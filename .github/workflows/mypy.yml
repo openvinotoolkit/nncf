@@ -11,10 +11,10 @@ jobs:
   mypy:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v3
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
       with:
-        python-version: 3.8.10
+        python-version: 3.8.18
     - name: Install NNCF
       run: pip install -e .
     - name: Install mypy

@@ -76,7 +76,9 @@ def test_can_restore_binary_mask_on_magnitude_algo_resume():
     PTTensorListComparator.check_equal(ref_mask_2, op.operand.binary_mask)
 
 
-@pytest.mark.parametrize("use_data_parallel", [True, False], ids=["dataparallel", "regular"])
+@pytest.mark.parametrize(
+    "use_data_parallel", [pytest.param(True, marks=pytest.mark.cuda), False], ids=["dataparallel", "regular"]
+)
 def test_can_restore_binary_mask_on_magnitude_quant_algo_resume(tmp_path, use_data_parallel):
     config = get_empty_config()
     config["compression"] = [

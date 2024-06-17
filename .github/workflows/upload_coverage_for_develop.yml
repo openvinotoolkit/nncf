@@ -12,9 +12,9 @@ on:
       coverage_artifact_name_in_pr:
         required: true
         type: string
-      coverage_flags: 
+      coverage_flags:
         required: true
-        type: string     
+        type: string
     secrets:
       CODECOV_TOKEN:
         required: true
@@ -24,7 +24,7 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3  # codecov uploader demands that the scanned files be present when uploading
+      - uses: actions/checkout@v4  # codecov uploader demands that the scanned files be present when uploading
         with:
           ref: ${{ inputs.merge_commit_sha }}
       - uses: dawidd6/action-download-artifact@v2

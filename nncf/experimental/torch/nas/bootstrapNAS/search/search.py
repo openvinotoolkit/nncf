@@ -710,9 +710,8 @@ class SearchProblem(Problem):
 
             result = [sample]
 
-            eval_idx = 0
             bn_adaption_executed = False
-            for evaluator_handler in self._evaluator_handlers:
+            for eval_idx, evaluator_handler in enumerate(self._evaluator_handlers):
                 in_cache, value = evaluator_handler.retrieve_from_cache(tuple(x_i))
                 if not in_cache:
                     if not bn_adaption_executed and self._search.bn_adaptation is not None:
@@ -720,7 +719,6 @@ class SearchProblem(Problem):
                         bn_adaption_executed = True
                     value = evaluator_handler.evaluate_and_add_to_cache_from_pymoo(tuple(x_i))
                 evaluators_arr[eval_idx].append(value)
-                eval_idx += 1
 
                 result.append(evaluator_handler.name)
                 result.append(value)

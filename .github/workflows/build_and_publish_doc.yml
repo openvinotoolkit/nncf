@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout main repo  # the github-pages-deploy-action seems to require this step
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Download HTML doc build artifact
         uses: alehechka/download-tartifact@v2
         with:

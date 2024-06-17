@@ -260,9 +260,9 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
         self.modules_to_init = modules_to_init_vs_init_configs
         self.progressbar_description = "Range parameters initialization"
 
-        self.collectors_and_modules_to_init: Dict[
-            str, Tuple[TensorStatisticCollectorBase, BaseQuantizer]
-        ] = OrderedDict()
+        self.collectors_and_modules_to_init: Dict[str, Tuple[TensorStatisticCollectorBase, BaseQuantizer]] = (
+            OrderedDict()
+        )
         self.hook_handles = []
         self.batch_size = batch_size
 

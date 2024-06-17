@@ -70,7 +70,7 @@ class OVConvolutionBackpropDataMetatype(OVOpMetatype):
     output_channel_axis = 1
 
 
-@OV_OPERATOR_METATYPES.register()
+@OV_OPERATOR_METATYPES.register(is_subtype=True)
 class OVDepthwiseConvolutionMetatype(OVOpMetatype):
     name = "DepthwiseConvolutionOp"
     op_names = ["GroupConvolution"]
@@ -410,7 +410,7 @@ class OVLogicalXorMetatype(OVOpMetatype):
     hw_config_names = [HWConfigOpName.LOGICALXOR]
 
 
-@OV_OPERATOR_METATYPES.register()
+@OV_OPERATOR_METATYPES.register(is_subtype=True)
 class OVEmbeddingMetatype(OVOpMetatype):
     name = "EmbeddingOp"
     hw_config_names = [HWConfigOpName.EMBEDDING]

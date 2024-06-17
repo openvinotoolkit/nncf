@@ -47,10 +47,10 @@ def convert_quantization_params(conf: Optional[Dict[str, Any]]) -> QuantizationP
         num_bits=conf.get("bits", None),
         mode=convert_quantization_mode(conf.get("mode", None)),
         signedness_to_force=conf.get("signed", None),
-        per_channel=None  # Always use the default parameter for per_channel parameters to prevent
+        per_channel=None,  # Always use the default parameter for per_channel parameters to prevent
         # accuracy degradation due to the fact that per_channel=False for activation will make
-        # deptwise convolutions activations quantizers work in the per tensor mode
-        # which does not make sence in case of the CPU target device.
+        # depthwise convolutions activations quantizers work in the per tensor mode
+        # which does not make sense in case of the CPU target device.
     )
 
 
@@ -96,11 +96,9 @@ def get_quantization_preset(config_quantization_params: Dict[str, Any]) -> Optio
 def get_advanced_ptq_parameters(config_quantization_params: Dict[str, Any]) -> AdvancedQuantizationParameters:
     range_estimator_params = get_range_init_type(config_quantization_params)
     return AdvancedQuantizationParameters(
-        overflow_fix=convert_overflow_fix_param(config_quantization_params.get("overflow_fix", None)),
-        weights_quantization_params=convert_quantization_params(config_quantization_params.get("weights", None)),
-        activations_quantization_params=convert_quantization_params(
-            config_quantization_params.get("activations", None)
-        ),
+        overflow_fix=convert_overflow_fix_param(config_quantization_params.get("overflow_fix")),
+        weights_quantization_params=convert_quantization_params(config_quantization_params.get("weights")),
+        activations_quantization_params=convert_quantization_params(config_quantization_params.get("activations")),
         weights_range_estimator_params=range_estimator_params,
         activations_range_estimator_params=range_estimator_params,
     )

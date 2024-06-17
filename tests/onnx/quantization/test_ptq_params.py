@@ -9,22 +9,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 import pytest
 
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.utils.backend import BackendType
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
+from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 from nncf.scopes import IgnoredScope
+from tests.common.quantization.metatypes import CatTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
@@ -61,8 +67,20 @@ class TestPTQParams(TemplateTestPTQParams):
             assert act_num_q == 1
         assert weight_num_q == 1
 
+    def check_unified_scale_layout(self, layout, unified_scale_group):
+        assert len(layout.transformations) == len(unified_scale_group)
+        for t, ref_tp in zip(layout.transformations, unified_scale_group):
+            assert isinstance(t, ONNXQuantizerInsertionCommand)
+            assert t.target_point == ref_tp
+            assert t.type == TransformationType.INSERT
+            assert t.quantizer_parameters.zero_point == 0
+            assert np.isclose(t.quantizer_parameters.scale, 0.03149606)
+
     def target_point(self, target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:
         return ONNXTargetPoint(target_type, target_node_name, port_id)
+
+    def get_backend_tensor(self, value):
+        return np.array(value)
 
     @property
     def metatypes_mapping(self):
@@ -70,7 +88,12 @@ class TestPTQParams(TemplateTestPTQParams):
             Conv2dTestMetatype: ONNXConvolutionMetatype,
             LinearTestMetatype: ONNXGemmMetatype,
             SoftmaxTestMetatype: ONNXSoftmaxMetatype,
+            CatTestMetatype: ONNXConcatMetatype,
         }
+
+    @property
+    def nncf_graph_cls(self):
+        return NNCFGraph
 
     @pytest.fixture(scope="session")
     def test_params(self):

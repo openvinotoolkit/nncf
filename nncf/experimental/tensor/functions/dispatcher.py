@@ -9,11 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import functools
-from typing import List
+from typing import Callable, List
 
 import numpy as np
 
 from nncf.experimental.tensor import Tensor
+from nncf.experimental.tensor.definitions import TensorBackend
 
 
 def tensor_guard(func: callable):
@@ -55,3 +56,21 @@ def register_numpy_types(singledispatch_fn):
         return func
 
     return inner
+
+
+def get_numeric_backend_fn(fn_name: str, backend: TensorBackend) -> Callable:
+    """
+    Returns a numeric function based on the provided function name and backend type.
+
+    :param fn_name: The name of the numeric function.
+    :param backend: The backend type for which the function is required.
+    :return: The backend-specific numeric function.
+    """
+    if backend == TensorBackend.numpy:
+        from nncf.experimental.tensor.functions import numpy_numeric
+
+        return getattr(numpy_numeric, fn_name)
+    if backend == TensorBackend.torch:
+        from nncf.experimental.tensor.functions import torch_numeric
+
+        return getattr(torch_numeric, fn_name)

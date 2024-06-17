@@ -25,6 +25,7 @@ from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.graph.layer_attributes import PermuteLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.graph.layer_attributes import TransposeLayerAttributes
+from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.torch import wrap_model
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
@@ -41,6 +42,7 @@ from nncf.torch.graph.operator_metatypes import PTConv3dMetatype
 from nncf.torch.graph.operator_metatypes import PTConvTranspose1dMetatype
 from nncf.torch.graph.operator_metatypes import PTConvTranspose2dMetatype
 from nncf.torch.graph.operator_metatypes import PTConvTranspose3dMetatype
+from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTEmbeddingBagMetatype
 from nncf.torch.graph.operator_metatypes import PTEmbeddingMetatype
 from nncf.torch.graph.operator_metatypes import PTGatherMetatype
@@ -182,7 +184,7 @@ LIST_TEST_DESCS = [
             padding_values=(0, 0),
             with_bias=True,
         ),
-        metatype_cls=PTConv2dMetatype,
+        metatype_cls=PTDepthwiseConv2dSubtype,
     ),
     LayerAttributesTestDesc(
         module_fn=lambda: nn.Conv1d(1, 2, 1),
@@ -550,6 +552,10 @@ def test_can_set_valid_layer_attributes_wrap_model(desc: LayerAttributesTestDesc
         RefNodeDesc(node.metatype, node.layer_attributes) for node in graph.get_nodes_by_metatypes([desc.metatype_cls])
     ]
     assert ref_values == actual_values
+
+    if isinstance(desc.layer_attributes, WeightedLayerAttributes):
+        assert hasattr(desc.metatype_cls, "weight_port_ids")
+        assert len(desc.metatype_cls.weight_port_ids) > 0
 
 
 @pytest.mark.parametrize(

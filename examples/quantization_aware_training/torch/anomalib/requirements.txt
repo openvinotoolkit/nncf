@@ -1,0 +1,1 @@
+anomalib[core,openvino]==1.0.0

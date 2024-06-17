@@ -44,6 +44,22 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
 
 
+def get_add_bias_node(node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
+    """
+    Returns Add node which stores bias for node.
+
+    :param node: NNCFGraph node.
+    :param nncf_graph: NNCFGraph.
+    :return: Add node if exists.
+    """
+    for child in nncf_graph.get_next_nodes(node):
+        if child.metatype == OVAddMetatype:
+            bias_constant = get_node_with_bias_value(child, nncf_graph)
+            if bias_constant is not None:
+                return child
+    return None
+
+
 def is_node_with_bias(
     node: NNCFNode, nncf_graph: NNCFGraph, metatypes_with_bias: Optional[List[OVOpMetatype]] = None
 ) -> bool:
@@ -63,12 +79,7 @@ def is_node_with_bias(
     if node.metatype not in metatypes_with_bias:
         return False
 
-    add_node = nncf_graph.get_next_nodes(node)[0]
-    if add_node.metatype != OVAddMetatype:
-        return False
-
-    bias_constant = get_node_with_bias_value(add_node, nncf_graph)
-    return bias_constant is not None
+    return get_add_bias_node(node, nncf_graph) is not None
 
 
 def get_number_if_op(model: ov.Model) -> int:
@@ -90,14 +101,17 @@ def get_number_if_op(model: ov.Model) -> int:
     return cnt_if_op(model, 0)
 
 
-def get_const_value(const_node: ov.Node) -> np.ndarray:
+def get_const_value(const_node: ov.Node, dtype: Optional[np.dtype] = None) -> np.ndarray:
     """
     Returns the constant tensor for the node.
 
     :param const_node: OpenVINO node.
+    :param dtype: Destination type.
     :return: The constant value.
     """
-    return const_node.data
+    if dtype is None:
+        return const_node.data
+    return const_node.get_data(dtype=dtype)
 
 
 def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
@@ -110,9 +124,7 @@ def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Mo
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
     ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
-
-    add_node = nncf_graph.get_next_nodes(node_with_bias)[0]
-    bias_constant = get_node_with_bias_value(add_node, nncf_graph)
+    bias_constant = get_node_with_bias_value(get_add_bias_node(node_with_bias, nncf_graph), nncf_graph)
     ov_bias_constant = ops_dict[bias_constant.node_name]
     return get_const_value(ov_bias_constant)
 
@@ -429,9 +441,11 @@ def get_weighted_layer_attributes(
                 "kernel_size": tuple(
                     dim for dim, elem in zip(weights_shape, weights_layout) if elem == OVLayoutElem.SPATIAL
                 ),
-                "groups": weights_shape[weights_layout.index(OVLayoutElem.GROUPS)]
-                if OVLayoutElem.GROUPS in weights_layout
-                else 1,
+                "groups": (
+                    weights_shape[weights_layout.index(OVLayoutElem.GROUPS)]
+                    if OVLayoutElem.GROUPS in weights_layout
+                    else 1
+                ),
             }
         )
 
@@ -445,9 +459,11 @@ def get_weighted_layer_attributes(
         kwargs = {
             "weight_requires_grad": False,
             "in_features": weights_shape[weights_layout.index(OVLayoutElem.C_IN)],
-            "out_features": weights_shape[weights_layout.index(OVLayoutElem.C_OUT)]
-            if OVLayoutElem.C_OUT in weights_layout
-            else None,
+            "out_features": (
+                weights_shape[weights_layout.index(OVLayoutElem.C_OUT)]
+                if OVLayoutElem.C_OUT in weights_layout
+                else None
+            ),
             "with_bias": False,
         }
         return LinearLayerAttributes(**kwargs)

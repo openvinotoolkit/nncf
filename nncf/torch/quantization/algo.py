@@ -81,8 +81,8 @@ from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import UNIFICATION_PRODUCING_METATYPES
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
-from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleDepthwiseConv2dSubtype
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -534,7 +534,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         return PTRangeInitParams(**range_init_params) if range_init_params is not None else None
 
     def _parse_precision_init_params(self, initializer_config: Dict) -> Tuple[str, BasePrecisionInitParams]:
-        init_precision_config = initializer_config.get("precision", None)
+        init_precision_config = initializer_config.get("precision")
         if not init_precision_config:
             return None, None
         precision_init_type = init_precision_config.get("type", "manual")
@@ -829,7 +829,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if weight_bitwidth:
                 is_applicable = False
                 target_node = target_model_graph.get_node_by_name(op_node_name)
-                if target_node.metatype in [PTModuleConv2dMetatype, PTDepthwiseConv2dSubtype]:
+                if target_node.metatype in [PTModuleConv2dMetatype, PTModuleDepthwiseConv2dSubtype]:
                     layer_attrs = target_node.layer_attributes
                     assert isinstance(layer_attrs, ConvolutionLayerAttributes)
                     padding_values = set(layer_attrs.padding_values)
@@ -934,7 +934,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
             range_init_minmax_values = None
             if minmax_values_for_range_init:
-                minmax_stat = minmax_values_for_range_init[qp_id] if qp_id in minmax_values_for_range_init else None
+                minmax_stat = minmax_values_for_range_init.get(qp_id)
                 if minmax_stat is not None:
                     range_init_minmax_values = (minmax_stat.min_values, minmax_stat.max_values)
 
@@ -1084,7 +1084,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             min_values = None
             max_values = None
             for qp_id in sorted_qp_ids:
-                minmax_stat = minmax_values_for_range_init[qp_id] if qp_id in minmax_values_for_range_init else None
+                minmax_stat = minmax_values_for_range_init.get(qp_id)
                 if minmax_stat is None:
                     continue
 

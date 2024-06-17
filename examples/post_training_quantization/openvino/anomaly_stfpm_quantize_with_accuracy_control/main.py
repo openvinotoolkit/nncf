@@ -177,7 +177,7 @@ def run_example():
     # nncf.quantize_with_accuracy_control(...) keeps the most impactful operations within
     # the model in the original precision to achieve the specified model accuracy.
     int8_ir_path = f"{ROOT}/stfpm_int8.xml"
-    ov.save_model(ov_quantized_model, int8_ir_path, compress_to_fp16=False)
+    ov.save_model(ov_quantized_model, int8_ir_path)
     print(f"[2/7] Save INT8 model: {int8_ir_path}")
     int8_size = get_model_size(int8_ir_path, verbose=True)
 

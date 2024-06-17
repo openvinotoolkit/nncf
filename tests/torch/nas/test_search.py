@@ -273,7 +273,7 @@ def test_search_results(search_result_descriptors, search_algo_name, tmp_path):
     )
     max_subnetwork_acc = validate_model_fn(model, eval_datasets)
 
-    _, best_config, performance_metrics = search.run(validate_model_fn, eval_datasets, tmp_path)
+    _, _, performance_metrics = search.run(validate_model_fn, eval_datasets, tmp_path)
 
     assert max_subnetwork_acc == search_result_descriptors.expected_accuracy
     assert performance_metrics[1] == search_result_descriptors.subnet_expected_accuracy[search_algo_name]

@@ -379,6 +379,7 @@ comp_loss_configs = [
 ]
 
 
+@pytest.mark.cuda
 @pytest.mark.parametrize(
     "config",
     comp_loss_configs,
@@ -399,7 +400,7 @@ def test_compression_loss_gpu_device_compatibility(config):
 NOT_SUPPORT_SCOPES_ALGO = ["knowledge_distillation", "NoCompressionAlgorithm", "elasticity", "progressive_shrinking"]
 
 
-@pytest.mark.parametrize("algo_name", PT_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO)
+@pytest.mark.parametrize("algo_name", sorted(PT_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO))
 @pytest.mark.parametrize("validate_scopes", (True, False, None))
 def test_raise_validationerror_for_not_matched_scope_names(algo_name, validate_scopes):
     model = BasicLinearTestModel()
@@ -450,7 +451,7 @@ def test_compressed_model_has_controller_references(algos: List[str]):
 
 ALGOS_SUPPORTING_SINGLE_LINE_CONFIGS = [
     x
-    for x in PT_COMPRESSION_ALGORITHMS.registry_dict
+    for x in sorted(PT_COMPRESSION_ALGORITHMS.registry_dict.keys())
     if x not in ["knowledge_distillation", "movement_sparsity", "elasticity", "progressive_shrinking"]
 ]
 

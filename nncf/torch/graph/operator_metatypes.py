@@ -111,15 +111,33 @@ class PTOperatorSubtype(PTOperatorMetatype):
         raise NotImplementedError
 
 
+def _is_called_inside_nncf_module(functions_kwargs):
+    key = DynamicGraph.IS_CALLED_INSIDE_NNCF_MODULE
+    if functions_kwargs is None or key not in functions_kwargs:
+        return False
+    return functions_kwargs[key]
+
+
 class PTModuleOperatorSubtype(PTOperatorSubtype):
     @classmethod
     def matches(
         cls, layer_attributes: Optional[BaseLayerAttributes] = None, function_args=None, functions_kwargs=None
     ) -> bool:
-        key = DynamicGraph.IS_CALLED_INSIDE_NNCF_MODULE
-        if functions_kwargs is None or key not in functions_kwargs:
+        return _is_called_inside_nncf_module(functions_kwargs)
+
+
+class PTModuleDepthwiseConvOperatorSubtype(PTOperatorSubtype):
+    @classmethod
+    def matches(
+        cls, layer_attributes: Optional[BaseLayerAttributes] = None, function_args=None, functions_kwargs=None
+    ) -> bool:
+        if not _is_called_inside_nncf_module(functions_kwargs):
             return False
-        return functions_kwargs[key]
+        if not isinstance(layer_attributes, ConvolutionLayerAttributes):
+            return False
+        if layer_attributes.groups == layer_attributes.in_channels and layer_attributes.in_channels > 1:
+            return True
+        return False
 
 
 class PTDepthwiseConvOperatorSubtype(PTOperatorSubtype):
@@ -127,6 +145,8 @@ class PTDepthwiseConvOperatorSubtype(PTOperatorSubtype):
     def matches(
         cls, layer_attributes: Optional[BaseLayerAttributes] = None, function_args=None, functions_kwargs=None
     ) -> bool:
+        if _is_called_inside_nncf_module(functions_kwargs):
+            return False
         if not isinstance(layer_attributes, ConvolutionLayerAttributes):
             return False
         if layer_attributes.groups == layer_attributes.in_channels and layer_attributes.in_channels > 1:
@@ -167,7 +187,30 @@ class PTNoopMetatype(PTOperatorMetatype):
     }
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
+class PTModuleDepthwiseConv1dSubtype(PTModuleDepthwiseConvOperatorSubtype):
+    name = "Conv1DOp"
+    hw_config_name = [HWConfigOpName.DEPTHWISECONVOLUTION]
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
+    output_channel_axis = 1
+    num_expected_input_edges = 2
+    weight_port_ids = [1]
+    bias_port_id = 2
+
+
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
+class PTModuleConv1dMetatype(PTModuleOperatorSubtype):
+    name = "Conv1DOp"
+    hw_config_names = [HWConfigOpName.CONVOLUTION]
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
+    subtypes = [PTModuleDepthwiseConv1dSubtype]
+    output_channel_axis = 1
+    num_expected_input_edges = 2
+    weight_port_ids = [1]
+    bias_port_id = 2
+
+
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTDepthwiseConv1dSubtype(PTDepthwiseConvOperatorSubtype):
     name = "Conv1DOp"
     hw_config_name = [HWConfigOpName.DEPTHWISECONVOLUTION]
@@ -179,30 +222,41 @@ class PTDepthwiseConv1dSubtype(PTDepthwiseConvOperatorSubtype):
 
 
 @PT_OPERATOR_METATYPES.register()
-class PTModuleConv1dMetatype(PTModuleOperatorSubtype):
-    name = "Conv1DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
-    subtypes = [PTDepthwiseConv1dSubtype]
-    output_channel_axis = 1
-    num_expected_input_edges = 2
-    weight_port_ids = [1]
-    bias_port_id = 2
-
-
-@PT_OPERATOR_METATYPES.register()
 class PTConv1dMetatype(PTOperatorMetatype):
     name = "Conv1DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
-    subtypes = [PTModuleConv1dMetatype]
+    subtypes = [PTModuleConv1dMetatype, PTDepthwiseConv1dSubtype]
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
     bias_port_id = 2
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
+class PTModuleDepthwiseConv2dSubtype(PTModuleDepthwiseConvOperatorSubtype):
+    name = "Conv2DOp"
+    hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
+    output_channel_axis = 1
+    num_expected_input_edges = 2
+    weight_port_ids = [1]
+    bias_port_id = 2
+
+
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
+class PTModuleConv2dMetatype(PTModuleOperatorSubtype):
+    name = "Conv2DOp"
+    hw_config_names = [HWConfigOpName.CONVOLUTION]
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
+    subtypes = [PTModuleDepthwiseConv2dSubtype]
+    output_channel_axis = 1
+    num_expected_input_edges = 2
+    weight_port_ids = [1]
+    bias_port_id = 2
+
+
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTDepthwiseConv2dSubtype(PTDepthwiseConvOperatorSubtype):
     name = "Conv2DOp"
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
@@ -214,30 +268,41 @@ class PTDepthwiseConv2dSubtype(PTDepthwiseConvOperatorSubtype):
 
 
 @PT_OPERATOR_METATYPES.register()
-class PTModuleConv2dMetatype(PTModuleOperatorSubtype):
-    name = "Conv2DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
-    subtypes = [PTDepthwiseConv2dSubtype]
-    output_channel_axis = 1
-    num_expected_input_edges = 2
-    weight_port_ids = [1]
-    bias_port_id = 2
-
-
-@PT_OPERATOR_METATYPES.register()
 class PTConv2dMetatype(PTOperatorMetatype):
     name = "Conv2DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
-    subtypes = [PTModuleConv2dMetatype]
+    subtypes = [PTModuleConv2dMetatype, PTDepthwiseConv2dSubtype]
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
     bias_port_id = 2
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
+class PTModuleDepthwiseConv3dSubtype(PTModuleDepthwiseConvOperatorSubtype):
+    name = "Conv3DOp"
+    hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
+    output_channel_axis = 1
+    num_expected_input_edges = 2
+    weight_port_ids = [1]
+    bias_port_id = 2
+
+
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
+class PTModuleConv3dMetatype(PTModuleOperatorSubtype):
+    name = "Conv3DOp"
+    hw_config_names = [HWConfigOpName.CONVOLUTION]
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
+    subtypes = [PTModuleDepthwiseConv3dSubtype]
+    output_channel_axis = 1
+    num_expected_input_edges = 2
+    weight_port_ids = [1]
+    bias_port_id = 2
+
+
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTDepthwiseConv3dSubtype(PTDepthwiseConvOperatorSubtype):
     name = "Conv3DOp"
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
@@ -249,30 +314,18 @@ class PTDepthwiseConv3dSubtype(PTDepthwiseConvOperatorSubtype):
 
 
 @PT_OPERATOR_METATYPES.register()
-class PTModuleConv3dMetatype(PTModuleOperatorSubtype):
-    name = "Conv3DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
-    subtypes = [PTDepthwiseConv3dSubtype]
-    output_channel_axis = 1
-    num_expected_input_edges = 2
-    weight_port_ids = [1]
-    bias_port_id = 2
-
-
-@PT_OPERATOR_METATYPES.register()
 class PTConv3dMetatype(PTOperatorMetatype):
     name = "Conv3DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
-    subtypes = [PTModuleConv3dMetatype]
+    subtypes = [PTModuleConv3dMetatype, PTDepthwiseConv3dSubtype]
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
     bias_port_id = 2
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleConvTranspose1dMetatype(PTModuleOperatorSubtype):
     name = "ConvTranspose1DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
@@ -295,7 +348,7 @@ class PTConvTranspose1dMetatype(PTOperatorMetatype):
     bias_port_id = 2
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleConvTranspose2dMetatype(PTModuleOperatorSubtype):
     name = "ConvTranspose2DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
@@ -318,7 +371,7 @@ class PTConvTranspose2dMetatype(PTOperatorMetatype):
     bias_port_id = 2
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleConvTranspose3dMetatype(PTModuleOperatorSubtype):
     name = "ConvTranspose3DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
@@ -341,7 +394,7 @@ class PTConvTranspose3dMetatype(PTOperatorMetatype):
     bias_port_id = 2
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleDeformConv2dMetatype(PTModuleOperatorSubtype):
     name = "DeformConv2dOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["deform_conv2d"]}
@@ -358,7 +411,7 @@ class PTDeformConv2dMetatype(PTOperatorMetatype):
     weight_port_ids = [2]
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleLinearMetatype(PTModuleOperatorSubtype):
     name = "LinearOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["linear"]}
@@ -428,12 +481,13 @@ class PTLeakyRELUMetatype(PTOperatorMetatype):
     num_expected_input_edges = 1
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleLayerNormMetatype(PTModuleOperatorSubtype):
     name = "LayerNormOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["layer_norm"]}
     hw_config_names = [HWConfigOpName.MVN]
     num_expected_input_edges = 1
+    weight_port_ids = [2]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -443,13 +497,15 @@ class PTLayerNormMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.MVN]
     subtypes = [PTModuleLayerNormMetatype]
     num_expected_input_edges = 1
+    weight_port_ids = [2]
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleGroupNormMetatype(PTModuleOperatorSubtype):
     name = "GroupNormOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["group_norm"]}
     hw_config_names = [HWConfigOpName.MVN]
+    weight_port_ids = [2]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -458,6 +514,7 @@ class PTGroupNormMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["group_norm"]}
     hw_config_names = [HWConfigOpName.MVN]
     subtypes = [PTModuleGroupNormMetatype]
+    weight_port_ids = [2]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -630,7 +687,7 @@ class PTThresholdMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["threshold"]}
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleBatchNormMetatype(PTModuleOperatorSubtype):
     name = "BatchNormOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"]}
@@ -821,7 +878,7 @@ class PTExpandAsMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["expand_as"]}
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleEmbeddingMetatype(PTModuleOperatorSubtype):
     name = "EmbeddingOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["embedding"]}
@@ -838,7 +895,7 @@ class PTEmbeddingMetatype(PTOperatorMetatype):
     weight_port_ids = [1]
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleEmbeddingBagMetatype(PTModuleOperatorSubtype):
     name = "EmbeddingBagOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["embedding_bag"]}
@@ -1021,9 +1078,9 @@ OPERATORS_WITH_WEIGHTS_METATYPES = [
     PTModuleConv1dMetatype,
     PTModuleConv2dMetatype,
     PTModuleConv3dMetatype,
-    PTDepthwiseConv1dSubtype,
-    PTDepthwiseConv2dSubtype,
-    PTDepthwiseConv3dSubtype,
+    PTModuleDepthwiseConv1dSubtype,
+    PTModuleDepthwiseConv2dSubtype,
+    PTModuleDepthwiseConv3dSubtype,
     PTModuleLinearMetatype,
     PTModuleBatchNormMetatype,
     PTModuleGroupNormMetatype,
@@ -1039,9 +1096,9 @@ UNIFICATION_PRODUCING_METATYPES = [
     PTModuleConv1dMetatype,
     PTModuleConv2dMetatype,
     PTModuleConv3dMetatype,
-    PTDepthwiseConv1dSubtype,
-    PTDepthwiseConv2dSubtype,
-    PTDepthwiseConv3dSubtype,
+    PTModuleDepthwiseConv1dSubtype,
+    PTModuleDepthwiseConv2dSubtype,
+    PTModuleDepthwiseConv3dSubtype,
     PTModuleConvTranspose1dMetatype,
     PTModuleConvTranspose2dMetatype,
     PTModuleConvTranspose3dMetatype,
@@ -1049,18 +1106,6 @@ UNIFICATION_PRODUCING_METATYPES = [
 ]
 
 OP_NAMES_WITH_WEIGHTS = [x for meta in OPERATORS_WITH_WEIGHTS_METATYPES for x in meta.get_all_aliases()]
-
-# Contains the operation metatypes for which bias can be applied.
-OPERATORS_WITH_BIAS_METATYPES = [
-    PTModuleConv1dMetatype,
-    PTModuleConv2dMetatype,
-    PTModuleConv3dMetatype,
-    # TODO: Need to add Linear support (CVS-111111)
-]
-
-OPERATORS_FUSED_METATYPES = [
-    PTModuleBatchNormMetatype,
-]
 
 QUANTIZE_NODE_TYPES = ["symmetric_quantize", "asymmetric_quantize"]
 

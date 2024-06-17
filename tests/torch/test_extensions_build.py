@@ -26,6 +26,7 @@ from tests.shared.paths import TEST_ROOT
 EXTENSIONS_BUILD_FILENAME = "extensions_build_checks.py"
 
 
+@pytest.mark.cuda
 def test_force_cuda_build(tmp_path):
     """
     Check that CUDA Extensions weren't initially built and \
@@ -33,7 +34,7 @@ def test_force_cuda_build(tmp_path):
     """
     if is_windows():
         pytest.skip("checked on linux only")
-    venv_path = create_venv_with_nncf(tmp_path, package_type="pip_local", venv_type="venv", extra_reqs={"torch"})
+    venv_path = create_venv_with_nncf(tmp_path, package_type="pip_local", venv_type="venv", backends={"torch"})
     cuda_home = os.environ.get("CUDA_HOME") or os.environ.get("CUDA_PATH")
     if cuda_home is None:
         try:

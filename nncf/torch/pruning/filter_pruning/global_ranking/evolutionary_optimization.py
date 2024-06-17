@@ -20,6 +20,11 @@ from torch import nn
 from torch import optim
 
 from nncf.config.config import NNCFConfig
+from nncf.config.schemata.defaults import PRUNING_LEGR_GENERATIONS
+from nncf.config.schemata.defaults import PRUNING_LEGR_MUTATE_PERCENT
+from nncf.config.schemata.defaults import PRUNING_LEGR_NUM_SAMPLES
+from nncf.config.schemata.defaults import PRUNING_LEGR_POPULATION_SIZE
+from nncf.config.schemata.defaults import PRUNING_LEGR_SIGMA_SCALE
 from nncf.torch.utils import get_filters_num
 
 
@@ -48,11 +53,11 @@ class EvolutionOptimizer:
         """
         self.random_seed = random_seed
         # Optimizer hyper-params
-        self.population_size = hparams.get("population_size", 64)
-        self.num_generations = hparams.get("num_generations", 400)
-        self.num_samples = hparams.get("num_samples", 16)
-        self.mutate_percent = hparams.get("mutate_percent", 0.1)
-        self.scale_sigma = hparams.get("sigma_scale", 1)
+        self.population_size = hparams.get("population_size", PRUNING_LEGR_POPULATION_SIZE)
+        self.num_generations = hparams.get("num_generations", PRUNING_LEGR_GENERATIONS)
+        self.num_samples = hparams.get("num_samples", PRUNING_LEGR_NUM_SAMPLES)
+        self.mutate_percent = hparams.get("mutate_percent", PRUNING_LEGR_MUTATE_PERCENT)
+        self.scale_sigma = hparams.get("sigma_scale", PRUNING_LEGR_SIGMA_SCALE)
         self.max_reward = -np.inf
         self.mean_rewards = []
 

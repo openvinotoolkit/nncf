@@ -71,7 +71,7 @@ class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
     bias_port_id: Optional[int] = None
 
 
-@ONNX_OPERATION_METATYPES.register()
+@ONNX_OPERATION_METATYPES.register(is_subtype=True)
 class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = "DepthwiseConvOp"
     op_names = ["Conv"]
@@ -86,7 +86,7 @@ class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
         return _is_depthwise_conv(model, node)
 
 
-@ONNX_OPERATION_METATYPES.register()
+@ONNX_OPERATION_METATYPES.register(is_subtype=True)
 class ONNXGroupConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = "GroupConvOp"
     op_names = ["Conv"]
@@ -420,7 +420,7 @@ class ONNXReciprocalMetatype(ONNXOpMetatype):
     hw_config_names = [HWConfigOpName.POWER]
 
 
-@ONNX_OPERATION_METATYPES.register()
+@ONNX_OPERATION_METATYPES.register(is_subtype=True)
 class ONNXEmbeddingMetatype(ONNXOpMetatype):
     name = "EmbeddingOp"
     hw_config_names = [HWConfigOpName.EMBEDDING]

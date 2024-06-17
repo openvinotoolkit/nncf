@@ -1,10 +1,10 @@
+-c ../../constraints.txt
+torch
+torchvision
 addict>=2.4.0
 pillow>=8.0.1
 tensorboard>=2.1
 matplotlib>=3.3.3
 defusedxml>=0.7.0rc1
-tabulate~=0.9.0
 opencv-python>=4.4.0.46
-torch==2.2.1
-torchvision==0.17.1
 efficientnet_pytorch==0.7.1

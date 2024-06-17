@@ -15,7 +15,11 @@ from torch import nn
 from nncf.common.logging import nncf_logger
 from nncf.config.schemata.defaults import PRUNING_LEGR_GENERATIONS
 from nncf.config.schemata.defaults import PRUNING_LEGR_MAX_PRUNING
+from nncf.config.schemata.defaults import PRUNING_LEGR_MUTATE_PERCENT
+from nncf.config.schemata.defaults import PRUNING_LEGR_NUM_SAMPLES
+from nncf.config.schemata.defaults import PRUNING_LEGR_POPULATION_SIZE
 from nncf.config.schemata.defaults import PRUNING_LEGR_RANDOM_SEED
+from nncf.config.schemata.defaults import PRUNING_LEGR_SIGMA_SCALE
 from nncf.config.schemata.defaults import PRUNING_LEGR_TRAIN_STEPS
 from nncf.torch.pruning.filter_pruning.global_ranking.evolutionary_optimization import EvolutionOptimizer
 from nncf.torch.pruning.filter_pruning.global_ranking.evolutionary_optimization import LeGREvolutionEnv
@@ -38,6 +42,10 @@ class LeGR:
         generations: int = PRUNING_LEGR_GENERATIONS,
         max_pruning: float = PRUNING_LEGR_MAX_PRUNING,
         random_seed: int = PRUNING_LEGR_RANDOM_SEED,
+        population_size: int = PRUNING_LEGR_POPULATION_SIZE,
+        num_samples: int = PRUNING_LEGR_NUM_SAMPLES,
+        mutate_percent: float = PRUNING_LEGR_MUTATE_PERCENT,
+        scale_sigma: float = PRUNING_LEGR_SIGMA_SCALE,
     ):
         """
         Initializing all necessary structures for optimization- LeGREvolutionEnv environment and EvolutionOptimizer
@@ -53,10 +61,20 @@ class LeGR:
         self.num_generations = generations
         self.max_pruning = max_pruning
         self.train_steps = train_steps
+        self.population_size = population_size
+        self.num_samples = num_samples
+        self.mutate_percent = mutate_percent
+        self.scale_sigma = scale_sigma
 
         self.pruner = LeGRPruner(pruning_ctrl, target_model)
         init_filter_norms = self.pruner.init_filter_norms
-        agent_hparams = {"num_generations": self.num_generations}
+        agent_hparams = {
+            "num_generations": self.num_generations,
+            "population_size": self.population_size,
+            "num_samples": self.num_samples,
+            "mutate_percent": self.mutate_percent,
+            "sigma_scale": self.scale_sigma,
+        }
         self.agent = EvolutionOptimizer(init_filter_norms, agent_hparams, random_seed)
         self.env = LeGREvolutionEnv(
             self.pruner,

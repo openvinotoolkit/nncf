@@ -16,11 +16,13 @@ import torch
 
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import TensorDeviceType
+from nncf.experimental.tensor.definitions import TensorBackend
 from nncf.experimental.tensor.definitions import TypeInfo
 from nncf.experimental.tensor.functions import numeric as numeric
 
 DTYPE_MAP = {
     TensorDataType.float16: torch.float16,
+    TensorDataType.bfloat16: torch.bfloat16,
     TensorDataType.float32: torch.float32,
     TensorDataType.float64: torch.float64,
     TensorDataType.int8: torch.int8,
@@ -29,16 +31,20 @@ DTYPE_MAP = {
     TensorDataType.uint8: torch.uint8,
 }
 
+DEVICE_MAP = {TensorDeviceType.CPU: "cpu", TensorDeviceType.GPU: "cuda"}
+
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
+DEVICE_MAP_REV = {v: k for k, v in DEVICE_MAP.items()}
 
 
 @numeric.device.register(torch.Tensor)
 def _(a: torch.Tensor) -> TensorDeviceType:
-    DEVICE_MAP = {
-        "cpu": TensorDeviceType.CPU,
-        "cuda": TensorDeviceType.GPU,
-    }
-    return DEVICE_MAP[a.device.type]
+    return DEVICE_MAP_REV[a.device.type]
+
+
+@numeric.backend.register(torch.Tensor)
+def _(a: torch.Tensor) -> TensorBackend:
+    return TensorBackend.torch
 
 
 @numeric.squeeze.register(torch.Tensor)
@@ -170,6 +176,11 @@ def _(x: List[torch.Tensor], axis: int = 0) -> List[torch.Tensor]:
     return torch.stack(x, dim=axis)
 
 
+@numeric.concatenate.register(torch.Tensor)
+def _(x: List[torch.Tensor], axis: int = 0) -> List[torch.Tensor]:
+    return torch.concatenate(x, dim=axis)
+
+
 @numeric.unstack.register(torch.Tensor)
 def _(x: torch.Tensor, axis: int = 0) -> List[torch.Tensor]:
     if not list(x.shape):
@@ -191,6 +202,20 @@ def _(
 ) -> torch.Tensor:
     dtype = DTYPE_MAP[dtype] if dtype else None
     return torch.mean(a, dim=axis, keepdim=keepdims, dtype=dtype)
+
+
+@numeric.median.register(torch.Tensor)
+def _(
+    a: torch.Tensor,
+    axis: Union[int, Tuple[int, ...]] = None,
+    keepdims: bool = False,
+) -> torch.Tensor:
+    # See https://github.com/pytorch/pytorch/issues/61582
+    if not isinstance(axis, int):
+        device = a.device
+        result = torch.tensor(np.median(a.detach().cpu().numpy(), axis=axis, keepdims=keepdims))
+        return result.type(a.dtype).to(device)
+    return torch.quantile(a, q=0.5, dim=axis, keepdims=keepdims)
 
 
 @numeric.round.register(torch.Tensor)
@@ -221,6 +246,16 @@ def _(
             keepdims,
         ).type(torch.float64)
     return torch.tensor(np.quantile(a.detach().cpu().numpy(), q=q, axis=axis, keepdims=keepdims)).to(device)
+
+
+@numeric.percentile.register(torch.Tensor)
+def percentile(
+    tensor: torch.Tensor,
+    q: Union[float, List[float]],
+    axis: Union[int, Tuple[int, ...], List[int]],
+    keepdims: bool = False,
+) -> List[Union[torch.Tensor, np.generic]]:
+    return numeric.quantile(tensor, q=torch.true_divide(torch.tensor(q), 100), axis=axis, keepdims=keepdims)
 
 
 @numeric._binary_op_nowarn.register(torch.Tensor)
@@ -288,9 +323,96 @@ def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> to
 
 @numeric.transpose.register(torch.Tensor)
 def _(a: torch.Tensor, axes: Optional[Tuple[int, ...]] = None) -> torch.Tensor:
-    return a.t()
+    if axes is None:
+        return a.t()
+    return torch.permute(a, axes)
 
 
 @numeric.argsort.register(torch.Tensor)
-def _(a: torch.Tensor, axis: Optional[int] = None, descending=False, stable=False) -> torch.Tensor:
+def _(a: torch.Tensor, axis: int = -1, descending=False, stable=False) -> torch.Tensor:
     return torch.argsort(a, dim=axis, descending=descending, stable=stable)
+
+
+@numeric.diag.register(torch.Tensor)
+def _(a: torch.Tensor, k: int = 0) -> torch.Tensor:
+    return torch.diag(a, diagonal=k)
+
+
+@numeric.logical_or.register(torch.Tensor)
+def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
+    return torch.logical_or(x1, x2)
+
+
+@numeric.masked_mean.register(torch.Tensor)
+def _(
+    x: torch.Tensor, mask: Optional[torch.Tensor], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
+) -> torch.Tensor:
+    if mask is None:
+        return torch.mean(x, axis=axis, keepdims=keepdims)
+    masked_x = x.masked_fill(mask, torch.nan)
+    ret = torch.nanmean(masked_x, dim=axis, keepdim=keepdims)
+    return torch.nan_to_num(ret)
+
+
+@numeric.masked_median.register(torch.Tensor)
+def _(
+    x: torch.Tensor, mask: Optional[torch.Tensor], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
+) -> torch.Tensor:
+    if mask is None:
+        return numeric.median(x, axis=axis, keepdims=keepdims)
+
+    # See https://github.com/pytorch/pytorch/issues/61582
+    if not isinstance(axis, int):
+        device = x.device
+        masked_x = np.ma.array(x.detach().cpu().numpy(), mask=mask.detach().cpu().numpy())
+        result = torch.tensor(np.ma.median(masked_x, axis=axis, keepdims=keepdims))
+        return result.type(x.dtype).to(device)
+    masked_x = x.masked_fill(mask, torch.nan)
+    ret = torch.nanquantile(masked_x, q=0.5, dim=axis, keepdims=keepdims)
+    return torch.nan_to_num(ret)
+
+
+@numeric.clone.register(torch.Tensor)
+def _(a: torch.Tensor) -> torch.Tensor:
+    return a.clone()
+
+
+@numeric.searchsorted.register(torch.Tensor)
+def _(a: torch.Tensor, v: torch.Tensor, side: str = "left", sorter: Optional[torch.Tensor] = None) -> torch.Tensor:
+    if side not in ["right", "left"]:
+        raise ValueError(f"Invalid value for 'side': {side}. Expected 'right' or 'left'.")
+    if a.dim() != 1:
+        raise ValueError(f"Input tensor 'a' must be 1-D. Received {a.dim()}-D tensor.")
+    return torch.searchsorted(sorted_sequence=a, input=v, right=(side == "right"), sorter=sorter)
+
+
+def zeros(
+    shape: Tuple[int, ...],
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> torch.Tensor:
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    if device is not None:
+        device = DEVICE_MAP[device]
+    return torch.zeros(*shape, dtype=dtype, device=device)
+
+
+def arange(
+    start: float,
+    end: float,
+    step: float,
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> torch.Tensor:
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    if device is not None:
+        device = DEVICE_MAP[device]
+    return torch.arange(start, end, step, dtype=dtype, device=device)
+
+
+def from_numpy(ndarray: np.ndarray) -> torch.Tensor:
+    return torch.from_numpy(ndarray)

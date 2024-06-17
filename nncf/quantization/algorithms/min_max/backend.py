@@ -141,10 +141,29 @@ class MinMaxAlgoBackend(ABC):
         Returns backend-specific quantizer insertion command.
 
         :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
-        :param target_point: Target location for the correction.
+        :param target_point: Target location for the quantizer insertion.
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def create_unified_scales_quantizers_insertion_commands(
+        nncf_graph: NNCFGraph,
+        target_points: List[TargetPoint],
+        quantizer_config: QuantizerConfig,
+        parameters: FakeQuantizeParameters,
+    ) -> List[TransformationCommand]:
+        """
+        Returns backend-specific unified scales quantizers insertion commands.
+
+        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
+        :param target_points: List of target locations for the quantizers insertion.
+        :param quantizer_config: QuantizerConfig instance for the current layer.
+        :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
+        :return: List of backend-specific TransformationCommands
+            for the quantizers with unified scales insertion operations.
         """
 
     @staticmethod

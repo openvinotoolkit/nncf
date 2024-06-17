@@ -41,6 +41,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TargetType
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import CompressionParameter
+from nncf.torch.layer_utils import StatefullModuleInterface
 from nncf.torch.quantization.quantize_functions import ExportQuantizeToFakeQuantize
 from nncf.torch.quantization.quantize_functions import ExportQuantizeToONNXQuantDequant
 from nncf.torch.quantization.quantize_functions import TuneRange
@@ -283,9 +284,10 @@ class PTQuantizerSetup(QuantizerSetupBase):
         self.quantization_points[qp_id] = qp
 
 
-class BaseQuantizer(nn.Module, ABC):
+class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__()
+        self._qspec = qspec
         self._narrow_range = qspec.narrow_range
         self._signedness_to_force = qspec.signedness_to_force
         self._is_using_log_scale_storage = qspec.logarithm_scale
@@ -562,6 +564,14 @@ class BaseQuantizer(nn.Module, ABC):
             scale - Quantizer scale.
             zero_point - Quantizer zero point.
         """
+
+    def get_config(self):
+        return self._qspec.get_state()
+
+    @classmethod
+    def from_config(cls, state) -> "BaseQuantizer":
+        qsetup = PTQuantizerSpec.from_state(state)
+        return cls(qsetup)
 
 
 class QuantizersSwitcher:

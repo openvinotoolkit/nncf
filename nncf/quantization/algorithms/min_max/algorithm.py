@@ -12,7 +12,7 @@
 import collections
 import dataclasses
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, OrderedDict, Set, TypeVar, Union
+from typing import Any, Dict, List, Optional, OrderedDict, Set, Tuple, TypeVar, Union
 
 import numpy as np
 
@@ -206,6 +206,7 @@ class MinMaxQuantization(Algorithm):
             else:
                 self._preset = QuantizationPreset.PERFORMANCE
 
+        self._override_device()
         self._set_mode_based_defaults()
         self._review_mode_based_defaults()
 
@@ -227,6 +228,21 @@ class MinMaxQuantization(Algorithm):
 
         self._reset_cache()
         self._algorithm_key = f"MMQ_{hash(self)}"
+
+    def _override_device(self) -> None:
+        """
+        Overrides NPU device to use CPU quantization scheme.
+        """
+        if self._target_device == TargetDevice.NPU:
+            act_bits, weight_bits = 8, 8
+            if self._activations_quantization_params and self._activations_quantization_params.num_bits:
+                act_bits = self._activations_quantization_params.num_bits
+            if self._weights_quantization_params and self._weights_quantization_params.num_bits:
+                weight_bits = self._weights_quantization_params.num_bits
+
+            if act_bits == 8 and weight_bits == 8:
+                self._target_device == TargetDevice.CPU
+                nncf_logger.debug("Target device NPU was changed to CPU!")
 
     def _set_mode_based_defaults(self) -> None:
         """
@@ -295,9 +311,9 @@ class MinMaxQuantization(Algorithm):
     def _reset_cache(self):
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
-        self._quantization_target_points_to_qconfig: OrderedDict[
-            TargetPoint, QuantizerConfig
-        ] = collections.OrderedDict()
+        self._quantization_target_points_to_qconfig: OrderedDict[TargetPoint, QuantizerConfig] = (
+            collections.OrderedDict()
+        )
         self._unified_scale_groups = []
 
     @property
@@ -681,7 +697,7 @@ class MinMaxQuantization(Algorithm):
 
     def _get_quantization_target_points(
         self, model: TModel, nncf_graph: NNCFGraph
-    ) -> OrderedDict[TargetPoint, QuantizerConfig]:
+    ) -> Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]]:
         """
         Returns Quantization Target Points.
         In the Compression Pipeline logic NNCF assumes that the compression pipeline works only on the single model.
@@ -863,25 +879,29 @@ class MinMaxQuantization(Algorithm):
                     group_statistics.append(statistics)
 
             unified_values = self._backend_entity.unify_statistics(group_statistics)
-            for quantization_target_point in unified_scale_group:
-                qconfig = quantization_target_points[quantization_target_point]
-                q_group = QuantizerGroup.ACTIVATIONS
-                narrow_range = get_quantizer_narrow_range(qconfig, q_group)
-                if self._mode is not None:
-                    destination_type = self._quantization_params[q_group].destination_type
-                    parameters = calculate_convert_parameters(
-                        unified_values, is_per_channel=qconfig.per_channel, destination_type=destination_type
+            qconfigs = [quantization_target_points[qtp] for qtp in unified_scale_group]
+            if any(qconfigs[0] != qconfig for qconfig in qconfigs[1:]):
+                raise nncf.InternalError(f"QConfigs for unified scale group {unified_scale_group} are not equal")
+            qconfig = qconfigs[0]
+            q_group = QuantizerGroup.ACTIVATIONS
+            narrow_range = get_quantizer_narrow_range(qconfig, q_group)
+            if self._mode is not None:
+                destination_type = self._quantization_params[q_group].destination_type
+                parameters = calculate_convert_parameters(
+                    unified_values, is_per_channel=qconfig.per_channel, destination_type=destination_type
+                )
+                for quantization_target_point in unified_scale_group:
+                    transformation_layout.register(
+                        self._backend_entity.create_convert_insertion_command(quantization_target_point, parameters)
                     )
-                    command = self._backend_entity.create_convert_insertion_command(
-                        quantization_target_point, parameters
-                    )
-                else:
-                    parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
-                    command = self._backend_entity.create_quantizer_insertion_command(
-                        graph, quantization_target_point, qconfig, parameters
-                    )
+                continue
+            parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
+            commands = self._backend_entity.create_unified_scales_quantizers_insertion_commands(
+                graph, unified_scale_group, qconfig, parameters
+            )
+            for command in commands:
                 transformation_layout.register(command)
-                unified_ops_list.add(quantization_target_point)
+            unified_ops_list.update(unified_scale_group)
 
         for quantization_target_point, qconfig in quantization_target_points.items():
             if quantization_target_point in unified_ops_list:
@@ -1049,7 +1069,7 @@ class MinMaxQuantization(Algorithm):
                     quantizer_setup.discard(fq_2_q_key, True)
                     continue
 
-                # In the case of the two quantizers without the brancking after them,
+                # In the case of the two quantizers without the branching after them,
                 # it needs to check that all quantizers follows after producer nodes.
                 if _is_node_after_producers(fq_1_producer) and _is_node_after_producers(fq_2_producer):
                     fq_1_prod_shape = np.prod(nncf_graph.get_output_edges(fq_1_producer)[0].tensor_shape)

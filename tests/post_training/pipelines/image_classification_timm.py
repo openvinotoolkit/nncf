@@ -24,9 +24,6 @@ from torchvision import datasets
 
 import nncf
 from nncf.common.logging.track_progress import track
-from nncf.experimental.torch.replace_custom_modules.timm_custom_modules import (
-    replace_timm_custom_modules_with_torch_native,
-)
 from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
 from tests.post_training.pipelines.base import OV_BACKENDS
 from tests.post_training.pipelines.base import PT_BACKENDS
@@ -43,7 +40,6 @@ class ImageClassificationTimm(PTQTestPipeline):
     def prepare_model(self) -> None:
         timm_model = timm.create_model(self.model_id, num_classes=1000, in_chans=3, pretrained=True, checkpoint_path="")
         timm_model.eval()
-        timm_model = replace_timm_custom_modules_with_torch_native(timm_model)
         self.model_cfg = timm_model.default_cfg
         self.input_size = [self.batch_size] + list(timm_model.default_cfg["input_size"])
         self.dummy_tensor = torch.rand(self.input_size)

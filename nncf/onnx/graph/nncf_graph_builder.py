@@ -297,31 +297,33 @@ class GraphConverter:
         """
         for i, _output in enumerate(model.graph.output):
             output_name = _output.name
-            layer_attributes = ONNXLayerAttributes()
-            output_node = nncf_graph.add_nncf_node(
-                node_name=MODEL_OUTPUT_OP_NAME + "_" + str(i),
-                node_type=NNCFGraphNodeType.OUTPUT_NODE,
-                node_metatype=OutputNoopMetatype,
-                layer_attributes=layer_attributes,
-            )
-            from_node = parents_node_mapping[output_name]
+            if output_name in parents_node_mapping:
+                layer_attributes = ONNXLayerAttributes()
+                output_node = nncf_graph.add_nncf_node(
+                    node_name=MODEL_OUTPUT_OP_NAME + "_" + str(i),
+                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
+                    node_metatype=OutputNoopMetatype,
+                    layer_attributes=layer_attributes,
+                )
 
-            output_node_node_id = output_node.node_id
-            edge = edge_info_mapping[output_name]
-            output_shape = get_edge_shape(edge)
-            onnx_dtype = get_edge_dtype(edge)
-            nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
-            input_port_id = 0
-            from_node_id = nncf_graph.get_node_by_name(from_node.name).node_id
-            output_port_id = get_output_port_id_for_node_before_output(output_name, from_node)
-            nncf_graph.add_edge_between_nncf_nodes(
-                from_node_id=from_node_id,
-                to_node_id=output_node_node_id,
-                tensor_shape=output_shape,
-                input_port_id=input_port_id,
-                output_port_id=output_port_id,
-                dtype=nncf_dtype,
-            )
+                from_node = parents_node_mapping[output_name]
+
+                output_node_node_id = output_node.node_id
+                edge = edge_info_mapping[output_name]
+                output_shape = get_edge_shape(edge)
+                onnx_dtype = get_edge_dtype(edge)
+                nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
+                input_port_id = 0
+                from_node_id = nncf_graph.get_node_by_name(from_node.name).node_id
+                output_port_id = get_output_port_id_for_node_before_output(output_name, from_node)
+                nncf_graph.add_edge_between_nncf_nodes(
+                    from_node_id=from_node_id,
+                    to_node_id=output_node_node_id,
+                    tensor_shape=output_shape,
+                    input_port_id=input_port_id,
+                    output_port_id=output_port_id,
+                    dtype=nncf_dtype,
+                )
 
     @staticmethod
     def convert_onnx_dtype_to_nncf_dtype(onnx_dtype: int) -> Dtype:

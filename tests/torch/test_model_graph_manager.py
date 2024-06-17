@@ -27,6 +27,7 @@ from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_data_on_port
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_fake_quantizer
+from nncf.torch.model_graph_manager import get_fused_bias_value
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import get_potential_fused_node
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
@@ -34,6 +35,7 @@ from nncf.torch.model_graph_manager import is_node_with_fused_bias
 from nncf.torch.model_graph_manager import is_quantized_weights
 from nncf.torch.model_graph_manager import set_const_data
 from nncf.torch.model_graph_manager import split_const_name
+from nncf.torch.model_graph_manager import update_fused_bias
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.model_transformer import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
@@ -313,3 +315,50 @@ def test_is_quantized_weights():
     q_graph = q_model.nncf.get_graph()
     q_node = q_graph.get_node_by_name(node_name)
     assert is_quantized_weights(q_node, q_graph)
+
+
+@pytest.mark.parametrize(
+    "model_cls, ref",
+    (
+        (helpers.ConvTestModel, [0.1000, 1.0000]),  # conv.bias
+        (helpers.ConvBNTestModel, [0.1000, 1.0000]),  # bn.bias
+        (helpers.ConvBiasBNTestModel, [0.1600, 3.6000]),  # conv.bias*bn.weight + bn.bias
+    ),
+)
+def test_get_fused_bias_value(model_cls, ref):
+    model = wrap_model(model_cls(), torch.ones(model_cls.INPUT_SIZE), trace_parameters=True)
+
+    graph = model.nncf.get_graph()
+    target_node = graph.get_nodes_by_types("conv2d")[0]
+
+    bias = get_fused_bias_value(target_node, model)
+    assert torch.all(torch.isclose(bias, torch.tensor(ref)))
+
+
+@pytest.mark.parametrize(
+    "model_cls",
+    (
+        (helpers.ConvTestModel),  # conv.bias
+        (helpers.ConvBNTestModel),  # bn.bias
+        (helpers.ConvBiasBNTestModel),  # conv.bias*bn.weight + bn.bias
+    ),
+)
+def test_update_fused_bias(model_cls):
+    model = wrap_model(model_cls(), torch.ones(model_cls.INPUT_SIZE), trace_parameters=True)
+    ref_new_bias = torch.tensor([-1.0, -1.0])
+    graph = model.nncf.get_graph()
+    target_node = graph.get_nodes_by_types("conv2d")[0]
+
+    update_fused_bias(target_node.node_name, ref_new_bias, model)
+    bias = get_fused_bias_value(target_node, model)
+    assert torch.all(torch.isclose(bias, ref_new_bias))
+
+    if model_cls == helpers.ConvTestModel:
+        assert torch.all(torch.isclose(model.conv.bias, ref_new_bias))
+    if model_cls == helpers.ConvBNTestModel:
+        assert model.conv.bias is None
+        assert torch.all(torch.isclose(model.bn.bias, ref_new_bias))
+    if model_cls == helpers.ConvBiasBNTestModel:
+        assert torch.all(torch.isclose(model.conv.bias, torch.tensor([0.3000, 1.3000])))
+        assert torch.all(torch.isclose(model.bn.bias, torch.tensor([-1.0600, -3.6000])))
+        assert torch.all(torch.isclose(model.conv.bias * model.bn.weight + model.bn.bias, ref_new_bias))

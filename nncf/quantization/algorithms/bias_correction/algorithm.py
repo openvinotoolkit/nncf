@@ -42,7 +42,6 @@ OUTPUT_PORT_OF_NODE = 0
 
 
 class BiasCorrection(Algorithm):
-
     """
     Post-training BiasCorrection algorithm implementation
 

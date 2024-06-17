@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
 from collections import defaultdict
 from functools import partial
 from typing import Callable, Dict, List, Optional, Tuple
@@ -22,15 +21,16 @@ from torch.nn.parameter import Parameter
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.torch.extractor import extract_model
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
-from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
+from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.model_analyzer import get_potential_fused_node
+from nncf.torch.model_graph_manager import update_fused_bias
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
@@ -53,7 +53,7 @@ class PTModelTransformer(ModelTransformer):
             device = get_model_device(model)
 
         self._command_transformation_ordered_pairs = [
-            (PTModelExtractionWithFusedBiasCommand, self._apply_extraction_with_fused_bias_transformations),
+            (PTModelExtractionCommand, self._apply_extraction_transformations),
             (PTInsertionCommand, partial(self._apply_insertion_transformations, device=device)),
             (PTSharedFnInsertionCommand, partial(self._apply_shared_nodes_insertion, device=device)),
             (PTBiasCorrectionCommand, self._apply_bias_correction_transformations),
@@ -193,18 +193,18 @@ class PTModelTransformer(ModelTransformer):
         return PTModelTransformer._apply_insertion_transformations(model, insertion_commands, device)
 
     @staticmethod
-    def _apply_extraction_with_fused_bias_transformations(
-        model: NNCFNetwork, transformations: List[PTModelExtractionWithFusedBiasCommand]
+    def _apply_extraction_transformations(
+        model: NNCFNetwork, transformations: List[PTModelExtractionCommand]
     ) -> nn.Sequential:
         """
-        Extracts copy of sub-modules from the original base on node name and potential fused nodes.
+        Extracts copy of sub-modules.
 
         :param model: Model to apply transformations.
         :param transformation: Model extraction transformation.
         :return: Extracted sub-modules.
         """
         transformation = transformations[-1]
-        return extraction_potential_fused_modules(transformation.node_name, model)
+        return extract_model(model, transformation.input_node_names, transformation.output_node_names)
 
     @staticmethod
     def _apply_bias_correction_transformations(
@@ -241,29 +241,6 @@ class PTModelTransformer(ModelTransformer):
         return model
 
 
-def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwork) -> None:
-    """
-    Update bias for target module or potential fused module.
-
-    :param target_node_name: The target node name.
-    :param new_bias: New bias value.
-    :param model: The model.
-    """
-    nncf_graph = model.nncf.get_graph()
-    fused_node = get_potential_fused_node(target_node_name, nncf_graph)
-    if fused_node is None:
-        update_parameter(target_node_name, "bias", new_bias, model)
-        return
-    target_module = model.nncf.get_containing_module(target_node_name)
-    fused_module = model.nncf.get_containing_module(fused_node.node_name)
-
-    if target_module.bias is None:
-        update_parameter(fused_node.node_name, "bias", new_bias, model)
-        return
-    new_bias = new_bias - target_module.bias * fused_module.weight
-    update_parameter(fused_node.node_name, "bias", new_bias, model)
-
-
 def update_parameter(target_node_name: str, parameter_name: str, new_value: Tensor, model: NNCFNetwork) -> None:
     """
     Update parameter for target module.
@@ -276,23 +253,3 @@ def update_parameter(target_node_name: str, parameter_name: str, new_value: Tens
     module = model.nncf.get_containing_module(target_node_name)
     parameter: Parameter = getattr(module, parameter_name)
     parameter.data = new_value
-
-
-def extraction_potential_fused_modules(node_name: str, model: NNCFNetwork) -> nn.Sequential:
-    """
-    Return Sequential from the copy of module by node_name and potential fused node if exists.
-
-    :param node_name: The node name.
-    :param model: The model.
-    :return nn.Sequential: Copy of the modules.
-    """
-    extracted_node_names = [node_name]
-    nncf_graph = model.nncf.get_graph()
-    fused_node = get_potential_fused_node(node_name, nncf_graph)
-    if fused_node:
-        extracted_node_names.append(fused_node.node_name)
-
-    extracted_modules = [
-        copy.deepcopy(model.nncf.get_containing_module(node_name)) for node_name in extracted_node_names
-    ]
-    return nn.Sequential(*extracted_modules)

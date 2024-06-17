@@ -1086,7 +1086,7 @@ def main():
         "quantize_with_accuracy_control": quantize_model_with_accuracy_control,
     }
     for algo_name, algo_config in nncf_algorithms_config.items():
-        algo_fn = algo_name_to_method_map.get(algo_name, None)
+        algo_fn = algo_name_to_method_map.get(algo_name)
         if algo_fn:
             quantize_model_arguments = {
                 "xml_path": xml_path,

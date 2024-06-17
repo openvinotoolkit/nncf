@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Dict
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pytest
 
 from nncf import Dataset
@@ -27,6 +27,7 @@ from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from tests.openvino.native.common import compare_nncf_graphs
+from tests.openvino.native.common import convert_torch_model
 from tests.openvino.native.common import dump_model
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.common import get_dataset_for_test
@@ -39,9 +40,8 @@ from tests.openvino.native.models import GRUSequenceModel
 from tests.openvino.native.models import IfModel
 from tests.openvino.native.models import MatmulSoftmaxMatmulBlock
 from tests.openvino.native.models import ScaledDotProductAttentionModel
+from tests.openvino.native.models import get_torch_model_info
 from tests.openvino.native.quantization.test_fq_params_calculation import quantize_model
-from tests.openvino.omz_helpers import convert_model
-from tests.openvino.omz_helpers import download_model
 
 QUANTIZED_REF_GRAPHS_DIR = Path("reference_graphs") / "quantized"
 
@@ -68,26 +68,24 @@ def test_depthwise_models_fq_placement(model_creator_func):
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
-OMZ_MODELS_QUANTIZE_PARAMS = {
-    "swin-tiny-patch4-window7-224": {"preset": QuantizationPreset.PERFORMANCE, "model_type": ModelType.TRANSFORMER},
-    "mobilenet-v2-pytorch": {"preset": QuantizationPreset.PERFORMANCE},
-    "mobilenet-v3-small-1.0-224-tf": {"preset": QuantizationPreset.PERFORMANCE},
-    "resnet-18-pytorch": {"preset": QuantizationPreset.PERFORMANCE},
-    "resnet-50-pytorch": {"preset": QuantizationPreset.PERFORMANCE, "target_device": TargetDevice.CPU_SPR},
-    "yolo-v4-tiny-tf": {"preset": QuantizationPreset.PERFORMANCE},
-}
+MODELS_QUANTIZE_PARAMS = (
+    ("mobilenet-v2", {"preset": QuantizationPreset.PERFORMANCE}),
+    ("mobilenet-v3-small", {"preset": QuantizationPreset.PERFORMANCE}),
+    ("resnet-18", {"preset": QuantizationPreset.PERFORMANCE}),
+    ("resnet-18", {"preset": QuantizationPreset.PERFORMANCE, "target_device": TargetDevice.CPU_SPR}),
+    ("ssd-vgg-300", {"preset": QuantizationPreset.PERFORMANCE}),
+    ("swin-block", {"preset": QuantizationPreset.PERFORMANCE, "model_type": ModelType.TRANSFORMER}),
+)
 
 
-@pytest.mark.parametrize("model_name_params", OMZ_MODELS_QUANTIZE_PARAMS.items(), ids=list(OMZ_MODELS_QUANTIZE_PARAMS))
-def test_omz_models_fq_placement(model_name_params, tmp_path, omz_cache_dir):
+@pytest.mark.parametrize("model_name_params", MODELS_QUANTIZE_PARAMS)
+def test_real_models_fq_placement(model_name_params, tmp_path):
     model_name, q_params = model_name_params
     params_str = "_".join([param.value for param in q_params.values()])
-    q_params.update({"inplace_statistics": True})
-    download_model(model_name, tmp_path, omz_cache_dir)
-    convert_model(model_name, tmp_path)
-    model_path = tmp_path / "public" / model_name / "FP32" / f"{model_name}.xml"
-    model = ov.Core().read_model(model_path)
-    quantized_model = quantize_model(model, q_params)
+    model_cls, input_shape = get_torch_model_info(model_name)
+    ov_model = convert_torch_model(model_cls(), input_shape, tmp_path)
+
+    quantized_model = quantize_model(ov_model, q_params)
 
     result_name = f"{model_name}_{params_str}"
     path_ref_graph = get_actual_reference_for_current_openvino(QUANTIZED_REF_GRAPHS_DIR / f"{result_name}.dot")
@@ -112,21 +110,17 @@ def test_transformer_models_fq_placement(model_creator_func, tmp_path):
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
-OMZ_MODELS_SQ_PARAMS = {
-    "swin-tiny-patch4-window7-224": {"preset": QuantizationPreset.PERFORMANCE, "model_type": ModelType.TRANSFORMER}
-}
+MODELS_SQ_PARAMS = (("swin-block", {"preset": QuantizationPreset.PERFORMANCE, "model_type": ModelType.TRANSFORMER}),)
 
 
-@pytest.mark.parametrize("model_name_params", OMZ_MODELS_SQ_PARAMS.items(), ids=list(OMZ_MODELS_SQ_PARAMS))
-def test_omz_models_sq_placement(model_name_params, tmp_path, omz_cache_dir):
+@pytest.mark.parametrize("model_name_params", MODELS_SQ_PARAMS)
+def test_real_models_sq_placement(model_name_params, tmp_path):
     model_name, q_params = model_name_params
-    q_params.update({"inplace_statistics": True})
-    download_model(model_name, tmp_path, omz_cache_dir)
-    convert_model(model_name, tmp_path)
-    model_path = tmp_path / "public" / model_name / "FP32" / f"{model_name}.xml"
-    model = ov.Core().read_model(model_path)
 
-    quantized_model = smooth_quant_model(model, q_params, quantize=False)
+    model_cls, input_shape = get_torch_model_info(model_name)
+    ov_model = convert_torch_model(model_cls(), input_shape, tmp_path)
+
+    quantized_model = smooth_quant_model(ov_model, q_params, quantize=False)
 
     path_ref_graph = get_actual_reference_for_current_openvino(QUANTIZED_REF_GRAPHS_DIR / f"{model_name}_sq.dot")
     xml_path = tmp_path / (model_name + ".xml")

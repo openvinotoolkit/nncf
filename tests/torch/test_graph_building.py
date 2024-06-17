@@ -374,10 +374,10 @@ def test_filler_input_info_arg_generation(filler_gen_test_struct: FillerInputInf
     ],
     ids=["filler", "example", "loader"],
 )
-@pytest.mark.parametrize("device", ["cuda", "cpu"])
-def test_input_infos_respect_device_setting(input_info: ModelInputInfo, device: str):
-    if device == "cuda" and not torch.cuda.is_available():
+def test_input_infos_respect_device_setting(input_info: ModelInputInfo, use_cuda: bool):
+    if use_cuda and not torch.cuda.is_available():
         pytest.skip("Skipped checking CUDA device test cases on CPU-only hosts")
+    device = "cuda" if use_cuda else "cpu"
     forward_inputs = input_info.get_forward_inputs(device)
 
     def assert_on_device(x: torch.Tensor):

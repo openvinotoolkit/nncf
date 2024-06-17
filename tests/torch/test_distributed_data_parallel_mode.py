@@ -82,6 +82,7 @@ def worker(rank: int, world_size: int) -> None:
     _ = torch.nn.parallel.DistributedDataParallel(compressed_model, device_ids=[rank])
 
 
+@pytest.mark.cuda
 @pytest.mark.parametrize("waiting_time", [20.0])
 def test_is_ddp_freezing(waiting_time: float) -> None:
     # Number of processes the same as GPU count

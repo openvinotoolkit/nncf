@@ -97,16 +97,16 @@ class MovementSchedulerParams:
         :param params: A dict that specifies the parameters of movement sparsity scheduler.
         :return: A `MovementSchedulerParams` object that stores the parameters from `params`.
         """
-        warmup_start_epoch: int = params.get("warmup_start_epoch", None)
-        warmup_end_epoch: int = params.get("warmup_end_epoch", None)
-        importance_regularization_factor: float = params.get("importance_regularization_factor", None)
+        warmup_start_epoch: int = params.get("warmup_start_epoch")
+        warmup_end_epoch: int = params.get("warmup_end_epoch")
+        importance_regularization_factor: float = params.get("importance_regularization_factor")
         enable_structured_masking: bool = params.get("enable_structured_masking", MOVEMENT_ENABLE_STRUCTURED_MASKING)
-        init_importance_threshold: Optional[float] = params.get("init_importance_threshold", None)
+        init_importance_threshold: Optional[float] = params.get("init_importance_threshold")
         final_importance_threshold: float = params.get(
             "final_importance_threshold", MOVEMENT_FINAL_IMPORTANCE_THRESHOLD
         )
         power: float = params.get("power", MOVEMENT_POWER)
-        steps_per_epoch: Optional[int] = params.get("steps_per_epoch", None)
+        steps_per_epoch: Optional[int] = params.get("steps_per_epoch")
 
         if None in [warmup_start_epoch, warmup_end_epoch, importance_regularization_factor]:
             raise ValueError(

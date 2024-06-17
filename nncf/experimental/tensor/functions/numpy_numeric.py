@@ -13,6 +13,7 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 
 import numpy as np
 
+from nncf.experimental.tensor.definitions import TensorBackend
 from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.experimental.tensor.definitions import TensorDeviceType
 from nncf.experimental.tensor.definitions import TypeInfo
@@ -35,6 +36,11 @@ DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 @register_numpy_types(numeric.device)
 def _(a: Union[np.ndarray, np.generic]) -> TensorDeviceType:
     return TensorDeviceType.CPU
+
+
+@register_numpy_types(numeric.backend)
+def _(a: Union[np.ndarray, np.generic]) -> TensorBackend:
+    return TensorBackend.numpy
 
 
 @register_numpy_types(numeric.squeeze)
@@ -159,6 +165,11 @@ def _(x: Union[np.ndarray, np.generic], axis: int = 0) -> List[np.ndarray]:
     return np.stack(x, axis=axis)
 
 
+@register_numpy_types(numeric.concatenate)
+def _(x: Union[np.ndarray, np.generic], axis: int = 0) -> List[np.ndarray]:
+    return np.concatenate(x, axis=axis)
+
+
 @register_numpy_types(numeric.unstack)
 def _(x: Union[np.ndarray, np.generic], axis: int = 0) -> List[np.ndarray]:
     return [np.squeeze(e, axis) for e in np.split(x, x.shape[axis], axis=axis)]
@@ -180,6 +191,15 @@ def _(
     return np.array(np.mean(a, axis=axis, keepdims=keepdims, dtype=dtype))
 
 
+@register_numpy_types(numeric.median)
+def _(
+    a: Union[np.ndarray, np.generic],
+    axis: Union[int, Tuple[int, ...]] = None,
+    keepdims: bool = False,
+) -> np.ndarray:
+    return np.array(np.median(a, axis=axis, keepdims=keepdims))
+
+
 @register_numpy_types(numeric.round)
 def _(a: Union[np.ndarray, np.generic], decimals: int = 0) -> np.ndarray:
     return np.round(a, decimals=decimals)
@@ -198,6 +218,16 @@ def _(
     keepdims: Optional[bool] = None,
 ) -> Union[np.ndarray, np.generic]:
     return np.array(np.quantile(a, q=q, axis=axis, keepdims=keepdims))
+
+
+@register_numpy_types(numeric.percentile)
+def _(
+    tensor: np.ndarray,
+    q: Union[float, List[float]],
+    axis: Union[int, Tuple[int, ...], List[int]],
+    keepdims: bool = False,
+) -> List[Union[np.ndarray, np.generic]]:
+    return np.quantile(tensor, q=np.true_divide(np.array(q), 100), axis=axis, keepdims=keepdims)
 
 
 @register_numpy_types(numeric._binary_op_nowarn)
@@ -289,6 +319,84 @@ def _(a: Union[np.ndarray, np.generic], axes: Optional[Tuple[int, ...]] = None) 
 
 @register_numpy_types(numeric.argsort)
 def _(
-    a: Union[np.ndarray, np.generic], axis: Optional[int] = None, descending=False, stable=False
+    a: Union[np.ndarray, np.generic], axis: int = -1, descending=False, stable=False
 ) -> Union[np.ndarray, np.generic]:
-    return np.argsort(a, axis=axis)
+    if descending and stable:
+        return a.shape[axis] - 1 - np.flip(np.argsort(np.flip(a, axis), axis=axis, kind="stable"), axis)
+    if descending and not stable:
+        return np.flip(np.argsort(a, axis=axis), axis)
+    return np.argsort(a, axis=axis, kind="stable" if stable else None)
+
+
+@register_numpy_types(numeric.diag)
+def _(a: Union[np.ndarray, np.generic], k: int = 0) -> np.ndarray:
+    return np.diag(a, k=k)
+
+
+@register_numpy_types(numeric.logical_or)
+def _(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
+    return np.logical_or(x1, x2)
+
+
+@register_numpy_types(numeric.masked_mean)
+def _(
+    x: np.ndarray, mask: Optional[np.ndarray], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
+) -> np.ndarray:
+    if mask is None:
+        return np.mean(x, axis=axis, keepdims=keepdims)
+    masked_x = np.ma.array(x, mask=mask)
+    result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
+    if isinstance(result, np.ma.MaskedArray):
+        return result.data
+    return result
+
+
+@register_numpy_types(numeric.masked_median)
+def _(
+    x: np.ndarray, mask: Optional[np.ndarray], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
+) -> np.ndarray:
+    if mask is None:
+        return np.median(x, axis=axis, keepdims=keepdims)
+    masked_x = np.ma.array(x, mask=mask)
+    result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
+    if isinstance(result, np.ma.MaskedArray):
+        return result.data
+    return result
+
+
+@register_numpy_types(numeric.clone)
+def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+    return a.copy()
+
+
+@register_numpy_types(numeric.searchsorted)
+def _(a: np.ndarray, v: np.ndarray, side: str = "left", sorter: Optional[np.ndarray] = None) -> np.ndarray:
+    return np.searchsorted(a, v, side, sorter)
+
+
+def zeros(
+    shape: Tuple[int, ...],
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> np.ndarray:
+    if device is not None and device != TensorDeviceType.CPU:
+        raise ValueError("numpy_numeric.zeros only supports CPU device.")
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    return np.zeros(shape, dtype=dtype)
+
+
+def arange(
+    start: float,
+    end: float,
+    step: float,
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> np.ndarray:
+    if device is not None and device != TensorDeviceType.CPU:
+        raise ValueError("numpy_numeric.arange only supports CPU device.")
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    return np.arange(start, end, step, dtype=dtype)

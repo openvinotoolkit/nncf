@@ -37,4 +37,4 @@ Please refer to the `<YOUR ...>` comments in `main.py` to find the exact places 
 
 ## See also
 
-- [Weight compression](../../../../docs/compression_algorithms/CompressWeights.md)
+- [Weight compression](/docs/usage/post_training_compression/weights_compression/Usage.md)

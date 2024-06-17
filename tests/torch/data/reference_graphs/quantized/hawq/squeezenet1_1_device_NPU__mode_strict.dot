@@ -140,7 +140,7 @@ strict digraph  {
 "122 SqueezeNet/Sequential[classifier]/NNCFConv2d[1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [color=red, id=122, label="WFQ_[B:4 M:S SGN:S PC:Y]_#122_G18", style=filled, type=symmetric_quantize];
 "123 SqueezeNet/Sequential[classifier]/NNCFConv2d[1]/conv2d_0" [color=lightblue, id=123, label="conv2d_k1x1_#123", style=filled, type=conv2d];
 "124 SqueezeNet/Sequential[classifier]/ReLU[2]/relu__0" [id=124, label="relu__#124", style=filled, type=relu_];
-"125 SqueezeNet/Sequential[classifier]/ReLU[2]/SymmetricQuantizer/symmetric_quantize_0" [color=green, id=125, label="AFQ_[B:8 M:S SGN:U PC:Y]_#125_G2", style=filled, type=symmetric_quantize];
+"125 SqueezeNet/Sequential[classifier]/ReLU[2]/SymmetricQuantizer/symmetric_quantize_0" [color=green, id=125, label="AFQ_[B:8 M:S SGN:U PC:N]_#125_G2", style=filled, type=symmetric_quantize];
 "126 SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]/adaptive_avg_pool2d_0" [id=126, label="adaptive_avg_pool2d_#126", style=filled, type=adaptive_avg_pool2d];
 "127 SqueezeNet/view_0" [id=127, label="view_#127", style=filled, type=view];
 "128 /nncf_model_output_0" [id=128, label="nncf_model_output_#128", style=filled, type=nncf_model_output];

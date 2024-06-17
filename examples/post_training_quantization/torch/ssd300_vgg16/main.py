@@ -70,9 +70,9 @@ def run_benchmark(model_path: str, shape=None, verbose: bool = True) -> float:
 
 class COCO128Dataset(torch.utils.data.Dataset):
     category_mapping = [
-        1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,31,32,33,
-        34,35,36,37,38,39,40,41,42,43,44,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,
-        61,62,63,64,65,67,70,72,73,74,75,76,77,78,79,80,81,82,84,85,86,87,88,89,90
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 27, 28, 31, 32, 33,
+        34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
+        61, 62, 63, 64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90
     ]  # fmt: skip
 
     def __init__(self, data_path: str, transform: Callable):
@@ -171,7 +171,7 @@ def main():
     fp32_model_size = get_model_size(fp32_ir_path, verbose=True)
 
     int8_ir_path = f"{ROOT}/ssd300_vgg16_int8.xml"
-    ov.save_model(ov_quantized_model, int8_ir_path, compress_to_fp16=False)
+    ov.save_model(ov_quantized_model, int8_ir_path)
     print(f"[2/7] Save INT8 model: {int8_ir_path}")
     int8_model_size = get_model_size(int8_ir_path, verbose=True)
 

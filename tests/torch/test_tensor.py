@@ -13,6 +13,7 @@ import torch
 
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import TensorDataType
+from nncf.experimental.tensor.definitions import TensorBackend
 from nncf.experimental.tensor.definitions import TensorDeviceType
 from tests.shared.test_templates.template_test_nncf_tensor import TemplateTestNNCFTensorOperators
 
@@ -31,15 +32,32 @@ class TestPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
         return torch.tensor(x)
 
     @staticmethod
+    def to_cpu(x):
+        return x
+
+    @staticmethod
     def cast_to(x: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
         return cast_to(x, dtype)
 
+    @staticmethod
+    def backend() -> TensorBackend:
+        return TensorBackend.torch
 
+    @staticmethod
+    def device() -> TensorDeviceType:
+        return TensorDeviceType.CPU
+
+
+@pytest.mark.cuda
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="Skipping for CPU-only setups")
 class TestCudaPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
     @staticmethod
     def to_tensor(x):
         return torch.tensor(x).cuda()
+
+    @staticmethod
+    def to_cpu(x):
+        return x.cpu()
 
     @staticmethod
     def cast_to(x: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
@@ -48,3 +66,11 @@ class TestCudaPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
     def test_device(self):
         tensor = Tensor(self.to_tensor([1]))
         assert tensor.device == TensorDeviceType.GPU
+
+    @staticmethod
+    def backend() -> TensorBackend:
+        return TensorBackend.torch
+
+    @staticmethod
+    def device() -> TensorDeviceType:
+        return TensorDeviceType.GPU

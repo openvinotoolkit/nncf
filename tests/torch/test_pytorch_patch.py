@@ -15,6 +15,7 @@ from typing import List
 import pytest
 import torch
 
+import nncf
 from nncf.config import NNCFConfig
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.patch_pytorch import _ORIG_JIT_SCRIPT
@@ -27,6 +28,7 @@ from tests.shared.isolation_runner import run_pytest_case_function_in_separate_p
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
+from tests.torch.pytorch_patch_isolated import test_compile
 from tests.torch.pytorch_patch_isolated import test_jit_if_tracing_script_source_equals
 from tests.torch.pytorch_patch_isolated import test_jit_script_exception_preserves_patching_isolated
 
@@ -106,6 +108,45 @@ def test_jit_script_exception_preserves_patching():
     run_pytest_case_function_in_separate_process(test_jit_script_exception_preserves_patching_isolated)
 
 
+def test_torch_compile():
+    # Run test case in a separate process to track patching of torch by NNCF
+    run_pytest_case_function_in_separate_process(test_compile)
+
+
+def test_torch_compile_on_nncf_model():
+    # Calling torch.compile on a regular torch model should work fine
+    model = BasicConvTestModel()
+    compiled_model = torch.compile(model)
+    compiled_model(torch.ones(model.INPUT_SIZE))
+
+    model = BasicConvTestModel()
+    quantized_model = nncf.quantize(model, nncf.Dataset([torch.rand(model.INPUT_SIZE)]))
+    with pytest.raises(
+        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
+    ):
+        torch.compile(quantized_model)
+
+    model = BasicConvTestModel()
+    config = get_test_quantization_config(model)
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    with pytest.raises(
+        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
+    ):
+        torch.compile(compressed_model)
+
+    stripped_model = compression_ctrl.strip()
+    with pytest.raises(
+        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
+    ):
+        torch.compile(stripped_model)
+
+    with pytest.raises(
+        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
+    ):
+        # Compiling this model would actually work, but inference of the compiled model will fail
+        torch.compile(model)
+
+
 def test_jit_script_signature():
     # Check that torch.jit.script has the same signature as the wrapper was designed for
     signature = inspect.signature(_ORIG_JIT_SCRIPT)
@@ -127,6 +168,16 @@ def test_jit_script_class():
 
 def test_jit_trace_model():
     model = BasicConvTestModel()
+    config = get_test_quantization_config(model)
+
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    torch.jit.trace(compressed_model, example_inputs=torch.rand(model.INPUT_SIZE))
+
+    model = compression_ctrl.strip()
+    torch.jit.trace(model, example_inputs=torch.rand(model.INPUT_SIZE))
+
+
+def get_test_quantization_config(model):
     config = NNCFConfig()
     config.update(
         {
@@ -136,9 +187,4 @@ def test_jit_trace_model():
         }
     )
     register_bn_adaptation_init_args(config)
-
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    torch.jit.trace(compressed_model, example_inputs=torch.rand(model.INPUT_SIZE))
-
-    model = compression_ctrl.strip()
-    torch.jit.trace(model, example_inputs=torch.rand(model.INPUT_SIZE))
+    return config

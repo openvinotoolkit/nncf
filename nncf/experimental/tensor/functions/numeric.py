@@ -10,12 +10,17 @@
 # limitations under the License.
 
 import functools
+from collections import deque
 from typing import Any, Callable, List, Optional, Tuple, Union
 
+import numpy as np
+
+from nncf.experimental.tensor.definitions import TensorBackend
 from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.experimental.tensor.definitions import TensorDeviceType
 from nncf.experimental.tensor.definitions import TypeInfo
 from nncf.experimental.tensor.functions.dispatcher import dispatch_list
+from nncf.experimental.tensor.functions.dispatcher import get_numeric_backend_fn
 from nncf.experimental.tensor.functions.dispatcher import tensor_guard
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.experimental.tensor.tensor import unwrap_tensor_data
@@ -31,6 +36,18 @@ def device(a: Tensor) -> TensorDeviceType:
     :return: The device of the tensor.
     """
     return device(a.data)
+
+
+@functools.singledispatch
+@tensor_guard
+def backend(a: Tensor) -> TensorBackend:
+    """
+    Return the backend of the tensor.
+
+    :param a: The input tensor.
+    :return: The backend of the tensor.
+    """
+    return backend(a.data)
 
 
 @functools.singledispatch
@@ -320,9 +337,23 @@ def stack(x: List[Tensor], axis: int = 0) -> Tensor:
     :param axis: The axis to stack along.
     :return: Stacked Tensor.
     """
-    if isinstance(x, List):
+    if isinstance(x, (list, deque)):
         return Tensor(dispatch_list(stack, x, axis=axis))
     raise NotImplementedError(f"Function `stack` is not implemented for {type(x)}")
+
+
+@functools.singledispatch
+def concatenate(x: List[Tensor], axis: int = 0) -> Tensor:
+    """
+    Join a sequence of arrays along an existing axis.
+
+    :param x: The arrays must have the same shape, except in the dimension corresponding to axis.
+    :param axis: The axis along which the arrays will be joined. Default is 0.
+    :return: The concatenated array.
+    """
+    if isinstance(x, (list, deque)):
+        return Tensor(dispatch_list(concatenate, x, axis=axis))
+    raise NotImplementedError(f"Function `concatenate` is not implemented for {type(x)}")
 
 
 @functools.singledispatch
@@ -368,6 +399,20 @@ def mean(
     :return: Array with moved axes.
     """
     return Tensor(mean(a.data, axis, keepdims, dtype))
+
+
+@functools.singledispatch
+@tensor_guard
+def median(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
+    """
+    Compute the arithmetic median along the specified axis.
+
+    :param a: Array containing numbers whose median is desired.
+    :param axis: Axis or axes along which the medians are computed.
+    :param keepdims: Destination positions for each of the original axes. These must also be unique.
+    :return: Array with moved axes.
+    """
+    return Tensor(median(a.data, axis, keepdims))
 
 
 @functools.singledispatch
@@ -421,6 +466,28 @@ def quantile(
         to the quantiles, other axes of the result correspond to the quantiles values.
     """
     return Tensor(quantile(a.data, q, axis, keepdims))
+
+
+@functools.singledispatch
+@tensor_guard
+def percentile(
+    tensor: Tensor,
+    q: Union[float, List[float]],
+    axis: Union[int, Tuple[int, ...], List[int]],
+    keepdims: bool = False,
+) -> Tensor:
+    """
+    Compute the percentile(s) of the data along the specified axis.
+
+    :param tensor: Given NNCFTensor.
+    :params q: percentile or sequence of percentiles to compute, which must be between
+        0 and 100 inclusive.
+    :param axis: Axis or axes along which the percentiles are computed.
+    :param keepdims: If True, the axes which are reduced are left in the result
+        as dimensions with size one.
+    :returns: The percentile(s) of the tensor elements.
+    """
+    return Tensor(percentile(tensor.data, q, axis, keepdims))
 
 
 @functools.singledispatch
@@ -599,8 +666,8 @@ def transpose(a: Tensor, axes: Optional[Tuple[int, ...]] = None) -> Tensor:
     Returns an array with axes transposed.
 
     :param a: The input tensor.
-    :param axes: list of permutations or None.
-    :return: array with permuted axes.
+    :param axes: List of permutations or None.
+    :return: A tensor with permuted axes.
     """
     return Tensor(transpose(a.data, axes=axes))
 
@@ -612,10 +679,167 @@ def argsort(a: Tensor, axis: int = -1, descending: bool = False, stable: bool = 
     Returns the indices that would sort an array.
 
     :param a: The input tensor.
-    :param axis: Axis along which to sort. The default is -1 (the last axis). If None, the flattened array is used.
+    :param axis: Axis along which to sort. The default is -1 (the last axis).
     :param descending: Controls the sorting order (ascending or descending).
     :param stable: If True then the sorting routine becomes stable, preserving the order of equivalent elements.
         If False, the relative order of values which compare equal is not guaranteed. True is slower.
-    :return: Array of indices that sort a along the specified axis.
+    :return: A tensor of indices that sort a along the specified axis.
     """
-    return Tensor(argsort(a.data, axis=axis))
+    return Tensor(argsort(a.data, axis=axis, descending=descending, stable=stable))
+
+
+@functools.singledispatch
+@tensor_guard
+def diag(a: Tensor, k: int = 0) -> Tensor:
+    """
+    Returns the indices that would sort an array.
+
+    :param a: The input tensor.
+    :param k: Diagonal in question. The default is 0. Use k > 0 for diagonals above the main diagonal, and k < 0
+        for diagonals below the main diagonal.
+    :return: A tensor with the extracted diagonal.
+    """
+    return Tensor(diag(a.data, k=k))
+
+
+@functools.singledispatch
+@tensor_guard
+def logical_or(x1: Tensor, x2: Tensor) -> Tensor:
+    """
+    Computes the element-wise logical OR of the given input tensors.
+    Zeros are treated as False and nonzeros are treated as True.
+
+    :param x1: The input tensor.
+    :param x2: The tensor to compute or with.
+    :return: Result of elementwise or operation between input_ and other tensor.
+    """
+    return Tensor(logical_or(x1.data, unwrap_tensor_data(x2)))
+
+
+@functools.singledispatch
+@tensor_guard
+def masked_mean(x: Tensor, mask: Tensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> Tensor:
+    """
+    Computes the masked mean of elements across given dimensions of Tensor.
+
+    :param x: Tensor to reduce.
+    :param mask: Boolean tensor that have the same shape as x. If an element in mask is True -
+        it is skipped during the aggregation.
+    :param axis: The dimensions to reduce.
+    :param keepdims: If True, the axes which are reduced are left in the result
+        as dimensions with size one.
+    :return: Reduced Tensor.
+    """
+    return Tensor(masked_mean(x.data, mask.data, axis, keepdims))
+
+
+@functools.singledispatch
+@tensor_guard
+def masked_median(x: Tensor, mask: Tensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> Tensor:
+    """
+    Computes the masked median of elements across given dimensions of Tensor.
+
+    :param x: Tensor to reduce.
+    :param axis: The dimensions to reduce.
+    :param mask: Boolean tensor that have the same shape as x. If an element in mask is True -
+        it is skipped during the aggregation.
+    :param keepdims: If True, the axes which are reduced are left in the result
+        as dimensions with size one.
+    :return: Reduced Tensor.
+    """
+    return Tensor(masked_median(x.data, mask.data, axis, keepdims))
+
+
+@functools.singledispatch
+@tensor_guard
+def clone(a: Tensor) -> Tensor:
+    """
+    Return a copy of the tensor.
+
+    :param a: The input tensor.
+    :return: The copied tensor.
+    """
+    return Tensor(clone(a.data))
+
+
+@functools.singledispatch
+@tensor_guard
+def searchsorted(a: Tensor, v: Tensor, side: str = "left", sorter: Optional[Tensor] = None) -> Tensor:
+    """
+    Find indices where elements should be inserted to maintain order.
+
+    Find the indices into a sorted tensor a such that, if the corresponding elements in v were inserted
+    before the indices, the order of a would be preserved.
+
+    :param a: 1-D tensor. If sorter is None, then it must be sorted in ascending order,
+        otherwise sorter must be an array of indices that sort it.
+    :param v: Values to insert into a.
+    :param side: If 'left', the index of the first suitable location found is given.
+        If 'right', return the last such index. Defaults to 'left'.
+    :param sorter: Optional array of integer indices that sort array a into ascending order, defaults to None.
+    :return: Tensor of insertion points with the same shape as v.
+    """
+    return Tensor(searchsorted(a.data, v.data, side, unwrap_tensor_data(sorter)))
+
+
+def zeros(
+    shape: Tuple[int, ...],
+    *,
+    backend: TensorBackend,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> Tensor:
+    """
+    Return a new array of given shape and type, filled with zeros.
+
+    :param shape: Shape of the new array
+    :param backend: The backend type for which the zero tensor is required.
+    :param dtype: The data type of the returned tensor, If dtype is not given,
+        then the default data type is determined by backend.
+    :param device: The device on which the tensor will be allocated, If device is not given,
+        then the default device is determined by backend.
+    :return: A tensor filled with zeros of the specified shape and data type.
+    """
+    return Tensor(get_numeric_backend_fn("zeros", backend)(shape, dtype=dtype, device=device))
+
+
+def arange(
+    start: float,
+    end: Optional[float] = None,
+    step: float = 1,
+    *,
+    backend: TensorBackend,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> Tensor:
+    """
+    Returns a tensor with a sequence of numbers in the specified range.
+
+    This function generates a tensor containing a sequence of numbers starting from
+    `start` to `end` with a step size of `step`, using the specified backend.
+
+    :param start: The starting value of the sequence.
+    :param end: The end value of the sequence (exclusive). If None, the sequence will start at 0 and end at `start`.
+    :param step: The step size between each value in the sequence, defaults to 1.
+    :param backend: The backend type for which the tensor is required.
+    :param dtype: The data type of the returned tensor If dtype is not given, infer the data type
+        from the other input arguments.
+    :param device: The device on which the tensor will be allocated, If device is not given,
+        then the default device is determined by backend.
+    :return: A tensor containing the sequence of numbers.
+    """
+    args = (0, start, step) if end is None else (start, end, step)
+    return Tensor(get_numeric_backend_fn("arange", backend)(*args, dtype=dtype, device=device))
+
+
+def from_numpy(ndarray: np.ndarray, *, backend: TensorBackend) -> Tensor:
+    """
+    Creates a Tensor from a numpy.ndarray, sharing the memory with the given NumPy array.
+
+    :param ndarray: The numpy.ndarray to share memory with.
+    :param backend: The backend type for which the tensor is required.
+    :return: A Tensor object that shares memory with the NumPy array.
+    """
+    if backend == TensorBackend.numpy:
+        return Tensor(ndarray)
+    return Tensor(get_numeric_backend_fn("from_numpy", backend)(ndarray))

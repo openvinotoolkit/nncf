@@ -87,7 +87,7 @@ class TFLayerNoopMetatype(TFLayerMetatype):
         return [cls.name]
 
 
-@KERAS_LAYER_METATYPES.register()
+@KERAS_LAYER_METATYPES.register(is_subtype=True)
 class TFDepthwiseConv1DSubLayerMetatype(TFLayerWithWeightsMetatype):
     name = "DepthwiseConv1D(Conv1DKerasLayer)"
     keras_layer_names = ["Conv1D", "Convolution1D"]
@@ -112,7 +112,7 @@ class TFConv1DLayerMetatype(TFLayerWithWeightsMetatype):
     bias_attr_name = "bias"
 
 
-@KERAS_LAYER_METATYPES.register()
+@KERAS_LAYER_METATYPES.register(is_subtype=True)
 class TFDepthwiseConv2DSubLayerMetatype(TFLayerWithWeightsMetatype):
     name = "DepthwiseConv2D(Conv2DKerasLayer)"
     keras_layer_names = ["Conv2D", "Convolution2D"]
@@ -137,7 +137,7 @@ class TFConv2DLayerMetatype(TFLayerWithWeightsMetatype):
     bias_attr_name = "bias"
 
 
-@KERAS_LAYER_METATYPES.register()
+@KERAS_LAYER_METATYPES.register(is_subtype=True)
 class TFDepthwiseConv3DSubLayerMetatype(TFLayerWithWeightsMetatype):
     name = "DepthwiseConv3D(Conv3DKerasLayer)"
     keras_layer_names = ["Conv3D", "Convolution3D"]

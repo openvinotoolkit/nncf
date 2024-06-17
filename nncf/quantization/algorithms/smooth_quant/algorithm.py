@@ -161,7 +161,8 @@ class SmoothQuant(Algorithm):
                 weight_update_command = self._backend_entity.weight_update_command(node_to_smooth, scaled_weight.data)
                 transformation_layout.register(weight_update_command)
 
-            activations_shape = graph.get_output_edges(source_node)[source_output_port_id].tensor_shape
+            activations_by_output_id = {e.output_port_id: e for e in graph.get_output_edges(source_node)}
+            activations_shape = activations_by_output_id[source_output_port_id].tensor_shape
             activation_scale = self._calculate_activation_scale(best_scale, activations_shape, nodes, graph)
 
             scale_node_name = self._create_scale_node_name(source_node.node_name, source_output_port_id)

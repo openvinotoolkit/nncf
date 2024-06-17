@@ -461,7 +461,9 @@ class MergedTensorCollector(TensorCollector):
             self._aggregators[key] = unique_aggregator
 
 
-##################################################Reducers##################################################
+##################################################
+# Reducers
+##################################################
 
 
 class NoopReducer(TensorReducerBase):
@@ -578,7 +580,9 @@ class MeanPerChReducer(TensorReducerBase):
         return hash((self.__class__.__name__, self.inplace, self._reduction_axes, self._channel_axis))
 
 
-##################################################Aggregators##################################################
+##################################################
+# Aggregators
+##################################################
 
 
 class NoopAggregator(AggregatorBase):

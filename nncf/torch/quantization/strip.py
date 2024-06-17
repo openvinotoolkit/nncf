@@ -139,6 +139,9 @@ def remove_disabled_quantizers(model: NNCFNetwork) -> NNCFNetwork:
             if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
                 external_quantizers.pop(key)
 
+    if not model.nncf.replace_modules:
+        return model
+
     for node in model.nncf.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
             continue

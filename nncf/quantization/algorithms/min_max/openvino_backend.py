@@ -42,6 +42,7 @@ from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.range_estimator import AggregatorType
 
 
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -121,6 +122,15 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
+    def create_unified_scales_quantizers_insertion_commands(
+        nncf_graph: NNCFGraph,
+        target_points: List[OVTargetPoint],
+        quantizer_config: QuantizerConfig,
+        parameters: FakeQuantizeParameters,
+    ) -> List[OVQuantizerInsertionCommand]:
+        return [OVQuantizerInsertionCommand(target_point, parameters) for target_point in target_points]
+
+    @staticmethod
     def create_convert_insertion_command(
         target_point: OVTargetPoint,
         parameters: FakeConvertParameters,
@@ -186,11 +196,14 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 statistic_type = StatisticsType.ABS_MAX
             reducer = OV_REDUCERS_MAP[statistic_type](**kwargs)
 
-            aggregator = AGGREGATORS_MAP[params.aggregator_type](
-                num_samples=num_samples,
-                aggregation_axes=aggregation_axes,
-                tensor_processor=OVNNCFCollectorTensorProcessor,
-            )
+            kwargs = {
+                "num_samples": num_samples,
+                "aggregation_axes": aggregation_axes,
+                "tensor_processor": OVNNCFCollectorTensorProcessor,
+            }
+            if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
+                kwargs.update({"quantile": params.quantile_outlier_prob})
+            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
 
             collector.register_statistic_branch(container_key, reducer, aggregator)
         return collector

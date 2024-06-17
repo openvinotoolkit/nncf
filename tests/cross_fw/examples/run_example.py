@@ -212,6 +212,27 @@ def set_torch_cuda_seed(seed: int = 42):
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
+def quantization_aware_training_torch_anomalib():
+    from examples.quantization_aware_training.torch.anomalib.main import main as anomalib_main
+
+    # Set manual seed and determenistic cuda mode to make the test determenistic
+    set_torch_cuda_seed()
+    results = anomalib_main()
+
+    return {
+        "fp32_f1score": float(results[0]),
+        "int8_init_f1score": float(results[1]),
+        "int8_f1score": float(results[2]),
+        "accuracy_drop": float(results[0] - results[2]),
+        "fp32_fps": results[3],
+        "int8_fps": results[4],
+        "performance_speed_up": results[4] / results[3],
+        "fp32_model_size": results[5],
+        "int8_model_size": results[6],
+        "model_compression_rate": results[5] / results[6],
+    }
+
+
 def main(argv):
     parser = ArgumentParser()
     parser.add_argument("--name", help="Example name", required=True)

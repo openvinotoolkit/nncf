@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import contextlib
 import numbers
 from abc import ABC
@@ -38,8 +39,11 @@ from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.initialization import register_default_init_args
+from nncf.torch.layer_utils import StatefullModuleInterface
 from nncf.torch.layers import NNCF_MODULES_MAP
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.module_operations import UpdateWeight
@@ -172,6 +176,16 @@ class BasicConvTestModel(nn.Module):
 
 
 class TwoConvTestModel(nn.Module):
+    INPUT_SHAPE = [1, 1, 4, 4]
+    NNCF_CONV_NODES_NAMES = [
+        "TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
+        "TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0",
+    ]
+    CONV_NODES_NAMES = [
+        "TwoConvTestModel/Sequential[features]/Sequential[0]/Conv2d[0]/conv2d_0",
+        "TwoConvTestModel/Sequential[features]/Sequential[1]/Conv2d[0]/conv2d_0",
+    ]
+
     def __init__(self):
         super().__init__()
         self.features = []
@@ -197,6 +211,30 @@ class TwoConvTestModel(nn.Module):
     @property
     def nz_bias_num(self):
         return 2
+
+
+class TwoSharedConvTestModel(nn.Module):
+    INPUT_SHAPE = [1, 1, 4, 4]
+    NNCF_CONV_NODES_NAMES = [
+        "TwoSharedConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
+        "TwoSharedConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0",
+    ]
+    CONV_NODES_NAMES = [
+        "TwoSharedConvTestModel/Sequential[features]/Sequential[0]/Conv2d[0]/conv2d_0",
+        "TwoSharedConvTestModel/Sequential[features]/Sequential[1]/Conv2d[0]/conv2d_0",
+    ]
+
+    def __init__(self):
+        super().__init__()
+        self.features = []
+        self.features.append(nn.Sequential(create_conv(1, 1, 1, -1, -2)))
+        self.features.append(nn.Sequential(create_conv(1, 1, 1, 0, 0)))
+        self.features = nn.Sequential(*self.features)
+
+    def forward(self, x):
+        for _ in range(2):
+            x = self.features(x)
+        return x
 
 
 class LeNet(nn.Module):
@@ -226,6 +264,79 @@ class LeNet(nn.Module):
         for s in size:
             num_features *= s
         return num_features
+
+
+class DummyOpWithState(torch.nn.Module, StatefullModuleInterface):
+    def __init__(self, state: str):
+        super().__init__()
+        self._state = state
+        # Keep dummy param to check state dict
+        self._dummy_param = torch.nn.Parameter(
+            torch.tensor(
+                0.0,
+            )
+        )
+
+    def forward(self, *args):
+        if len(args) == 1:
+            return args[0] + self._dummy_param
+        # To work correctly with
+        # TargetType.PRE_LAYER_OPERATION
+        # TargetType.POST_LAYER_OPERATION
+        args[0].weight + self._dummy_param
+        return None
+
+    def get_config(self):
+        return self._state
+
+    @classmethod
+    def from_config(cls, state: str):
+        return cls(state)
+
+
+def commands_are_equal(
+    command_left: Union[PTInsertionCommand, PTSharedFnInsertionCommand],
+    command_right: Union[PTInsertionCommand, PTSharedFnInsertionCommand],
+    check_priority: bool = True,
+    check_hooks_group_name: bool = True,
+    check_fn_ref=True,
+) -> bool:
+    """
+    Returns True if given commands are equal and False elsewhere.
+
+    :param command_left: The first command.
+    :param command_right: The second command.
+    :param check_priority: Whether to check insertion priority or not.
+    :param check_hooks_group_name: Whether to check hooks group name or not.
+    :param check_fn_ref: Whether to check fn by reference or not.
+    :returns: True if given commands are equal and False elsewhere.
+    """
+    if type(command_right) is not type(command_left):
+        return False
+
+    # Check reference to functions are equal.
+    if check_fn_ref and command_right.fn is not command_left.fn:
+        return False
+    if check_hooks_group_name and command_right.hooks_group_name != command_left.hooks_group_name:
+        return False
+    if check_priority and command_right.priority != command_left.priority:
+        return False
+
+    if isinstance(command_right, PTInsertionCommand):
+        if command_left.target_point != command_right.target_point:
+            return False
+    elif isinstance(command_right, PTSharedFnInsertionCommand):
+        if not all(a == b for a, b in zip(command_left.target_points, command_right.target_points)):
+            return False
+        if (
+            command_right.target_points != command_left.target_points
+            or command_right.op_name != command_left.op_name
+            or command_right.compression_module_type != command_left.compression_module_type
+        ):
+            return False
+    else:
+        raise RuntimeError()
+    return True
 
 
 class SharedConv(nn.Module):
@@ -363,6 +474,24 @@ class EmptyModel(nn.Module):
 
     def forward(self, *input_, **kwargs):
         return None
+
+
+class ModelWithReloadedForward(nn.Module):
+    """
+    Model accepts tensor or a dict in format
+    {"tensor": input_tensor}
+    """
+
+    INPUT_SHAPE = [1, 1]
+
+    def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(1, 1)
+
+    def forward(self, x):
+        if isinstance(x, dict):
+            self.forward(x["tensor"])
+        return self.linear(x)
 
 
 def check_correct_nncf_modules_replacement(
@@ -566,20 +695,33 @@ class HookChecker:
         """
         Adds references hooks.
         """
-        op_address = self._convert_to_op_address(target_type, target_node_name, input_port_id)
+        op_address = self._convert_to_op_address(
+            target_type, target_node_name, input_port_id, self._target_model.nncf.replace_modules
+        )
         self._ref_hooks[target_type].update({op_address: ref_hooks})
 
-    def _convert_to_op_address(self, target_type: TargetType, target_node_name: str, input_port_id: int) -> Any:
+    def _convert_to_op_address(
+        self, target_type: TargetType, target_node_name: str, input_port_id: int, replace_modules: bool
+    ) -> Any:
         address_map = self._target_model.nncf.get_node_to_op_address_mapping()
         address = address_map[target_node_name]
-        if target_type == TargetType.OPERATOR_PRE_HOOK:
-            address = PreHookId(address, input_port_id)
-        elif target_type in [
-            TargetType.OPERATION_WITH_WEIGHTS,
-            TargetType.PRE_LAYER_OPERATION,
-            TargetType.POST_LAYER_OPERATION,
-        ]:
-            address = getattr(self._target_model, self._nncf_module_attr_name)
+        if replace_modules:
+            if target_type == TargetType.OPERATOR_PRE_HOOK:
+                address = PreHookId(address, input_port_id)
+            elif target_type in [
+                TargetType.OPERATION_WITH_WEIGHTS,
+                TargetType.PRE_LAYER_OPERATION,
+                TargetType.POST_LAYER_OPERATION,
+            ]:
+                address = getattr(self._target_model, self._nncf_module_attr_name)
+        else:
+            if target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
+                address = PreHookId(address, input_port_id)
+            elif target_type in [
+                TargetType.PRE_LAYER_OPERATION,
+                TargetType.POST_LAYER_OPERATION,
+            ]:
+                address = getattr(self._target_model, self._nncf_module_attr_name)
         return address
 
     def check_with_reference(self):

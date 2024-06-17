@@ -42,6 +42,7 @@ from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 
@@ -118,7 +119,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: ONNXTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ):
+    ) -> ONNXQuantizerInsertionCommand:
         tensor_type = np.int8 if np.any(parameters.input_low.data < 0) else np.uint8
         is_weight = target_point.is_weight_target_point()
         if is_weight:
@@ -130,6 +131,20 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             axis = ONNXMinMaxAlgoBackend.get_weight_quantization_axes(node, target_point) if is_weight else (1,)
         onnx_parameters = convert_fq_params_to_onnx_params(parameters, quantizer_config.num_bits, tensor_type, axis)
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
+
+    @staticmethod
+    def create_unified_scales_quantizers_insertion_commands(
+        nncf_graph: NNCFGraph,
+        target_points: List[ONNXTargetPoint],
+        quantizer_config: QuantizerConfig,
+        parameters: FakeQuantizeParameters,
+    ) -> List[ONNXQuantizerInsertionCommand]:
+        return [
+            ONNXMinMaxAlgoBackend.create_quantizer_insertion_command(
+                nncf_graph, target_point, quantizer_config, parameters
+            )
+            for target_point in target_points
+        ]
 
     @staticmethod
     def create_convert_insertion_command(
@@ -197,11 +212,14 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 statistic_type = StatisticsType.ABS_MAX
             reducer = ONNX_REDUCERS_MAP[statistic_type](**kwargs)
 
-            aggregator = AGGREGATORS_MAP[params.aggregator_type](
-                num_samples=num_samples,
-                aggregation_axes=aggregation_axes,
-                tensor_processor=ONNXNNCFCollectorTensorProcessor,
-            )
+            kwargs = {
+                "num_samples": num_samples,
+                "aggregation_axes": aggregation_axes,
+                "tensor_processor": ONNXNNCFCollectorTensorProcessor,
+            }
+            if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
+                kwargs.update({"quantile": params.quantile_outlier_prob})
+            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
 
             collector.register_statistic_branch(container_key, reducer, aggregator)
         return collector

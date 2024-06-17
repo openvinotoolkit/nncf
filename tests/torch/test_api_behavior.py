@@ -24,7 +24,7 @@ from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import OnesDatasetMock
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
-from tests.torch.test_nncf_network import SimplestModel
+from tests.torch.nncf_network.helpers import SimplestModel
 
 INPUT_SAMPLE_SIZE = [1, 1, 4, 4]
 CONFIG_WITH_ALL_INIT_TYPES = {
@@ -122,7 +122,10 @@ class DeviceCheckingModel(torch.nn.Module):
         return self.model.forward(x)
 
 
-@pytest.mark.parametrize("original_device", ["cpu", "cuda", "cuda:0"])
+@pytest.mark.parametrize(
+    "original_device",
+    ["cpu", pytest.param("cuda", marks=pytest.mark.cuda), pytest.param("cuda:0", marks=pytest.mark.cuda)],
+)
 def test_model_is_inited_with_own_device_by_default(nncf_config_with_default_init_args, original_device):
     if not torch.cuda.is_available() and "cuda" in original_device:
         pytest.skip("Skipping for CPU-only setups")

@@ -14,18 +14,20 @@ jobs:
   common:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
-          python-version: 3.8.10
+          python-version: 3.8.18
+          cache: pip
       - name: Install NNCF and test requirements
         run: make install-common-test
       - name: Run common precommit test scope
         run: make test-common
         env:
           NNCF_COVERAGE: 1
+          NUM_WORKERS: 2
       - name: Upload coverage report as artifact
         uses: actions/upload-artifact@v3
         with:
@@ -38,20 +40,21 @@ jobs:
           name: coverage_common
           flags: COMMON
   onnx:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-20.04-8-cores
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
-          python-version: 3.8.10
+          python-version: 3.8.18
       - name: Install NNCF and test requirements
         run: make install-onnx-test
       - name: Run ONNX precommit test scope
         run: make test-onnx
         env:
           NNCF_COVERAGE: 1
+          NUM_WORKERS: 4
       - name: Upload coverage report as artifact
         uses: actions/upload-artifact@v3
         with:
@@ -64,20 +67,22 @@ jobs:
           name: coverage_onnx
           flags: ONNX
   openvino:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-20.04-8-cores
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
-          python-version: 3.8.10
+          python-version: 3.8.18
+          cache: pip
       - name: Install NNCF and test requirements
         run: make install-openvino-test
       - name: Run OV precommit test scope
         run: make test-openvino
         env:
           NNCF_COVERAGE: 1
+          NUM_WORKERS: 4
       - name: Upload coverage report as artifact
         uses: actions/upload-artifact@v3
         with:
@@ -89,3 +94,100 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           name: coverage_openvino
           flags: OPENVINO
+  pytorch-cpu:
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-20.04-8-cores
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install dependencies
+        run : |
+          sudo apt-get update
+          sudo apt-get --assume-yes install gcc g++ build-essential ninja-build libgl1-mesa-dev libglib2.0-0
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.8.18
+          cache: pip
+      - name: Runner info
+        continue-on-error: true
+        run: |
+          cat /etc/*release
+          cat /proc/cpuinfo
+      - name: Install NNCF and test requirements
+        run: make install-torch-test
+      - name: Run PyTorch precommit test scope
+        run: |
+          make test-torch-cpu
+        env:
+          NUM_WORKERS: 4
+  pytorch-cuda:
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install dependencies
+        run : |
+          sudo apt-get update
+          sudo apt-get --assume-yes install gcc ninja-build libgl1-mesa-dev libglib2.0-0
+      - name: Download CUDA
+        run: |
+          wget -q https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_530.30.02_linux.run
+          sudo sh cuda_12.1.1_530.30.02_linux.run --toolkit --silent
+      - name: Runner info
+        continue-on-error: true
+        run: |
+          export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}
+          export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+          nvidia-smi
+          cat /proc/cpuinfo
+          nvcc --version
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.8.18
+          cache: pip
+      - name: Install NNCF and test requirements
+        run: make install-torch-test
+      - name: Check CUDA
+        run: |
+          python -c "import torch; print(torch.cuda.is_available())"
+      - name: Run PyTorch precommit test scope
+        run: |
+          export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}
+          export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+          make test-torch-cuda
+  tensorflow:
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-20.04-8-cores
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.8.18
+          cache: pip
+      - name: Install NNCF and test requirements
+        run: make install-tensorflow-test
+      - name: Run TensorFlow precommit test scope
+        run: |
+          make test-tensorflow
+        env:
+          NUM_WORKERS: 6
