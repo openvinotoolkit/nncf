@@ -34,6 +34,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import resh
 from nncf.scopes import IgnoredScope
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.common import get_openvino_major_minor_version
+from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
@@ -713,6 +714,23 @@ def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
     dataset = Dataset([np.ones([8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
+
+
+@pytest.mark.parametrize("mode", INT4_MODES)
+@pytest.mark.parametrize("with_multiply", (True, False))
+def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(mode, with_multiply):
+    n_layers = 8
+    n_awq_target = n_layers - 1  # first MatMul is always int8
+    model = AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers).ov_model
+    dataset = Dataset([np.ones([8, 8])])
+
+    compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
+
+    awq_num = 0
+    for op in model.get_ops():
+        if op.get_type_name() == "Constant" and "awq" in op.get_friendly_name():
+            awq_num += 1
+    assert awq_num == n_awq_target
 
 
 @pytest.mark.parametrize("mode", INT4_MODES)
