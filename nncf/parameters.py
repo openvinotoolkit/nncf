@@ -84,6 +84,7 @@ class CompressWeightsMode(StrEnum):
         https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization
     :param NF4: The the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
     :param INT8: Mode is deprecated and will be removed in future releases. Please use `INT8_ASYM` instead.
+    :param E2M1: FP4 format from "OCP Microscaling Formats (MX) Specification" Version 1.0.
     """
 
     INT8_SYM = "int8_sym"
@@ -92,6 +93,7 @@ class CompressWeightsMode(StrEnum):
     INT4_ASYM = "int4_asym"
     NF4 = "nf4"
     INT8 = "int8"  # Deprecated mode
+    E2M1 = "e2m1"
 
 
 @api(canonical_alias="nncf.SensitivityMetric")

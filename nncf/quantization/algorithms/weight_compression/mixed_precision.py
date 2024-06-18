@@ -33,7 +33,8 @@ THE_LOWEST_SENSITIVITY = 0
 
 class MixedPrecisionCriterion:
     """
-    Assigns mixed quantization scheme (e.g. uniform int8 or non-uniform nf4) for weights based on some criteria.
+    Assigns mixed quantization scheme (e.g. uniform int8 or uniform int4/non-uniform fp4)
+    for weights based on some criteria.
     """
 
     def __init__(

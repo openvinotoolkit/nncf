@@ -359,6 +359,7 @@ def compress_weights(
         INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
             with a typical non-fixed zero point.
         NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
+        E2M1 is the same as INT4_SYM mode, but primary precision is E2M1 data type without zero point.
     :type mode: nncf.CompressWeightsMode
     :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
         and the rest to INT8_ASYM).
@@ -436,12 +437,14 @@ def compress_weights(
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import compress_weights_impl as ov_compress_weights_impl
 
-        if any((awq, scale_estimation)) and (dataset is None or mode == CompressWeightsMode.NF4 or group_size == -1):
+        if any((awq, scale_estimation)) and (
+            dataset is None or mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1] or group_size == -1
+        ):
             raise AttributeError(
                 "Scale estimation or AWQ algorithm defined, but dataset is None or mode is NF4 or group_size < 0."
             )
-        if gptq and (dataset is None or group_size == -1):
-            raise AttributeError("GPTQ algorithm defined, but dataset is None or group_size < 0.")
+        if gptq and (dataset is None or group_size == -1 or mode == CompressWeightsMode.E2M1):
+            raise AttributeError("GPTQ algorithm defined, but dataset is None or group_size < 0 or mode is E2M1.")
 
         if gptq and scale_estimation:
             raise AttributeError(
