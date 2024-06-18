@@ -18,7 +18,6 @@ import openvino as ov
 import torch
 from packaging import version
 
-import nncf
 from nncf import Dataset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
@@ -99,7 +98,7 @@ def get_actual_reference_for_current_openvino(rel_path: Path) -> Path:
 
     :param rel_path: Relative path to reference file.
 
-    :return: Path to reference file or raise RuntimeError.
+    :return: Path to a reference file.
     """
     root_dir = OPENVINO_NATIVE_TEST_ROOT / "data"
     current_ov_version = version.parse(get_openvino_version())
@@ -119,5 +118,4 @@ def get_actual_reference_for_current_openvino(rel_path: Path) -> Path:
         file_name = root_version / rel_path
         if file_name.is_file():
             return file_name
-
-    raise nncf.InternalError(f"Not found file {root_dir}/{current_ov_version}/{rel_path}")
+    return file_name
