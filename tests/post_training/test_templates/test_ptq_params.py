@@ -391,7 +391,7 @@ class TemplateTestPTQParams:
         )
         algo._backend_entity = self.get_algo_backend()
         if validate_scopes:
-            with pytest.raises(nncf.ValidationError, match="Ignored nodes with name"):
+            with pytest.raises(nncf.ValidationError, match="Ignored nodes that matches names"):
                 algo._get_ignored_names(nncf_graph, inference_nncf_graph, ignored_patterns)
         else:
             algo._get_ignored_names(nncf_graph, inference_nncf_graph, ignored_patterns)

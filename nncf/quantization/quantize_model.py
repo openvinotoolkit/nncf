@@ -42,7 +42,7 @@ TTensor = TypeVar("TTensor")
 BATCHWISE_STATISTICS_WARNING = (
     "For the particular model the batchwise statistics collection can lead to inaccurate statistics. "
     "If the accuracy degradation after compression is unsatisfactory, then "
-    "the recomendation is to turn off batchwise statistics. If the results are still unsatisfactory, "
+    "the recommendation is to turn off batchwise statistics. If the results are still unsatisfactory, "
     "provide a dataloader with batch_size = 1 to the calibration dataset."
 )
 
@@ -54,19 +54,38 @@ def warning_model_no_batchwise_support(
     no_batchwise_support_metatypes: List[OperatorMetatype],
 ) -> None:
     """
-    Prints the warning message if batchwise statistics could lead to a significant accuracy drop.
+    Logs when is_model_no_batchwise_support(...) returns True.
 
     :param graph: Model's NNCFGraph.
     :param advanced_quantization_parameters: AdvancedQuantizationParameters.
     :param model_type: Model type algorithm option.
     :param no_batchwise_support_metatypes: Meatypes having no batchwise statistics support.
     """
-    if (
+    if is_model_no_batchwise_support(
+        graph, advanced_quantization_parameters, model_type, no_batchwise_support_metatypes
+    ):
+        nncf_logger.warning(BATCHWISE_STATISTICS_WARNING)
+
+
+def is_model_no_batchwise_support(
+    graph: NNCFGraph,
+    advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
+    model_type: ModelType,
+    no_batchwise_support_metatypes: List[OperatorMetatype],
+) -> None:
+    """
+    Returns True if batchwise statistics could lead to a significant accuracy drop.
+
+    :param graph: Model's NNCFGraph.
+    :param advanced_quantization_parameters: AdvancedQuantizationParameters.
+    :param model_type: Model type algorithm option.
+    :param no_batchwise_support_metatypes: Meatypes having no batchwise statistics support.
+    """
+    return (
         advanced_quantization_parameters
         and advanced_quantization_parameters.batchwise_statistics
         and (graph.get_nodes_by_metatypes(no_batchwise_support_metatypes) or model_type == ModelType.TRANSFORMER)
-    ):
-        nncf_logger.warning(BATCHWISE_STATISTICS_WARNING)
+    )
 
 
 def _update_advanced_quantization_parameters(
