@@ -151,7 +151,7 @@ jobs:
       - name: Install dependencies
         run : |
           sudo apt-get update
-          sudo apt-get --assume-yes install gcc ninja-build libgl1-mesa-dev libglib2.0-0 wget make
+          sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
       - name: Download CUDA
         run: |
           wget -q https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_530.30.02_linux.run
