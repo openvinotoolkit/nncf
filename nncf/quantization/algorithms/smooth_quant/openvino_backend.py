@@ -28,6 +28,7 @@ from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
 from nncf.openvino.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.node_utils import get_activation_channel_axis
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
@@ -116,21 +117,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
-        channel_axis = 1
-
-        if port_id > 1:
-            raise nncf.InternalError(f"{node.metatype.name} can not take more than 2 input tensors.")
-
-        if (
-            node.metatype == OVMatMulMetatype
-            and node.layer_attributes is not None
-            and node.layer_attributes.input_attributes is not None
-            and "transpose" in node.layer_attributes.input_attributes
-        ):
-            transpose = node.layer_attributes.input_attributes["transpose"]
-            channel_axis = OVSmoothQuantAlgoBackend.calculate_port_based_channel_axis(port_id, transpose)
-
-        return channel_axis
+        return get_activation_channel_axis(node, port_id)
 
     @staticmethod
     def get_weight_channel_axis(node: NNCFNode) -> int:
@@ -139,10 +126,6 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
         weights_layout = get_linear_weights_layout_from_node(node)
         return weights_layout.index(OVLayoutElem.C_IN)
-
-    @staticmethod
-    def calculate_port_based_channel_axis(port_id: int, transpose: bool) -> int:
-        return -2 + port_id if transpose else -1 - port_id
 
     @staticmethod
     def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:

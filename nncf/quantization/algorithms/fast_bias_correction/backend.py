@@ -182,3 +182,14 @@ class FastBiasCorrectionAlgoBackend(ABC):
             Name of node to collect input statistics
             Name of node to collect output statistics
         """
+
+    @staticmethod
+    @abstractmethod
+    def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
+        """
+        Returns axis number of the activation tensor which correspond to it channel.
+
+        :param node: NNCFNode instance.
+        :param port_id: Specified input port id.
+        :return: Channel axis number.
+        """

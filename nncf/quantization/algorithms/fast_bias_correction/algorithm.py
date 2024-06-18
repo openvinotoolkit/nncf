@@ -150,6 +150,7 @@ class FastBiasCorrection(Algorithm):
                 continue
 
             in_node_name, out_node_name = self._backend_entity.get_node_names_for_input_output_statistics(node, graph)
+            input_port_id, _ = self._backend_entity.get_activation_port_ids_for_bias_node(node)
 
             input_fp, input_shape = self._get_fp_inputs(statistic_points, in_node_name)
             output_fp = self._get_fp_outputs(statistic_points, out_node_name)
@@ -161,20 +162,24 @@ class FastBiasCorrection(Algorithm):
 
             sub_input_name, sub_output_name = self._backend_entity.get_sub_input_output_names(extracted_model)
 
-            channel_axis = node.metatype.output_channel_axis
+            output_channel_axis = node.metatype.output_channel_axis
+            input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id)
             if bias_value.ndim > 1:
                 # Make index positive
-                channel_axis = range(bias_value.ndim)[channel_axis]
-            input_blob = self._backend_entity.create_input_data(input_shape, input_fp, sub_input_name, channel_axis)
+                output_channel_axis = range(bias_value.ndim)[output_channel_axis]
+                input_channel_axis = range(bias_value.ndim)[input_channel_axis]
+            input_blob = self._backend_entity.create_input_data(
+                input_shape, input_fp, sub_input_name, input_channel_axis
+            )
             bias_shift = self._get_bias_shift(
                 model=extracted_model,
                 input_blob=input_blob,
-                channel_axis=channel_axis,
+                output_channel_axis=output_channel_axis,
                 output_fp=output_fp,
                 output_name=sub_output_name,
             )
 
-            bias_shift = self._reshape_bias_shift(bias_shift, bias_value, channel_axis)
+            bias_shift = self._reshape_bias_shift(bias_shift, bias_value, output_channel_axis)
             updated_bias = bias_value + bias_shift
             magnitude = self._get_bias_shift_magnitude(bias_value, updated_bias)
 
@@ -306,7 +311,7 @@ class FastBiasCorrection(Algorithm):
         self,
         model: TModel,
         input_blob: Union[TTensor, Dict[str, TTensor]],
-        channel_axis: Tuple[int],
+        output_channel_axis: Tuple[int],
         output_fp: List[TTensor],
         output_name: str,
     ) -> TTensor:
@@ -316,7 +321,7 @@ class FastBiasCorrection(Algorithm):
         :param engine: Backend-specific engine instance for the model execution.
         :param model: Backend-specific sub-model for the execution.
         :param input_blob: Input data for the execution.
-        :param channel_axis: Channel axis for the raw data aggregation.
+        :param output_channel_axis: Channel axis for the raw output data aggregation.
         :param output_fp: Output data for the shift calculation.
         :param output_name: Name of the output tensor for the data collection.
         :return: Calculated bias shift.
@@ -324,7 +329,7 @@ class FastBiasCorrection(Algorithm):
         engine = EngineFactory.create(model)
         raw_output = engine.infer(input_blob)
         q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
-        q_outputs = mean_per_channel(q_outputs, channel_axis)
+        q_outputs = mean_per_channel(q_outputs, output_channel_axis)
         bias_shift = fns.stack(output_fp) - q_outputs
         return bias_shift
 
@@ -345,9 +350,11 @@ class FastBiasCorrection(Algorithm):
             post_layer_statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, out_node_name, output_port_id
             )
-            channel_axis = node.metatype.output_channel_axis
+            input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id)
 
-            self._add_statistic_point(statistic_container, pre_layer_statistic_point, channel_axis)
-            self._add_statistic_point(statistic_container, post_layer_statistic_point, channel_axis)
+            self._add_statistic_point(statistic_container, pre_layer_statistic_point, input_channel_axis)
+            self._add_statistic_point(
+                statistic_container, post_layer_statistic_point, node.metatype.output_channel_axis
+            )
 
         return statistic_container
