@@ -311,8 +311,10 @@ class MinMaxQuantization(Algorithm):
                 )
 
     def _reset_cache(self):
-        # It prevents the duplicate weight quantizers from being added.
-        # It can happen when you have layers that share the identical weight tensor.
+        self._quantization_target_points_to_qconfig: OrderedDict[TargetPoint, QuantizerConfig] = None
+        self._unified_scale_groups = None
+
+    def _init_cache(self):
         self._quantization_target_points_to_qconfig: OrderedDict[TargetPoint, QuantizerConfig] = (
             collections.OrderedDict()
         )
@@ -711,8 +713,9 @@ class MinMaxQuantization(Algorithm):
         :param nncf_graph: NNCFGraph instance.
         :return: Set of Quantization Target Points.
         """
-        if self._quantization_target_points_to_qconfig:
+        if self._quantization_target_points_to_qconfig is not None:
             return self._quantization_target_points_to_qconfig, self._unified_scale_groups
+        self._init_cache()
         backend = get_backend(model)
         device = self._target_device
         model_type = self._model_type
