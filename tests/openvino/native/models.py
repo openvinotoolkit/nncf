@@ -1058,3 +1058,21 @@ class StatefulModel(OVReferenceModel):
             model = ov.Model(results=[result], parameters=[input_data], name="TestModel")
 
         return model
+
+
+class IfModel_2(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 3, 4, 2], name="Input_1")
+        input_2 = opset.parameter([], dtype=bool, name="Cond_input")
+
+        then_body = ConvNotBiasModel().ov_model
+        else_body = FPModel().ov_model
+
+        if_node = opset.if_op(input_2)
+        if_node.set_then_body(then_body)
+        if_node.set_else_body(else_body)
+        if_node.set_input(input_1.outputs()[0], then_body.get_parameters()[0], else_body.get_parameters()[0])
+        if_node.set_output(then_body.results[0], else_body.results[0])
+        result = opset.result(if_node, name="Result")
+        model = ov.Model([result], [input_1, input_2])
+        return model
