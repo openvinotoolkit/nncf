@@ -48,7 +48,8 @@ def test_compress_weights(model_creator_func, ref_nodes):
 
     fq_nodes = get_nodes_by_type(quantized_model, type_name="FakeQuantize")
     assert len(fq_nodes) == len(ref_fqs_names)
-    for fq_name in fq_nodes:
+    for fq_node in fq_nodes:
+        fq_name = fq_node.get_friendly_name()
         assert fq_name in ref_fqs_names
 
     for op in quantized_model.get_ops():
@@ -76,7 +77,8 @@ def test_overflow_fix_applied(model_creator_func, ref_nodes):
 
     fq_nodes = get_nodes_by_type(quantized_model, type_name="FakeQuantize")
     assert len(fq_nodes) == len(ref_fqs_names)
-    for fq_name in fq_nodes:
+    for fq_node in fq_nodes:
+        fq_name = fq_node.get_friendly_name()
         assert fq_name in ref_fqs_names
 
     for op in quantized_model.get_ops():
