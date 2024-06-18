@@ -1,2 +1,2 @@
 anomalib==0.6.0
-openvino==2024.1
+openvino==2024.2
