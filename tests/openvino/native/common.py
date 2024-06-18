@@ -95,6 +95,8 @@ def get_openvino_version() -> str:
 def get_actual_reference_for_current_openvino(rel_path: Path) -> Path:
     """
     Get path to actual reference file.
+    If from all of the OpenVINO versions such rel_path is not existed,
+    than the path for current OpenVINO version is returned.
 
     :param rel_path: Relative path to reference file.
 
@@ -118,4 +120,4 @@ def get_actual_reference_for_current_openvino(rel_path: Path) -> Path:
         file_name = root_version / rel_path
         if file_name.is_file():
             return file_name
-    return file_name
+    return current_ov_version / rel_path
