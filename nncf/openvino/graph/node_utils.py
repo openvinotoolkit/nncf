@@ -470,25 +470,22 @@ def get_weighted_layer_attributes(
     return GenericWeightedLayerAttributes(weight_requires_grad=False, weight_shape=attrs.get("shape", None))
 
 
-def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
+def get_activation_channel_axis(node: NNCFNode, port_id: Optional[int] = None) -> int:
     """
     Returns axis number of the activation tensor which correspond to it channel.
 
     :param node: NNCFNode instance.
-    :param port_id: Specified input port id.
+    :param port_id: Specified input port id if needed.
     :return: Channel axis number.
     """
     channel_axis = 1
 
-    if port_id > 1:
-        raise nncf.InternalError(f"{node.metatype.name} can not take more than 2 input tensors.")
+    if node.metatype == OVMatMulMetatype:
+        if port_id is None:
+            raise nncf.InternalError("port_id is required for OVMatMulMetatype with transpose.")
+        if port_id > 1:
+            raise nncf.InternalError(f"{node.metatype.name} can not take more than 2 input tensors.")
 
-    if (
-        node.metatype == OVMatMulMetatype
-        and node.layer_attributes is not None
-        and node.layer_attributes.input_attributes is not None
-        and "transpose" in node.layer_attributes.input_attributes
-    ):
         transpose = node.layer_attributes.input_attributes["transpose"]
         channel_axis = calculate_port_based_channel_axis(port_id, transpose)
 
