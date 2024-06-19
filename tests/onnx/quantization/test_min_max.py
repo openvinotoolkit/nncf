@@ -91,4 +91,9 @@ class TestONNXCommonMinMax(TemplateTestCommonMinMax, TestONNXMinMaxAlgorithm):
 
     @staticmethod
     def get_no_quantized_ops_graph():
-        return NNCFGraphToTest(ONNXIdentityMetatype).nncf_graph
+        return NNCFGraphToTest(
+            ONNXIdentityMetatype,
+            conv_layer_attrs=ONNXLayerAttributes(),
+            input_layer_attrs=ONNXLayerAttributes(),
+            output_layer_attrs=ONNXLayerAttributes(),
+        ).nncf_graph
