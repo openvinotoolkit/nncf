@@ -51,6 +51,33 @@ class NNCFGraphToTest:
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
 
 
+class NNCFGraphToTestInputOutput:
+    def __init__(
+        self,
+        nncf_graph_cls=NNCFGraph,
+        input_layer_attrs=None,
+        output_layer_attrs=None,
+    ):
+        #       Original graph
+        #          Input_1
+        #             |
+        #          Output_1
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=input_layer_attrs),
+            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=output_layer_attrs),
+        ]
+        node_edges = [("Input_1", "Output_1")]
+        original_mock_graph = create_mock_graph(
+            nodes,
+            node_edges,
+            (
+                {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: (1, 3, 224, 224)},
+                {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: (1, 3, 224, 224)},
+            ),
+        )
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
+
+
 class NNCFGraphToTestDepthwiseConv:
     def __init__(
         self,

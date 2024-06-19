@@ -176,7 +176,6 @@ class TemplateTestCommonMinMax(TemplateTestMinMaxAlgorithm):
         "Returns backend."
 
     @staticmethod
-    @abstractmethod
     def get_no_quantized_ops_graph():
         "Returns a NNCFGraph with no operations for quantization."
 

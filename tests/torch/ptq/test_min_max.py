@@ -23,9 +23,9 @@ from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
-from nncf.torch.graph.operator_metatypes import PTTransposeMetatype
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from tests.post_training.test_templates.models import NNCFGraphToTest
+from tests.post_training.test_templates.models import NNCFGraphToTestInputOutput
 from tests.post_training.test_templates.test_min_max import TemplateTestCommonMinMax
 from tests.post_training.test_templates.test_min_max import TemplateTestGetChannelAxes
 from tests.post_training.test_templates.test_min_max import TemplateTestGetTargetPointShape
@@ -118,4 +118,4 @@ class TestTorchCommonMinMax(TemplateTestCommonMinMax, TestTorchMinMaxAlgorithm):
 
     @staticmethod
     def get_no_quantized_ops_graph():
-        return NNCFGraphToTest(PTTransposeMetatype, nncf_graph_cls=PTNNCFGraph).nncf_graph
+        return NNCFGraphToTestInputOutput(nncf_graph_cls=PTNNCFGraph).nncf_graph
