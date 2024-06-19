@@ -180,16 +180,15 @@ class TemplateTestCommonMinMax(TemplateTestMinMaxAlgorithm):
     def get_no_quantized_ops_graph():
         "Returns a NNCFGraph with no operations for quantization."
 
-    @pytest.mark.parametrize("run_nums", (2,))
     def test_min_max_call_once(
         self,
-        run_nums,
         mocker,
     ):
         """
         Checks that the _get_quantizer_setup(...) of MinMaxQuantization called once utilizing the cache.
         Checks that after _reset_cache() it called one more time.
         """
+        run_nums = 2
         _ = mocker.patch(
             "nncf.quantization.algorithms.min_max.algorithm.get_backend",
             return_value=self.get_backend(),

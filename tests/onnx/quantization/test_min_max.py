@@ -18,7 +18,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXIdentityMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTransposeMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
@@ -92,7 +92,7 @@ class TestONNXCommonMinMax(TemplateTestCommonMinMax, TestONNXMinMaxAlgorithm):
     @staticmethod
     def get_no_quantized_ops_graph():
         return NNCFGraphToTest(
-            ONNXIdentityMetatype,
+            ONNXTransposeMetatype,
             conv_layer_attrs=ONNXLayerAttributes(),
             input_layer_attrs=ONNXLayerAttributes(),
             output_layer_attrs=ONNXLayerAttributes(),

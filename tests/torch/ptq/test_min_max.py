@@ -118,4 +118,4 @@ class TestTorchCommonMinMax(TemplateTestCommonMinMax, TestTorchMinMaxAlgorithm):
 
     @staticmethod
     def get_no_quantized_ops_graph():
-        return NNCFGraphToTest(PTTransposeMetatype).nncf_graph
+        return NNCFGraphToTest(PTTransposeMetatype, nncf_graph_cls=PTNNCFGraph).nncf_graph

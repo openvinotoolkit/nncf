@@ -20,7 +20,7 @@ from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVShapeOfMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVTransposeMetatype
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
@@ -90,4 +90,4 @@ class TestOVCommonMinMax(TemplateTestCommonMinMax, TestOVMinMaxAlgorithm):
 
     @staticmethod
     def get_no_quantized_ops_graph():
-        return NNCFGraphToTest(OVShapeOfMetatype).nncf_graph
+        return NNCFGraphToTest(OVTransposeMetatype).nncf_graph
