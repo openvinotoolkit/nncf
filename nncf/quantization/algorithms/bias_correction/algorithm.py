@@ -229,6 +229,17 @@ class BiasCorrection(Algorithm):
         subgraph_input_ids, subgraph_output_ids = [], []
 
         def fill_subgraph_output_ids(main_node: NNCFNode):
+            """
+            Fills subgraph_output_ids container in-place.
+
+            The essence of the method is to collect output points (output_id) for the future subgraph.
+            It is understood that the main_node is the one for which the correction will be performed.
+            In the process of traversing the graph from top to bottom, we look for nodes that will be
+            adjusted in the next step. Output points for these nodes are added to the subgraph_output_ids container.
+            The mapping with the nodes for which statistics have been collected - self._collected_stat_inputs_map
+            is also filled in. Additionally, the statistic_nodes container fills with the correctable node
+            for future actions.
+            """
             edges_queue = nncf_graph.get_output_edges(main_node)
             while edges_queue:
                 edge = edges_queue.pop()
@@ -253,6 +264,15 @@ class BiasCorrection(Algorithm):
                 edges_queue.extend(nncf_graph.get_output_edges(node))
 
         def fill_subgraph_input_ids(main_node: NNCFNode):
+            """
+            Fills subgraph_input_ids container in-place.
+
+            The essence of the method is to collect entry points (input_id) for the future subgraph.
+            It is understood that the main_node is the one from the statistic_nodes collected before.
+            In the process of traversing the graph from bottom to top, we look for layers for which statistics were or
+            will be collected in the previous step and placed into self._collected_stat_inputs_map.
+            Entry points for these nodes are added to the subgraph_output_ids container.
+            """
             edges_queue = nncf_graph.get_input_edges(main_node)
             while edges_queue:
                 edge = edges_queue.pop()
