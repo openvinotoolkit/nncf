@@ -32,7 +32,6 @@ from tests.openvino.native.common import convert_torch_model
 from tests.openvino.native.common import dump_model
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.common import get_dataset_for_test
-from tests.openvino.native.common import get_openvino_major_minor_version
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import DepthwiseConv3DModel
 from tests.openvino.native.models import DepthwiseConv4DModel
@@ -231,9 +230,6 @@ def test_if_model_fq_placement_ignored_scope():
 
 @pytest.mark.parametrize("q_params", [{}, {"model_type": ModelType.TRANSFORMER}], ids=["default", "transformer"])
 def test_scaled_dot_product_attention_placement(q_params, tmp_path):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
-        pytest.xfail("ScaledDotProductAttention is not supported until 2023.3")
     model = ScaledDotProductAttentionModel().ov_model
     quantized_model = quantize_model(model, q_params)
 
@@ -257,9 +253,6 @@ def test_scaled_dot_product_attention_placement(q_params, tmp_path):
     [SYNTHETIC_MODELS.get("LinearModel"), SYNTHETIC_MODELS.get("ConvModel"), SYNTHETIC_MODELS.get("SharedConvModel")],
 )
 def test_synthetic_models_fc_placement(model_creator_func):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
-        pytest.xfail("FakeConvert is not supported until 2023.3")
     model = model_creator_func()
     quantized_model = quantize_model(
         model.ov_model,
