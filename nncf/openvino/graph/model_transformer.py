@@ -167,15 +167,16 @@ class OVModelTransformer(ModelTransformer):
             node_name = transformation.target_point.target_node_name
             node = name_to_node_mapping[node_name]
             port_id = transformation.target_point.port_id
+            output_dtype = transformation.output_dtype
             if transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
                 output = node.output(port_id)
-                extra_model_outputs.append((output, port_id))
+                extra_model_outputs.append((output, port_id, output_dtype))
             elif transformation.target_point.type in [
                 TargetType.PRE_LAYER_OPERATION,
                 TargetType.OPERATION_WITH_WEIGHTS,
             ]:
                 output = node.input_value(port_id)
-                extra_model_outputs.append((output, output.get_index()))
+                extra_model_outputs.append((output, output.get_index(), output_dtype))
             else:
                 raise NotImplementedError(f"Unsupported target point type {transformation.target_point.type}")
 
@@ -190,18 +191,17 @@ class OVModelTransformer(ModelTransformer):
         :param outputs: list of tuples with ov.Output & port_id.
         :return: Model with new outputs.
         """
-        outputs_type = ov.Type.f32
         results = model.get_results()
         params = model.get_parameters()
 
         extra_model_outputs = []
-        for output, port_id in outputs:
+        for output, port_id, dtype in outputs:
             node_output = output
             output_name = node_output.get_node().get_friendly_name()
             result_name = get_result_node_name(output_name, port_id)
 
-            if node_output.get_element_type() != outputs_type:
-                node_output = opset.convert(output, destination_type=outputs_type)
+            if node_output.get_element_type() != dtype:
+                node_output = opset.convert(output, destination_type=dtype)
 
             result = opset.result(node_output, name=result_name)
             result_tensor_names = [result_name] + list(output.get_names())
@@ -683,15 +683,16 @@ class OVModelTransformer(ModelTransformer):
         target_node = name_to_node_mapping[node_name]
         port_id = transformation.target_point.port_id
         fn_output_port_id = transformation.fn_output_port_id
+        output_dtype = transformation.output_dtype
         if transform_type == TargetType.POST_LAYER_OPERATION:
             new_node = transformation.inplace_op_fn(target_node, port_id, transformation.last_inplace_node_name)
-            return (new_node.output(fn_output_port_id), fn_output_port_id)
+            return (new_node.output(fn_output_port_id), fn_output_port_id, output_dtype)
         if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
             output = target_node.input_value(port_id)
             new_node = transformation.inplace_op_fn(
                 output.get_node(), output.get_index(), transformation.last_inplace_node_name
             )
-            return (new_node.output(fn_output_port_id), fn_output_port_id)
+            return (new_node.output(fn_output_port_id), fn_output_port_id, output_dtype)
         raise nncf.InternalError(f"Transform type {transform_type} is not supported")
 
     @staticmethod
