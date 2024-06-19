@@ -264,11 +264,14 @@ class TemplateTestSQAlgorithm:
         }
         node = NNCFNode(attributes)
 
-        try:
+        if reference_value is nncf.InternalError:
+            with pytest.raises(
+                nncf.InternalError, match=f"{node.metatype.name} can not take more than 2 input tensors."
+            ):
+                backend.get_activation_channel_axis(node, port_id)
+        else:
             activation_channel_axis = backend.get_activation_channel_axis(node, port_id)
-        except nncf.InternalError:
-            pytest.xfail("Expected exception")
-        assert activation_channel_axis == reference_value
+            assert activation_channel_axis == reference_value
 
     def test_get_weight_channel_axis(self, node_metatype, layer_attributes, reference_value):
         backend = self.get_backend()
