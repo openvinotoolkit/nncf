@@ -480,12 +480,7 @@ def get_activation_channel_axis(node: NNCFNode, port_id: Optional[int] = None) -
     """
     channel_axis = 1
 
-    if (
-        node.metatype == OVMatMulMetatype
-        and node.layer_attributes is not None
-        and node.layer_attributes.input_attributes is not None
-        and "transpose" in node.layer_attributes.input_attributes
-    ):
+    if node.metatype == OVMatMulMetatype:
         if port_id is None:
             raise nncf.InternalError("port_id is required for OVMatMulMetatype with transpose.")
         if port_id > 1:
