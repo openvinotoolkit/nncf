@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from collections import defaultdict
-from collections import deque
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import nncf
@@ -230,13 +229,13 @@ class BiasCorrection(Algorithm):
         subgraph_input_ids, subgraph_output_ids = [], []
 
         def fill_subgraph_output_ids(main_node: NNCFNode):
-            edges_queue = deque(nncf_graph.get_output_edges(main_node))
+            edges_queue = nncf_graph.get_output_edges(main_node)
             while edges_queue:
                 edge = edges_queue.pop()
                 node = edge.to_node
                 if node in visited_nodes:
                     continue
-                visited_nodes.append(node)
+                visited_nodes.add(node)
 
                 input_id = (node.node_name, edge.input_port_id)
                 output_id = (edge.from_node.node_name, edge.output_port_id)
@@ -254,7 +253,7 @@ class BiasCorrection(Algorithm):
                 edges_queue.extend(nncf_graph.get_output_edges(node))
 
         def fill_subgraph_input_ids(main_node: NNCFNode):
-            edges_queue = deque(nncf_graph.get_input_edges(main_node))
+            edges_queue = nncf_graph.get_input_edges(main_node)
             while edges_queue:
                 edge = edges_queue.pop()
                 node = edge.from_node
@@ -270,18 +269,18 @@ class BiasCorrection(Algorithm):
 
                 if node in visited_nodes:
                     continue
-                visited_nodes.append(node)
+                visited_nodes.add(node)
                 edges_queue.extend(nncf_graph.get_input_edges(node))
 
         # First, we need to find out the nodes with bias that follow by main node.
         # To collect statistics for next nodes.
-        visited_nodes = []
+        visited_nodes = set()
         fill_subgraph_output_ids(node)
 
         # We then need to find nodes for which statistics have already been collected,
         # to use them as inputs for the subgraph.
         statistic_nodes = statistic_nodes if statistic_nodes else nncf_graph.get_next_nodes(node)
-        visited_nodes = []
+        visited_nodes = set()
         for stat_node in statistic_nodes:
             fill_subgraph_input_ids(stat_node)
 
