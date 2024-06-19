@@ -310,14 +310,14 @@ class MinMaxQuantization(Algorithm):
                     "value is not supported with the mode: None option!"
                 )
 
-    def _reset_cache(self):
+    def _reset_cache(self) -> None:
         """
         Marks cache by noninitialized values.
         """
         self._quantization_target_points_to_qconfig: OrderedDict[TargetPoint, QuantizerConfig] = None
         self._unified_scale_groups = None
 
-    def _init_cache(self):
+    def _init_cache(self) -> None:
         """
         Initializes cache. Needs to be called when the new quantizer setup is needed.
         """
