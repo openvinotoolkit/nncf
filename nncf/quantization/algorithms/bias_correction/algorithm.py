@@ -273,7 +273,6 @@ class BiasCorrection(Algorithm):
                 visited_nodes.append(node)
                 edges_queue.extend(nncf_graph.get_input_edges(node))
 
-        nncf_logger.info(f"Processing subgraph data for {node.node_name} node")
         # First, we need to find out the nodes with bias that follow by main node.
         # To collect statistics for next nodes.
         visited_nodes = []
