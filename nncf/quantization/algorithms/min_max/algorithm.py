@@ -311,10 +311,16 @@ class MinMaxQuantization(Algorithm):
                 )
 
     def _reset_cache(self):
+        """
+        Marks cache by noninitialized values.
+        """
         self._quantization_target_points_to_qconfig: OrderedDict[TargetPoint, QuantizerConfig] = None
         self._unified_scale_groups = None
 
     def _init_cache(self):
+        """
+        Initializes cache. Needs to be called when the new quantizer setup is needed.
+        """
         self._quantization_target_points_to_qconfig: OrderedDict[TargetPoint, QuantizerConfig] = (
             collections.OrderedDict()
         )
