@@ -161,7 +161,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                         should_add_convert_node = True
                         break
 
-            weight = Tensor(get_const_value(const_node, const_dtype))
+            weight = Tensor(get_const_value(const_node))
             original_shape = weight.shape
             compressed_weight = compress_weight(
                 weight,

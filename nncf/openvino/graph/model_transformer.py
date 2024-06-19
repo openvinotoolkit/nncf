@@ -97,7 +97,7 @@ class OVModelTransformer(ModelTransformer):
         return list(activation_nodes)
 
     @staticmethod
-    def _update_tensor_name(tensors: List[DescriptorTensor], names: List[str]) -> None:
+    def _update_tensor_names(tensors: List[DescriptorTensor], names: List[str]) -> None:
         """
         Updates tensors names in-place.
 
@@ -205,7 +205,7 @@ class OVModelTransformer(ModelTransformer):
 
             result = opset.result(node_output, name=result_name)
             result_tensor_names = [result_name] + list(output.get_names())
-            OVModelTransformer._update_tensor_name([result.get_output_tensor(0)], result_tensor_names)
+            OVModelTransformer._update_tensor_names([result.get_output_tensor(0)], result_tensor_names)
             extra_model_outputs.append(result)
 
         model_with_outputs = ov.Model(
@@ -566,7 +566,7 @@ class OVModelTransformer(ModelTransformer):
 
             input_port.replace_source_output(new_input)
             new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
-            OVModelTransformer._update_tensor_name(new_param_tensors, [parameter_name])
+            OVModelTransformer._update_tensor_names(new_param_tensors, [parameter_name])
             params.append(new_param)
 
         for output_name, output_port_id in transformation.output_ids:
@@ -577,7 +577,7 @@ class OVModelTransformer(ModelTransformer):
                 output_node = opset.convert(output_node, destination_type=outputs_type)
             new_result = opset.result(output_node, name=result_name)
             result_tensor_names = [result_name] + list(output_node.output(0).get_names())
-            OVModelTransformer._update_tensor_name([new_result.get_output_tensor(0)], result_tensor_names)
+            OVModelTransformer._update_tensor_names([new_result.get_output_tensor(0)], result_tensor_names)
             results.append(new_result)
 
         if not results:
@@ -619,7 +619,7 @@ class OVModelTransformer(ModelTransformer):
             for input_port in output_port.get_target_inputs():
                 input_port.replace_source_output(new_param.output(0))
             new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
-            OVModelTransformer._update_tensor_name(new_param_tensors, [parameter_name])
+            OVModelTransformer._update_tensor_names(new_param_tensors, [parameter_name])
             params.append(new_param)
 
         for output_name, output_port_id in transformation.output_ids:
@@ -628,7 +628,7 @@ class OVModelTransformer(ModelTransformer):
             output_port = output_node.output(output_port_id)
             result_name = get_result_node_name(output_name, output_port_id)
             new_result = opset.result(output_port, name=result_name)
-            OVModelTransformer._update_tensor_name([new_result.get_output_tensor(0)], [result_name])
+            OVModelTransformer._update_tensor_names([new_result.get_output_tensor(0)], [result_name])
             results.append(new_result)
 
         if not results:
