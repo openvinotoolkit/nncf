@@ -116,8 +116,8 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         )
 
     @staticmethod
-    def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
-        return get_activation_channel_axis(node, port_id)
+    def get_activation_channel_axis(node: NNCFNode) -> int:
+        return get_activation_channel_axis(node)
 
     @staticmethod
     def get_weight_channel_axis(node: NNCFNode) -> int:

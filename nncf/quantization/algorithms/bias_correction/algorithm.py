@@ -215,6 +215,95 @@ class BiasCorrection(Algorithm):
             node, nncf_graph
         )
 
+    def _find_subgraph_output_ids(self, nncf_graph: NNCFGraph, main_node: NNCFNode) -> List[Tuple[str, int]]:
+        """
+        The essence of the method is to collect output points for the future subgraph.
+        It is understood that the main_node is the one for which the correction will be performed.
+        In the process of traversing the graph from top to bottom, we look for nodes that will be
+        adjusted in the next step. Output points for these nodes are added to the resulting container.
+        The mapping with the nodes for which statistics have been collected - self._collected_stat_inputs_map
+        is also filled in.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param main_node: Correctable NNCFNode.
+        :return: Collected output ids.
+        """
+        visited_nodes = set()
+        subgraph_output_ids = []
+        edges_queue = nncf_graph.get_output_edges(main_node)
+        while edges_queue:
+            edge = edges_queue.pop()
+            node = edge.to_node
+            if node in visited_nodes:
+                continue
+            visited_nodes.add(node)
+
+            input_id = (node.node_name, edge.input_port_id)
+            output_id = (edge.from_node.node_name, edge.output_port_id)
+
+            # If we found a node with bias, we have to collect it as a statistic node,
+            # and its input for _collected_stat_inputs_map,
+            # which will be used during the collection of statistics for the next node.
+            if self._is_node_correctable(node, nncf_graph):
+                subgraph_output_ids.append(output_id)
+                self._collected_stat_inputs_map[input_id] = output_id
+                continue
+
+            edges_queue.extend(nncf_graph.get_output_edges(node))
+        return subgraph_output_ids
+
+    def _get_statistic_nodes(self, nncf_graph: NNCFGraph, subgraph_output_ids: List[Tuple[str, int]]) -> List[NNCFNode]:
+        """
+        This method extracts NNCFNode instances from the subgraph_output_ids list.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param subgraph_output_ids: Container filled with output ids.
+        :return: Collected NNCFNodes.
+        """
+        statistic_nodes = []
+        for subgraph_output_id in subgraph_output_ids:
+            node_name, _ = subgraph_output_id
+            node = nncf_graph.get_node_by_name(node_name)
+            statistic_nodes.append(node)
+        return statistic_nodes
+
+    def _find_subgraph_input_ids(
+        self, nncf_graph: NNCFGraph, main_node: NNCFNode, subgraph_output_ids: List[Tuple[str, int]]
+    ) -> List[Tuple[str, int]]:
+        """
+        The essence of the method is to collect entry points for the future subgraph.
+        It is understood that the main_node is the one from the statistic nodes collected before.
+        In the process of traversing the graph from bottom to top, we look for layers for which statistics were or
+        will be collected in the previous step and placed into self._collected_stat_inputs_map
+        (and not into subgraph_output_ids). Entry points for these nodes are added to the resulting container.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param main_node: Correctable NNCFNode.
+        :param subgraph_output_ids: Container filled with output ids.
+        :return: Collected input ids.
+        """
+        visited_nodes = set()
+        subgraph_input_ids = []
+        edges_queue = nncf_graph.get_input_edges(main_node)
+        while edges_queue:
+            edge = edges_queue.pop()
+            node = edge.from_node
+            input_id = (edge.to_node.node_name, edge.input_port_id)
+
+            # Since we need to find the inputs for the subgraph,
+            # we can take only those layers for which we have already collected statistics.
+            if input_id in self._collected_stat_inputs_map:
+                activation_id = self._collected_stat_inputs_map[input_id]
+                if activation_id not in subgraph_output_ids:
+                    subgraph_input_ids.append(input_id)
+                    continue
+
+            if node in visited_nodes:
+                continue
+            visited_nodes.add(node)
+            edges_queue.extend(nncf_graph.get_input_edges(node))
+        return subgraph_input_ids
+
     def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Dict[str, List[str]]:
         """
         This method collects necessary data for the specified node and its subgraph.
@@ -225,84 +314,20 @@ class BiasCorrection(Algorithm):
         :param nncf_graph: NNCFGraph instance for graph analysis.
         :return: A dict with the list of the nodes for the subgraph input and statistics collection.
         """
-        statistic_nodes = []
-        subgraph_input_ids, subgraph_output_ids = [], []
-
-        def fill_subgraph_output_ids(main_node: NNCFNode):
-            """
-            Fills subgraph_output_ids container in-place.
-
-            The essence of the method is to collect output points (output_id) for the future subgraph.
-            It is understood that the main_node is the one for which the correction will be performed.
-            In the process of traversing the graph from top to bottom, we look for nodes that will be
-            adjusted in the next step. Output points for these nodes are added to the subgraph_output_ids container.
-            The mapping with the nodes for which statistics have been collected - self._collected_stat_inputs_map
-            is also filled in. Additionally, the statistic_nodes container fills with the correctable node
-            for future actions.
-            """
-            edges_queue = nncf_graph.get_output_edges(main_node)
-            while edges_queue:
-                edge = edges_queue.pop()
-                node = edge.to_node
-                if node in visited_nodes:
-                    continue
-                visited_nodes.add(node)
-
-                input_id = (node.node_name, edge.input_port_id)
-                output_id = (edge.from_node.node_name, edge.output_port_id)
-
-                # If we found a node with bias, we have to collect it as a statistic node,
-                # and its input for _collected_stat_inputs_map,
-                # which will be used during the collection of statistics for the next node.
-                if self._is_node_correctable(node, nncf_graph):
-                    subgraph_output_ids.append(output_id)
-                    self._collected_stat_inputs_map[input_id] = output_id
-
-                    statistic_nodes.append(edge.from_node)
-                    continue
-
-                edges_queue.extend(nncf_graph.get_output_edges(node))
-
-        def fill_subgraph_input_ids(main_node: NNCFNode):
-            """
-            Fills subgraph_input_ids container in-place.
-
-            The essence of the method is to collect entry points (input_id) for the future subgraph.
-            It is understood that the main_node is the one from the statistic_nodes collected before.
-            In the process of traversing the graph from bottom to top, we look for layers for which statistics were or
-            will be collected in the previous step and placed into self._collected_stat_inputs_map.
-            Entry points for these nodes are added to the subgraph_output_ids container.
-            """
-            edges_queue = nncf_graph.get_input_edges(main_node)
-            while edges_queue:
-                edge = edges_queue.pop()
-                node = edge.from_node
-                input_id = (edge.to_node.node_name, edge.input_port_id)
-
-                # Since we need to find the inputs for the subgraph,
-                # we can take only those layers for which we have already collected statistics.
-                if input_id in self._collected_stat_inputs_map:
-                    activation_id = self._collected_stat_inputs_map[input_id]
-                    if activation_id not in subgraph_output_ids:
-                        subgraph_input_ids.append(input_id)
-                        continue
-
-                if node in visited_nodes:
-                    continue
-                visited_nodes.add(node)
-                edges_queue.extend(nncf_graph.get_input_edges(node))
+        subgraph_input_ids = []
 
         # First, we need to find out the nodes with bias that follow by main node.
         # To collect statistics for next nodes.
-        visited_nodes = set()
-        fill_subgraph_output_ids(node)
+        subgraph_output_ids = self._find_subgraph_output_ids(nncf_graph, node)
+        statistic_nodes = self._get_statistic_nodes(nncf_graph, subgraph_output_ids)
 
         # We then need to find nodes for which statistics have already been collected,
         # to use them as inputs for the subgraph.
         statistic_nodes = statistic_nodes if statistic_nodes else nncf_graph.get_next_nodes(node)
-        visited_nodes = set()
+
         for stat_node in statistic_nodes:
-            fill_subgraph_input_ids(stat_node)
+            stat_node_inputs = self._find_subgraph_input_ids(nncf_graph, stat_node, subgraph_output_ids)
+            subgraph_input_ids.extend(stat_node_inputs)
 
         if not subgraph_output_ids:
             for edge in nncf_graph.get_output_edges(node):

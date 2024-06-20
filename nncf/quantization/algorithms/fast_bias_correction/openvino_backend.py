@@ -104,5 +104,5 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return node.node_name, node.node_name
 
     @staticmethod
-    def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
-        return get_activation_channel_axis(node, port_id)
+    def get_activation_channel_axis(node: NNCFNode) -> int:
+        return get_activation_channel_axis(node)

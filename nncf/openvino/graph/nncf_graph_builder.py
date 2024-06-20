@@ -207,7 +207,9 @@ class GraphConverter:
                         node_attributes = node.get_attributes()
                         const_transpose_name = attribute_names[const_port_id]
                         const_attrs[const_port_id]["transpose"] = node_attributes[const_transpose_name]
+                        act_shape = node.input(act_port_id).get_partial_shape().get_max_shape()
                         act_attrs["transpose"] = node_attributes[attribute_names[act_port_id]]
+                        act_attrs["shape"] = tuple(act_shape)
                     elif metatype == OVGRUSequenceMetatype:
                         node_attributes = node.get_attributes()
                         act_attrs["linear_before_reset"] = node_attributes["linear_before_reset"]

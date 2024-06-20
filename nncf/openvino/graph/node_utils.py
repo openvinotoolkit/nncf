@@ -26,7 +26,8 @@ from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.layout import get_conv_weights_layout
 from nncf.openvino.graph.layout import get_conv_weights_layout_from_node
-from nncf.openvino.graph.layout import get_linear_weights_layout
+from nncf.openvino.graph.layout import get_linear_activations_layout_from_node
+from nncf.openvino.graph.layout import get_linear_input_layout
 from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
 from nncf.openvino.graph.metatypes.groups import CONV_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS
@@ -452,8 +453,8 @@ def get_weighted_layer_attributes(
         return ConvolutionLayerAttributes(**kwargs)
     if ov_metatype == OVMatMulMetatype:
         weights_shape = attrs["shape"]
-        weights_layout = get_linear_weights_layout(
-            weights_shape=weights_shape, transpose=attrs["transpose"], port_id=port_id
+        weights_layout = get_linear_input_layout(
+            input_shape=weights_shape, transpose=attrs["transpose"], port_id=port_id
         )
 
         kwargs = {
@@ -470,24 +471,18 @@ def get_weighted_layer_attributes(
     return GenericWeightedLayerAttributes(weight_requires_grad=False, weight_shape=attrs.get("shape", None))
 
 
-def get_activation_channel_axis(node: NNCFNode, port_id: Optional[int] = None) -> int:
+def get_activation_channel_axis(node: NNCFNode) -> int:
     """
     Returns axis number of the activation tensor which correspond to it channel.
 
     :param node: NNCFNode instance.
-    :param port_id: Specified input port id if needed.
     :return: Channel axis number.
     """
     channel_axis = 1
 
     if node.metatype == OVMatMulMetatype:
-        if port_id is None:
-            raise nncf.InternalError("port_id is required for OVMatMulMetatype with transpose.")
-        if port_id > 1:
-            raise nncf.InternalError(f"{node.metatype.name} can not take more than 2 input tensors.")
-
-        transpose = node.layer_attributes.input_attributes["transpose"]
-        channel_axis = calculate_port_based_channel_axis(port_id, transpose)
+        activations_layout = get_linear_activations_layout_from_node(node)
+        channel_axis = activations_layout.index(OVLayoutElem.C_IN)
 
     return channel_axis
 

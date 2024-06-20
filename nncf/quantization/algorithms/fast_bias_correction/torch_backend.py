@@ -109,5 +109,5 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return input_node_name, output_node_name
 
     @staticmethod
-    def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
+    def get_activation_channel_axis(node: NNCFNode) -> int:
         return node.metatype.output_channel_axis
