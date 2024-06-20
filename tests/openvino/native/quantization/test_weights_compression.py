@@ -33,7 +33,6 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import get_
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
-from tests.openvino.native.common import get_openvino_major_minor_version
 from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
@@ -766,11 +765,6 @@ def test_data_type_for_num_weights(mocker):
     ],
 )
 def test_compression_for_different_dtypes(activation_dtype, weight_dtype):
-    if weight_dtype == ov.Type.bf16:
-        ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-        if ov_major_version < 2024 or (ov_major_version == 2024 and ov_minor_version < 2):
-            pytest.xfail("const_node.get_data() is not supported until 2024.2")
-
     model = IdentityMatmul(weights_dtype=weight_dtype, activation_dtype=activation_dtype).ov_model
     compressed_model = compress_weights(
         model, mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=1, all_layers=True

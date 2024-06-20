@@ -27,7 +27,6 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
-from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
 from tests.post_training.test_templates.helpers import ConvTestModel
 from tests.post_training.test_templates.helpers import LinearMultiShapeModel
 from tests.post_training.test_templates.helpers import NonZeroLinearModel
@@ -211,9 +210,6 @@ class TemplateTestSQAlgorithm:
     def test__get_nodes_to_smooth_data(self, model_cls, references, tmpdir):
         model = self.backend_specific_model(model_cls(), tmpdir)
         nncf_graph = NNCFGraphFactory.create(model)
-
-        if isinstance(self.get_backend(), OVSmoothQuantAlgoBackend) and model_cls is ShareWeghtsConvAndShareLinearModel:
-            pytest.xfail("Matmuls don't share one weight in OV ir. Ticket 130912.")
 
         algo = SmoothQuant()
         algo._set_backend_entity(model)

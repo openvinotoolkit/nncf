@@ -11,7 +11,6 @@
 
 
 import numpy as np
-import pytest
 import torch
 
 from nncf.experimental.tensor import Tensor
@@ -21,7 +20,3 @@ from tests.common.experimental.test_statistic_collector import TemplateTestStati
 class TestPTStatisticCollector(TemplateTestStatisticCollector):
     def get_nncf_tensor(self, value: np.ndarray) -> Tensor:
         return Tensor(torch.tensor(value))
-
-    @pytest.mark.skip
-    def test_raw_max_stat_building(self):
-        pass

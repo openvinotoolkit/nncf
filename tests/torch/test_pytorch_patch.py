@@ -16,6 +16,7 @@ import pytest
 import torch
 
 import nncf
+from nncf.common.utils.os import is_windows
 from nncf.config import NNCFConfig
 from nncf.torch import wrap_model
 from nncf.torch.dynamic_graph.context import TracingContext
@@ -112,6 +113,7 @@ def test_jit_script_exception_preserves_patching():
     run_pytest_case_function_in_separate_process(test_jit_script_exception_preserves_patching_isolated)
 
 
+@pytest.mark.xfail(is_windows(), reason="https://github.com/pytorch/pytorch/issues/122094")
 def test_torch_compile():
     # Run test case in a separate process to track patching of torch by NNCF
     run_pytest_case_function_in_separate_process(test_compile)

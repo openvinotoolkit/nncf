@@ -16,6 +16,7 @@ import openvino as ov
 import pytest
 import torch
 
+import nncf
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.layout import OVLayoutElem
