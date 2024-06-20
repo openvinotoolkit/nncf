@@ -14,7 +14,6 @@ from typing import Callable, Dict, Type, TypeVar
 
 import pytest
 
-import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFNode
@@ -257,7 +256,7 @@ class TemplateTestSQAlgorithm:
         for transformation in arg.transformations:
             assert self.get_target_node_name(transformation) != matmuls[0].node_name
 
-    def test_get_activation_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):
+    def test_get_activation_channel_axis(self, node_metatype, layer_attributes, reference_value):
         backend = self.get_backend()
 
         attributes = {
@@ -268,12 +267,7 @@ class TemplateTestSQAlgorithm:
         }
         node = NNCFNode(attributes)
 
-        try:  # noqa
-            activation_channel_axis = backend.get_activation_channel_axis(node, port_id)
-        except nncf.InternalError as e:  # noqa
-            # TODO: this is wrong, should only expect an exception for cases where the exception is known to be raised
-            #  with pytest.raises(...)
-            pytest.xfail("FIXME")
+        activation_channel_axis = backend.get_activation_channel_axis(node)
         assert activation_channel_axis == reference_value
 
     def test_get_weight_channel_axis(self, node_metatype, layer_attributes, reference_value):

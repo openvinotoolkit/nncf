@@ -124,18 +124,89 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
             assert np.all(np.isclose(value, ref_value, atol=0.0001)), f"{value} != {ref_value}"
 
     @pytest.mark.parametrize(
-        "node_metatype, layer_attributes, port_id, reference_value",
+        "node_metatype, layer_attributes, reference_value",
         (
-            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": False}), 0, -1),
-            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": True}), 0, -2),
-            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": False}), 1, -2),
-            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": True}), 1, -1),
-            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": False}), 2, RuntimeError),
-            (OVConvolutionMetatype, OVLayerAttributes({}, inputs_attributes={}), 0, 1),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(
+                    constant_attributes={0: None}, inputs_attributes={"transpose": False, "shape": (1, 2, 3)}
+                ),
+                1,
+            ),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(
+                    constant_attributes={1: None}, inputs_attributes={"transpose": False, "shape": (1, 2, 3)}
+                ),
+                2,
+            ),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(
+                    constant_attributes={0: None}, inputs_attributes={"transpose": True, "shape": (1, 2, 3)}
+                ),
+                2,
+            ),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(
+                    constant_attributes={1: None}, inputs_attributes={"transpose": True, "shape": (1, 2, 3)}
+                ),
+                1,
+            ),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(
+                    constant_attributes={0: None}, inputs_attributes={"transpose": False, "shape": (1, 2)}
+                ),
+                0,
+            ),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(
+                    constant_attributes={1: None}, inputs_attributes={"transpose": False, "shape": (1, 2)}
+                ),
+                1,
+            ),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(
+                    constant_attributes={0: None}, inputs_attributes={"transpose": True, "shape": (1, 2)}
+                ),
+                1,
+            ),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(
+                    constant_attributes={1: None}, inputs_attributes={"transpose": True, "shape": (1, 2)}
+                ),
+                0,
+            ),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(constant_attributes={0: None}, inputs_attributes={"transpose": False, "shape": (1,)}),
+                0,
+            ),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(constant_attributes={1: None}, inputs_attributes={"transpose": False, "shape": (1,)}),
+                0,
+            ),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(constant_attributes={0: None}, inputs_attributes={"transpose": True, "shape": (1,)}),
+                0,
+            ),
+            (
+                OVMatMulMetatype,
+                OVLayerAttributes(constant_attributes={1: None}, inputs_attributes={"transpose": True, "shape": (1,)}),
+                0,
+            ),
+            (OVConvolutionMetatype, OVLayerAttributes({}, inputs_attributes={}), 1),
         ),
     )
-    def test_get_activation_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):
-        return super().test_get_activation_channel_axis(node_metatype, layer_attributes, port_id, reference_value)
+    def test_get_activation_channel_axis(self, node_metatype, layer_attributes, reference_value):
+        return super().test_get_activation_channel_axis(node_metatype, layer_attributes, reference_value)
 
     @pytest.mark.parametrize(
         "node_metatype,weights_layout,reference_value",
