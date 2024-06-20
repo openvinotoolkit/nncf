@@ -15,7 +15,6 @@ from pathlib import Path
 import numpy as np
 import onnx
 import onnxruntime
-import openvino as ov
 import pytest
 import torch
 from addict import Dict
@@ -184,9 +183,7 @@ class TestONNXExport:
             ),
             Dict(
                 nncf_weight_ratio=0.43,
-                ov_weight_ratio=(
-                    0.29 if version.parse(ov.runtime.__version__.split("-")[0]) < version.parse("2024.2.0") else 0.33
-                ),
+                ov_weight_ratio=0.33,
                 recipe=SwinRunRecipe().model_config_(
                     num_heads=[4],
                     num_labels=1,

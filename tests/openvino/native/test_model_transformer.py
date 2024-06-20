@@ -45,7 +45,6 @@ from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
-from tests.openvino.native.common import get_openvino_major_minor_version
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import ConvNotBiasModel
 from tests.openvino.native.models import FPModel
@@ -473,9 +472,6 @@ def test_fq_insertion_pre_layer(target_layers, ref_fq_names):
 
 @pytest.mark.parametrize("target_layers, ref_fс_names", zip(TARGET_INSERT_LAYERS, TARGET_PRE_LAYER_FCS))
 def test_fc_insertion_pre_layer(target_layers, ref_fс_names):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
-        pytest.xfail("FakeConvert is not supported until 2023.3")
     model = LinearModel().ov_model
 
     transformed_model = create_transformed_model(
@@ -512,9 +508,6 @@ def test_fq_insertion_post_layer(target_layers, ref_fq_names):
 
 @pytest.mark.parametrize("target_layers, ref_fс_names", zip(TARGET_INSERT_LAYERS, TARGET_POST_LAYER_FCS))
 def test_fc_insertion_post_layer(target_layers, ref_fс_names):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
-        pytest.xfail("FakeConvert is not supported until 2023.3")
     model = LinearModel().ov_model
 
     transformed_model = create_transformed_model(
@@ -552,9 +545,6 @@ def test_fq_insertion_weights(target_layers, ref_fq_names):
 
 @pytest.mark.parametrize("target_layers, ref_fс_names", zip(TARGET_INSERT_LAYERS, TARGET_WEIGHTS_FCS))
 def test_fc_insertion_weights(target_layers, ref_fс_names):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
-        pytest.xfail("FakeConvert is not supported until 2023.3")
     model = LinearModel().ov_model
 
     transformed_model = create_transformed_model(
