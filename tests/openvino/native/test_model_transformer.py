@@ -46,7 +46,6 @@ from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
-from tests.openvino.native.common import get_openvino_major_minor_version
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import ConvNotBiasModel
 from tests.openvino.native.models import FPModel
@@ -513,10 +512,6 @@ def test_fq_insertion_pre_layer(target_layers, ref_fq_names, model_object):
     ],
 )
 def test_fc_insertion_pre_layer(target_layers, ref_fc_names, model_object):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
-        pytest.xfail("FakeConvert is not supported until 2023.3")
-
     transformed_model = create_transformed_model(
         model_object,
         target_layers,
@@ -571,9 +566,6 @@ def test_fq_insertion_post_layer(target_layers, ref_fq_names, model_object):
     ],
 )
 def test_fc_insertion_post_layer(target_layers, ref_fc_names, model_object):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
-        pytest.xfail("FakeConvert is not supported until 2023.3")
     transformed_model = create_transformed_model(
         model_object,
         target_layers,
@@ -629,9 +621,6 @@ def test_fq_insertion_weights(target_layers, ref_fq_names, model_object):
     ],
 )
 def test_fc_insertion_weights(target_layers, ref_fc_names, model_object):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
-        pytest.xfail("FakeConvert is not supported until 2023.3")
     transformed_model = create_transformed_model(
         model_object,
         target_layers,

@@ -11,7 +11,6 @@
 
 
 import numpy as np
-import pytest
 
 from nncf.experimental.tensor import Tensor
 from tests.common.experimental.test_statistic_collector import TemplateTestStatisticCollector
@@ -20,11 +19,3 @@ from tests.common.experimental.test_statistic_collector import TemplateTestStati
 class TestOVStatisticCollector(TemplateTestStatisticCollector):
     def get_nncf_tensor(self, value: np.ndarray) -> Tensor:
         return Tensor(value)
-
-    @pytest.mark.skip()
-    def test_median_mad_stat_building(self):
-        pass
-
-    @pytest.mark.skip
-    def test_percentile_max_stat_building(self):
-        pass
