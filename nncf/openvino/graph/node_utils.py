@@ -485,14 +485,3 @@ def get_activation_channel_axis(node: NNCFNode) -> int:
         channel_axis = activations_layout.index(OVLayoutElem.C_IN)
 
     return channel_axis
-
-
-def calculate_port_based_channel_axis(port_id: int, transpose: bool) -> int:
-    """
-    Calculates channel axis based on the port.
-
-    :param port_id: Port ID.
-    :param transpose: Transpose attribute value.
-    :return: Channel axis number.
-    """
-    return -2 + port_id if transpose else -1 - port_id
