@@ -358,11 +358,11 @@ def get_reducer_output_node_names(
     return [get_result_node_name(target_node_name, port_id)]
 
 
-def get_weight_channel_axes(node: NNCFNode) -> List[int]:
+def get_weight_channel_axes(node: NNCFNode) -> Tuple[int, ...]:
     """
     Returns axes numbers of the weight tensor which correspond to its channels.
 
-    :param node: NNCCFNode with weights.
+    :param node: NNCFNode with weights.
     :param weights_port_id: Weight port id of the target node.
     :return: Axes numbers of the weight tensor which correspond to its channels.
     """
@@ -374,7 +374,7 @@ def get_weight_channel_axes(node: NNCFNode) -> List[int]:
         return [idx for idx, elem in enumerate(weights_layout) if elem in [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT]]
     elif node.metatype == OVMatMulMetatype:
         return get_matmul_channel_axes(node)
-    return node.metatype.const_channel_axis
+    return tuple(node.metatype.const_channel_axis)
 
 
 def get_matmul_channel_axes(node: ov.Node) -> List[int]:
@@ -408,7 +408,7 @@ def get_weighted_layer_attributes(
     ov_node: ov.Node, ov_metatype: OVOpMetatype, constant_attributes: Dict[int, Any]
 ) -> WeightedLayerAttributes:
     """
-    Funciton retrieves common layer attributes from the given node.
+    Function retrieves common layer attributes from the given node.
 
     :param ov_node: TargetOpenvino graph node instance.
     :param ov_metatype: NNCF Openvino metatype of the given node.

@@ -42,7 +42,7 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.model_graph_manager import get_const_node
-from nncf.torch.model_graph_manager import get_target_dim_for_weight_compression
+from nncf.torch.model_graph_manager import get_weight_channel_axes
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
@@ -160,7 +160,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_quantization_axes(node: NNCFNode, target_point: PTTargetPoint, ndims: int) -> Tuple[int]:
-        return (get_target_dim_for_weight_compression(node.metatype, target_point.input_port_id, ndims),)
+        return get_weight_channel_axes(node.metatype, ndims, target_point.input_port_id)
 
     @staticmethod
     def get_statistic_collector(
@@ -231,24 +231,40 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def _get_input_scale_shape(
         nncf_graph: NNCFGraph, target_point: PTTargetPoint, per_channel: bool
-    ) -> Tuple[Tuple[int, ...], Tuple[int, ...], int]:
+    ) -> Tuple[int, ...]:
+        """
+        Determines the scale shape for the input data at a given target point in the NNCF graph.
+
+        :param nncf_graph: The graph representing the neural network for compression.
+        :param target_point: The target point in the graph where the input scale shape is required.
+        :param per_channel: Whether the scaling is per-channel or per-tensor.
+
+        :return: Tuple[int, ...]: The shape of the scale to be applied to the input.
+        """
+
         is_weights = target_point.is_weight_target_point()
         if is_weights:
             node_with_weight = nncf_graph.get_node_by_name(target_point.target_node_name)
             weight_node = get_const_node(node_with_weight, target_point.input_port_id, nncf_graph)
             input_shape = weight_node.layer_attributes.shape
-            channel_idx = get_target_dim_for_weight_compression(
-                node_with_weight.metatype, input_shape, target_point.input_port_id
+            channel_axes = get_weight_channel_axes(
+                node_with_weight.metatype, len(input_shape), target_point.input_port_id
             )
         else:
             input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
-            channel_idx = 1  # channel dim for activations
+            channel_axes = (1,)  # channel dim for activations
 
-        scale_shape = tuple(
-            get_scale_shape(input_shape, is_weights=is_weights, per_channel=per_channel, channel_idx=channel_idx)
-        )
+        if len(channel_axes):
+            scale_shape = tuple(
+                get_scale_shape(
+                    input_shape, is_weights=is_weights, per_channel=per_channel, channel_idx=channel_axes[0]
+                )
+            )
+        else:
+            # For cases where weights are vectors that should be quantized as per-tensor
+            scale_shape = [1]
 
-        return input_shape, scale_shape, channel_idx
+        return scale_shape
 
     @staticmethod
     def _create_quantizer(
@@ -276,7 +292,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return quantizer
 
     @staticmethod
-    def _fill_quantizer_parameters(quantizer: BaseQuantizer, parameters: FakeQuantizeParameters, scale_shape) -> None:
+    def _fill_quantizer_parameters(
+        quantizer: BaseQuantizer, parameters: FakeQuantizeParameters, scale_shape: Tuple[int, ...]
+    ) -> None:
         if isinstance(quantizer, AsymmetricQuantizer):
             quantizer.input_low = torch.nn.Parameter(parameters.input_low.data.reshape(scale_shape))
             input_range = parameters.input_high - parameters.input_low
@@ -296,9 +314,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
     ) -> Union[PTInsertionCommand, PTSharedFnInsertionCommand]:
-        _, scale_shape, _ = PTMinMaxAlgoBackend._get_input_scale_shape(
-            nncf_graph, target_point, quantizer_config.per_channel
-        )
+        scale_shape = PTMinMaxAlgoBackend._get_input_scale_shape(nncf_graph, target_point, quantizer_config.per_channel)
 
         quantizer = PTMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_point.target_type
@@ -312,7 +328,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
     ) -> List[PTSharedFnInsertionCommand]:
-        _, scale_shape, _ = PTMinMaxAlgoBackend._get_input_scale_shape(
+        scale_shape = PTMinMaxAlgoBackend._get_input_scale_shape(
             nncf_graph, target_points[0], quantizer_config.per_channel
         )
 

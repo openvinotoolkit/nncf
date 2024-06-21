@@ -31,7 +31,7 @@ from nncf.torch.model_graph_manager import get_fake_quantizer
 from nncf.torch.model_graph_manager import get_fused_bias_value
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import get_potential_fused_node
-from nncf.torch.model_graph_manager import get_target_dim_for_weight_compression
+from nncf.torch.model_graph_manager import get_weight_channel_axes
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.model_graph_manager import is_node_with_fused_bias
 from nncf.torch.model_graph_manager import is_quantized_weights
@@ -366,37 +366,46 @@ def test_update_fused_bias(model_cls):
         assert torch.all(torch.isclose(model.conv.bias * model.bn.weight + model.bn.bias, ref_new_bias))
 
 
-class TestTargetDimForWeightCompression:
+class TestGetWeightChannelAxes:
 
-    MM_SHAPES = (
-        (1, 1, 0, 0),  # [3] x [3]
-        (2, 1, 0, 0),  # [3, 4] x [4]
-        (3, 1, 1, 0),  # [10, 3, 4] x [4]
-        (3, 3, 1, 2),  # [10, 3, 4] x [10, 4, 5]
-        (3, 2, 1, 1),  # [10, 3, 4] x [4, 5]
+    @pytest.mark.parametrize(
+        "ndim1, ndim2, ref_dim1, ref_dim2",
+        (
+            (1, 1, (), ()),  # vector x vector
+            (2, 1, (0,), ()),  # matrix x vector
+            (3, 1, (1,), ()),  # batched matrix x vector
+            (3, 3, (1,), (2,)),  # batched matrix x batched matrix
+            (3, 2, (1,), (1,)),  # batched matrix x broadcasted matrix
+        ),
     )
-
-    @pytest.mark.parametrize("ndim1, ndim2, ref_dim1, ref_dim2", MM_SHAPES)
     def test_matmul(self, ndim1, ndim2, ref_dim1, ref_dim2):
-        assert get_target_dim_for_weight_compression(om.PTMatMulMetatype, ndim1, 0) == ref_dim1
-        assert get_target_dim_for_weight_compression(om.PTMatMulMetatype, ndim2, 1) == ref_dim2
+        assert get_weight_channel_axes(om.PTMatMulMetatype, ndim1, 0) == ref_dim1
+        assert get_weight_channel_axes(om.PTMatMulMetatype, ndim2, 1) == ref_dim2
 
-    @pytest.mark.parametrize("ndim1, ndim2, ref_dim1, ref_dim2", MM_SHAPES)
+    @pytest.mark.parametrize(
+        "ndim1, ndim2, ref_dim1, ref_dim2",
+        (
+            (2, 2, (0,), (1,)),  # matrix x matrix
+            (3, 3, (1,), (2,)),  # batched matrix x batched matrix
+            (3, 2, (1,), (1,)),  # batched matrix x broadcasted matrix
+        ),
+    )
     def test_addmm(self, ndim1, ndim2, ref_dim1, ref_dim2):
-        assert get_target_dim_for_weight_compression(om.PTAddmmMetatype, ndim1, 1) == ref_dim1
-        assert get_target_dim_for_weight_compression(om.PTAddmmMetatype, ndim2, 2) == ref_dim2
+        assert get_weight_channel_axes(om.PTAddmmMetatype, ndim1, 1) == ref_dim1
+        assert get_weight_channel_axes(om.PTAddmmMetatype, ndim2, 2) == ref_dim2
 
     @pytest.mark.parametrize("ndims", (3, 4, 5))
     @pytest.mark.parametrize("metatype", (om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype))
     def test_conv(self, ndims, metatype):
-        assert get_target_dim_for_weight_compression(metatype, ndims, 1) == 0
+        assert get_weight_channel_axes(metatype, ndims, 1) == (0,)
 
     @pytest.mark.parametrize("ndims", (3, 4, 5))
     @pytest.mark.parametrize(
         "metatype", (om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype)
     )
     def test_transpose_conv(self, ndims, metatype):
-        assert get_target_dim_for_weight_compression(metatype, ndims, 1) == 1
+        assert get_weight_channel_axes(metatype, ndims, 1) == (1,)
 
     def test_exception(self):
-        assert get_target_dim_for_weight_compression(om.PTAbsMetatype, 0, 1) == 1
+        with pytest.raises(ValueError, match="Unexpected input_port_id=3"):
+            get_weight_channel_axes(om.PTAddmmMetatype, 1, 3)
