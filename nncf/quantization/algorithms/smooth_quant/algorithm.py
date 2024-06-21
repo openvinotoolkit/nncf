@@ -324,7 +324,7 @@ class SmoothQuant(Algorithm):
         """
         activation_ports_map = {node: self._backend_entity.get_activations_port_id(node, nncf_graph) for node in nodes}
         channel_axes = [
-            self._backend_entity.get_activation_channel_axis(node) for node, _ in activation_ports_map.items()
+            self._backend_entity.get_activation_channel_axis(node, port) for node, port in activation_ports_map.items()
         ]
         channel_axis = channel_axes[0]
 
@@ -370,7 +370,7 @@ class SmoothQuant(Algorithm):
         shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
         reduction_axes = tuple([])
         if len(shape) > 1:
-            channel_axis = self._backend_entity.get_activation_channel_axis(node)
+            channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port)
             reduction_axes = get_reduction_axes((channel_axis,), shape)
         return reduction_axes
 

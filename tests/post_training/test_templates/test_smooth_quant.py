@@ -14,6 +14,7 @@ from typing import Callable, Dict, Type, TypeVar
 
 import pytest
 
+import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFNode
@@ -252,7 +253,7 @@ class TemplateTestSQAlgorithm:
         for transformation in arg.transformations:
             assert self.get_target_node_name(transformation) != matmuls[0].node_name
 
-    def test_get_activation_channel_axis(self, node_metatype, layer_attributes, reference_value):
+    def test_get_activation_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):
         backend = self.get_backend()
 
         attributes = {
@@ -263,8 +264,14 @@ class TemplateTestSQAlgorithm:
         }
         node = NNCFNode(attributes)
 
-        activation_channel_axis = backend.get_activation_channel_axis(node)
-        assert activation_channel_axis == reference_value
+        if reference_value is nncf.InternalError:
+            with pytest.raises(
+                nncf.InternalError, match=f"{node.metatype.name} can not take more than 2 input tensors."
+            ):
+                backend.get_activation_channel_axis(node, port_id)
+        else:
+            activation_channel_axis = backend.get_activation_channel_axis(node, port_id)
+            assert activation_channel_axis == reference_value
 
     def test_get_weight_channel_axis(self, node_metatype, layer_attributes, reference_value):
         backend = self.get_backend()
