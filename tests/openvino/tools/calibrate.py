@@ -349,7 +349,7 @@ def map_ignored_scope(ignored):
             if op.get("attributes") is not None:
                 raise ValueError('"attributes" in the ignored operations ' "are not supported")
             ignored_operations.append(op["type"])
-    return {"ignored_scope": IgnoredScope(names=ignored.get("scope"), types=ignored_operations)}
+    return {"ignored_scope": IgnoredScope(names=ignored.get("scope", []), types=ignored_operations)}
 
 
 def map_preset(preset):
