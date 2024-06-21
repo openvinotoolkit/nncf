@@ -705,22 +705,17 @@ class MinMaxQuantization(Algorithm):
             )
         return activation_quantization_target_point
 
-    def _get_quantization_target_points(
+    def _find_quantization_target_points(
         self, model: TModel, nncf_graph: NNCFGraph
     ) -> Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]]:
         """
-        Returns Quantization Target Points.
-        In the Compression Pipeline logic NNCF assumes that the compression pipeline works only on the single model.
-        So for the optimization purpose if Quantization Target Points were computed before the function returns them,
-        otherwise builds NNCFGraph from the 'model',
-        finds the quantization setup and processes it to the Set of Quantization Target Points.
+        Initializes a cache, finds quantization target points and them puts in the cache.
 
         :param model: Backend-specific model, for which Quantization Target Points are being seek.
         :param nncf_graph: NNCFGraph instance.
-        :return: Set of Quantization Target Points.
+        :return: Mapping of quantization target points with associated quantization configuration,
+        along with target points for scale unification.
         """
-        if self._quantization_target_points_to_qconfig is not None:
-            return self._quantization_target_points_to_qconfig, self._unified_scale_groups
         self._init_cache()
         backend = get_backend(model)
         device = self._target_device
@@ -751,6 +746,22 @@ class MinMaxQuantization(Algorithm):
             else:
                 raise nncf.InternalError("Incorrect quantization point")
         return self._quantization_target_points_to_qconfig, self._unified_scale_groups
+
+    def _get_quantization_target_points(
+        self, model: TModel, nncf_graph: NNCFGraph
+    ) -> Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]]:
+        """
+        Returns Quantization Target Points.
+        Returns a cache with target points if exists. Otherwise, initiates a procedure of finding them.
+
+        :param model: Backend-specific model, for which Quantization Target Points are being seek.
+        :param nncf_graph: NNCFGraph instance.
+        :return: Mapping of quantization target points with associated quantization configuration,
+        along with target points for scale unification.
+        """
+        if self._quantization_target_points_to_qconfig is not None:
+            return self._quantization_target_points_to_qconfig, self._unified_scale_groups
+        return self._find_quantization_target_points(model, nncf_graph)
 
     def _collect_unified_groups(
         self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph

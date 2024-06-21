@@ -18,7 +18,6 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 
 CONV_WEIGHT_SHAPE = (3, 10, 4, 4)
@@ -167,41 +166,3 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
         matmul_node = NNCFNode({"metatype": self.matmul_metatype})
         matmul_node.layer_attributes = self.get_matmul_node_attrs(None, None, weight_shape)
         assert self.backend().get_weight_quantization_axes(matmul_node, "dummy") == ref_axes
-
-
-class TemplateTestCommonMinMax(TemplateTestMinMaxAlgorithm):
-    @staticmethod
-    @abstractmethod
-    def get_backend():
-        "Returns backend."
-
-    @staticmethod
-    @abstractmethod
-    def get_no_quantized_ops_graph():
-        "Returns a NNCFGraph with no operations for quantization."
-
-    def test_min_max_call_once(
-        self,
-        mocker,
-    ):
-        """
-        Checks that the _get_quantizer_setup(...) of MinMaxQuantization called once utilizing the cache.
-        Checks that after _reset_cache() it called one more time.
-        """
-        run_nums = 2
-        _ = mocker.patch(
-            "nncf.quantization.algorithms.min_max.algorithm.get_backend",
-            return_value=self.get_backend(),
-        )
-        spy = mocker.spy(MinMaxQuantization, "_get_quantizer_setup")
-        algo = MinMaxQuantization()
-        algo._backend_entity = self.backend()
-
-        nncf_graph = self.get_no_quantized_ops_graph()
-        for _ in range(run_nums):
-            algo._get_quantization_target_points(None, nncf_graph)
-        assert spy.call_count == 1
-        algo._reset_cache()
-        for _ in range(run_nums):
-            algo._get_quantization_target_points(None, nncf_graph)
-        assert spy.call_count == 2

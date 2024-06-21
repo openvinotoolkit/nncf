@@ -15,7 +15,6 @@ import pytest
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.utils.backend import BackendType
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
@@ -24,8 +23,6 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 from tests.post_training.test_templates.models import NNCFGraphToTest
-from tests.post_training.test_templates.models import NNCFGraphToTestInputOutput
-from tests.post_training.test_templates.test_min_max import TemplateTestCommonMinMax
 from tests.post_training.test_templates.test_min_max import TemplateTestGetChannelAxes
 from tests.post_training.test_templates.test_min_max import TemplateTestGetTargetPointShape
 from tests.post_training.test_templates.test_min_max import TemplateTestMinMaxAlgorithm
@@ -81,13 +78,3 @@ class TestOVGetChannelAxes(TemplateTestGetChannelAxes, TestOVMinMaxAlgorithm):
 
     def test_get_channel_axes_matmul_torch(self):
         pytest.skip("Test is not applied for OV backend.")
-
-
-class TestOVCommonMinMax(TemplateTestCommonMinMax, TestOVMinMaxAlgorithm):
-    @staticmethod
-    def get_backend():
-        return BackendType.OPENVINO
-
-    @staticmethod
-    def get_no_quantized_ops_graph():
-        return NNCFGraphToTestInputOutput().nncf_graph

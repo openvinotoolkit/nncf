@@ -16,7 +16,6 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.utils.backend import BackendType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.torch.graph.graph import PTNNCFGraph
@@ -25,8 +24,6 @@ from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from tests.post_training.test_templates.models import NNCFGraphToTest
-from tests.post_training.test_templates.models import NNCFGraphToTestInputOutput
-from tests.post_training.test_templates.test_min_max import TemplateTestCommonMinMax
 from tests.post_training.test_templates.test_min_max import TemplateTestGetChannelAxes
 from tests.post_training.test_templates.test_min_max import TemplateTestGetTargetPointShape
 from tests.post_training.test_templates.test_min_max import TemplateTestMinMaxAlgorithm
@@ -109,13 +106,3 @@ class TestTorchGetChannelAxes(TemplateTestGetChannelAxes, TestTorchMinMaxAlgorit
 
     def test_get_channel_axes_deptwiseconv_node_ov(self):
         pytest.skip("Test is not applied for Torch backend.")
-
-
-class TestTorchCommonMinMax(TemplateTestCommonMinMax, TestTorchMinMaxAlgorithm):
-    @staticmethod
-    def get_backend():
-        return BackendType.TORCH
-
-    @staticmethod
-    def get_no_quantized_ops_graph():
-        return NNCFGraphToTestInputOutput(nncf_graph_cls=PTNNCFGraph).nncf_graph

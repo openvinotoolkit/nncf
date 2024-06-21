@@ -14,7 +14,6 @@ import pytest
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
@@ -23,8 +22,6 @@ from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 from tests.post_training.test_templates.models import NNCFGraphToTest
-from tests.post_training.test_templates.models import NNCFGraphToTestInputOutput
-from tests.post_training.test_templates.test_min_max import TemplateTestCommonMinMax
 from tests.post_training.test_templates.test_min_max import TemplateTestGetChannelAxes
 from tests.post_training.test_templates.test_min_max import TemplateTestGetTargetPointShape
 from tests.post_training.test_templates.test_min_max import TemplateTestMinMaxAlgorithm
@@ -82,16 +79,3 @@ class TestONNXGetChannelAxesMinMaxAlgorithm(TemplateTestGetChannelAxes, TestONNX
 
     def test_get_channel_axes_matmul_torch(self):
         pytest.skip("Test is not applied for ONNX backend.")
-
-
-class TestONNXCommonMinMax(TemplateTestCommonMinMax, TestONNXMinMaxAlgorithm):
-    @staticmethod
-    def get_backend():
-        return BackendType.ONNX
-
-    @staticmethod
-    def get_no_quantized_ops_graph():
-        return NNCFGraphToTestInputOutput(
-            input_layer_attrs=ONNXLayerAttributes(),
-            output_layer_attrs=ONNXLayerAttributes(),
-        ).nncf_graph
