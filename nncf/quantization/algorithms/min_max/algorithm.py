@@ -716,7 +716,6 @@ class MinMaxQuantization(Algorithm):
         :return: Mapping of quantization target points with associated quantization configuration,
         along with target points for scale unification.
         """
-        self._init_cache()
         backend = get_backend(model)
         device = self._target_device
         model_type = self._model_type
@@ -761,6 +760,7 @@ class MinMaxQuantization(Algorithm):
         """
         if self._quantization_target_points_to_qconfig is not None:
             return self._quantization_target_points_to_qconfig, self._unified_scale_groups
+        self._init_cache()
         return self._find_quantization_target_points(model, nncf_graph)
 
     def _collect_unified_groups(

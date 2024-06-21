@@ -231,7 +231,7 @@ def test_min_max_caching():
 
     run_nums = 2
     algo = MinMaxQuantization()
-    MinMaxQuantization._find_quantization_target_points = types.MethodType(foo, algo)
+    algo._find_quantization_target_points = types.MethodType(foo, algo)
     for _ in range(run_nums):
         algo._get_quantization_target_points(None, None)
     assert called == 1
