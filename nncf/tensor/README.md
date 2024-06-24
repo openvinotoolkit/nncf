@@ -11,7 +11,7 @@ Common algorithms should use wrapped tensors and provide the unwrapped tensor to
 ### Initialization Tensor
 
 ```python
-from nncf.experimental.tensor import Tensor
+from nncf.tensor import Tensor
 
 import numpy as np
 numpy_array = np.array([1,2])
@@ -27,8 +27,8 @@ nncf_tensor = Tensor(torch_tensor)
 The function for creating a tensor requires a backend argument to specify the type of data to be created. It supports both numpy array and torch tensor.
 
 ```python
-from nncf.experimental.tensor import functions as fns
-from nncf.experimental.tensor.definitions import TensorBackend
+from nncf.tensor import functions as fns
+from nncf.tensor.definitions import TensorBackend
 
 # create zeros tensor where data is numpy array
 nncf_tensor = fns.zeros((2,2), backend=TensorBackend.numpy)
@@ -72,7 +72,7 @@ nncf_tensor.max()  # Tensor(2)
 All available functions you can found in the functions module.
 
 ```python
-from nncf.experimental.tensor import functions as fns
+from nncf.tensor import functions as fns
 fns.max(nncf_tensor)  # Tensor(2)
 ```
 
@@ -166,7 +166,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
             return torch.foo(a, arg1)
         ```
 
-4. Add test of method to [test template](../../../tests/shared/test_templates/template_test_nncf_tensor.py) for Tensor class
+4. Add test of method to [test template](/tests/shared/test_templates/template_test_nncf_tensor.py) for Tensor class
 
 ### Add new backend
 
@@ -181,7 +181,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
             return np.array(x)  # Function to initialize tensor from list
     ```
 
-3. Add new backend type to `mock_modules` list in [docs/api/source/conf.py](https://github.com/openvinotoolkit/nncf/blob/develop/docs/api/source/conf.py#L131)
+3. Add new backend type to `mock_modules` list in [docs/api/source/conf.py](/docs/api/source/conf.py#L131)
 
     ```python
     mock_modules = [
@@ -192,8 +192,8 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
         "openvino",
         "tensorflow",
         "tensorflow_addons",
-        "nncf.experimental.tensor.functions.torch_*",
-        "nncf.experimental.tensor.functions.numpy_*",
-        "nncf.experimental.tensor.functions.<NEW_BACKEND>_*",
+        "nncf.tensor.functions.torch_*",
+        "nncf.tensor.functions.numpy_*",
+        "nncf.tensor.functions.<NEW_BACKEND>_*",
     ]
     ```

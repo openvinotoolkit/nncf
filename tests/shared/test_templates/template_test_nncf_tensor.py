@@ -17,12 +17,12 @@ from typing import TypeVar
 import numpy as np
 import pytest
 
+import nncf.tensor.functions as fns
 from nncf.experimental.common.tensor_statistics import statistical_functions as s_fns
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import TensorDataType
-from nncf.experimental.tensor import TensorDeviceType
-from nncf.experimental.tensor import functions as fns
-from nncf.experimental.tensor.definitions import TensorBackend
+from nncf.tensor import Tensor
+from nncf.tensor import TensorDataType
+from nncf.tensor import TensorDeviceType
+from nncf.tensor.definitions import TensorBackend
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")

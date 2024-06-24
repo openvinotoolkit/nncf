@@ -14,8 +14,8 @@ from typing import TypeVar
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
-from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.layerwise.engine import LayerwiseEngine
+from nncf.tensor import functions as fns
 from tests.post_training.test_templates.helpers import ConvTestModel
 from tests.post_training.test_templates.helpers import get_static_dataset
 

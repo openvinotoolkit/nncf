@@ -11,9 +11,9 @@
 
 import numpy as np
 
-from nncf.experimental.tensor import TensorDataType
-from nncf.experimental.tensor.definitions import TensorBackend
-from nncf.experimental.tensor.definitions import TensorDeviceType
+from nncf.tensor import TensorDataType
+from nncf.tensor.definitions import TensorBackend
+from nncf.tensor.definitions import TensorDeviceType
 from tests.shared.test_templates.template_test_nncf_tensor import TemplateTestNNCFTensorOperators
 
 

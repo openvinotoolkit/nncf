@@ -13,8 +13,8 @@ from typing import Callable, List
 
 import numpy as np
 
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor.definitions import TensorBackend
+from nncf.tensor import Tensor
+from nncf.tensor.definitions import TensorBackend
 
 
 def tensor_guard(func: callable):
@@ -68,10 +68,10 @@ def get_numeric_backend_fn(fn_name: str, backend: TensorBackend) -> Callable:
     :return: The backend-specific numeric function.
     """
     if backend == TensorBackend.numpy:
-        from nncf.experimental.tensor.functions import numpy_numeric
+        from nncf.tensor.functions import numpy_numeric
 
         return getattr(numpy_numeric, fn_name)
     if backend == TensorBackend.torch:
-        from nncf.experimental.tensor.functions import torch_numeric
+        from nncf.tensor.functions import torch_numeric
 
         return getattr(torch_numeric, fn_name)

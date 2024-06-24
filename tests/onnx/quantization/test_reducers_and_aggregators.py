@@ -15,7 +15,6 @@ import numpy as np
 import pytest
 
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.experimental.tensor import Tensor
 from nncf.onnx.statistics.collectors import ONNXAbsMaxReducer
 from nncf.onnx.statistics.collectors import ONNXAbsQuantileReducer
 from nncf.onnx.statistics.collectors import ONNXBatchMeanReducer
@@ -24,6 +23,7 @@ from nncf.onnx.statistics.collectors import ONNXMeanPerChanelReducer
 from nncf.onnx.statistics.collectors import ONNXMeanReducer
 from nncf.onnx.statistics.collectors import ONNXMinReducer
 from nncf.onnx.statistics.collectors import ONNXQuantileReducer
+from nncf.tensor import Tensor
 from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggregators
 
 

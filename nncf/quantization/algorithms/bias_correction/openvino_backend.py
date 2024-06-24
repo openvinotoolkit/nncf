@@ -17,7 +17,6 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.model_utils import remove_fq_from_inputs
 from nncf.openvino.graph.node_utils import get_bias_value
@@ -32,6 +31,7 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.collectors import get_mean_statistic_collector
 from nncf.openvino.statistics.collectors import get_raw_stat_collector
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
+from nncf.tensor import Tensor
 
 
 class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):

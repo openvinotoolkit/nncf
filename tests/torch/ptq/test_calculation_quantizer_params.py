@@ -25,13 +25,13 @@ from nncf.common.quantization.structs import QuantizationScheme as QuantizationM
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import functions as fn
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 from tests.post_training.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
@@ -210,8 +210,8 @@ def test_quantizer_params_asym(case_to_test: CaseSymParams):
     )
     quantizer = PTMinMaxAlgoBackend._create_quantizer(qconfig, scale_shape, fq_params, target_type)
     assert quantizer.levels == fq_params.levels
-    assert fn.allclose(quantizer.input_low.data, case_to_test.ref_inp_low)
-    assert fn.allclose(quantizer.input_range.data, case_to_test.ref_inp_range)
+    assert fns.allclose(quantizer.input_low.data, case_to_test.ref_inp_low)
+    assert fns.allclose(quantizer.input_range.data, case_to_test.ref_inp_range)
 
 
 class LinearTestModel(nn.Module):
@@ -342,8 +342,8 @@ def test_quantizer_parameters_export(tmp_path: Path, _seed):
 
     for name, param in fq_params.items():
         assert name in torch_ptq_params
-        assert fn.allclose(param["input_low"], torch_ptq_params[name]["input_low"])
-        assert fn.allclose(param["input_high"], torch_ptq_params[name]["input_high"])
+        assert fns.allclose(param["input_low"], torch_ptq_params[name]["input_low"])
+        assert fns.allclose(param["input_high"], torch_ptq_params[name]["input_high"])
 
 
 class TestFQParams(TemplateTestFQParams):

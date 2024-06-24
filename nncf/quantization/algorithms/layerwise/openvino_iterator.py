@@ -18,7 +18,6 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.data.dataset import Dataset
-from nncf.experimental.tensor.tensor import Tensor
 from nncf.openvino.engine import OVNativeEngine
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_parameter_node_name
@@ -27,6 +26,7 @@ from nncf.openvino.graph.transformations.commands import OVStateLessModelExtract
 from nncf.quantization.algorithms.layerwise.iterator import LayerwiseIterator
 from nncf.quantization.algorithms.layerwise.scheduler import LayerwiseStep
 from nncf.quantization.algorithms.layerwise.scheduler import NodeOutputPort
+from nncf.tensor import Tensor
 
 
 class OVLayerwiseIterator(LayerwiseIterator):

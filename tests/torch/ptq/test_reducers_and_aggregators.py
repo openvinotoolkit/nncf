@@ -19,8 +19,8 @@ import torch
 import nncf
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import functions as fns
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 from nncf.torch.tensor_statistics.algo import create_register_input_hook
 from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
 from nncf.torch.tensor_statistics.collectors import PTAbsQuantileReducer

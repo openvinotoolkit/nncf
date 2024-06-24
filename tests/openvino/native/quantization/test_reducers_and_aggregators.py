@@ -15,7 +15,6 @@ import numpy as np
 import pytest
 
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.experimental.tensor import Tensor
 from nncf.openvino.statistics.collectors import OVAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVAbsQuantileReducer
 from nncf.openvino.statistics.collectors import OVBatchMeanReducer
@@ -24,6 +23,7 @@ from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer
 from nncf.openvino.statistics.collectors import OVMeanReducer
 from nncf.openvino.statistics.collectors import OVMinReducer
 from nncf.openvino.statistics.collectors import OVQuantileReducer
+from nncf.tensor import Tensor
 from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggregators
 
 

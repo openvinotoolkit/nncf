@@ -13,12 +13,12 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 
 import numpy as np
 
-from nncf.experimental.tensor.definitions import TensorBackend
-from nncf.experimental.tensor.definitions import TensorDataType
-from nncf.experimental.tensor.definitions import TensorDeviceType
-from nncf.experimental.tensor.definitions import TypeInfo
-from nncf.experimental.tensor.functions import numeric as numeric
-from nncf.experimental.tensor.functions.dispatcher import register_numpy_types
+from nncf.tensor.definitions import TensorBackend
+from nncf.tensor.definitions import TensorDataType
+from nncf.tensor.definitions import TensorDeviceType
+from nncf.tensor.definitions import TypeInfo
+from nncf.tensor.functions import numeric as numeric
+from nncf.tensor.functions.dispatcher import register_numpy_types
 
 DTYPE_MAP = {
     TensorDataType.float16: np.dtype(np.float16),

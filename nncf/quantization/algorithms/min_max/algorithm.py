@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, OrderedDict, Set, Tuple, TypeVar, 
 import numpy as np
 
 import nncf
-import nncf.experimental.tensor.functions as fns
+import nncf.tensor.functions as fns
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph

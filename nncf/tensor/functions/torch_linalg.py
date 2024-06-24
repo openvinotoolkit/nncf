@@ -12,7 +12,7 @@ from typing import Optional, Tuple, Union
 
 import torch
 
-from nncf.experimental.tensor.functions import linalg
+from nncf.tensor.functions import linalg
 
 
 @linalg.norm.register(torch.Tensor)
