@@ -79,7 +79,14 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
-        return 0, 0
+        possible_input_ports = [0, 1]
+        const_port_ids = node.layer_attributes.get_const_port_ids()
+        assert len(const_port_ids) == 1
+        const_port_id = const_port_ids[0]
+
+        possible_input_ports.pop(const_port_id)
+        act_port_id = possible_input_ports[0]
+        return act_port_id, 0
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
@@ -104,5 +111,5 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return node.node_name, node.node_name
 
     @staticmethod
-    def get_activation_channel_axis(node: NNCFNode) -> int:
-        return get_activation_channel_axis(node)
+    def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
+        return get_activation_channel_axis(node, port_id)

@@ -185,10 +185,11 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_activation_channel_axis(node: NNCFNode) -> int:
+    def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
         """
         Returns axis number of the activation tensor which correspond to it channel.
 
         :param node: NNCFNode instance.
+        :param port_id: Port ID for input.
         :return: Channel axis number.
         """

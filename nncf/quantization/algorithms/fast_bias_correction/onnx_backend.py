@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -20,6 +21,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor import Tensor
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_BIAS_REDUCED
+from nncf.onnx.graph.node_utils import get_act_quantization_axis
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_any_weight_quantized
 from nncf.onnx.graph.node_utils import is_node_with_bias
@@ -78,7 +80,19 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
-        return 0, 0
+        layer_attrs = node.layer_attributes
+        inputs = deepcopy(layer_attrs.node_attrs["inputs"])
+
+        # removing bias input from list
+        inputs.remove(layer_attrs.bias_attrs["name"])
+
+        # removing weight inputs from list
+        for weight_attr in layer_attrs.weight_attrs.values():
+            inputs.remove(weight_attr["name"])
+
+        assert len(inputs) == 1
+        input_name = inputs[0]
+        return layer_attrs.node_attrs["inputs"].index(input_name), 0
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> Tensor:
@@ -97,5 +111,5 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return node.node_name, node.node_name
 
     @staticmethod
-    def get_activation_channel_axis(node: NNCFNode) -> int:
-        return node.metatype.output_channel_axis
+    def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
+        return get_act_quantization_axis(node, port_id)

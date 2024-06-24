@@ -143,19 +143,23 @@ def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
     :return: Axis, along which quantizer parameters are calculated.
     """
     weight_channel_axis = node.metatype.weight_channel_axis
-    if node.layer_attributes.has_node_attrs() and node.metatype == om.ONNXGemmMetatype:
-        weight_shape = node.layer_attributes.weight_attrs[port_id]["shape"]
-        weight_channel_axis %= len(weight_shape)  # Make axis positive
-        if port_id == 0:
-            weight_channel_axis -= 1
-        if (
-            port_id == 0
-            and node.layer_attributes.node_attrs["transA"] == 1
-            or port_id == 1
-            and node.layer_attributes.node_attrs["transB"] == 1
-        ):
-            weight_channel_axis = transpose_axis(weight_shape, weight_channel_axis)
+    if node.metatype == om.ONNXGemmMetatype:
+        weight_channel_axis = calculate_gemm_channel_axis(node, port_id)
     return weight_channel_axis
+
+
+def get_act_quantization_axis(node: NNCFNode, port_id: int) -> int:
+    """
+    Returns activation tensor axis, along which quantizer parameters are calculated.
+
+    :param node: NNCFNode, which has a weight on input port_id.
+    :param port_id: Input port id on which there is a weight of a node.
+    :return: Axis, along which quantizer parameters are calculated.
+    """
+    act_channel_axis = node.metatype.output_channel_axis
+    if node.metatype == om.ONNXGemmMetatype:
+        act_channel_axis = calculate_gemm_channel_axis(node, port_id)
+    return act_channel_axis
 
 
 def _get_activation_tensor_shape(
@@ -209,3 +213,16 @@ def get_quantized_tensor_shape(
     if target_point.is_weight_target_point():
         return node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
     return _get_activation_tensor_shape(nncf_graph, node, target_point)
+
+
+def calculate_gemm_channel_axis(node: NNCFNode, port_id: int) -> int:
+    """
+    Calculates Gemm channel axis based on the port and node attributes.
+
+    :param node: NNCFNode instance.
+    :param port_id: Port ID.
+    :return: Channel axis number.
+    """
+    trans_attr = "transA" if not port_id else "transB"
+    transpose = node.layer_attributes.node_attrs[trans_attr]
+    return -1 - port_id if transpose else -2 + port_id

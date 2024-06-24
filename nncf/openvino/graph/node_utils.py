@@ -471,17 +471,18 @@ def get_weighted_layer_attributes(
     return GenericWeightedLayerAttributes(weight_requires_grad=False, weight_shape=attrs.get("shape", None))
 
 
-def get_activation_channel_axis(node: NNCFNode) -> int:
+def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
     """
     Returns axis number of the activation tensor which correspond to it channel.
 
     :param node: NNCFNode instance.
+    :param port_id: Port ID for input.
     :return: Channel axis number.
     """
     channel_axis = 1
 
     if node.metatype == OVMatMulMetatype:
-        activations_layout = get_linear_activations_layout_from_node(node)
-        channel_axis = activations_layout.index(OVLayoutElem.C_IN)
+        activations_layout = get_linear_activations_layout_from_node(node, port_id)
+        channel_axis = activations_layout.index(OVLayoutElem.C_OUT)
 
     return channel_axis

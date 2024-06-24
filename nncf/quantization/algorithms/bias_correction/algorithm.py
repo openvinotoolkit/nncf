@@ -669,18 +669,18 @@ class BiasCorrection(Algorithm):
         return list(biased_nodes - dependant_nodes)
 
     def extract_model(
-        self, model: TModel, input_node_ids: List[Tuple[str, int]], output_node_ids: List[Tuple[str, int]]
+        self, model: TModel, input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
     ) -> TModel:
         """
         Returns the backend-specific model that bounded by the specified input & output layers.
 
         :param model: Backend-specific model.
-        :param input_node_ids: List with the input node IDs.
-        :param output_node_ids: List with the output node IDs.
+        :param input_ids: List with the input IDs.
+        :param output_ids: List with the output IDs.
         :return: Extracted backend-specific model.
         """
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(model)
-        model_extraction_command = self._backend_entity.model_extraction_command(input_node_ids, output_node_ids)
+        model_extraction_command = self._backend_entity.model_extraction_command(input_ids, output_ids)
         transformation_layout.register(model_extraction_command)
         return model_transformer.transform(transformation_layout)

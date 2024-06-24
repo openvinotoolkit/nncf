@@ -77,21 +77,19 @@ def get_linear_weights_layout_from_node(node: NNCFNode) -> List[OVLayoutElem]:
     )
 
 
-def get_linear_activations_layout_from_node(node: NNCFNode) -> List[OVLayoutElem]:
+def get_linear_activations_layout_from_node(node: NNCFNode, port_id: int) -> List[OVLayoutElem]:
     """
     Calculates activations layout for a target linear node.
 
     :param node: Target linear node.
+    :param port_id: Target input port ID.
     :return: Target linear Node weight layout.
     """
-    layer_attributes = node.layer_attributes
-    const_port_id = _get_constant_port_id_from_layer_attributes(layer_attributes)
-    act_layer_attrs = layer_attributes.input_attributes
-    act_port_id = abs(const_port_id - 1)
+    act_layer_attrs = node.layer_attributes.input_attributes
     return get_linear_input_layout(
         input_shape=act_layer_attrs["shape"],
         transpose=act_layer_attrs["transpose"],
-        port_id=act_port_id,
+        port_id=port_id,
     )
 
 

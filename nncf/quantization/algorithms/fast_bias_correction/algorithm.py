@@ -150,11 +150,15 @@ class FastBiasCorrection(Algorithm):
                 continue
 
             in_node_name, out_node_name = self._backend_entity.get_node_names_for_input_output_statistics(node, graph)
+            input_port_id, _ = self._backend_entity.get_activation_port_ids_for_bias_node(node)
 
             input_fp, input_shape = self._get_fp_inputs(statistic_points, in_node_name)
+
             output_fp = self._get_fp_outputs(statistic_points, out_node_name)
 
-            extracted_model = self._extract_submodel(model_transformer, in_node_name, out_node_name)
+            input_id = (in_node_name, input_port_id)
+            output_id = (out_node_name, 0)
+            extracted_model = self._extract_submodel(model_transformer, input_id, output_id)
             if extracted_model is None:
                 nncf_logger.debug(f"Skipping node {node_name} because cant extract submodel")
                 continue
@@ -162,7 +166,7 @@ class FastBiasCorrection(Algorithm):
             sub_input_name, sub_output_name = self._backend_entity.get_sub_input_output_names(extracted_model)
 
             output_channel_axis = node.metatype.output_channel_axis
-            input_channel_axis = self._backend_entity.get_activation_channel_axis(node)
+            input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id)
             if bias_value.ndim > 1:
                 # Make index positive
                 output_channel_axis = range(bias_value.ndim)[output_channel_axis]
@@ -274,18 +278,18 @@ class FastBiasCorrection(Algorithm):
             output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
 
-    def _extract_submodel(self, model_transformer: ModelTransformer, in_node_name: str, out_node_name: str) -> TModel:
+    def _extract_submodel(
+        self, model_transformer: ModelTransformer, input_id: Tuple[str, int], output_id: Tuple[str, int]
+    ) -> TModel:
         """
         Extracts sub-model using backend-specific ModelTransformer.
 
         :param model_transformer: Backend-specific ModelTransformer.
-        :param in_node_name: Name of the start node.
-        :param out_node_name: Name of the output node.
+        :param input_id: Input ID.
+        :param output_id: Output ID.
         :return: Backend-specific sub-model.
         """
-        model_extraction_command = self._backend_entity.model_extraction_command(
-            [(in_node_name, 0)], [(out_node_name, 0)]
-        )
+        model_extraction_command = self._backend_entity.model_extraction_command([input_id], [output_id])
         me_transformation_layout = TransformationLayout()
         me_transformation_layout.register(model_extraction_command)
         extracted_model = model_transformer.transform(me_transformation_layout)
@@ -349,7 +353,7 @@ class FastBiasCorrection(Algorithm):
             post_layer_statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, out_node_name, output_port_id
             )
-            input_channel_axis = self._backend_entity.get_activation_channel_axis(node)
+            input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id)
 
             self._add_statistic_point(statistic_container, pre_layer_statistic_point, input_channel_axis)
             self._add_statistic_point(
