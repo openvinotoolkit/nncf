@@ -152,8 +152,8 @@ def get_act_quantization_axis(node: NNCFNode, port_id: int) -> int:
     """
     Returns activation tensor axis, along which quantizer parameters are calculated.
 
-    :param node: NNCFNode, which has a weight on input port_id.
-    :param port_id: Input port id on which there is a weight of a node.
+    :param node: NNCFNode, with the activation on input port_id.
+    :param port_id: Input port id on which there is a activation of a node.
     :return: Axis, along which quantizer parameters are calculated.
     """
     act_channel_axis = node.metatype.output_channel_axis
@@ -223,6 +223,10 @@ def calculate_gemm_channel_axis(node: NNCFNode, port_id: int) -> int:
     :param port_id: Port ID.
     :return: Channel axis number.
     """
+    # Gemm metatype supports only 2D inputs according to the documentation -
+    # https://onnx.ai/onnx/operators/onnx__Gemm.html
+    gemm_shape = [0, 1]
     trans_attr = "transA" if not port_id else "transB"
     transpose = node.layer_attributes.node_attrs[trans_attr]
-    return -1 - port_id if transpose else -2 + port_id
+    channel_axis = -1 - port_id if transpose else -2 + port_id
+    return gemm_shape.pop(channel_axis)

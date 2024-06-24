@@ -154,6 +154,7 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
 class LayerAttributesTestCase:
     node_creator: Callable
     input_shape: Tuple[int, ...]
+    act_port_id: int
     ref_layer_attrs: OVLayerAttributes
     ref_weights_layout: Tuple[OVLayoutElem]
     ref_acts_layout: Tuple[OVLayoutElem]
@@ -163,6 +164,7 @@ TEST_CASES_CONV = [
     LayerAttributesTestCase(
         get_conv,
         (1, 3, 3, 3),
+        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (4, 3, 2, 1)}},
             ConvolutionLayerAttributes(
@@ -189,6 +191,7 @@ TEST_CASES_CONV = [
     LayerAttributesTestCase(
         get_convert_conv,
         (1, 3, 3, 3),
+        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (4, 3, 1, 1)}},
             ConvolutionLayerAttributes(
@@ -215,6 +218,7 @@ TEST_CASES_CONV = [
     LayerAttributesTestCase(
         get_depthwise_conv,
         (1, 3, 3, 3),
+        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (3, 3, 1, 1, 1)}},
             ConvolutionLayerAttributes(
@@ -242,6 +246,7 @@ TEST_CASES_CONV = [
     LayerAttributesTestCase(
         get_group_conv,
         (1, 10, 3, 3),
+        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (5, 10, 2, 1, 1)}},
             ConvolutionLayerAttributes(
@@ -269,6 +274,7 @@ TEST_CASES_CONV = [
     LayerAttributesTestCase(
         get_transpose_conv,
         (1, 3, 3, 3),
+        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (3, 4, 2, 1)}},
             ConvolutionLayerAttributes(
@@ -295,6 +301,7 @@ TEST_CASES_CONV = [
     LayerAttributesTestCase(
         get_transpose_group_conv,
         (1, 3, 3, 3),
+        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (3, 1, 3, 1, 1)}},
             ConvolutionLayerAttributes(
@@ -326,6 +333,7 @@ TEST_CASES_LINEAR = [
     LayerAttributesTestCase(
         get_matmul_b,
         (1, 3, 4),
+        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (1, 4), "transpose": True}},
             LinearLayerAttributes(
@@ -342,6 +350,7 @@ TEST_CASES_LINEAR = [
     LayerAttributesTestCase(
         get_matmul_a,
         (1, 3, 4),
+        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (3, 1), "transpose": False}},
             LinearLayerAttributes(
@@ -358,6 +367,7 @@ TEST_CASES_LINEAR = [
     LayerAttributesTestCase(
         get_matmul_a_swapped,
         (1, 3, 4),
+        1,
         OVLayerAttributes(
             {0: {"name": "Const", "shape": (3, 1), "transpose": True}},
             LinearLayerAttributes(
@@ -374,6 +384,7 @@ TEST_CASES_LINEAR = [
     LayerAttributesTestCase(
         get_matmul_b_swapped,
         (1, 3, 4),
+        1,
         OVLayerAttributes(
             {0: {"name": "Const", "shape": (1, 4), "transpose": False}},
             LinearLayerAttributes(
@@ -390,6 +401,7 @@ TEST_CASES_LINEAR = [
     LayerAttributesTestCase(
         get_1d_matmul,
         (1, 3, 4),
+        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (4,), "transpose": False}},
             LinearLayerAttributes(
@@ -407,10 +419,11 @@ TEST_CASES_LINEAR = [
 
 
 TEST_CASES_NO_WEGIHTS_LAYOUT = [
-    LayerAttributesTestCase(get_shape_node, (1, 3, 3, 3), None, None, None),
+    LayerAttributesTestCase(get_shape_node, (1, 3, 3, 3), 0, None, None, None),
     LayerAttributesTestCase(
         get_add,
         (1, 3, 4, 5),
+        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (1, 1, 1, 1)}},
             GenericWeightedLayerAttributes(False, weight_shape=(1, 1, 1, 1)),
@@ -422,6 +435,7 @@ TEST_CASES_NO_WEGIHTS_LAYOUT = [
     LayerAttributesTestCase(
         get_lstm,
         (2, 3, 4),
+        0,
         OVLayerAttributes(
             {
                 1: {"name": "hs", "shape": (2, 1, 4)},
@@ -474,5 +488,5 @@ def test_get_linear_weights_layout_from_node(test_descriptor: LayerAttributesTes
 def test_get_linear_activations_layout_from_node(test_descriptor: LayerAttributesTestCase):
     node = _get_node_to_test(test_descriptor)
     for _ in range(2):  # To test get_linear_activations_layout_from_node is a clean function
-        acts_layout = get_linear_activations_layout_from_node(node)
+        acts_layout = get_linear_activations_layout_from_node(node, test_descriptor.act_port_id)
         assert acts_layout == test_descriptor.ref_acts_layout
