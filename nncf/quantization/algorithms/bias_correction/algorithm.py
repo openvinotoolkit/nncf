@@ -581,7 +581,7 @@ class BiasCorrection(Algorithm):
 
         for biased_after_input_node in biased_after_input_nodes:
             # We need to collect activation input to register it for the biased layer as the layer with statistics.
-            activation_port = self._backend_entity.get_activation_port_id(node, graph)
+            activation_port = self._backend_entity.get_activation_port_id(biased_after_input_node, graph)
             edge = graph.get_input_edges(biased_after_input_node)[activation_port]
 
             input_id = (biased_after_input_node.node_name, edge.input_port_id)
