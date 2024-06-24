@@ -479,8 +479,10 @@ def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
     :param port_id: Port ID for input.
     :return: Channel axis number.
     """
+    # In case of the OpenVINO, [N, C, ..] layout applicable for most quantizable layers.
     channel_axis = 1
 
+    # But the MatMul layers may transpose inputs internally.
     if node.metatype == OVMatMulMetatype:
         activations_layout = get_linear_activations_layout_from_node(node, port_id)
         channel_axis = activations_layout.index(OVLayoutElem.C_OUT)

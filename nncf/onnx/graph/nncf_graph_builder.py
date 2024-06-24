@@ -176,6 +176,8 @@ def _get_node_attrs(node: onnx.NodeProto, model: onnx.ModelProto) -> Dict[str, A
     :param model: ONNX model.
     :return : Node attributes.
     """
+    # We need to collect list of the inputs.
+    # These inputs exists for each node.
     node_attrs = {"inputs": list(node.input)}
     metatype = get_metatype(model, node)
     if metatype == ONNXGemmMetatype:

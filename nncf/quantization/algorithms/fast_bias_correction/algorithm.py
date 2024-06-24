@@ -156,8 +156,11 @@ class FastBiasCorrection(Algorithm):
 
             output_fp = self._get_fp_outputs(statistic_points, out_node_name)
 
+            # In case of the matrix multiplication layers, this is crucial to know the correct input port.
             input_id = (in_node_name, input_port_id)
+            # Outputs of the subgraphs for the FastBiasCorrection are the same across the backends.
             output_id = (out_node_name, 0)
+
             extracted_model = self._extract_submodel(model_transformer, input_id, output_id)
             if extracted_model is None:
                 nncf_logger.debug(f"Skipping node {node_name} because cant extract submodel")
