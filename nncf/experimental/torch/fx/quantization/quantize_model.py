@@ -18,15 +18,20 @@ from torch.ao.quantization.pt2e.duplicate_dq_pass import DuplicateDQPass
 from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
 from torch.ao.quantization.pt2e.qat_utils import _fold_conv_bn_qat
 from torch.ao.quantization.pt2e.utils import _disallow_eval_train
+from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
 
 import nncf
 from nncf.common.factory import NNCFGraphFactory
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.data import Dataset
-from nncf.experimental.torch_fx.transformations import merge_conv_and_bias
+from nncf.experimental.torch.fx.transformations import merge_conv_and_bias
+from nncf.experimental.torch.fx.transformations import separate_conv_and_bias
+from nncf.experimental.torch.fx.transformations import separate_linear_and_bias
+from nncf.experimental.torch.fx.transformations import view_to_reshape
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -53,6 +58,11 @@ def quantize_impl(
     """
     Implementation of the `quantize()` method for the Torch FX backend.
     """
+    nncf_logger.warning(
+        "Experimental Torch FX quantization backend is being used for the given torch.fx.GraphModule model."
+        " Torch FX PTQ is an experimental feature, consider using Torch or OpenVino PTQ backends"
+        " in case of errors or a poor model performance."
+    )
     if fast_bias_correction is False:
         raise ValueError(f"fast_bias_correction={fast_bias_correction} is not supported")
     if target_device == TargetDevice.CPU_SPR:
@@ -66,8 +76,7 @@ def quantize_impl(
 
     if advanced_parameters is None:
         advanced_parameters = AdvancedQuantizationParameters()
-    # torch.fx supports only assymetric activations quantization
-    # force to use only this type of quantization
+    # Default quantization mode is assymmetric
     activations_quantization_params = advanced_parameters.activations_quantization_params
     if activations_quantization_params is None:
         activations_quantization_params = QuantizationParameters()
@@ -84,6 +93,24 @@ def quantize_impl(
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
     )
+
+    # BatchNorm operations have 3 output ports,
+    # to make it easier for alorithms to work
+    # with the target graph BatchNorm operations
+    # are being fused
+    _fuse_conv_bn_(copied_model)
+
+    # To make it easier for bias correction algorithms,
+    # biases are being separated by the followng calls.
+    separate_linear_and_bias(copied_model)
+    separate_conv_and_bias(copied_model)
+
+    # View requires at least one dimension spans
+    # across two contiguous subspaces and reshape is not.
+    # To prevent error during statistics collection
+    # all view operation are translated to reshape.
+    view_to_reshape(copied_model)
+
     nncf_graph = NNCFGraphFactory.create(copied_model)
     quantized_model = quantization_algorithm.apply(copied_model, nncf_graph, dataset=calibration_dataset)
     merge_conv_and_bias(quantized_model)

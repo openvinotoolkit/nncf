@@ -27,8 +27,8 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.torch_fx.model_transformer import FXApplyTransformationCommand
-from nncf.experimental.torch_fx.transformations import qdq_insertion_tranformation_builder
+from nncf.experimental.torch.fx.model_transformer import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.transformations import qdq_insertion_tranformation_builder
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import StatisticsType
@@ -41,6 +41,7 @@ from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
+from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
@@ -104,7 +105,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def scaled_dot_product_attention_metatypes(self) -> List[OperatorMetatype]:
-        return []
+        return [om.PTScaledDotProductAttentionMetatype]
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
@@ -142,7 +143,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return nncf_graph.get_input_shape_for_insertion_point(target_point)
 
     @staticmethod
-    def get_weight_quantization_axes(node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int]:
+    def get_weight_quantization_axes(node: NNCFNode, target_point: PTTargetPoint, ndims: int) -> Tuple[int]:
         # TODO: support transpose conv and other cases
         return (0,)
 
@@ -195,8 +196,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return collector
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
-        return node.metatype.weight_port_ids
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
+        return get_weight_tensor_port_ids(node, graph)
 
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> str:

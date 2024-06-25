@@ -47,15 +47,10 @@ class PatternsManager:
                 Dict[HWFusedPatternNames, Callable[[], GraphPattern]], OPENVINO_HW_FUSED_PATTERNS.registry_dict
             )
             return registry
-        if backend == BackendType.TORCH:
+        if backend in (BackendType.TORCH, BackendType.TORCH_FX):
             from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
 
             registry = cast(Dict[HWFusedPatternNames, Callable[[], GraphPattern]], PT_HW_FUSED_PATTERNS.registry_dict)
-            return registry
-        if backend == BackendType.TORCH_FX:
-            from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
-
-            registry = PT_HW_FUSED_PATTERNS.registry_dict
             return registry
         raise ValueError(f"Hardware-fused patterns not implemented for {backend} backend.")
 
@@ -82,15 +77,10 @@ class PatternsManager:
                 Dict[IgnoredPatternNames, Callable[[], GraphPattern]], OPENVINO_IGNORED_PATTERNS.registry_dict
             )
             return registry
-        if backend == BackendType.TORCH:
+        if backend in (BackendType.TORCH, BackendType.TORCH_FX):
             from nncf.torch.quantization.ignored_patterns import PT_IGNORED_PATTERNS
 
             registry = cast(Dict[IgnoredPatternNames, Callable[[], GraphPattern]], PT_IGNORED_PATTERNS.registry_dict)
-            return registry
-        if backend == BackendType.TORCH_FX:
-            from nncf.torch.quantization.ignored_patterns import PT_IGNORED_PATTERNS
-
-            registry = PT_IGNORED_PATTERNS.registry_dict
             return registry
         raise ValueError(f"Ignored patterns not implemented for {backend} backend.")
 

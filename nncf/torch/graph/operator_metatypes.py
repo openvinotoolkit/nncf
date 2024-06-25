@@ -554,7 +554,6 @@ class PTAddMetatype(PTOperatorMetatype):
             "__radd__",
         ],
         NamespaceTarget.TORCH: ["add"],
-        NamespaceTarget.ATEN: ["add_"],
     }
     hw_config_names = [HWConfigOpName.ADD]
     num_expected_input_edges = 2
@@ -572,7 +571,6 @@ class PTSubMetatype(PTOperatorMetatype):
             "__rsub__",
         ],
         NamespaceTarget.TORCH: ["sub"],
-        NamespaceTarget.ATEN: ["sub_"],
     }
     hw_config_names = [HWConfigOpName.SUBTRACT]
     num_expected_input_edges = 2

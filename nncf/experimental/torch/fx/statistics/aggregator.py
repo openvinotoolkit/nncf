@@ -21,7 +21,8 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.torch_fx.model_transformer import FXModuleInsertionCommand
+from nncf.experimental.torch.fx.model_transformer import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.transformations import leaf_module_insertion_transformation_builder
 from nncf.tensor import Tensor
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.return_types import maybe_get_values_from_torch_return_type
@@ -36,7 +37,7 @@ class TensorCollectorModule(torch.nn.Module):
         super().__init__()
         self._collector = collector
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Register inputs hook function.
 
@@ -74,11 +75,12 @@ class FXStatisticsAggregator(StatisticsAggregator):
             for _statistic_point in _statistic_points:
                 for collectors in _statistic_point.algorithm_to_tensor_collectors.values():
                     for collector in collectors:
+                        transformation = leaf_module_insertion_transformation_builder(
+                            TensorCollectorModule(collector), [_statistic_point.target_point]
+                        )
                         transformation_commands.append(
-                            FXModuleInsertionCommand(
-                                [_statistic_point.target_point],
-                                TensorCollectorModule(collector),
-                                TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION,
+                            FXApplyTransformationCommand(
+                                transformation, TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION
                             )
                         )
 
@@ -91,7 +93,7 @@ class FXStatisticsAggregator(StatisticsAggregator):
     def _get_merged_statistic_points(
         statistic_points: StatisticPointsContainer, model: TModel, graph: NNCFGraph
     ) -> StatisticPointsContainer:
-        # TODO: mirgate to experimental statistic collector and use common merging algorithm
+        # TODO(dlyakhov): mirgate to experimental statistic collector and use common merging algorithm
         return statistic_points
 
     @staticmethod

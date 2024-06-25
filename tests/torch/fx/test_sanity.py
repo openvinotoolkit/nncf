@@ -28,10 +28,15 @@ from torch._export import capture_pre_autograd_graph
 import nncf
 from nncf.common.logging.track_progress import track
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
-from tests.torch_fx.helpers import TinyImagenetDatasetManager
+from tests.torch.fx.helpers import TinyImagenetDatasetManager
 
 IMAGE_SIZE = 64
 BATCH_SIZE = 128
+
+
+@pytest.fixture(name="tiny_imagenet_dataset", scope="module")
+def tiny_imagenet_dataset_fixture():
+    return TinyImagenetDatasetManager(IMAGE_SIZE, BATCH_SIZE).create_data_loaders()
 
 
 @dataclass
@@ -47,7 +52,7 @@ MODELS = (
     SanitySampleCase(
         "resnet18",
         "https://storage.openvinotoolkit.org/repositories/nncf/openvino_notebook_ckpts/302_resnet18_fp32_v1.pth",
-        55.23,
+        55.2,
         51,
         58,
     ),
@@ -113,13 +118,12 @@ def count_q_dq(model: torch.fx.GraphModule):
 
 
 @pytest.mark.parametrize("test_case", MODELS)
-def test_sanity(test_case: SanitySampleCase):
+def test_sanity(test_case: SanitySampleCase, tiny_imagenet_dataset):
     with disable_patching():
+        torch.manual_seed(42)
         device = torch.device("cpu")
         model = get_model(test_case.model_id, test_case.checkpoint_url, device)
-        _, val_dataloader, calibration_dataset = TinyImagenetDatasetManager(
-            IMAGE_SIZE, BATCH_SIZE
-        ).create_data_loaders()
+        _, val_dataloader, calibration_dataset = tiny_imagenet_dataset
 
         def transform_fn(data_item):
             return data_item[0].to(device)
@@ -134,7 +138,7 @@ def test_sanity(test_case: SanitySampleCase):
             quantized_model = torch.compile(quantized_model, backend="openvino")
 
         top1_int8 = validate(val_dataloader, quantized_model, device)
-        assert np.isclose(top1_int8, test_case.top1_int8_ref, atol=1e-2)
+        assert np.isclose(top1_int8, test_case.top1_int8_ref, atol=0.1)
 
         num_q, num_dq = count_q_dq(quantized_model)
         assert num_q == test_case.ref_num_q

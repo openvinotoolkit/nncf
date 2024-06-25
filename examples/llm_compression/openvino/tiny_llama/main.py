@@ -11,12 +11,12 @@
 import time
 from functools import partial
 
+import datasets
 import numpy as np
 import openvino as ov
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 
-import datasets
 import nncf
 
 
