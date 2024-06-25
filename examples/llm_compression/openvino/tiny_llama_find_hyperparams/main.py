@@ -17,12 +17,12 @@ from typing import Callable, Iterable, Optional, Tuple, TypeVar
 
 import numpy as np
 import openvino as ov
+from datasets import load_dataset
 from optimum.intel import OVModelForCausalLM
 from transformers import AutoTokenizer
 from whowhatbench import Evaluator
 
 import nncf
-from datasets import load_dataset
 from nncf.common.logging import nncf_logger
 
 DataItem = TypeVar("DataItem")
