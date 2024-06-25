@@ -11,7 +11,6 @@
 
 from typing import Dict
 
-import numpy as np
 import torch
 
 from nncf.common.factory import TModel
@@ -20,9 +19,9 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.tensor_statistics.algo import create_register_input_hook
 
 
@@ -34,9 +33,8 @@ class PTStatisticsAggregator(StatisticsAggregator):
             super().collect_statistics(model, graph)
         model.nncf.remove_hooks_group(self.HOOKS_GROUP_NAME)
 
-    def _register_statistics(
-        self, outputs: Dict[str, PTNNCFTensor], statistic_points: StatisticPointsContainer
-    ) -> None:
+    def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
+        # PyTorch backend doesn't use outputs to register statistics
         return
 
     def _get_transformation_layout_extra_outputs(
@@ -71,5 +69,6 @@ class PTStatisticsAggregator(StatisticsAggregator):
         return statistic_points
 
     @staticmethod
-    def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, PTNNCFTensor]:
-        return outputs
+    def _process_outputs(outputs: torch.Tensor) -> Dict[str, Tensor]:
+        # PyTorch backend doesn't use outputs to register statistics
+        return {}

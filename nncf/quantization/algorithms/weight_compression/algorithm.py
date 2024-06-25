@@ -26,19 +26,20 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
+from nncf.tensor import Tensor
+from nncf.tensor.definitions import TensorDataType
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -63,16 +64,17 @@ class WeightCompression(Algorithm):
         awq: bool,
         subset_size: int,
         scale_estimation: bool,
+        gptq: bool,
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ):
         """
         :param mode: Defines a mode for weight compression.
             INT8_SYM stands for 8-bit integer symmetric quantization of all weights.
-                Weights are quantized symmetrically with a fixed zero point equals to 128.
+                Weights are quantized symmetrically without zero point.
             INT8_ASYM is the same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically
                 with a typical non-fixed zero point.
             INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
-                Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
+                Weights are quantized to a primary precision symmetrically without zero point.
                 All embeddings and the last layer are always compressed to a backup precision, which is INT8_ASYM,
                 by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
                 criteria and the given ratio.
@@ -93,6 +95,7 @@ class WeightCompression(Algorithm):
         :param subset_size: Number of data samples to calculate activation statistics used for assigning different
             quantization precision.
         :param scale_estimation: determines whether to use or not scale estimation for 4 bit layers.
+        :param gptq: determines whether to use or not GPTQ algorithm.
         :param advanced_parameters: advanced parameters for algorithms in compression pipeline.
         """
         super().__init__()
@@ -108,9 +111,15 @@ class WeightCompression(Algorithm):
         self._awq = awq
         self._subset_size = subset_size
         self._scale_estimation = scale_estimation
+        self._gptq = gptq
         self._advanced_parameters = (
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
+
+        if self._gptq:
+            gptq_params = self._advanced_parameters.gptq_params
+            self._gptq_algo = GPTQ(gptq_params.damp_percent, gptq_params.block_size, gptq_params.subset_size)
+            self._gptq_statistics = None
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -294,17 +303,6 @@ class WeightCompression(Algorithm):
         activations = {}
         if dataset is not None and self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
             activations = self._get_activations(dataset, self._subset_size, nodes_to_compress, graph, model)
-
-        transformed_model = self.do_compression(model, graph, nodes_to_compress, activations)
-        return transformed_model
-
-    def do_compression(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        nodes_to_compress: List[NNCFNode],
-        activations: Optional[Dict[str, List[Tensor]]] = None,
-    ) -> TModel:
         all_weight_params: List[WeightCompressionParameters] = []
         weight_names = set()
 
@@ -369,7 +367,8 @@ class WeightCompression(Algorithm):
             )
             awq_algo.apply(model, graph)
 
-        precomputed_scales = {wp.node_with_weight.node_name: None for wp in all_weight_params}
+        scales = {}
+        zero_points = {}
         if self._scale_estimation and activations is not None and self._mode != CompressWeightsMode.NF4:
             scale_estimation_params = self._advanced_parameters.scale_estimation_params
             scale_algo = ScaleEstimation(
@@ -383,11 +382,25 @@ class WeightCompression(Algorithm):
                 scale_estimation_params.scale_steps,
                 scale_estimation_params.weight_penalty,
             )
-            precomputed_scales = scale_algo.apply(model, graph)
+            scales = scale_algo.apply(model, graph)
+
+        if self._gptq:
+            model, scales, zero_points = self._gptq_algo.apply(
+                model=model,
+                graph=graph,
+                dataset=dataset,
+                weight_compression_parameters=all_weight_params,
+                statistic_points=self._gptq_statistics,
+                backend_entity=self._backend_entity,
+            )
 
         # Compress model using weight compression parameters
         transformed_model = self._backend_entity.transform_model(
-            model, graph, track(all_weight_params, description="Applying Weight Compression"), precomputed_scales
+            model,
+            graph,
+            track(all_weight_params, description="Applying Weight Compression"),
+            scales,
+            zero_points,
         )
 
         self._backend_entity.dump_parameters(
@@ -401,6 +414,7 @@ class WeightCompression(Algorithm):
                 "sensitivity_metric": self._sensitivity_metric.value,
                 "awq": self._awq,
                 "scale_estimation": self._scale_estimation,
+                "gptq": self._gptq,
             },
             algo_name="weight_compression",
         )
@@ -452,7 +466,7 @@ class WeightCompression(Algorithm):
             node_name, input_filter_func, self._algorithm_key
         ):
             for value in tensor_collector.get_statistics().values:
-                input_fp.append(Tensor(value))
+                input_fp.append(value)
         self._fp_inputs[input_id] = input_fp
         return self._fp_inputs[input_id]
 
@@ -499,6 +513,13 @@ class WeightCompression(Algorithm):
 
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         statistics_aggregator.register_statistic_points(statistic_container)
+
+        if self._gptq:
+            self._gptq_statistics = self._gptq_algo.get_statistic_points(
+                model, graph, nodes_to_compress, self._backend_entity
+            )
+            statistics_aggregator.register_statistic_points(self._gptq_statistics)
+
         statistics_aggregator.collect_statistics(model, graph)
 
         for node_name, output_id in _collected_stat_inputs_map.items():

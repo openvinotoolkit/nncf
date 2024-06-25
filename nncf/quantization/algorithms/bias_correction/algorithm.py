@@ -12,8 +12,6 @@
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
-import numpy as np
-
 import nncf
 from nncf import Dataset
 from nncf import nncf_logger
@@ -33,7 +31,10 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 
 TModel = TypeVar("TModel")
 
@@ -177,7 +178,7 @@ class BiasCorrection(Algorithm):
             if current_bias.ndim > 1:
                 channel_axis = range(current_bias.ndim)[channel_axis]
                 axes = [i for i in range(current_bias.ndim) if i != channel_axis]
-                bias_shift = np.expand_dims(bias_shift, axes)
+                bias_shift = fns.expand_dims(bias_shift, axes)
 
             updated_bias = current_bias + bias_shift
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
@@ -352,13 +353,13 @@ class BiasCorrection(Algorithm):
                 # Since we do not use as inputs the layers from which the statistics are gathered,
                 # but those that follow them, we need to take this into account when creating feed dicts.
                 activation_name, _ = self._collected_stat_inputs_map[(input_node_name, input_port_id)]
-                feed_dict[input_tensor_name] = statistics_per_input[input_tensor_name][stat_id]
+                feed_dict[input_tensor_name] = statistics_per_input[input_tensor_name][stat_id].data
             feed_dicts.append(feed_dict)
         return feed_dicts
 
     def _compute_bias_shift(
         self, node: NNCFNode, model: TModel, feed_dicts: List, statistic_points: StatisticPointsContainer
-    ) -> np.ndarray:
+    ) -> Tensor:
         """
         Computes bias shift that will be used for the further bias correction.
 
@@ -376,13 +377,13 @@ class BiasCorrection(Algorithm):
         for feed_dict in feed_dicts:
             q_output = engine.infer(feed_dict)
             q_output = self._backend_entity.process_model_output(q_output, output_tensor_name)
-            q_outputs.append(self._backend_entity.tensor_processor.mean_per_channel(q_output, channel_axis).tensor)
+            q_outputs.append(mean_per_channel(q_output, channel_axis))
         # Here we get the per-sample average, so the axis is 0.
-        q_output = np.mean(q_outputs, axis=0)
-        return output_fp - q_output
+        q_output = fns.mean(fns.stack(q_outputs), axis=0)
+        return fns.stack(output_fp) - q_output
 
     @staticmethod
-    def _get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
+    def _get_bias_shift_magnitude(current_bias_value: Tensor, updated_bias_value: Tensor) -> Tensor:
         """
         Calculates bias shift magnitude based on the current and updated values.
 
@@ -390,11 +391,9 @@ class BiasCorrection(Algorithm):
         :param updated_bias_value: Updated bias value.
         :return: Magnitude between original and updated bias values.
         """
-        bias_shift_magnitude = np.inf
-        bias_shift_magnitude = np.max(
-            np.abs(
-                (updated_bias_value - current_bias_value)
-                / (current_bias_value + np.finfo(current_bias_value.dtype).min)
+        bias_shift_magnitude = fns.max(
+            fns.abs(
+                (updated_bias_value - current_bias_value) / (current_bias_value + fns.finfo(current_bias_value).min)
             )
         )
         return bias_shift_magnitude
@@ -426,7 +425,7 @@ class BiasCorrection(Algorithm):
             new_q_output = engine.infer(feed_dict)
             for output_node_name, output_id in subgraph_data["subgraph_output_ids"]:
                 output_tensor_name = self._backend_entity.get_output_name(model, output_node_name, output_id)
-                self._fp_inputs[(output_node_name, output_id)].append(new_q_output[output_tensor_name])
+                self._fp_inputs[(output_node_name, output_id)].append(Tensor(new_q_output[output_tensor_name]))
 
     def _remove_unnecessary_stats(self, position: int, subgraphs_data: Dict[str, Dict]) -> None:
         """
@@ -450,7 +449,7 @@ class BiasCorrection(Algorithm):
                 nncf_logger.debug(f"Dropped {activation_name} output statistics.")
                 self._fp_inputs[input_id] = []
 
-    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> np.ndarray:
+    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> Tensor:
         """
         # TODO: paraphrase
         Makes out pre-layer needed data from the floating-point collected statistics.
@@ -483,7 +482,7 @@ class BiasCorrection(Algorithm):
         self._fp_inputs[input_id] = input_fp
         return self._fp_inputs[input_id]
 
-    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> np.ndarray:
+    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tensor:
         """
         Makes out post-layer needed data from the floating-point collected statistics.
 
@@ -503,7 +502,7 @@ class BiasCorrection(Algorithm):
             node_name, output_filter_func, self._algorithm_key
         ):
             output_fp.extend(tensor_collector.get_statistics().mean_values)
-        return np.array(output_fp)
+        return output_fp
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)

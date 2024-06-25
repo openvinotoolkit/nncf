@@ -19,8 +19,8 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.tensor import Tensor
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
+from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.command_creation import create_bias_correction_command
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand

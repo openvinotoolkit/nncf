@@ -270,6 +270,7 @@ class TemplateTestQuantizerConfig:
             subset_size=num_samples, activations_range_estimator_params=range_estimator_params
         )
         min_max_algo._backend_entity = self.get_algo_backend()
+        min_max_algo._init_cache()
         q_config = QuantizerConfig(num_bits=8, mode=q_config_mode, per_channel=q_config_per_channel)
 
         if params.target_type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:

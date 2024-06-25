@@ -183,7 +183,7 @@ class TestONNXExport:
             ),
             Dict(
                 nncf_weight_ratio=0.43,
-                ov_weight_ratio=0.29,
+                ov_weight_ratio=0.33,
                 recipe=SwinRunRecipe().model_config_(
                     num_heads=[4],
                     num_labels=1,

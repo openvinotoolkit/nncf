@@ -296,6 +296,26 @@ class AdvancedScaleEstimationParameters:
 
 @api()
 @dataclass
+class AdvancedGPTQParameters:
+    """
+    Contains advanced parameters for GPTQ algorithm.
+
+    :param damp_percent: The percent of the average Hessian diagonal to use for dampening,
+        recommended value is 0.1.
+    :type damp_percent: float
+    :param block_size: The size of the blocks used during quantization. Defaults to 128.
+    :type block_size: int
+    :param subset_size: Number of data samples to calculate Hessian. Defaults to 128.
+    :type subset_size: int
+    """
+
+    damp_percent: float = 0.1
+    block_size: int = 128
+    subset_size: int = 128
+
+
+@api()
+@dataclass
 class AdvancedCompressionParameters:
     """
     Contains advanced parameters for compression algorithms.
@@ -313,6 +333,9 @@ class AdvancedCompressionParameters:
     scale_estimation_params: AdvancedScaleEstimationParameters = field(
         default_factory=AdvancedScaleEstimationParameters
     )
+
+    # Advanced GPTQ algorithm parameters
+    gptq_params: AdvancedGPTQParameters = field(default_factory=AdvancedGPTQParameters)
 
 
 @api()
