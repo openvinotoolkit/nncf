@@ -120,7 +120,6 @@ INSTALL_REQUIRES = [
     "tqdm>=4.54.1",
 ]
 
-
 EXTRAS_REQUIRE = {
     "plots": [
         "kaleido>=0.2.1",
