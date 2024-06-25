@@ -15,19 +15,21 @@ from typing import Any, Dict, List, Optional, TypeVar
 
 from nncf import Dataset
 from nncf import nncf_logger
+from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
+from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.passes import transform_to_inference_graph
+from nncf.tensor import functions as fns
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -141,6 +143,9 @@ class AWQ(Algorithm):
         if len(matches) == 0:
             nncf_logger.info("No matching patterns were found for applying AWQ algorithm, it will be skipped.")
             return model
+
+        transformation_layout = TransformationLayout()
+        model_transformer = ModelTransformerFactory.create(model, inplace=True)
 
         awq_data = {}
         name_mapping = {wp.weight_name: idx for idx, wp in enumerate(self._all_weight_params)}
@@ -280,7 +285,9 @@ class AWQ(Algorithm):
             scaled_weight = weight * w_scale
             self._backend_entity.set_weight(wp.node_with_weight, weight_port_id, model, graph, scaled_weight)
 
-            if merge_node.node_type == "MatMul":  # for MatMul->Multiply->MatMul pattern scale merged to first MatMul
+            if self._backend_entity.is_node_with_weights(
+                merge_node, graph
+            ):  # for MatMul->Multiply->MatMul pattern scale merged to first MatMul
                 for _, port_id in self._backend_entity.get_weight_names_and_port_ids(merge_node, graph):
                     merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
                     merge_weight = merge_weight * a_scale
@@ -288,15 +295,21 @@ class AWQ(Algorithm):
                 a_scale = fns.transpose(a_scale)
             else:  # for Act->Multiply->MatMul and Act->MatMul patterns scale inserted after Act as extra node
                 a_scale = fns.transpose(a_scale)
-                nonlinear_node = self.name_to_node_mapping[merge_node.node_name]
-                self._backend_entity.insert_scale_after_node(nonlinear_node, a_scale.data, merge_node.node_name)
+                next_nodes = graph.get_next_nodes(merge_node)
+                source_node_output_port = graph.get_output_edges(merge_node)[0].output_port_id
+                scale_insertion_command = self._backend_entity.scale_insertion_command(
+                    merge_node, next_nodes, source_node_output_port, a_scale.data
+                )
+                transformation_layout.register(scale_insertion_command)
 
             # update activations for next usage
             for i, stat in enumerate(self._activations[k]):
                 stat = stat * a_scale
                 self._activations[k][i] = stat
 
-        return model
+        transformed_model = model_transformer.transform(transformation_layout)
+
+        return transformed_model
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         """

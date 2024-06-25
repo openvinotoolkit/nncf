@@ -15,12 +15,10 @@ import pathlib
 from abc import ABC
 from abc import abstractmethod
 from functools import partial
-from typing import Callable, Dict, List, Optional, Tuple, TypedDict, TypeVar, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast
 
 import numpy as np
 from scipy.interpolate import interp1d  # type: ignore
-from typing_extensions import NotRequired
-from typing_extensions import Unpack
 
 import nncf
 from nncf.api.compression import CompressionAlgorithmController
@@ -635,19 +633,11 @@ class AccuracyAwareTrainingMode:
     ADAPTIVE_COMPRESSION_LEVEL = "adaptive_compression_level"
 
 
-class additionalRunnerArgs(TypedDict):
-    lr_updates_needed: bool
-    verbose: bool
-    minimal_compression_rate: NotRequired[float]
-    maximal_compression_rate: float
-    dump_checkpoints: bool
-
-
 def create_accuracy_aware_training_loop(
     nncf_config: NNCFConfig,
     compression_ctrl: CompressionAlgorithmController,
     uncompressed_model_accuracy: float,
-    **additional_runner_args: Unpack[additionalRunnerArgs],
+    **additional_runner_args: Any,
 ) -> BaseEarlyExitCompressionTrainingLoop:
     """
     Creates an accuracy aware training loop corresponding to NNCFConfig and CompressionAlgorithmController.
@@ -661,7 +651,7 @@ def create_accuracy_aware_training_loop(
     accuracy_aware_training_mode = accuracy_aware_training_params.get("mode")
     if accuracy_aware_training_mode == AccuracyAwareTrainingMode.EARLY_EXIT:
         return EarlyExitCompressionTrainingLoop(
-            nncf_config, compression_ctrl, uncompressed_model_accuracy, **additional_runner_args  # type: ignore
+            nncf_config, compression_ctrl, uncompressed_model_accuracy, **additional_runner_args
         )
     if accuracy_aware_training_mode == AccuracyAwareTrainingMode.ADAPTIVE_COMPRESSION_LEVEL:
         return AdaptiveCompressionTrainingLoop(

@@ -299,9 +299,8 @@ class BaseTestPipeline(ABC):
                 status_msg = f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
                 raise ValueError(status_msg)
             if metric_value > metric_reference:
-                self.run_info.status = (
-                    f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
-                )
+                status_msg = f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
+                raise ValueError(status_msg)
 
     def run(self) -> None:
         """

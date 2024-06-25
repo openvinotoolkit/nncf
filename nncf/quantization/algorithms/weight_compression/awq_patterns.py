@@ -13,13 +13,12 @@ from functools import partial
 
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.utils.registry import Registry
-from nncf.openvino.hardware.fused_patterns import atomic_activations_operations
 
 AWQ_PATTERNS = Registry("awq")
 
 
 @AWQ_PATTERNS.register("MatMul_Mul_MatMul")
-def create_matmul_mul_matmul(matmul_metatype, multiply_metatype) -> GraphPattern:
+def create_matmul_mul_matmul(matmul_metatype, multiply_metatype, _atomic_activations_operations) -> GraphPattern:
     pattern = GraphPattern()
     linear_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.METATYPE_ATTR: matmul_metatype})
     mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: multiply_metatype})
@@ -30,7 +29,7 @@ def create_matmul_mul_matmul(matmul_metatype, multiply_metatype) -> GraphPattern
     return pattern
 
 
-def matmul_mul_operation(matmul_metatype, multiply_metatype) -> GraphPattern:
+def mul_matmul_operation(matmul_metatype, multiply_metatype) -> GraphPattern:
     pattern = GraphPattern()
     linear_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.METATYPE_ATTR: matmul_metatype})
     mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: multiply_metatype})
@@ -46,25 +45,33 @@ def matmul_operation(matmul_metatype) -> GraphPattern:
     return pattern
 
 
-@AWQ_PATTERNS.register("ACT_Mul_MatMul")
-def create_linear_mul_activations(matmul_metatype, multiply_metatype) -> GraphPattern:
-    linear = matmul_mul_operation(matmul_metatype, multiply_metatype)
-    activations = atomic_activations_operations()
+def atomic_activations_operations_pattern(atomic_activations_operations) -> GraphPattern:
+    pattern = GraphPattern()
+    pattern.add_node(
+        **{GraphPattern.METATYPE_ATTR: atomic_activations_operations, GraphPattern.LABEL_ATTR: "ATOMIC_ACTIVATIONS"}
+    )
+    return pattern
+
+
+@AWQ_PATTERNS.register("Act_Mul_MatMul")
+def create_linear_mul_activations(matmul_metatype, multiply_metatype, atomic_activations_operations) -> GraphPattern:
+    linear = mul_matmul_operation(matmul_metatype, multiply_metatype)
+    activations = atomic_activations_operations_pattern(atomic_activations_operations)
     activations.join_patterns(linear)
     return activations
 
 
-@AWQ_PATTERNS.register("ACT_MatMul")
-def create_linear_activations(matmul_metatype, _multiply_metatype) -> GraphPattern:
+@AWQ_PATTERNS.register("Act_MatMul")
+def create_linear_activations(matmul_metatype, _multiply_metatype, atomic_activations_operations) -> GraphPattern:
     linear = matmul_operation(matmul_metatype)
-    activations = atomic_activations_operations()
+    activations = atomic_activations_operations_pattern(atomic_activations_operations)
     activations.join_patterns(linear)
     return activations
 
 
-def get_awq_patterns(matmul_metatype, multiply_metatype):
+def get_awq_patterns(matmul_metatype, multiply_metatype, atomic_activations_operations):
     res = Registry("awq")
     for k, v in AWQ_PATTERNS.registry_dict.items():
-        res.registry_dict[k] = partial(v, matmul_metatype, multiply_metatype)
+        res.registry_dict[k] = partial(v, matmul_metatype, multiply_metatype, atomic_activations_operations)
 
     return res.registry_dict

@@ -11,7 +11,6 @@
 
 from typing import Dict, List, Optional, Tuple
 
-import numpy as np
 import onnx
 
 from nncf.common.graph import NNCFGraph
@@ -28,17 +27,13 @@ from nncf.onnx.graph.transformations.commands import ONNXInitializerUpdateComman
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 from nncf.onnx.statistics.collectors import get_mean_statistic_collector
 from nncf.onnx.statistics.collectors import get_raw_stat_collector
-from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
+from nncf.tensor import Tensor
 
 
 class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
-    @property
-    def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
-        return ONNXNNCFCollectorTensorProcessor
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:
@@ -46,9 +41,9 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def create_bias_correction_command(
-        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+        node: NNCFNode, bias_value: Tensor, nncf_graph: NNCFGraph
     ) -> ONNXInitializerUpdateCommand:
-        return create_bias_correction_command(node, bias_value)
+        return create_bias_correction_command(node, bias_value.data)
 
     @staticmethod
     def model_extraction_command(
@@ -78,16 +73,16 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return get_raw_stat_collector(num_samples)
 
     @staticmethod
-    def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
-        return ONNXNNCFTensor(raw_data[output_name])
+    def process_model_output(raw_data: Dict, output_name: str) -> Tensor:
+        return Tensor(raw_data[output_name])
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[int, int]:
         return 0
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, model: onnx.ModelProto, nncf_graph: NNCFGraph) -> np.ndarray:
-        return get_bias_value(node, model)
+    def get_bias_value(node: NNCFNode, model: onnx.ModelProto, nncf_graph: NNCFGraph) -> Tensor:
+        return Tensor(get_bias_value(node, model))
 
     @staticmethod
     def get_input_name(model: onnx.ModelProto, node_name: str, input_port_id: int) -> str:

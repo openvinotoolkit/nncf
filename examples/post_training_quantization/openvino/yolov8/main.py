@@ -73,8 +73,6 @@ def prepare_validation(model: YOLO, args: Any) -> Tuple[Validator, torch.utils.d
 
     data_loader = validator.get_dataloader(f"{DATASETS_DIR}/coco128", 1)
 
-    validator = model.smart_load("validator")(args)
-
     validator.is_coco = True
     validator.class_map = coco80_to_coco91_class()
     validator.names = model.model.names
@@ -152,7 +150,7 @@ def main():
     # Quantize mode in OpenVINO representation
     quantized_model = quantize(ov_model, data_loader, validator)
     quantized_model_path = Path(f"{ROOT}/{MODEL_NAME}_openvino_model/{MODEL_NAME}_quantized.xml")
-    ov.save_model(quantized_model, str(quantized_model_path), compress_to_fp16=False)
+    ov.save_model(quantized_model, str(quantized_model_path))
 
     # Validate FP32 model
     fp_stats, total_images, total_objects = validate(ov_model, tqdm(data_loader), validator)

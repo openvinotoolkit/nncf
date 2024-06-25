@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from functools import partial
-from typing import Callable, Tuple
+from typing import Callable, Optional, Tuple
 
 import numpy as np
 import openvino.runtime as ov
@@ -812,13 +812,13 @@ class SequentialMatmulModel(OVReferenceModel):
 
 
 class IdentityMatmul(OVReferenceModel):
-    def _create_ov_model(self, weights_dtype=None, activation_dtype=None):
+    def _create_ov_model(self, weights_dtype: Optional[ov.Type] = None, activation_dtype: Optional[ov.Type] = None):
         """
-        :param: weights_dtype: precision of weights, should be either np.float32 or np.float16
-        :param: activation_dtype: precision of activations, should be either np.float32 or np.float16
+        :param: weights_dtype: precision of weights
+        :param: activation_dtype: precision of activations
         """
-        weights_dtype = np.float32 if weights_dtype is None else weights_dtype
-        activation_dtype = np.float32 if activation_dtype is None else activation_dtype
+        weights_dtype = ov.Type.f32 if weights_dtype is None else weights_dtype
+        activation_dtype = ov.Type.f32 if activation_dtype is None else activation_dtype
 
         input_node = opset.parameter([3, 3], dtype=activation_dtype, name="Input_1")
         weights_data = np.eye(3) * 255
@@ -1088,14 +1088,36 @@ class StatefulModel(OVReferenceModel):
             rv = opset.read_value(init_val, "var_id_667", data_type, input_shape)
             add = opset.add(rv, input_data, name="MemoryAdd")
             node = opset.assign(add, "var_id_667")
-            result = opset.result(add, name="Result")
+            scale_val = opset.constant(np.ones(input_shape), data_type)
+            scale = opset.multiply(add, scale_val, name="Scale")
+            result = opset.result(scale, name="Result")
             result.get_output_tensor(0).set_names(set(["Result"]))
             model = ov.Model(results=[result], sinks=[node], parameters=[input_data], name="TestModel")
         else:
             bias = opset.constant(init_val, data_type)
             add = opset.add(input_data, bias, name="Add")
-            result = opset.result(add, name="Result")
+            scale_val = opset.constant(np.ones(input_shape), data_type)
+            scale = opset.multiply(add, scale_val, name="Scale")
+            result = opset.result(scale, name="Result")
             result.get_output_tensor(0).set_names(set(["Result"]))
             model = ov.Model(results=[result], parameters=[input_data], name="TestModel")
 
+        return model
+
+
+class IfModel_2(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 3, 4, 2], name="Input_1")
+        input_2 = opset.parameter([], dtype=bool, name="Cond_input")
+
+        then_body = ConvNotBiasModel().ov_model
+        else_body = FPModel().ov_model
+
+        if_node = opset.if_op(input_2)
+        if_node.set_then_body(then_body)
+        if_node.set_else_body(else_body)
+        if_node.set_input(input_1.outputs()[0], then_body.get_parameters()[0], else_body.get_parameters()[0])
+        if_node.set_output(then_body.results[0], else_body.results[0])
+        result = opset.result(if_node, name="Result")
+        model = ov.Model([result], [input_1, input_2])
         return model

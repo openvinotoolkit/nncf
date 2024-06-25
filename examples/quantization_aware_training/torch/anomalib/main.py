@@ -44,11 +44,7 @@ def download_and_extract(root: Path, info: download.DownloadInfo) -> None:
     downloaded_file_path = root / info.url.split("/")[-1]
     print(f"Downloading the {info.name} dataset.")
     with download.DownloadProgressBar(unit="B", unit_scale=True, miniters=1, desc=info.name) as progress_bar:
-        urlretrieve(
-            url=f"{info.url}",
-            filename=downloaded_file_path,
-            reporthook=progress_bar.update_to,
-        )
+        urlretrieve(url=f"{info.url}", filename=downloaded_file_path, reporthook=progress_bar.update_to)  # nosec
     print("Checking the hash of the downloaded file.")
     download.check_hash(downloaded_file_path, info.hashsum)
     print(f"Extracting the {info.name} dataset.")

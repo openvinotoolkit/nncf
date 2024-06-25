@@ -16,6 +16,7 @@ import openvino as ov
 import pytest
 import torch
 
+import nncf
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.layout import OVLayoutElem
@@ -130,7 +131,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
             (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": True}), 0, -2),
             (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": False}), 1, -2),
             (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": True}), 1, -1),
-            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": False}), 2, RuntimeError),
+            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": False}), 2, nncf.InternalError),
             (OVConvolutionMetatype, OVLayerAttributes({}, inputs_attributes={}), 0, 1),
         ),
     )

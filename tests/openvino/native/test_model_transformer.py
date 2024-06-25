@@ -21,7 +21,6 @@ from openvino.runtime import opset13 as opset
 import nncf
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_max_op
@@ -38,19 +37,21 @@ from nncf.openvino.graph.transformations.commands import OVModelExtractionComman
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVStateLessModelExtractionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.quantization.advanced_parameters import FP8Type
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.tensor import Tensor
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
-from tests.openvino.native.common import get_openvino_major_minor_version
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import ConvNotBiasModel
 from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import QuantizedModel
 from tests.openvino.native.models import SimpleSplitModel
+from tests.openvino.native.models import StatefulModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.models import ZeroRankEltwiseModel
 
@@ -471,9 +472,6 @@ def test_fq_insertion_pre_layer(target_layers, ref_fq_names):
 
 @pytest.mark.parametrize("target_layers, ref_fс_names", zip(TARGET_INSERT_LAYERS, TARGET_PRE_LAYER_FCS))
 def test_fc_insertion_pre_layer(target_layers, ref_fс_names):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
-        pytest.xfail("FakeConvert is not supported until 2023.3")
     model = LinearModel().ov_model
 
     transformed_model = create_transformed_model(
@@ -510,9 +508,6 @@ def test_fq_insertion_post_layer(target_layers, ref_fq_names):
 
 @pytest.mark.parametrize("target_layers, ref_fс_names", zip(TARGET_INSERT_LAYERS, TARGET_POST_LAYER_FCS))
 def test_fc_insertion_post_layer(target_layers, ref_fс_names):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
-        pytest.xfail("FakeConvert is not supported until 2023.3")
     model = LinearModel().ov_model
 
     transformed_model = create_transformed_model(
@@ -550,9 +545,6 @@ def test_fq_insertion_weights(target_layers, ref_fq_names):
 
 @pytest.mark.parametrize("target_layers, ref_fс_names", zip(TARGET_INSERT_LAYERS, TARGET_WEIGHTS_FCS))
 def test_fc_insertion_weights(target_layers, ref_fс_names):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
-        pytest.xfail("FakeConvert is not supported until 2023.3")
     model = LinearModel().ov_model
 
     transformed_model = create_transformed_model(
@@ -685,6 +677,34 @@ def test_model_extraction(model_with_data):
     model = model_to_test.ov_model
     transformation_layout = TransformationLayout()
     command = OVModelExtractionCommand(model_with_data["input_ids"], model_with_data["output_ids"])
+    transformation_layout.register(command)
+
+    model_transformer = OVModelTransformer(model)
+    transformed_model = model_transformer.transform(transformation_layout)
+
+    path_to_dot = get_actual_reference_for_current_openvino(
+        REFERENCE_GRAPHS_DIR / f"exctracted_{model_to_test.ref_graph_name}"
+    )
+    compare_nncf_graphs(transformed_model, path_to_dot)
+
+
+MODELS_WITH_DATA_V2 = [
+    {"model": ConvModel(), "input_ids": [("Sub", 0)], "output_ids": [("Conv", 0)]},
+    {
+        "model": QuantizedModel(),
+        "input_ids": [("Conv_1", 0), ("Transpose/fq_input_0", 0)],
+        "output_ids": [("Conv_3", 0), ("Add_2", 0)],
+    },
+    {"model": StatefulModel(stateful=True), "input_ids": [("input_data", 0)], "output_ids": [("MemoryAdd", 0)]},
+]
+
+
+@pytest.mark.parametrize("model_with_data", MODELS_WITH_DATA_V2)
+def test_stateless_model_extraction(model_with_data):
+    model_to_test = model_with_data["model"]
+    model = model_to_test.ov_model
+    transformation_layout = TransformationLayout()
+    command = OVStateLessModelExtractionCommand(model_with_data["input_ids"], model_with_data["output_ids"])
     transformation_layout.register(command)
 
     model_transformer = OVModelTransformer(model)

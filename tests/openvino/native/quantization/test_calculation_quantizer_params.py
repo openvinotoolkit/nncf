@@ -8,11 +8,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
+from nncf.tensor import Tensor
 from tests.post_training.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
 
 
 class TestFQParams(TemplateTestFQParams):
-    @property
-    def tensor_statistic(self):
-        return OVMinMaxTensorStatistic
+    def to_nncf_tensor(self, t):
+        return Tensor(t)

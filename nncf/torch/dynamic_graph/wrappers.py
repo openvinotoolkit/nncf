@@ -13,6 +13,7 @@ from copy import deepcopy
 from typing import Callable, List, Tuple
 
 import torch
+from torch._dynamo import OptimizedModule
 from torch.nn import DataParallel
 
 from nncf.common.graph.definitions import MODEL_CONST_OP_NAME
@@ -25,6 +26,7 @@ from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_args_and_kwargs
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
+from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.structs import PatchedOperatorInfo
 from nncf.torch.dynamic_graph.trace_functions import forward_trace_only
@@ -75,6 +77,10 @@ def wrap_operator(operator, operator_info: PatchedOperatorInfo):
 
     @functools.wraps(operator)
     def wrapped(*args, **kwargs):
+        if not PATCHING_STATE.operators_are_wrapped:
+            # If operators are not supposed to be wrapped, skip the wrapper logic
+            return operator(*args, **kwargs)
+
         ctx = get_current_context()
         if not ctx or getattr(ctx, "in_operator", False) or not ctx.is_tracing:
             op1 = operator(*args, **kwargs)
@@ -127,6 +133,12 @@ def wrap_module_call(module_call):
 
     @functools.wraps(module_call)
     def wrapped(self, *args, **kwargs):
+        from nncf.torch.dynamic_graph.patch_pytorch import unpatching_module_call
+
+        # If called on a model compiled by torch dynamo, we unpatch torch operators and invoke original module call
+        if isinstance(self, OptimizedModule):
+            return unpatching_module_call(self, *args, **kwargs)
+
         ctx = get_current_context()
         if not ctx or self.__class__ in _IGNORED_SCOPES:
             if isinstance(self, DataParallel):

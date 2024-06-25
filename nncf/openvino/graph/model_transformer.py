@@ -36,6 +36,7 @@ from nncf.openvino.graph.transformations.commands import OVModelExtractionComman
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVStateLessModelExtractionCommand
 from nncf.openvino.graph.transformations.commands import OVUpdateIfBodyCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.fake_quantize import FakeConvertParameters
@@ -57,6 +58,7 @@ class OVModelTransformer(ModelTransformer):
             (OVBiasCorrectionCommand, self._apply_bias_correction_transformations),
             (OVWeightUpdateCommand, self._apply_weight_update_transformations),
             (OVModelExtractionCommand, self._apply_model_extraction_transformation),
+            (OVStateLessModelExtractionCommand, self._apply_stateless_model_extraction_transformation),
             (OVInplaceFnInsertionCommand, self._apply_insert_operation),
             (OVOutputInsertionCommand, self._apply_output_insertion_transformations),
             (OVBiasInsertionCommand, self._apply_bias_insertion_transformations),
@@ -196,8 +198,6 @@ class OVModelTransformer(ModelTransformer):
         results = model.get_results()
         params = model.get_parameters()
 
-        assign_ops = [op for op in model.get_ops() if op.get_type_name() == "Assign"]
-
         extra_model_outputs = []
         for output, port_id in outputs:
             output_name = output.get_node().get_friendly_name()
@@ -208,7 +208,7 @@ class OVModelTransformer(ModelTransformer):
             extra_model_outputs.append(result)
 
         model_with_outputs = ov.Model(
-            results=results + extra_model_outputs, sinks=assign_ops, parameters=params, name=model.friendly_name
+            results=results + extra_model_outputs, sinks=model.get_sinks(), parameters=params, name=model.friendly_name
         )
         copy_rt_info(model, model_with_outputs, path=["nncf"])
         return model_with_outputs
@@ -590,6 +590,71 @@ class OVModelTransformer(ModelTransformer):
 
         extracted_model = ov.Model(results, params)
         copy_rt_info(model, extracted_model, path=["nncf"])
+        return extracted_model
+
+    @staticmethod
+    def _apply_stateless_model_extraction_transformation(
+        model: ov.Model, transformations: List[OVStateLessModelExtractionCommand]
+    ) -> ov.Model:
+        """
+        Extracts stateless sub-model from the original based on the inputs and outputs names.
+
+        :param model: Model to apply transformations.
+        :param transformation: Model extraction transformation.
+        :return: Extracted sub-model.
+        """
+        transformation = transformations[-1]
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+
+        params, results = [], []
+        model_input_names = [tensor.node.get_friendly_name() for tensor in model.inputs]
+        for input_name, output_port_id in transformation.input_ids:
+            input_node = name_to_node_mapping[input_name]
+            if input_name in model_input_names:
+                params.append(input_node)
+                continue
+
+            output_port = input_node.output(output_port_id)
+            parameter_name = get_parameter_node_name(input_name, output_port_id)
+            new_param = opset.parameter(
+                shape=output_port.partial_shape,
+                dtype=output_port.get_element_type(),
+                name=parameter_name,
+            )
+            for input_port in output_port.get_target_inputs():
+                input_port.replace_source_output(new_param.output(0))
+            new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
+            OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
+            params.append(new_param)
+
+        for output_name, output_port_id in transformation.output_ids:
+            output_node = name_to_node_mapping[output_name]
+
+            output_port = output_node.output(output_port_id)
+            result_name = get_result_node_name(output_name, output_port_id)
+            new_result = opset.result(output_port, name=result_name)
+            OVModelTransformer._update_tensor_name([new_result.get_output_tensor(0)], result_name)
+            results.append(new_result)
+
+        if not results:
+            results = model.get_results()
+
+        extracted_model = ov.Model(results=results, parameters=params)
+        copy_rt_info(model, extracted_model, path=["nncf"])
+
+        for op in extracted_model.get_ops():
+            if op.get_type_name() != "ReadValue":
+                continue
+
+            op_input_values = op.input_values()
+            op_outputs = op.outputs()
+            if op_input_values:
+                for op_output in op_outputs:
+                    for target_in in op_output.get_target_inputs():
+                        target_in.replace_source_output(op_input_values[0])
+            else:
+                raise RuntimeError("ReadValue has no initial value.")
+
         return extracted_model
 
     @staticmethod

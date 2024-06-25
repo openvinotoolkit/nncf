@@ -23,10 +23,10 @@ from nncf.common.quantization.quantizer_propagation.structs import QuantizationT
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
+from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.command_creation import create_command_to_update_weight
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -38,7 +38,6 @@ from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
-from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 
 
 @COMPRESSION_MODULES.register()
@@ -115,7 +114,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     ) -> TensorCollector:
         collector = TensorCollector()
         reducer = PTAbsMaxReducer(reduction_axes=stats_reduction_axes)
-        aggregator = MaxAggregator(tensor_processor=PTNNCFCollectorTensorProcessor, num_samples=num_samples)
+        aggregator = MaxAggregator(num_samples=num_samples)
         collector.register_statistic_branch(branch_key, reducer, aggregator)
         return collector
 

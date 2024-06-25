@@ -25,7 +25,7 @@ from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
-from nncf.onnx.tensor import ONNXNNCFTensor
+from nncf.tensor import Tensor
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
@@ -35,9 +35,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         self._registered_weights = set()
         super().collect_statistics(model, graph)
 
-    def _register_statistics(
-        self, outputs: Dict[str, ONNXNNCFTensor], statistic_points: StatisticPointsContainer
-    ) -> None:
+    def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
         for _, statistic_point, tensor_collector in statistic_points.get_tensor_collectors():
             target_point = statistic_point.target_point
             port_id = target_point.port_id
@@ -87,5 +85,5 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         return statistic_points
 
     @staticmethod
-    def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, ONNXNNCFTensor]:
-        return {n: ONNXNNCFTensor(v) for n, v in outputs.items()}
+    def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, Tensor]:
+        return {n: Tensor(v) for n, v in outputs.items()}

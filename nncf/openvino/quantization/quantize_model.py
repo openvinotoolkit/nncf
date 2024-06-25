@@ -20,6 +20,8 @@ from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_number_if_op
@@ -42,10 +44,13 @@ from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_ac
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
+from nncf.quantization.quantize_model import BATCHWISE_STATISTICS_WARNING
+from nncf.quantization.quantize_model import is_model_no_batchwise_support
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
+from nncf.scopes import validate_ignored_scope
 from nncf.telemetry.decorator import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 
@@ -72,6 +77,28 @@ def native_quantize_if_op_impl(
         raise NotImplementedError(
             "The BiasCorrection algorithm is not supported for OpenVINO models with If operation."
         )
+    graphs = {}
+
+    def _extract_all_subgraphs(model: ov.Model, current_id: str) -> None:
+        """
+        Creates all inner subgraphs from If nodes and adds them to 'graphs'.
+
+        :param model: Model.
+        :param current_id: Current graph id.
+        """
+        graphs[current_id] = NNCFGraphFactory.create(model)
+        for op in model.get_ops():
+            if get_node_metatype(op) == OVIfMetatype:
+                _extract_all_subgraphs(op.get_function(0), op.get_friendly_name() + "_then")
+                _extract_all_subgraphs(op.get_function(1), op.get_friendly_name() + "_else")
+
+    main_model_graph_id = "main_model_graph"
+    _extract_all_subgraphs(model, main_model_graph_id)
+    if ignored_scope and ignored_scope.validate:
+        validate_ignored_scope(ignored_scope, graphs.values())
+        ignored_scope = IgnoredScope(
+            ignored_scope.names, ignored_scope.patterns, ignored_scope.types, ignored_scope.subgraphs, validate=False
+        )
     quantization_algorithm = PostTrainingQuantization(
         mode=mode,
         preset=preset,
@@ -82,17 +109,17 @@ def native_quantize_if_op_impl(
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
     )
-
-    graph = GraphConverter.create_nncf_graph(model)
-    warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
+    for graph in graphs.values():
+        if is_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS):
+            nncf_logger.warning(BATCHWISE_STATISTICS_WARNING)
+            break
     if_ops_number = get_number_if_op(model)
-    all_models_number = if_ops_number * 2 + 1
     nncf_logger.info(
         f"The model consists of {if_ops_number} If node(-s) with then and else bodies. \
             Main model and all If bodies will be quantized recursively."
     )
     quantized_model, _ = apply_algorithm_if_bodies(
-        quantization_algorithm, model, graph, calibration_dataset, subset_size, 1, all_models_number
+        quantization_algorithm, model, graphs, main_model_graph_id, calibration_dataset, subset_size, 1
     )
 
     if is_weight_compression_needed(advanced_parameters):
@@ -409,6 +436,7 @@ def compress_weights_impl(
     awq: bool,
     subset_size: int,
     scale_estimation: bool,
+    gptq: bool,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> ov.Model:
     """
@@ -426,6 +454,7 @@ def compress_weights_impl(
         awq,
         subset_size,
         scale_estimation,
+        gptq,
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)
