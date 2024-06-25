@@ -120,12 +120,7 @@ def train_lenet():
     model.save(MODEL_PATH)
 
 
-@pytest.mark.parametrize(
-    "distributed",
-    [pytest.param(False, marks=pytest.mark.skip(reason="")), pytest.param(True, marks=pytest.mark.nightly)],
-    ids=["not_distributed", "distributed"],
-)
-def test_rb_sparse_target_lenet(distributed, deterministic_mode):
+def test_rb_sparse_target_lenet():
     context._reset_context()
     if not os.path.exists(MODEL_PATH):
         train_lenet()
@@ -140,12 +135,10 @@ def test_rb_sparse_target_lenet(distributed, deterministic_mode):
     x_test = x_test / 255
 
     batch_size = 128
-    if distributed:
-        num_of_replicas = 3
-        strategy = tf.distribute.MirroredStrategy([f"GPU:{i}" for i in range(num_of_replicas)])
-    else:
-        num_of_replicas = 1
-        strategy = tf.distribute.OneDeviceStrategy("device:CPU:0")
+
+    strategy = tf.distribute.MirroredStrategy()
+    num_gpus = len(tf.config.list_physical_devices("GPU"))
+    num_of_replicas = num_gpus if num_gpus > 0 else 1
 
     tf.keras.backend.clear_session()
     with strategy.scope():
