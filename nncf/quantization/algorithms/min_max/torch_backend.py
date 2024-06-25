@@ -141,10 +141,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         raise nncf.InternalError("FakeConvert insertion not implemented in PyTorch backend!")
 
     @staticmethod
-    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int, ...]:
-        if target_point.is_weight_target_point():
-            weight_node = get_const_node(node, target_point.input_port_id, nncf_graph)
-            return tuple(weight_node.layer_attributes.shape)
+    def get_target_point_shape(nncf_graph: PTNNCFGraph, node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int, ...]:
         return nncf_graph.get_input_shape_for_insertion_point(target_point)
 
     @staticmethod

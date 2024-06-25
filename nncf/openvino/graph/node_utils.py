@@ -361,7 +361,7 @@ def get_reducer_output_node_names(
     return [get_result_node_name(target_node_name, port_id)]
 
 
-def get_weight_channel_axes(node: NNCFNode) -> Tuple[int, ...]:
+def get_weight_channel_axes(node: NNCFNode) -> List[int]:
     """
     Returns axes numbers of the weight tensor which correspond to its channels.
 
@@ -377,7 +377,7 @@ def get_weight_channel_axes(node: NNCFNode) -> Tuple[int, ...]:
         return [idx for idx, elem in enumerate(weights_layout) if elem in [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT]]
     elif node.metatype == OVMatMulMetatype:
         return get_matmul_channel_axes(node)
-    return tuple(node.metatype.const_channel_axis)
+    return node.metatype.const_channel_axis
 
 
 def get_matmul_channel_axes(node: ov.Node) -> List[int]:

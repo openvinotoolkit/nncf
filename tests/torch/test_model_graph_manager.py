@@ -372,6 +372,8 @@ class TestGetWeightChannelAxes:
         "ndim1, ndim2, ref_dim1, ref_dim2",
         (
             (1, 1, (), ()),  # vector x vector
+            (1, 2, (), (1,)),  # vector x matrix
+            (1, 3, (), (2,)),  # vector x matrix
             (2, 1, (0,), ()),  # matrix x vector
             (3, 1, (1,), ()),  # batched matrix x vector
             (3, 3, (1,), (2,)),  # batched matrix x batched matrix

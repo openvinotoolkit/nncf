@@ -48,7 +48,7 @@ class NNCFGraphToTest:
             node_edges,
             (
                 {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: (1, 3, 224, 224)},
-                {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: (1, 3, 224, 224), NNCFGraph.INPUT_PORT_ID_EDGE_ATTR: 1},
+                {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: (3, 10, 4, 4), NNCFGraph.INPUT_PORT_ID_EDGE_ATTR: 1},
                 {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: (1, 10, 224, 224)},
             ),
         )

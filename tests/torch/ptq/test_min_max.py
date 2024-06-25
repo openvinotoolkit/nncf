@@ -46,7 +46,7 @@ class TestTorchMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
         return PTTargetPoint(target_point_type, name, input_port_id=port_id)
 
 
-class TestOVGetTargetPointShape(TemplateTestGetTargetPointShape, TestTorchMinMaxAlgorithm):
+class TestTorchGetTargetPointShape(TemplateTestGetTargetPointShape, TestTorchMinMaxAlgorithm):
     def get_nncf_graph(self, weight_port_id: int, weight_shape: Tuple[int]) -> NNCFGraph:
         conv_layer_attrs = ConvolutionLayerAttributes(
             weight_requires_grad=True,
