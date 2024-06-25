@@ -1065,6 +1065,16 @@ class PTReduceL2(PTOperatorMetatype):
     num_expected_input_edges = 1
 
 
+@PT_OPERATOR_METATYPES.register()
+class PTScaledDotProductAttentionMetatype(PTOperatorMetatype):
+    name = "ScaledDotProductAttentionOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["scaled_dot_product_attention"],
+    }
+    hw_config_names = [HWConfigOpName.SCALED_DOT_PRODUCT_ATTENTION]
+    target_input_ports = [0, 1]
+
+
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.
