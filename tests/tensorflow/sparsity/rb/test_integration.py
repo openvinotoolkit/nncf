@@ -139,7 +139,7 @@ def test_rb_sparse_target_lenet():
 
     strategy = tf.distribute.MirroredStrategy()
     num_gpus = len(tf.config.list_physical_devices("GPU"))
-    num_of_replicas = num_gpus if num_gpus > 0 else 1
+    num_of_replicas = 3 if num_gpus > 0 else 1
 
     tf.keras.backend.clear_session()
     with strategy.scope():
