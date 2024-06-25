@@ -397,10 +397,8 @@ def do_dequantization(
     :param reduction_axis: axis for return back for group compression.
     :return: dequantized/decompressed weights.
     """
-    decompressed_weight = compressed_weights.astype(dtype=scale.dtype)
-    if zero_point is not None:
-        decompressed_weight -= zero_point
-    decompressed_weight *= scale
+    decompressed_weight = compressed_weights - zero_point if zero_point is not None else compressed_weights
+    decompressed_weight = decompressed_weight.astype(scale.dtype) * scale
 
     if reduction_axis > -1:
         shape = list(decompressed_weight.shape)  # [a1, r, a2] - "r" refers to number of channels along reduction axis
