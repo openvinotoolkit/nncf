@@ -120,6 +120,7 @@ def train_lenet():
     model.save(MODEL_PATH)
 
 
+@pytest.mark.nightly
 def test_rb_sparse_target_lenet():
     context._reset_context()
     if not os.path.exists(MODEL_PATH):
