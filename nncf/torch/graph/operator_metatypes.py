@@ -545,9 +545,14 @@ class PTSigmoidMetatype(PTOperatorMetatype):
 class PTAddMetatype(PTOperatorMetatype):
     name = "AddOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["add", "__add__", "__iadd__", "__radd__"],
+        NamespaceTarget.TORCH_TENSOR: [
+            "add",
+            "add_",
+            "__add__",
+            "__iadd__",
+            "__radd__",
+        ],
         NamespaceTarget.TORCH: ["add"],
-        NamespaceTarget.ATEN: ["add_"],
     }
     hw_config_names = [HWConfigOpName.ADD]
     num_expected_input_edges = 2
@@ -557,9 +562,14 @@ class PTAddMetatype(PTOperatorMetatype):
 class PTSubMetatype(PTOperatorMetatype):
     name = "SubOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["sub", "__sub__", "__isub__", "__rsub__"],
+        NamespaceTarget.TORCH_TENSOR: [
+            "sub",
+            "sub_",
+            "__sub__",
+            "__isub__",
+            "__rsub__",
+        ],
         NamespaceTarget.TORCH: ["sub"],
-        NamespaceTarget.ATEN: ["sub_"],
     }
     hw_config_names = [HWConfigOpName.SUBTRACT]
     num_expected_input_edges = 2
@@ -569,7 +579,7 @@ class PTSubMetatype(PTOperatorMetatype):
 class PTMulMetatype(PTOperatorMetatype):
     name = "MulOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["mul", "__mul__", "__imul__", "__rmul__"],
+        NamespaceTarget.TORCH_TENSOR: ["mul", "mul_", "__mul__", "__imul__", "__rmul__"],
         NamespaceTarget.TORCH: ["mul"],
     }
     hw_config_names = [HWConfigOpName.MULTIPLY]
@@ -582,6 +592,7 @@ class PTDivMetatype(PTOperatorMetatype):
     module_to_function_names = {
         NamespaceTarget.TORCH_TENSOR: [
             "div",
+            "div_",
             "__div__",
             "__idiv__",
             "__rdiv__",
