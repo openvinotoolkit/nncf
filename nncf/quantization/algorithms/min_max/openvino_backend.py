@@ -23,6 +23,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
+from nncf.openvino.graph.metatypes.groups import ELEMENTWISE_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.model_utils import get_start_nodes_for_activation_path_tracing
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
@@ -257,3 +258,11 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
         return True
+
+    @staticmethod
+    def find_elementwise_with_constants(nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph):
+        output = set()
+        for node in inference_nncf_graph.get_nodes_by_metatypes(ELEMENTWISE_OPERATIONS):
+            if len(inference_nncf_graph.get_previous_nodes(node)) < 2:
+                output.add(node.node_name)
+        return output

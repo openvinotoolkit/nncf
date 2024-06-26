@@ -349,3 +349,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [
             node for node in nncf_graph.get_all_nodes() if isinstance(node.layer_attributes, WeightedLayerAttributes)
         ]
+
+    @staticmethod
+    def find_elementwise_with_constants(nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph):
+        return {}

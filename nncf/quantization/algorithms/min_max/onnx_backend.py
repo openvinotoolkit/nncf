@@ -259,3 +259,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
         # If the nodes share one weight tensor, we should have only one quantizer on that
         return weight_name not in quantized_weight_names
+
+    @staticmethod
+    def find_elementwise_with_constants(nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph):
+        return {}
