@@ -178,6 +178,17 @@ test-models-hub-torch:
 	pytest tests/torch/models_hub_test --junitxml ${JUNITXML_PATH}
 
 ###############################################################################
+# TorchFX backend
+install-torch-fx-test:
+	pip install -U pip
+	pip install -e .
+	pip install -r tests/torch_fx/requirements.txt
+
+test-torch-fx:
+	pytest ${COVERAGE_ARGS} tests/torch_fx/  -ra \
+		--junitxml ${JUNITXML_PATH}
+
+###############################################################################
 # Common part
 install-common-test:
 	pip install -U pip

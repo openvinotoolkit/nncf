@@ -1,1 +1,7 @@
+-c ../../constraints.txt
+pytest
+pytest-cov
+openvino
+torch
+torchvision
 fastdownload==0.0.7
