@@ -342,7 +342,7 @@ TEST_CASES_LINEAR = [
                 out_features=1,
                 with_bias=False,
             ),
-            {"transpose": False, "shape": (1, 3, 4)},
+            {"transpose": False},
         ),
         (OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
         (OVLayoutElem.SPATIAL, OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
@@ -359,7 +359,7 @@ TEST_CASES_LINEAR = [
                 out_features=1,
                 with_bias=False,
             ),
-            {"transpose": True, "shape": (1, 3, 4)},
+            {"transpose": True},
         ),
         (OVLayoutElem.C_IN, OVLayoutElem.C_OUT),
         (OVLayoutElem.SPATIAL, OVLayoutElem.C_IN, OVLayoutElem.C_OUT),
@@ -376,7 +376,7 @@ TEST_CASES_LINEAR = [
                 out_features=1,
                 with_bias=False,
             ),
-            {"transpose": False, "shape": (1, 3, 4)},
+            {"transpose": False},
         ),
         (OVLayoutElem.C_IN, OVLayoutElem.C_OUT),
         (OVLayoutElem.SPATIAL, OVLayoutElem.C_IN, OVLayoutElem.C_OUT),
@@ -393,7 +393,7 @@ TEST_CASES_LINEAR = [
                 out_features=1,
                 with_bias=False,
             ),
-            {"transpose": True, "shape": (1, 3, 4)},
+            {"transpose": True},
         ),
         (OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
         (OVLayoutElem.SPATIAL, OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
@@ -410,7 +410,7 @@ TEST_CASES_LINEAR = [
                 out_features=None,
                 with_bias=False,
             ),
-            {"transpose": False, "shape": (1, 3, 4)},
+            {"transpose": False},
         ),
         (OVLayoutElem.C_IN,),
         (OVLayoutElem.SPATIAL, OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
@@ -488,5 +488,7 @@ def test_get_linear_weights_layout_from_node(test_descriptor: LayerAttributesTes
 def test_get_linear_activations_layout_from_node(test_descriptor: LayerAttributesTestCase):
     node = _get_node_to_test(test_descriptor)
     for _ in range(2):  # To test get_linear_activations_layout_from_node is a clean function
-        acts_layout = get_linear_activations_layout_from_node(node, test_descriptor.act_port_id)
+        acts_layout = get_linear_activations_layout_from_node(
+            node, test_descriptor.act_port_id, test_descriptor.input_shape
+        )
         assert acts_layout == test_descriptor.ref_acts_layout

@@ -169,7 +169,6 @@ class FastBiasCorrection(Algorithm):
             sub_input_name, sub_output_name = self._backend_entity.get_sub_input_output_names(extracted_model)
 
             output_channel_axis = node.metatype.output_channel_axis
-            input_shape = graph.get_input_edges(node)[input_port_id].tensor_shape
             input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id, input_shape)
             if bias_value.ndim > 1:
                 # Make index positive

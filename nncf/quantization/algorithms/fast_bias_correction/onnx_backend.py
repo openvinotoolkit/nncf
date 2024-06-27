@@ -109,4 +109,4 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
-        return get_act_quantization_axis(node, port_id, input_shape)
+        return get_act_quantization_axis(node, port_id)

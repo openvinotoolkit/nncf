@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import onnx
@@ -131,24 +131,23 @@ def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
     :return: Axis, along which quantizer parameters are calculated.
     """
     weight_channel_axis = node.metatype.weight_channel_axis
-    weight_shape = node.layer_attributes.weight_attrs[port_id]["shape"]
     if node.metatype == om.ONNXGemmMetatype:
-        weight_channel_axis = calculate_gemm_channel_axis(node, port_id, weight_shape)
+        weight_channel_axis = calculate_gemm_channel_axis(node, port_id)
     return weight_channel_axis
 
 
-def get_act_quantization_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
+def get_act_quantization_axis(node: NNCFNode, port_id: int) -> int:
     """
     Returns activation tensor axis, along which quantizer parameters are calculated.
 
     :param node: NNCFNode, with the activation on input port_id.
     :param port_id: Input port id on which there is a activation of a node.
-    :param input_shape: Shape of the input.
     :return: Axis, along which quantizer parameters are calculated.
     """
-    act_channel_axis = node.metatype.output_channel_axis
+    # In case of the ONNX, [N, C, ..] layout applicable for most quantizable layers.
+    act_channel_axis = 1
     if node.metatype == om.ONNXGemmMetatype:
-        act_channel_axis = calculate_gemm_channel_axis(node, port_id, input_shape)
+        act_channel_axis = calculate_gemm_channel_axis(node, port_id)
     return act_channel_axis
 
 
@@ -205,18 +204,15 @@ def get_quantized_tensor_shape(
     return _get_activation_tensor_shape(nncf_graph, node, target_point)
 
 
-def calculate_gemm_channel_axis(node: NNCFNode, port_id: int, input_shape: List[int]) -> int:
+def calculate_gemm_channel_axis(node: NNCFNode, port_id: int) -> int:
     """
     Calculates Gemm channel axis based on the port and node attributes.
 
     :param node: NNCFNode instance with layer attributes.
     :param port_id: Port ID is used to choose correct transpose attribute.
         transB in case of port_id is 1, transA for port_id is 0.
-    :param input_shape: Shape of the input.
     :return: Channel axis number.
     """
-    shape_indexes = list(range(len(input_shape)))
     trans_attr = "transB" if port_id else "transA"
     transpose = node.layer_attributes.node_attrs[trans_attr]
-    channel_axis = -1 - port_id if transpose else -2 + port_id
-    return shape_indexes.pop(channel_axis)
+    return -1 - port_id if transpose else -2 + port_id
