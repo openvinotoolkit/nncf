@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import List, Tuple
+from typing import Tuple
 
 from nncf.common.graph.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
@@ -46,7 +46,7 @@ _CONV_BASE_CONST_LAYOUT = {
 }
 
 
-def get_conv_weights_layout_from_node(node: NNCFNode) -> List[OVLayoutElem]:
+def get_conv_weights_layout_from_node(node: NNCFNode) -> Tuple[OVLayoutElem]:
     """
     Calculates weights layout for a target convolution node.
 
@@ -60,7 +60,7 @@ def get_conv_weights_layout_from_node(node: NNCFNode) -> List[OVLayoutElem]:
     )
 
 
-def get_linear_weights_layout_from_node(node: NNCFNode) -> List[OVLayoutElem]:
+def get_linear_weights_layout_from_node(node: NNCFNode) -> Tuple[OVLayoutElem]:
     """
     Calculates weights layout for a target linear node.
 
@@ -77,23 +77,26 @@ def get_linear_weights_layout_from_node(node: NNCFNode) -> List[OVLayoutElem]:
     )
 
 
-def get_linear_activations_layout_from_node(node: NNCFNode, port_id: int) -> List[OVLayoutElem]:
+def get_linear_activations_layout_from_node(
+    node: NNCFNode, port_id: int, input_shape: Tuple[int]
+) -> Tuple[OVLayoutElem]:
     """
     Calculates activations layout for a target linear node.
 
     :param node: Target linear node.
     :param port_id: Target input port ID.
+    :param input_shape: Shape of the input.
     :return: Target linear Node weight layout.
     """
     act_layer_attrs = node.layer_attributes.input_attributes
     return get_linear_input_layout(
-        input_shape=act_layer_attrs["shape"],
+        input_shape=input_shape,
         transpose=act_layer_attrs["transpose"],
         port_id=port_id,
     )
 
 
-def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: Tuple[int, ...]) -> List[OVLayoutElem]:
+def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: Tuple[int, ...]) -> Tuple[OVLayoutElem]:
     """
     Calculates weights layout for a target convolution node.
 
@@ -107,7 +110,7 @@ def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: Tuple[int,
     return tuple(weights_layout)
 
 
-def get_linear_input_layout(input_shape: Tuple[int, ...], transpose: bool, port_id: int) -> List[OVLayoutElem]:
+def get_linear_input_layout(input_shape: Tuple[int, ...], transpose: bool, port_id: int) -> Tuple[OVLayoutElem]:
     """
     Calculates input layout for a target linear node.
 

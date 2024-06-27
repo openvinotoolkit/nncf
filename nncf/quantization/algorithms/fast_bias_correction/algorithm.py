@@ -169,7 +169,8 @@ class FastBiasCorrection(Algorithm):
             sub_input_name, sub_output_name = self._backend_entity.get_sub_input_output_names(extracted_model)
 
             output_channel_axis = node.metatype.output_channel_axis
-            input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id)
+            input_shape = graph.get_input_edges(node)[input_port_id].tensor_shape
+            input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id, input_shape)
             if bias_value.ndim > 1:
                 # Make index positive
                 output_channel_axis = range(bias_value.ndim)[output_channel_axis]
@@ -356,7 +357,8 @@ class FastBiasCorrection(Algorithm):
             post_layer_statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, out_node_name, output_port_id
             )
-            input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id)
+            input_shape = graph.get_input_edges(node)[input_port_id].tensor_shape
+            input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id, input_shape)
 
             self._add_statistic_point(statistic_container, pre_layer_statistic_point, input_channel_axis)
             self._add_statistic_point(

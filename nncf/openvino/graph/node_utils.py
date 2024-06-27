@@ -471,12 +471,13 @@ def get_weighted_layer_attributes(
     return GenericWeightedLayerAttributes(weight_requires_grad=False, weight_shape=attrs.get("shape", None))
 
 
-def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
+def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
     """
     Returns axis number of the activation tensor which correspond to it channel.
 
     :param node: NNCFNode instance.
     :param port_id: Port ID for input.
+    :param input_shape: Shape of the input.
     :return: Channel axis number.
     """
     # In case of the OpenVINO, [N, C, ..] layout applicable for most quantizable layers.
@@ -484,7 +485,7 @@ def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
 
     # But the MatMul layers may transpose inputs internally.
     if node.metatype == OVMatMulMetatype:
-        activations_layout = get_linear_activations_layout_from_node(node, port_id)
+        activations_layout = get_linear_activations_layout_from_node(node, port_id, input_shape)
         channel_axis = activations_layout.index(OVLayoutElem.C_OUT)
 
     return channel_axis

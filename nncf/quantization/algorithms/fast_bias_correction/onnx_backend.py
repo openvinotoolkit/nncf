@@ -80,19 +80,16 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
-        layer_attrs = node.layer_attributes
-        inputs = deepcopy(layer_attrs.node_attrs["inputs"])
+        activation_port = 0
 
-        # removing bias input from list
-        inputs.remove(layer_attrs.bias_attrs["name"])
+        if hasattr(node.metatype, "possible_weight_ports"):
+            activation_ports = deepcopy(node.metatype.possible_weight_ports)
+            for weight_port in node.layer_attributes.weight_attrs:
+                activation_ports.remove(weight_port)
+            assert len(activation_ports) == 1
+            activation_port = activation_ports[0]
 
-        # removing weight inputs from list
-        for weight_attr in layer_attrs.weight_attrs.values():
-            inputs.remove(weight_attr["name"])
-
-        assert len(inputs) == 1
-        input_name = inputs[0]
-        return layer_attrs.node_attrs["inputs"].index(input_name), 0
+        return activation_port, 0
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> Tensor:
@@ -111,5 +108,5 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return node.node_name, node.node_name
 
     @staticmethod
-    def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
-        return get_act_quantization_axis(node, port_id)
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
+        return get_act_quantization_axis(node, port_id, input_shape)
