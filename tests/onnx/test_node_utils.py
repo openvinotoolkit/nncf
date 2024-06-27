@@ -38,14 +38,14 @@ def test_get_bias_value(model):
 @pytest.mark.parametrize(
     "layer_attrs, port_id, ref_axis",
     [
-        [{"node_attrs": {"transA": 0, "transB": 0}}, 0, -2],
-        [{"node_attrs": {"transA": 0, "transB": 1}}, 0, -2],
-        [{"node_attrs": {"transA": 1, "transB": 0}}, 0, -1],
-        [{"node_attrs": {"transA": 1, "transB": 1}}, 0, -1],
-        [{"node_attrs": {"transA": 0, "transB": 0}}, 1, -1],
-        [{"node_attrs": {"transA": 0, "transB": 1}}, 1, -2],
-        [{"node_attrs": {"transA": 1, "transB": 0}}, 1, -1],
-        [{"node_attrs": {"transA": 1, "transB": 1}}, 1, -2],
+        [{"node_attrs": {"transA": 0, "transB": 0}}, 0, 0],
+        [{"node_attrs": {"transA": 0, "transB": 1}}, 0, 0],
+        [{"node_attrs": {"transA": 1, "transB": 0}}, 0, 1],
+        [{"node_attrs": {"transA": 1, "transB": 1}}, 0, 1],
+        [{"node_attrs": {"transA": 0, "transB": 0}}, 1, 1],
+        [{"node_attrs": {"transA": 0, "transB": 1}}, 1, 0],
+        [{"node_attrs": {"transA": 1, "transB": 0}}, 1, 1],
+        [{"node_attrs": {"transA": 1, "transB": 1}}, 1, 0],
     ],
 )
 def test_calculate_gemm_channel_axis(layer_attrs, port_id, ref_axis):
