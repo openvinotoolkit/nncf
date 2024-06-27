@@ -213,6 +213,12 @@ def calculate_gemm_channel_axis(node: NNCFNode, port_id: int) -> int:
         transB in case of port_id is 1, transA for port_id is 0.
     :return: Channel axis number.
     """
+    # Gemm metatype supports only 2D inputs according to the documentation -
+    # https://onnx.ai/onnx/operators/onnx__Gemm.html
+    # Usage of the tensor shape is not possible,
+    # because ONNX allows to contain empty shape even after the shape inference.
+    gemm_shape = [0, 1]
     trans_attr = "transB" if port_id else "transA"
     transpose = node.layer_attributes.node_attrs[trans_attr]
-    return -1 - port_id if transpose else -2 + port_id
+    channel_axis = -1 - port_id if transpose else -2 + port_id
+    return gemm_shape.pop(channel_axis)
