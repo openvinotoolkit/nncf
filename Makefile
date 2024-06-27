@@ -153,6 +153,7 @@ test-torch-cuda:
 
 test-torch-nightly:
 	pytest ${COVERAGE_ARGS} tests/torch -m nightly --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+	test-torch-fx
 
 test-torch-weekly:
 	pytest ${COVERAGE_ARGS} tests/torch -m weekly \

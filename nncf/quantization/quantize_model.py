@@ -229,7 +229,7 @@ def quantize(
             advanced_parameters=advanced_parameters,
         )
     if backend == BackendType.TORCH_FX:
-        from nncf.experimental.torch_fx.quantization.quantize_model import quantize_impl
+        from nncf.experimental.torch.fx.quantization.quantize_model import quantize_impl
 
         return quantize_impl(
             model=model,

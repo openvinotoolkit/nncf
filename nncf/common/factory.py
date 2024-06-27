@@ -43,7 +43,7 @@ class NNCFGraphFactory:
 
             return GraphConverter.create_nncf_graph(model)
         if model_backend == BackendType.TORCH_FX:
-            from nncf.experimental.torch_fx.nncf_graph_builder import GraphConverter
+            from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 
             return GraphConverter.create_nncf_graph(model)
         if model_backend == BackendType.TORCH:
@@ -77,7 +77,7 @@ class ModelTransformerFactory:
 
             return PTModelTransformer(model)
         if model_backend == BackendType.TORCH_FX:
-            from nncf.experimental.torch_fx.model_transformer import FXModelTransformer
+            from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 
             return FXModelTransformer(model)
         raise nncf.UnsupportedBackendError(
@@ -108,7 +108,7 @@ class EngineFactory:
 
             return PTEngine(model)
         if model_backend == BackendType.TORCH_FX:
-            from nncf.experimental.torch_fx.engine import FXEngine
+            from nncf.experimental.torch.fx.engine import FXEngine
 
             return FXEngine(model)
         raise nncf.UnsupportedBackendError(
@@ -164,7 +164,7 @@ class StatisticsAggregatorFactory:
 
             return PTStatisticsAggregator(dataset)
         if model_backend == BackendType.TORCH_FX:
-            from nncf.experimental.torch_fx.statistics.aggregator import FXStatisticsAggregator
+            from nncf.experimental.torch.fx.statistics.aggregator import FXStatisticsAggregator
 
             return FXStatisticsAggregator(dataset)
         raise nncf.UnsupportedBackendError(

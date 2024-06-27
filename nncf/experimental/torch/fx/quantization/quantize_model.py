@@ -23,10 +23,11 @@ from torch.fx.passes.infra.pass_manager import PassManager
 
 import nncf
 from nncf.common.factory import NNCFGraphFactory
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.data import Dataset
-from nncf.experimental.torch_fx.transformations import merge_conv_and_bias
+from nncf.experimental.torch.fx.transformations import merge_conv_and_bias
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -53,6 +54,11 @@ def quantize_impl(
     """
     Implementation of the `quantize()` method for the Torch FX backend.
     """
+    nncf_logger.warning(
+        "Experimental Torch FX quantization backend is being used for the given torch.fx.GraphModule model."
+        " Torch FX PTQ is an experimental feature, consider using Torch or OpenVino PTQ backends"
+        " in case of errors or a poor model performance."
+    )
     if fast_bias_correction is False:
         raise ValueError(f"fast_bias_correction={fast_bias_correction} is not supported")
     if target_device == TargetDevice.CPU_SPR:

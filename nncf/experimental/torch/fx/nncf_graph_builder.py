@@ -21,9 +21,9 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.logging import nncf_logger
-from nncf.experimental.torch_fx.transformations import separate_conv_and_bias
-from nncf.experimental.torch_fx.transformations import separate_linear_and_bias
-from nncf.experimental.torch_fx.transformations import view_to_reshape
+from nncf.experimental.torch.fx.transformations import separate_conv_and_bias
+from nncf.experimental.torch.fx.transformations import separate_linear_and_bias
+from nncf.experimental.torch.fx.transformations import view_to_reshape
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 

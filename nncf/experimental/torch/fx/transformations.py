@@ -21,7 +21,7 @@ from torch.quantization.fake_quantize import FakeQuantize
 
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.experimental.torch_fx.model_transformer import FXModelTransformer
+from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 

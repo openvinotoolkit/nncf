@@ -22,8 +22,8 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.torch_fx.model_transformer import FXApplyTransformationCommand
-from nncf.experimental.torch_fx.transformations import bias_update_transformation_builder
+from nncf.experimental.torch.fx.model_transformer import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.transformations import bias_update_transformation_builder
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
@@ -83,7 +83,7 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: torch.fx.GraphModule) -> Tensor:
         # TODO: make a node_name_vs_node map to speed up the process
-        from nncf.experimental.torch_fx.model_transformer import FXModelTransformer
+        from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 
         bias_node = nncf_graph.get_next_nodes(node)[0]
         graph_bias_node = FXModelTransformer.get_graph_node_by_name(model.graph, bias_node.node_name)
