@@ -139,10 +139,10 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
     @pytest.mark.parametrize(
         "weight_shape, weight_port_id, transpose_weight, ref_axes",
         (
-            (MATMUL_WEIGHT_SHAPE, 1, False, (-1,)),
-            (MATMUL_WEIGHT_SHAPE, 1, True, (-2,)),
-            (MATMUL_WEIGHT_SHAPE, 0, True, (-1,)),
-            (MATMUL_WEIGHT_SHAPE, 0, False, (-2,)),
+            (MATMUL_WEIGHT_SHAPE, 1, False, (1,)),
+            (MATMUL_WEIGHT_SHAPE, 1, True, (0,)),
+            (MATMUL_WEIGHT_SHAPE, 0, True, (1,)),
+            (MATMUL_WEIGHT_SHAPE, 0, False, (0,)),
         ),
     )
     def test_get_channel_axes_matmul_node_ov_onnx(self, weight_shape, weight_port_id, transpose_weight, ref_axes):
