@@ -136,10 +136,12 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     ) -> ov.Model:
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
+            scale_dtype = ov.Type.f16
             if compression_config.mode == CompressWeightsMode.NF4:
                 compression_dtype = ov.Type.nf4
             elif compression_config.mode == CompressWeightsMode.E2M1:
                 compression_dtype = ov.Type.f4e2m1
+                scale_dtype = ov.Type.f8e8m0
             elif compression_config.mode == CompressWeightsMode.INT4_SYM:
                 compression_dtype = ov.Type.i4
             elif compression_config.mode == CompressWeightsMode.INT4_ASYM:
@@ -190,8 +192,11 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 )
 
             scale_const = opset.constant(
-                compressed_weight.scale.data, dtype=ov.Type.f16, name=f"{const_node_name}/scale"
+                compressed_weight.scale.data, dtype=scale_dtype, name=f"{const_node_name}/scale"
             )
+            if scale_dtype != ov.Type.f16:
+                scale_const = opset.convert(scale_const, ov.Type.f16)
+
             mul = opset.multiply(
                 converted_const,
                 scale_const,

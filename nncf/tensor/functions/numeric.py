@@ -858,3 +858,27 @@ def from_numpy(ndarray: np.ndarray, *, backend: TensorBackend) -> Tensor:
     if backend == TensorBackend.numpy:
         return Tensor(ndarray)
     return Tensor(get_numeric_backend_fn("from_numpy", backend)(ndarray))
+
+
+@functools.singledispatch
+@tensor_guard
+def log2(a: Tensor) -> Tensor:
+    """
+    Base-2 logarithm of a.
+
+    :param a: The input tensor.
+    :return: A tensor containing the base-2 logarithm of each element in a.
+    """
+    return Tensor(log2(a.data))
+
+
+@functools.singledispatch
+@tensor_guard
+def ceil(a: Tensor) -> Tensor:
+    """
+    Return the ceiling of the input, element-wise.
+
+    :param a: Input data.
+    :return: An array of the same type as a, containing the ceiling values.
+    """
+    return Tensor(ceil(a.data))
