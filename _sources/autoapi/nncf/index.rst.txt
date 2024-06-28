@@ -204,6 +204,7 @@ Functions
        https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization
    :param NF4: The the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
    :param INT8: Mode is deprecated and will be removed in future releases. Please use `INT8_ASYM` instead.
+   :param E2M1: FP4 format from "OCP Microscaling Formats (MX) Specification" Version 1.0.
 
 
 .. py:class:: DropType
@@ -296,6 +297,7 @@ Functions
        INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
            with a typical non-fixed zero point.
        NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
+       E2M1 is the same as INT4_SYM mode, but primary precision is E2M1 data type without zero point.
    :type mode: nncf.CompressWeightsMode
    :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
        and the rest to INT8_ASYM).
