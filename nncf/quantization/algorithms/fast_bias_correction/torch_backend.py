@@ -107,3 +107,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         next_norm_node = get_potential_fused_node(input_node_name, nncf_graph)
         output_node_name = next_norm_node.node_name if next_norm_node else input_node_name
         return input_node_name, output_node_name
+
+    @staticmethod
+    def get_activation_channel_axis(node: NNCFNode, pord_id: int, input_shape: Tuple[int]) -> int:
+        return node.metatype.output_channel_axis

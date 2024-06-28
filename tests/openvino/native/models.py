@@ -252,7 +252,9 @@ class WeightsModel(OVReferenceModel):
 @SYNTHETIC_MODELS.register()
 class MatMul2DModel(OVReferenceModel):
     def _create_ov_model(self):
-        input_shape = [3, 5]
+        # Originally, OpenVINO backend does not support statistics collection
+        # from the model with the batch size > 1.
+        input_shape = [1, 5]
         input_1 = opset.parameter(input_shape, name="Input")
         data = self._rng.random((5, 2)).astype(np.float32)
         matmul = opset.matmul(input_1, data, transpose_a=False, transpose_b=False, name="MatMul")
