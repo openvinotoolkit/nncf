@@ -864,3 +864,45 @@ def test_call_gptq(mode):
     dataset = Dataset([np.ones([8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, gptq=True)
+
+
+# TODO(andreyanufr) Waiting for the e2m1 in OV release
+@pytest.mark.xfail
+@pytest.mark.parametrize(
+    ("mode", "all_layers", "ratio", "ref_ids"),
+    (
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 3, 4]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, []),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, []),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2]),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2]),
+    ),
+)
+def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
+    model = SequentialMatmulModel().ov_model
+    dataset = Dataset([np.ones([3, 3]), np.arange(9).reshape(3, 3)])
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.E2M1,
+        ratio=ratio,
+        group_size=1,
+        all_layers=all_layers,
+        sensitivity_metric=mode,
+        dataset=dataset,
+    )
+    names = {
+        op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.f4e2m1
+    }
+    ref_nf4_nodes = {f"weights_{i}" for i in ref_ids}
+    assert ref_nf4_nodes == names

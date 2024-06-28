@@ -50,7 +50,7 @@ class WeightCompression(Algorithm):
     Post-training Weight Compression algorithm implementation.
 
     Compresses weights of Linear and Embedding layers to 8-bit integer or
-    to nf4 depending on mode, ratio and group size.
+    to 4-bit integer/float depending on mode, ratio and group size.
     """
 
     def __init__(
@@ -81,6 +81,7 @@ class WeightCompression(Algorithm):
             INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
                 with a typical non-fixed zero point.
             NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
+            E2M1 is the same as INT4_SYM mode, but primary precision is E2M1 data type without zero point.
         :param ratio: the ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to INT8_ASYM).
         :param group_size: number of weights (e.g. 128) in the channel dimension
@@ -351,7 +352,11 @@ class WeightCompression(Algorithm):
         self._set_weight_compression_config(ratio_defining_params, model, graph, activations)
         nncf_logger.info(self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
 
-        if self._awq and activations is not None and self._mode != CompressWeightsMode.NF4:
+        if (
+            self._awq
+            and activations is not None
+            and self._mode not in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
+        ):
             awq_params = self._advanced_parameters.awq_params
             awq_algo = AWQ(
                 model,
@@ -369,7 +374,11 @@ class WeightCompression(Algorithm):
 
         scales = {}
         zero_points = {}
-        if self._scale_estimation and activations is not None and self._mode != CompressWeightsMode.NF4:
+        if (
+            self._scale_estimation
+            and activations is not None
+            and self._mode not in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
+        ):
             scale_estimation_params = self._advanced_parameters.scale_estimation_params
             scale_algo = ScaleEstimation(
                 model,
