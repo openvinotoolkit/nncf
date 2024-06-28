@@ -27,7 +27,9 @@ The framework is organized as a Python\* package that can be built and used in a
 architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep
 learning frameworks.
 
-## Key Features<a id="key-features"></a>
+<a id="key-features"></a>
+
+## Key Features
 
 ### Post-Training Compression Algorithms
 
@@ -57,7 +59,9 @@ joint (movement) pruning, quantization and distillation (JPQD), end-to-end from 
 - Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai).
 - Support for [Accuracy-Aware model training](./docs/usage/training_time_compression/other_algorithms/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
-## Documentation<a id="documentation"></a>
+<a id="documentation"></a>
+
+## Documentation
 
 This documentation covers detailed information about NNCF algorithms and functions needed for the contribution to NNCF.
 
@@ -65,7 +69,9 @@ The latest user documentation for NNCF is available [here](https://docs.openvino
 
 NNCF API documentation can be found [here](https://openvinotoolkit.github.io/nncf/autoapi/nncf/).
 
-## Usage<a id="usage"></a>
+<a id="usage"></a>
+
+## Usage
 
 ### Post-Training Quantization
 
@@ -320,7 +326,9 @@ compression_ctrl.export_model("compressed_model.pb", save_format="frozen_graph")
 
 For a more detailed description of NNCF usage in your training code, see [this tutorial](docs/usage/training_time_compression/other_algorithms/Usage.md).
 
-## Demos, Tutorials and Samples<a id="demos-tutorials-and-samples"></a>
+<a id="demos-tutorials-and-samples"></a>
+
+## Demos, Tutorials and Samples
 
 For a quicker start with NNCF-powered compression, try sample notebooks and scripts presented below.
 
@@ -393,7 +401,9 @@ These examples provide full pipelines including compression, training and infere
 | [TensorFlow Object Detection](./examples/tensorflow/object_detection/README.md)                            | Training-Time Compression | TensorFlow |   Object Detection    |
 | [TensorFlow Instance Segmentation](./examples/tensorflow/segmentation/README.md)                           | Training-Time Compression | TensorFlow | Instance Segmentation |
 
-## Third-party repository integration<a id="third-party-repository-integration"></a>
+<a id="third-party-repository-integration"></a>
+
+## Third-party repository integration
 
 NNCF may be straightforwardly integrated into training/evaluation pipelines of third-party repositories.
 
@@ -407,7 +417,9 @@ NNCF may be straightforwardly integrated into training/evaluation pipelines of t
 
   NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel.
 
-## Installation Guide<a id="installation-guide"></a>
+<a id="installation-guide"></a>
+
+## Installation Guide
 
 For detailed installation instructions please refer to the [Installation](./docs/Installation.md) page.
 
