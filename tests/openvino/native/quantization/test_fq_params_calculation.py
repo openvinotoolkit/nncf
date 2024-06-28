@@ -11,7 +11,6 @@
 
 from pathlib import Path
 
-import numpy as np
 import openvino as ov
 import pytest
 import torch
@@ -163,8 +162,8 @@ def test_synthetic_models_fq_shapes(model_creator_func, ref_shapes, inplace_stat
         assert node["output_high"].shape == ref_shapes[node_name]
 
 
-@pytest.mark.parametrize("const_dtype", ["FP16", "FP32"])
-@pytest.mark.parametrize("input_dtype", ["FP16", "FP32"])
+@pytest.mark.parametrize("const_dtype", [ov.Type.f16, ov.Type.f32, ov.Type.bf16])
+@pytest.mark.parametrize("input_dtype", [ov.Type.f16, ov.Type.f32, ov.Type.bf16])
 def test_fq_precision_orig_fp32model(const_dtype, input_dtype, inplace_statistics):
     model = FPModel(const_dtype, input_dtype)
     quantized_model = quantize_model(
@@ -174,10 +173,10 @@ def test_fq_precision_orig_fp32model(const_dtype, input_dtype, inplace_statistic
         if op.get_type_name() == "FakeQuantize":
             inp_node = op.input(0)
             fq_input_node = inp_node.get_source_output().get_node()
-            if fq_input_node.get_element_type() == "Constant":
-                assert op.get_element_type() == ov.Type(np.float32 if input_dtype == "FP32" else np.float16)
+            if fq_input_node.get_type_name() == "Constant":
+                assert op.get_element_type() == const_dtype
         elif op.get_type_name() == "Convert":
             inp_node = op.input(0)
             fq_input_node = inp_node.get_source_output().get_node()
-            if fq_input_node.get_element_type() == "Constant":
-                assert op.get_element_type() == ov.Type(np.float32 if const_dtype == "FP32" else np.float16)
+            if fq_input_node.get_type_name() == "Constant":
+                assert op.get_element_type() == input_dtype

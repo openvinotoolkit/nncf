@@ -47,7 +47,8 @@ def get_dataset_for_test(model):
     input_data = {}
     for param in model.get_parameters():
         input_shape = param.partial_shape.get_max_shape()
-        input_data[param.get_output_tensor(0).get_any_name()] = rng.uniform(0, 1, input_shape)
+        tensor = param.get_output_tensor(0)
+        input_data[tensor.get_any_name()] = rng.uniform(0, 1, input_shape).astype(tensor.get_element_type().to_dtype())
 
     dataset = Dataset([input_data])
     return dataset

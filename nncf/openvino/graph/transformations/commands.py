@@ -48,6 +48,10 @@ class OVInsertionCommand(TransformationCommand):
 
 
 class OVOutputInsertionCommand(OVInsertionCommand):
+    def __init__(self, target_point: OVTargetPoint, output_dtype: ov.Type = ov.Type.f32):
+        super().__init__(target_point)
+        self.output_dtype = output_dtype
+
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()
@@ -60,11 +64,13 @@ class OVInplaceFnInsertionCommand(OVInsertionCommand):
         inplace_op_fn: InplaceInsertionFnType,
         fn_output_port_id: int,
         last_inplace_node_name: str,
+        output_dtype: ov.Type = ov.Type.f32,
     ):
         super().__init__(target_point)
         self.inplace_op_fn = inplace_op_fn
         self.fn_output_port_id = fn_output_port_id
         self.last_inplace_node_name = last_inplace_node_name
+        self.output_dtype = output_dtype
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
