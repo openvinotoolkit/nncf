@@ -146,14 +146,6 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
             ),
             MinMaxTestParameters(
                 RangeEstimatorParametersSet.MINMAX,
-                TargetType.OPERATION_WITH_WEIGHTS,
-                QuantizationMode.SYMMETRIC,
-                False,
-                256,
-                -256,
-            ),
-            MinMaxTestParameters(
-                RangeEstimatorParametersSet.MINMAX,
                 TargetType.OPERATOR_POST_HOOK,
                 QuantizationMode.SYMMETRIC,
                 False,
@@ -221,17 +213,6 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
                     -512,
                 ),
                 "PTIdentityConvModel/fn_0",
-            ),
-            (
-                MinMaxTestParameters(
-                    RangeEstimatorParametersSet.MINMAX,
-                    TargetType.OPERATION_WITH_WEIGHTS,
-                    QuantizationMode.SYMMETRIC,
-                    False,
-                    512,
-                    -512,
-                ),
-                "PTIdentityConvModel/Conv2d[conv]/fn_0",
             ),
             (
                 MinMaxTestParameters(

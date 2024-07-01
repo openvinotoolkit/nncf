@@ -366,7 +366,7 @@ def get_weight_channel_axes(node: NNCFNode) -> List[int]:
     """
     Returns axes numbers of the weight tensor which correspond to its channels.
 
-    :param node: NNCCFNode with weights.
+    :param node: NNCFNode with weights.
     :param weights_port_id: Weight port id of the target node.
     :return: Axes numbers of the weight tensor which correspond to its channels.
     """
@@ -412,7 +412,7 @@ def get_weighted_layer_attributes(
     ov_node: ov.Node, ov_metatype: OVOpMetatype, constant_attributes: Dict[int, Any]
 ) -> WeightedLayerAttributes:
     """
-    Funciton retrieves common layer attributes from the given node.
+    Function retrieves common layer attributes from the given node.
 
     :param ov_node: TargetOpenvino graph node instance.
     :param ov_metatype: NNCF Openvino metatype of the given node.

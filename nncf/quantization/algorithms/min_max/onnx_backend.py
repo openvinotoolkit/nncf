@@ -127,7 +127,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         axis = ()
         if quantizer_config.per_channel:
-            axis = ONNXMinMaxAlgoBackend.get_weight_quantization_axes(node, target_point) if is_weight else (1,)
+            axis = ONNXMinMaxAlgoBackend.get_weight_quantization_axes(node, target_point, None) if is_weight else (1,)
         onnx_parameters = convert_fq_params_to_onnx_params(parameters, quantizer_config.num_bits, tensor_type, axis)
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 
@@ -161,7 +161,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return get_quantized_tensor_shape(nncf_graph, node, target_point)
 
     @staticmethod
-    def get_weight_quantization_axes(node: NNCFNode, target_point: ONNXTargetPoint) -> Tuple[int]:
+    def get_weight_quantization_axes(node: NNCFNode, target_point: ONNXTargetPoint, ndims: int) -> Tuple[int]:
         return (get_weight_quantization_axis(node, target_point.port_id),)
 
     @staticmethod
@@ -211,7 +211,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return collector
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
         return list(node.layer_attributes.weight_attrs.keys())
 
     @staticmethod

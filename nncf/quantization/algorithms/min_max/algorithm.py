@@ -448,7 +448,9 @@ class MinMaxQuantization(Algorithm):
 
         channel_axes = ()
         if qconfig.per_channel:
-            channel_axes = self._backend_entity.get_weight_quantization_axes(node, target_point) if is_weight else (1,)
+            channel_axes = (
+                self._backend_entity.get_weight_quantization_axes(node, target_point, len(shape)) if is_weight else (1,)
+            )
 
         # Weight statistics is constant, so only one collection is enough.
         num_samples = self._subset_size if not is_weight else 1
@@ -674,7 +676,7 @@ class MinMaxQuantization(Algorithm):
         weight_quantization_target_points = []
         node_name = quantization_point.insertion_point.target_node_name
         node = nncf_graph.get_node_by_name(node_name)
-        weights_port_ids = self._backend_entity.get_weight_tensor_port_ids(node)
+        weights_port_ids = self._backend_entity.get_weight_tensor_port_ids(node, nncf_graph)
         for port_id in weights_port_ids:
             weight_quantization_target_points.append(
                 self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS, node_name, port_id)
