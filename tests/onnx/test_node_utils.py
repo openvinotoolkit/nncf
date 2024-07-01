@@ -39,17 +39,17 @@ def test_get_bias_value(model):
 @pytest.mark.parametrize(
     "layer_attrs, port_id, ref_axis",
     [
-        [{"node_attrs": {"transA": 0, "transB": 0}}, 0, 1],
-        [{"node_attrs": {"transA": 0, "transB": 1}}, 0, 1],
-        [{"node_attrs": {"transA": 1, "transB": 0}}, 0, 0],
-        [{"node_attrs": {"transA": 1, "transB": 1}}, 0, 0],
-        [{"node_attrs": {"transA": 0, "transB": 0}}, 1, 0],
-        [{"node_attrs": {"transA": 0, "transB": 1}}, 1, 1],
-        [{"node_attrs": {"transA": 1, "transB": 0}}, 1, 0],
-        [{"node_attrs": {"transA": 1, "transB": 1}}, 1, 1],
+        [{"node_attrs": {"transA": 0, "transB": 0}}, 0, -1],
+        [{"node_attrs": {"transA": 0, "transB": 1}}, 0, -1],
+        [{"node_attrs": {"transA": 1, "transB": 0}}, 0, -2],
+        [{"node_attrs": {"transA": 1, "transB": 1}}, 0, -2],
+        [{"node_attrs": {"transA": 0, "transB": 0}}, 1, -2],
+        [{"node_attrs": {"transA": 0, "transB": 1}}, 1, -1],
+        [{"node_attrs": {"transA": 1, "transB": 0}}, 1, -2],
+        [{"node_attrs": {"transA": 1, "transB": 1}}, 1, -1],
     ],
 )
 def test_get_act_quantization_axis(layer_attrs, port_id, ref_axis):
     node = create_nncf_node(**layer_attrs)
-    channel_axis = get_act_quantization_axis(node, port_id, (2, 3))
+    channel_axis = get_act_quantization_axis(node, port_id)
     assert channel_axis == ref_axis

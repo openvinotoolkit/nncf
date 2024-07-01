@@ -131,34 +131,31 @@ def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
     :return: Axis, along which quantizer parameters are calculated.
     """
     weight_channel_axis = node.metatype.weight_channel_axis
-    weight_axes = list(range(len(node.layer_attributes.weight_attrs[port_id]["shape"])))
 
     if node.metatype == om.ONNXGemmMetatype:
         trans_attr = "transB" if port_id else "transA"
         transpose = node.layer_attributes.node_attrs[trans_attr]
         # 0 - (M, K), 1 - (K, N)
         weight_channel_axis = -1 - port_id if transpose else -2 + port_id
-    return weight_axes[weight_channel_axis]
+    return weight_channel_axis
 
 
-def get_act_quantization_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
+def get_act_quantization_axis(node: NNCFNode, port_id: int) -> int:
     """
     Returns activation tensor axis, along which quantizer parameters are calculated.
 
     :param node: NNCFNode, with the activation on input port_id.
     :param port_id: Input port id on which there is a activation of a node.
-    :param input_shape: Shape of the input tensor.
     :return: Axis, along which quantizer parameters are calculated.
     """
     act_channel_axis = node.metatype.output_channel_axis
-    act_axes = list(range(len(input_shape)))
 
     if node.metatype == om.ONNXGemmMetatype:
         trans_attr = "transB" if port_id else "transA"
         transpose = node.layer_attributes.node_attrs[trans_attr]
         # 0 - (M, K), 1 - (K, N)
         act_channel_axis = -2 + port_id if transpose else -1 - port_id
-    return act_axes[act_channel_axis]
+    return act_channel_axis
 
 
 def _get_activation_tensor_shape(
