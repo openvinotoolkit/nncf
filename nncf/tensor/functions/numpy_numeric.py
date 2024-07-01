@@ -392,6 +392,20 @@ def zeros(
     return np.zeros(shape, dtype=dtype)
 
 
+def eye(
+    n: int,
+    m: Optional[int] = None,
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> np.ndarray:
+    if device is not None and device != TensorDeviceType.CPU:
+        raise ValueError("numpy_numeric.eye only supports CPU device.")
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    return np.eye(n, m, dtype=dtype)
+
+
 def arange(
     start: float,
     end: float,
