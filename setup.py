@@ -123,7 +123,7 @@ INSTALL_REQUIRES = [
 EXTRAS_REQUIRE = {
     "plots": [
         "kaleido>=0.2.1",
-        "matplotlib>=3.3.4, <3.6",
+        "matplotlib>=3.3.4",
         "pillow>=9.0.0",
         "plotly-express>=0.4.1",
     ],
