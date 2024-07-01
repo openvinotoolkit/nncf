@@ -486,6 +486,6 @@ def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple
     # But the MatMul layers may transpose inputs internally.
     if node.metatype == OVMatMulMetatype:
         activations_layout = get_linear_activations_layout_from_node(node, port_id, input_shape)
-        channel_axis = activations_layout.index(OVLayoutElem.C_OUT)
+        channel_axis = activations_layout.index(OVLayoutElem.C_IN)
 
     return channel_axis

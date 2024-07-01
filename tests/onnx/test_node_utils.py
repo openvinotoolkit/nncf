@@ -13,16 +13,17 @@ import pytest
 
 from nncf.common.graph.graph import NNCFNode
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
-from nncf.onnx.graph.node_utils import calculate_gemm_channel_axis
+from nncf.onnx.graph.node_utils import get_act_quantization_axis
 from nncf.onnx.graph.node_utils import get_bias_value
 from tests.onnx.models import OneConvolutionalIdentityBiasModel
 from tests.onnx.models import OneConvolutionalModel
 
 
 def create_nncf_node(**layer_atrributes) -> NNCFNode:
-    return NNCFNode({"layer_attributes": ONNXLayerAttributes(**layer_atrributes)})
+    return NNCFNode({"layer_attributes": ONNXLayerAttributes(**layer_atrributes), "metatype": ONNXGemmMetatype})
 
 
 @pytest.mark.parametrize("model", [OneConvolutionalModel(), OneConvolutionalIdentityBiasModel()])
@@ -38,17 +39,17 @@ def test_get_bias_value(model):
 @pytest.mark.parametrize(
     "layer_attrs, port_id, ref_axis",
     [
-        [{"node_attrs": {"transA": 0, "transB": 0}}, 0, 0],
-        [{"node_attrs": {"transA": 0, "transB": 1}}, 0, 0],
-        [{"node_attrs": {"transA": 1, "transB": 0}}, 0, 1],
-        [{"node_attrs": {"transA": 1, "transB": 1}}, 0, 1],
-        [{"node_attrs": {"transA": 0, "transB": 0}}, 1, 1],
-        [{"node_attrs": {"transA": 0, "transB": 1}}, 1, 0],
-        [{"node_attrs": {"transA": 1, "transB": 0}}, 1, 1],
-        [{"node_attrs": {"transA": 1, "transB": 1}}, 1, 0],
+        [{"node_attrs": {"transA": 0, "transB": 0}}, 0, 1],
+        [{"node_attrs": {"transA": 0, "transB": 1}}, 0, 1],
+        [{"node_attrs": {"transA": 1, "transB": 0}}, 0, 0],
+        [{"node_attrs": {"transA": 1, "transB": 1}}, 0, 0],
+        [{"node_attrs": {"transA": 0, "transB": 0}}, 1, 0],
+        [{"node_attrs": {"transA": 0, "transB": 1}}, 1, 1],
+        [{"node_attrs": {"transA": 1, "transB": 0}}, 1, 0],
+        [{"node_attrs": {"transA": 1, "transB": 1}}, 1, 1],
     ],
 )
-def test_calculate_gemm_channel_axis(layer_attrs, port_id, ref_axis):
+def test_get_act_quantization_axis(layer_attrs, port_id, ref_axis):
     node = create_nncf_node(**layer_attrs)
-    channel_axis = calculate_gemm_channel_axis(node, port_id)
+    channel_axis = get_act_quantization_axis(node, port_id, (2, 3))
     assert channel_axis == ref_axis
