@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 import tensorflow as tf
+from tensorflow.python.eager import context
 
 import nncf
 from examples.common.sample_config import EVAL_ONLY_ERROR_TEXT
@@ -215,6 +216,7 @@ def test_model_eval(_config, tmp_path):
 @pytest.mark.nightly
 @pytest.mark.dependency(name="tf_test_model_train")
 def test_model_train(_config, tmp_path, _case_common_dirs):
+    context._reset_context()
     if _config["sample_type"] == "segmentation":
         pytest.skip("ticket #58759")
     checkpoint_save_dir = os.path.join(_case_common_dirs["checkpoint_save_dir"], _config["tid"])

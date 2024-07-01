@@ -10,7 +10,8 @@ onnx==1.16.0
 onnxruntime==1.17.1
 
 # TensorFlow
-tensorflow==2.12.1
+tensorflow==2.12.1; python_version < '3.9'
+tensorflow==2.15.1; python_version >= '3.9'
 
 # Tests and examples
 pytest==8.0.2
