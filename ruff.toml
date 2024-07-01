@@ -19,6 +19,7 @@ select = [
     "E",  # pycodestyle rules
     "F",  # pyflakes rules
     "CPY001",  # copyright check
+    "NPY201"
 ]
 extend-select = [
     "SIM",  # https://pypi.org/project/flake8-simplify
