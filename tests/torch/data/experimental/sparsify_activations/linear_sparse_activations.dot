@@ -1,0 +1,18 @@
+strict digraph  {
+"0 /nncf_model_input_0" [id=0, type=nncf_model_input];
+"1 weight" [id=1, type=nncf_model_const];
+"2 bias" [id=2, type=nncf_model_const];
+"3 Linear/NNCFNetworkInterface[_nncf]/ModuleDict[external_op]/ActivationsSparsifier[activations_sparsifier_Linear/linear_0]/abs_0" [id=3, type=abs];
+"4 Linear/NNCFNetworkInterface[_nncf]/ModuleDict[external_op]/ActivationsSparsifier[activations_sparsifier_Linear/linear_0]/le_0" [id=4, type=le];
+"5 Linear/NNCFNetworkInterface[_nncf]/ModuleDict[external_op]/ActivationsSparsifier[activations_sparsifier_Linear/linear_0]/masked_fill_0" [id=5, type=masked_fill];
+"6 Linear/linear_0" [id=6, type=linear];
+"7 /nncf_model_output_0" [id=7, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "3 Linear/NNCFNetworkInterface[_nncf]/ModuleDict[external_op]/ActivationsSparsifier[activations_sparsifier_Linear/linear_0]/abs_0";
+"0 /nncf_model_input_0" -> "5 Linear/NNCFNetworkInterface[_nncf]/ModuleDict[external_op]/ActivationsSparsifier[activations_sparsifier_Linear/linear_0]/masked_fill_0";
+"1 weight" -> "6 Linear/linear_0";
+"2 bias" -> "6 Linear/linear_0";
+"3 Linear/NNCFNetworkInterface[_nncf]/ModuleDict[external_op]/ActivationsSparsifier[activations_sparsifier_Linear/linear_0]/abs_0" -> "4 Linear/NNCFNetworkInterface[_nncf]/ModuleDict[external_op]/ActivationsSparsifier[activations_sparsifier_Linear/linear_0]/le_0";
+"4 Linear/NNCFNetworkInterface[_nncf]/ModuleDict[external_op]/ActivationsSparsifier[activations_sparsifier_Linear/linear_0]/le_0" -> "5 Linear/NNCFNetworkInterface[_nncf]/ModuleDict[external_op]/ActivationsSparsifier[activations_sparsifier_Linear/linear_0]/masked_fill_0";
+"5 Linear/NNCFNetworkInterface[_nncf]/ModuleDict[external_op]/ActivationsSparsifier[activations_sparsifier_Linear/linear_0]/masked_fill_0" -> "6 Linear/linear_0";
+"6 Linear/linear_0" -> "7 /nncf_model_output_0";
+}
