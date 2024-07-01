@@ -68,6 +68,7 @@ install-openvino-test:
 	pip install -r tests/openvino/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
+	pip install numpy==2.0.0
 
 install-openvino-dev: install-openvino-test install-pre-commit
 	pip install -r examples/post_training_quantization/openvino/mobilenet_v2/requirements.txt
@@ -99,6 +100,7 @@ install-tensorflow-test:
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
 	pip install -r examples/tensorflow/requirements.txt
+	pip install numpy==2.0.0
 
 install-tensorflow-dev: install-tensorflow-test install-pre-commit
 	pip install -r examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt
@@ -128,6 +130,7 @@ install-torch-test:
 	pip install -r tests/torch/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
+	pip install numpy==2.0.0
 
 install-torch-dev: install-torch-test install-pre-commit
 	pip install -r examples/post_training_quantization/torch/mobilenet_v2/requirements.txt
@@ -185,6 +188,7 @@ install-common-test:
 	pip install -r tests/common/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
+	pip install numpy==2.0.0
 
 test-common:
 	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
