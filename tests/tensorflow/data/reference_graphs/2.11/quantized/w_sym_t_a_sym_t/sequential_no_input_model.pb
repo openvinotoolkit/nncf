@@ -1,1 +1,3 @@
-../../../2.8/quantized/w_sym_t_a_sym_t/sequential_no_input_model.pb
+version https://git-lfs.github.com/spec/v1
+oid sha256:9fa724098db343c4308b735c0ba01e9da8ac965a8c25621509cf92ff9ce69667
+size 14077
