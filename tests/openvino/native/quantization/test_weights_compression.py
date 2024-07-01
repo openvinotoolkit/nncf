@@ -901,8 +901,14 @@ def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
         sensitivity_metric=mode,
         dataset=dataset,
     )
-    names = {
+    names_e2m1 = {
         op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.f4e2m1
     }
-    ref_nf4_nodes = {f"weights_{i}" for i in ref_ids}
-    assert ref_nf4_nodes == names
+    ref_e2m1_nodes = {f"weights_{i}" for i in ref_ids}
+    assert ref_e2m1_nodes == names_e2m1
+
+    names_e8m0 = {
+        op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.f8e8m0
+    }
+    ref_e8m0_nodes = {f"weights_{i}/scale" for i in ref_ids}
+    assert ref_e8m0_nodes == names_e8m0
