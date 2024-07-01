@@ -20,25 +20,10 @@ from torch.fx.passes.split_utils import split_by_tags
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import Command
-from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
-from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-
-
-class FXModuleInsertionCommand(Command):
-    def __init__(
-        self,
-        target_points: List[PTTargetPoint],
-        module_to_insert: torch.nn.Module,
-        priority: Union[TransformationPriority, int] = TransformationPriority.DEFAULT_PRIORITY,
-    ):
-        super().__init__(TransformationType.INSERT)
-        self.target_points = target_points
-        self.module_to_insert = module_to_insert
-        self.priority = priority
 
 
 class FXApplyTransformationCommand(Command):
@@ -63,9 +48,7 @@ class FXModelTransformer(ModelTransformer):
         super().__init__(model)
 
         self._command_transformation_ordered_pairs = [
-            # TODO: Move the module insertion command to a transformation
             (FXApplyTransformationCommand, self._apply_transformation),
-            (FXModuleInsertionCommand, self._apply_module_insertion),
             (PTModelExtractionCommand, self._apply_model_extraction),
         ]
 
@@ -82,7 +65,7 @@ class FXModelTransformer(ModelTransformer):
                 model = transformation_fn(model, transformations)
 
         # Do not eliminate dead code as
-        # the dead code is coputing statistics :)
+        # the dead code is computing statistics :)
         # model.graph.eliminate_dead_code()
         model.recompile()
         return model
@@ -116,62 +99,11 @@ class FXModelTransformer(ModelTransformer):
         return splitted_gm.extracted
 
     @staticmethod
-    def _apply_module_insertion(
-        model: torch.fx.GraphModule,
-        transformations: List[FXModuleInsertionCommand],
-    ) -> torch.fx.GraphModule:
-        """
-        Applies insertion of PTSharedFnInsertionCommand commands. For each command method inserts
-        a torch module to the torch.fx.GraphModule and inserts call hooks for each command target points.
-
-        :param model: Model to apply transformations.
-        :param transformations: List of the bias correction transformations.
-        :param device: Target device for the insertion functions. Applies only to
-            functions which are subclassed from torch.nn.Module. Do nothing in case device is None.
-        :return: A modified torch.fx.GraphModule.
-        """
-        for transformation in transformations:
-            # Set fn to the model as an attribute
-            module_to_insert = transformation.module_to_insert
-            module_name_in_model = (
-                ";".join(
-                    "_".join((tp.target_node_name, str(tp.input_port_id), str(tp.target_type.value)))
-                    for tp in transformation.target_points
-                )
-                + "_"
-                + str(id(module_to_insert))
-            )
-            assert not hasattr(model, module_name_in_model)
-            setattr(model, module_name_in_model, module_to_insert)
-            # Insert call_module nodes to the model
-            for target_point in transformation.target_points:
-                FXModelTransformer._create_call_module_node(model.graph, target_point, module_name_in_model)
-        return model
-
-    @staticmethod
     def get_graph_node_by_name(graph, name):
         for node in graph.nodes:
             if node.name == name:
                 return node
         raise RuntimeError(f"Node with name {name} is not found")
-
-    @staticmethod
-    def _get_target_node(graph: torch.fx.Graph, target_point: PTTargetPoint):
-        target_type = target_point.target_type
-        target_node = FXModelTransformer.get_graph_node_by_name(graph, target_point.target_node_name)
-        if target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
-            target_node = target_node.all_input_nodes[target_point.input_port_id]
-        elif target_type == TargetType.OPERATOR_POST_HOOK:
-            pass
-        else:
-            raise RuntimeError(f"Unsupported target type: {target_type} for target_point: {target_point}")
-        return target_node
-
-    @staticmethod
-    def _create_call_module_node(graph: torch.fx.Graph, target_point: PTTargetPoint, module_name: str):
-        target_node = FXModelTransformer._get_target_node(graph, target_point)
-        with graph.inserting_after(target_node):
-            graph.create_node("call_module", module_name, (target_node,), {}, name=module_name + "_graph_node")
 
     @staticmethod
     def _apply_transformation(

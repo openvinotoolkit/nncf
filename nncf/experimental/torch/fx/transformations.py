@@ -25,25 +25,48 @@ from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 
-def fake_quantize_insertion_tranformation_builder(quantizer: FakeQuantize, target_points: List[PTTargetPoint]):
-    def fake_quantize_insertion_transformation(model: torch.fx.GraphModule):
-        module_attr_name = _set_module_to_the_graph_module(model, quantizer, target_points)
+def module_insertion_tranformation_builder(module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint]):
+    """
+    Inserts given module to a target model and calls given module after each target points.
+    For each target node all original ouputs are being replaced by outputs of corresponded
+    module call.
+    """
+
+    def module_insertion_transformation(model: torch.fx.GraphModule):
+        module_attr_name = _set_module_to_the_graph_module(model, module_to_insert, target_points)
         graph = model.graph
         for target_point in target_points:
-            target_node = FXModelTransformer._get_target_node(model.graph, target_point)
-            with graph.inserting_after(target_node):
-                fq_node = graph.create_node(
-                    "call_module", module_attr_name, (target_node,), {}, name=module_attr_name + "_quantizer"
-                )
+            target_node = _get_target_node(graph, target_point)
+            new_node = _insert_call_module(graph, target_node, module_attr_name)
             for user in list(target_node.users):
-                if user is fq_node:
+                if user is new_node:
                     continue
-                user.replace_input_with(target_node, fq_node)
+                user.replace_input_with(target_node, new_node)
 
-    return fake_quantize_insertion_transformation
+    return module_insertion_transformation
+
+
+def leaf_module_insertion_transformation_builder(module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint]):
+    """
+    Inserts given module to a target model and calls given module after each target points.
+    """
+
+    def leaf_module_insertion_transformation(model: torch.fx.GraphModule):
+        module_attr_name = _set_module_to_the_graph_module(model, module_to_insert, target_points)
+        # Insert call_module nodes to the model
+        graph = model.graph
+        for target_point in target_points:
+            target_node = _get_target_node(graph, target_point)
+            _insert_call_module(graph, target_node, module_attr_name)
+
+    return leaf_module_insertion_transformation
 
 
 def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor):
+    """
+    Updates constant of the given bias node to the given value.
+    """
+
     def bias_update_transformation(model: torch.fx.GraphModule):
         graph = model.graph
         target_node_name = node.node_name
@@ -60,11 +83,16 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor):
 
 
 def qdq_insertion_tranformation_builder(quantizer: FakeQuantize, target_points: List[PTTargetPoint]):
+    """
+    Inserts quantize-dequantize operations with parameters inherited from the given quantizer to each
+    given target point.
+    """
+
     def qdq_insertion_tranformation(model: torch.fx.GraphModule):
         if any(tp.target_type != TargetType.OPERATION_WITH_WEIGHTS for tp in target_points) and len(target_points) > 1:
             raise RuntimeError
         for target_point in target_points:
-            target_node = FXModelTransformer._get_target_node(model.graph, target_point)
+            target_node = _get_target_node(model.graph, target_point)
             insert_one_qdq(model, target_node, quantizer, target_point)
 
     return qdq_insertion_tranformation
@@ -140,6 +168,25 @@ def insert_one_qdq(
 
     for user, dq_node in user_dq_nodes:
         user.replace_input_with(target_node, dq_node)
+
+
+def _insert_call_module(graph: torch.fx.Graph, target_node: torch.fx.Node, module_attr_name: str):
+    with graph.inserting_after(target_node):
+        return graph.create_node(
+            "call_module", module_attr_name, (target_node,), {}, name=module_attr_name + "_graph_node"
+        )
+
+
+def _get_target_node(graph: torch.fx.Graph, target_point: PTTargetPoint):
+    target_type = target_point.target_type
+    target_node = FXModelTransformer.get_graph_node_by_name(graph, target_point.target_node_name)
+    if target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
+        target_node = target_node.all_input_nodes[target_point.input_port_id]
+    elif target_type == TargetType.OPERATOR_POST_HOOK:
+        pass
+    else:
+        raise RuntimeError(f"Unsupported target type: {target_type} for target_point: {target_point}")
+    return target_node
 
 
 def _set_module_to_the_graph_module(
