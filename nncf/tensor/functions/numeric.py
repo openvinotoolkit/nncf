@@ -818,6 +818,29 @@ def zeros(
     return Tensor(get_numeric_backend_fn("zeros", backend)(shape, dtype=dtype, device=device))
 
 
+def eye(
+    n: int,
+    m: Optional[int] = None,
+    *,
+    backend: TensorBackend,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> Tensor:
+    """
+    Return a 2-D array with ones on the diagonal and zeros elsewhere.
+
+    :param n: Number of rows in the output.
+    :param m: Number of columns in the output. If None, defaults to n.
+    :param backend: The backend type for which the eye tensor is required.
+    :param dtype: The data type of the returned tensor, If dtype is not given,
+        then the default data type is determined by backend.
+    :param device: The device on which the tensor will be allocated, If device is not given,
+        then the default device is determined by backend.
+    :return: A tensor where all elements are equal to zero, except for the k-th diagonal, whose values are equal to one.
+    """
+    return Tensor(get_numeric_backend_fn("eye", backend)(n, m, dtype=dtype, device=device))
+
+
 def arange(
     start: float,
     end: Optional[float] = None,
