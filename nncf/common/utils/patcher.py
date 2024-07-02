@@ -25,7 +25,7 @@ class Patcher:
     """
 
     def __init__(self) -> None:
-        self._patched: Dict[tuple[Any, str], List[tuple[object, Callable[..., Any]]]] = OrderedDict()
+        self._patched: Dict[Tuple[Any, str], List[Tuple[object, Callable[..., Any]]]] = OrderedDict()
 
     def patch(  # noqa: C901
         self,
@@ -72,7 +72,7 @@ class Patcher:
         :param depth: How many patches to undo, depth=0 to undo all of them
         """
 
-        def _unpatch(obj: object, fn_name: str, key: tuple[Any, str], depth: int) -> None:
+        def _unpatch(obj: object, fn_name: str, key: Tuple[Any, str], depth: int) -> None:
             if depth == 0:
                 depth = len(self._patched[key])
             keep = len(self._patched[key]) - depth

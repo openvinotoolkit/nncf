@@ -56,7 +56,7 @@ def is_torch_model(model: TModel) -> bool:
     :param model: A target model.
     :return: True if the model is an instance of torch.nn.Module, otherwise False.
     """
-    import torch
+    import torch  # type: ignore
 
     return isinstance(model, torch.nn.Module)
 
@@ -80,7 +80,7 @@ def is_onnx_model(model: TModel) -> bool:
     :param model: A target model.
     :return: True if the model is an instance of onnx.ModelProto, otherwise False.
     """
-    import onnx
+    import onnx  # type: ignore
 
     return isinstance(model, onnx.ModelProto)
 
