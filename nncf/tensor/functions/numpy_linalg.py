@@ -51,7 +51,7 @@ def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
 
 
 @register_numpy_types(linalg.lstsq)
-def _(a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic], driver: str = "gelsy") -> np.ndarray:
+def _(a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic], driver: Optional[str] = None) -> np.ndarray:
     return lstsq(a, b, lapack_driver=driver)[0]
 
 
