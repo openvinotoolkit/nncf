@@ -38,3 +38,13 @@ def _(a: torch.Tensor, upper: bool = False) -> torch.Tensor:
 @linalg.inv.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.linalg.inv(a)
+
+
+@linalg.lstsq.register(torch.Tensor)
+def _(a: torch.Tensor, b: torch.Tensor, driver: Optional[str] = None) -> torch.Tensor:
+    return torch.linalg.lstsq(a, b, driver=driver).solution
+
+
+@linalg.svd.register(torch.Tensor)
+def _(a: torch.Tensor, full_matrices: Optional[bool] = True) -> torch.Tensor:
+    return torch.linalg.svd(a, full_matrices=full_matrices)

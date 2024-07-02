@@ -76,7 +76,7 @@ def cholesky(a: Tensor, upper: bool = False) -> Tensor:
     If `upper` is True, then the conjugate transpose tensor of the tensor with upper=False
     is returned.
 
-    :param a: The input tensor of size (n,n).
+    :param a: The input tensor of size (N, N).
     :param upper: Whether to compute the upper- or lower-triangular Cholesky factorization.
         Default is lower-triangular.
     :return: Upper- or lower-triangular Cholesky factor of `a`.
@@ -91,7 +91,7 @@ def cholesky_inverse(a: Tensor, upper: bool = False) -> Tensor:
     Computes the inverse of a complex Hermitian or real symmetric positive-definite matrix given
     its Cholesky decomposition.
 
-    :param a: The input tensor of size (n,n) consisting of lower or upper triangular Cholesky
+    :param a: The input tensor of size (N, N) consisting of lower or upper triangular Cholesky
         decompositions of symmetric or Hermitian positive-definite matrices.
     :param upper: The flag that indicates whether the input tensor is lower triangular or
         upper triangular. Default: False.
@@ -106,8 +106,43 @@ def inv(a: Tensor) -> Tensor:
     """
     Computes the inverse of a matrix.
 
-    :param a: The input tensor of shape (*, n, n) where * is zero or more batch dimensions
+    :param a: The input tensor of shape (*, N, N) where * is zero or more batch dimensions
         consisting of invertible matrices.
     :return: The inverse of the input tensor.
     """
     return Tensor(inv(a.data))
+
+
+@functools.singledispatch
+@tensor_guard
+def lstsq(a: Tensor, b: Tensor, driver: Optional[str] = None) -> Tensor:
+    """
+    Compute least-squares solution to equation Ax = b.
+
+    :param a: Left-hand side tensor of size (M, N).
+    :param b: Right-hand side tensor of size (M,) or (M, K).
+    :param driver: name of the LAPACK/MAGMA method to be used for solving the least-squares problem.
+    :return: a tensor of size (N,) or (N, K), such that the 2-norm |b - A x| is minimized.
+    """
+    return Tensor(lstsq(a.data, b.data, driver))
+
+
+@functools.singledispatch
+@tensor_guard
+def svd(a: Tensor, full_matrices: Optional[bool] = True) -> Tensor:
+    """
+    Factorizes the matrix a into two unitary matrices U and Vh, and a 1-D array s of singular values
+    (real, non-negative) such that a == U @ S @ Vh, where S is a suitably shaped matrix of zeros with main diagonal s.
+
+    :param a: Tensor of shape (*, M, N) where * is zero or more batch dimensions.
+    :param full_matrices: Controls whether to compute the full or reduced SVD, and consequently,
+        If True (default), u and vh have the shapes (..., M, M) and (..., N, N), respectively.
+        Otherwise, the shapes are (..., M, K) and (..., K, N), respectively, where K = min(M, N).
+    :return: a tuple with the following tensors:
+        U - Unitary matrix having left singular vectors as columns. Of shape (M, M) or (M, K),
+            depending on full_matrices.
+        S - The singular values, sorted in non-increasing order. Of shape (K,), with K = min(M, N).
+        Vh - Unitary matrix having right singular vectors as rows. Of shape (N, N) or (K, N) depending on full_matrices.
+    """
+    U, S, Vh = svd(a.data, full_matrices=full_matrices)
+    return (Tensor(U), Tensor(S), Tensor(Vh))

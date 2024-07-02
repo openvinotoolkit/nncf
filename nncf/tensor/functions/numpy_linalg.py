@@ -12,6 +12,7 @@
 from typing import Optional, Tuple, Union
 
 import numpy as np
+from scipy.linalg import lstsq
 
 from nncf.tensor.functions import linalg
 from nncf.tensor.functions.dispatcher import register_numpy_types
@@ -47,3 +48,13 @@ def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
 @register_numpy_types(linalg.inv)
 def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
     return np.linalg.inv(a)
+
+
+@register_numpy_types(linalg.lstsq)
+def _(a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic], driver: Optional[str] = None) -> np.ndarray:
+    return lstsq(a, b, lapack_driver=driver)[0]
+
+
+@register_numpy_types(linalg.svd)
+def _(a: Union[np.ndarray, np.generic], full_matrices: Optional[bool] = True) -> np.ndarray:
+    return np.linalg.svd(a, compute_uv=True, full_matrices=full_matrices)

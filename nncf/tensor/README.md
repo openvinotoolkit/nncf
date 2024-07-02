@@ -39,24 +39,24 @@ nncf_tensor = fns.zeros((2,2), backend=TensorBackend.torch)
 
 ### Math operations
 
-All math operations are overrided to operated with wrapped object and return `Tensor`
+All math operations are overridden to operated with wrapped object and return `Tensor`
 
 ```python
 tensor_a = Tensor(np.array([1,2]))
-tenor_b = Tensor(np.array([1,2]))
-tensor_a + tenor_b  # Tensor(array([2, 4]))
+tensor_b = Tensor(np.array([1,2]))
+tensor_a + tensor_b  # Tensor(array([2, 4]))
 ```
 
 **NOTE** Division operations for the numpy backend are performed with warnings disabled for the same for all backends.
 
 ### Comparison operators
 
-All math operations are overrided to operated with wrapped object and return `Tensor`
+All math operations are overridden to operated with wrapped object and return `Tensor`
 
 ```python
 tensor_a = Tensor(np.array([1,2]))
-tenor_b = Tensor(np.array([1,2]))
-tensor_a < tenor_b  # Tensor(array([False, False]))
+tensor_b = Tensor(np.array([1,2]))
+tensor_a < tensor_b  # Tensor(array([False, False]))
 ```
 
 ### Method of the Tensor class
@@ -148,7 +148,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
         raise NotImplementedError(f"Function `foo` is not implemented for {type(x)}")
     ```
 
-3. Add backend specific implementation of method to correcponding module:
+3. Add backend specific implementation of method to corresponding module:
 
     - `functions/numpy_*.py`
 
@@ -172,7 +172,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
 
 1. Add backend specific implementation for all function from functions module in `functions/<NEW_BACKEND>_*.py` file.
 
-2. Add `test_tensor.py` in backend-specific t directory for tests that inherited from class `TemplateTestNNCFTensorOperators`
+2. Add `test_tensor.py` in backend-specific directory for tests that inherited from class `TemplateTestNNCFTensorOperators`
 
     ```python
     class TestNPNNCFTensorOperators(TemplateTestNNCFTensorOperators):

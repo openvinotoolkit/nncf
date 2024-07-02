@@ -25,6 +25,7 @@ from nncf.tensor.functions.numeric import device as device
 from nncf.tensor.functions.numeric import diag as diag
 from nncf.tensor.functions.numeric import dtype as dtype
 from nncf.tensor.functions.numeric import expand_dims as expand_dims
+from nncf.tensor.functions.numeric import eye as eye
 from nncf.tensor.functions.numeric import finfo as finfo
 from nncf.tensor.functions.numeric import flatten as flatten
 from nncf.tensor.functions.numeric import from_numpy as from_numpy
