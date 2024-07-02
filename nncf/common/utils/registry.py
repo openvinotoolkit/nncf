@@ -9,32 +9,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Callable, Dict, List, cast
+
 
 class Registry:
     REGISTERED_NAME_ATTR = "_registered_name"
 
     def __init__(self, name: str, add_name_as_attr: bool = False):
         self._name = name
-        self._registry_dict = {}
+        self._registry_dict: Dict[str, object] = {}
         self._add_name_as_attr = add_name_as_attr
 
     @property
-    def registry_dict(self):
+    def registry_dict(self) -> Dict[str, object]:
         return self._registry_dict
 
-    def values(self):
-        return self._registry_dict.values()
+    def values(self) -> List[object]:
+        return cast(List[object], self._registry_dict.values())
 
-    def _register(self, obj, name: str):
+    def _register(self, obj: object, name: str) -> None:
         if name in self._registry_dict:
             raise KeyError("{} is already registered in {}".format(name, self._name))
         self._registry_dict[name] = obj
 
-    def register(self, name: str = None):
-        def wrap(obj):
+    def register(self, name: str = None) -> Callable[[object], object]:
+        def wrap(obj: object) -> object:
             cls_name = name
             if cls_name is None:
-                cls_name = obj.__name__
+                cls_name = obj.__name__  # type: ignore
             if self._add_name_as_attr:
                 setattr(obj, self.REGISTERED_NAME_ATTR, name)
             self._register(obj, cls_name)
@@ -42,13 +44,13 @@ class Registry:
 
         return wrap
 
-    def get(self, name):
+    def get(self, name: str) -> object:
         if name not in self._registry_dict:
             self._key_not_found(name)
         return self._registry_dict[name]
 
-    def _key_not_found(self, name):
+    def _key_not_found(self, name: str) -> None:
         raise KeyError("{} is unknown type of {} ".format(name, self._name))
 
-    def __contains__(self, item):
+    def __contains__(self, item: object) -> bool:
         return item in self._registry_dict.values()

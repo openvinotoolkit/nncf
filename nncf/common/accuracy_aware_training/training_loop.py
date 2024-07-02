@@ -357,7 +357,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                 )
 
             return {
-                remove_registry_prefix(algo_name): controller_cls
+                remove_registry_prefix(algo_name): cast(CompressionAlgorithmController, controller_cls)
                 for algo_name, controller_cls in ADAPTIVE_COMPRESSION_CONTROLLERS.registry_dict.items()
             }
 

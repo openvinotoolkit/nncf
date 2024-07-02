@@ -17,14 +17,14 @@ class api:
     def __init__(self, canonical_alias: str = None):
         self._canonical_alias = canonical_alias
 
-    def __call__(self, obj):
+    def __call__(self, obj: object) -> object:
         # The value of the marker will be useful in determining
         # whether we are handling a base class or a derived one.
-        setattr(obj, api.API_MARKER_ATTR, obj.__name__)
+        setattr(obj, api.API_MARKER_ATTR, obj.__name__)  # type: ignore
         if self._canonical_alias is not None:
             setattr(obj, api.CANONICAL_ALIAS_ATTR, self._canonical_alias)
         return obj
 
 
-def is_api(obj) -> bool:
+def is_api(obj: object) -> bool:
     return hasattr(obj, api.API_MARKER_ATTR)

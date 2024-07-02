@@ -59,7 +59,7 @@ def configure_accuracy_aware_paths(log_dir: Union[str, pathlib.Path]) -> Union[s
     return acc_aware_log_dir
 
 
-def product_dict(d: Dict[Hashable, List]) -> Dict:
+def product_dict(d: Dict[Hashable, List[str]]) -> Iterable[Dict[Hashable, str]]:
     """
     Generates dicts which enumerate the options for keys given in the input dict;
     options are represented by list values in the input dict.

@@ -11,23 +11,24 @@
 
 import logging
 from contextlib import contextmanager
+from typing import Generator
 
 from nncf.common.logging import nncf_logger
 
 DEBUG_LOG_DIR = "./nncf_debug"
 
 
-def is_debug():
+def is_debug() -> bool:
     return nncf_logger.getEffectiveLevel() == logging.DEBUG
 
 
-def set_debug_log_dir(dir_: str):
+def set_debug_log_dir(dir_: str) -> None:
     global DEBUG_LOG_DIR
     DEBUG_LOG_DIR = dir_
 
 
 @contextmanager
-def nncf_debug():
+def nncf_debug() -> Generator[None, None, None]:
     from nncf.common.logging.logger import set_log_level
 
     set_log_level(logging.DEBUG)

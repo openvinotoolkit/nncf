@@ -11,12 +11,13 @@
 
 import time
 from contextlib import contextmanager
+from typing import Callable, Iterator
 
 from nncf.common.logging import nncf_logger
 
 
 @contextmanager
-def timer():
+def timer() -> Iterator[Callable[[], float]]:
     """
     Context manager to measure execution time.
     """
