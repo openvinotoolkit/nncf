@@ -13,7 +13,6 @@ from itertools import chain
 from typing import Tuple
 
 import torch.fx
-from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFGraph
@@ -21,9 +20,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.logging import nncf_logger
-from nncf.experimental.torch.fx.transformations import separate_conv_and_bias
-from nncf.experimental.torch.fx.transformations import separate_linear_and_bias
-from nncf.experimental.torch.fx.transformations import view_to_reshape
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
@@ -81,13 +77,6 @@ class GraphConverter:
         :param model: torch fx GraphModule.
         :return: NNCFGraph.
         """
-
-        _fuse_conv_bn_(model)
-        # BN fuses to conv bias, conv+bias joined op
-        # needs to be splited for nncf
-        separate_linear_and_bias(model)
-        separate_conv_and_bias(model)
-        view_to_reshape(model)
 
         nncf_graph = PTNNCFGraph()
 

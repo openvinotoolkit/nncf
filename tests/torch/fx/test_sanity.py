@@ -28,7 +28,7 @@ from torch._export import capture_pre_autograd_graph
 import nncf
 from nncf.common.logging.track_progress import track
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
-from tests.torch_fx.helpers import TinyImagenetDatasetManager
+from tests.torch.fx.helpers import TinyImagenetDatasetManager
 
 IMAGE_SIZE = 64
 BATCH_SIZE = 128

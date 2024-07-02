@@ -177,7 +177,7 @@ def _insert_call_module(graph: torch.fx.Graph, target_node: torch.fx.Node, modul
         )
 
 
-def _get_target_node(graph: torch.fx.Graph, target_point: PTTargetPoint):
+def _get_target_node(graph: torch.fx.Graph, target_point: PTTargetPoint) -> torch.fx.Node:
     target_type = target_point.target_type
     target_node = FXModelTransformer.get_graph_node_by_name(graph, target_point.target_node_name)
     if target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
@@ -225,6 +225,9 @@ def separate_linear_and_bias(model: torch.fx.GraphModule):
             continue
         linear_node = n
         linear_bias_node = linear_node.args[2]
+        while linear_bias_node.op != "get_attr":
+            # Assume zero argument is on a path to the constant
+            linear_bias_node = linear_bias_node.args[0]
         conv_bias_value = _get_tensor_constant_from_node(linear_bias_node, model)
         args = list(n.args)
         args[2] = None
@@ -251,6 +254,9 @@ def separate_linear_and_bias(model: torch.fx.GraphModule):
 
 
 def view_to_reshape(model: torch.fx.GraphModule):
+    """
+    Replaces all instances of view to a reshape call.
+    """
     for n in model.graph.nodes:
         if not (n.op == "call_function" and n.target in [torch.ops.aten.view.default]):
             continue

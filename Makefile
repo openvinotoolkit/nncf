@@ -126,6 +126,7 @@ install-torch-test:
 	pip install -e .
 	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/torch/requirements.txt
+	pip install -r tests/torch/fx/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
 
@@ -183,11 +184,7 @@ test-models-hub-torch:
 install-torch-fx-test:
 	pip install -U pip
 	pip install -e .
-	pip install -r tests/torch_fx/requirements.txt
-
-test-torch-fx:
-	pytest ${COVERAGE_ARGS} tests/torch_fx/  -ra \
-		--junitxml ${JUNITXML_PATH}
+	pip install -r tests/torch/fx/requirements.txt
 
 ###############################################################################
 # Common part

@@ -42,8 +42,6 @@ class FXModelTransformer(ModelTransformer):
     Applies transformations upon Torch FX model.
     """
 
-    # TODO: manage priorities of transformations
-
     def __init__(self, model: torch.fx.GraphModule):
         super().__init__(model)
 
@@ -53,6 +51,7 @@ class FXModelTransformer(ModelTransformer):
         ]
 
     def transform(self, transformation_layout: PTTransformationLayout) -> torch.fx.GraphModule:
+        # TODO(dlyakhov): Manage priorities of transformations.
         transformations = transformation_layout.transformations
         aggregated_transformations = defaultdict(list)
         for transformation in transformations:
@@ -99,7 +98,7 @@ class FXModelTransformer(ModelTransformer):
         return splitted_gm.extracted
 
     @staticmethod
-    def get_graph_node_by_name(graph, name):
+    def get_graph_node_by_name(graph: torch.fx.Graph, name: str) -> torch.fx.Node:
         for node in graph.nodes:
             if node.name == name:
                 return node

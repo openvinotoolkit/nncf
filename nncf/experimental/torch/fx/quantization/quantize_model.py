@@ -18,6 +18,7 @@ from torch.ao.quantization.pt2e.duplicate_dq_pass import DuplicateDQPass
 from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
 from torch.ao.quantization.pt2e.qat_utils import _fold_conv_bn_qat
 from torch.ao.quantization.pt2e.utils import _disallow_eval_train
+from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
 
@@ -28,6 +29,9 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.data import Dataset
 from nncf.experimental.torch.fx.transformations import merge_conv_and_bias
+from nncf.experimental.torch.fx.transformations import separate_conv_and_bias
+from nncf.experimental.torch.fx.transformations import separate_linear_and_bias
+from nncf.experimental.torch.fx.transformations import view_to_reshape
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -90,6 +94,14 @@ def quantize_impl(
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
     )
+
+    _fuse_conv_bn_(model)
+    # BN fuses to conv bias, conv+bias joined op
+    # needs to be splited for nncf
+    separate_linear_and_bias(model)
+    separate_conv_and_bias(model)
+    view_to_reshape(model)
+
     nncf_graph = NNCFGraphFactory.create(copied_model)
     quantized_model = quantization_algorithm.apply(copied_model, nncf_graph, dataset=calibration_dataset)
     merge_conv_and_bias(quantized_model)
