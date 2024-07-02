@@ -217,7 +217,7 @@ def _(
     axis: Optional[Union[int, Tuple[int]]] = None,
     keepdims: bool = False,
 ) -> Union[np.ndarray, np.generic]:
-    return np.array(np.quantile(a.astype(np.float64), q=q, axis=axis, keepdims=keepdims))
+    return np.array(np.quantile(a.astype(np.float64, copy=False), q=q, axis=axis, keepdims=keepdims))
 
 
 @register_numpy_types(numeric.percentile)
@@ -227,7 +227,9 @@ def _(
     axis: Union[int, Tuple[int, ...], List[int]],
     keepdims: bool = False,
 ) -> List[Union[np.ndarray, np.generic]]:
-    return np.quantile(a.astype(np.float64), q=np.true_divide(np.array(q), 100), axis=axis, keepdims=keepdims)
+    return np.quantile(
+        a.astype(np.float64, copy=False), q=np.true_divide(np.array(q), 100), axis=axis, keepdims=keepdims
+    )
 
 
 @register_numpy_types(numeric._binary_op_nowarn)

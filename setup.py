@@ -106,7 +106,7 @@ INSTALL_REQUIRES = [
     "natsort>=7.1.0",
     "networkx>=2.6, <=3.3",
     "ninja>=1.10.0.post2, <1.12",
-    "numpy>=2.0.0",
+    "numpy>=1.19.1, <1.27",
     "openvino-telemetry>=2023.2.0",
     "packaging>=20.0",
     "pandas>=1.1.5,<2.3",
@@ -123,7 +123,7 @@ INSTALL_REQUIRES = [
 EXTRAS_REQUIRE = {
     "plots": [
         "kaleido>=0.2.1",
-        "matplotlib>=3.3.4",
+        "matplotlib>=3.3.4, <3.6",
         "pillow>=9.0.0",
         "plotly-express>=0.4.1",
     ],

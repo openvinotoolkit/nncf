@@ -20,7 +20,7 @@ jobs:
           lfs: true
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
-          python-version: 3.10.14
+          python-version: 3.8.18
           cache: pip
       - name: Install NNCF and test requirements
         run: make install-common-test
@@ -48,7 +48,7 @@ jobs:
           lfs: true
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
-          python-version: 3.10.14
+          python-version: 3.8.18
       - name: Install NNCF and test requirements
         run: make install-onnx-test
       - name: Run ONNX precommit test scope
@@ -75,7 +75,7 @@ jobs:
           lfs: true
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
-          python-version: 3.10.14
+          python-version: 3.8.18
           cache: pip
       - name: Install NNCF and test requirements
         run: make install-openvino-test
@@ -113,7 +113,7 @@ jobs:
           lfs: true
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
-          python-version: 3.10.14
+          python-version: 3.8.18
           cache: pip
       - name: Runner info
         continue-on-error: true
@@ -169,7 +169,7 @@ jobs:
           lfs: true
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
-          python-version: 3.10.14
+          python-version: 3.8.18
           cache: pip
       - name: Install NNCF and test requirements
         run: make install-torch-test
@@ -208,7 +208,7 @@ jobs:
           lfs: true
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
-          python-version: 3.10.14
+          python-version: 3.9.19
           cache: pip
       - name: Install NNCF and test requirements
         run: make install-tensorflow-test
