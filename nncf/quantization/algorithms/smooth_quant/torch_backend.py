@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 import numpy as np
 import torch
@@ -23,28 +23,48 @@ from nncf.common.quantization.quantizer_propagation.structs import QuantizationT
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
+from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.command_creation import create_command_to_update_weight
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.layer_utils import COMPRESSION_MODULES
+from nncf.torch.layer_utils import CompressionParameter
+from nncf.torch.layer_utils import StatefullModuleInterface
 from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
-from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 
 
-class SQMultiply(torch.nn.Module):
-    def __init__(self, scale_value):
+@COMPRESSION_MODULES.register()
+class SQMultiply(torch.nn.Module, StatefullModuleInterface):
+    SCALE_SHAPE_KEY = "scale_shape"
+
+    def __init__(self, scale_shape: Tuple[int, ...]):
         super().__init__()
-        self._scale_value = scale_value
+        self._scale_value = CompressionParameter(torch.empty(scale_shape))
 
-    def forward(self, x):
+    @property
+    def scale(self) -> torch.nn.Parameter:
+        return self._scale_value
+
+    @scale.setter
+    def scale(self, value: torch.tensor):
+        self._scale_value.data = value
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return torch.mul(x, self._scale_value)
+
+    def get_config(self) -> Dict[str, Any]:
+        return {self.SCALE_SHAPE_KEY: list(self._scale_value.shape)}
+
+    @classmethod
+    def from_config(cls, state) -> "SQMultiply":
+        return SQMultiply(state[cls.SCALE_SHAPE_KEY])
 
 
 PT_PRE_LAYER_TARGET_TYPE = TargetType.OPERATOR_PRE_HOOK
@@ -94,7 +114,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     ) -> TensorCollector:
         collector = TensorCollector()
         reducer = PTAbsMaxReducer(reduction_axes=stats_reduction_axes)
-        aggregator = MaxAggregator(tensor_processor=PTNNCFCollectorTensorProcessor, num_samples=num_samples)
+        aggregator = MaxAggregator(num_samples=num_samples)
         collector.register_statistic_branch(branch_key, reducer, aggregator)
         return collector
 
@@ -122,7 +142,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @staticmethod
     def scale_insertion_command(
         source_node: NNCFNode,
-        scale_value: np.ndarray,
+        scale_value: torch.Tensor,
         source_output_port_id: int,
         nodes: List[NNCFNode],
         scale_node_name: str,
@@ -132,7 +152,9 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         for node in nodes:
             target_points.append(PTTargetPoint(PT_PRE_LAYER_TARGET_TYPE, node.node_name, input_port_id=input_port_id))
 
-        return PTSharedFnInsertionCommand(target_points, SQMultiply(scale_value), scale_node_name)
+        sq_multiply = SQMultiply(scale_value.shape)
+        sq_multiply.scale = scale_value
+        return PTSharedFnInsertionCommand(target_points, sq_multiply, scale_node_name)
 
     @staticmethod
     def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:

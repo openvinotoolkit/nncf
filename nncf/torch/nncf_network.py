@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Callable, Dict, Iterator, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, TypeVar
 
 import torch
 from torch import nn
@@ -73,6 +73,7 @@ from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
+from nncf.torch.graph.transformations.serialization import serialize_transformations
 from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.module_operations import UpdateWeight
@@ -784,6 +785,19 @@ class NNCFNetworkInterface(torch.nn.Module):
                 result.append(scope_in_model)
         return result
 
+    def get_config(self) -> Dict[str, Any]:
+        """
+        Returns serializable NNCFNetwork config which contains
+        all information required to recover all additional modules placement.
+
+        :return: Serializable config which contains
+            all information required to recover all additional modules placement.
+        """
+        transformation_layout = self.transformation_layout()
+        config = serialize_transformations(transformation_layout)
+        config[NNCFNetwork.TRACE_PARAMETERS_KEY] = self.trace_parameters
+        return config
+
     def transformation_layout(self) -> PTTransformationLayout:
         """
         Collects all hooks applied to the NNCFNetwork, converts them to insertion commands
@@ -1125,6 +1139,8 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
     """
     A mixin-like class to dynamically extend the original model object's class with.
     """
+
+    TRACE_PARAMETERS_KEY = "trace_parameters"
 
     def __init__(self, *args, **kwargs):
         """

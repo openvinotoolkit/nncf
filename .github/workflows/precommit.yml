@@ -1,4 +1,5 @@
 name: precommit
+permissions: read-all
 
 on:
   pull_request:
@@ -14,36 +15,38 @@ jobs:
   common:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
           lfs: true
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
           python-version: 3.8.18
+          cache: pip
       - name: Install NNCF and test requirements
         run: make install-common-test
       - name: Run common precommit test scope
         run: make test-common
         env:
           NNCF_COVERAGE: 1
+          NUM_WORKERS: 2
       - name: Upload coverage report as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           name: coverage_common
           path: ./coverage.xml
       - name: Upload coverage report to codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c # v4.4.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           name: coverage_common
           flags: COMMON
   onnx:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-20.04-8-cores
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
           lfs: true
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
           python-version: 3.8.18
       - name: Install NNCF and test requirements
@@ -52,13 +55,14 @@ jobs:
         run: make test-onnx
         env:
           NNCF_COVERAGE: 1
+          NUM_WORKERS: 4
       - name: Upload coverage report as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           name: coverage_onnx
           path: ./coverage.xml
       - name: Upload coverage report to codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c # v4.4.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           name: coverage_onnx
@@ -66,25 +70,27 @@ jobs:
   openvino:
     runs-on: ubuntu-20.04-8-cores
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
           lfs: true
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
           python-version: 3.8.18
+          cache: pip
       - name: Install NNCF and test requirements
         run: make install-openvino-test
       - name: Run OV precommit test scope
         run: make test-openvino
         env:
           NNCF_COVERAGE: 1
+          NUM_WORKERS: 4
       - name: Upload coverage report as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           name: coverage_openvino
           path: ./coverage.xml
       - name: Upload coverage report to codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c # v4.4.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           name: coverage_openvino
@@ -102,12 +108,13 @@ jobs:
         run : |
           sudo apt-get update
           sudo apt-get --assume-yes install gcc g++ build-essential ninja-build libgl1-mesa-dev libglib2.0-0
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
           lfs: true
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
           python-version: 3.8.18
+          cache: pip
       - name: Runner info
         continue-on-error: true
         run: |
@@ -118,6 +125,20 @@ jobs:
       - name: Run PyTorch precommit test scope
         run: |
           make test-torch-cpu
+        env:
+          NNCF_COVERAGE: 1
+          NUM_WORKERS: 4
+      - name: Upload coverage report as artifact
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: coverage_pt_cpu
+          path: ./coverage.xml
+      - name: Upload coverage report to codecov
+        uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c # v4.4.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage_pt_cpu
+          flags: TORCH
   pytorch-cuda:
     timeout-minutes: 40
     defaults:
@@ -130,7 +151,7 @@ jobs:
       - name: Install dependencies
         run : |
           sudo apt-get update
-          sudo apt-get --assume-yes install gcc ninja-build libgl1-mesa-dev libglib2.0-0
+          sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
       - name: Download CUDA
         run: |
           wget -q https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_530.30.02_linux.run
@@ -143,12 +164,13 @@ jobs:
           nvidia-smi
           cat /proc/cpuinfo
           nvcc --version
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
           lfs: true
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
           python-version: 3.8.18
+          cache: pip
       - name: Install NNCF and test requirements
         run: make install-torch-test
       - name: Check CUDA
@@ -159,3 +181,51 @@ jobs:
           export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}
           export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
           make test-torch-cuda
+        env:
+          NNCF_COVERAGE: 1
+      - name: Upload coverage report as artifact
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: coverage_pt_cuda
+          path: ./coverage.xml
+      - name: Upload coverage report to codecov
+        uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c # v4.4.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage_pt_cuda
+          flags: TORCH
+  tensorflow:
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-20.04-8-cores
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        with:
+          lfs: true
+      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+        with:
+          python-version: 3.9.19
+          cache: pip
+      - name: Install NNCF and test requirements
+        run: make install-tensorflow-test
+      - name: Run TensorFlow precommit test scope
+        run: |
+          make test-tensorflow
+        env:
+          NNCF_COVERAGE: 1
+          NUM_WORKERS: 6
+      - name: Upload coverage report as artifact
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: coverage_tensorflow
+          path: ./coverage.xml
+      - name: Upload coverage report to codecov
+        uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c # v4.4.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage_tensorflow
+          flags: TENSORFLOW

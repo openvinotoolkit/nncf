@@ -13,6 +13,8 @@ import pytest
 from nncf.common.graph import NNCFNode
 from nncf.common.scopes import get_not_matched_scopes
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Subgraph
+from nncf.scopes import get_difference_ignored_scope
 
 
 @pytest.mark.parametrize(
@@ -38,3 +40,38 @@ def test_get_not_matched_scopes(scope, ref):
     ]
     not_matched = get_not_matched_scopes(scope, node_lists)
     assert not set(not_matched) - set(ref)
+
+
+@pytest.mark.parametrize(
+    "scope_1, scope_2, ref",
+    (
+        (
+            IgnoredScope(
+                names=["A_name", "B_name"],
+                patterns=["A_pattern", "B_pattern"],
+                types=["A_type", "B_type"],
+                subgraphs=[
+                    Subgraph(inputs=["A_input"], outputs=["A_output"]),
+                    Subgraph(inputs=["B_input"], outputs=["B_output"]),
+                ],
+            ),
+            IgnoredScope(
+                names=["B_name", "C_name"],
+                patterns=["B_pattern", "C_pattern"],
+                types=["B_type", "C_type"],
+                subgraphs=[
+                    Subgraph(inputs=["B_input"], outputs=["B_output"]),
+                    Subgraph(inputs=["C_input"], outputs=["C_output"]),
+                ],
+            ),
+            IgnoredScope(
+                names=["A_name"],
+                patterns=["A_pattern"],
+                types=["A_type"],
+                subgraphs=[Subgraph(inputs=["A_input"], outputs=["A_output"])],
+            ),
+        ),
+    ),
+)
+def test_ignored_scope_diff(scope_1, scope_2, ref):
+    assert get_difference_ignored_scope(scope_1, scope_2) == ref

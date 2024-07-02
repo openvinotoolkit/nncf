@@ -20,11 +20,11 @@ from nncf.common.quantization.quantizers import get_num_levels
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import TensorDataType
-from nncf.experimental.tensor import functions as fns
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.quantization.advanced_parameters import FP8Type
+from nncf.tensor import Tensor
+from nncf.tensor import TensorDataType
+from nncf.tensor import functions as fns
 
 
 @dataclass
@@ -240,8 +240,8 @@ def calculate_quantizer_parameters(
         False - the full range is used.
     :return: Parameters of the FakeQuantize layer.
     """
-    min_values = Tensor(statistics.min_values).astype(TensorDataType.float32)
-    max_values = Tensor(statistics.max_values).astype(TensorDataType.float32)
+    min_values = statistics.min_values.astype(TensorDataType.float32)
+    max_values = statistics.max_values.astype(TensorDataType.float32)
 
     if half_range:
         input_low, input_high, levels = _calculate_scaled_parameters(
@@ -284,8 +284,8 @@ def calculate_convert_parameters(
 
     destination_type_maximum = {FP8Type.E4M3: 448, FP8Type.E5M2: 57344}
 
-    max_values = Tensor(statistics.max_values)
-    min_values = Tensor(statistics.min_values)
+    max_values = statistics.max_values
+    min_values = statistics.min_values
 
     max_destination_value = destination_type_maximum[destination_type]
     tensor_dtype = fns.finfo(max_values)

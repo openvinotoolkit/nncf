@@ -9,12 +9,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional
+from dataclasses import asdict
+from typing import Any, Dict, List, Optional
 
 import openvino.runtime as ov
 
 from nncf.common.logging import nncf_logger
 from nncf.scopes import IgnoredScope
+
+
+def exclude_empty_fields(value: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Remove keys where value is empty and key is `validate`
+
+    :param value: IgnoredScope instance, based on the quantization parameters
+    """
+    value.pop("validate")
+    keys = list(value.keys())
+    for key in keys:
+        if not value[key]:
+            value.pop(key)
+    return value
 
 
 def dump_parameters(
@@ -33,8 +48,14 @@ def dump_parameters(
         for key, value in parameters.items():
             # Special condition for composed fields like IgnoredScope
             if isinstance(value, IgnoredScope):
-                dump_parameters(model, value.__dict__, algo_name, [key])
-                continue
+                value = exclude_empty_fields(asdict(value))
+                if bool(value):
+                    dump_parameters(model, value, algo_name, [key])
+                    continue
+                else:
+                    # The default value in case empty ignored_scope parameter passed
+                    value = []
+
             rt_path = ["nncf", algo_name] + path + [key]
             model.set_rt_info(str(value), rt_path)
     except RuntimeError as e:

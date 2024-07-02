@@ -13,14 +13,15 @@ from typing import List, Optional
 
 import torch
 
+from nncf.common.graph.layer_attributes import ConstantLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.torch import wrap_model
 from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.operator_metatypes import PTConstNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSumMetatype
-from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
@@ -38,7 +39,13 @@ def get_single_conv_nncf_graph() -> NNCFGraphToTest:
         transpose=False,
         padding_values=[],
     )
-    return NNCFGraphToTest(PTModuleConv2dMetatype, conv_layer_attrs, PTNNCFGraph)
+    return NNCFGraphToTest(
+        PTModuleConv2dMetatype,
+        conv_layer_attrs,
+        PTNNCFGraph,
+        const_metatype=PTConstNoopMetatype,
+        const_layer_attrs=ConstantLayerAttributes("w", shape=[4, 4, 4, 4]),
+    )
 
 
 def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
@@ -53,7 +60,13 @@ def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
         transpose=False,
         padding_values=(1, 1),
     )
-    return NNCFGraphToTestDepthwiseConv(PTModuleDepthwiseConv2dSubtype, conv_layer_attrs, nncf_graph_cls=PTNNCFGraph)
+    return NNCFGraphToTestDepthwiseConv(
+        PTModuleDepthwiseConv2dSubtype,
+        conv_layer_attrs,
+        nncf_graph_cls=PTNNCFGraph,
+        const_metatype=PTConstNoopMetatype,
+        const_layer_attrs=ConstantLayerAttributes("w", shape=[4, 4, 4, 4]),
+    )
 
 
 def get_single_no_weight_matmul_nncf_graph() -> NNCFGraphToTest:
@@ -72,7 +85,14 @@ def get_sum_aggregation_nncf_graph() -> NNCFGraphToTestSumAggregation:
         transpose=False,
         padding_values=[],
     )
-    return NNCFGraphToTestSumAggregation(PTModuleConv2dMetatype, PTSumMetatype, conv_layer_attrs, PTNNCFGraph)
+    return NNCFGraphToTestSumAggregation(
+        PTModuleConv2dMetatype,
+        PTSumMetatype,
+        conv_layer_attrs,
+        PTNNCFGraph,
+        const_metatype=PTConstNoopMetatype,
+        const_layer_attrs=ConstantLayerAttributes("w", shape=[4, 4, 4, 4]),
+    )
 
 
 def get_nncf_network(model: torch.nn.Module, input_shape: Optional[List[int]] = None):
@@ -81,15 +101,3 @@ def get_nncf_network(model: torch.nn.Module, input_shape: Optional[List[int]] = 
     model = model.eval()
     device = next(model.named_parameters())[1].device
     return wrap_model(model, torch.ones(input_shape).to(device=device), trace_parameters=True)
-
-
-def mock_collect_statistics(mocker):
-    _ = mocker.patch(
-        "nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics", return_value=None
-    )
-    min_, max_ = 0.0, 1.0
-    min_, max_ = torch.tensor(min_), torch.tensor(max_)
-    _ = mocker.patch(
-        "nncf.experimental.common.tensor_statistics.collectors.TensorCollector.get_statistics",
-        return_value=PTMinMaxTensorStatistic(min_values=min_, max_values=max_),
-    )

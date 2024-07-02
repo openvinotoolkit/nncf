@@ -123,12 +123,14 @@ def benchmark_performance(model_path, config) -> float:
 
 
 def prepare_openvino_model(model: YOLO, model_name: str) -> Tuple[ov.Model, Path]:
-    model_path = Path(f"{ROOT}/{model_name}_openvino_model/{model_name}.xml")
-    if not model_path.exists():
-        model.export(format="openvino", dynamic=True, half=False)
+    ir_model_path = Path(f"{ROOT}/{model_name}_openvino_model/{model_name}.xml")
+    if not ir_model_path.exists():
+        onnx_model_path = Path(f"{ROOT}/{model_name}.onnx")
+        if not onnx_model_path.exists():
+            model.export(format="onnx", dynamic=True, half=False)
 
-    model = ov.Core().read_model(model_path)
-    return model, model_path
+        ov.save_model(ov.convert_model(onnx_model_path), ir_model_path)
+    return ov.Core().read_model(ir_model_path), ir_model_path
 
 
 def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, validator_ac: Validator) -> ov.Model:
@@ -191,7 +193,6 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
                     inputs=[
                         "/model.22/Concat_3",
                         "/model.22/Concat_6",
-                        "/model.22/Concat_24",
                         "/model.22/Concat_5",
                         "/model.22/Concat_4",
                     ],
@@ -220,7 +221,7 @@ def main():
     quantized_model = quantize_ac(ov_model, data_loader, validator)
 
     quantized_model_path = Path(f"{ROOT}/{MODEL_NAME}_openvino_model/{MODEL_NAME}_quantized.xml")
-    ov.save_model(quantized_model, str(quantized_model_path), compress_to_fp16=False)
+    ov.save_model(quantized_model, str(quantized_model_path))
 
     # Validate FP32 model
     fp_stats, total_images, total_objects = validate(ov_model, tqdm(data_loader), validator)

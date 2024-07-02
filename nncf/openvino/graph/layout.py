@@ -28,7 +28,7 @@ class OVLayoutElem(Enum):
         C_IN: Input channels dimension.
         C_OUT: Output channels dimension.
         SPATIAL: Spatial dimension.
-        GROUPS: Groups dimention.
+        GROUPS: Groups dimension.
     """
 
     C_IN = "channels_in"

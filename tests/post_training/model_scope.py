@@ -17,12 +17,15 @@ from nncf import ModelType
 from nncf import QuantizationPreset
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedScaleEstimationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
 from tests.post_training.pipelines.base import NNCF_PTQ_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.causal_language_model import CausalLMHF
+from tests.post_training.pipelines.gpt import GPT
 from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
 from tests.post_training.pipelines.lm_weight_compression import LMWeightCompression
 from tests.post_training.pipelines.masked_language_modeling import MaskedLanguageModelingHF
@@ -50,6 +53,17 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
         },
         "backends": [BackendType.OPTIMUM],
+    },
+    {
+        "reported_name": "hf/hf-internal-testing/tiny-random-gpt2",
+        "model_id": "hf-internal-testing/tiny-random-gpt2",
+        "pipeline_cls": GPT,
+        "compression_params": {
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "subset_size": 2,
+        },
+        "backends": [BackendType.TORCH, BackendType.OV, BackendType.OPTIMUM],
     },
     # Timm models
     {
@@ -328,18 +342,65 @@ WEIGHT_COMPRESSION_MODELS = [
         "backends": [BackendType.OV],
     },
     {
-        "reported_name": "tinyllama_data_aware_awq",
-        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
-        "pipeline_cls": LMWeightCompression,
-        "compression_params": {"group_size": 64, "ratio": 0.8, "mode": CompressWeightsMode.INT4_SYM, "awq": True},
-        "backends": [BackendType.OV],
-    },
-    {
         "reported_name": "tinyllama_data_aware_awq_stateful",
         "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
         "pipeline_cls": LMWeightCompression,
         "compression_params": {"group_size": 64, "ratio": 0.8, "mode": CompressWeightsMode.INT4_SYM, "awq": True},
         "params": {"is_stateful": True},
+        "backends": [BackendType.OV],
+    },
+    {
+        "reported_name": "tinyllama_data_aware_awq_scale_estimation",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": 64,
+            "ratio": 0.8,
+            "mode": CompressWeightsMode.INT4_SYM,
+            "awq": True,
+            "scale_estimation": True,
+            "advanced_parameters": AdvancedCompressionParameters(
+                scale_estimation_params=AdvancedScaleEstimationParameters(32, 5, 10, 1.0)
+            ),
+        },
+        "backends": [BackendType.OV],
+    },
+    {
+        "reported_name": "tinyllama_data_aware_awq_scale_estimation_stateful",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": 64,
+            "ratio": 0.8,
+            "mode": CompressWeightsMode.INT4_SYM,
+            "awq": True,
+            "scale_estimation": True,
+            "advanced_parameters": AdvancedCompressionParameters(
+                scale_estimation_params=AdvancedScaleEstimationParameters(32, 5, 10, 1.0)
+            ),
+        },
+        "params": {"is_stateful": True},
+        "backends": [BackendType.OV],
+    },
+    {
+        "reported_name": "tinyllama_int8_data_free",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "mode": CompressWeightsMode.INT8_ASYM,
+        },
+        "backends": [BackendType.TORCH],
+    },
+    {
+        "reported_name": "tinyllama_data_aware_gptq",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": 64,
+            "ratio": 0.8,
+            "mode": CompressWeightsMode.INT4_SYM,
+            "gptq": True,
+        },
         "backends": [BackendType.OV],
     },
 ]

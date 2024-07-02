@@ -22,6 +22,10 @@ ifdef WEEKLY_MODELS
 	WEEKLY_MODELS_ARG := --weekly-models $(WEEKLY_MODELS)
 endif
 
+ifdef NUM_WORKERS
+	NUM_WORKERS_ARG := -n${NUM_WORKERS}
+endif
+
 install-pre-commit:
 	pip install pre-commit==3.2.2
 
@@ -31,7 +35,6 @@ install-pre-commit:
 install-onnx-test:
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
 	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/onnx/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
@@ -42,7 +45,7 @@ install-onnx-dev: install-onnx-test install-pre-commit
 	pip install -r examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt
 
 test-onnx:
-	pytest ${COVERAGE_ARGS} tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 
 test-install-onnx:
@@ -60,7 +63,6 @@ test-examples-onnx:
 install-openvino-test:
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
 	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install tensorflow==2.12.0 # Install tensorflow before to avoid conflict on install for typing-extensions
 	pip install -r tests/openvino/requirements.txt
@@ -74,7 +76,8 @@ install-openvino-dev: install-openvino-test install-pre-commit
 	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
 
 test-openvino:
-	ONEDNN_MAX_CPU_ISA=AVX2 pytest ${COVERAGE_ARGS} -n4 -ra tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	ONEDNN_MAX_CPU_ISA=AVX2 pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/openvino $(DATA_ARG) \
+		--junitxml ${JUNITXML_PATH} --dist loadscope
 
 test-install-openvino:
 	pytest tests/cross_fw/install -s        \
@@ -91,7 +94,6 @@ test-examples-openvino:
 install-tensorflow-test:
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
 	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/tensorflow/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
@@ -102,7 +104,7 @@ install-tensorflow-dev: install-tensorflow-test install-pre-commit
 	pip install -r examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt
 
 test-tensorflow:
-	pytest ${COVERAGE_ARGS} tests/tensorflow -m "not nightly"   \
+	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/tensorflow -m "not nightly"   \
 		--junitxml ${JUNITXML_PATH}         \
 		$(DATA_ARG)
 
@@ -122,7 +124,6 @@ test-examples-tensorflow:
 install-torch-test:
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
 	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/torch/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
@@ -145,7 +146,7 @@ test-torch:
 	pytest ${COVERAGE_ARGS} tests/torch -m "not weekly and not nightly and not models_hub" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
 test-torch-cpu:
-	pytest ${COVERAGE_ARGS} tests/torch -n4 -ra -m "not cuda and not weekly and not nightly and not models_hub"
+	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} tests/torch -ra -m "not cuda and not weekly and not nightly and not models_hub"
 
 test-torch-cuda:
 	pytest ${COVERAGE_ARGS} tests/torch -ra -m "cuda and not weekly and not nightly and not models_hub"
@@ -186,7 +187,7 @@ install-common-test:
 	pip install -r tests/cross_fw/examples/requirements.txt
 
 test-common:
-	pytest ${COVERAGE_ARGS} tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 test-examples:
 	pytest tests/cross_fw/examples -s --junitxml ${JUNITXML_PATH}

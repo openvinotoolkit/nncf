@@ -27,7 +27,7 @@ from nncf.openvino.graph.node_utils import get_ov_model_reduce_node_name
 from nncf.openvino.graph.node_utils import get_reducer_output_node_names
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
-from nncf.openvino.tensor import OVNNCFTensor
+from nncf.tensor import Tensor
 
 
 class OVStatisticsAggregator(StatisticsAggregator):
@@ -35,9 +35,7 @@ class OVStatisticsAggregator(StatisticsAggregator):
         self._name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         super().collect_statistics(model, graph)
 
-    def _register_statistics(
-        self, outputs: Dict[str, OVNNCFTensor], statistic_points: StatisticPointsContainer
-    ) -> None:
+    def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
         for _, statistic_point, tensor_collector in statistic_points.get_tensor_collectors():
             stat_node_name, port_id, _ = self._translate_to_post_layer_operation(statistic_point)
             input_info = []
@@ -125,5 +123,5 @@ class OVStatisticsAggregator(StatisticsAggregator):
         return stat_node_name, port_id, target_point_type
 
     @staticmethod
-    def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, OVNNCFTensor]:
-        return {n: OVNNCFTensor(v) for n, v in outputs.items()}
+    def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, Tensor]:
+        return {n: Tensor(v) for n, v in outputs.items()}

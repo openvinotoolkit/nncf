@@ -15,10 +15,16 @@ from typing import List
 import pytest
 import torch
 
+import nncf
+from nncf.common.utils.os import is_windows
 from nncf.config import NNCFConfig
+from nncf.torch import wrap_model
 from nncf.torch.dynamic_graph.context import TracingContext
+from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.patch_pytorch import _ORIG_JIT_SCRIPT
 from nncf.torch.dynamic_graph.patch_pytorch import MagicFunctionsToPatch
+from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
+from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
@@ -27,6 +33,7 @@ from tests.shared.isolation_runner import run_pytest_case_function_in_separate_p
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
+from tests.torch.pytorch_patch_isolated import test_compile
 from tests.torch.pytorch_patch_isolated import test_jit_if_tracing_script_source_equals
 from tests.torch.pytorch_patch_isolated import test_jit_script_exception_preserves_patching_isolated
 
@@ -106,6 +113,46 @@ def test_jit_script_exception_preserves_patching():
     run_pytest_case_function_in_separate_process(test_jit_script_exception_preserves_patching_isolated)
 
 
+@pytest.mark.xfail(is_windows(), reason="https://github.com/pytorch/pytorch/issues/122094")
+def test_torch_compile():
+    # Run test case in a separate process to track patching of torch by NNCF
+    run_pytest_case_function_in_separate_process(test_compile)
+
+
+def test_torch_compile_on_nncf_model():
+    # Calling torch.compile on a regular torch model should work fine
+    model = BasicConvTestModel()
+    compiled_model = torch.compile(model)
+    compiled_model(torch.ones(model.INPUT_SIZE))
+
+    model = BasicConvTestModel()
+    quantized_model = nncf.quantize(model, nncf.Dataset([torch.rand(model.INPUT_SIZE)]))
+    with pytest.raises(
+        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
+    ):
+        torch.compile(quantized_model)
+
+    model = BasicConvTestModel()
+    config = get_test_quantization_config(model)
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    with pytest.raises(
+        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
+    ):
+        torch.compile(compressed_model)
+
+    stripped_model = compression_ctrl.strip()
+    with pytest.raises(
+        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
+    ):
+        torch.compile(stripped_model)
+
+    with pytest.raises(
+        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
+    ):
+        # Compiling this model would actually work, but inference of the compiled model will fail
+        torch.compile(model)
+
+
 def test_jit_script_signature():
     # Check that torch.jit.script has the same signature as the wrapper was designed for
     signature = inspect.signature(_ORIG_JIT_SCRIPT)
@@ -127,6 +174,16 @@ def test_jit_script_class():
 
 def test_jit_trace_model():
     model = BasicConvTestModel()
+    config = get_test_quantization_config(model)
+
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    torch.jit.trace(compressed_model, example_inputs=torch.rand(model.INPUT_SIZE))
+
+    model = compression_ctrl.strip()
+    torch.jit.trace(model, example_inputs=torch.rand(model.INPUT_SIZE))
+
+
+def get_test_quantization_config(model):
     config = NNCFConfig()
     config.update(
         {
@@ -136,9 +193,33 @@ def test_jit_trace_model():
         }
     )
     register_bn_adaptation_init_args(config)
+    return config
 
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    torch.jit.trace(compressed_model, example_inputs=torch.rand(model.INPUT_SIZE))
 
-    model = compression_ctrl.strip()
-    torch.jit.trace(model, example_inputs=torch.rand(model.INPUT_SIZE))
+def test_operator_unpatching():
+    unwrapped_operator_expected = False
+
+    class TestModel(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.op = torch.nn.functional.gelu
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            ctx = get_current_context()
+            original_in_operator_value = ctx.in_operator
+            ctx.in_operator = "unexpected_value"
+            result = self.op(x)
+            # If ctx.in_operator value was not changed, then operator wrapper exited early
+            assert not unwrapped_operator_expected or ctx.in_operator == "unexpected_value"
+            ctx.in_operator = original_in_operator_value
+            return result
+
+    test_model = TestModel()
+    example_input = torch.ones((1,))
+    wrapped_operator = wrap_model(test_model, example_input)
+    with disable_patching():
+        assert not PATCHING_STATE.operators_are_wrapped
+        # Despite patching is disabled, test_model holds a reference to a patched operator
+        assert "_original_op" in test_model.op.__dict__
+        unwrapped_operator_expected = True
+        wrapped_operator(example_input)

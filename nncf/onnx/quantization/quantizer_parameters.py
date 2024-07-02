@@ -14,9 +14,9 @@ from typing import Optional, Tuple
 
 import numpy as np
 
-from nncf.experimental.tensor import functions as fns
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
+from nncf.tensor import functions as fns
 
 
 @dataclass

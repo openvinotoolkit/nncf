@@ -28,9 +28,9 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -193,7 +193,7 @@ class FastBiasCorrection(Algorithm):
         return transformed_model
 
     @staticmethod
-    def _get_bias_shift_magnitude(current_bias_value: Tensor, updated_bias_value: Tensor) -> float:
+    def _get_bias_shift_magnitude(current_bias_value: Tensor, updated_bias_value: Tensor) -> Tensor:
         """
         Calculates bias shift magnitude based on the current and updated values.
 
@@ -244,7 +244,7 @@ class FastBiasCorrection(Algorithm):
             node_name, input_filter_func, self._algorithm_key
         ):
             statistics = tensor_collector.get_statistics()
-            input_fp.extend(Tensor(statistics.mean_values))
+            input_fp.extend(statistics.mean_values)
             input_shape.extend(statistics.shape)
         return input_fp, input_shape
 
@@ -267,7 +267,7 @@ class FastBiasCorrection(Algorithm):
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, output_filter_func, self._algorithm_key
         ):
-            output_fp.extend(Tensor(tensor_collector.get_statistics().mean_values))
+            output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
 
     def _extract_submodel(self, model_transformer: ModelTransformer, in_node_name: str, out_node_name: str) -> TModel:

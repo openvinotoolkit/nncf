@@ -2,26 +2,45 @@
     "target_device": "NPU",
     "config": {
         "quantization": {
-            "q8_tn": {
+            "q8_a_sym": {
                 "bits": 8,
-                "mode": ["asymmetric", "symmetric"],
+                "mode": [
+                    "symmetric"
+                ],
                 "granularity": "pertensor"
             },
-
-            "q8_ch": {
+            "q8_a": {
                 "bits": 8,
-                "mode": "symmetric",
-                "granularity": "perchannel"
+                "mode": [
+                    "symmetric",
+                    "asymmetric"
+                ],
+                "granularity": "pertensor"
             },
-
-            "q8_w": {
+            "q8_a_ch": {
                 "bits": 8,
-                "mode": "symmetric",
+                "mode": [
+                    "symmetric",
+                    "asymmetric"
+                ],
                 "granularity": [
                     "perchannel",
                     "pertensor"
                 ]
             },
+            "q8_w_sym": {
+                "bits": 8,
+                "mode": "symmetric",
+                "level_low": -128,
+                "level_high": 127,
+                "granularity": ["perchannel", "pertensor"]
+            },
+            "q8_w_asym": {
+                "bits": 8,
+                "mode": "asymmetric",
+                "granularity": ["perchannel", "pertensor"]
+            },
+            // 4-bit configs
             "q4_tn": {
                 "bits": 4,
                 "mode": "symmetric",
@@ -32,7 +51,6 @@
                 "mode": "symmetric",
                 "granularity": "perchannel"
             },
-
             "q4_w": {
                 "bits": 4,
                 "mode": "symmetric",
@@ -41,12 +59,12 @@
                     "pertensor"
                 ]
             },
+            // 2-bit configs
             "q2_ch": {
                 "bits": 2,
                 "mode": "symmetric",
                 "granularity": "perchannel"
             },
-
             "q2_w": {
                 "bits": 2,
                 "mode": "symmetric",
@@ -64,29 +82,22 @@
                 "adjust_padding": true
             },
             "quantization": {
-                "activations": ["q8_tn", "q4_tn"],
-                "weights": ["q8_w", "q4_w", "q2_w"]
-            }
-        },
-        {
-            "type": "GroupConvolutionBackpropData",
-            "quantization": {
-                "activations": "q8_tn",
-                "weights": ["q8_w", "q4_w", "q2_w"]
+                "activations": ["q8_a", "q4_tn"],
+                "weights": ["q8_w_sym", "q8_w_asym", "q4_w", "q2_w"]
             }
         },
         {
             "type": "DepthWiseConvolution",
             "quantization": {
-                "activations": ["q8_ch", "q8_tn"],
-                "weights": ["q8_w", "q4_w", "q2_w"]
+                "activations": ["q8_a_ch", "q8_a"],
+                "weights": ["q8_w_sym", "q8_w_asym", "q4_w", "q2_w"]
             }
         },
         {
             "type": "MatMul",
             "quantization": {
-                "activations": ["q8_tn", "q4_tn"],
-                "weights": ["q8_w", "q4_w", "q2_w"]
+                "activations": ["q8_a", "q4_tn"],
+                "weights": ["q8_w_sym", "q8_w_asym", "q4_w", "q2_w"]
             }
         },
         {
@@ -95,8 +106,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": ["q8_tn", "q4_tn"],
-                "weights": ["q8_w", "q4_tn"]
+                "activations": ["q8_a", "q4_tn"],
+                "weights": ["q8_w_sym", "q8_w_asym", "q4_tn"]
             }
         },
         {
@@ -105,8 +116,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": ["q8_tn", "q4_tn"],
-                "weights": ["q8_w", "q4_tn"]
+                "activations": ["q8_a", "q4_tn"],
+                "weights": ["q8_w_sym", "q8_w_asym", "q4_tn"]
             }
         },
         {
@@ -115,8 +126,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": ["q8_tn", "q4_tn"],
-                "weights": ["q8_w", "q4_tn"]
+                "activations": ["q8_a", "q4_tn"],
+                "weights": ["q8_w_sym", "q8_w_asym", "q4_tn"]
             }
         },
         {
@@ -125,8 +136,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "q8_tn",
-                "weights": "q8_w"
+                "activations": "q8_a",
+                "weights": ["q8_w_sym", "q8_w_asym"]
             }
         },
         {
@@ -135,8 +146,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "q8_tn",
-                "weights": "q8_w"
+                "activations": "q8_a",
+                "weights": ["q8_w_sym", "q8_w_asym"]
             }
         },
         {
@@ -145,8 +156,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "q8_tn",
-                "weights": "q8_w"
+                "activations": "q8_a",
+                "weights": ["q8_w_sym", "q8_w_asym"]
             }
         },
         {
@@ -155,8 +166,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "q8_tn",
-                "weights": "q8_w"
+                "activations": "q8_a",
+                "weights": ["q8_w_sym", "q8_w_asym"]
             }
         },
         {
@@ -165,8 +176,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "q8_tn",
-                "weights": "q8_w"
+                "activations": "q8_a",
+                "weights": ["q8_w_sym", "q8_w_asym"]
             }
         },
         {
@@ -175,8 +186,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": ["q8_tn", "q4_tn"],
-                "weights": ["q8_w", "q4_tn"]
+                "activations": ["q8_a", "q4_tn"],
+                "weights": ["q8_w_sym", "q8_w_asym", "q4_tn"]
             }
         },
         {
@@ -185,8 +196,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "q8_tn",
-                "weights": "q8_w"
+                "activations": "q8_a",
+                "weights": ["q8_w_sym", "q8_w_asym"]
             }
         },
         {
@@ -195,8 +206,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": ["q8_tn", "q4_tn"],
-                "weights": ["q8_w", "q4_tn"]
+                "activations": ["q8_a", "q4_tn"],
+                "weights": ["q8_w_sym", "q8_w_asym", "q4_tn"]
             }
         },
         {
@@ -205,8 +216,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "q8_tn",
-                "weights": "q8_w"
+                "activations": "q8_a",
+                "weights": ["q8_w_sym", "q8_w_asym"]
             }
         },
         {
@@ -215,8 +226,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "q8_tn",
-                "weights": "q8_w"
+                "activations": "q8_a",
+                "weights": ["q8_w_sym", "q8_w_asym"]
             }
         },
         {
@@ -225,8 +236,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "q8_tn",
-                "weights": "q8_w"
+                "activations": "q8_a",
+                "weights": ["q8_w_sym", "q8_w_asym"]
             }
         },
         {
@@ -235,8 +246,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "q8_tn",
-                "weights": "q8_w"
+                "activations": "q8_a",
+                "weights": ["q8_w_sym", "q8_w_asym"]
             }
         },
         {
@@ -245,33 +256,45 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "q8_tn",
-                "weights": "q8_w"
+                "activations": "q8_a",
+                "weights": ["q8_w_sym", "q8_w_asym"]
             }
         },
         {
             "type": "LogicalNot",
             "quantization": {
-                "activations": "q8_tn",
-                "weights": "q8_w"
+                "activations": "q8_a",
+                "weights": ["q8_w_sym", "q8_w_asym"]
             }
         },
         {
             "type": "Power",
             "quantization": {
-                "activations": "q8_tn"
+                "activations": "q8_a"
             }
         },
         {
             "type": "AvgPool",
             "quantization": {
-                "activations": ["q8_ch", "q8_tn"]
+                "activations": "q8_a"
+            }
+        },
+        {
+            "type": "NormalizeL2",
+            "quantization": {
+                "activations": "q8_a"
+            }
+        },
+        {
+            "type": "ReduceL2",
+            "quantization": {
+                "activations": "q8_a"
             }
         },
         {
             "type": "ReduceMean",
             "quantization": {
-                "activations": "q8_ch"
+                "activations": "q8_a"
             }
         },
         {
@@ -286,7 +309,7 @@
                 "mode": "linear"
             },
             "quantization": {
-                "activations": "q8_tn"
+                "activations": "q8_a"
             }
         },
         {
@@ -298,30 +321,67 @@
         {
             "type": "MVN",
             "quantization": {
-                "activations": "q8_tn"
+                "activations": "q8_a"
             }
         },
-        {"type": "Reshape"},
         {
             "type": "Concat",
             "attributes": {
                 "scales": "unified"
             }
         },
+        {
+            "type": "LSTMSequence",
+            "quantization": {
+                "activations": "q8_a",
+                "weights": "q8_w_sym"
+            }
+        },
+        {
+            "type": "GRUSequence",
+            "quantization": {
+                "activations": "q8_a",
+                "weights": "q8_w_sym"
+            }
+        },
+        {
+            "type": "ReduceSum",
+            "quantization": {
+                "activations": "q8_a"
+            }
+        },
+        {
+            "type": "GroupNormalization",
+            "quantization": {
+                "activations": "q8_a"
+            }
+        },
+        {
+            "type": "ScaledDotProductAttention",
+            "quantization": {
+                "activations": "q8_a_sym"
+            }
+        },
+        {"type": "Reshape"},
         {"type": "Flatten"},
         {"type": "Squeeze"},
         {"type": "Unsqueeze"},
         {"type": "Split"},
+        {"type": "VariadicSplit"},
         {"type": "Crop"},
         {"type": "Transpose"},
         {"type": "Tile"},
         {"type": "StridedSlice"},
+        {"type": "ShuffleChannels"},
+        {"type": "Broadcast"},
+        {"type": "Pad"},
+        {"type": "ConvertLike"},
         // NNCF-specific extensions are below:
         {
             "type": "Embedding",
             "quantization": {
                 "weights": [
-                    "q8_tn", "q8_w"
+                    "q8_w_sym", "q8_w_asym"
                 ]
             }
         },
@@ -329,9 +389,9 @@
             "type": "EmbeddingBag",
             "quantization": {
                 "weights": [
-                    "q8_tn", "q8_w"
+                    "q8_w_sym", "q8_w_asym"
                 ]
             }
-        }
+        },
     ]
 }

@@ -22,7 +22,6 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
 from nncf.openvino.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
@@ -34,8 +33,8 @@ from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionComm
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.openvino.statistics.collectors import OVAbsMaxReducer
-from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
+from nncf.tensor import Tensor
 
 OV_PRE_LAYER_TARGET_TYPE = TargetType.PRE_LAYER_OPERATION
 
@@ -82,7 +81,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     ) -> TensorCollector:
         collector = TensorCollector()
         reducer = OVAbsMaxReducer(reduction_axes=stats_reduction_axes, inplace=inplace)
-        aggregator = MaxAggregator(tensor_processor=OVNNCFCollectorTensorProcessor, num_samples=num_samples)
+        aggregator = MaxAggregator(num_samples=num_samples)
         collector.register_statistic_branch(branch_key, reducer, aggregator)
         return collector
 

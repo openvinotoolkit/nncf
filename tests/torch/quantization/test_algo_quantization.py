@@ -948,9 +948,9 @@ def test_works_when_wrapped_with_dataparallel():
     if not torch.cuda.is_available() and torch.cuda.device_count() > 1:
         pytest.xfail("The executing host must have > 1 CUDA GPU in order for this test to be relevant.")
 
-    model = SharedLayersModel()
+    model = SharedLayersModel().cuda()
     config = get_quantization_config_without_range_init(model_size=1)
     register_bn_adaptation_init_args(config)
     model, _ = create_compressed_model_and_algo_for_test(model, config)
-    model = torch.nn.DataParallel(model.cuda())
+    model = torch.nn.DataParallel(model)
     model(torch.ones([10, 1, 1, 1], device="cuda"))

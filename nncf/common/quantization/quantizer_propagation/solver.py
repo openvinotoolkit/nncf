@@ -831,9 +831,9 @@ class QuantizerPropagationSolver:
                 trait = self._operator_quantization_trait_map.get(quant_det_id, QuantizationTrait.NON_QUANTIZABLE)
                 node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] = trait
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
-                    node[
-                        QuantizerPropagationStateGraph.ALLOWED_INPUT_QUANTIZATION_TYPES_NODE_ATTR
-                    ] = self.get_allowed_quantizer_configs_for_operator(quant_det_id)
+                    node[QuantizerPropagationStateGraph.ALLOWED_INPUT_QUANTIZATION_TYPES_NODE_ATTR] = (
+                        self.get_allowed_quantizer_configs_for_operator(quant_det_id)
+                    )
         return quant_prop_graph
 
     def get_operator_quantization_traits_map(self) -> Dict[OperatorMetatype, QuantizationTrait]:

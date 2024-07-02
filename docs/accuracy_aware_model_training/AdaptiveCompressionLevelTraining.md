@@ -16,7 +16,7 @@ The exact compression algorithm for which the compression level search will be a
 7. `lr_reduction_factor` (Optional; default=0.5) - factor used to reduce the base value of the learning rate scheduler after compression rate step is reduced.
 8. `maximal_total_epochs` (Optional; default=10000) - number of training epochs, if the fine-tuning epoch reaches this number, the loop finishes the fine-tuning and return the model with thi highest compression rate and the least accuracy drop.
 
-To launch the adaptive compression training loop, the user should define several functions related to model training, validation and optimizer creation (see [the usage documentation](../Usage.md#accuracy-aware-model-training) for more details) and pass them to the run method of an `AdaptiveCompressionTrainingLoop` instance.
+To launch the adaptive compression training loop, the user should define several functions related to model training, validation and optimizer creation (see [the usage documentation](../usage/training_time_compression/other_algorithms/Usage.md#accuracy-aware-model-training) for more details) and pass them to the run method of an `AdaptiveCompressionTrainingLoop` instance.
 The training loop logic inside of the `AdaptiveCompressionTrainingLoop` is framework-agnostic, while all of the framework specifics are encapsulated inside of corresponding `Runner` objects, which are created and called inside the training loop.
 The adaptive compression training loop is generally aimed at automatically searching for the optimal compression rate in the model, with the parameters of the search algorithm specified in the configuration file.
 Below is an example of a filter pruning configuration with added `"accuracy_aware_training"` parameters.

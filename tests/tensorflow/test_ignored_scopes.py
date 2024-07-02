@@ -59,10 +59,10 @@ def test_ignored_scopes():
     assert Counter(nncf_wrapper_names) == Counter(ref_nncf_wrapper_names)
 
 
-NOT_SUPPORT_SCOPES_ALGO = ["NoCompressionAlgorithm"]
+TEST_ALGO = sorted(TF_COMPRESSION_ALGORITHMS.registry_dict.keys() - ["NoCompressionAlgorithm"])
 
 
-@pytest.mark.parametrize("algo_name", TF_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO)
+@pytest.mark.parametrize("algo_name", TEST_ALGO)
 @pytest.mark.parametrize("validate_scopes", (True, False, None))
 def test_raise_runtimeerror_for_not_matched_scope_names(algo_name, validate_scopes):
     model = get_mock_model()

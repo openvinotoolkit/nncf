@@ -23,6 +23,7 @@ from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
@@ -34,8 +35,6 @@ from nncf.onnx.hardware.config import ONNXHWConfig
 from nncf.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.onnx.quantization.quantizer_parameters import convert_fq_params_to_onnx_params
 from nncf.onnx.statistics.collectors import ONNX_REDUCERS_MAP
-from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
-from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import StatisticsType
@@ -128,7 +127,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         axis = ()
         if quantizer_config.per_channel:
-            axis = ONNXMinMaxAlgoBackend.get_weight_quantization_axes(node, target_point) if is_weight else (1,)
+            axis = ONNXMinMaxAlgoBackend.get_weight_quantization_axes(node, target_point, None) if is_weight else (1,)
         onnx_parameters = convert_fq_params_to_onnx_params(parameters, quantizer_config.num_bits, tensor_type, axis)
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 
@@ -154,18 +153,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         raise nncf.InternalError("FakeConvert insertion not implemented in ONNX backend!")
 
     @staticmethod
-    def unify_statistics(
-        statistics: List[ONNXMinMaxTensorStatistic],
-    ) -> ONNXMinMaxTensorStatistic:
-        max_values, min_values = [], []
-        for statistic in statistics:
-            max_values.append(np.array(statistic.max_values).flatten())
-            min_values.append(np.array(statistic.min_values).flatten())
-        max_values = np.max(max_values, axis=0)
-        min_values = np.min(min_values, axis=0)
-        return ONNXMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
-
-    @staticmethod
     def _get_input_edges_mapping(nncf_graph: NNCFGraph):
         return get_input_edges_mapping(nncf_graph)
 
@@ -174,7 +161,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return get_quantized_tensor_shape(nncf_graph, node, target_point)
 
     @staticmethod
-    def get_weight_quantization_axes(node: NNCFNode, target_point: ONNXTargetPoint) -> Tuple[int]:
+    def get_weight_quantization_axes(node: NNCFNode, target_point: ONNXTargetPoint, ndims: int) -> Tuple[int]:
         return (get_weight_quantization_axis(node, target_point.port_id),)
 
     @staticmethod
@@ -186,10 +173,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         inplace: bool,
         num_samples: Optional[int] = None,
     ) -> TensorCollector:
-        collector = TensorCollector(ONNXMinMaxTensorStatistic)
+        collector = TensorCollector(MinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
-            [ONNXMinMaxTensorStatistic.MIN_STAT, ONNXMinMaxTensorStatistic.MAX_STAT],
+            [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
         ):
             if params.statistics_type not in ONNX_REDUCERS_MAP:
                 raise nncf.InternalError(
@@ -201,7 +188,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 )
             kwargs = {"reduction_axes": reduction_axes, "inplace": False}
             if params.statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
-                if container_key == ONNXMinMaxTensorStatistic.MIN_STAT:
+                if container_key == MinMaxTensorStatistic.MIN_STAT:
                     quantile = params.quantile_outlier_prob
                 else:
                     quantile = 1 - params.quantile_outlier_prob
@@ -215,7 +202,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             kwargs = {
                 "num_samples": num_samples,
                 "aggregation_axes": aggregation_axes,
-                "tensor_processor": ONNXNNCFCollectorTensorProcessor,
             }
             if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
                 kwargs.update({"quantile": params.quantile_outlier_prob})
@@ -225,7 +211,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return collector
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
         return list(node.layer_attributes.weight_attrs.keys())
 
     @staticmethod
@@ -247,6 +233,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.ONNXSqrtMetatype,
                 om.ONNXReciprocalMetatype,
                 om.ONNXBatchNormMetatype,
+                # Сomparison operations
+                om.ONNXGreaterMetatype,
+                om.ONNXLessMetatype,
+                om.ONNXEqualMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 types.append(om.ONNXMulLayerMetatype)

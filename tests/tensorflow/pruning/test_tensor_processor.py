@@ -16,7 +16,7 @@ from nncf.tensorflow.pruning.tensor_processor import TFNNCFPruningTensorProcesso
 from nncf.tensorflow.tensor import TFNNCFTensor
 
 
-@pytest.mark.parametrize("device", ("CPU", "GPU"))
+@pytest.mark.parametrize("device", ("CPU", pytest.param("GPU", marks=pytest.mark.nightly)))
 def test_create_tensor(device):
     if not tf.config.list_physical_devices("GPU") and device == "GPU":
         pytest.skip("There are no available CUDA devices")

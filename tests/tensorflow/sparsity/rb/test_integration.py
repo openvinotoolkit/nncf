@@ -15,6 +15,8 @@ from pathlib import Path
 import pytest
 import tensorflow as tf
 import tensorflow_addons as tfa
+from tensorflow.python.framework.config import disable_op_determinism
+from tensorflow.python.framework.config import enable_op_determinism
 
 from examples.tensorflow.common.callbacks import get_callbacks
 from examples.tensorflow.common.callbacks import get_progress_bar
@@ -25,6 +27,14 @@ from nncf.tensorflow.helpers.callback_creation import create_compression_callbac
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 
 MODEL_PATH = Path(__file__).parent.parent.parent / "data" / "mock_models" / "LeNet.h5"
+
+
+@pytest.fixture(name="deterministic_mode", scope="module")
+def deterministic_mode_fixture():
+    tf.keras.utils.set_random_seed(1)
+    enable_op_determinism()
+    yield
+    disable_op_determinism()
 
 
 def get_basic_sparsity_config(
@@ -109,9 +119,10 @@ def train_lenet():
     model.save(MODEL_PATH)
 
 
-@pytest.mark.parametrize("distributed", [False, True], ids=["not_distributed", "distributed"])
-@pytest.mark.parametrize("quantized", [False, True], ids=["without_quantization", "with_quantization"])
-def test_rb_sparse_target_lenet(distributed, quantized):
+@pytest.mark.parametrize(
+    "distributed", [False, pytest.param(True, marks=pytest.mark.nightly)], ids=["not_distributed", "distributed"]
+)
+def test_rb_sparse_target_lenet(distributed, deterministic_mode):
     if not os.path.exists(MODEL_PATH):
         train_lenet()
 
@@ -126,10 +137,10 @@ def test_rb_sparse_target_lenet(distributed, quantized):
 
     batch_size = 128
     if distributed:
-        num_of_replicas = 3
-        strategy = tf.distribute.MirroredStrategy([f"GPU:{i}" for i in range(num_of_replicas)])
+        coeff = 3
+        strategy = tf.distribute.MirroredStrategy()
     else:
-        num_of_replicas = 1
+        coeff = 1
         strategy = tf.distribute.OneDeviceStrategy("device:CPU:0")
 
     tf.keras.backend.clear_session()
@@ -152,8 +163,6 @@ def test_rb_sparse_target_lenet(distributed, quantized):
             sparsity_freeze_epoch=freeze_epoch,
             scheduler="exponential",
         )
-        if quantized:
-            config.update({"compression": [config["compression"], {"algorithm": "quantization"}]})
 
         compression_state_to_skip_init = {BaseCompressionAlgorithmController.BUILDER_STATE: {}}
         compress_algo, compress_model = create_compressed_model(model, config, compression_state_to_skip_init)
@@ -190,7 +199,7 @@ def test_rb_sparse_target_lenet(distributed, quantized):
 
         compress_model.compile(
             loss=loss_obj,
-            optimizer=tf.keras.optimizers.Adam(5e-3 * num_of_replicas),
+            optimizer=tf.keras.optimizers.Adam(5e-3 * coeff),
             metrics=metrics,
         )
 

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Tuple, TypeVar
+from typing import Callable, Optional, Tuple, TypeVar
 
 import numpy as np
 import torch
@@ -52,7 +52,9 @@ class StaticDatasetMock:
         return self._len
 
 
-def get_static_dataset(input_size: Tuple, transform_fn: Callable, fn_to_type: Callable, length: int = 1) -> Dataset:
+def get_static_dataset(
+    input_size: Tuple, transform_fn: Callable, fn_to_type: Optional[Callable] = None, length: int = 1
+) -> Dataset:
     """
     Create nncf.Dataset for StaticDatasetMock.
     :param input_size: Size of generated tensors,
@@ -422,3 +424,11 @@ class ShareWeghtsConvAndShareLinearModel(nn.Module):
             x = self.conv(x)
             x = self.linear(x)
         return x
+
+
+class ScaledDotProductAttentionModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, query, key, value):
+        return nn.functional.scaled_dot_product_attention(query, key, value)

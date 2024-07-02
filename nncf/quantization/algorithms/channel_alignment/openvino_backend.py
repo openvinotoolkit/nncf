@@ -22,6 +22,8 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.openvino.graph import node_utils
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.layout import get_conv_weights_layout_from_node
 from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
@@ -34,12 +36,9 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSubtractMetatype
 from nncf.openvino.graph.node_utils import create_bias_tensor
 from nncf.openvino.graph.node_utils import get_bias_value
-from nncf.openvino.graph.node_utils import get_node_with_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
-from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import OVQuantileReducer
-from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
 
@@ -81,28 +80,17 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
     def get_statistic_collector(
         reduction_axes, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
-        tensor_collector = TensorCollector(OVMinMaxTensorStatistic)
+        tensor_collector = TensorCollector(MinMaxTensorStatistic)
         quantile_reducer = OVQuantileReducer(reduction_axes, (q, 1 - q), inplace)
 
-        for port_id, container_key in enumerate([OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT]):
-            aggregator = MedianAggregator(
-                OVNNCFCollectorTensorProcessor, num_samples=num_samples, aggregation_axes=(0, 1)
-            )
+        for port_id, container_key in enumerate([MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT]):
+            aggregator = MedianAggregator(num_samples=num_samples, aggregation_axes=(0, 1))
             tensor_collector.register_statistic_branch(container_key, quantile_reducer, aggregator, port_id)
         return tensor_collector
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        next_nodes = nncf_graph.get_next_nodes(node)
-        if not next_nodes:
-            return False
-
-        add_node = next_nodes[0]
-        if add_node.metatype != OVAddMetatype:
-            return False
-
-        bias_constant = get_node_with_bias_value(add_node, nncf_graph)
-        return bias_constant is not None
+        return node_utils.is_node_with_bias(node, nncf_graph)
 
     @staticmethod
     def get_dims_descriptor(node: NNCFNode) -> LayoutDescriptor:

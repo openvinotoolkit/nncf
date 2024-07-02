@@ -207,13 +207,12 @@ class QuantizationConstraints:
         return qconfig
 
     def is_config_compatible(self, qconfig: QuantizerConfig) -> bool:
-        is_compatible = True
         for attr_name, constraint in self.qconf_attr_vs_constraint_dict.items():
             if constraint is not None:
                 qconf_attr_value = getattr(qconfig, attr_name)
                 if qconf_attr_value != constraint:
-                    is_compatible = False
-        return is_compatible
+                    return False
+        return True
 
     def get_updated_constraints(self, overriding_constraints: "QuantizationConstraints") -> "QuantizationConstraints":
         new_dict = deepcopy(self.qconf_attr_vs_constraint_dict)

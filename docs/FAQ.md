@@ -58,7 +58,7 @@ Post-training is faster, but can degrade accuracy more than the training-enabled
 
 The sparsity algorithms introduce unstructured sparsity which can only be taken advantage of in terms of performance by using specialized hardware and/or software runtimes. Within the scope of these algorithms, NNCF provides functionally correct models with non-salient weights simply zeroed out, which does not lead to the reduction of the model checkpoint size. The models can, however, be used for benchmarking experimental/future hardware or runtimes, and for SOTA claims of applying unstructured sparsity on a given model architecture.
 
-For an opportunity to observably increase performance by omitting unnecessary computations in the model, consider using the [filter pruning](./compression_algorithms/Pruning.md) algorithm. Models compressed with this algorithm can be executed more efficiently within OpenVINO Inference Engine runtime when compared to the uncompressed counterparts.
+For an opportunity to observably increase performance by omitting unnecessary computations in the model, consider using the [filter pruning](./usage/training_time_compression/other_algorithms/Pruning.md) algorithm. Models compressed with this algorithm can be executed more efficiently within OpenVINO Inference Engine runtime when compared to the uncompressed counterparts.
 
 ### What is a "saturation issue" and how to avoid it?
 
@@ -90,7 +90,7 @@ It is recommended, although by no means mandatory, to pass a dataloader with the
 ### The compression process takes too long, how can I make it faster?
 
 For training approaches the majority of time is taken by the training loop, so any regular methods that improve model convergence should work here.
-Try the built-in [knowledge distillation](./compression_algorithms/KnowledgeDistillation.md) to potentially obtain target accuracy faster.
+Try the built-in [knowledge distillation](./usage/training_time_compression/other_algorithms/KnowledgeDistillation.md) to potentially obtain target accuracy faster.
 Alternatively you may want to reduce the number of initialization samples taken from the initialization dataloader by the algorithms that require it.
 
 ### I get a "CUDA out of memory" error when running NNCF in the compression-aware training approach, although the original model to be compressed runs and trains fine without NNCF

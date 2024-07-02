@@ -1,17 +1,17 @@
 # Openvino
-openvino==2024.1.0
-openvino-dev==2024.1.0
+openvino==2024.2.0
 
 # Pytorch
-torch==2.2.1
-torchvision==0.17.1
+torch==2.3.0
+torchvision==0.18.0
 
 # ONNX
 onnx==1.16.0
 onnxruntime==1.17.1
 
 # TensorFlow
-tensorflow==2.12.1
+tensorflow==2.12.1; python_version < '3.9'
+tensorflow==2.15.1; python_version >= '3.9'
 
 # Tests and examples
 pytest==8.0.2
