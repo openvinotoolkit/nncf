@@ -15,7 +15,7 @@ import inspect
 from collections import OrderedDict
 from functools import partial
 from functools import partialmethod
-from typing import Any, Callable, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Tuple, Union, Dict, List
 
 
 class Patcher:
@@ -25,11 +25,11 @@ class Patcher:
     """
 
     def __init__(self) -> None:
-        self._patched = OrderedDict()
+        self._patched: Dict[tuple[Any, str], List[tuple[object, Callable[..., Any]]]] = OrderedDict()
 
     def patch(  # noqa: C901
         self,
-        obj_cls: object,
+        obj_cls: Union[object],
         wrapper: Callable[..., Any],
         *,
         force: bool = True,
@@ -54,7 +54,7 @@ class Patcher:
         else:
             if inspect.isclass(obj_cls):
                 try:
-                    fn = obj_cls.__getattribute__(obj_cls, fn_name)
+                    fn = obj_cls.__getattribute__(obj_cls, fn_name) #type: ignore
                 except AttributeError:
                     return
                 self._patch_class_fn(obj_cls, fn_name, fn, wrapper, force)
@@ -72,7 +72,7 @@ class Patcher:
         :param depth: How many patches to undo, depth=0 to undo all of them
         """
 
-        def _unpatch(obj: object, fn_name: str, key, depth: int) -> None:
+        def _unpatch(obj: object, fn_name: str, key: tuple[Any, str], depth: int) -> None:
             if depth == 0:
                 depth = len(self._patched[key])
             keep = len(self._patched[key]) - depth
@@ -118,7 +118,7 @@ class Patcher:
         else:
             if "_partialmethod" in obj_cls.__dict__:
                 while "_partialmethod" in obj_cls.__dict__:
-                    obj_cls = obj_cls._partialmethod.keywords["__fn"]
+                    obj_cls = obj_cls._partialmethod.keywords["__fn"] #type: ignore
             while isinstance(obj_cls, (partial, partialmethod)):
                 obj_cls = obj_cls.keywords["__fn"]
 
@@ -134,8 +134,8 @@ class Patcher:
                 fn_name = obj_cls.__name__
                 obj_cls = ".".join([obj_cls.__module__] + obj_cls.__qualname__.split(".")[:-1])
             else:
-                fn_name = obj_cls.__name__
-                obj_cls = ".".join([obj_cls.__module__] + obj_cls.__qualname__.split(".")[:-1])
+                fn_name = obj_cls.__name__ #type: ignore
+                obj_cls = ".".join([obj_cls.__module__] + obj_cls.__qualname__.split(".")[:-1]) #type: ignore
 
         if isinstance(obj_cls, str):
             try:
@@ -146,7 +146,7 @@ class Patcher:
                 obj_cls = getattr(importlib.import_module(module), obj_cls)
         return obj_cls, fn_name
 
-    def _patch_module_fn(self, obj_cls: object, fn_name: str, fn: object, wrapper: Callable[...,Any], force: bool):
+    def _patch_module_fn(self, obj_cls: object, fn_name: str, fn: object, wrapper: Callable[...,Any], force: bool) -> None:
         def helper(*args, **kwargs):  # type: ignore
             obj_cls = kwargs.pop("__obj_cls")
             fn = kwargs.pop("__fn")
@@ -154,7 +154,7 @@ class Patcher:
             return wrapper(obj_cls, fn, *args, **kwargs)
 
         assert len(inspect.getfullargspec(obj_cls.__getattribute__)[0]) == 1
-        obj_cls_path = obj_cls.__name__
+        obj_cls_path = obj_cls.__name__ #type: ignore
         key = (obj_cls_path, fn_name)
         fn_ = self._initialize(key, force)
         if fn_ is not None:
@@ -162,7 +162,7 @@ class Patcher:
         setattr(obj_cls, fn_name, partial(helper, __wrapper=wrapper, __fn=fn, __obj_cls=obj_cls))
         self._patched[key].append((fn, wrapper))
 
-    def _patch_class_fn(self, obj_cls: object, fn_name: str, fn: object, wrapper: Callable[..., Any], force: bool):
+    def _patch_class_fn(self, obj_cls: object, fn_name: str, fn: object, wrapper: Callable[..., Any], force: bool) -> None:
         if isinstance(fn, (staticmethod, classmethod)):
 
             def helper(*args, **kwargs):  # type: ignore
@@ -173,8 +173,7 @@ class Patcher:
                     return wrapper(args[0], fn.__get__(args[0]), *args[1:], **kwargs)
                 return wrapper(obj_cls, fn.__get__(obj_cls), *args, **kwargs)
 
-        elif isinstance(fn, type(all.__call__)):
-
+        elif isinstance(fn, type(all.__call__)): #type: ignore
             def helper(self, *args, **kwargs):  # type: ignore
                 kwargs.pop("__obj_cls")
                 wrapper = kwargs.pop("__wrapper")
