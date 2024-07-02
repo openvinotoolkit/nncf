@@ -19,7 +19,6 @@ from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFGraphEdge
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
@@ -216,24 +215,28 @@ class BiasCorrection(Algorithm):
             node, nncf_graph
         )
 
-    def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Dict[str, List[str]]:
+    def _find_subgraph_output_ids(self, nncf_graph: NNCFGraph, main_node: NNCFNode) -> List[Tuple[str, int]]:
         """
-        This method collects necessary data for the specified node and its subgraph.
-        This data contains the nodes (NNCFNode) for the subgraph building
-        and statistics collection (for the next step).
+        The essence of the method is to collect output points for the future subgraph.
+        It is understood that the main_node is the one for which the correction will be performed.
+        In the process of traversing the graph from top to bottom, we look for nodes that will be
+        adjusted in the next step. Output points for these nodes are added to the resulting container.
+        The mapping with the nodes for which statistics have been collected - self._collected_stat_inputs_map
+        is also filled in.
 
-        :param node: NNCFNode instance. This is the main node with bias that would be corrected (or not).
-        :param nncf_graph: NNCFGraph instance for graph analysis.
-        :return: A dict with the list of the nodes for the subgraph input and statistics collection.
+        :param nncf_graph: NNCFGraph instance.
+        :param main_node: Correctable NNCFNode.
+        :return: Collected output ids.
         """
-        statistic_nodes = []
-        subgraph_input_ids, subgraph_output_ids = [], []
-
-        def fill_subgraph_output_ids(edge: NNCFGraphEdge):
+        visited_nodes = set()
+        subgraph_output_ids = []
+        edges_queue = nncf_graph.get_output_edges(main_node)
+        while edges_queue:
+            edge = edges_queue.pop()
             node = edge.to_node
             if node in visited_nodes:
-                return
-            visited_nodes.append(node)
+                continue
+            visited_nodes.add(node)
 
             input_id = (node.node_name, edge.input_port_id)
             output_id = (edge.from_node.node_name, edge.output_port_id)
@@ -244,14 +247,46 @@ class BiasCorrection(Algorithm):
             if self._is_node_correctable(node, nncf_graph):
                 subgraph_output_ids.append(output_id)
                 self._collected_stat_inputs_map[input_id] = output_id
+                continue
 
-                statistic_nodes.append(edge.from_node)
-                return
+            edges_queue.extend(nncf_graph.get_output_edges(node))
+        return subgraph_output_ids
 
-            for output_edge in nncf_graph.get_output_edges(node):
-                fill_subgraph_output_ids(output_edge)
+    def _get_statistic_nodes(self, nncf_graph: NNCFGraph, subgraph_output_ids: List[Tuple[str, int]]) -> List[NNCFNode]:
+        """
+        This method extracts NNCFNode instances from the subgraph_output_ids list.
 
-        def fill_subgraph_input_ids(edge: NNCFGraphEdge):
+        :param nncf_graph: NNCFGraph instance.
+        :param subgraph_output_ids: Container filled with output ids.
+        :return: Collected NNCFNodes.
+        """
+        statistic_nodes = []
+        for subgraph_output_id in subgraph_output_ids:
+            node_name, _ = subgraph_output_id
+            node = nncf_graph.get_node_by_name(node_name)
+            statistic_nodes.append(node)
+        return statistic_nodes
+
+    def _find_subgraph_input_ids(
+        self, nncf_graph: NNCFGraph, main_node: NNCFNode, subgraph_output_ids: List[Tuple[str, int]]
+    ) -> List[Tuple[str, int]]:
+        """
+        The essence of the method is to collect entry points for the future subgraph.
+        It is understood that the main_node is the one from the statistic nodes collected before.
+        In the process of traversing the graph from bottom to top, we look for layers for which statistics were or
+        will be collected in the previous step and placed into self._collected_stat_inputs_map
+        (and not into subgraph_output_ids). Entry points for these nodes are added to the resulting container.
+
+        :param nncf_graph: NNCFGraph instance.
+        :param main_node: Correctable NNCFNode.
+        :param subgraph_output_ids: Container filled with output ids.
+        :return: Collected input ids.
+        """
+        visited_nodes = set()
+        subgraph_input_ids = []
+        edges_queue = nncf_graph.get_input_edges(main_node)
+        while edges_queue:
+            edge = edges_queue.pop()
             node = edge.from_node
             input_id = (edge.to_node.node_name, edge.input_port_id)
 
@@ -261,28 +296,38 @@ class BiasCorrection(Algorithm):
                 activation_id = self._collected_stat_inputs_map[input_id]
                 if activation_id not in subgraph_output_ids:
                     subgraph_input_ids.append(input_id)
-                    return
+                    continue
 
             if node in visited_nodes:
-                return
-            visited_nodes.append(node)
+                continue
+            visited_nodes.add(node)
+            edges_queue.extend(nncf_graph.get_input_edges(node))
+        return subgraph_input_ids
 
-            for input_edge in nncf_graph.get_input_edges(node):
-                fill_subgraph_input_ids(input_edge)
+    def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Dict[str, List[str]]:
+        """
+        This method collects necessary data for the specified node and its subgraph.
+        This data contains the nodes (NNCFNode) for the subgraph building
+        and statistics collection (for the next step).
+
+        :param node: NNCFNode instance. This is the main node with bias that would be corrected (or not).
+        :param nncf_graph: NNCFGraph instance for graph analysis.
+        :return: A dict with the list of the nodes for the subgraph input and statistics collection.
+        """
+        subgraph_input_ids = []
 
         # First, we need to find out the nodes with bias that follow by main node.
         # To collect statistics for next nodes.
-        visited_nodes = []
-        for output_edge in nncf_graph.get_output_edges(node):
-            fill_subgraph_output_ids(output_edge)
+        subgraph_output_ids = self._find_subgraph_output_ids(nncf_graph, node)
+        statistic_nodes = self._get_statistic_nodes(nncf_graph, subgraph_output_ids)
 
         # We then need to find nodes for which statistics have already been collected,
         # to use them as inputs for the subgraph.
         statistic_nodes = statistic_nodes if statistic_nodes else nncf_graph.get_next_nodes(node)
-        visited_nodes = []
+
         for stat_node in statistic_nodes:
-            for input_edge in nncf_graph.get_input_edges(stat_node):
-                fill_subgraph_input_ids(input_edge)
+            stat_node_inputs = self._find_subgraph_input_ids(nncf_graph, stat_node, subgraph_output_ids)
+            subgraph_input_ids.extend(stat_node_inputs)
 
         if not subgraph_output_ids:
             for edge in nncf_graph.get_output_edges(node):
@@ -536,7 +581,7 @@ class BiasCorrection(Algorithm):
 
         for biased_after_input_node in biased_after_input_nodes:
             # We need to collect activation input to register it for the biased layer as the layer with statistics.
-            activation_port = self._backend_entity.get_activation_port_id(node, graph)
+            activation_port = self._backend_entity.get_activation_port_id(biased_after_input_node, graph)
             edge = graph.get_input_edges(biased_after_input_node)[activation_port]
 
             input_id = (biased_after_input_node.node_name, edge.input_port_id)
@@ -624,18 +669,18 @@ class BiasCorrection(Algorithm):
         return list(biased_nodes - dependant_nodes)
 
     def extract_model(
-        self, model: TModel, input_node_ids: List[Tuple[str, int]], output_node_ids: List[Tuple[str, int]]
+        self, model: TModel, input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
     ) -> TModel:
         """
         Returns the backend-specific model that bounded by the specified input & output layers.
 
         :param model: Backend-specific model.
-        :param input_node_ids: List with the input node IDs.
-        :param output_node_ids: List with the output node IDs.
+        :param input_ids: List with the input IDs.
+        :param output_ids: List with the output IDs.
         :return: Extracted backend-specific model.
         """
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(model)
-        model_extraction_command = self._backend_entity.model_extraction_command(input_node_ids, output_node_ids)
+        model_extraction_command = self._backend_entity.model_extraction_command(input_ids, output_ids)
         transformation_layout.register(model_extraction_command)
         return model_transformer.transform(transformation_layout)
