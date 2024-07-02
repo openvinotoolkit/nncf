@@ -80,6 +80,9 @@ def is_node_with_bias(
     if node.metatype not in metatypes_with_bias:
         return False
 
+    if node.layer_attributes is None:
+        return False
+
     return get_add_bias_node(node, nncf_graph) is not None
 
 
