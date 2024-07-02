@@ -38,7 +38,7 @@ def validate(
 ) -> Tuple[Dict, int, int]:
     validator.seen = 0
     validator.jdict = []
-    validator.stats = []
+    validator.stats = dict(tp_m=[], tp=[], conf=[], pred_cls=[], target_cls=[])
     validator.batch_i = 1
     validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
     model.reshape({0: [1, 3, -1, -1]})
