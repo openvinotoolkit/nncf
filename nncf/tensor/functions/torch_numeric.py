@@ -245,7 +245,9 @@ def quantile(
             axis,
             keepdims,
         )
-    return torch.tensor(np.quantile(a.detach().cpu().numpy(), q=q, axis=axis, keepdims=keepdims)).to(device)
+    return torch.tensor(
+        np.quantile(a.detach().cpu().numpy().astype(np.float64, copy=False), q=q, axis=axis, keepdims=keepdims)
+    ).to(device)
 
 
 @numeric.percentile.register(torch.Tensor)
