@@ -72,7 +72,7 @@ class Patcher:
         :param depth: How many patches to undo, depth=0 to undo all of them
         """
 
-        def _unpatch(obj: object, fn_name: str, key, depth: int):
+        def _unpatch(obj: object, fn_name: str, key, depth: int) -> None:
             if depth == 0:
                 depth = len(self._patched[key])
             keep = len(self._patched[key]) - depth
@@ -109,7 +109,7 @@ class Patcher:
             _unpatch(obj, fn_name, key, depth)
 
     def import_obj(
-        self, obj_cls: Union[str, partial, partialmethod, staticmethod, classmethod, object]
+        self, obj_cls: Union[str, object]
     ) -> Tuple[object, str]:  # noqa: C901
         """Object import helper."""
         if isinstance(obj_cls, str):
@@ -146,7 +146,7 @@ class Patcher:
                 obj_cls = getattr(importlib.import_module(module), obj_cls)
         return obj_cls, fn_name
 
-    def _patch_module_fn(self, obj_cls: object, fn_name: str, fn: object, wrapper, force: bool):
+    def _patch_module_fn(self, obj_cls: object, fn_name: str, fn: object, wrapper: Callable[...,Any], force: bool):
         def helper(*args, **kwargs):  # type: ignore
             obj_cls = kwargs.pop("__obj_cls")
             fn = kwargs.pop("__fn")
