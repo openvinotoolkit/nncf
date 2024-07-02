@@ -126,6 +126,7 @@ install-torch-test:
 	pip install -e .
 	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/torch/requirements.txt
+	pip install -r tests/torch/fx/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
 
@@ -153,6 +154,7 @@ test-torch-cuda:
 
 test-torch-nightly:
 	pytest ${COVERAGE_ARGS} tests/torch -m nightly --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+	test-torch-fx
 
 test-torch-weekly:
 	pytest ${COVERAGE_ARGS} tests/torch -m weekly \
@@ -176,6 +178,13 @@ test-examples-torch:
 
 test-models-hub-torch:
 	pytest tests/torch/models_hub_test --junitxml ${JUNITXML_PATH}
+
+###############################################################################
+# TorchFX backend
+install-torch-fx-test:
+	pip install -U pip
+	pip install -e .
+	pip install -r tests/torch/fx/requirements.txt
 
 ###############################################################################
 # Common part

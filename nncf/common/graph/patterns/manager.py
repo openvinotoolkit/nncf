@@ -45,7 +45,7 @@ class PatternsManager:
 
             registry = OPENVINO_HW_FUSED_PATTERNS.registry_dict
             return registry
-        if backend == BackendType.TORCH:
+        if backend in (BackendType.TORCH, BackendType.TORCH_FX):
             from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
 
             registry = PT_HW_FUSED_PATTERNS.registry_dict
@@ -74,6 +74,11 @@ class PatternsManager:
             registry = OPENVINO_IGNORED_PATTERNS.registry_dict
             return registry
         if backend == BackendType.TORCH:
+            from nncf.torch.quantization.ignored_patterns import PT_IGNORED_PATTERNS
+
+            registry = PT_IGNORED_PATTERNS.registry_dict
+            return registry
+        if backend == BackendType.TORCH_FX:
             from nncf.torch.quantization.ignored_patterns import PT_IGNORED_PATTERNS
 
             registry = PT_IGNORED_PATTERNS.registry_dict

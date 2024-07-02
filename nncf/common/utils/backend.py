@@ -20,6 +20,7 @@ TModel = TypeVar("TModel")
 
 class BackendType(Enum):
     TORCH = "Torch"
+    TORCH_FX = "TorchFX"
     TENSORFLOW = "Tensorflow"
     ONNX = "ONNX"
     OPENVINO = "OpenVINO"
@@ -33,6 +34,7 @@ def get_available_backends() -> List[BackendType]:
     """
     frameworks = [
         ("torch", BackendType.TORCH),
+        ("torch.fx", BackendType.TORCH_FX),
         ("tensorflow", BackendType.TENSORFLOW),
         ("onnx", BackendType.ONNX),
         ("openvino.runtime", BackendType.OPENVINO),
@@ -51,14 +53,27 @@ def get_available_backends() -> List[BackendType]:
 
 def is_torch_model(model: TModel) -> bool:
     """
-    Returns True if the model is an instance of torch.nn.Module, otherwise False.
+    Returns True if the model is an instance of torch.nn.Module and not a torch.fx.GraphModule, otherwise False.
 
     :param model: A target model.
-    :return: True if the model is an instance of torch.nn.Module, otherwise False.
+    :return: True if the model is an instance of torch.nn.Module and not torch.fx.GraphModule, otherwise False.
     """
     import torch
+    import torch.fx
 
-    return isinstance(model, torch.nn.Module)
+    return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
+
+
+def is_torch_fx_model(model: TModel) -> bool:
+    """
+    Returns True if the model is an instance of torch.fx.GraphModule, otherwise False.
+
+    :param model: A target model.
+    :return: True if the model is an instance of torch.fx.GraphModule, otherwise False.
+    """
+    import torch.fx
+
+    return isinstance(model, torch.fx.GraphModule)
 
 
 def is_tensorflow_model(model: TModel) -> bool:
@@ -117,6 +132,9 @@ def get_backend(model: TModel) -> BackendType:
     :return: A BackendType representing the correct NNCF backend to be used when working with the framework.
     """
     available_backends = get_available_backends()
+
+    if BackendType.TORCH_FX in available_backends and is_torch_fx_model(model):
+        return BackendType.TORCH_FX
 
     if BackendType.TORCH in available_backends and is_torch_model(model):
         return BackendType.TORCH

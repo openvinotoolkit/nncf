@@ -67,7 +67,7 @@ ATOMIC_ACTIVATIONS_OPERATIONS = merge_two_types_of_operations(
 )
 
 ARITHMETIC_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: ["__iadd__", "__add__", "__mul__", "__rmul__", "__truediv__"],
+    GraphPattern.METATYPE_ATTR: ["__iadd__", "__add__", "__mul__", "__rmul__", "__truediv__", "add_"],
     GraphPattern.LABEL_ATTR: "ARITHMETIC",
 }
 

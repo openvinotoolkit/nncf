@@ -93,7 +93,7 @@ class FastBiasCorrection(Algorithm):
 
     @property
     def available_backends(self) -> List[BackendType]:
-        return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH]
+        return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
@@ -116,6 +116,12 @@ class FastBiasCorrection(Algorithm):
             from nncf.quantization.algorithms.fast_bias_correction.torch_backend import PTFastBiasCorrectionAlgoBackend
 
             self._backend_entity = PTFastBiasCorrectionAlgoBackend()
+        elif model_backend == BackendType.TORCH_FX:
+            from nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend import (
+                FXFastBiasCorrectionAlgoBackend,
+            )
+
+            self._backend_entity = FXFastBiasCorrectionAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
