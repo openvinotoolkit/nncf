@@ -211,9 +211,11 @@ class ScaleEstimation:
                 compress_model = compress_decompress_cache[key]["compress_model"]
             else:
                 compress_decompress_model = self._backend_entity.get_compress_decompress_pipeline(
-                    wp, q_weights.shape, scale.shape, zp_shape
+                    wp.compression_config, q_weights.shape, scale.shape, zp_shape
                 )
-                compress_model = self._backend_entity.get_compress_pipeline(wp, q_weights.shape, scale.shape, zp_shape)
+                compress_model = self._backend_entity.get_compress_pipeline(
+                    wp.compression_config, q_weights.shape, scale.shape, zp_shape
+                )
                 compress_decompress_cache[key] = {
                     "compress_decompress_model": compress_decompress_model,
                     "compress_model": compress_model,
