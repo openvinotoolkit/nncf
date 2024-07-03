@@ -80,6 +80,8 @@ def is_node_with_bias(
     if node.metatype not in metatypes_with_bias:
         return False
 
+    # Since we do not verify bias constant shape, we need to verify the weight's existence at least.
+    # layer_attributes adds only for nodes with weights, according to the nncf_graph_builder.py for the backend.
     if node.layer_attributes is None:
         return False
 
