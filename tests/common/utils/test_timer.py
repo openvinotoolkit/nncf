@@ -22,4 +22,4 @@ def test_timer(nncf_caplog):
     t()
 
     with nncf_caplog.at_level(logging.INFO):
-        assert "nncf:timer.py:28 Elapsed Time: 00:00:01" in nncf_caplog.text
+        assert "nncf:timer.py:29 Elapsed Time: 00:00:01" in nncf_caplog.text
