@@ -75,5 +75,8 @@ def _initialize_backends():
         import nncf.tensor.functions.torch_linalg
         import nncf.tensor.functions.torch_numeric  # noqa: F401
 
+    with contextlib.suppress(ImportError):
+        import nncf.tensor.functions.ov  # noqa: F401
+
 
 _initialize_backends()

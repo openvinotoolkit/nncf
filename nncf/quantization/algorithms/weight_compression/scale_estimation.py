@@ -27,6 +27,8 @@ from nncf.quantization.algorithms.weight_compression.backend import WeightCompre
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight_and_fp4_scale
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_dequantized_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
@@ -43,8 +45,6 @@ class ScaleEstimation:
     """
     Scale estimation algorithm implementation.
     """
-
-    compress_decompress_cache = {}
 
     def __init__(
         self,
@@ -256,41 +256,20 @@ class ScaleEstimation:
         if weight_penalty > 0.0:
             min_max_scale_diffs += weight_penalty * fns.mean((q_weights - original_weight) ** 2, axis=-1)
 
-        zp_shape = zp.shape if zp is not None else None
-        key = (config.mode, config.num_bits) + q_weights.shape + scale.shape
-        if zp is not None:
-            key += zp_shape
-        if config.mode != CompressWeightsMode.NF4:
-            if key in ScaleEstimation.compress_decompress_cache:
-                compress_decompress_model = ScaleEstimation.compress_decompress_cache[key]["compress_decompress_model"]
-                compress_model = ScaleEstimation.compress_decompress_cache[key]["compress_model"]
-            else:
-                compress_decompress_model = backend_entity.get_compress_decompress_pipeline(
-                    config, q_weights.shape, scale.shape, zp_shape
-                )
-                compress_model = backend_entity.get_compress_pipeline(config, q_weights.shape, scale.shape, zp_shape)
-                ScaleEstimation.compress_decompress_cache[key] = {
-                    "compress_decompress_model": compress_decompress_model,
-                    "compress_model": compress_model,
-                }
         scale_sign = scale / fns.abs(scale)
         zero_scale = 0.001
         zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
-        input_tensors = [original_weight.data, None]
-        if zp is not None:
-            input_tensors.append(zp.data)
         # iterative rectification of initial scale
         for i in range(initial_steps):
             near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
-            input_tensors[1] = near_to_ideal_scale.data
 
             if config.mode == CompressWeightsMode.NF4:
                 g_compressed_weighs = do_nf4_quantization(original_weight, near_to_ideal_scale)
                 out = do_nf4_dequantization(g_compressed_weighs, near_to_ideal_scale)
             else:
-                out = compress_decompress_model(input_tensors)
+                out = calculate_quantized_dequantized_weight(original_weight, config, near_to_ideal_scale, zp)
             q_weights_ = fns.zeros_like(original_weight) + out
             q_outs = fns.matmul(fns.transpose(q_weights_, (1, 0, 2)), X)
 
@@ -313,13 +292,12 @@ class ScaleEstimation:
             else:
                 near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
             result_scale = near_to_ideal_scale
-            input_tensors[1] = near_to_ideal_scale.data
 
             if i < initial_steps - 1:
                 if config.mode == CompressWeightsMode.NF4:
                     out = do_nf4_quantization(original_weight, near_to_ideal_scale)
                 else:
-                    out = compress_model(input_tensors)
+                    out = calculate_quantized_weight(original_weight, config, near_to_ideal_scale, zp)
                 compressed_weights = fns.zeros_like(original_weight) + out
                 target, zero_mask = get_target_zero_mask(compressed_weights, zp)
                 zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
@@ -333,7 +311,7 @@ class ScaleEstimation:
             if config.mode == CompressWeightsMode.NF4:
                 out = do_nf4_quantization(original_weight, scaled_scale)
             else:
-                out = compress_model(input_tensors)
+                out = calculate_quantized_weight(original_weight, config, scaled_scale, zp)
             compressed_weights = fns.zeros_like(original_weight) + out
 
             target, zero_mask = get_target_zero_mask(compressed_weights, zp)
@@ -346,7 +324,7 @@ class ScaleEstimation:
                 g_compressed_weighs = do_nf4_quantization(original_weight, near_to_ideal_scale)
                 out = do_nf4_dequantization(g_compressed_weighs, near_to_ideal_scale)
             else:
-                out = compress_decompress_model(input_tensors)
+                out = calculate_quantized_dequantized_weight(original_weight, config, near_to_ideal_scale, zp)
             q_weights_ = fns.zeros_like(original_weight) + out
 
             q_outs = fns.matmul(fns.transpose(q_weights_, (1, 0, 2)), X)

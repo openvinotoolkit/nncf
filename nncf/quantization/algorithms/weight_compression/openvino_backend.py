@@ -244,21 +244,38 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         original_shape = weight.shape
         compressed_weight = compress_weight(weight, reduction_axes, compression_config, layer_scales, layer_zero_points)
 
-        compressed_const = opset.constant(compressed_weight.tensor.data, dtype=compression_dtype, name=const_node_name)
+        compressed_weight_data = compressed_weight.tensor.data
+        if isinstance(compressed_weight_data, ov.Tensor):
+            compressed_const = opset.constant(compressed_weight_data, name=const_node_name)
+        else:
+            compressed_const = opset.constant(compressed_weight_data, dtype=compression_dtype, name=const_node_name)
+        if compressed_const.get_element_type() != compression_dtype:
+            compressed_const = opset.convert(compressed_const, compression_dtype)
         converted_const = opset.convert(compressed_const, ov.Type.f16)
-        if compressed_weight.zero_point is not None and compressed_weight.tensor.dtype == TensorDataType.uint8:
-            zero_point_const = opset.constant(
-                compressed_weight.zero_point.data,
-                dtype=compression_dtype,
-                name=f"{const_node_name}/zero_point",
-            )
-            converted_zero_point = opset.convert(zero_point_const, ov.Type.f16)
+        if compressed_weight.zero_point is not None:
+            zero_point_data = compressed_weight.zero_point.data
+            if isinstance(zero_point_data, ov.Tensor):
+                zero_point_const = opset.constant(
+                    compressed_weight.zero_point.data,
+                    name=f"{const_node_name}/zero_point",
+                )
+            else:
+                zero_point_const = opset.constant(
+                    compressed_weight.zero_point.data,
+                    dtype=compression_dtype,
+                    name=f"{const_node_name}/zero_point",
+                )
+            zero_point_const = opset.convert(zero_point_const, ov.Type.f16)
             converted_const = opset.subtract(
-                converted_const, converted_zero_point, name=f"{const_node_name}/zero_point/subtract"
+                converted_const, zero_point_const, name=f"{const_node_name}/zero_point/subtract"
             )
 
-        scale_const = opset.constant(compressed_weight.scale.data, dtype=scale_dtype, name=f"{const_node_name}/scale")
-        if scale_dtype != ov.Type.f16:
+        scale_data = compressed_weight.scale.data
+        if isinstance(scale_data, ov.Tensor):
+            scale_const = opset.constant(scale_data, name=f"{const_node_name}/scale")
+        else:
+            scale_const = opset.constant(scale_data, dtype=scale_dtype, name=f"{const_node_name}/scale")
+        if scale_const.get_element_type() != ov.Type.f16:
             scale_const = opset.convert(scale_const, ov.Type.f16)
 
         mul = opset.multiply(
@@ -302,6 +319,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             layer_zero_points = (
                 None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name)
             )
+            import os
+
+            os.environ["CURRENT_NODE_NAME"] = wc_params.weight_name
             mul, compressed_weight = self._create_compression_subgraph(
                 weight=weight,
                 compression_config=wc_params.compression_config,
@@ -332,58 +352,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: ov.Model, parameters: Dict, algo_name: Optional[str] = "quantization", path: Optional[List] = None
     ) -> None:
         dump_parameters(model, parameters, algo_name, path)
-
-    @staticmethod
-    def get_compress_decompress_pipeline(config: WeightCompressionConfig, w_shape, s_shape, z_p_shape=None):
-        parameters, clamp = OVWeightCompressionAlgoBackend.get_compress_pipeline(
-            config, w_shape, s_shape, z_p_shape, True
-        )
-
-        if len(parameters) == 3:
-            _, s, zp = parameters
-            result = (clamp - zp) * s
-        else:
-            s = parameters[1]
-            result = clamp * s
-
-        model = ov.Model([result], parameters)
-
-        compiled_model = ov.compile_model(model, device_name="CPU", config={inference_precision: Type.f32})
-
-        return lambda parameters: compiled_model(parameters)[0]
-
-    @staticmethod
-    def get_compress_pipeline(config: WeightCompressionConfig, w_shape, s_shape, z_p_shape=None, return_nodes=False):
-        mode = config.mode
-        assert mode in [
-            CompressWeightsMode.INT4_SYM,
-            CompressWeightsMode.INT4_ASYM,
-        ], f"Only int4 supported, but given={mode}"
-        num_bits = config.num_bits
-
-        asym_quant = mode in [CompressWeightsMode.INT4_ASYM]
-        level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
-        level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
-
-        w = opset.parameter(w_shape, name="w")
-        s = opset.parameter(s_shape, name="s")
-        parameters = [w, s]
-        compressed_w = w / s
-        if z_p_shape is not None:
-            zp = opset.parameter(z_p_shape, name="zp")
-            parameters.append(zp)
-            compressed_w += zp
-
-        result = opset.clamp(opset.round(compressed_w), level_low, level_high, name="compressed_weights")
-
-        if return_nodes:
-            return parameters, result
-
-        model = ov.Model([result], parameters)
-
-        compiled_model = ov.compile_model(model, device_name="CPU", config={inference_precision: Type.f32})
-
-        return lambda parameters: compiled_model(parameters)[0]
 
 
 class OVAWQAlgoAlgoBackend(AWQAlgoBackend, OVWeightCompressionAlgoBackend):

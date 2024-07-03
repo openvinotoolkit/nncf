@@ -12,6 +12,7 @@
 import logging
 import sys
 from contextlib import contextmanager
+from functools import lru_cache
 
 NNCF_LOGGER_NAME = "nncf"
 
@@ -86,3 +87,8 @@ def warn_bkc_version_mismatch(backend: str, bkc_version: str, current_version: s
         f"while current {backend} version is {current_version}. "
         f"If you encounter issues, consider switching to {backend}{bkc_version}"
     )
+
+
+@lru_cache(None)
+def log_once(level, message):
+    nncf_logger.log(level, message)
