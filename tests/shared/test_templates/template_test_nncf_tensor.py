@@ -12,6 +12,7 @@
 
 import operator
 from abc import abstractmethod
+from math import log2
 from math import sqrt
 from typing import TypeVar
 
@@ -1573,6 +1574,44 @@ class TemplateTestNNCFTensorOperators:
         tensor_v = Tensor(self.to_tensor([-2.0, -0.6, 0.0, 0.3, 1.5]))
         with pytest.raises(ValueError):
             fns.searchsorted(tensor_a, tensor_v)
+
+    @pytest.mark.parametrize(
+        "val,ref",
+        (
+            (1.1, 2.0),
+            ([1.1, 0.9], [2.0, 1.0]),
+            ([1.11, 0.91], [2.0, 1.0]),
+        ),
+    )
+    def test_fn_ceil(self, val, ref):
+        tensor = Tensor(self.to_tensor(val))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.ceil(tensor)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
+
+    @pytest.mark.parametrize(
+        "x,ref",
+        [
+            (list(map(float, range(1, 10))), [log2(x) for x in map(float, range(1, 10))]),
+        ],
+    )
+    def test_fn_log2(self, x, ref):
+        if isinstance(x, list):
+            x = self.to_tensor(x)
+        tensor = Tensor(x)
+
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.log2(tensor)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
+        assert res.shape == tuple(ref_tensor.shape)
 
     @pytest.mark.parametrize(
         "x, y, a_ref, b_ref",

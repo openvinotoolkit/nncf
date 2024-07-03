@@ -421,3 +421,13 @@ def arange(
     if dtype is not None:
         dtype = DTYPE_MAP[dtype]
     return np.arange(start, end, step, dtype=dtype)
+
+
+@register_numpy_types(numeric.log2)
+def _(a: Union[np.ndarray, np.generic]) -> Union[np.ndarray, np.generic]:
+    return np.log2(a)
+
+
+@register_numpy_types(numeric.ceil)
+def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+    return np.ceil(a)

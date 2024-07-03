@@ -147,6 +147,11 @@ def calculate_e2m1_scale(weight: Tensor, reduction_axes: ReductionAxes, max_val=
     """
     scale = calculate_nf4_scale(weight, reduction_axes) / max_val
 
+    scale = fns.log2(scale)
+    scale = fns.ceil(scale)
+    scale = fns.clip(scale, -127, 127)
+    scale = 2**scale
+
     return scale
 
 

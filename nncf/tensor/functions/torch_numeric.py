@@ -455,3 +455,13 @@ def arange(
 
 def from_numpy(ndarray: np.ndarray) -> torch.Tensor:
     return torch.from_numpy(ndarray)
+
+
+@numeric.log2.register(torch.Tensor)
+def _(a: torch.Tensor) -> torch.Tensor:
+    return torch.log2(a)
+
+
+@numeric.ceil.register(torch.Tensor)
+def _(a: torch.Tensor) -> torch.Tensor:
+    return torch.ceil(a)
