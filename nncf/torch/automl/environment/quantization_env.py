@@ -8,10 +8,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import ctypes
 import functools
 import json
+import math
 import os
 import os.path as osp
 from collections import OrderedDict
@@ -520,7 +520,7 @@ class QuantizationEnv:
 
     def reward(self, acc: float, model_ratio: float) -> float:
         def order_of_magnitude(number):
-            return np.floor(np.math.log(abs(number), 10))
+            return np.floor(math.log(abs(number), 10))
 
         if self.pretrained_score == 0:
             return acc

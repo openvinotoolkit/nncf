@@ -818,6 +818,29 @@ def zeros(
     return Tensor(get_numeric_backend_fn("zeros", backend)(shape, dtype=dtype, device=device))
 
 
+def eye(
+    n: int,
+    m: Optional[int] = None,
+    *,
+    backend: TensorBackend,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> Tensor:
+    """
+    Return a 2-D array with ones on the diagonal and zeros elsewhere.
+
+    :param n: Number of rows in the output.
+    :param m: Number of columns in the output. If None, defaults to n.
+    :param backend: The backend type for which the eye tensor is required.
+    :param dtype: The data type of the returned tensor, If dtype is not given,
+        then the default data type is determined by backend.
+    :param device: The device on which the tensor will be allocated, If device is not given,
+        then the default device is determined by backend.
+    :return: A tensor where all elements are equal to zero, except for the k-th diagonal, whose values are equal to one.
+    """
+    return Tensor(get_numeric_backend_fn("eye", backend)(n, m, dtype=dtype, device=device))
+
+
 def arange(
     start: float,
     end: Optional[float] = None,
@@ -858,3 +881,27 @@ def from_numpy(ndarray: np.ndarray, *, backend: TensorBackend) -> Tensor:
     if backend == TensorBackend.numpy:
         return Tensor(ndarray)
     return Tensor(get_numeric_backend_fn("from_numpy", backend)(ndarray))
+
+
+@functools.singledispatch
+@tensor_guard
+def log2(a: Tensor) -> Tensor:
+    """
+    Base-2 logarithm of a.
+
+    :param a: The input tensor.
+    :return: A tensor containing the base-2 logarithm of each element in a.
+    """
+    return Tensor(log2(a.data))
+
+
+@functools.singledispatch
+@tensor_guard
+def ceil(a: Tensor) -> Tensor:
+    """
+    Return the ceiling of the input, element-wise.
+
+    :param a: Input data.
+    :return: An array of the same type as a, containing the ceiling values.
+    """
+    return Tensor(ceil(a.data))

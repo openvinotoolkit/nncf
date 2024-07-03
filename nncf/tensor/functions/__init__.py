@@ -18,6 +18,7 @@ from nncf.tensor.functions.numeric import arange as arange
 from nncf.tensor.functions.numeric import argsort as argsort
 from nncf.tensor.functions.numeric import as_tensor_like as as_tensor_like
 from nncf.tensor.functions.numeric import astype as astype
+from nncf.tensor.functions.numeric import ceil as ceil
 from nncf.tensor.functions.numeric import clip as clip
 from nncf.tensor.functions.numeric import concatenate as concatenate
 from nncf.tensor.functions.numeric import count_nonzero as count_nonzero
@@ -25,12 +26,14 @@ from nncf.tensor.functions.numeric import device as device
 from nncf.tensor.functions.numeric import diag as diag
 from nncf.tensor.functions.numeric import dtype as dtype
 from nncf.tensor.functions.numeric import expand_dims as expand_dims
+from nncf.tensor.functions.numeric import eye as eye
 from nncf.tensor.functions.numeric import finfo as finfo
 from nncf.tensor.functions.numeric import flatten as flatten
 from nncf.tensor.functions.numeric import from_numpy as from_numpy
 from nncf.tensor.functions.numeric import isclose as isclose
 from nncf.tensor.functions.numeric import isempty as isempty
 from nncf.tensor.functions.numeric import item as item
+from nncf.tensor.functions.numeric import log2 as log2
 from nncf.tensor.functions.numeric import logical_or as logical_or
 from nncf.tensor.functions.numeric import masked_mean as masked_mean
 from nncf.tensor.functions.numeric import masked_median as masked_median

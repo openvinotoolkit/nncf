@@ -217,7 +217,7 @@ def _(
     axis: Optional[Union[int, Tuple[int]]] = None,
     keepdims: bool = False,
 ) -> Union[np.ndarray, np.generic]:
-    return np.array(np.quantile(a, q=q, axis=axis, keepdims=keepdims))
+    return np.array(np.quantile(a.astype(np.float64, copy=False), q=q, axis=axis, keepdims=keepdims))
 
 
 @register_numpy_types(numeric.percentile)
@@ -227,7 +227,9 @@ def _(
     axis: Union[int, Tuple[int, ...], List[int]],
     keepdims: bool = False,
 ) -> List[Union[np.ndarray, np.generic]]:
-    return np.quantile(a, q=np.true_divide(np.array(q), 100), axis=axis, keepdims=keepdims)
+    return np.quantile(
+        a.astype(np.float64, copy=False), q=np.true_divide(np.array(q), 100), axis=axis, keepdims=keepdims
+    )
 
 
 @register_numpy_types(numeric._binary_op_nowarn)
@@ -392,6 +394,20 @@ def zeros(
     return np.zeros(shape, dtype=dtype)
 
 
+def eye(
+    n: int,
+    m: Optional[int] = None,
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> np.ndarray:
+    if device is not None and device != TensorDeviceType.CPU:
+        raise ValueError("numpy_numeric.eye only supports CPU device.")
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    return np.eye(n, m, dtype=dtype)
+
+
 def arange(
     start: float,
     end: float,
@@ -405,3 +421,13 @@ def arange(
     if dtype is not None:
         dtype = DTYPE_MAP[dtype]
     return np.arange(start, end, step, dtype=dtype)
+
+
+@register_numpy_types(numeric.log2)
+def _(a: Union[np.ndarray, np.generic]) -> Union[np.ndarray, np.generic]:
+    return np.log2(a)
+
+
+@register_numpy_types(numeric.ceil)
+def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+    return np.ceil(a)

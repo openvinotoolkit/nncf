@@ -26,7 +26,8 @@ from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.layout import get_conv_weights_layout
 from nncf.openvino.graph.layout import get_conv_weights_layout_from_node
-from nncf.openvino.graph.layout import get_linear_weights_layout
+from nncf.openvino.graph.layout import get_linear_activations_layout_from_node
+from nncf.openvino.graph.layout import get_linear_input_layout
 from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
 from nncf.openvino.graph.metatypes.groups import CONV_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS
@@ -77,6 +78,11 @@ def is_node_with_bias(
         metatypes_with_bias = OPERATIONS_WITH_BIAS
 
     if node.metatype not in metatypes_with_bias:
+        return False
+
+    # Since we do not verify bias constant shape, we need to verify the weight's existence at least.
+    # layer_attributes adds only for nodes with weights, according to the nncf_graph_builder.py for the backend.
+    if node.layer_attributes is None:
         return False
 
     return get_add_bias_node(node, nncf_graph) is not None
@@ -452,8 +458,8 @@ def get_weighted_layer_attributes(
         return ConvolutionLayerAttributes(**kwargs)
     if ov_metatype == OVMatMulMetatype:
         weights_shape = attrs["shape"]
-        weights_layout = get_linear_weights_layout(
-            weights_shape=weights_shape, transpose=attrs["transpose"], port_id=port_id
+        weights_layout = get_linear_input_layout(
+            input_shape=weights_shape, transpose=attrs["transpose"], port_id=port_id
         )
 
         kwargs = {
@@ -468,3 +474,23 @@ def get_weighted_layer_attributes(
         }
         return LinearLayerAttributes(**kwargs)
     return GenericWeightedLayerAttributes(weight_requires_grad=False, weight_shape=attrs.get("shape", None))
+
+
+def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
+    """
+    Returns axis number of the activation tensor which correspond to it channel.
+
+    :param node: NNCFNode instance.
+    :param port_id: Port ID for input.
+    :param input_shape: Shape of the input.
+    :return: Channel axis number.
+    """
+    # In case of the OpenVINO, [N, C, ..] layout applicable for most quantizable layers.
+    channel_axis = 1
+
+    # But the MatMul layers may transpose inputs internally.
+    if node.metatype == OVMatMulMetatype:
+        activations_layout = get_linear_activations_layout_from_node(node, port_id, input_shape)
+        channel_axis = activations_layout.index(OVLayoutElem.C_IN)
+
+    return channel_axis

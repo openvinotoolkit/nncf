@@ -14,11 +14,13 @@ ignore = [
     "SIM110",  # reimplemented-builtin
     "SIM117",  # multiple-with-statements
     "SIM103", # needless-bool
+    "NPY002", # numpy-legacy-random
 ]
 select = [
     "E",  # pycodestyle rules
     "F",  # pyflakes rules
     "CPY001",  # copyright check
+    "NPY", # numpy rules
 ]
 extend-select = [
     "SIM",  # https://pypi.org/project/flake8-simplify
