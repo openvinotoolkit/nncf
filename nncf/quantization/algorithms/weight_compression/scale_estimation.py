@@ -20,6 +20,8 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_dequantized_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
@@ -117,7 +119,6 @@ class ScaleEstimation:
         :return: Dict with pairs (weight name, estimated scale).
         """
 
-        compress_decompress_cache = {}
         res = dict()
 
         for wp in track(self._all_weight_params, description="Applying Scale Estimation"):
@@ -200,38 +201,14 @@ class ScaleEstimation:
             if self._weight_penalty > 0.0:
                 min_max_scale_diffs += self._weight_penalty * fns.mean((q_weights - original_weight) ** 2, axis=-1)
 
-            zp_shape = zp.shape if zp is not None else None
-            key = [(wp.compression_config.mode, wp.compression_config.num_bits) + q_weights.shape + scale.shape]
-            if zp is not None:
-                key += zp_shape
-            key = tuple(key)
-            if key in compress_decompress_cache:
-                compress_decompress_model = compress_decompress_cache[key]["compress_decompress_model"]
-                compress_model = compress_decompress_cache[key]["compress_model"]
-            else:
-                compress_decompress_model = self._backend_entity.get_compress_decompress_pipeline(
-                    wp.compression_config, q_weights.shape, scale.shape, zp_shape
-                )
-                compress_model = self._backend_entity.get_compress_pipeline(
-                    wp.compression_config, q_weights.shape, scale.shape, zp_shape
-                )
-                compress_decompress_cache[key] = {
-                    "compress_decompress_model": compress_decompress_model,
-                    "compress_model": compress_model,
-                }
-
             zero_scale = 0.001
             zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
-            input_tensors = [original_weight.data, None]
-            if zp is not None:
-                input_tensors.append(zp.data)
             # iterative rectification of initial scale
             for i in range(self._initial_steps):
                 near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
-                input_tensors[1] = near_to_ideal_scale.data
 
-                out = compress_decompress_model(input_tensors)
+                out = calculate_quantized_dequantized_weight(original_weight, config, near_to_ideal_scale, zp)
                 q_weights_ = fns.zeros_like(original_weight) + out
                 q_outs = fns.matmul(fns.transpose(q_weights_, (1, 0, 2)), X)
 
@@ -254,10 +231,9 @@ class ScaleEstimation:
                 else:
                     near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
                 result_scale = near_to_ideal_scale
-                input_tensors[1] = near_to_ideal_scale.data
 
                 if i < self._initial_steps - 1:
-                    out = compress_model(input_tensors)
+                    out = calculate_quantized_weight(original_weight, config, near_to_ideal_scale, zp)
                     compressed_weights = fns.zeros_like(original_weight) + out
                     target, zero_mask = get_target_zero_mask(compressed_weights, zp)
                     zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
@@ -267,16 +243,14 @@ class ScaleEstimation:
                 factor = 1.0 - 0.05 * scale_steps
                 scaled_scale = factor * scale
 
-                input_tensors[1] = scaled_scale.data
-                out = compress_model(input_tensors)
+                out = calculate_quantized_weight(original_weight, config, scaled_scale, zp)
                 compressed_weights = fns.zeros_like(original_weight) + out
 
                 target, zero_mask = get_target_zero_mask(compressed_weights, zp)
                 zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
                 near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
 
-                input_tensors[1] = near_to_ideal_scale.data
-                out = compress_decompress_model(input_tensors)
+                out = calculate_quantized_dequantized_weight(original_weight, config, near_to_ideal_scale, zp)
                 q_weights_ = fns.zeros_like(original_weight) + out
 
                 q_outs = fns.matmul(fns.transpose(q_weights_, (1, 0, 2)), X)
