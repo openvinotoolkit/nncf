@@ -913,13 +913,13 @@ def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
 def test_np_ov_compression_decompression(mode):
-    sz = 8
-    w = np.arange(-sz, sz).reshape(2, sz).astype(np.float32)
+    sz = 60
+    w = np.arange(-sz, sz).reshape(2, sz).astype(np.float32) / 9.0
     w = Tensor(w)
 
     config = WeightCompressionConfig(mode)
 
-    compressed_weighs, scale, zp = do_integer_quantization(w, -1, config)
+    compressed_weighs, scale, zp = do_integer_quantization(w, -1, config, invert_scale=True)
     decompressed_weighs = do_dequantization(compressed_weighs, scale, zp)
 
     compressed_weighs = compressed_weighs.data
