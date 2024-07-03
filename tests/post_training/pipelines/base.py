@@ -386,11 +386,21 @@ class PTQTestPipeline(BaseTestPipeline):
         model = ie.read_model(model=self.path_compressed_ir)
 
         num_fq = 0
+        num_int4 = 0
+        num_int8 = 0
         for node in model.get_ops():
             node_type = node.type_info.name
             if node_type == "FakeQuantize":
                 num_fq += 1
 
+            for i in range(node.get_output_size()):
+                if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
+                    num_int8 += 1
+                if node.get_output_element_type(i).get_type_name() in ["i4", "u4"]:
+                    num_int4 += 1
+
+        self.run_info.num_compress_nodes.num_int8 = num_int8
+        self.run_info.num_compress_nodes.num_int4 = num_int4
         self.run_info.num_compress_nodes.num_fq_nodes = num_fq
 
     def run_bench(self) -> None:

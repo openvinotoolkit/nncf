@@ -245,7 +245,9 @@ def quantile(
             axis,
             keepdims,
         )
-    return torch.tensor(np.quantile(a.detach().cpu().numpy(), q=q, axis=axis, keepdims=keepdims)).to(device)
+    return torch.tensor(
+        np.quantile(a.detach().cpu().numpy().astype(np.float64, copy=False), q=q, axis=axis, keepdims=keepdims)
+    ).to(device)
 
 
 @numeric.percentile.register(torch.Tensor)
@@ -419,6 +421,21 @@ def zeros(
     if device is not None:
         device = DEVICE_MAP[device]
     return torch.zeros(*shape, dtype=dtype, device=device)
+
+
+def eye(
+    n: int,
+    m: Optional[int] = None,
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> torch.Tensor:
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    if device is not None:
+        device = DEVICE_MAP[device]
+    p_args = (n,) if m is None else (n, m)
+    return torch.eye(*p_args, dtype=dtype, device=device)
 
 
 def arange(

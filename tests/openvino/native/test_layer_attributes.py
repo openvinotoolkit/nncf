@@ -23,7 +23,6 @@ from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.layout import get_conv_weights_layout_from_node
-from nncf.openvino.graph.layout import get_linear_activations_layout_from_node
 from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 
@@ -154,17 +153,14 @@ def get_one_layer_model(op_name: str, node_creator, input_shape):
 class LayerAttributesTestCase:
     node_creator: Callable
     input_shape: Tuple[int, ...]
-    act_port_id: int
     ref_layer_attrs: OVLayerAttributes
     ref_weights_layout: Tuple[OVLayoutElem]
-    ref_acts_layout: Tuple[OVLayoutElem]
 
 
 TEST_CASES_CONV = [
     LayerAttributesTestCase(
         get_conv,
         (1, 3, 3, 3),
-        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (4, 3, 2, 1)}},
             ConvolutionLayerAttributes(
@@ -186,12 +182,10 @@ TEST_CASES_CONV = [
             OVLayoutElem.SPATIAL,
             OVLayoutElem.SPATIAL,
         ),
-        {},
     ),
     LayerAttributesTestCase(
         get_convert_conv,
         (1, 3, 3, 3),
-        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (4, 3, 1, 1)}},
             ConvolutionLayerAttributes(
@@ -213,12 +207,10 @@ TEST_CASES_CONV = [
             OVLayoutElem.SPATIAL,
             OVLayoutElem.SPATIAL,
         ),
-        {},
     ),
     LayerAttributesTestCase(
         get_depthwise_conv,
         (1, 3, 3, 3),
-        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (3, 3, 1, 1, 1)}},
             ConvolutionLayerAttributes(
@@ -241,12 +233,10 @@ TEST_CASES_CONV = [
             OVLayoutElem.SPATIAL,
             OVLayoutElem.SPATIAL,
         ),
-        {},
     ),
     LayerAttributesTestCase(
         get_group_conv,
         (1, 10, 3, 3),
-        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (5, 10, 2, 1, 1)}},
             ConvolutionLayerAttributes(
@@ -269,12 +259,10 @@ TEST_CASES_CONV = [
             OVLayoutElem.SPATIAL,
             OVLayoutElem.SPATIAL,
         ),
-        {},
     ),
     LayerAttributesTestCase(
         get_transpose_conv,
         (1, 3, 3, 3),
-        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (3, 4, 2, 1)}},
             ConvolutionLayerAttributes(
@@ -296,12 +284,10 @@ TEST_CASES_CONV = [
             OVLayoutElem.SPATIAL,
             OVLayoutElem.SPATIAL,
         ),
-        {},
     ),
     LayerAttributesTestCase(
         get_transpose_group_conv,
         (1, 3, 3, 3),
-        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (3, 1, 3, 1, 1)}},
             ConvolutionLayerAttributes(
@@ -324,7 +310,6 @@ TEST_CASES_CONV = [
             OVLayoutElem.SPATIAL,
             OVLayoutElem.SPATIAL,
         ),
-        {},
     ),
 ]
 
@@ -333,7 +318,6 @@ TEST_CASES_LINEAR = [
     LayerAttributesTestCase(
         get_matmul_b,
         (1, 3, 4),
-        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (1, 4), "transpose": True}},
             LinearLayerAttributes(
@@ -345,12 +329,10 @@ TEST_CASES_LINEAR = [
             {"transpose": False},
         ),
         (OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
-        (OVLayoutElem.SPATIAL, OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
     ),
     LayerAttributesTestCase(
         get_matmul_a,
         (1, 3, 4),
-        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (3, 1), "transpose": False}},
             LinearLayerAttributes(
@@ -362,12 +344,10 @@ TEST_CASES_LINEAR = [
             {"transpose": True},
         ),
         (OVLayoutElem.C_IN, OVLayoutElem.C_OUT),
-        (OVLayoutElem.SPATIAL, OVLayoutElem.C_IN, OVLayoutElem.C_OUT),
     ),
     LayerAttributesTestCase(
         get_matmul_a_swapped,
         (1, 3, 4),
-        1,
         OVLayerAttributes(
             {0: {"name": "Const", "shape": (3, 1), "transpose": True}},
             LinearLayerAttributes(
@@ -379,12 +359,10 @@ TEST_CASES_LINEAR = [
             {"transpose": False},
         ),
         (OVLayoutElem.C_IN, OVLayoutElem.C_OUT),
-        (OVLayoutElem.SPATIAL, OVLayoutElem.C_IN, OVLayoutElem.C_OUT),
     ),
     LayerAttributesTestCase(
         get_matmul_b_swapped,
         (1, 3, 4),
-        1,
         OVLayerAttributes(
             {0: {"name": "Const", "shape": (1, 4), "transpose": False}},
             LinearLayerAttributes(
@@ -396,12 +374,10 @@ TEST_CASES_LINEAR = [
             {"transpose": True},
         ),
         (OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
-        (OVLayoutElem.SPATIAL, OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
     ),
     LayerAttributesTestCase(
         get_1d_matmul,
         (1, 3, 4),
-        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (4,), "transpose": False}},
             LinearLayerAttributes(
@@ -413,29 +389,25 @@ TEST_CASES_LINEAR = [
             {"transpose": False},
         ),
         (OVLayoutElem.C_IN,),
-        (OVLayoutElem.SPATIAL, OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
     ),
 ]
 
 
 TEST_CASES_NO_WEGIHTS_LAYOUT = [
-    LayerAttributesTestCase(get_shape_node, (1, 3, 3, 3), 0, None, None, None),
+    LayerAttributesTestCase(get_shape_node, (1, 3, 3, 3), None, None),
     LayerAttributesTestCase(
         get_add,
         (1, 3, 4, 5),
-        0,
         OVLayerAttributes(
             {1: {"name": "Const", "shape": (1, 1, 1, 1)}},
             GenericWeightedLayerAttributes(False, weight_shape=(1, 1, 1, 1)),
             {},
         ),
         None,
-        {},
     ),
     LayerAttributesTestCase(
         get_lstm,
         (2, 3, 4),
-        0,
         OVLayerAttributes(
             {
                 1: {"name": "hs", "shape": (2, 1, 4)},
@@ -447,7 +419,6 @@ TEST_CASES_NO_WEGIHTS_LAYOUT = [
             {},
         ),
         None,
-        {},
     ),
 ]
 
@@ -459,7 +430,7 @@ def _get_node_to_test(test_descriptor: LayerAttributesTestCase):
     return nncf_graph.get_node_by_name(op_name)
 
 
-@pytest.mark.parametrize("test_descriptor", TEST_CASES_LINEAR + TEST_CASES_NO_WEGIHTS_LAYOUT)
+@pytest.mark.parametrize("test_descriptor", TEST_CASES_CONV + TEST_CASES_LINEAR + TEST_CASES_NO_WEGIHTS_LAYOUT)
 def test_layer_attributes(test_descriptor: LayerAttributesTestCase):
     node = _get_node_to_test(test_descriptor)
     if test_descriptor.ref_layer_attrs is None:
@@ -482,13 +453,3 @@ def test_get_linear_weights_layout_from_node(test_descriptor: LayerAttributesTes
     for _ in range(2):  # To test get_linear_weights_layout_from_node is a clean function
         weights_layout = get_linear_weights_layout_from_node(node)
         assert weights_layout == test_descriptor.ref_weights_layout
-
-
-@pytest.mark.parametrize("test_descriptor", TEST_CASES_LINEAR)
-def test_get_linear_activations_layout_from_node(test_descriptor: LayerAttributesTestCase):
-    node = _get_node_to_test(test_descriptor)
-    for _ in range(2):  # To test get_linear_activations_layout_from_node is a clean function
-        acts_layout = get_linear_activations_layout_from_node(
-            node, test_descriptor.act_port_id, test_descriptor.input_shape
-        )
-        assert acts_layout == test_descriptor.ref_acts_layout

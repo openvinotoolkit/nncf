@@ -4,7 +4,8 @@ absl-py==1.0.0
 tensorflow
 tensorflow_datasets==4.2.0
 tensorflow_hub
-tensorflow_addons==0.20.0
+tensorflow_addons==0.20.0; python_version < '3.9'
+tensorflow_addons==0.23.0; python_version >= '3.9'
 tensorflow-metadata==1.13.0
 opencv-python
 pycocotools==2.0.6

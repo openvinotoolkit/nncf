@@ -145,7 +145,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
 
     @staticmethod
-    def get_weight_quantization_axes(node: NNCFNode, target_point: OVTargetPoint) -> Tuple[int]:
+    def get_weight_quantization_axes(node: NNCFNode, target_point: OVTargetPoint, ndims: int) -> Tuple[int]:
         return tuple(get_weight_channel_axes(node))
 
     @staticmethod
@@ -195,7 +195,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return collector
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
         return node.layer_attributes.get_const_port_ids()
 
     @staticmethod

@@ -73,17 +73,26 @@ def calc_rb_mask_decorator(fn):
     return wrapper
 
 
+@pytest.fixture(scope="module")
+def mirrored_strategy():
+    gpus = tf.config.list_physical_devices("GPU")
+    if len(gpus) == 0:
+        return tf.distribute.get_strategy()
+    num_of_replicas = 3
+    strategy = tf.distribute.MirroredStrategy([f"GPU:{i}" for i in range(num_of_replicas)])
+    return strategy
+
+
 @pytest.mark.parametrize("quantization", [False, True], ids=["without_quantization", "with_quantization"])
 @patch("nncf.tensorflow.sparsity.rb.operation.calc_rb_binary_mask", new=calc_rb_mask_decorator(calc_rb_binary_mask))
-def test_distributed_masks_are_equal(quantization):
+def test_distributed_masks_are_equal(quantization, mirrored_strategy):
     # Clean output file
     with contextlib.suppress(OSError):
         os.remove(MASKS_SEEDS_PATH)
 
     # Fill file with seeds
     num_of_replicas = 3
-    strategy = tf.distribute.MirroredStrategy([f"GPU:{i}" for i in range(num_of_replicas)])
-    with strategy.scope():
+    with mirrored_strategy.scope():
         config = NNCFConfig.from_json(CONF)
         if quantization:
             config.update({"compression": [config["compression"], {"algorithm": "quantization"}]})

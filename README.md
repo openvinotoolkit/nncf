@@ -429,7 +429,7 @@ conda install -c conda-forge nncf
 - Python\* 3.8 or later
 - Supported frameworks:
   - PyTorch\* >=2.2, <2.4
-  - TensorFlow\* >=2.8.4, <=2.12.1
+  - TensorFlow\* >=2.8.4, <=2.15.1
   - ONNX\* ==1.16.0
   - OpenVINO\* >=2022.3.0
 
