@@ -28,6 +28,7 @@ from nncf.quantization import compress_weights
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
@@ -912,3 +913,18 @@ def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
     }
     ref_e8m0_nodes = {f"weights_{i}/scale" for i in ref_ids}
     assert ref_e8m0_nodes == names_e8m0
+
+
+def test_compressed_weighs_range():
+    bits = 4
+    sz = 2 ** (bits - 1)
+    quantized_w = np.arange(-sz, sz).reshape(2, sz).astype(np.float32)
+    w = Tensor(quantized_w / 10.0)
+
+    config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM)
+    compressed_weighs, scale, zp = do_integer_quantization(w, -1, config)
+
+    assert zp is None
+    ref_scale = 2 * np.max(np.abs(quantized_w) / 10.0, axis=1) / (2**bits - 1)
+    assert np.allclose(scale.data, ref_scale.reshape(scale.shape))
+    assert np.allclose(compressed_weighs.data, quantized_w)
