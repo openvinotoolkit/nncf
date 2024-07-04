@@ -22,8 +22,8 @@ def test_ops_combination_patterns():
     pattern = TestPattern.first_pattern + TestPattern.second_pattern
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "c"})
+    ref_graph.add_node("1", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("2", **{GraphPattern.TYPE_ATTR: "c"})
     ref_graph.add_edge("1", "2")
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert matches == [["1", "2"]]
@@ -31,8 +31,8 @@ def test_ops_combination_patterns():
     pattern = TestPattern.first_pattern + TestPattern.second_pattern | TestPattern.third_pattern
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "c"})
+    ref_graph.add_node("1", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("2", **{GraphPattern.TYPE_ATTR: "c"})
     ref_graph.add_edge("1", "2")
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert matches == [["1", "2"]]
@@ -44,9 +44,9 @@ def test_ops_combination_patterns():
     pattern.join_patterns(TestPattern.third_pattern, edges)
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "c"})
-    ref_graph.add_node("3", **{GraphPattern.METATYPE_ATTR: "e"})
+    ref_graph.add_node("1", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("2", **{GraphPattern.TYPE_ATTR: "c"})
+    ref_graph.add_node("3", **{GraphPattern.TYPE_ATTR: "e"})
     ref_graph.add_edge("1", "2")
     ref_graph.add_edge("1", "3")
     ref_graph.add_edge("2", "3")
@@ -63,9 +63,9 @@ def test_no_matches():
     pattern.join_patterns(TestPattern.third_pattern, edges)
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "c"})
-    ref_graph.add_node("3", **{GraphPattern.METATYPE_ATTR: "e"})
+    ref_graph.add_node("1", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("2", **{GraphPattern.TYPE_ATTR: "c"})
+    ref_graph.add_node("3", **{GraphPattern.TYPE_ATTR: "e"})
     ref_graph.add_edge("1", "2")
     ref_graph.add_edge("2", "3")
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
@@ -77,12 +77,12 @@ def test_two_matches():
     pattern = TestPattern.first_pattern + TestPattern.second_pattern
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "c"})
-    ref_graph.add_node("3", **{GraphPattern.METATYPE_ATTR: "e"})
-    ref_graph.add_node("4", **{GraphPattern.METATYPE_ATTR: "c"})
-    ref_graph.add_node("5", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("6", **{GraphPattern.METATYPE_ATTR: "d"})
+    ref_graph.add_node("1", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("2", **{GraphPattern.TYPE_ATTR: "c"})
+    ref_graph.add_node("3", **{GraphPattern.TYPE_ATTR: "e"})
+    ref_graph.add_node("4", **{GraphPattern.TYPE_ATTR: "c"})
+    ref_graph.add_node("5", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("6", **{GraphPattern.TYPE_ATTR: "d"})
     ref_graph.add_edge("1", "2")
     ref_graph.add_edge("2", "3")
     ref_graph.add_edge("5", "6")
@@ -110,15 +110,15 @@ def create_graph_with_many_nodes():
 
     ref_graph = nx.DiGraph()
     nodes = {
-        "1": {GraphPattern.METATYPE_ATTR: "a"},
-        "2": {GraphPattern.METATYPE_ATTR: "b"},
-        "3": {GraphPattern.METATYPE_ATTR: "c"},
-        "4": {GraphPattern.METATYPE_ATTR: "a"},
-        "5": {GraphPattern.METATYPE_ATTR: "e"},
-        "6": {GraphPattern.METATYPE_ATTR: "a"},
-        "7": {GraphPattern.METATYPE_ATTR: "a"},
-        "8": {GraphPattern.METATYPE_ATTR: "b"},
-        "9": {GraphPattern.METATYPE_ATTR: "c"},
+        "1": {GraphPattern.TYPE_ATTR: "a"},
+        "2": {GraphPattern.TYPE_ATTR: "b"},
+        "3": {GraphPattern.TYPE_ATTR: "c"},
+        "4": {GraphPattern.TYPE_ATTR: "a"},
+        "5": {GraphPattern.TYPE_ATTR: "e"},
+        "6": {GraphPattern.TYPE_ATTR: "a"},
+        "7": {GraphPattern.TYPE_ATTR: "a"},
+        "8": {GraphPattern.TYPE_ATTR: "b"},
+        "9": {GraphPattern.TYPE_ATTR: "c"},
     }
     for k, attrs in nodes.items():
         ref_graph.add_node(k, **attrs)
@@ -132,9 +132,9 @@ def test_matches_with_non_pattern_node_type():
     pattern = TestPattern.forth_pattern + TestPattern.first_pattern + TestPattern.second_pattern
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("3", **{GraphPattern.METATYPE_ATTR: "c"})
+    ref_graph.add_node("1", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("2", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("3", **{GraphPattern.TYPE_ATTR: "c"})
     ref_graph.add_edge("1", "2")
     ref_graph.add_edge("2", "3")
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
@@ -145,9 +145,9 @@ def test_matches_with_non_pattern_node_type():
     )
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("3", **{GraphPattern.METATYPE_ATTR: "c"})
+    ref_graph.add_node("1", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("2", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("3", **{GraphPattern.TYPE_ATTR: "c"})
     ref_graph.add_edge("1", "2")
     ref_graph.add_edge("2", "3")
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
@@ -156,18 +156,18 @@ def test_matches_with_non_pattern_node_type():
     pattern = TestPattern.pattern_with_non_pattern_nodes
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "b"})
-    ref_graph.add_node("3", **{GraphPattern.METATYPE_ATTR: "c"})
+    ref_graph.add_node("1", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("2", **{GraphPattern.TYPE_ATTR: "b"})
+    ref_graph.add_node("3", **{GraphPattern.TYPE_ATTR: "c"})
     ref_graph.add_edge("1", "2")
     ref_graph.add_edge("2", "3")
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert not matches
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "b"})
-    ref_graph.add_node("4", **{GraphPattern.METATYPE_ATTR: "a"})
+    ref_graph.add_node("1", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("2", **{GraphPattern.TYPE_ATTR: "b"})
+    ref_graph.add_node("4", **{GraphPattern.TYPE_ATTR: "a"})
     ref_graph.add_edge("1", "2")
     ref_graph.add_edge("2", "4")
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
@@ -182,18 +182,18 @@ def test_matches_with_any_pattern_node_type():
     pattern = TestPattern.pattern_with_any_pattern_nodes
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "b"})
-    ref_graph.add_node("3", **{GraphPattern.METATYPE_ATTR: "c"})
+    ref_graph.add_node("1", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("2", **{GraphPattern.TYPE_ATTR: "b"})
+    ref_graph.add_node("3", **{GraphPattern.TYPE_ATTR: "c"})
     ref_graph.add_edge("1", "2")
     ref_graph.add_edge("2", "3")
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert not matches
 
     ref_graph = nx.DiGraph()
-    ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "b"})
-    ref_graph.add_node("4", **{GraphPattern.METATYPE_ATTR: "a"})
+    ref_graph.add_node("1", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("2", **{GraphPattern.TYPE_ATTR: "b"})
+    ref_graph.add_node("4", **{GraphPattern.TYPE_ATTR: "a"})
     ref_graph.add_edge("1", "2")
     ref_graph.add_edge("2", "4")
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
@@ -206,19 +206,19 @@ def test_matches_with_any_pattern_node_type():
 
 def test_not_match_edges_inside_pattern():
     ref_graph = nx.DiGraph()
-    ref_graph.add_node("0", **{GraphPattern.METATYPE_ATTR: "0"})
-    ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
-    ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "b"})
-    ref_graph.add_node("3", **{GraphPattern.METATYPE_ATTR: "c"})
+    ref_graph.add_node("0", **{GraphPattern.TYPE_ATTR: "0"})
+    ref_graph.add_node("1", **{GraphPattern.TYPE_ATTR: "a"})
+    ref_graph.add_node("2", **{GraphPattern.TYPE_ATTR: "b"})
+    ref_graph.add_node("3", **{GraphPattern.TYPE_ATTR: "c"})
     ref_graph.add_edge("0", "1")
     ref_graph.add_edge("1", "2")
     ref_graph.add_edge("2", "3")
     ref_graph.add_edge("1", "3")
 
     pattern = GraphPattern()
-    node_1 = pattern.add_node(**{GraphPattern.METATYPE_ATTR: "a"})
-    node_2 = pattern.add_node(**{GraphPattern.METATYPE_ATTR: "b"})
-    node_3 = pattern.add_node(**{GraphPattern.METATYPE_ATTR: "c"})
+    node_1 = pattern.add_node(**{GraphPattern.TYPE_ATTR: "a"})
+    node_2 = pattern.add_node(**{GraphPattern.TYPE_ATTR: "b"})
+    node_3 = pattern.add_node(**{GraphPattern.TYPE_ATTR: "c"})
     pattern.add_edge(node_1, node_2)
     pattern.add_edge(node_2, node_3)
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
@@ -232,18 +232,18 @@ def test_not_match_edges_inside_pattern():
 def test_non_pattern_graph_with_type():
     for match in [False, True]:
         ref_graph = nx.DiGraph()
-        ref_graph.add_node("0", **{GraphPattern.METATYPE_ATTR: "0"})
-        ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a" if match else "0"})
-        ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "b"})
-        ref_graph.add_node("3", **{GraphPattern.METATYPE_ATTR: "c"})
+        ref_graph.add_node("0", **{GraphPattern.TYPE_ATTR: "0"})
+        ref_graph.add_node("1", **{GraphPattern.TYPE_ATTR: "a" if match else "0"})
+        ref_graph.add_node("2", **{GraphPattern.TYPE_ATTR: "b"})
+        ref_graph.add_node("3", **{GraphPattern.TYPE_ATTR: "c"})
         ref_graph.add_edge("0", "1")
         ref_graph.add_edge("1", "2")
         ref_graph.add_edge("2", "3")
 
         pattern = GraphPattern()
-        node_1 = pattern.add_node(**{GraphPattern.METATYPE_ATTR: "a", GraphPattern.PATTERN_NODE_TO_EXCLUDE: True})
-        node_2 = pattern.add_node(**{GraphPattern.METATYPE_ATTR: "b"})
-        node_3 = pattern.add_node(**{GraphPattern.METATYPE_ATTR: "c"})
+        node_1 = pattern.add_node(**{GraphPattern.TYPE_ATTR: "a", GraphPattern.PATTERN_NODE_TO_EXCLUDE: True})
+        node_2 = pattern.add_node(**{GraphPattern.TYPE_ATTR: "b"})
+        node_3 = pattern.add_node(**{GraphPattern.TYPE_ATTR: "c"})
         pattern.add_edge(node_1, node_2)
         pattern.add_edge(node_2, node_3)
 

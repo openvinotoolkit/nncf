@@ -32,12 +32,12 @@ def _add_softmax_matmul(pattern: GraphPattern) -> None:
         om.OVSqueezeMetatype,
         om.OVConcatMetatype,
     ]
-    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
-    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
+    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.TYPE_ATTR: om.OVSoftmaxMetatype})
+    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.TYPE_ATTR: om.OVMatMulMetatype})
     matmul_branch_nodes = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT",
-            GraphPattern.METATYPE_ATTR: branch_matmul_nodes,
+            GraphPattern.TYPE_ATTR: branch_matmul_nodes,
         }
     )
     pattern.add_edge(softmax, matmul)
@@ -64,13 +64,13 @@ def _add_softmax_reshape_matmul(pattern: GraphPattern) -> None:
         om.OVSqueezeMetatype,
         om.OVConcatMetatype,
     ]
-    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
-    reshape = pattern.add_node(**{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: om.OVReshapeMetatype})
-    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
+    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.TYPE_ATTR: om.OVSoftmaxMetatype})
+    reshape = pattern.add_node(**{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.TYPE_ATTR: om.OVReshapeMetatype})
+    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.TYPE_ATTR: om.OVMatMulMetatype})
     matmul_branch_nodes = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT",
-            GraphPattern.METATYPE_ATTR: branch_matmul_nodes,
+            GraphPattern.TYPE_ATTR: branch_matmul_nodes,
         }
     )
     pattern.add_edge(softmax, reshape)
@@ -90,14 +90,14 @@ def create_multihead_attention_output() -> GraphPattern:
 def create_fc_bn_hswish() -> GraphPattern:
     pattern = GraphPattern()
     unsqueeze_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "UNSQUEEZE", GraphPattern.METATYPE_ATTR: om.OVUnsqueezeMetatype}
+        **{GraphPattern.LABEL_ATTR: "UNSQUEEZE", GraphPattern.TYPE_ATTR: om.OVUnsqueezeMetatype}
     )
     multiply_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype}
     )
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
     squeeze_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "SQUEEZE", GraphPattern.METATYPE_ATTR: om.OVSqueezeMetatype}
+        **{GraphPattern.LABEL_ATTR: "SQUEEZE", GraphPattern.TYPE_ATTR: om.OVSqueezeMetatype}
     )
 
     pattern.add_edge(unsqueeze_node, multiply_node)
@@ -109,9 +109,9 @@ def create_fc_bn_hswish() -> GraphPattern:
 @OPENVINO_IGNORED_PATTERNS.register(IgnoredPatternNames.EQUAL_LOGICALNOT)
 def create_equal_logicalnot() -> GraphPattern:
     pattern = GraphPattern()
-    equal_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "EQUAL", GraphPattern.METATYPE_ATTR: om.OVEqualMetatype})
+    equal_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "EQUAL", GraphPattern.TYPE_ATTR: om.OVEqualMetatype})
     logical_not_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "LOGICAL_NOT", GraphPattern.METATYPE_ATTR: om.OVLogicalNotMetatype}
+        **{GraphPattern.LABEL_ATTR: "LOGICAL_NOT", GraphPattern.TYPE_ATTR: om.OVLogicalNotMetatype}
     )
 
     pattern.add_edge(equal_node, logical_not_node)
@@ -122,39 +122,35 @@ def create_equal_logicalnot() -> GraphPattern:
 def create_se_block() -> GraphPattern:
     pattern = GraphPattern()
     any_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.TYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
     )
     reduce_mean_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "REDUCE_MEAN",
-            GraphPattern.METATYPE_ATTR: om.OVReduceMeanMetatype,
+            GraphPattern.TYPE_ATTR: om.OVReduceMeanMetatype,
             GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
         }
     )
-    linear_node_1 = pattern.add_node(
-        **{GraphPattern.METATYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"}
-    )
-    add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    linear_node_1 = pattern.add_node(**{GraphPattern.TYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
+    add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
     activation_node_1 = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "RELU, PRELU, SWISH",
-            GraphPattern.METATYPE_ATTR: [om.OVReluMetatype, om.OVPReluMetatype, om.OVSwishMetatype],
+            GraphPattern.TYPE_ATTR: [om.OVReluMetatype, om.OVPReluMetatype, om.OVSwishMetatype],
         }
     )
-    linear_node_2 = pattern.add_node(
-        **{GraphPattern.METATYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"}
-    )
-    add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    linear_node_2 = pattern.add_node(**{GraphPattern.TYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
+    add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
     activation_node_2 = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "SIGMOID",
-            GraphPattern.METATYPE_ATTR: [om.OVSigmoidMetatype, om.OVHSigmoidMetatype],
+            GraphPattern.TYPE_ATTR: [om.OVSigmoidMetatype, om.OVHSigmoidMetatype],
         }
     )
     multiply_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "MULTIPLY",
-            GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype,
+            GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype,
             GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
         }
     )

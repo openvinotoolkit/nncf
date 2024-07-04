@@ -36,7 +36,7 @@ def test_find_matching_subgraphs():
         graph_part = GraphPattern()
         pattern_nodes = []
         for metatype in patterns:
-            pattern_nodes.append(graph_part.add_node(**{GraphPattern.METATYPE_ATTR: metatype}))
+            pattern_nodes.append(graph_part.add_node(**{GraphPattern.TYPE_ATTR: metatype}))
         for i in range(1, len(pattern_nodes)):
             graph_part.add_edge(pattern_nodes[i - 1], pattern_nodes[i])
         graph_pattern.add_pattern_alternative(graph_part)

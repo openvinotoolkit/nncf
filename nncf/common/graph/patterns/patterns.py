@@ -78,8 +78,8 @@ class GraphPattern:
     """
 
     LABEL_ATTR = "label"
-    METATYPE_ATTR = "type"
-    NODE_TYPE_ATTR = "metatype"
+    TYPE_ATTR = "type"
+    METATYPE_ATTR = "metatype"
     ANY_PATTERN_NODE_TYPE = "ANY_PATTERN_NODE"
     NON_PATTERN_NODE_TYPE = "NON_PATTERN_NODE"
     PATTERN_NODE_TO_EXCLUDE = "PATTERN_NODE_TO_EXCLUDE"
@@ -172,10 +172,8 @@ class GraphPattern:
 
         # Special case when first node is ANY_PATTERN_NODE_TYPE or NON_PATTERN_NODE_TYPE
         if (
-            GraphPattern.ANY_PATTERN_NODE_TYPE
-            in second_graph.nodes[first_node_second_graph][GraphPattern.METATYPE_ATTR]
-            or GraphPattern.NON_PATTERN_NODE_TYPE
-            in second_graph.nodes[first_node_second_graph][GraphPattern.METATYPE_ATTR]
+            GraphPattern.ANY_PATTERN_NODE_TYPE in second_graph.nodes[first_node_second_graph][GraphPattern.TYPE_ATTR]
+            or GraphPattern.NON_PATTERN_NODE_TYPE in second_graph.nodes[first_node_second_graph][GraphPattern.TYPE_ATTR]
         ):
             successors = self_graph.successors(first_node_second_graph)
             new_edges = list(it.product([last_node_first_graph], successors))
@@ -235,8 +233,8 @@ class GraphPattern:
             self._graph.add_edges_from(remapped_edges)
 
     def add_node(self, **attrs: Dict[str, Any]) -> int:
-        if GraphPattern.METATYPE_ATTR in attrs and not isinstance(attrs[GraphPattern.METATYPE_ATTR], list):
-            attrs[GraphPattern.METATYPE_ATTR] = cast(Any, [attrs[GraphPattern.METATYPE_ATTR]])
+        if GraphPattern.TYPE_ATTR in attrs and not isinstance(attrs[GraphPattern.TYPE_ATTR], list):
+            attrs[GraphPattern.TYPE_ATTR] = cast(Any, [attrs[GraphPattern.TYPE_ATTR]])
         self._graph.add_node(self._node_counter, **attrs)
         self._node_counter += 1
         return self._node_counter - 1
@@ -255,9 +253,9 @@ class GraphPattern:
 
 
 def merge_two_types_of_operations(first_op: Dict[str, Any], second_op: Dict[str, Any], label: str) -> Dict[str, Any]:
-    if GraphPattern.METATYPE_ATTR in first_op and GraphPattern.METATYPE_ATTR in second_op:
-        res = {GraphPattern.METATYPE_ATTR: first_op[GraphPattern.METATYPE_ATTR]}
-        res[GraphPattern.METATYPE_ATTR].extend(second_op[GraphPattern.METATYPE_ATTR])
+    if GraphPattern.TYPE_ATTR in first_op and GraphPattern.TYPE_ATTR in second_op:
+        res = {GraphPattern.TYPE_ATTR: first_op[GraphPattern.TYPE_ATTR]}
+        res[GraphPattern.TYPE_ATTR].extend(second_op[GraphPattern.TYPE_ATTR])
         res[GraphPattern.LABEL_ATTR] = label
         return res
     raise nncf.InternalError("Incorrect dicts of operations")

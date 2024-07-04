@@ -284,28 +284,28 @@ class ChannelAlignment(Algorithm):
     def _get_target_patterns(self) -> GraphPattern:
         input_attrs = {
             GraphPattern.LABEL_ATTR: "INPUT",
-            GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE,
+            GraphPattern.TYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE,
         }
         producer_attrs = {
             GraphPattern.LABEL_ATTR: "CONV_PRODUCER",
-            GraphPattern.NODE_TYPE_ATTR: self._backend_entity.get_conv_metatypes()
+            GraphPattern.METATYPE_ATTR: self._backend_entity.get_conv_metatypes()
             + self._backend_entity.get_linear_metatypes(),
         }
         bias_attrs = {
             GraphPattern.LABEL_ATTR: "BIAS_PRODUCER",
-            GraphPattern.NODE_TYPE_ATTR: self._backend_entity.get_add_metatypes(),
+            GraphPattern.METATYPE_ATTR: self._backend_entity.get_add_metatypes(),
         }
         bias_const_attrs = {
             GraphPattern.LABEL_ATTR: "BIAS_CONSTANT",
-            GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE,
+            GraphPattern.TYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE,
         }
         consumer_attrs = {
             GraphPattern.LABEL_ATTR: "CONV_CONSUMER",
-            GraphPattern.NODE_TYPE_ATTR: self._backend_entity.get_conv_metatypes(),
+            GraphPattern.METATYPE_ATTR: self._backend_entity.get_conv_metatypes(),
         }
         conv_const_attrs = {
             GraphPattern.LABEL_ATTR: "CONV_CONSTANT",
-            GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE,
+            GraphPattern.TYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE,
         }
 
         use_constant = True

@@ -22,7 +22,7 @@ def _are_nodes_matched(node_1, node_2) -> bool:  # type:ignore
     for attr in node_2:
         if attr in ATTRS_TO_SKIP:
             continue
-        if attr == GraphPattern.METATYPE_ATTR:
+        if attr == GraphPattern.TYPE_ATTR:
             # GraphPattern.ANY_PATTERN_NODE_TYPE and GraphPattern.NON_PATTERN_NODE_TYPE
             # are matched to any node type.
             if GraphPattern.ANY_PATTERN_NODE_TYPE in node_2[attr] or GraphPattern.NON_PATTERN_NODE_TYPE in node_2[attr]:
@@ -30,7 +30,7 @@ def _are_nodes_matched(node_1, node_2) -> bool:  # type:ignore
             # Torch and TF pattern mapping based on 'type' section,
             # While ONNX mapping based on metatypes -
             # to support all of them, we need to check the existence of the attributes
-            if GraphPattern.NODE_TYPE_ATTR in node_1 and node_1[GraphPattern.NODE_TYPE_ATTR] in node_2[attr]:
+            if GraphPattern.METATYPE_ATTR in node_1 and node_1[GraphPattern.METATYPE_ATTR] in node_2[attr]:
                 continue
         if node_1[attr] not in node_2[attr]:
             return False
@@ -44,7 +44,7 @@ def _sort_patterns_by_len(pattern: nx.DiGraph) -> int:
     non_pattern_nodes = [
         node_id
         for node_id, node_data in pattern.nodes(data=True)
-        if GraphPattern.NON_PATTERN_NODE_TYPE in node_data.get(GraphPattern.METATYPE_ATTR, [])
+        if GraphPattern.NON_PATTERN_NODE_TYPE in node_data.get(GraphPattern.TYPE_ATTR, [])
     ]
     return len(pattern) - len(non_pattern_nodes)
 
@@ -85,7 +85,7 @@ def _is_subgraph_matching_strict(graph: nx.DiGraph, pattern: nx.DiGraph, subgrap
             last_nodes.append(node)
 
     for node_from_graph, node_from_pattern in subgraph.items():
-        if GraphPattern.NON_PATTERN_NODE_TYPE in pattern.nodes[node_from_pattern].get(GraphPattern.METATYPE_ATTR, []):
+        if GraphPattern.NON_PATTERN_NODE_TYPE in pattern.nodes[node_from_pattern].get(GraphPattern.TYPE_ATTR, []):
             continue
         predecessors_keys = graph.pred[node_from_graph].keys()
         successor_keys = graph.succ[node_from_graph].keys()
@@ -114,7 +114,7 @@ def _copy_subgraph_excluding_non_pattern_node(subgraph: Dict[str, str], pattern_
     output = {}
     for node_from_graph, node_from_pattern in subgraph.items():
         pattern_node = pattern_graph.graph.nodes[node_from_pattern]
-        pattern_node_types = pattern_node.get(GraphPattern.METATYPE_ATTR, [])
+        pattern_node_types = pattern_node.get(GraphPattern.TYPE_ATTR, [])
         if GraphPattern.NON_PATTERN_NODE_TYPE in pattern_node_types:
             continue
         if pattern_node.get(GraphPattern.PATTERN_NODE_TO_EXCLUDE, False):

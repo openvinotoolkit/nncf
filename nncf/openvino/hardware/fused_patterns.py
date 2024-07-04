@@ -27,13 +27,11 @@ OPENVINO_HW_FUSED_PATTERNS = Registry("openvino")
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ADD_SCALE_SHIFT_OUTPUT)
 def create_add_scale_shift_output() -> GraphPattern:
     pattern = GraphPattern()
-    add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
-    mul_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
-    )
-    add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
+    mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype})
+    add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
     result_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MODEL_OUTPUT", GraphPattern.METATYPE_ATTR: om.OVResultMetatype}
+        **{GraphPattern.LABEL_ATTR: "MODEL_OUTPUT", GraphPattern.TYPE_ATTR: om.OVResultMetatype}
     )
 
     pattern.add_edge(add_node_1, mul_node)
@@ -46,30 +44,26 @@ def create_add_scale_shift_output() -> GraphPattern:
 def create_batch_index() -> GraphPattern:
     pattern = GraphPattern()
     subtract_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "SUBTRACT", GraphPattern.METATYPE_ATTR: om.OVSubtractMetatype}
+        **{GraphPattern.LABEL_ATTR: "SUBTRACT", GraphPattern.TYPE_ATTR: om.OVSubtractMetatype}
     )
     multiply_node_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype}
     )
     multiply_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype}
     )
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
     unsqueeze_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "UNSQUEEZE", GraphPattern.METATYPE_ATTR: om.OVUnsqueezeMetatype}
+        **{GraphPattern.LABEL_ATTR: "UNSQUEEZE", GraphPattern.TYPE_ATTR: om.OVUnsqueezeMetatype}
     )
     # TODO (KodiaqQ): Check the pattern on real case
-    concat_node_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
-    )
-    concat_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
-    )
+    concat_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.TYPE_ATTR: om.OVConcatMetatype})
+    concat_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.TYPE_ATTR: om.OVConcatMetatype})
     reshape_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: om.OVReshapeMetatype}
+        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.TYPE_ATTR: om.OVReshapeMetatype}
     )
     convolution_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "CONVOLUTION", GraphPattern.METATYPE_ATTR: om.OVConvolutionMetatype}
+        **{GraphPattern.LABEL_ATTR: "CONVOLUTION", GraphPattern.TYPE_ATTR: om.OVConvolutionMetatype}
     )
 
     pattern.add_edge(subtract_node, multiply_node_1)
@@ -86,7 +80,7 @@ def create_batch_index() -> GraphPattern:
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.MVN_SCALE_SHIFT)
 def create_mvn() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MVN", GraphPattern.METATYPE_ATTR: om.OVMVNMetatype})
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MVN", GraphPattern.TYPE_ATTR: om.OVMVNMetatype})
     scale_shift = create_scale_shift()
 
     pattern.join_patterns(scale_shift)
@@ -97,10 +91,10 @@ def create_mvn() -> GraphPattern:
 def create_normalize() -> GraphPattern:
     pattern = GraphPattern()
     normalize_l2_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "NORMALIZEL2", GraphPattern.METATYPE_ATTR: om.OVNormalizeL2Metatype}
+        **{GraphPattern.LABEL_ATTR: "NORMALIZEL2", GraphPattern.TYPE_ATTR: om.OVNormalizeL2Metatype}
     )
     multiply_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype}
     )
 
     pattern.add_edge(normalize_l2_node, multiply_node)
@@ -110,8 +104,8 @@ def create_normalize() -> GraphPattern:
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_WITH_BIAS)
 def create_biased_op() -> GraphPattern:
     pattern = GraphPattern()
-    linear_node = pattern.add_node(**{GraphPattern.METATYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    linear_node = pattern.add_node(**{GraphPattern.TYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
 
     pattern.add_edge(linear_node, add_node)
     return pattern
@@ -120,10 +114,8 @@ def create_biased_op() -> GraphPattern:
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SCALE_SHIFT)
 def create_scale_shift() -> GraphPattern:
     pattern = GraphPattern()
-    mul_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
-    )
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
     pattern.add_edge(mul_node, add_node)
     return pattern
 
@@ -134,13 +126,13 @@ def create_shift_scale() -> GraphPattern:
     add_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "ADD, SUBTRACT",
-            GraphPattern.METATYPE_ATTR: [om.OVAddMetatype, om.OVSubtractMetatype],
+            GraphPattern.TYPE_ATTR: [om.OVAddMetatype, om.OVSubtractMetatype],
         }
     )
     mul_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "MULTIPLY, DIV",
-            GraphPattern.METATYPE_ATTR: [om.OVMultiplyMetatype, om.OVDivideMetatype],
+            GraphPattern.TYPE_ATTR: [om.OVMultiplyMetatype, om.OVDivideMetatype],
         }
     )
     pattern.add_edge(add_node, mul_node)
@@ -150,11 +142,9 @@ def create_shift_scale() -> GraphPattern:
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SOFTMAX_DIV)
 def create_softmax_div() -> GraphPattern:
     pattern = GraphPattern()
-    exp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "EXP", GraphPattern.METATYPE_ATTR: om.OVExpMetatype})
-    sum_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "REDUCE_SUM", GraphPattern.METATYPE_ATTR: om.OVSumMetatype})
-    divide_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "DIVIDE", GraphPattern.METATYPE_ATTR: om.OVDivideMetatype}
-    )
+    exp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "EXP", GraphPattern.TYPE_ATTR: om.OVExpMetatype})
+    sum_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "REDUCE_SUM", GraphPattern.TYPE_ATTR: om.OVSumMetatype})
+    divide_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "DIVIDE", GraphPattern.TYPE_ATTR: om.OVDivideMetatype})
 
     pattern.add_edge(exp_node, sum_node)
     pattern.add_edge(exp_node, divide_node)
@@ -168,15 +158,15 @@ def create_softmax_div() -> GraphPattern:
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.HSWISH_ACTIVATION)
 def create_hswish() -> GraphPattern:
     pattern = GraphPattern()
-    linear_node = pattern.add_node(**{GraphPattern.METATYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
-    add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
-    add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
-    clamp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CLAMP", GraphPattern.METATYPE_ATTR: om.OVClampMetatype})
+    linear_node = pattern.add_node(**{GraphPattern.TYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
+    add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
+    add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
+    clamp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CLAMP", GraphPattern.TYPE_ATTR: om.OVClampMetatype})
     multiply_node_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype}
     )
     multiply_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype}
     )
 
     pattern.add_edge(linear_node, add_node_1)
@@ -194,7 +184,7 @@ def create_hswish_pattern_2() -> GraphPattern:
     input_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "ADD, MULTIPLY, REDUCE_MEAN, SQUEEZE",
-            GraphPattern.METATYPE_ATTR: [
+            GraphPattern.TYPE_ATTR: [
                 om.OVAddMetatype,
                 om.OVMultiplyMetatype,
                 om.OVReduceMeanMetatype,
@@ -202,13 +192,13 @@ def create_hswish_pattern_2() -> GraphPattern:
             ],
         }
     )
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
-    clamp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CLAMP", GraphPattern.METATYPE_ATTR: om.OVClampMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
+    clamp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CLAMP", GraphPattern.TYPE_ATTR: om.OVClampMetatype})
     multiply_node_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype}
     )
     multiply_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype}
     )
 
     pattern.add_edge(input_node, add_node)
@@ -222,12 +212,12 @@ def create_hswish_pattern_2() -> GraphPattern:
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.HSWISH_ACTIVATION_WITHOUT_DENOMINATOR)
 def create_hswish_without_denominator() -> GraphPattern:
     pattern = GraphPattern()
-    linear_node = pattern.add_node(**{GraphPattern.METATYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
-    add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
-    add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
-    clamp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CLAMP", GraphPattern.METATYPE_ATTR: om.OVClampMetatype})
+    linear_node = pattern.add_node(**{GraphPattern.TYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
+    add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
+    add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
+    clamp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CLAMP", GraphPattern.TYPE_ATTR: om.OVClampMetatype})
     multiply_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype}
     )
 
     pattern.add_edge(linear_node, add_node_1)
@@ -241,13 +231,13 @@ def create_hswish_without_denominator() -> GraphPattern:
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SWISH_WITH_HARD_SIGMOID)
 def create_swish_with_hardsigmoid() -> GraphPattern:
     pattern = GraphPattern()
-    linear_node = pattern.add_node(**{GraphPattern.METATYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    linear_node = pattern.add_node(**{GraphPattern.TYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
     hard_sigmoid_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "HARDSIGMOID", GraphPattern.METATYPE_ATTR: om.OVHardSigmoidMetatype}
+        **{GraphPattern.LABEL_ATTR: "HARDSIGMOID", GraphPattern.TYPE_ATTR: om.OVHardSigmoidMetatype}
     )
     multiply_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype}
     )
 
     pattern.add_edge(linear_node, add_node)
@@ -260,11 +250,11 @@ def create_swish_with_hardsigmoid() -> GraphPattern:
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SOFTMAX)
 def create_softmax() -> GraphPattern:
     pattern = GraphPattern()
-    exp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "EXP", GraphPattern.METATYPE_ATTR: om.OVExpMetatype})
-    sum_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "REDUCE_SUM", GraphPattern.METATYPE_ATTR: om.OVSumMetatype})
-    power_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "POWER", GraphPattern.METATYPE_ATTR: om.OVPowerMetatype})
+    exp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "EXP", GraphPattern.TYPE_ATTR: om.OVExpMetatype})
+    sum_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "REDUCE_SUM", GraphPattern.TYPE_ATTR: om.OVSumMetatype})
+    power_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "POWER", GraphPattern.TYPE_ATTR: om.OVPowerMetatype})
     multiply_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype}
     )
 
     pattern.add_edge(exp_node, sum_node)
@@ -284,7 +274,7 @@ def create_input_convert_transpose_processing() -> GraphPattern:
     pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "ADD, MULTIPLY, SUBTRACT",
-            GraphPattern.METATYPE_ATTR: [om.OVAddMetatype, om.OVMultiplyMetatype, om.OVSubtractMetatype],
+            GraphPattern.TYPE_ATTR: [om.OVAddMetatype, om.OVMultiplyMetatype, om.OVSubtractMetatype],
         }
     )
 
@@ -296,12 +286,10 @@ def create_input_convert_transpose_processing() -> GraphPattern:
 def create_input_convert_transpose_reverse_add() -> GraphPattern:
     input_convert_transpose = create_input_convert_transpose()
     pattern = GraphPattern()
-    split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.METATYPE_ATTR: om.OVSplitMetatype})
+    split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.TYPE_ATTR: om.OVSplitMetatype})
     # TODO (KodiaqQ): Check the pattern on real case
-    concat_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
-    )
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    concat_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.TYPE_ATTR: om.OVConcatMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
 
     pattern.add_edge(split_node, concat_node)
     pattern.add_edge(concat_node, add_node)
@@ -313,19 +301,17 @@ def create_input_convert_transpose_reverse_add() -> GraphPattern:
 def create_input_convert_transpose_reverse_scale_shift() -> GraphPattern:
     pattern = GraphPattern()
     model_input = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype}
+        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.TYPE_ATTR: om.OVParameterMetatype}
     )
     convert_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "CONVERT", GraphPattern.METATYPE_ATTR: om.OVConvertMetatype}
+        **{GraphPattern.LABEL_ATTR: "CONVERT", GraphPattern.TYPE_ATTR: om.OVConvertMetatype}
     )
     transpose_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: om.OVTransposeMetatype}
+        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.TYPE_ATTR: om.OVTransposeMetatype}
     )
-    split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.METATYPE_ATTR: om.OVSplitMetatype})
+    split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.TYPE_ATTR: om.OVSplitMetatype})
     # TODO (KodiaqQ): Check the pattern on real case
-    concat_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
-    )
+    concat_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.TYPE_ATTR: om.OVConcatMetatype})
     scale_shift = create_scale_shift()
 
     pattern.add_edge(model_input, convert_node)
@@ -348,12 +334,12 @@ def create_input_convert_transpose_scale_shift() -> GraphPattern:
 def create_input_processing() -> GraphPattern:
     pattern = GraphPattern()
     model_input = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype}
+        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.TYPE_ATTR: om.OVParameterMetatype}
     )
     processing_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "SUBTRACT, MULTIPLY, ADD",
-            GraphPattern.METATYPE_ATTR: [om.OVSubtractMetatype, om.OVMultiplyMetatype, om.OVAddMetatype],
+            GraphPattern.TYPE_ATTR: [om.OVSubtractMetatype, om.OVMultiplyMetatype, om.OVAddMetatype],
         }
     )
 
@@ -365,14 +351,12 @@ def create_input_processing() -> GraphPattern:
 def create_input_reverse_add() -> GraphPattern:
     pattern = GraphPattern()
     model_input = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype}
+        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.TYPE_ATTR: om.OVParameterMetatype}
     )
-    split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.METATYPE_ATTR: om.OVSplitMetatype})
+    split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.TYPE_ATTR: om.OVSplitMetatype})
     # TODO (KodiaqQ): Check the pattern on real case
-    concat_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
-    )
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    concat_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.TYPE_ATTR: om.OVConcatMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
 
     pattern.add_edge(model_input, split_node)
     pattern.add_edge(split_node, concat_node)
@@ -384,13 +368,11 @@ def create_input_reverse_add() -> GraphPattern:
 def create_input_reverse_scale_shift() -> GraphPattern:
     pattern = GraphPattern()
     model_input = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype}
+        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.TYPE_ATTR: om.OVParameterMetatype}
     )
-    split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.METATYPE_ATTR: om.OVSplitMetatype})
+    split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.TYPE_ATTR: om.OVSplitMetatype})
     # TODO (KodiaqQ): Check the pattern on real case
-    concat_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
-    )
+    concat_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.TYPE_ATTR: om.OVConcatMetatype})
     scale_shift = create_scale_shift()
 
     pattern.add_edge(model_input, split_node)
@@ -402,7 +384,7 @@ def create_input_reverse_scale_shift() -> GraphPattern:
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SCALE_SHIFT)
 def create_input_scale_shift() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.TYPE_ATTR: om.OVParameterMetatype})
     scale_shift = create_scale_shift()
 
     pattern.join_patterns(scale_shift)
@@ -412,7 +394,7 @@ def create_input_scale_shift() -> GraphPattern:
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SHIFT_SCALE)
 def create_input_shift_scale() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype})
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.TYPE_ATTR: om.OVParameterMetatype})
     shift_scale = create_shift_scale()
 
     pattern.join_patterns(shift_scale)
@@ -423,15 +405,15 @@ def create_input_shift_scale() -> GraphPattern:
 def create_input_transpose_processing() -> GraphPattern:
     pattern = GraphPattern()
     model_input = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype}
+        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.TYPE_ATTR: om.OVParameterMetatype}
     )
     transpose_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: om.OVTransposeMetatype}
+        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.TYPE_ATTR: om.OVTransposeMetatype}
     )
     processing_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "ADD, MULTIPLY, SUBTRACT",
-            GraphPattern.METATYPE_ATTR: [om.OVAddMetatype, om.OVMultiplyMetatype, om.OVSubtractMetatype],
+            GraphPattern.TYPE_ATTR: [om.OVAddMetatype, om.OVMultiplyMetatype, om.OVSubtractMetatype],
         }
     )
 
@@ -444,17 +426,15 @@ def create_input_transpose_processing() -> GraphPattern:
 def create_input_transpose_reverse_add() -> GraphPattern:
     pattern = GraphPattern()
     model_input = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype}
+        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.TYPE_ATTR: om.OVParameterMetatype}
     )
     transpose_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: om.OVTransposeMetatype}
+        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.TYPE_ATTR: om.OVTransposeMetatype}
     )
-    split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.METATYPE_ATTR: om.OVSplitMetatype})
+    split_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SPLIT", GraphPattern.TYPE_ATTR: om.OVSplitMetatype})
     # TODO (KodiaqQ): Check the pattern on real case
-    concat_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.OVConcatMetatype}
-    )
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    concat_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.TYPE_ATTR: om.OVConcatMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.TYPE_ATTR: om.OVAddMetatype})
 
     pattern.add_edge(model_input, transpose_node)
     pattern.add_edge(transpose_node, split_node)
@@ -467,10 +447,10 @@ def create_input_transpose_reverse_add() -> GraphPattern:
 def create_input_transpose_scale_shift() -> GraphPattern:
     pattern = GraphPattern()
     model_input = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype}
+        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.TYPE_ATTR: om.OVParameterMetatype}
     )
     transpose_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: om.OVTransposeMetatype}
+        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.TYPE_ATTR: om.OVTransposeMetatype}
     )
     scale_shift = create_scale_shift()
 
@@ -575,7 +555,7 @@ def create_linear_squeeze_arithmetic_activation() -> GraphPattern:
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.MVN_SCALE_SHIFT_ACTIVATIONS)
 def create_mvn_scale_shift_activations() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MVN", GraphPattern.METATYPE_ATTR: om.OVMVNMetatype})
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MVN", GraphPattern.TYPE_ATTR: om.OVMVNMetatype})
     scale_shift = create_scale_shift()
     activations = atomic_activations_operations()
 
@@ -605,9 +585,9 @@ def create_linear_activations_unsqueeze_bn_squeeze():
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.HSWISH_ACTIVATION_CLAMP_MULTIPLY)
 def create_clamp_mult_const() -> GraphPattern:
     pattern = GraphPattern()
-    clamp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CLAMP", GraphPattern.METATYPE_ATTR: om.OVClampMetatype})
+    clamp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CLAMP", GraphPattern.TYPE_ATTR: om.OVClampMetatype})
     multiply_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.OVMultiplyMetatype}
     )
 
     pattern.add_edge(clamp_node, multiply_node)
@@ -696,20 +676,20 @@ def create_linear_biased_activation_elementwise() -> GraphPattern:
 
 def elementwise_operations() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.METATYPE_ATTR: ELEMENTWISE_OPERATIONS, GraphPattern.LABEL_ATTR: "ELEMENTWISE"})
+    pattern.add_node(**{GraphPattern.TYPE_ATTR: ELEMENTWISE_OPERATIONS, GraphPattern.LABEL_ATTR: "ELEMENTWISE"})
     return pattern
 
 
 def linear_operations() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.METATYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
+    pattern.add_node(**{GraphPattern.TYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
     return pattern
 
 
 def batch_normalization_operations() -> GraphPattern:
     pattern = GraphPattern()
     pattern.add_node(
-        **{GraphPattern.METATYPE_ATTR: BATCH_NORMALIZATION_OPERATIONS, GraphPattern.LABEL_ATTR: "BATCH_NORMALIZATION"}
+        **{GraphPattern.TYPE_ATTR: BATCH_NORMALIZATION_OPERATIONS, GraphPattern.LABEL_ATTR: "BATCH_NORMALIZATION"}
     )
     return pattern
 
@@ -717,39 +697,39 @@ def batch_normalization_operations() -> GraphPattern:
 def atomic_activations_operations() -> GraphPattern:
     pattern = GraphPattern()
     pattern.add_node(
-        **{GraphPattern.METATYPE_ATTR: ATOMIC_ACTIVATIONS_OPERATIONS, GraphPattern.LABEL_ATTR: "ATOMIC_ACTIVATIONS"}
+        **{GraphPattern.TYPE_ATTR: ATOMIC_ACTIVATIONS_OPERATIONS, GraphPattern.LABEL_ATTR: "ATOMIC_ACTIVATIONS"}
     )
     return pattern
 
 
 def arithmetic_operations() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.METATYPE_ATTR: ARITHMETIC_OPERATIONS, GraphPattern.LABEL_ATTR: "ARITHMETIC"})
+    pattern.add_node(**{GraphPattern.TYPE_ATTR: ARITHMETIC_OPERATIONS, GraphPattern.LABEL_ATTR: "ARITHMETIC"})
     return pattern
 
 
 def squeeze_operation() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: "SQUEEZE", GraphPattern.METATYPE_ATTR: om.OVSqueezeMetatype})
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "SQUEEZE", GraphPattern.TYPE_ATTR: om.OVSqueezeMetatype})
     return pattern
 
 
 def unsqueeze_operation() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: "UNSQUEEZE", GraphPattern.METATYPE_ATTR: om.OVUnsqueezeMetatype})
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "UNSQUEEZE", GraphPattern.TYPE_ATTR: om.OVUnsqueezeMetatype})
     return pattern
 
 
 def create_input_convert_transpose() -> GraphPattern:
     pattern = GraphPattern()
     model_input = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: om.OVParameterMetatype}
+        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.TYPE_ATTR: om.OVParameterMetatype}
     )
     convert_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "CONVERT", GraphPattern.METATYPE_ATTR: om.OVConvertMetatype}
+        **{GraphPattern.LABEL_ATTR: "CONVERT", GraphPattern.TYPE_ATTR: om.OVConvertMetatype}
     )
     transpose_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: om.OVTransposeMetatype}
+        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.TYPE_ATTR: om.OVTransposeMetatype}
     )
     pattern.add_edge(model_input, convert_node)
     pattern.add_edge(convert_node, transpose_node)

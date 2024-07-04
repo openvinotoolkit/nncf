@@ -28,29 +28,29 @@ ONNX_HW_FUSED_PATTERNS = Registry("onnx")
 def create_mvn() -> GraphPattern:
     pattern = GraphPattern()
     pattern_input_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.TYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
     )
     reduce_mean_node_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "REDUCE_MEAN_1", GraphPattern.METATYPE_ATTR: om.ONNXReduceMeanMetatype}
+        **{GraphPattern.LABEL_ATTR: "REDUCE_MEAN_1", GraphPattern.TYPE_ATTR: om.ONNXReduceMeanMetatype}
     )
     sub_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "SUBTRACT",
-            GraphPattern.METATYPE_ATTR: [om.ONNXSubMetatype],
+            GraphPattern.TYPE_ATTR: [om.ONNXSubMetatype],
         }
     )
     pow_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "POW",
-            GraphPattern.METATYPE_ATTR: [om.ONNXPowMetatype],
+            GraphPattern.TYPE_ATTR: [om.ONNXPowMetatype],
         }
     )
     reduce_mean_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "REDUCE_MEAN_2", GraphPattern.METATYPE_ATTR: om.ONNXReduceMeanMetatype}
+        **{GraphPattern.LABEL_ATTR: "REDUCE_MEAN_2", GraphPattern.TYPE_ATTR: om.ONNXReduceMeanMetatype}
     )
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
-    sqrt_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SQRT", GraphPattern.METATYPE_ATTR: om.ONNXSqrtMetatype})
-    div_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "DIV", GraphPattern.METATYPE_ATTR: om.ONNXDivLayerMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.TYPE_ATTR: om.ONNXAddLayerMetatype})
+    sqrt_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SQRT", GraphPattern.TYPE_ATTR: om.ONNXSqrtMetatype})
+    div_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "DIV", GraphPattern.TYPE_ATTR: om.ONNXDivLayerMetatype})
 
     pattern.add_edge(pattern_input_node, reduce_mean_node_1)
     pattern.add_edge(reduce_mean_node_1, sub_node)
@@ -77,30 +77,30 @@ def create_mvn_scale_shift() -> GraphPattern:
 def create_gelu() -> GraphPattern:
     pattern = GraphPattern()
     pattern_input_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.TYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
     )
     div_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "DIV",
-            GraphPattern.METATYPE_ATTR: [om.ONNXDivLayerMetatype, om.ONNXMulLayerMetatype],
+            GraphPattern.TYPE_ATTR: [om.ONNXDivLayerMetatype, om.ONNXMulLayerMetatype],
         }
     )
     erf_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "ERF",
-            GraphPattern.METATYPE_ATTR: om.ONNXErfMetatype,
+            GraphPattern.TYPE_ATTR: om.ONNXErfMetatype,
         }
     )
     add_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "ADD",
-            GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype],
+            GraphPattern.TYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype],
         }
     )
     mul_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "MUL",
-            GraphPattern.METATYPE_ATTR: [om.ONNXMulLayerMetatype, om.ONNXDivLayerMetatype],
+            GraphPattern.TYPE_ATTR: [om.ONNXMulLayerMetatype, om.ONNXDivLayerMetatype],
         }
     )
     pattern.add_edge(pattern_input_node, div_node)
@@ -115,15 +115,15 @@ def create_gelu() -> GraphPattern:
 def create_scale_shift() -> GraphPattern:
     pattern = GraphPattern()
     pattern_input_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.TYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
     )
     mul_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.ONNXMulLayerMetatype}
     )
     add_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "ADD, SUBTRACT",
-            GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype],
+            GraphPattern.TYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype],
         }
     )
     pattern.add_edge(pattern_input_node, mul_node)
@@ -137,13 +137,13 @@ def create_shift_scale() -> GraphPattern:
     add_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "ADD, SUBTRACT",
-            GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype],
+            GraphPattern.TYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype],
         }
     )
     mul_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "MULTIPLY, DIV",
-            GraphPattern.METATYPE_ATTR: [om.ONNXMulLayerMetatype, om.ONNXDivLayerMetatype],
+            GraphPattern.TYPE_ATTR: [om.ONNXMulLayerMetatype, om.ONNXDivLayerMetatype],
         }
     )
 
@@ -155,13 +155,13 @@ def create_shift_scale() -> GraphPattern:
 def create_swish_with_sigmoid() -> GraphPattern:
     pattern = GraphPattern()
     pattern_input_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.TYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
     )
     sigmoid_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "SIGMOID", GraphPattern.METATYPE_ATTR: om.ONNXSigmoidMetatype}
+        **{GraphPattern.LABEL_ATTR: "SIGMOID", GraphPattern.TYPE_ATTR: om.ONNXSigmoidMetatype}
     )
     mul_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.ONNXMulLayerMetatype}
     )
 
     pattern.add_edge(pattern_input_node, sigmoid_node)
@@ -174,13 +174,13 @@ def create_swish_with_sigmoid() -> GraphPattern:
 def create_swish_with_hard_sigmoid() -> GraphPattern:
     pattern = GraphPattern()
     pattern_input_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.TYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
     )
     hard_sigmoid_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "HARD_SIGMOID", GraphPattern.METATYPE_ATTR: om.ONNXHardSigmoidMetatype}
+        **{GraphPattern.LABEL_ATTR: "HARD_SIGMOID", GraphPattern.TYPE_ATTR: om.ONNXHardSigmoidMetatype}
     )
     mul_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.ONNXMulLayerMetatype}
     )
 
     pattern.add_edge(pattern_input_node, hard_sigmoid_node)
@@ -193,12 +193,12 @@ def create_swish_with_hard_sigmoid() -> GraphPattern:
 def create_hswish_without_denominator() -> GraphPattern:
     pattern = GraphPattern()
     any_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE}
+        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.TYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE}
     )
-    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
-    relu_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "RELU", GraphPattern.METATYPE_ATTR: om.ONNXReluMetatype})
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.TYPE_ATTR: om.ONNXAddLayerMetatype})
+    relu_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "RELU", GraphPattern.TYPE_ATTR: om.ONNXReluMetatype})
     multiply_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: om.ONNXMulLayerMetatype}
     )
 
     pattern.add_edge(any_node, add_node)
@@ -212,7 +212,7 @@ def create_hswish_without_denominator() -> GraphPattern:
 def create_hswish() -> GraphPattern:
     div_pattern = GraphPattern()
     hswish = create_hswish_without_denominator()
-    div_pattern.add_node(**{GraphPattern.LABEL_ATTR: "DIV", GraphPattern.METATYPE_ATTR: om.ONNXDivLayerMetatype})
+    div_pattern.add_node(**{GraphPattern.LABEL_ATTR: "DIV", GraphPattern.TYPE_ATTR: om.ONNXDivLayerMetatype})
     hswish.join_patterns(div_pattern)
     return hswish
 
@@ -223,7 +223,7 @@ def create_hswish() -> GraphPattern:
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SCALE_SHIFT)
 def create_input_scale_shift() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype})
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.TYPE_ATTR: InputNoopMetatype})
     scale_shift = create_scale_shift()
 
     pattern.join_patterns(scale_shift)
@@ -233,7 +233,7 @@ def create_input_scale_shift() -> GraphPattern:
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SHIFT_SCALE)
 def create_input_shift_scale() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype})
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.TYPE_ATTR: InputNoopMetatype})
     shift_scale = create_shift_scale()
 
     pattern.join_patterns(shift_scale)
@@ -243,13 +243,11 @@ def create_input_shift_scale() -> GraphPattern:
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_PROCESSING)
 def create_input_add() -> GraphPattern:
     pattern = GraphPattern()
-    input_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype}
-    )
+    input_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.TYPE_ATTR: InputNoopMetatype})
     add_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "ADD, MULTIPLY",
-            GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXMulLayerMetatype],
+            GraphPattern.TYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXMulLayerMetatype],
         }
     )
 
@@ -490,14 +488,14 @@ def create_linear_scale_shift() -> GraphPattern:
 
 def linear_operations() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.METATYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
+    pattern.add_node(**{GraphPattern.TYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"})
     return pattern
 
 
 def batch_normalization_operations() -> GraphPattern:
     pattern = GraphPattern()
     pattern.add_node(
-        **{GraphPattern.METATYPE_ATTR: BATCH_NORMALIZATION_OPERATIONS, GraphPattern.LABEL_ATTR: "BATCH_NORMALIZATION"}
+        **{GraphPattern.TYPE_ATTR: BATCH_NORMALIZATION_OPERATIONS, GraphPattern.LABEL_ATTR: "BATCH_NORMALIZATION"}
     )
     return pattern
 
@@ -505,7 +503,7 @@ def batch_normalization_operations() -> GraphPattern:
 def atomic_activations_operations() -> GraphPattern:
     pattern = GraphPattern()
     pattern.add_node(
-        **{GraphPattern.METATYPE_ATTR: ATOMIC_ACTIVATIONS_OPERATIONS, GraphPattern.LABEL_ATTR: "ATOMIC_ACTIVATIONS"}
+        **{GraphPattern.TYPE_ATTR: ATOMIC_ACTIVATIONS_OPERATIONS, GraphPattern.LABEL_ATTR: "ATOMIC_ACTIVATIONS"}
     )
 
     swish_sigmoid = create_swish_with_sigmoid()
@@ -527,11 +525,11 @@ def atomic_activations_operations() -> GraphPattern:
 
 def arithmetic_operations() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.METATYPE_ATTR: ARITHMETIC_OPERATIONS, GraphPattern.LABEL_ATTR: "ARITHMETIC"})
+    pattern.add_node(**{GraphPattern.TYPE_ATTR: ARITHMETIC_OPERATIONS, GraphPattern.LABEL_ATTR: "ARITHMETIC"})
     return pattern
 
 
 def squeeze_operation() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: "SQUEEZE", GraphPattern.METATYPE_ATTR: om.ONNXSqueezeMetatype})
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "SQUEEZE", GraphPattern.TYPE_ATTR: om.ONNXSqueezeMetatype})
     return pattern
