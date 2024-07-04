@@ -253,23 +253,19 @@ def calculate_integer_quantization_params(
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
-    if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:
-        level_low = 0
-        level_high = 2**num_bits - 1
+    asym_quant = mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]
+    level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
+    level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
+
+    if asym_quant:
         min_values = fns.min(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
         max_values = fns.max(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
-        scale, zero_point = calculate_scale_zero_point(
-            min_values, max_values, level_low, level_high, narrow_range=False
-        )
-        return scale, zero_point
+    else:
+        max_values = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
+        min_values = -max_values
 
-    level_high = 2 ** (num_bits - 1) - 1
-    scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)  # [a1, r//gs, 1, a2]
-    scale /= level_high
-    eps = fns.finfo(scale).eps
-    # NOTE: adding machine epsilon to avoid division by zero
-    scale = fns.where(fns.abs(scale) < eps, eps, scale)
-    return scale, None
+    scale, zero_point = calculate_scale_zero_point(min_values, max_values, level_low, level_high, narrow_range=False)
+    return scale, zero_point if asym_quant else None
 
 
 def calculate_quantized_weight(
