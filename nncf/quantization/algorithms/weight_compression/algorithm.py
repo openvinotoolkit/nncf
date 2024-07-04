@@ -119,7 +119,12 @@ class WeightCompression(Algorithm):
 
         if self._gptq:
             gptq_params = self._advanced_parameters.gptq_params
-            self._gptq_algo = GPTQ(gptq_params.damp_percent, gptq_params.block_size, gptq_params.subset_size)
+            self._gptq_algo = GPTQ(
+                damp_percent=gptq_params.damp_percent,
+                block_size=gptq_params.block_size,
+                subset_size=gptq_params.subset_size,
+                scale_estimation=self._scale_estimation,
+            )
             self._gptq_statistics = None
 
     @property
@@ -374,7 +379,16 @@ class WeightCompression(Algorithm):
 
         scales = {}
         zero_points = {}
-        if (
+        if self._gptq:
+            model, scales, zero_points = self._gptq_algo.apply(
+                model=model,
+                graph=graph,
+                dataset=dataset,
+                weight_compression_parameters=all_weight_params,
+                statistic_points=self._gptq_statistics,
+                backend_entity=self._backend_entity,
+            )
+        elif (
             self._scale_estimation
             and activations is not None
             and self._mode not in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
@@ -392,16 +406,6 @@ class WeightCompression(Algorithm):
                 scale_estimation_params.weight_penalty,
             )
             scales = scale_algo.apply(model, graph)
-
-        if self._gptq:
-            model, scales, zero_points = self._gptq_algo.apply(
-                model=model,
-                graph=graph,
-                dataset=dataset,
-                weight_compression_parameters=all_weight_params,
-                statistic_points=self._gptq_statistics,
-                backend_entity=self._backend_entity,
-            )
 
         # Compress model using weight compression parameters
         transformed_model = self._backend_entity.transform_model(
@@ -523,7 +527,7 @@ class WeightCompression(Algorithm):
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         statistics_aggregator.register_statistic_points(statistic_container)
 
-        if self._gptq:
+        if self._gptq and not self._awq:
             self._gptq_statistics = self._gptq_algo.get_statistic_points(
                 model, graph, nodes_to_compress, self._backend_entity
             )
