@@ -19,7 +19,6 @@ from typing import Dict, Optional
 import numpy as np
 import openvino as ov
 import torch
-from datasets import load_dataset
 from memory_profiler import memory_usage
 from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
@@ -28,6 +27,7 @@ from transformers import AutoTokenizer
 from whowhatbench import Evaluator
 
 import nncf
+from datasets import load_dataset
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import StatsFromOutput
@@ -268,7 +268,12 @@ class LMWeightCompression(BaseTestPipeline):
         compressed_model_hf = self.model_hf
         if self.backend != BackendType.FP32:
             compressed_model_hf = OVModelForCausalLM.from_pretrained(
-                self.output_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                self.output_model_dir,
+                trust_remote_code=True,
+                load_in_8bit=False,
+                compile=False,
+                stateful=is_stateful,
+                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
             )
         print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)
