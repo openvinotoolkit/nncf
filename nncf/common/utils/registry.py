@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, List, cast
+from typing import Any, Callable, Dict
 
 
 class Registry:
@@ -17,26 +17,26 @@ class Registry:
 
     def __init__(self, name: str, add_name_as_attr: bool = False):
         self._name = name
-        self._registry_dict: Dict[str, object] = {}
+        self._registry_dict: Dict[str, Any] = {}
         self._add_name_as_attr = add_name_as_attr
 
     @property
-    def registry_dict(self) -> Dict[str, object]:
+    def registry_dict(self) -> Dict[str, Any]:
         return self._registry_dict
 
-    def values(self) -> List[object]:
-        return cast(List[object], self._registry_dict.values())
+    def values(self) -> Any:
+        return self._registry_dict.values()
 
-    def _register(self, obj: object, name: str) -> None:
+    def _register(self, obj: Any, name: str) -> None:
         if name in self._registry_dict:
             raise KeyError("{} is already registered in {}".format(name, self._name))
         self._registry_dict[name] = obj
 
-    def register(self, name: str = None) -> Callable[[object], object]:
-        def wrap(obj: object) -> object:
+    def register(self, name: str = None) -> Callable[[Any], Any]:
+        def wrap(obj: Any) -> Any:
             cls_name = name
             if cls_name is None:
-                cls_name = obj.__name__  # type: ignore
+                cls_name = obj.__name__
             if self._add_name_as_attr:
                 setattr(obj, self.REGISTERED_NAME_ATTR, name)
             self._register(obj, cls_name)
@@ -44,7 +44,7 @@ class Registry:
 
         return wrap
 
-    def get(self, name: str) -> object:
+    def get(self, name: str) -> Any:
         if name not in self._registry_dict:
             self._key_not_found(name)
         return self._registry_dict[name]
@@ -52,5 +52,5 @@ class Registry:
     def _key_not_found(self, name: str) -> None:
         raise KeyError("{} is unknown type of {} ".format(name, self._name))
 
-    def __contains__(self, item: object) -> bool:
+    def __contains__(self, item: Any) -> bool:
         return item in self._registry_dict.values()

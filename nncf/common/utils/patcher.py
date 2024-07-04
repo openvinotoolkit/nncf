@@ -25,11 +25,11 @@ class Patcher:
     """
 
     def __init__(self) -> None:
-        self._patched: Dict[Tuple[Any, str], List[Tuple[object, Callable[..., Any]]]] = OrderedDict()
+        self._patched: Dict[Tuple[Any, str], List[Tuple[Any, Callable[..., Any]]]] = OrderedDict()
 
     def patch(  # noqa: C901
         self,
-        obj_cls: Union[object],
+        obj_cls: Union[Any],
         wrapper: Callable[..., Any],
         *,
         force: bool = True,
@@ -65,14 +65,14 @@ class Patcher:
                     return
                 self._patch_instance_fn(obj_cls, fn_name, fn, wrapper, force)
 
-    def unpatch(self, obj_cls: object = None, depth: int = 0) -> None:
+    def unpatch(self, obj_cls: Any = None, depth: int = 0) -> None:
         """
         Undo patching
         :param obj_cls: Function to be unpatched.
         :param depth: How many patches to undo, depth=0 to undo all of them
         """
 
-        def _unpatch(obj: object, fn_name: str, key: Tuple[Any, str], depth: int) -> None:
+        def _unpatch(obj: Any, fn_name: str, key: Tuple[Any, str], depth: int) -> None:
             if depth == 0:
                 depth = len(self._patched[key])
             keep = len(self._patched[key]) - depth
@@ -90,7 +90,7 @@ class Patcher:
             obj_cls, fn_name = self.import_obj(obj_cls)
             n_args = len(inspect.getfullargspec(obj_cls.__getattribute__)[0])
             if n_args == 1:
-                key = (obj_cls.__name__, fn_name)  # type: ignore
+                key = (obj_cls.__name__, fn_name)
             else:
                 if inspect.isclass(obj_cls):
                     obj_cls_path = obj_cls.__module__ + "." + obj_cls.__name__
@@ -108,7 +108,7 @@ class Patcher:
                 obj, fn_name = self.import_obj(".".join([obj, fn_name]))
             _unpatch(obj, fn_name, key, depth)
 
-    def import_obj(self, obj_cls: Union[str, object]) -> Tuple[object, str]:  # noqa: C901
+    def import_obj(self, obj_cls: Union[str, Any]) -> Tuple[Any, str]:  # noqa: C901
         """Object import helper."""
         if isinstance(obj_cls, str):
             fn_name = obj_cls.split(".")[-1]
@@ -116,7 +116,7 @@ class Patcher:
         else:
             if "_partialmethod" in obj_cls.__dict__:
                 while "_partialmethod" in obj_cls.__dict__:
-                    obj_cls = obj_cls._partialmethod.keywords["__fn"]  # type: ignore
+                    obj_cls = obj_cls._partialmethod.keywords["__fn"]
             while isinstance(obj_cls, (partial, partialmethod)):
                 obj_cls = obj_cls.keywords["__fn"]
 
@@ -132,8 +132,8 @@ class Patcher:
                 fn_name = obj_cls.__name__
                 obj_cls = ".".join([obj_cls.__module__] + obj_cls.__qualname__.split(".")[:-1])
             else:
-                fn_name = obj_cls.__name__  # type: ignore
-                obj_cls = ".".join([obj_cls.__module__] + obj_cls.__qualname__.split(".")[:-1])  # type: ignore
+                fn_name = obj_cls.__name__
+                obj_cls = ".".join([obj_cls.__module__] + obj_cls.__qualname__.split(".")[:-1])
 
         if isinstance(obj_cls, str):
             try:
@@ -144,9 +144,7 @@ class Patcher:
                 obj_cls = getattr(importlib.import_module(module), obj_cls)
         return obj_cls, fn_name
 
-    def _patch_module_fn(
-        self, obj_cls: object, fn_name: str, fn: object, wrapper: Callable[..., Any], force: bool
-    ) -> None:
+    def _patch_module_fn(self, obj_cls: Any, fn_name: str, fn: Any, wrapper: Callable[..., Any], force: bool) -> None:
         def helper(*args, **kwargs):  # type: ignore
             obj_cls = kwargs.pop("__obj_cls")
             fn = kwargs.pop("__fn")
@@ -154,7 +152,7 @@ class Patcher:
             return wrapper(obj_cls, fn, *args, **kwargs)
 
         assert len(inspect.getfullargspec(obj_cls.__getattribute__)[0]) == 1
-        obj_cls_path = obj_cls.__name__  # type: ignore
+        obj_cls_path = obj_cls.__name__
         key = (obj_cls_path, fn_name)
         fn_ = self._initialize(key, force)
         if fn_ is not None:
@@ -162,9 +160,7 @@ class Patcher:
         setattr(obj_cls, fn_name, partial(helper, __wrapper=wrapper, __fn=fn, __obj_cls=obj_cls))
         self._patched[key].append((fn, wrapper))
 
-    def _patch_class_fn(
-        self, obj_cls: object, fn_name: str, fn: object, wrapper: Callable[..., Any], force: bool
-    ) -> None:
+    def _patch_class_fn(self, obj_cls: Any, fn_name: str, fn: Any, wrapper: Callable[..., Any], force: bool) -> None:
         if isinstance(fn, (staticmethod, classmethod)):
 
             def helper(*args, **kwargs):  # type: ignore
@@ -192,7 +188,7 @@ class Patcher:
                 return wrapper(self, fn.__get__(self), *args, **kwargs)
 
         assert len(inspect.getfullargspec(obj_cls.__getattribute__)[0]) == 2
-        obj_cls_path = obj_cls.__module__ + "." + obj_cls.__name__  # type: ignore
+        obj_cls_path = obj_cls.__module__ + "." + obj_cls.__name__
         key = (obj_cls_path, fn_name)
         fn_ = self._initialize(key, force)
         if fn_ is not None:
@@ -204,9 +200,7 @@ class Patcher:
         )
         self._patched[key].append((fn, wrapper))
 
-    def _patch_instance_fn(
-        self, obj_cls: object, fn_name: str, fn: object, wrapper: Callable[..., Any], force: bool
-    ) -> None:
+    def _patch_instance_fn(self, obj_cls: Any, fn_name: str, fn: Any, wrapper: Callable[..., Any], force: bool) -> None:
         def helper(ctx, *args, **kwargs):  # type: ignore
             fn = kwargs.pop("__fn")
             wrapper = kwargs.pop("__wrapper")
@@ -221,7 +215,7 @@ class Patcher:
         setattr(obj_cls, fn_name, partialmethod(helper, __wrapper=wrapper, __fn=fn).__get__(obj_cls))
         self._patched[key].append((fn, wrapper))
 
-    def _initialize(self, key: Tuple[int, str], force: bool) -> Optional[object]:
+    def _initialize(self, key: Tuple[int, str], force: bool) -> Optional[Any]:
         fn = None
         if key not in self._patched:
             self._patched[key] = []
