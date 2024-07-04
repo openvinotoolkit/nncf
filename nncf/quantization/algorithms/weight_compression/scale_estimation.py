@@ -132,9 +132,6 @@ class ScaleEstimation:
             stats = self._activations[node_name]
             reduction_axis = wp.reduction_axes[0]
 
-            cur_config = deepcopy(config)
-            cur_config.group_size = -1
-
             weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
             if len(weight_data) != 1:  # not supported by the algorithm
                 continue
@@ -162,19 +159,21 @@ class ScaleEstimation:
                 weight = fns.transpose(weight)
                 reduction_axis = 1
 
+            group_size = config.group_size if config.group_size != -1 else weight.shape[reduction_axis]
+            cur_config = deepcopy(config)
+            cur_config.group_size = group_size
+
             original_weight = fns.zeros_like(weight) + weight
 
-            compressed_weights, scale, zp = do_integer_quantization(original_weight, reduction_axis, config)
+            compressed_weights, scale, zp = do_integer_quantization(original_weight, reduction_axis, cur_config)
             if zp is not None:
                 zp = zp.astype(scale.dtype)
             q_weights = do_dequantization(compressed_weights, scale, zp, reduction_axis)
 
             s = fns.unsqueeze(s, 0)
-            s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, config.group_size)
+            s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, group_size)
 
-            original_weight, _ = reshape_weight_for_grouped_quantization(
-                original_weight, reduction_axis, config.group_size
-            )
+            original_weight, _ = reshape_weight_for_grouped_quantization(original_weight, reduction_axis, group_size)
 
             # all weight in group has importance based on corresponding input activations
             importance = fns.ones_like(original_weight)
@@ -187,8 +186,8 @@ class ScaleEstimation:
             denum = fns.sum(importance, axis=2, keepdims=True)
             importance = importance / (denum + eps)
 
-            X, _ = reshape_weight_for_grouped_quantization(X, 0, config.group_size)
-            q_weights, _ = reshape_weight_for_grouped_quantization(q_weights, reduction_axis, config.group_size)
+            X, _ = reshape_weight_for_grouped_quantization(X, 0, group_size)
+            q_weights, _ = reshape_weight_for_grouped_quantization(q_weights, reduction_axis, group_size)
             best_diffs = None
             result_scale = None
 
@@ -298,6 +297,8 @@ class ScaleEstimation:
                     near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
                 result_scale = near_to_ideal_scale
 
+            if config.group_size == -1:
+                result_scale = fns.squeeze(result_scale, axis=1)
             res[weight_name] = result_scale
 
         return res
