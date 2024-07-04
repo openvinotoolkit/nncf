@@ -243,7 +243,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         model = ov.Model([result], parameters)
 
-        compiled_model = ov.compile_model(model, "CPU")
+        compiled_model = ov.compile_model(model, device_name="CPU")
 
         return lambda parameters: compiled_model(parameters)[0]
 
@@ -275,7 +275,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         model = ov.Model([result], parameters)
 
-        compiled_model = ov.compile_model(model, "CPU")
+        compiled_model = ov.compile_model(model, device_name="CPU")
 
         return lambda parameters: compiled_model(parameters)[0]
 

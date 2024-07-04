@@ -69,7 +69,7 @@ class OVNativeEngine(Engine):
 
         ie = ov.Core()
         stateful = model_has_state(model)
-        compiled_model = ie.compile_model(model, target_device.value, "CPU")
+        compiled_model = ie.compile_model(model, device_name="CPU")
         self.engine = OVCompiledModelEngine(compiled_model, stateful)
 
     def infer(
