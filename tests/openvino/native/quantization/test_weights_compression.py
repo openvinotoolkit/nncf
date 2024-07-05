@@ -28,6 +28,9 @@ from nncf.quantization import compress_weights
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
+from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
@@ -912,3 +915,31 @@ def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
     }
     ref_e8m0_nodes = {f"weights_{i}/scale" for i in ref_ids}
     assert ref_e8m0_nodes == names_e8m0
+
+
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
+def test_np_ov_compression_decompression(mode):
+    sz = 60
+    w = np.arange(-sz, sz).reshape(2, sz).astype(np.float32) / 9.0
+    w = Tensor(w)
+
+    config = WeightCompressionConfig(mode)
+
+    compressed_weighs, scale, zp = do_integer_quantization(w, -1, config, invert_scale=True)
+    decompressed_weighs = do_dequantization(compressed_weighs, scale, zp)
+
+    compressed_weighs = compressed_weighs.data
+    decompressed_weighs = decompressed_weighs.data
+    zp_shape = zp.shape if zp is not None else None
+
+    compress = OVWeightCompressionAlgoBackend.get_compress_pipeline(config, w.shape, scale.shape, zp_shape)
+    compress_decompress = OVWeightCompressionAlgoBackend.get_compress_decompress_pipeline(
+        config, w.shape, scale.shape, zp_shape
+    )
+
+    params = [w.data, scale.data, zp.data] if zp is not None else [w.data, scale.data]
+    compressed_weighs_ov = compress(params)
+    decompressed_weighs_ov = compress_decompress(params)
+
+    assert np.allclose(compressed_weighs, compressed_weighs_ov)
+    assert np.allclose(decompressed_weighs, decompressed_weighs_ov)
