@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Any
 
 
 class api:
@@ -17,7 +18,7 @@ class api:
     def __init__(self, canonical_alias: str = None):
         self._canonical_alias = canonical_alias
 
-    def __call__(self, obj):
+    def __call__(self, obj: Any) -> Any:
         # The value of the marker will be useful in determining
         # whether we are handling a base class or a derived one.
         setattr(obj, api.API_MARKER_ATTR, obj.__name__)
@@ -26,5 +27,5 @@ class api:
         return obj
 
 
-def is_api(obj) -> bool:
+def is_api(obj: Any) -> bool:
     return hasattr(obj, api.API_MARKER_ATTR)
