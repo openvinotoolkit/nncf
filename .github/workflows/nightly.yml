@@ -5,11 +5,7 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * *'
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
+
 jobs:
   md-dead-link-check:
     runs-on: ubuntu-22.04
