@@ -946,6 +946,12 @@ def test_np_ov_compression_decompression(mode):
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_gptq_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
-    dataset = Dataset([np.ones([8, 8])])
+    sz = 8
+    dataset = Dataset([np.ones([sz, sz])])
 
-    compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, gptq=True)
+    compressed_model = compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, gptq=True)
+
+    for op in compressed_model.get_ordered_ops():
+        op_name = op.get_friendly_name()
+        if op.get_type_name() == "Constant" and ("/zero_point" in op_name or "/scale" in op_name):
+            assert op.get_shape() == [sz, 1]
