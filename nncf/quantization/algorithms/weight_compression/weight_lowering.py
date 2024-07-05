@@ -155,6 +155,31 @@ def calculate_e2m1_scale(weight: Tensor, reduction_axes: ReductionAxes, max_val=
     return scale
 
 
+def calculate_signed_scale(weight: Tensor, reduction_axes: ReductionAxes, num_bits=4) -> Tensor:
+    """
+    Calculates the scale for e2m1 quantization.
+
+    :param weight: Weight array to compress.
+    :param reduction_axes: Axes along which to reduce (collect) different statistics (e.g., min, max).
+    :param num_bits: number of bits in compression.
+    :return: Scale tensor.
+    """
+    level_high = 2 ** (num_bits - 1)
+    scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)  # [a1, r//gs, 1, a2]
+
+    w_min = fns.abs(fns.min(weight, axis=reduction_axes, keepdims=True))
+    w_max = fns.abs(fns.max(weight, axis=reduction_axes, keepdims=True))
+
+    denum = fns.ones_like(scale) * level_high
+    denum = fns.where(w_min < w_max, level_high - 1, level_high)
+
+    scale /= denum
+    eps = fns.finfo(scale).eps
+    scale = fns.where(fns.abs(scale) < eps, eps, scale)
+
+    return scale
+
+
 def calculate_normalized_weight(weight: Tensor, scale: Tensor) -> Tensor:
     """
     Normalizes the weight tensor using the provided scale.
@@ -263,12 +288,7 @@ def calculate_integer_quantization_params(
         )
         return scale, zero_point
 
-    level_high = 2 ** (num_bits - 1) - 1
-    scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)  # [a1, r//gs, 1, a2]
-    scale /= level_high
-    eps = fns.finfo(scale).eps
-    # NOTE: adding machine epsilon to avoid division by zero
-    scale = fns.where(fns.abs(scale) < eps, eps, scale)
+    scale = calculate_signed_scale(weight, reduction_axes, num_bits)
     return scale, None
 
 

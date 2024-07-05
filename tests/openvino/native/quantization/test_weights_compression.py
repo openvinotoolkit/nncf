@@ -943,3 +943,24 @@ def test_np_ov_compression_decompression(mode):
 
     assert np.allclose(compressed_weighs, compressed_weighs_ov)
     assert np.allclose(decompressed_weighs, decompressed_weighs_ov)
+
+
+@pytest.mark.parametrize(
+    ("mode", "data"),
+    (
+        (CompressWeightsMode.INT4_SYM, [-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0]),
+        (CompressWeightsMode.INT4_SYM, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]),
+        (
+            CompressWeightsMode.INT4_SYM,
+            [-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
+        ),
+    ),
+)
+def test_compressed_weighs_range(mode, data):
+    data = np.array(data).astype(np.float32)
+    w = Tensor(data)
+
+    config = WeightCompressionConfig(mode=mode)
+    compressed_weighs, _, _ = do_integer_quantization(w, -1, config)
+
+    assert np.allclose(compressed_weighs.data, w.data)
