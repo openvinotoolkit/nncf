@@ -119,6 +119,11 @@ class GPTQ:
         )
         for node, inputs in track(target_node_iterator, total=len(target_nodes), description="Applying GPTQ"):
             wc_params = target_nodes_wc_params_map[node]
+            if wc_params.compression_config.mode in [
+                CompressWeightsMode.INT8_ASYM,
+                CompressWeightsMode.INT8_SYM,
+            ]:
+                continue
             assert len(inputs) == 1
             _, input_tensors = next(iter(inputs.items()))
             hessian = self._calculate_hessian(node, input_tensors)
