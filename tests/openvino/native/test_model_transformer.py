@@ -605,7 +605,7 @@ def test_bias_correction(model_with_parameters):
 def test_no_transformations():
     def infer_model_with_ones(model, shape):
         ie = ov.Core()
-        compiled_model = ie.compile_model(model)
+        compiled_model = ie.compile_model(model, device_name="CPU")
         _input = np.ones(shape)
         model_outputs = compiled_model(_input)
         return {out.get_node().get_friendly_name(): data for out, data in model_outputs.items()}
