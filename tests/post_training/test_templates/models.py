@@ -15,8 +15,8 @@ from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from tests.common.quantization.metatypes import ConstantTestMetatype
 from tests.common.quantization.mock_graphs import NodeWithType
-from tests.common.quantization.test_filter_constant_nodes import create_mock_graph
-from tests.common.quantization.test_filter_constant_nodes import get_nncf_graph_from_mock_nx_graph
+from tests.common.quantization.mock_graphs import create_mock_graph
+from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
 
 
 class NNCFGraphToTest:
