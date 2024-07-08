@@ -1349,6 +1349,16 @@ class TemplateTestNNCFTensorOperators:
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == tensor_a.device
 
+    def test_fn_linalg_pinv(self):
+        a = [[1.0], [2.0]]
+        A = Tensor(self.to_tensor(a))
+        B = fns.linalg.pinv(A)
+        print(B)
+        assert isinstance(B, Tensor)
+        assert B.device == A.device
+        assert fns.allclose(A, A @ B @ A)
+        assert fns.allclose(B, B @ A @ B)
+
     @pytest.mark.parametrize(
         "a, k, ref",
         (

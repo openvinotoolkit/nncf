@@ -50,6 +50,11 @@ def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
     return np.linalg.inv(a)
 
 
+@register_numpy_types(linalg.pinv)
+def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+    return np.linalg.pinv(a)
+
+
 @register_numpy_types(linalg.lstsq)
 def _(a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic], driver: Optional[str] = None) -> np.ndarray:
     return lstsq(a, b, lapack_driver=driver)[0]
