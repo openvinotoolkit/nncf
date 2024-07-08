@@ -221,6 +221,7 @@ class ScaleEstimation:
                     "compress_model": compress_model,
                 }
 
+            scale_sign = scale / fns.abs(scale)
             zero_scale = 0.001
             zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
@@ -230,6 +231,7 @@ class ScaleEstimation:
             # iterative rectification of initial scale
             for i in range(self._initial_steps):
                 near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
+                near_to_ideal_scale = near_to_ideal_scale * scale_sign
                 input_tensors[1] = near_to_ideal_scale.data
 
                 out = compress_decompress_model(input_tensors)
@@ -265,7 +267,7 @@ class ScaleEstimation:
 
             # iterative rectification of scale based on grid search
             for scale_steps in range(self._scale_steps):
-                factor = 1.0 - 0.05 * scale_steps
+                factor = 1.0 + 0.05 * scale_steps
                 scaled_scale = factor * scale
 
                 input_tensors[1] = scaled_scale.data
@@ -275,6 +277,7 @@ class ScaleEstimation:
                 target, zero_mask = get_target_zero_mask(compressed_weights, zp)
                 zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
                 near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
+                near_to_ideal_scale = near_to_ideal_scale * scale_sign
 
                 input_tensors[1] = near_to_ideal_scale.data
                 out = compress_decompress_model(input_tensors)

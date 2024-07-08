@@ -289,8 +289,8 @@ class AdvancedScaleEstimationParameters:
     """
 
     subset_size: int = 32
-    initial_steps: int = 5
-    scale_steps: int = 6
+    initial_steps: int = 7
+    scale_steps: int = 0
     weight_penalty: float = -1.0
 
 

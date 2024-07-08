@@ -171,7 +171,7 @@ def calculate_signed_scale(weight: Tensor, reduction_axes: ReductionAxes, num_bi
     w_max = fns.abs(fns.max(weight, axis=reduction_axes, keepdims=True))
 
     denum = fns.ones_like(scale) * level_high
-    denum = fns.where(w_min < w_max, level_high - 1, denum)
+    denum = fns.where(w_min < w_max, -denum, denum)
 
     scale /= denum
     eps = fns.finfo(scale).eps
@@ -329,6 +329,7 @@ def calculate_quantized_weight(
         compressed_weights += zero_point.astype(weight.dtype)
     compressed_weights = fns.round(compressed_weights)
     compressed_weights = fns.clip(compressed_weights, level_low, level_high).astype(dtype)
+
     return compressed_weights
 
 
