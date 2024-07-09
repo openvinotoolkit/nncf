@@ -46,7 +46,17 @@ MAP_BACKEND_PACKAGES = {
 }
 
 
-def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, backends: Set[str] = None):
+def run_process(command: str, log_file: str = None, **kwargs):
+    if log_file:
+        with open(log_file, "a") as f:
+            subprocess.run(command, stdout=f, **kwargs)
+    else:
+        subprocess.run(command, **kwargs)
+
+
+def create_venv_with_nncf(
+    tmp_path: Path, package_type: str, venv_type: str, backends: Set[str] = None, log_file: str = None
+):
     venv_path = tmp_path / "venv"
     venv_path.mkdir()
 
@@ -57,15 +67,15 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
 
     if venv_type == "virtualenv":
         virtualenv = Path(sys.executable).parent / "virtualenv"
-        subprocess.check_call(f"{virtualenv} -ppython{version_string} {venv_path}", shell=True)
+        run_process(f"{virtualenv} -ppython{version_string} {venv_path}", log_file, shell=True)
     elif venv_type == "venv":
-        subprocess.check_call(f"{sys.executable} -m venv {venv_path}", shell=True)
+        run_process(f"{sys.executable} -m venv {venv_path}", log_file, shell=True)
 
-    subprocess.check_call(f"{pip_with_venv} install --upgrade pip", shell=True)
-    subprocess.check_call(f"{pip_with_venv} install --upgrade wheel setuptools", shell=True)
+    run_process(f"{pip_with_venv} install --upgrade pip", log_file, shell=True)
+    run_process(f"{pip_with_venv} install --upgrade wheel setuptools", log_file, shell=True)
 
     if package_type in ["build_s", "build_w"]:
-        subprocess.check_call(f"{pip_with_venv} install build", shell=True)
+        run_process(f"{pip_with_venv} install build", log_file, shell=True)
 
     run_path = tmp_path / "run"
     run_path.mkdir()
@@ -85,13 +95,14 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
     else:
         raise nncf.ValidationError(f"Invalid package type: {package_type}")
 
-    subprocess.run(run_cmd_line, check=True, shell=True, cwd=PROJECT_ROOT)
+    run_process(run_cmd_line, log_file, check=True, shell=True, cwd=PROJECT_ROOT)
     if backends:
         # Install backend specific packages with according version from constraints.txt
         packages = [item for b in backends for item in MAP_BACKEND_PACKAGES[b]]
         extra_reqs = " ".join(packages)
-        subprocess.run(
+        run_process(
             f"{pip_with_venv} install {extra_reqs} -c {PROJECT_ROOT}/constraints.txt",
+            log_file,
             check=True,
             shell=True,
             cwd=PROJECT_ROOT,
