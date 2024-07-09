@@ -197,3 +197,20 @@ def test_ignored_scope_dump(ignored_options, expected_dump, tmp_path):
             assert dumped_model.get_rt_info(rt_path) == value
         else:
             assert dumped_model.has_rt_info(rt_path) is False
+
+
+@pytest.mark.parametrize("subset_size, expected_actual_subset_size", [[1, 1], [2, 1]])
+def test_dump(subset_size, expected_actual_subset_size, tmp_path):
+    model = WeightsModel().ov_model
+    dataset = get_dataset_for_test(model)  # dataset.get_length() == 1
+    quantize_parameters = {
+        "preset": QuantizationPreset.PERFORMANCE,
+        "target_device": TargetDevice.CPU,
+        "subset_size": subset_size,
+        "fast_bias_correction": True,
+    }
+    quantized_model = quantize_impl(model, dataset, **quantize_parameters)
+    ov.save_model(quantized_model, tmp_path / "ov_model.xml")
+    core = ov.Core()
+    dumped_model = core.read_model(tmp_path / "ov_model.xml")
+    assert dumped_model.get_rt_info(["nncf", "quantization", "actual_subset_size"]) == str(expected_actual_subset_size)

@@ -57,6 +57,13 @@ from nncf.telemetry.events import NNCF_OV_CATEGORY
 TTensor = TypeVar("TTensor")
 
 
+def get_actual_subset_size(dataset, subset_size):
+    dataset_length = dataset.get_length()
+    if dataset_length:
+        return min(dataset_length, subset_size)
+    return subset_size
+
+
 @tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
 def native_quantize_if_op_impl(
     model: ov.Model,
@@ -131,7 +138,7 @@ def native_quantize_if_op_impl(
             "preset": preset,
             "target_device": target_device.value,
             "subset_size": subset_size,
-            "actual_subset_size": calibration_dataset.get_length(),
+            "actual_subset_size": get_actual_subset_size(calibration_dataset, subset_size),
             "fast_bias_correction": fast_bias_correction,
             "model_type": model_type,
             "ignored_scope": ignored_scope,
@@ -180,7 +187,7 @@ def native_quantize_impl(
             "preset": preset,
             "target_device": target_device.value,
             "subset_size": subset_size,
-            "actual_subset_size": calibration_dataset.get_length(),
+            "actual_subset_size": get_actual_subset_size(calibration_dataset, subset_size),
             "fast_bias_correction": fast_bias_correction,
             "model_type": model_type,
             "ignored_scope": ignored_scope,
@@ -320,7 +327,7 @@ def native_quantize_with_accuracy_control_impl(
             "preset": preset,
             "target_device": target_device.value,
             "subset_size": subset_size,
-            "actual_subset_size": calibration_dataset.get_length(),
+            "actual_subset_size": get_actual_subset_size(calibration_dataset, subset_size),
             "fast_bias_correction": fast_bias_correction,
             "model_type": model_type,
             "ignored_scope": ignored_scope,
