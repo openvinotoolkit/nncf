@@ -61,20 +61,17 @@ def test_examples(
 
     backend = example_params["backend"]
     skip_if_backend_not_selected(backend, backends_list)
-    venv_log_path = tmp_path / f"{example_name}_env_log.txt"
-    venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {backend}, venv_log_path)
+    venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {backend})
     if "requirements" in example_params:
         pip_with_venv = get_pip_executable_with_venv(venv_path)
         requirements = PROJECT_ROOT / example_params["requirements"]
         run_cmd_line = f"{pip_with_venv} install -r {requirements}"
-        with open(venv_log_path, "a") as f:
-            subprocess.run(run_cmd_line, check=True, shell=True, stdout=f)
+        subprocess.run(run_cmd_line, check=True, shell=True)
 
     if ov_version_override is not None:
         pip_with_venv = get_pip_executable_with_venv(venv_path)
         ov_version_cmd_line = f"{pip_with_venv} install {ov_version_override}"
-        with open(venv_log_path, "a") as f:
-            subprocess.run(ov_version_cmd_line, check=True, shell=True, stdout=f)
+        subprocess.run(ov_version_cmd_line, check=True, shell=True)
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(PROJECT_ROOT)  # need this to be able to import from tests.* in run_example.py
