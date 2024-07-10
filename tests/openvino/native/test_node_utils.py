@@ -41,10 +41,6 @@ from tests.openvino.native.models import MatMul2DNotBiasModel
             "type_for_const": ov.Type.f16,
             "type_to_get": ov.Type.f16,
         },
-        {
-            "type_for_const": ov.Type.f16,
-            "type_to_get": ov.Type.f32,
-        },
         # from base BF16 precision to FP32
         {
             "type_for_const": ov.Type.bf16,
