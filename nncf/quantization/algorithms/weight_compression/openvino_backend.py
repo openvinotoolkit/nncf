@@ -114,7 +114,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         const_node = node_with_const.input_value(weight_port_id).get_node()
 
         shared_memory = True
-        if weight.get_element_type() == ov.Type.bf16:
+        if const_node.get_element_type() == ov.Type.bf16:
             # Shared memory does not work for BF16 precision
             shared_memory = False
 
