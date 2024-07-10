@@ -506,8 +506,16 @@ class OVModelTransformer(ModelTransformer):
 
         const_value = np.reshape(const_value, const_node.data.shape)
 
+        shared_memory = True
+        if const_port.get_element_type() == ov.Type.bf16:
+            # Shared memory does not work for BF16 precision
+            shared_memory = False
+
         new_const_node = opset.constant(
-            const_value, dtype=const_port.get_element_type(), name=const_node.get_friendly_name(), shared_memory=True
+            const_value,
+            dtype=const_port.get_element_type(),
+            name=const_node.get_friendly_name(),
+            shared_memory=shared_memory,
         )
         const_port.replace_source_output(new_const_node.output(0))
 
