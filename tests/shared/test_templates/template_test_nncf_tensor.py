@@ -1353,7 +1353,6 @@ class TemplateTestNNCFTensorOperators:
         a = [[1.0], [2.0]]
         A = Tensor(self.to_tensor(a))
         B = fns.linalg.pinv(A)
-        print(B)
         assert isinstance(B, Tensor)
         assert B.device == A.device
         assert fns.allclose(A, A @ B @ A)

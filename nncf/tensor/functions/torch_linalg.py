@@ -42,14 +42,10 @@ def _(a: torch.Tensor) -> torch.Tensor:
 
 @linalg.pinv.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
-    """
-    Consider using torch.linalg.lstsq() if possible for multiplying a matrix on the left by the pseudo-inverse, as:
-
-    torch.linalg.lstsq(A, B).solution == A.pinv() @ B
-
-    It is always preferred to use lstsq() when possible, as it is faster and more numerically stable than computing
-    the pseudo-inverse explicitly.
-    """
+    # Consider using torch.linalg.lstsq() if possible for multiplying a matrix on the left by the pseudo-inverse, as:
+    # torch.linalg.lstsq(A, B).solution == A.pinv() @ B
+    # It is always preferred to use lstsq() when possible, as it is faster and more numerically stable than computing
+    # the pseudo-inverse explicitly.
     return torch.linalg.pinv(a)
 
 
