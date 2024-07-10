@@ -348,12 +348,12 @@ class WeightCompression(Algorithm):
                 all_weight_params.append(weight_params)
                 weight_names.add(weight_name)
 
-        # Sort weight params to start compression with the bigger constants. This lowers peak memory footprint.
-        all_weight_params = sorted(all_weight_params, key=lambda wp: wp.num_weights, reverse=True)
-
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_shared)
         self._set_weight_compression_config(ratio_defining_params, model, graph, activations)
         nncf_logger.info(self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
+
+        # Sort weight params to start compression with the bigger constants. This lowers peak memory footprint.
+        all_weight_params = sorted(all_weight_params, key=lambda wp: wp.num_weights, reverse=True)
 
         if (
             self._awq
