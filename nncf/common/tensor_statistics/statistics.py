@@ -14,8 +14,8 @@ from abc import abstractmethod
 from collections import Counter
 from typing import TypeVar
 
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import functions as fns
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 
 TensorType = TypeVar("TensorType")
 

@@ -17,10 +17,10 @@ import torch
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.data.dataset import Dataset
-from nncf.experimental.tensor.tensor import Tensor
 from nncf.quantization.algorithms.layerwise.openvino_iterator import OVLayerwiseIterator
 from nncf.quantization.algorithms.layerwise.scheduler import LayerwiseStep
 from nncf.quantization.algorithms.layerwise.scheduler import NodeOutputPort
+from nncf.tensor import Tensor
 from tests.post_training.test_templates.test_layerwise import TemplateTestLayerwiseEngine
 
 

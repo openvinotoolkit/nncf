@@ -11,4 +11,6 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
-      - uses: AlexanderDokuchaev/md-dead-link-check@76ecefc7f64753bba30a36179f46d903e9f77669 # v0.8
+      - uses: AlexanderDokuchaev/md-dead-link-check@cc3ed55268899a1a6d5fd7068abbc4591eab1f74 # v0.9
+        with:
+          config: md_dead_link_check.toml

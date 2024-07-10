@@ -15,8 +15,8 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import ClassVar, Dict, Tuple
 
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import functions as fns
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 
 
 class TensorStatistic:

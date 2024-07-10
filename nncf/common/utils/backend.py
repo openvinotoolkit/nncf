@@ -56,7 +56,7 @@ def is_torch_model(model: TModel) -> bool:
     :param model: A target model.
     :return: True if the model is an instance of torch.nn.Module, otherwise False.
     """
-    import torch
+    import torch  # type: ignore
 
     return isinstance(model, torch.nn.Module)
 
@@ -68,7 +68,7 @@ def is_tensorflow_model(model: TModel) -> bool:
     :param model: A target model.
     :return: True if the model is an instance of tensorflow.Module, otherwise False.
     """
-    import tensorflow
+    import tensorflow  # type: ignore
 
     return isinstance(model, tensorflow.Module)
 
@@ -80,7 +80,7 @@ def is_onnx_model(model: TModel) -> bool:
     :param model: A target model.
     :return: True if the model is an instance of onnx.ModelProto, otherwise False.
     """
-    import onnx
+    import onnx  # type: ignore
 
     return isinstance(model, onnx.ModelProto)
 
@@ -92,7 +92,7 @@ def is_openvino_model(model: TModel) -> bool:
     :param model: A target model.
     :return: True if the model is an instance of openvino.runtime.Model, otherwise False.
     """
-    import openvino.runtime as ov
+    import openvino.runtime as ov  # type: ignore
 
     return isinstance(model, ov.Model)
 
@@ -147,7 +147,7 @@ def copy_model(model: TModel) -> TModel:
     model_backend = get_backend(model)
     if model_backend == BackendType.OPENVINO:
         # TODO(l-bat): Remove after fixing ticket: 100919
-        return model.clone()
+        return model.clone()  # type: ignore
     if model_backend == BackendType.TENSORFLOW:
         # deepcopy and tensorflow.keras.models.clone_model does not work correctly on 2.8.4 version
         from nncf.tensorflow.graph.model_transformer import TFModelTransformer

@@ -38,8 +38,8 @@ from nncf.experimental.common.tensor_statistics.statistics import MedianMADTenso
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
-from nncf.experimental.tensor import Tensor
 from nncf.quantization.advanced_parameters import StatisticsType
+from nncf.tensor import Tensor
 
 
 class PTReducerMixIn:

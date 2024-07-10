@@ -138,7 +138,7 @@ class ImageClassificationTimm(PTQTestPipeline):
             core.set_property("CPU", properties={"INFERENCE_NUM_THREADS": str(inference_num_threads)})
 
         ov_model = core.read_model(self.path_compressed_ir)
-        compiled_model = core.compile_model(ov_model)
+        compiled_model = core.compile_model(ov_model, device_name="CPU")
 
         jobs = int(os.environ.get("NUM_VAL_THREADS", DEFAULT_VAL_THREADS))
         infer_queue = ov.AsyncInferQueue(compiled_model, jobs)

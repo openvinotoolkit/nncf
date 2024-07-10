@@ -16,11 +16,11 @@ import openvino as ov
 import torch
 
 from nncf.common.factory import NNCFGraphFactory
-from nncf.experimental.tensor.tensor import Tensor
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
+from nncf.tensor.tensor import Tensor
 
 
 def quantize(x, scale, zero, maxq):

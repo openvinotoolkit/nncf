@@ -14,6 +14,14 @@ hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_backend_FP32:
   metric_value: null
 hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_backend_OPTIMUM:
   metric_value: null
+hf/hf-internal-testing/tiny-random-gpt2_backend_FP32:
+  metric_value: null
+hf/hf-internal-testing/tiny-random-gpt2_backend_OPTIMUM:
+  metric_value: null
+hf/hf-internal-testing/tiny-random-gpt2_backend_OV:
+  metric_value: null
+hf/hf-internal-testing/tiny-random-gpt2_backend_TORCH:
+  metric_value: null
 timm/crossvit_9_240_backend_CUDA_TORCH:
   metric_value: 0.689
 timm/crossvit_9_240_backend_FP32:

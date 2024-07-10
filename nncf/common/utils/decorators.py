@@ -10,14 +10,14 @@
 # limitations under the License.
 
 from importlib import import_module
-from typing import Callable, List
+from typing import Any, Callable, Dict, List
 
 from nncf.common.logging import nncf_logger
 
-IMPORTED_DEPENDENCIES = {}
+IMPORTED_DEPENDENCIES: Dict[str, bool] = {}
 
 
-def skip_if_dependency_unavailable(dependencies: List[str]) -> Callable:
+def skip_if_dependency_unavailable(dependencies: List[str]) -> Callable[[Callable[..., None]], Callable[..., None]]:
     """
     Decorator factory to skip a noreturn function if dependencies are not met.
 
@@ -26,7 +26,7 @@ def skip_if_dependency_unavailable(dependencies: List[str]) -> Callable:
     """
 
     def wrap(func: Callable[..., None]) -> Callable[..., None]:
-        def wrapped_f(*args, **kwargs):
+        def wrapped_f(*args: Any, **kwargs: Any):  # type: ignore
             for libname in dependencies:
                 if libname in IMPORTED_DEPENDENCIES:
                     if IMPORTED_DEPENDENCIES[libname]:

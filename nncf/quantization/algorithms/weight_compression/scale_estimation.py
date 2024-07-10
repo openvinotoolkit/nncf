@@ -19,12 +19,12 @@ from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.tensor import TensorDataType
-from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
+from nncf.tensor import TensorDataType
+from nncf.tensor import functions as fns
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -211,9 +211,11 @@ class ScaleEstimation:
                 compress_model = compress_decompress_cache[key]["compress_model"]
             else:
                 compress_decompress_model = self._backend_entity.get_compress_decompress_pipeline(
-                    wp, q_weights.shape, scale.shape, zp_shape
+                    wp.compression_config, q_weights.shape, scale.shape, zp_shape
                 )
-                compress_model = self._backend_entity.get_compress_pipeline(wp, q_weights.shape, scale.shape, zp_shape)
+                compress_model = self._backend_entity.get_compress_pipeline(
+                    wp.compression_config, q_weights.shape, scale.shape, zp_shape
+                )
                 compress_decompress_cache[key] = {
                     "compress_decompress_model": compress_decompress_model,
                     "compress_model": compress_model,

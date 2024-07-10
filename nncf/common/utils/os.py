@@ -11,19 +11,20 @@
 import sys
 from contextlib import contextmanager
 from pathlib import Path
+from typing import IO, Any, BinaryIO, Iterator, TextIO, Union
 
 import psutil
 
 import nncf
 
 
-def fail_if_symlink(file: Path):
+def fail_if_symlink(file: Path) -> None:
     if file.is_symlink():
         raise nncf.ValidationError("File {} is a symbolic link, aborting.".format(str(file)))
 
 
 @contextmanager
-def safe_open(file: Path, *args, **kwargs):
+def safe_open(file: Path, *args, **kwargs) -> Iterator[Union[TextIO, BinaryIO, IO[Any]]]:  # type: ignore
     """
     Safe function to open file and return a stream.
 
@@ -38,11 +39,11 @@ def safe_open(file: Path, *args, **kwargs):
         yield f
 
 
-def is_windows():
+def is_windows() -> bool:
     return "win32" in sys.platform
 
 
-def is_linux():
+def is_linux() -> bool:
     return "linux" in sys.platform
 
 
@@ -61,7 +62,7 @@ def get_available_cpu_count(logical: bool = True) -> int:
         return 1
 
 
-def get_available_memory_amount() -> int:
+def get_available_memory_amount() -> float:
     """
     :return: Available memory amount (bytes)
     """

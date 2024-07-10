@@ -1121,3 +1121,13 @@ class IfModel_2(OVReferenceModel):
         result = opset.result(if_node, name="Result")
         model = ov.Model([result], [input_1, input_2])
         return model
+
+
+class PreluModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input = opset.parameter([1, 3, 4, 2], name="Input")
+        prelu = opset.prelu(input, slope=1)
+        result = opset.result(prelu, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input])
+        return model

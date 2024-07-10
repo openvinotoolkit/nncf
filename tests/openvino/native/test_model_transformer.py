@@ -21,7 +21,6 @@ from openvino.runtime import opset13 as opset
 import nncf
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
@@ -44,6 +43,7 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.quantization.advanced_parameters import FP8Type
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.tensor import Tensor
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import ConvModel
@@ -694,7 +694,7 @@ def test_bias_correction(model_with_parameters):
 def test_no_transformations():
     def infer_model_with_ones(model, shape):
         ie = ov.Core()
-        compiled_model = ie.compile_model(model)
+        compiled_model = ie.compile_model(model, device_name="CPU")
         _input = np.ones(shape)
         model_outputs = compiled_model(_input)
         return {out.get_node().get_friendly_name(): data for out, data in model_outputs.items()}

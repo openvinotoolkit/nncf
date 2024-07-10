@@ -12,17 +12,19 @@
 
 import operator
 from abc import abstractmethod
+from math import log2
+from math import sqrt
 from typing import TypeVar
 
 import numpy as np
 import pytest
 
+import nncf.tensor.functions as fns
 from nncf.experimental.common.tensor_statistics import statistical_functions as s_fns
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import TensorDataType
-from nncf.experimental.tensor import TensorDeviceType
-from nncf.experimental.tensor import functions as fns
-from nncf.experimental.tensor.definitions import TensorBackend
+from nncf.tensor import Tensor
+from nncf.tensor import TensorDataType
+from nncf.tensor import TensorDeviceType
+from nncf.tensor.definitions import TensorBackend
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -36,6 +38,12 @@ OPERATOR_MAP = {
     "truediv": operator.truediv,
     "floordiv": operator.floordiv,
     "neg": lambda a, _: -a,
+    "iadd": operator.iadd,
+    "isub": operator.isub,
+    "imul": operator.imul,
+    "ipow": operator.ipow,
+    "itruediv": operator.itruediv,
+    "ifloordiv": operator.ifloordiv,
 }
 BINARY_OPERATORS = ["add", "sub", "pow", "mul", "truediv", "floordiv"]
 
@@ -91,8 +99,8 @@ class TemplateTestNNCFTensorOperators:
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
     def test_operators_tensor(self, op_name):
-        tensor_a = self.to_tensor([1, 2])
-        tensor_b = self.to_tensor([22, 11])
+        tensor_a = self.to_tensor([1.0, 2.0])
+        tensor_b = self.to_tensor([22.0, 11.0])
 
         nncf_tensor_a = Tensor(tensor_a)
         nncf_tensor_b = Tensor(tensor_b)
@@ -108,8 +116,8 @@ class TemplateTestNNCFTensorOperators:
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
     def test_operators_int(self, op_name):
-        tensor_a = self.to_tensor([1, 2])
-        value = 2
+        tensor_a = self.to_tensor([1.0, 2.0])
+        value = 2.0
 
         nncf_tensor_a = Tensor(tensor_a)
 
@@ -1088,6 +1096,12 @@ class TemplateTestNNCFTensorOperators:
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == tensor1.device
 
+        res = tensor1 @ tensor2
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor1.device
+
     @pytest.mark.parametrize(
         "val, axis, ref",
         (
@@ -1492,6 +1506,28 @@ class TemplateTestNNCFTensorOperators:
             assert fns.all(tensor_a == 0)
 
     @pytest.mark.parametrize(
+        "n, m, ref",
+        (
+            (2, None, [[1, 0], [0, 1]]),
+            (2, 2, [[1, 0], [0, 1]]),
+            (2, 1, [[1], [0]]),
+            (1, 2, [[1, 0]]),
+        ),
+    )
+    def test_fn_eye(self, n, m, ref):
+        for dtype in TensorDataType:
+            if dtype == TensorDataType.bfloat16 and self.backend() == TensorBackend.numpy:
+                continue
+            tensor_a = fns.eye(n, m, backend=self.backend(), dtype=dtype, device=self.device())
+            assert isinstance(tensor_a, Tensor)
+            assert tensor_a.device == self.device()
+            assert tensor_a.backend == self.backend()
+            assert tensor_a.dtype == dtype
+            ref_shape = (n, n) if m is None else (n, m)
+            assert tensor_a.shape == ref_shape
+            assert fns.allclose(tensor_a, ref)
+
+    @pytest.mark.parametrize(
         "start, end, stop, ref",
         ((3, None, None, [0, 1, 2]), (0, 3, None, [0, 1, 2]), (0, 3, 1, [0, 1, 2]), (2, -1, -1, [2, 1, 0])),
     )
@@ -1550,3 +1586,103 @@ class TemplateTestNNCFTensorOperators:
         tensor_v = Tensor(self.to_tensor([-2.0, -0.6, 0.0, 0.3, 1.5]))
         with pytest.raises(ValueError):
             fns.searchsorted(tensor_a, tensor_v)
+
+    @pytest.mark.parametrize(
+        "val,ref",
+        (
+            (1.1, 2.0),
+            ([1.1, 0.9], [2.0, 1.0]),
+            ([1.11, 0.91], [2.0, 1.0]),
+        ),
+    )
+    def test_fn_ceil(self, val, ref):
+        tensor = Tensor(self.to_tensor(val))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.ceil(tensor)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
+
+    @pytest.mark.parametrize(
+        "x,ref",
+        [
+            (list(map(float, range(1, 10))), [log2(x) for x in map(float, range(1, 10))]),
+        ],
+    )
+    def test_fn_log2(self, x, ref):
+        if isinstance(x, list):
+            x = self.to_tensor(x)
+        tensor = Tensor(x)
+
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.log2(tensor)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
+        assert res.shape == tuple(ref_tensor.shape)
+
+    @pytest.mark.parametrize(
+        "x, y, a_ref, b_ref",
+        (
+            ([1.0, 2.0, 4.0], [3.0, 4.0, 6.0], 1, 2),
+            ([1.0, 2.0, 3.0], [3.0, 2.5, 1.0], -1, 25 / 6),
+        ),
+    )
+    def test_lstsq(self, x, y, a_ref, b_ref):
+        t_x = Tensor(self.to_tensor(x))
+        t_y = Tensor(self.to_tensor(y))
+        M = Tensor(self.to_tensor(np.vstack([x, np.ones_like(x) ** 0]).transpose()))
+        M = M.astype(t_x.dtype)
+
+        solution = fns.linalg.lstsq(M, t_y)
+        a, b = solution
+
+        assert isinstance(solution, Tensor)
+        assert fns.allclose(a, a_ref)
+        assert fns.allclose(b, b_ref)
+
+    @pytest.mark.parametrize(
+        "a, full_matrices, abs_res_ref",
+        (
+            # example is taken from: https://www.d.umn.edu/~mhampton/m4326svd_example.pdf
+            # compare absolute values, since different backends may vary the sign.
+            (
+                [[3.0, 2.0, 2.0], [2.0, 3.0, -2.0]],
+                True,
+                (
+                    [[1 / sqrt(2), 1 / sqrt(2)], [1 / sqrt(2), 1 / sqrt(2)]],
+                    [5.0, 3.0],
+                    [
+                        [1 / sqrt(2), 1 / sqrt(2), 0.0],
+                        [1 / sqrt(18), 1 / sqrt(18), 4 / sqrt(18)],
+                        [2 / 3, 2 / 3, 1 / 3],
+                    ],
+                ),
+            ),
+            (
+                [[3.0, 2.0, 2.0], [2.0, 3.0, -2.0]],
+                False,
+                (
+                    [[1 / sqrt(2), 1 / sqrt(2)], [1 / sqrt(2), 1 / sqrt(2)]],
+                    [5.0, 3.0],
+                    [
+                        [1 / sqrt(2), 1 / sqrt(2), 0.0],
+                        [1 / sqrt(18), 1 / sqrt(18), 4 / sqrt(18)],
+                    ],
+                ),
+            ),
+        ),
+    )
+    def test_svd(self, a, full_matrices, abs_res_ref):
+        t_a = Tensor(self.to_tensor(a))
+
+        res = fns.linalg.svd(t_a, full_matrices)
+
+        assert isinstance(res, tuple)
+        for act, abs_ref in zip(res, abs_res_ref):
+            assert isinstance(act, Tensor)
+            assert fns.allclose(fns.abs(act), abs_ref, atol=1e-7)

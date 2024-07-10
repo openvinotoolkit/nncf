@@ -20,9 +20,6 @@ from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import functions as fns
-from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.layerwise.engine import LayerwiseEngine
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
@@ -34,6 +31,9 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import calc
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import decompress_nf4_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
+from nncf.tensor.definitions import TensorDataType
 
 TModel = TypeVar("TModel")
 

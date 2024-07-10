@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, OrderedDict, Set, Tuple, TypeVar, 
 import numpy as np
 
 import nncf
-import nncf.experimental.tensor.functions as fns
+import nncf.tensor.functions as fns
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -310,9 +310,17 @@ class MinMaxQuantization(Algorithm):
                     "value is not supported with the mode: None option!"
                 )
 
-    def _reset_cache(self):
-        # It prevents the duplicate weight quantizers from being added.
-        # It can happen when you have layers that share the identical weight tensor.
+    def _reset_cache(self) -> None:
+        """
+        Marks cache by noninitialized values. Needs to be called when the new quantizer setup is needed.
+        """
+        self._quantization_target_points_to_qconfig: OrderedDict[TargetPoint, QuantizerConfig] = None
+        self._unified_scale_groups = None
+
+    def _init_cache(self) -> None:
+        """
+        Initializes cache.
+        """
         self._quantization_target_points_to_qconfig: OrderedDict[TargetPoint, QuantizerConfig] = (
             collections.OrderedDict()
         )
@@ -440,7 +448,9 @@ class MinMaxQuantization(Algorithm):
 
         channel_axes = ()
         if qconfig.per_channel:
-            channel_axes = self._backend_entity.get_weight_quantization_axes(node, target_point) if is_weight else (1,)
+            channel_axes = (
+                self._backend_entity.get_weight_quantization_axes(node, target_point, len(shape)) if is_weight else (1,)
+            )
 
         # Weight statistics is constant, so only one collection is enough.
         num_samples = self._subset_size if not is_weight else 1
@@ -666,7 +676,7 @@ class MinMaxQuantization(Algorithm):
         weight_quantization_target_points = []
         node_name = quantization_point.insertion_point.target_node_name
         node = nncf_graph.get_node_by_name(node_name)
-        weights_port_ids = self._backend_entity.get_weight_tensor_port_ids(node)
+        weights_port_ids = self._backend_entity.get_weight_tensor_port_ids(node, nncf_graph)
         for port_id in weights_port_ids:
             weight_quantization_target_points.append(
                 self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS, node_name, port_id)
@@ -697,22 +707,17 @@ class MinMaxQuantization(Algorithm):
             )
         return activation_quantization_target_point
 
-    def _get_quantization_target_points(
+    def _find_quantization_target_points(
         self, model: TModel, nncf_graph: NNCFGraph
     ) -> Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]]:
         """
-        Returns Quantization Target Points.
-        In the Compression Pipeline logic NNCF assumes that the compression pipeline works only on the single model.
-        So for the optimization purpose if Quantization Target Points were computed before the function returns them,
-        otherwise builds NNCFGraph from the 'model',
-        finds the quantization setup and processes it to the Set of Quantization Target Points.
+        Initializes a cache, finds quantization target points and them puts in the cache.
 
         :param model: Backend-specific model, for which Quantization Target Points are being seek.
         :param nncf_graph: NNCFGraph instance.
-        :return: Set of Quantization Target Points.
+        :return: Mapping of quantization target points with associated quantization configuration,
+        along with target points for scale unification.
         """
-        if self._quantization_target_points_to_qconfig:
-            return self._quantization_target_points_to_qconfig, self._unified_scale_groups
         backend = get_backend(model)
         device = self._target_device
         model_type = self._model_type
@@ -742,6 +747,23 @@ class MinMaxQuantization(Algorithm):
             else:
                 raise nncf.InternalError("Incorrect quantization point")
         return self._quantization_target_points_to_qconfig, self._unified_scale_groups
+
+    def _get_quantization_target_points(
+        self, model: TModel, nncf_graph: NNCFGraph
+    ) -> Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]]:
+        """
+        Returns Quantization Target Points.
+        Returns a cache with target points if exists. Otherwise, initiates a procedure of finding them.
+
+        :param model: Backend-specific model, for which Quantization Target Points are being seek.
+        :param nncf_graph: NNCFGraph instance.
+        :return: Mapping of quantization target points with associated quantization configuration,
+        along with target points for scale unification.
+        """
+        if self._quantization_target_points_to_qconfig is not None:
+            return self._quantization_target_points_to_qconfig, self._unified_scale_groups
+        self._init_cache()
+        return self._find_quantization_target_points(model, nncf_graph)
 
     def _collect_unified_groups(
         self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph

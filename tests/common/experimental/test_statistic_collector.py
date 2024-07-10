@@ -27,7 +27,7 @@ from nncf.experimental.common.tensor_statistics.statistics import MedianMADTenso
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
-from nncf.experimental.tensor import Tensor
+from nncf.tensor import Tensor
 
 
 class DummyTensorReducer(TensorReducerBase):

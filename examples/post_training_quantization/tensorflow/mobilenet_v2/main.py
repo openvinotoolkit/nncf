@@ -28,7 +28,7 @@ DATASET_CLASSES = 10
 
 
 def validate(model: ov.Model, val_loader: tf.data.Dataset) -> tf.Tensor:
-    compiled_model = ov.compile_model(model)
+    compiled_model = ov.compile_model(model, device_name="CPU")
     output = compiled_model.outputs[0]
 
     metric = tf.keras.metrics.CategoricalAccuracy(name="acc@1")

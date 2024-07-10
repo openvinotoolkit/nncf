@@ -13,12 +13,14 @@ from typing import Tuple
 import pytest
 
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.layer_attributes import ConstantLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.operator_metatypes import PTConstNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
@@ -44,7 +46,7 @@ class TestTorchMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
         return PTTargetPoint(target_point_type, name, input_port_id=port_id)
 
 
-class TestOVGetTargetPointShape(TemplateTestGetTargetPointShape, TestTorchMinMaxAlgorithm):
+class TestTorchGetTargetPointShape(TemplateTestGetTargetPointShape, TestTorchMinMaxAlgorithm):
     def get_nncf_graph(self, weight_port_id: int, weight_shape: Tuple[int]) -> NNCFGraph:
         conv_layer_attrs = ConvolutionLayerAttributes(
             weight_requires_grad=True,
@@ -57,7 +59,13 @@ class TestOVGetTargetPointShape(TemplateTestGetTargetPointShape, TestTorchMinMax
             transpose=False,
             padding_values=[],
         )
-        return NNCFGraphToTest(PTConv2dMetatype, conv_layer_attrs, PTNNCFGraph).nncf_graph
+        return NNCFGraphToTest(
+            PTConv2dMetatype,
+            conv_layer_attrs,
+            PTNNCFGraph,
+            const_metatype=PTConstNoopMetatype,
+            const_layer_attrs=ConstantLayerAttributes("w", shape=weight_shape),
+        ).nncf_graph
 
 
 class TestTorchGetChannelAxes(TemplateTestGetChannelAxes, TestTorchMinMaxAlgorithm):

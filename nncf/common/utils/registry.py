@@ -9,29 +9,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any, Callable, Dict
+
 
 class Registry:
     REGISTERED_NAME_ATTR = "_registered_name"
 
     def __init__(self, name: str, add_name_as_attr: bool = False):
         self._name = name
-        self._registry_dict = {}
+        self._registry_dict: Dict[str, Any] = {}
         self._add_name_as_attr = add_name_as_attr
 
     @property
-    def registry_dict(self):
+    def registry_dict(self) -> Dict[str, Any]:
         return self._registry_dict
 
-    def values(self):
+    def values(self) -> Any:
         return self._registry_dict.values()
 
-    def _register(self, obj, name: str):
+    def _register(self, obj: Any, name: str) -> None:
         if name in self._registry_dict:
             raise KeyError("{} is already registered in {}".format(name, self._name))
         self._registry_dict[name] = obj
 
-    def register(self, name: str = None):
-        def wrap(obj):
+    def register(self, name: str = None) -> Callable[[Any], Any]:
+        def wrap(obj: Any) -> Any:
             cls_name = name
             if cls_name is None:
                 cls_name = obj.__name__
@@ -42,13 +44,13 @@ class Registry:
 
         return wrap
 
-    def get(self, name):
+    def get(self, name: str) -> Any:
         if name not in self._registry_dict:
             self._key_not_found(name)
         return self._registry_dict[name]
 
-    def _key_not_found(self, name):
+    def _key_not_found(self, name: str) -> None:
         raise KeyError("{} is unknown type of {} ".format(name, self._name))
 
-    def __contains__(self, item):
+    def __contains__(self, item: Any) -> bool:
         return item in self._registry_dict.values()

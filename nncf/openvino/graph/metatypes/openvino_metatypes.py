@@ -129,7 +129,7 @@ class OVEluMetatype(OVOpMetatype):
 @OV_OPERATOR_METATYPES.register()
 class OVPReluMetatype(OVOpMetatype):
     name = "PReluOp"
-    op_names = ["PReLU"]
+    op_names = ["PRelu"]
 
 
 @OV_OPERATOR_METATYPES.register()

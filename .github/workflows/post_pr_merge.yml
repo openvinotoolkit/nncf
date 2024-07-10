@@ -16,6 +16,9 @@ on:
       - develop
     types:
       - closed
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**/*'
 
 jobs:
   upload-coverage-common:

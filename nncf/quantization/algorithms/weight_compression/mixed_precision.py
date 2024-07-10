@@ -15,9 +15,6 @@ from typing import Dict, List, Optional, TypeVar
 from nncf.common.graph import NNCFGraph
 from nncf.common.logging.track_progress import track
 from nncf.common.utils.registry import Registry
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import functions as fns
-from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -25,6 +22,9 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
+from nncf.tensor.definitions import TensorDataType
 
 TModel = TypeVar("TModel")
 MIXED_PRECISION_CRITERIA = Registry("mixed_precision_criteria")
@@ -33,7 +33,8 @@ THE_LOWEST_SENSITIVITY = 0
 
 class MixedPrecisionCriterion:
     """
-    Assigns mixed quantization scheme (e.g. uniform int8 or non-uniform nf4) for weights based on some criteria.
+    Assigns mixed quantization scheme (e.g. uniform int8 or uniform int4/non-uniform fp4)
+    for weights based on some criteria.
     """
 
     def __init__(

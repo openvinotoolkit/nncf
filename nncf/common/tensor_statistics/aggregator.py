@@ -21,7 +21,7 @@ from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.data.dataset import Dataset
-from nncf.experimental.tensor.tensor import Tensor
+from nncf.tensor import Tensor
 
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")

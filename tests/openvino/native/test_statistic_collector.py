@@ -12,7 +12,7 @@
 
 import numpy as np
 
-from nncf.experimental.tensor import Tensor
+from nncf.tensor import Tensor
 from tests.common.experimental.test_statistic_collector import TemplateTestStatisticCollector
 
 

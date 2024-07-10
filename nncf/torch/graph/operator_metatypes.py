@@ -50,6 +50,7 @@ class PTOperatorMetatype(OperatorMetatype):
 
     external_op_names: List[str] = []
     num_expected_input_edges: Optional[int] = None
+    weight_port_ids: List[int] = []
 
     module_to_function_names: Dict[NamespaceTarget, List[str]] = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
@@ -1063,6 +1064,16 @@ class PTReduceL2(PTOperatorMetatype):
     }
     hw_config_names = [HWConfigOpName.REDUCEL2]
     num_expected_input_edges = 1
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTScaledDotProductAttentionMetatype(PTOperatorMetatype):
+    name = "ScaledDotProductAttentionOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["scaled_dot_product_attention"],
+    }
+    hw_config_names = [HWConfigOpName.SCALED_DOT_PRODUCT_ATTENTION]
+    target_input_ports = [0, 1]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:

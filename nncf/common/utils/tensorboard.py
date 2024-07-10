@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from functools import singledispatch
-from typing import Dict
+from typing import Any, Dict, Union
 
 from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.sparsity.statistics import ConstSparsityStatistics
@@ -35,12 +35,21 @@ def prepare_for_tensorboard(nncf_stats: NNCFStatistics) -> Dict[str, float]:
 
 
 @singledispatch
-def convert_to_dict(stats, algorithm_name: str):
+def convert_to_dict(
+    stats: Union[
+        FilterPruningStatistics,
+        MagnitudeSparsityStatistics,
+        RBSparsityStatistics,
+        ConstSparsityStatistics,
+        MovementSparsityStatistics,
+    ],
+    algorithm_name: str,
+) -> Dict[Any, Any]:
     return {}
 
 
 @convert_to_dict.register(FilterPruningStatistics)
-def _(stats, algorithm_name):
+def _(stats: FilterPruningStatistics, algorithm_name: str) -> Dict[str, float]:
     tensorboard_stats = {
         f"{algorithm_name}/algo_current_pruning_level": stats.current_pruning_level,
         f"{algorithm_name}/model_FLOPS_pruning_level": stats.model_statistics.flops_pruning_level,
@@ -53,7 +62,9 @@ def _(stats, algorithm_name):
 @convert_to_dict.register(MagnitudeSparsityStatistics)
 @convert_to_dict.register(RBSparsityStatistics)
 @convert_to_dict.register(ConstSparsityStatistics)
-def _(stats, algorithm_name):
+def _(
+    stats: Union[MagnitudeSparsityStatistics, RBSparsityStatistics, ConstSparsityStatistics], algorithm_name: str
+) -> Dict[str, float]:
     tensorboard_stats = {
         f"{algorithm_name}/sparsity_level_for_model": stats.model_statistics.sparsity_level,
         f"{algorithm_name}/sparsity_level_for_sparsified_layers": stats.model_statistics.sparsity_level_for_layers,
@@ -67,7 +78,7 @@ def _(stats, algorithm_name):
 
 
 @convert_to_dict.register(MovementSparsityStatistics)
-def _(stats, algorithm_name):
+def _(stats: MovementSparsityStatistics, algorithm_name: str) -> Dict[str, float]:
     tensorboard_stats = {
         f"{algorithm_name}/model_sparsity": stats.model_statistics.sparsity_level,
         f"{algorithm_name}/linear_layer_sparsity": stats.model_statistics.sparsity_level_for_layers,

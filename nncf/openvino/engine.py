@@ -16,7 +16,6 @@ import openvino.runtime as ov
 
 from nncf.common.engine import Engine
 from nncf.openvino.graph.model_utils import model_has_state
-from nncf.parameters import TargetDevice
 
 
 class OVCompiledModelEngine(Engine):
@@ -63,13 +62,10 @@ class OVNativeEngine(Engine):
     to infer the model.
     """
 
-    def __init__(self, model: ov.Model, target_device: TargetDevice = TargetDevice.CPU):
-        if target_device == TargetDevice.ANY:
-            target_device = TargetDevice.CPU
-
+    def __init__(self, model: ov.Model):
         ie = ov.Core()
         stateful = model_has_state(model)
-        compiled_model = ie.compile_model(model, target_device.value)
+        compiled_model = ie.compile_model(model, device_name="CPU")
         self.engine = OVCompiledModelEngine(compiled_model, stateful)
 
     def infer(

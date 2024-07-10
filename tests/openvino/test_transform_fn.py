@@ -55,7 +55,7 @@ def multiple_inputs_as_dict_transform_fn(data_item):
 )
 def test_transform_fn(model, transform_fn):
     # Check the transformation function
-    compiled_model = ov.compile_model(model.ov_model)
+    compiled_model = ov.compile_model(model.ov_model, device_name="CPU")
     _ = compiled_model(transform_fn(next(iter(dataset))))
 
     # Start quantization

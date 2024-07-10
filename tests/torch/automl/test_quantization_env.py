@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import math
 from copy import deepcopy
 
 import numpy as np
@@ -165,7 +166,7 @@ def test_reward(pretrained_score, compressed_score, model_size_ratio):
             qenv.reward(compressed_score, model_size_ratio)
     else:
         reward = qenv.reward(compressed_score, model_size_ratio)
-        assert reward == compressed_score * (10 ** (-np.floor(np.math.log(abs(pretrained_score), 10))))
+        assert reward == compressed_score * (10 ** (-np.floor(math.log(abs(pretrained_score), 10))))
 
 
 STRATEGY_LIST = [[2], [8, 8], [4, 8, 2]]
