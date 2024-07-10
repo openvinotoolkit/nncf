@@ -352,9 +352,6 @@ class WeightCompression(Algorithm):
         self._set_weight_compression_config(ratio_defining_params, model, graph, activations)
         nncf_logger.info(self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
 
-        # Sort weight params to start compression with the bigger constants. This lowers peak memory footprint.
-        all_weight_params = sorted(all_weight_params, key=lambda wp: wp.num_weights, reverse=True)
-
         if (
             self._awq
             and activations is not None
@@ -405,6 +402,9 @@ class WeightCompression(Algorithm):
                 statistic_points=self._gptq_statistics,
                 backend_entity=self._backend_entity,
             )
+
+        # Sort weight params to start compression with the bigger constants. This lowers peak memory footprint.
+        all_weight_params = sorted(all_weight_params, key=lambda wp: wp.num_weights, reverse=True)
 
         # Compress model using weight compression parameters
         transformed_model = self._backend_entity.transform_model(
