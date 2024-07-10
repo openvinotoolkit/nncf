@@ -1,5 +1,5 @@
 # Copyright (c) 2024 Intel Corporation
-# Licensed under the Apache License, Version 2.0 \\(the "License"\\);
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #      http://www.apache.org/licenses/LICENSE-2.0
@@ -45,7 +45,7 @@ class MemoryLogger:
         self,
         log_dir: Path,
         plot_title: str = "",
-        interval: float = 1,
+        interval: float = 0.1,
         memory_type: MemoryType = MemoryType.RSS,
         memory_unit: MemoryUnit = MemoryUnit.MiB,
     ):
