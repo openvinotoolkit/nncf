@@ -49,6 +49,12 @@ class FXModelTransformer(ModelTransformer):
         ]
 
     def transform(self, transformation_layout: PTTransformationLayout) -> torch.fx.GraphModule:
+        """
+        Transforms the target model according to given transformation layout.
+
+        :param transformation_layout: Given transformation layout.
+        :return: Target model transformered according to the given transformation layout.
+        """
         # TODO(dlyakhov): Manage priorities of transformations.
         transformations = transformation_layout.transformations
         aggregated_transformations = defaultdict(list)
@@ -72,6 +78,15 @@ class FXModelTransformer(ModelTransformer):
         model: torch.fx.GraphModule,
         transformations: List[PTModelExtractionCommand],
     ) -> torch.fx.GraphModule:
+        """
+        Returns a submodel extracted from the given model by the given transformation.
+
+        :param model: Given model.
+        :param transformations: List of one transformation which specifies
+            how to retrieve a submodule from the model. In case list contains
+            more than one element this function raises an assert.
+        :return: Returns a submodel extracted from the given model by the given transformation.
+        """
         transformation = transformations[-1]
         assert len(transformation.input_node_names) == 1
         assert transformation.input_node_names == transformation.output_node_names
@@ -97,6 +112,13 @@ class FXModelTransformer(ModelTransformer):
 
     @staticmethod
     def get_graph_node_by_name(graph: torch.fx.Graph, name: str) -> torch.fx.Node:
+        """
+        Retrieves a node with the specified name from the grpah.
+
+        :param graph: Given torch fx graph.
+        :param name: Target node name.
+        :return: A graph node with the given name.
+        """
         for node in graph.nodes:
             if node.name == name:
                 return node
@@ -107,6 +129,13 @@ class FXModelTransformer(ModelTransformer):
         model: torch.fx.GraphModule,
         transformations: List[FXApplyTransformationCommand],
     ) -> torch.fx.GraphModule:
+        """
+        Applies transformations to the given model.
+
+        :param model: Target model.
+        :param transformations: Transformations to apply to the model.
+        :return: Target model after all transformations were applied.
+        """
         for transformation in transformations:
             transformation.tranformation_fn(model)
         return model

@@ -28,10 +28,8 @@ from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.data import Dataset
-from nncf.experimental.torch.fx.transformations import merge_conv_and_bias
-from nncf.experimental.torch.fx.transformations import separate_conv_and_bias
-from nncf.experimental.torch.fx.transformations import separate_linear_and_bias
-from nncf.experimental.torch.fx.transformations import view_to_reshape
+from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
+from nncf.experimental.torch.fx.transformations import revert_quantization_transformations
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -76,13 +74,12 @@ def quantize_impl(
 
     if advanced_parameters is None:
         advanced_parameters = AdvancedQuantizationParameters()
-    # Default quantization mode is assymmetric
+    # Default quantization mode is asymmetric
     activations_quantization_params = advanced_parameters.activations_quantization_params
     if activations_quantization_params is None:
         activations_quantization_params = QuantizationParameters()
-
-    activations_quantization_params.mode = QuantizationScheme.ASYMMETRIC
-    advanced_parameters.activations_quantization_params = activations_quantization_params
+        activations_quantization_params.mode = QuantizationScheme.ASYMMETRIC
+        advanced_parameters.activations_quantization_params = activations_quantization_params
 
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,
@@ -102,18 +99,14 @@ def quantize_impl(
 
     # To make it easier for bias correction algorithms,
     # biases are being separated by the followng calls.
-    separate_linear_and_bias(copied_model)
-    separate_conv_and_bias(copied_model)
-
-    # View requires at least one dimension spans
-    # across two contiguous subspaces and reshape is not.
-    # To prevent error during statistics collection
-    # all view operation are translated to reshape.
-    view_to_reshape(copied_model)
+    apply_quantization_transformations(copied_model)
 
     nncf_graph = NNCFGraphFactory.create(copied_model)
     quantized_model = quantization_algorithm.apply(copied_model, nncf_graph, dataset=calibration_dataset)
-    merge_conv_and_bias(quantized_model)
+
+    # Revert applied transformation to keep original model
+    # bias configuration.
+    revert_quantization_transformations(quantized_model)
 
     # Magic. Without this call compiled model
     # is not preformant

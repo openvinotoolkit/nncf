@@ -144,7 +144,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_quantization_axes(node: NNCFNode, target_point: PTTargetPoint, ndims: int) -> Tuple[int]:
-        # TODO: support transpose conv and other cases
+        # TODO(dlyakhov): support transpose conv and other cases
         return (0,)
 
     @staticmethod
@@ -220,7 +220,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     ) -> Tuple[Tuple[int, ...], Tuple[int, ...], int]:
         is_weights = target_point.is_weight_target_point()
         if is_weights:
-            # TODO: support transpose conv/ make channel_idx common
+            # TODO(dlyakhov): support transpose conv/ make channel_idx common
             channel_idx = 0
         else:
             channel_idx = 1  # channel dim for activations

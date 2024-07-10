@@ -58,8 +58,8 @@ def is_torch_model(model: TModel) -> bool:
     :param model: A target model.
     :return: True if the model is an instance of torch.nn.Module and not torch.fx.GraphModule, otherwise False.
     """
-    import torch # type: ignore
-    import torch.fx
+    import torch  # type: ignore
+    import torch.fx  # type: ignore
 
     return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
 

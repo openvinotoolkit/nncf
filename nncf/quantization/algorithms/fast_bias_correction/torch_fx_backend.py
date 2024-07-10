@@ -82,7 +82,7 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: torch.fx.GraphModule) -> Tensor:
-        # TODO: make a node_name_vs_node map to speed up the process
+        # TODO(dlyakhov): make a node_name_vs_node map to speed up the process
         from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 
         bias_node = nncf_graph.get_next_nodes(node)[0]

@@ -15,7 +15,6 @@ import torch
 import torch.fx
 from torch.ao.quantization.fx.utils import create_getattr_from_value
 from torch.ao.quantization.pt2e.utils import _get_tensor_constant_from_node
-from torch.ao.quantization.pt2e.utils import _is_conv
 from torch.quantization.fake_quantize import FakeQuantize
 
 from nncf.common.graph.graph import NNCFNode
@@ -118,7 +117,10 @@ def qdq_insertion_tranformation_builder(
 
     def qdq_insertion_tranformation(model: torch.fx.GraphModule):
         if any(tp.target_type != TargetType.OPERATION_WITH_WEIGHTS for tp in target_points) and len(target_points) > 1:
-            raise RuntimeError
+            raise RuntimeError(
+                "Insertion of shared qdq pair for the weights is not supported."
+                " Please use non shared qdq pairs for the weights quantization."
+            )
         for target_point in target_points:
             target_node = _get_target_node(model.graph, target_point)
             insert_one_qdq_before_node(model, target_node, quantizer)
@@ -166,14 +168,14 @@ def insert_one_qdq_before_node(model: torch.fx.GraphModule, target_node: torch.f
 
     # 2. replace activation_post_process node with quantize and dequantize
     graph = model.graph
-    # TODO: use metatype to get correct input_port_id
+    # TODO(dlyakhov): use metatype to get correct input_port_id
     # Do not quantize already quantized nodes
     # inserting_before handle only order in the graph generated code.
     # so, inserting quantize-dequantize and all constant nodes before the usage of the nodes
     with graph.inserting_before(target_node):
         quantize_op_inputs = [target_node]
         for key, value_or_node in qparams.items():
-            # TODO: we can add the information of whether a value needs to
+            # TODO(dlyakhov): we can add the information of whether a value needs to
             # be registered as an attribute in qparams dict itself
             if key in ["_scale_", "_zero_point_"] and (not isinstance(value_or_node, (float, int))):
                 # For scale and zero_point values we register them as buffers in the root module.
@@ -183,7 +185,7 @@ def insert_one_qdq_before_node(model: torch.fx.GraphModule, target_node: torch.f
                 # tracing where it may consider tensor overload as opposed to default.
                 # With extra check of scale and zero_point being scalar, it makes
                 # sure that the default overload can be used.
-                # TODO: maybe need more complex attr name here
+                # TODO(dlaykhov): maybe need more complex attr name here
                 qparam_node = create_getattr_from_value(model, graph, target_node.name + key, value_or_node)
                 quantize_op_inputs.append(qparam_node)
             else:
@@ -231,9 +233,7 @@ def _get_target_node(graph: torch.fx.Graph, target_point: PTTargetPoint) -> torc
     target_node = FXModelTransformer.get_graph_node_by_name(graph, target_point.target_node_name)
     if target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
         target_node = target_node.all_input_nodes[target_point.input_port_id]
-    elif target_type == TargetType.OPERATOR_POST_HOOK:
-        pass
-    else:
+    elif target_type != TargetType.OPERATOR_POST_HOOK:
         raise RuntimeError(f"Unsupported target type: {target_type} for target_point: {target_point}")
     return target_node
 
@@ -263,14 +263,42 @@ def _set_module_to_the_graph_module(
     return module_name_in_model
 
 
+def apply_quantization_transformations(model: torch.fx.Graph):
+    """
+    Applies quantization transformations to the model.
+    :param model: Model to apply transformations to.
+    """
+    separate_conv_and_bias(model)
+    separate_linear_and_bias(model)
+
+
+def revert_quantization_transformations(model: torch.fx.Graph):
+    """
+    Reverts quantization transformations from the model.
+    :param model: Model to revert transformations from.
+    """
+    merge_conv_and_bias(model)
+    merge_linear_and_bias(model)
+
+
 def _is_linear(n: torch.fx.Node) -> bool:
     """
-    Returns true if given node is a linear node, else False.
+    Return whether the node refers to an aten linear op.
 
     :param n: The given node.
     :return: True if given node is a linear node, else False.
     """
-    return n.op == "call_function" and n.target in [torch.ops.aten.linear.default]
+    return n.op == "call_function" and n.target in (torch.ops.aten.linear.default,)
+
+
+def _is_conv(n: torch.fx.Node):
+    """
+    Return whether the node refers to an aten conv op.
+    """
+    return n.op == "call_function" and n.target in (
+        torch.ops.aten.conv1d.default,
+        torch.ops.aten.conv2d.default,
+    )
 
 
 def separate_linear_and_bias(model: torch.fx.GraphModule):
@@ -291,7 +319,7 @@ def separate_linear_and_bias(model: torch.fx.GraphModule):
         while linear_bias_node.op != "get_attr":
             # Assume zero argument is on a path to the constant
             linear_bias_node = linear_bias_node.args[0]
-        conv_bias_value = _get_tensor_constant_from_node(linear_bias_node, model)
+        linear_bias_value = _get_tensor_constant_from_node(linear_bias_node, model)
         args = list(n.args)
         args[2] = None
         linear_node.args = tuple(args)
@@ -300,7 +328,7 @@ def separate_linear_and_bias(model: torch.fx.GraphModule):
                 model,
                 model.graph,
                 linear_bias_node.name + "_",
-                conv_bias_value,
+                linear_bias_value,
             )
         with model.graph.inserting_after(new_linear_bias_node):
             add_node = model.graph.create_node(
@@ -312,26 +340,6 @@ def separate_linear_and_bias(model: torch.fx.GraphModule):
             user.replace_input_with(linear_node, add_node)
         if "val" in linear_node.meta:
             add_node.meta["val"] = linear_node.meta["val"]
-    model.graph.eliminate_dead_code()
-    model.recompile()
-
-
-def view_to_reshape(model: torch.fx.GraphModule):
-    """
-    Replaces all instances of view to a reshape call.
-
-    :param model: Target model.
-    """
-    for n in model.graph.nodes:
-        if not (n.op == "call_function" and n.target in [torch.ops.aten.view.default]):
-            continue
-        with model.graph.inserting_after(n):
-            reshape = model.graph.create_node("call_function", torch.ops.aten.reshape.default, tuple(n.args), {})
-            reshape.meta = n.meta
-
-        for user in list(n.users):
-            user.replace_input_with(n, reshape)
-
     model.graph.eliminate_dead_code()
     model.recompile()
 
@@ -384,14 +392,34 @@ def separate_conv_and_bias(model: torch.fx.GraphModule):
 
 def merge_conv_and_bias(model: torch.fx.GraphModule):
     """
-    Separates one joined conv+bias node to two nodes: conv and bias.
+    Merges two separate conv and bias nodes to a one node: conv+bias.
     Needed as nncf does not expect joined conv
 
     :param model: Target model.
     """
+    _merge_node_and_bias(model, _is_conv)
+
+
+def merge_linear_and_bias(model: torch.fx.GraphModule):
+    """
+    Merges two separate linear and bias nodes to a one node: linear+bias.
+
+    :param model: Target model.
+    """
+    _merge_node_and_bias(model, _is_linear)
+
+
+def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[torch.fx.Node], bool]):
+    """
+    Merges two separate node and bias node to a one node: node+bias.
+    Check which node should be merged by the given `is_target_node` predicate.
+
+    :param model: Target model.
+    :param is_target_node: Predicate to specify nodes which shoudld be merged with the bias
+    """
     add_node_targets = (torch.ops.aten.add_.Tensor,)
     for n in model.graph.nodes:
-        if not _is_conv(n):
+        if not is_target_node(n):
             continue
         if len(n.args) > 2 and n.args[2] is not None:
             continue
