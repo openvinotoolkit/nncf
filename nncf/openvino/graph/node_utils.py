@@ -109,7 +109,9 @@ def get_const_value(const_node: ov.Node, dtype: ov.Type = ov.Type.f32) -> np.nda
     :param dtype: Value return type.
     :return: The constant value.
     """
-    return const_node.get_data(dtype=dtype.to_dtype())
+    if const_node.get_element_type() == ov.Type.bf16:
+        return const_node.get_data(dtype=dtype.to_dtype())
+    return const_node.data
 
 
 def get_bias_value(
