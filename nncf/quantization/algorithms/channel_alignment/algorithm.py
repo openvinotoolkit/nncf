@@ -288,12 +288,12 @@ class ChannelAlignment(Algorithm):
         }
         producer_attrs = {
             GraphPattern.LABEL_ATTR: "CONV_PRODUCER",
-            GraphPattern.METATYPE_ATTR: self._backend_entity.get_conv_metatypes()
+            GraphPattern.TYPE_ATTR: self._backend_entity.get_conv_metatypes()
             + self._backend_entity.get_linear_metatypes(),
         }
         bias_attrs = {
             GraphPattern.LABEL_ATTR: "BIAS_PRODUCER",
-            GraphPattern.METATYPE_ATTR: self._backend_entity.get_add_metatypes(),
+            GraphPattern.TYPE_ATTR: self._backend_entity.get_add_metatypes(),
         }
         bias_const_attrs = {
             GraphPattern.LABEL_ATTR: "BIAS_CONSTANT",
@@ -301,7 +301,7 @@ class ChannelAlignment(Algorithm):
         }
         consumer_attrs = {
             GraphPattern.LABEL_ATTR: "CONV_CONSUMER",
-            GraphPattern.METATYPE_ATTR: self._backend_entity.get_conv_metatypes(),
+            GraphPattern.TYPE_ATTR: self._backend_entity.get_conv_metatypes(),
         }
         conv_const_attrs = {
             GraphPattern.LABEL_ATTR: "CONV_CONSTANT",

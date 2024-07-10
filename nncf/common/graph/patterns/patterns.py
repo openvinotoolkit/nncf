@@ -253,12 +253,16 @@ class GraphPattern:
 
 
 def merge_two_types_of_operations(first_op: Dict[str, Any], second_op: Dict[str, Any], label: str) -> Dict[str, Any]:
-    if GraphPattern.TYPE_ATTR in first_op and GraphPattern.TYPE_ATTR in second_op:
-        res = {GraphPattern.TYPE_ATTR: first_op[GraphPattern.TYPE_ATTR]}
-        res[GraphPattern.TYPE_ATTR].extend(second_op[GraphPattern.TYPE_ATTR])
-        res[GraphPattern.LABEL_ATTR] = label
-        return res
-    raise nncf.InternalError("Incorrect dicts of operations")
+    res = dict()
+    any_attr = False
+    for attr in [GraphPattern.TYPE_ATTR, GraphPattern.TYPE_ATTR]:
+        if attr in first_op and attr in second_op:
+            res[attr] = first_op[attr]
+            res[attr].extend(second_op[attr])
+            any_attr = True
+    if not any_attr:
+        raise nncf.InternalError("Incorrect dicts of operations")
+    return res
 
 
 @dataclass

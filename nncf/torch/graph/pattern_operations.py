@@ -13,7 +13,7 @@ from nncf.common.graph.patterns import merge_two_types_of_operations
 from nncf.torch.graph import operator_metatypes as om
 
 LINEAR_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: [
+    GraphPattern.TYPE_ATTR: [
         # Linear
         om.PTLinearMetatype,
         om.PTModuleLinearMetatype,
@@ -52,22 +52,22 @@ LINEAR_OPERATIONS = {
 }
 
 BATCH_NORMALIZATION_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: [om.PTBatchNormMetatype, om.PTModuleBatchNormMetatype],
+    GraphPattern.TYPE_ATTR: [om.PTBatchNormMetatype, om.PTModuleBatchNormMetatype],
     GraphPattern.LABEL_ATTR: "BATCH_NORMALIZATION",
 }
 
 GROUP_NORMALIZATION_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: [om.PTGroupNormMetatype, om.PTModuleGroupNormMetatype],
+    GraphPattern.TYPE_ATTR: [om.PTGroupNormMetatype, om.PTModuleGroupNormMetatype],
     GraphPattern.LABEL_ATTR: "GROUP_NORMALIZATION",
 }
 
 LAYER_NORMALIZATION_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: [om.PTLayerNormMetatype, om.PTModuleLayerNormMetatype],
+    GraphPattern.TYPE_ATTR: [om.PTLayerNormMetatype, om.PTModuleLayerNormMetatype],
     GraphPattern.LABEL_ATTR: "LAYER_NORMALIZATION",
 }
 
 RELU_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: [
+    GraphPattern.TYPE_ATTR: [
         om.PTRELUMetatype,
         om.PTRELU6Metatype,
         om.PTHardTanhMetatype,
@@ -76,7 +76,7 @@ RELU_OPERATIONS = {
 }
 
 NON_RELU_ACTIVATIONS_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: [
+    GraphPattern.TYPE_ATTR: [
         om.PTELUMetatype,
         om.PTPRELUMetatype,
         om.PTLeakyRELUMetatype,
@@ -95,6 +95,6 @@ ATOMIC_ACTIVATIONS_OPERATIONS = merge_two_types_of_operations(
 )
 
 ARITHMETIC_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: [om.PTAddMetatype, om.PTSubMetatype, om.PTMulMetatype, om.PTDivMetatype],
+    GraphPattern.TYPE_ATTR: [om.PTAddMetatype, om.PTSubMetatype, om.PTMulMetatype, om.PTDivMetatype],
     GraphPattern.LABEL_ATTR: "ARITHMETIC",
 }
