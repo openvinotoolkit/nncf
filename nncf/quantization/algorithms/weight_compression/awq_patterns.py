@@ -20,9 +20,9 @@ AWQ_PATTERNS = Registry("awq")
 @AWQ_PATTERNS.register("MatMul_Mul_MatMul")
 def create_matmul_mul_matmul(matmul_metatype, multiply_metatype, _atomic_activations_operations) -> GraphPattern:
     pattern = GraphPattern()
-    linear_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.TYPE_ATTR: matmul_metatype})
-    mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: multiply_metatype})
-    linear_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.TYPE_ATTR: matmul_metatype})
+    linear_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.METATYPE_ATTR: matmul_metatype})
+    mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: multiply_metatype})
+    linear_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.METATYPE_ATTR: matmul_metatype})
 
     pattern.add_edge(linear_node_1, mul_node)
     pattern.add_edge(mul_node, linear_node_2)
@@ -31,8 +31,8 @@ def create_matmul_mul_matmul(matmul_metatype, multiply_metatype, _atomic_activat
 
 def mul_matmul_operation(matmul_metatype, multiply_metatype) -> GraphPattern:
     pattern = GraphPattern()
-    linear_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.TYPE_ATTR: matmul_metatype})
-    mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.TYPE_ATTR: multiply_metatype})
+    linear_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.METATYPE_ATTR: matmul_metatype})
+    mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: multiply_metatype})
     pattern.add_edge(mul_node, linear_node)
 
     return pattern
@@ -40,7 +40,7 @@ def mul_matmul_operation(matmul_metatype, multiply_metatype) -> GraphPattern:
 
 def matmul_operation(matmul_metatype) -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.TYPE_ATTR: matmul_metatype})
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.METATYPE_ATTR: matmul_metatype})
 
     return pattern
 
@@ -48,7 +48,7 @@ def matmul_operation(matmul_metatype) -> GraphPattern:
 def atomic_activations_operations_pattern(atomic_activations_operations) -> GraphPattern:
     pattern = GraphPattern()
     pattern.add_node(
-        **{GraphPattern.TYPE_ATTR: atomic_activations_operations, GraphPattern.LABEL_ATTR: "ATOMIC_ACTIVATIONS"}
+        **{GraphPattern.METATYPE_ATTR: atomic_activations_operations, GraphPattern.LABEL_ATTR: "ATOMIC_ACTIVATIONS"}
     )
     return pattern
 

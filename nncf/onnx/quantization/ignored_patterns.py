@@ -33,12 +33,14 @@ def _add_softmax_matmul(pattern: GraphPattern) -> None:
         om.ONNXSqueezeMetatype,
         om.ONNXConcatMetatype,
     ]
-    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.TYPE_ATTR: om.ONNXSoftmaxMetatype})
-    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.TYPE_ATTR: MATMUL_METATYPES})
+    softmax = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.ONNXSoftmaxMetatype}
+    )
+    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: MATMUL_METATYPES})
     matmul_branch_nodes = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT",
-            GraphPattern.TYPE_ATTR: branch_matmul_nodes,
+            GraphPattern.METATYPE_ATTR: branch_matmul_nodes,
         }
     )
     pattern.add_edge(softmax, matmul)
@@ -65,13 +67,17 @@ def _add_softmax_reshape_matmul(pattern: GraphPattern) -> None:
         om.ONNXSqueezeMetatype,
         om.ONNXConcatMetatype,
     ]
-    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.TYPE_ATTR: om.ONNXSoftmaxMetatype})
-    reshape = pattern.add_node(**{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.TYPE_ATTR: om.ONNXReshapeMetatype})
-    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.TYPE_ATTR: MATMUL_METATYPES})
+    softmax = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.ONNXSoftmaxMetatype}
+    )
+    reshape = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: om.ONNXReshapeMetatype}
+    )
+    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: MATMUL_METATYPES})
     matmul_branch_nodes = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT",
-            GraphPattern.TYPE_ATTR: branch_matmul_nodes,
+            GraphPattern.METATYPE_ATTR: branch_matmul_nodes,
         }
     )
     pattern.add_edge(softmax, reshape)
@@ -110,12 +116,12 @@ def create_se_block() -> GraphPattern:
     reduce_mean_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "REDUCE_MEAN",
-            GraphPattern.TYPE_ATTR: om.ONNXReduceMeanMetatype,
+            GraphPattern.METATYPE_ATTR: om.ONNXReduceMeanMetatype,
             GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
         }
     )
     conv_node_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "CONVOLUTION", GraphPattern.TYPE_ATTR: om.ONNXConvolutionMetatype}
+        **{GraphPattern.LABEL_ATTR: "CONVOLUTION", GraphPattern.METATYPE_ATTR: om.ONNXConvolutionMetatype}
     )
 
     pattern.add_edge(non_pattern_node, reduce_mean_node)
@@ -124,19 +130,19 @@ def create_se_block() -> GraphPattern:
 
     rest_pattern = GraphPattern()
     conv_node_2 = rest_pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "CONVOLUTION", GraphPattern.TYPE_ATTR: om.ONNXConvolutionMetatype}
+        **{GraphPattern.LABEL_ATTR: "CONVOLUTION", GraphPattern.METATYPE_ATTR: om.ONNXConvolutionMetatype}
     )
 
     sigmoid_node = rest_pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "SIGMOID",
-            GraphPattern.TYPE_ATTR: [om.ONNXSigmoidMetatype, om.ONNXHardSigmoidMetatype],
+            GraphPattern.METATYPE_ATTR: [om.ONNXSigmoidMetatype, om.ONNXHardSigmoidMetatype],
         }
     )
     multiply_node = rest_pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "LAST_MULTIPLY",
-            GraphPattern.TYPE_ATTR: om.ONNXMulLayerMetatype,
+            GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype,
             GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
         }
     )

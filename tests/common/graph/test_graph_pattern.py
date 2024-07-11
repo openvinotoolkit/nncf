@@ -26,15 +26,15 @@ class TestPattern:
     fifth_type = [GraphPattern.ANY_PATTERN_NODE_TYPE]
 
     first_pattern = GraphPattern()
-    first_pattern.add_node(**{GraphPattern.LABEL_ATTR: "first", GraphPattern.TYPE_ATTR: first_type})
+    first_pattern.add_node(**{GraphPattern.LABEL_ATTR: "first", GraphPattern.METATYPE_ATTR: first_type})
     second_pattern = GraphPattern()
-    second_pattern.add_node(**{GraphPattern.LABEL_ATTR: "second", GraphPattern.TYPE_ATTR: second_type})
+    second_pattern.add_node(**{GraphPattern.LABEL_ATTR: "second", GraphPattern.METATYPE_ATTR: second_type})
     third_pattern = GraphPattern()
-    third_pattern.add_node(**{GraphPattern.LABEL_ATTR: "third", GraphPattern.TYPE_ATTR: third_type})
+    third_pattern.add_node(**{GraphPattern.LABEL_ATTR: "third", GraphPattern.METATYPE_ATTR: third_type})
     forth_pattern = GraphPattern()
-    forth_pattern.add_node(**{GraphPattern.LABEL_ATTR: "forth", GraphPattern.TYPE_ATTR: forth_type})
+    forth_pattern.add_node(**{GraphPattern.LABEL_ATTR: "forth", GraphPattern.METATYPE_ATTR: forth_type})
     fifth_pattern = GraphPattern()
-    fifth_pattern.add_node(**{GraphPattern.LABEL_ATTR: "fifth", GraphPattern.TYPE_ATTR: fifth_pattern})
+    fifth_pattern.add_node(**{GraphPattern.LABEL_ATTR: "fifth", GraphPattern.METATYPE_ATTR: fifth_pattern})
 
     # pattern_with_non_pattern_nodes |  pattern_with_any_pattern_nodes
     #        NON                     |            ANY
@@ -54,22 +54,22 @@ class TestPattern:
     pattern_with_non_pattern_nodes = GraphPattern()
     pattern_with_any_pattern_nodes = GraphPattern()
     common_nodes = {
-        "1": {GraphPattern.TYPE_ATTR: "a"},
-        "2": {GraphPattern.TYPE_ATTR: "b"},
-        "3": {GraphPattern.TYPE_ATTR: "c"},
-        "4": {GraphPattern.TYPE_ATTR: "a"},
-        "5": {GraphPattern.TYPE_ATTR: "e"},
-        "6": {GraphPattern.TYPE_ATTR: "a"},
+        "1": {GraphPattern.METATYPE_ATTR: "a"},
+        "2": {GraphPattern.METATYPE_ATTR: "b"},
+        "3": {GraphPattern.METATYPE_ATTR: "c"},
+        "4": {GraphPattern.METATYPE_ATTR: "a"},
+        "5": {GraphPattern.METATYPE_ATTR: "e"},
+        "6": {GraphPattern.METATYPE_ATTR: "a"},
     }
     non_pattern_nodes = {
-        "7": {GraphPattern.TYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE},
-        "8": {GraphPattern.TYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE},
-        "9": {GraphPattern.TYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE},
+        "7": {GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE},
+        "8": {GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE},
+        "9": {GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE},
     }
     any_pattern_nodes = {
-        "7": {GraphPattern.TYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE},
-        "8": {GraphPattern.TYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE},
-        "9": {GraphPattern.TYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE},
+        "7": {GraphPattern.METATYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE},
+        "8": {GraphPattern.METATYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE},
+        "9": {GraphPattern.METATYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE},
     }
     label_to_non_pattern_nodes = {}
     label_to_any_pattern_nodes = {}
@@ -94,9 +94,9 @@ class TestPattern:
 def test_ops_combination_two_patterns():
     pattern = TestPattern.first_pattern + TestPattern.second_pattern
     ref_pattern = GraphPattern()
-    ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "first", GraphPattern.TYPE_ATTR: TestPattern.first_type})
+    ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "first", GraphPattern.METATYPE_ATTR: TestPattern.first_type})
     added_node = ref_pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "second", GraphPattern.TYPE_ATTR: TestPattern.second_type}
+        **{GraphPattern.LABEL_ATTR: "second", GraphPattern.METATYPE_ATTR: TestPattern.second_type}
     )
     for node in ref_pattern.graph.nodes:
         if node != added_node:
@@ -105,27 +105,27 @@ def test_ops_combination_two_patterns():
 
     pattern = TestPattern.first_pattern | TestPattern.second_pattern
     ref_pattern = GraphPattern()
-    ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "first", GraphPattern.TYPE_ATTR: TestPattern.first_type})
-    _ = ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "second", GraphPattern.TYPE_ATTR: TestPattern.second_type})
+    ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "first", GraphPattern.METATYPE_ATTR: TestPattern.first_type})
+    _ = ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "second", GraphPattern.METATYPE_ATTR: TestPattern.second_type})
     assert ref_pattern == pattern
 
 
 def test_ops_combination_three_patterns():
     pattern = TestPattern.first_pattern + TestPattern.second_pattern | TestPattern.third_pattern
     ref_pattern = GraphPattern()
-    ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "first", GraphPattern.TYPE_ATTR: TestPattern.first_type})
+    ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "first", GraphPattern.METATYPE_ATTR: TestPattern.first_type})
     added_node = ref_pattern.add_node(label="second", type=TestPattern.second_type)
     for node in ref_pattern.graph.nodes:
         if node != added_node:
             ref_pattern.add_edge(node, added_node)
-    _ = ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "third", GraphPattern.TYPE_ATTR: TestPattern.third_type})
+    _ = ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "third", GraphPattern.METATYPE_ATTR: TestPattern.third_type})
     assert ref_pattern == pattern
 
     pattern = TestPattern.first_pattern | TestPattern.second_pattern | TestPattern.third_pattern
     ref_pattern = GraphPattern()
-    _ = ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "first", GraphPattern.TYPE_ATTR: TestPattern.first_type})
-    _ = ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "second", GraphPattern.TYPE_ATTR: TestPattern.second_type})
-    _ = ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "third", GraphPattern.TYPE_ATTR: TestPattern.third_type})
+    _ = ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "first", GraphPattern.METATYPE_ATTR: TestPattern.first_type})
+    _ = ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "second", GraphPattern.METATYPE_ATTR: TestPattern.second_type})
+    _ = ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "third", GraphPattern.METATYPE_ATTR: TestPattern.third_type})
     assert ref_pattern == pattern
 
     pattern = TestPattern.first_pattern + TestPattern.second_pattern
@@ -134,15 +134,15 @@ def test_ops_combination_three_patterns():
     edges = list(itertools.product(pattern_nodes, third_nodes))
     pattern.join_patterns(TestPattern.third_pattern, edges)
     ref_pattern = GraphPattern()
-    ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "second", GraphPattern.TYPE_ATTR: TestPattern.first_type})
+    ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "second", GraphPattern.METATYPE_ATTR: TestPattern.first_type})
     added_node = ref_pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "second", GraphPattern.TYPE_ATTR: TestPattern.second_type}
+        **{GraphPattern.LABEL_ATTR: "second", GraphPattern.METATYPE_ATTR: TestPattern.second_type}
     )
     for node in ref_pattern.graph.nodes:
         if node != added_node:
             ref_pattern.add_edge(node, added_node)
     added_node = ref_pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "third", GraphPattern.TYPE_ATTR: TestPattern.third_type}
+        **{GraphPattern.LABEL_ATTR: "third", GraphPattern.METATYPE_ATTR: TestPattern.third_type}
     )
     for node in ref_pattern.graph.nodes:
         if node != added_node:
@@ -173,21 +173,21 @@ def test_join_patterns_func_three_patterns():
     edges = list(itertools.product(pattern_nodes, third_nodes))
     pattern.join_patterns(TestPattern.third_pattern, edges)
     ref_pattern = GraphPattern()
-    _ = ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "first", GraphPattern.TYPE_ATTR: TestPattern.first_type})
+    _ = ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "first", GraphPattern.METATYPE_ATTR: TestPattern.first_type})
     added_node = ref_pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "second", GraphPattern.TYPE_ATTR: TestPattern.second_type}
+        **{GraphPattern.LABEL_ATTR: "second", GraphPattern.METATYPE_ATTR: TestPattern.second_type}
     )
     for node in ref_pattern.graph.nodes:
         if node != added_node:
             ref_pattern.add_edge(node, added_node)
     last_node = list(nx.topological_sort(ref_pattern.graph))[-1]
     added_node = ref_pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "third", GraphPattern.TYPE_ATTR: TestPattern.third_type}
+        **{GraphPattern.LABEL_ATTR: "third", GraphPattern.METATYPE_ATTR: TestPattern.third_type}
     )
     ref_pattern.add_edge(last_node, added_node)
 
     added_node = ref_pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "third", GraphPattern.TYPE_ATTR: TestPattern.third_type}
+        **{GraphPattern.LABEL_ATTR: "third", GraphPattern.METATYPE_ATTR: TestPattern.third_type}
     )
     for node in ref_pattern.graph.nodes:
         if node != added_node:
@@ -199,15 +199,15 @@ def test_join_pattern_with_special_input_node():
     pattern = TestPattern.first_pattern
     second_pattern = GraphPattern()
     second_pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "second", GraphPattern.TYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE}
+        **{GraphPattern.LABEL_ATTR: "second", GraphPattern.METATYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE}
     )
     pattern.join_patterns(second_pattern)
     pattern.join_patterns(TestPattern.third_pattern)
 
     ref_pattern = GraphPattern()
-    ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "first", GraphPattern.TYPE_ATTR: TestPattern.first_type})
+    ref_pattern.add_node(**{GraphPattern.LABEL_ATTR: "first", GraphPattern.METATYPE_ATTR: TestPattern.first_type})
     added_node = ref_pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "third", GraphPattern.TYPE_ATTR: TestPattern.third_type}
+        **{GraphPattern.LABEL_ATTR: "third", GraphPattern.METATYPE_ATTR: TestPattern.third_type}
     )
     for node in ref_pattern.graph.nodes:
         if node != added_node:

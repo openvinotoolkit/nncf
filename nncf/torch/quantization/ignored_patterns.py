@@ -34,10 +34,10 @@ def _add_softmax_matmul(
     #               \      /
     #                MATMUL
     branch_matmul_nodes = reshape_squeeze_metatypes + gather_metatypes + transpose_metatypes + concat_metatypes
-    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.TYPE_ATTR: om.PTSoftmaxMetatype})
-    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.TYPE_ATTR: matmul_metatypes})
+    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.PTSoftmaxMetatype})
+    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: matmul_metatypes})
     matmul_branch_nodes = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "NON_PATTERN", GraphPattern.TYPE_ATTR: branch_matmul_nodes}
+        **{GraphPattern.LABEL_ATTR: "NON_PATTERN", GraphPattern.METATYPE_ATTR: branch_matmul_nodes}
     )
     pattern.add_edge(softmax, matmul)
     pattern.add_edge(matmul_branch_nodes, matmul)
@@ -64,13 +64,13 @@ def _add_softmax_reshape_matmul(
     #                      \       /
     #                        MATMUL
     branch_matmul_nodes = reshape_squeeze_metatypes + gather_metatypes + transpose_metatypes + concat_metatypes
-    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.TYPE_ATTR: om.PTSoftmaxMetatype})
+    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.PTSoftmaxMetatype})
     reshape = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.TYPE_ATTR: reshape_squeeze_metatypes}
+        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: reshape_squeeze_metatypes}
     )
-    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.TYPE_ATTR: matmul_metatypes})
+    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: matmul_metatypes})
     matmul_branch_nodes = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER", GraphPattern.TYPE_ATTR: branch_matmul_nodes}
+        **{GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER", GraphPattern.METATYPE_ATTR: branch_matmul_nodes}
     )
     pattern.add_edge(softmax, reshape)
     pattern.add_edge(reshape, matmul)
@@ -111,16 +111,16 @@ def create_multihead_attention_output() -> GraphPattern:
 def create_se_block() -> GraphPattern:
     MEAN_OPERATIONS = {
         GraphPattern.LABEL_ATTR: "REDUCE_MEAN",
-        GraphPattern.TYPE_ATTR: [om.PTAvgPool2dMetatype, om.PTAvgPool3dMetatype, om.PTMeanMetatype],
+        GraphPattern.METATYPE_ATTR: [om.PTAvgPool2dMetatype, om.PTAvgPool3dMetatype, om.PTMeanMetatype],
         GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
     }
     SYGMOID_OPERATIONS = {
         GraphPattern.LABEL_ATTR: "SIGMOID",
-        GraphPattern.TYPE_ATTR: [om.PTSigmoidMetatype, om.PTHardSigmoidMetatype],
+        GraphPattern.METATYPE_ATTR: [om.PTSigmoidMetatype, om.PTHardSigmoidMetatype],
     }
     MUL_OPERATION = {
         GraphPattern.LABEL_ATTR: "MUL",
-        GraphPattern.TYPE_ATTR: om.PTMulMetatype,
+        GraphPattern.METATYPE_ATTR: om.PTMulMetatype,
         GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
     }
 
@@ -168,7 +168,7 @@ def create_se_block() -> GraphPattern:
 
     RESHAPE_NODES = {
         GraphPattern.LABEL_ATTR: "RESHAPE",
-        GraphPattern.TYPE_ATTR: om.PTReshapeMetatype,
+        GraphPattern.METATYPE_ATTR: om.PTReshapeMetatype,
     }
 
     def get_se_block_with_reshape() -> GraphPattern:
