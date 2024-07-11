@@ -642,25 +642,25 @@ MODELS_WITH_PARAMETERS = [
     {
         "model": ConvModel().ov_model,
         "layers": ["Conv"],
-        "values": [np.full((3,), 2)],
+        "values": [np.full((3,), 2).astype(np.float32)],
         "refs": [2.0],
     },
     {
         "model": FPModel(const_dtype=ov.Type.f16).ov_model,
         "layers": ["MatMul"],
-        "values": [np.full((3,), 2)],
+        "values": [np.full((3,), 2).astype(np.float16)],
         "refs": [2.0],
     },
     {
         "model": FPModel(const_dtype=ov.Type.f16, input_dtype=ov.Type.f16).ov_model,
         "layers": ["MatMul"],
-        "values": [np.full((3,), 2)],
+        "values": [np.full((3,), 2).astype(np.float16)],
         "refs": [2.0],
     },
     {
         "model": FPModel(const_dtype=ov.Type.bf16, input_dtype=ov.Type.bf16).ov_model,
         "layers": ["MatMul"],
-        "values": [np.full((3,), 2)],
+        "values": [np.full((3,), 2).astype(np.float32)],
         "refs": [2.0],
     },
 ]
@@ -687,7 +687,7 @@ def test_bias_correction(model_with_parameters):
         if potential_bias.get_type_name() == "Convert":
             potential_bias = potential_bias.input_value(0).node
         assert potential_bias.get_type_name() == "Constant"
-        potential_bias_value = get_const_value(potential_bias, dtype=ov.Type.f32)
+        potential_bias_value = get_const_value(potential_bias)
         assert np.all(potential_bias_value == bias_reference)
 
 

@@ -34,32 +34,26 @@ from tests.openvino.native.models import MatMul2DNotBiasModel
         # base FP32 precision
         {
             "type_for_const": ov.Type.f32,
-            "type_to_get": ov.Type.f32,
+            "ref_type": np.float32,
         },
-        # from base FP16 precision to FP32
+        # base FP16 precision
         {
             "type_for_const": ov.Type.f16,
-            "type_to_get": ov.Type.f16,
+            "ref_type": np.float16,
         },
-        # from base BF16 precision to FP32
+        # base BF16 precision should be casted to FP32
         {
             "type_for_const": ov.Type.bf16,
-            "type_to_get": ov.Type.bf16,
-        },
-        {
-            "type_for_const": ov.Type.bf16,
-            "type_to_get": ov.Type.f32,
+            "ref_type": np.float32,
         },
     ],
 )
 def test_get_const_value(precisions):
-    type_to_get = precisions["type_to_get"]
-
     const_data = np.ones((1, 2, 3), dtype=np.float32)
     weight_const = opset.constant(const_data, dtype=precisions["type_for_const"])
 
-    const_value = get_const_value(weight_const, dtype=type_to_get)
-    assert const_value.dtype == type_to_get.to_dtype()
+    const_value = get_const_value(weight_const)
+    assert const_value.dtype == precisions["ref_type"]
 
 
 @pytest.mark.parametrize(

@@ -107,40 +107,35 @@ def get_number_if_op(model: ov.Model) -> int:
     return cnt_if_op(model, 0)
 
 
-def get_const_value(const_node: ov.Node, dtype: ov.Type = ov.Type.f32) -> np.ndarray:
+def get_const_value(const_node: ov.Node) -> np.ndarray:
     """
     Returns the constant tensor for the node.
 
     :param const_node: OpenVINO node.
-    :param dtype: Value return type.
     :return: The constant value.
     """
     if const_node.get_element_type() == ov.Type.bf16:
-        return const_node.get_data(dtype=dtype.to_dtype())
+        # Fixed FP32 data type as the result for BF16 constant
+        return const_node.get_data(dtype=np.float32)
     return const_node.data
 
 
-def get_bias_value(
-    node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model, dtype: ov.Type = ov.Type.f32
-) -> np.ndarray:
+def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
     """
     Returns the bias tensor for the biased node.
 
     :param node_with_bias: The node that corresponds to the operation with bias.
     :param nncf_graph: NNCFGraph instance.
     :param model: The model that contains this operation.
-    :param dtype: Value return type.
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
     ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
     bias_constant = get_node_with_bias_value(get_add_bias_node(node_with_bias, nncf_graph), nncf_graph)
     ov_bias_constant = ops_dict[bias_constant.node_name]
-    return get_const_value(ov_bias_constant, dtype)
+    return get_const_value(ov_bias_constant)
 
 
-def get_weight_value(
-    node_with_weight: NNCFNode, model: ov.Model, port_id: int, dtype: ov.Type = ov.Type.f32
-) -> np.ndarray:
+def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
     """
     Returns a weight value for the node with weight.
 
@@ -148,13 +143,12 @@ def get_weight_value(
     :param nncf_graph: NNCF graph.
     :param model: The model that contains this operation.
     :param port_id: The input port ID to get weight input.
-    :param dtype: Value return type.
     :return: The weight value.
     """
     const_op_friendly_name = node_with_weight.layer_attributes.constant_attributes[port_id]["name"]
     friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
     const_op = friendly_name_to_op_map[const_op_friendly_name]
-    weight_tensor = get_const_value(const_op, dtype)
+    weight_tensor = get_const_value(const_op)
     return weight_tensor
 
 
