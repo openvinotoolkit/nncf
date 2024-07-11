@@ -8,7 +8,7 @@
 [Usage](#usage) •
 [Tutorials and Samples](#demos-tutorials-and-samples) •
 [Third-party integration](#third-party-repository-integration) •
-[Model Zoo](./docs/ModelZoo.md)
+[NNCF Model Zoo](./docs/ModelZoo.md)
 
 [![GitHub Release](https://img.shields.io/github/v/release/openvinotoolkit/nncf?color=green)](https://github.com/openvinotoolkit/nncf/releases)
 [![Website](https://img.shields.io/website?up_color=blue&up_message=docs&url=https%3A%2F%2Fdocs.openvino.ai%2Flatest%2Fopenvino_docs_model_optimization_guide.html)](https://docs.openvino.ai/nncf)
@@ -21,7 +21,7 @@ Neural Network Compression Framework (NNCF) provides a suite of post-training an
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai).
 
-NNCF provides [samples](#demos-tutorials-and-samples) that demonstrate the usage of compression algorithms for different use cases and models. See compression results achievable with the NNCF-powered samples on the [Model Zoo page](./docs/ModelZoo.md).
+NNCF provides [samples](#demos-tutorials-and-samples) that demonstrate the usage of compression algorithms for different use cases and models. See compression results achievable with the NNCF-powered samples on the [NNCF Model Zoo page](./docs/ModelZoo.md).
 
 The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework
 architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep
@@ -447,9 +447,9 @@ conda install -c conda-forge nncf
 
 This repository is tested on Python* 3.8.10, PyTorch* 2.3.0 (NVidia CUDA\* Toolkit 12.1) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
 
-## NNCF Compressed Model Zoo
+## NNCF Compressed NNCF Model Zoo
 
-List of models and compression results for them can be found at our [Model Zoo page](./docs/ModelZoo.md).
+List of models and compression results for them can be found at our [NNCF Model Zoo page](./docs/ModelZoo.md).
 
 ## Citing
 
