@@ -10,7 +10,6 @@
 # limitations under the License.
 from typing import Dict, Iterable, List, Optional, Tuple
 
-import numpy as np
 import openvino as ov
 from openvino.runtime import opset13 as opset
 
@@ -114,7 +113,12 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         const_port = node_with_const.input(weight_port_id)
         const_node = node_with_const.input_value(weight_port_id).get_node()
 
-        new_const_node = ov.runtime.op.Constant(weight.data, shared_memory=True)
+        shared_memory = True
+        if const_node.get_element_type() == ov.Type.bf16:
+            # Shared memory does not work for BF16 precision
+            shared_memory = False
+
+        new_const_node = ov.runtime.op.Constant(weight.data, shared_memory=shared_memory)
         new_const_node.set_friendly_name(const_node.get_friendly_name())
         const_port.replace_source_output(new_const_node.output(0))
 
@@ -167,7 +171,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                         should_add_convert_node = True
                         break
 
-            weight = Tensor(get_const_value(const_node, np.float32 if const_dtype == ov.Type.bf16 else None))
+            weight = Tensor(get_const_value(const_node))
             original_shape = weight.shape
             compressed_weight = compress_weight(
                 weight,
