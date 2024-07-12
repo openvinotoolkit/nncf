@@ -21,6 +21,7 @@ import pytest
 import yaml
 
 import nncf
+from tests.openvino.native.common import get_openvino_version
 from tests.post_training.model_scope import PTQ_TEST_CASES
 from tests.post_training.model_scope import WC_TEST_CASES
 from tests.post_training.pipelines.base import BackendType
@@ -75,12 +76,23 @@ def fixture_extra_columns(pytestconfig):
     return pytestconfig.getoption("extra_columns")
 
 
+def ref_data_correction(data: Dict, file_name: str):
+    correction_data_path = Path(__file__).parent / "data" / f"{file_name}_{get_openvino_version()}.yaml"
+    if correction_data_path.exists():
+        with correction_data_path.open() as f:
+            correction_data = yaml.safe_load(f)
+
+        for m_name, c_data in correction_data.items():
+            data[m_name].update(c_data)
+    return data
+
+
 @pytest.fixture(scope="session", name="ptq_reference_data")
 def fixture_ptq_reference_data():
     path_reference = Path(__file__).parent / "data" / "ptq_reference_data.yaml"
     with path_reference.open() as f:
         data = yaml.safe_load(f)
-    return data
+    return ref_data_correction(data, "ptq_reference_data")
 
 
 @pytest.fixture(scope="session", name="wc_reference_data")
@@ -98,7 +110,7 @@ def fixture_wc_reference_data():
             if "atol" not in fp32_test_cases[fp32_case_name]:
                 fp32_test_cases[fp32_case_name]["atol"] = 1e-10
         data.update(fp32_test_cases)
-    return data
+    return ref_data_correction(data, "wc_reference_data")
 
 
 @pytest.fixture(scope="session", name="ptq_result_data")
