@@ -305,9 +305,14 @@ def calculate_quantized_weight(
         compressed_weights = weight * scale
     else:
         compressed_weights = weight / scale
+
     if zero_point is not None:
         compressed_weights += zero_point.astype(weight.dtype)
-    compressed_weights = fns.round(compressed_weights)
+        compressed_weights = fns.round(compressed_weights)
+    else:
+        level_low_sym = 2 ** (num_bits - 1)
+        compressed_weights = fns.round(compressed_weights + level_low_sym) - level_low_sym
+
     compressed_weights = fns.clip(compressed_weights, level_low, level_high).astype(dtype)
     return compressed_weights
 
