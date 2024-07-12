@@ -201,8 +201,8 @@ def compare_stats(expected: Dict[str, np.ndarray], actual: Dict[str, np.ndarray]
         actual_stats = actual[ref_node_name]
         for param_name, ref_param in ref_stats.items():
             actual_param = actual_stats.get(param_name)
-        assert np.array(ref_param).shape == np.array(actual_param).shape
-        assert np.allclose(ref_param, actual_param, atol=1e-5)
+            assert np.array(ref_param).shape == np.array(actual_param).shape
+            assert np.allclose(ref_param, actual_param, atol=1e-5)
 
 
 def get_python_executable_with_venv(venv_path: Path) -> str:
