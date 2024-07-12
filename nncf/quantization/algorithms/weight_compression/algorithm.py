@@ -302,7 +302,11 @@ class WeightCompression(Algorithm):
         nodes_to_compress = self._get_nodes_to_compress(graph)
 
         activations = {}
-        if dataset is not None and self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
+        if (
+            dataset is not None
+            and self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR
+            and (self._awq or self._scale_estimation)
+        ):
             activations = self._get_activations(dataset, self._subset_size, nodes_to_compress, graph, model)
         all_weight_params: List[WeightCompressionParameters] = []
         weight_names = set()
