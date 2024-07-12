@@ -32,8 +32,8 @@ class OVCompiledModelEngine(Engine):
         self.reset_state = stateful and hasattr(self.infer_request, "reset_state")
 
     def infer(
-        self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray], ov.Tensor]
-    ) -> Union[Dict[str, np.ndarray], ov.Tensor]:
+        self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]
+    ) -> Dict[str, np.ndarray]:
         """
         Runs model on the provided input via OpenVINO Runtime.
         Returns the dictionary of model outputs by node names.
@@ -69,8 +69,8 @@ class OVNativeEngine(Engine):
         self.engine = OVCompiledModelEngine(compiled_model, stateful)
 
     def infer(
-        self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray], ov.Tensor]
-    ) -> Union[Dict[str, np.ndarray], ov.Tensor]:
+        self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]
+    ) -> Dict[str, np.ndarray]:
         """
         Runs model on the provided input via OpenVINO Runtime.
         Returns the dictionary of model outputs by node names.

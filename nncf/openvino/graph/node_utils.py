@@ -110,6 +110,7 @@ def get_number_if_op(model: ov.Model) -> int:
 def get_const_value(const_node: ov.Node) -> np.ndarray:
     """
     Returns the constant tensor for the node.
+    This method is applicable only for the floating-point constant data.
 
     :param const_node: OpenVINO node.
     :return: The constant value.
