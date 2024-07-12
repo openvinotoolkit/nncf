@@ -490,7 +490,7 @@ class LSTMSequenceModel(OVReferenceModel):
             x, initial_hidden_state, initial_cell_state, seq_len, W, R, B, 128, "FORWARD", name="LSTMSequence"
         )
         data = self._rng.random((1, 1, 128, 3)).astype(np.float32)
-        matmul = opset.matmul(lstm.output(0), data, transpose_a=False, transpose_b=False, name="MatMul")
+        matmul = opset.matmul(lstm.output(1), data, transpose_a=False, transpose_b=False, name="MatMul")
 
         result = opset.result(matmul, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
