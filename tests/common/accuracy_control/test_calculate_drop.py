@@ -18,7 +18,7 @@ from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_ac
 
 
 @dataclass
-class TestCase:
+class AccuracyDropTestCase:
     initial_metric: float
     quantized_metric: float
     drop_type: DropType
@@ -31,28 +31,28 @@ class TestCase:
     "ts",
     [
         # ABSOLUTE
-        TestCase(
+        AccuracyDropTestCase(
             initial_metric=0.2923,
             quantized_metric=0.3185,
             drop_type=DropType.ABSOLUTE,
             expected_should_terminate=True,
             expected_accuracy_drop=-0.0262,
         ),
-        TestCase(
+        AccuracyDropTestCase(
             initial_metric=0.3185,
             quantized_metric=0.2923,
             drop_type=DropType.ABSOLUTE,
             expected_should_terminate=False,
             expected_accuracy_drop=0.0262,
         ),
-        TestCase(
+        AccuracyDropTestCase(
             initial_metric=-0.2923,
             quantized_metric=-0.3185,
             drop_type=DropType.ABSOLUTE,
             expected_should_terminate=False,
             expected_accuracy_drop=0.0262,
         ),
-        TestCase(
+        AccuracyDropTestCase(
             initial_metric=-0.3185,
             quantized_metric=-0.2923,
             drop_type=DropType.ABSOLUTE,
@@ -60,28 +60,28 @@ class TestCase:
             expected_accuracy_drop=-0.0262,
         ),
         # RELATIVE
-        TestCase(
+        AccuracyDropTestCase(
             initial_metric=0.2923,
             quantized_metric=0.3185,
             drop_type=DropType.RELATIVE,
             expected_should_terminate=True,
             expected_accuracy_drop=None,
         ),
-        TestCase(
+        AccuracyDropTestCase(
             initial_metric=0.3185,
             quantized_metric=0.2923,
             drop_type=DropType.RELATIVE,
             expected_should_terminate=False,
             expected_accuracy_drop=0.08226059,
         ),
-        TestCase(
+        AccuracyDropTestCase(
             initial_metric=-0.2923,
             quantized_metric=-0.3185,
             drop_type=DropType.RELATIVE,
             expected_should_terminate=False,
             expected_accuracy_drop=0.0896339,
         ),
-        TestCase(
+        AccuracyDropTestCase(
             initial_metric=-0.3185,
             quantized_metric=-0.2923,
             drop_type=DropType.RELATIVE,
@@ -90,7 +90,7 @@ class TestCase:
         ),
     ],
 )
-def test_calculate_accuracy_drop(ts: TestCase):
+def test_calculate_accuracy_drop(ts: AccuracyDropTestCase):
     should_terminate, accuracy_drop = calculate_accuracy_drop(
         ts.initial_metric, ts.quantized_metric, ts.max_drop, ts.drop_type
     )

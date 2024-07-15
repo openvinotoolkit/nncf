@@ -26,10 +26,13 @@ from tests.shared.paths import TEST_ROOT
 DATA_ROOT = TEST_ROOT / "common" / "data" / "reference_graphs"
 
 
-class TestModes(Enum):
+class ParameterTestModes(Enum):
     VALID = "valid"
     WRONG_TENSOR_SHAPE = "wrong_dropout_node"
     WRONG_PARALLEL_EDGES = "wrong_parallel_edges"
+
+    def __str__(self):
+        return self.value
 
 
 def _check_graphs(dot_file_name, nncf_graph) -> None:
@@ -38,18 +41,18 @@ def _check_graphs(dot_file_name, nncf_graph) -> None:
     compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
 
 
-@pytest.mark.parametrize("mode", [TestModes.VALID, TestModes.WRONG_TENSOR_SHAPE, TestModes.WRONG_PARALLEL_EDGES])
-def test_remove_nodes_and_reconnect_graph(mode: TestModes):
+@pytest.mark.parametrize("mode", ParameterTestModes)
+def test_remove_nodes_and_reconnect_graph(mode: ParameterTestModes):
     dot_reference_path_before = Path("passes") / "dropout_synthetic_model_before.dot"
     dot_reference_path_after = Path("passes") / "dropout_synthetic_model_after.dot"
     dropout_metatype = "DROPOUT_METATYPE"
     kwargs = {}
-    if mode != TestModes.VALID:
+    if mode != ParameterTestModes.VALID:
         kwargs.update({mode.value: True})
 
     nncf_graph = NNCFGraphDropoutRemovingCase(dropout_metatype, **kwargs).nncf_graph
 
-    if mode != TestModes.VALID:
+    if mode != ParameterTestModes.VALID:
         with pytest.raises(AssertionError):
             remove_nodes_and_reconnect_graph(nncf_graph, [dropout_metatype])
         return
