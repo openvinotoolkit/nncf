@@ -7,8 +7,8 @@ The algorithm sparsifies the input of a layer by applying the following function
 $$ 
 sparsify(X) = 
 \begin{cases} 
-\cdot & \text{if } |\cdot| \ge \tau \\
-0 & \text{if } |\cdot| < \tau 
+X & \text{if } |X| \ge \tau \\
+0 & \text{if } |X| < \tau 
 \end{cases}
 $$
 
@@ -55,8 +55,8 @@ In this example, we first conduct data-free INT8 asymmetric weight quantization 
 #### Interface Details
 
 - `model`: The model to be sparsified. Currently only Torch backend is supported.
-- `dataset`: A dataset to calibrate the pruning thresholds. **TODO** NNCF Dataset
-- `target_sparsity_by_scope`: A dictionary defines the target activation sparsity level for specified layers. For each item, the key is an instance of `TargetScope` class representing the layers to match in the model's NNCF graph; the corresponding value is a float number in the range [0, 1] representing the target sparsity level. `TargetScope` supports absolute and REGEX-based name matching.
+- `dataset`: An `nncf.Dataset` instance used to calibrate the pruning thresholds.
+- `target_sparsity_by_scope`: A dictionary that defines the target activation sparsity level for specified layers. For each item, the key is an instance of `TargetScope` class representing the layers to match in the model's NNCF graph; the corresponding value is a float number in the range [0, 1] representing the target sparsity level. `TargetScope` supports absolute and REGEX-based name matching.
 
   - Example:
 
@@ -73,10 +73,72 @@ In this example, we first conduct data-free INT8 asymmetric weight quantization 
 
 
 #### Evaluation results
-> TODO
+Here is the word perplexity for different language models on a subset of [wikitext dataset](https://arxiv.org/pdf/1609.07843.pdf), with maximum context length set as 2048. In the table, "int8_asym" means the model weights are asymmetrically quantized to int8. "Avg. Activation Sparsity" column shows the average activation sparsity on the evaluation samples. "up/gate/down" means the up, gate, and down projection layers in the [GLU](https://arxiv.org/abs/1612.08083)-style feed forward networks.
+<table>
+    <tr bgcolor='#B4B5BB'>
+        <td>Model</td>
+        <td>Mode</td>
+        <td>Avg. Activation Sparsity</td>
+        <td>Word Perplexity (↓)</td>
+    </tr>
+        <tr>
+        <td>meta-llama/Llama-2-7b-hf</td>
+        <td>fp32</td>
+        <td>-</td>
+        <td>9.242</td>
+    </tr>
+        <tr>
+        <td></td>
+        <td>sparse_activation</td>
+        <td>up/gate30% + down50%</td>
+        <td>9.508</td>
+    </tr>
+        <tr>
+        <td></td>
+        <td>int8_asym + sparse_activation</td>
+         <td>up/gate30% + down50%</td>
+        <td>9.511</td>
+    </tr>
+        <tr>
+        <td>meta-llama/Meta-Llama-3-8B-Instruct</td>
+        <td>fp32</td>
+        <td>-</td>
+        <td>10.802</td>
+    </tr>
+        <tr>
+        <td></td>
+        <td>sparse_activation</td>
+        <td>up/gate30% + down50%</td>
+        <td>11.294</td>
+    </tr>
+        <tr>
+        <td></td>
+        <td>int8_asym + sparse_activation</td>
+         <td>up/gate30% + down50%</td>
+        <td>11.302</td>
+    </tr>
+        <tr>
+        <td>mistralai/Mixtral-8x7B-Instruct-v0.1</td>
+        <td>fp32</td>
+        <td>-</td>
+        <td>6.224</td>
+    </tr>
+        <tr>
+        <td></td>
+        <td>sparse_activation</td>
+        <td>up/gate40% + down50%</td>
+        <td>6.561</td>
+    </tr>
+        <tr>
+        <td></td>
+        <td>int8_asym + sparse_activation</td>
+         <td>up/gate40% + down50%</td>
+        <td>6.579</td>
+    </tr>
+</table>
 
 #### Known Limitations
 
-1. When used with `nncf.compress_weight`,  only int8 is supported. can it work before or after? **TODO**
+1. Currently activation sparsity only supports Torch backend. Consequently, this restricts the available compression modes to 8-bit integer modes when using `nncf.compress_weight` before activation sparsification. More information on supported modes can be found at [Weights Compression](../../../../docs/usage/post_training_compression/weights_compression/Usage.md#limitations).
 2. Actual activation sparsity during inference is dynamic and per input basis, deviation from the target should be expected. In our local experiments, the statistical mean of actual activation sparsity aligned to the target when thresholds are calibrated on datasets similar to the final task.
 3. Similar to other compression methods, model accuracy and activation sparsity are trade-off at play. For large language models like [Llama](https://llama.meta.com), it is recommended to start with 30%~50% sparsity for the linear layers in feed-forward networks.
