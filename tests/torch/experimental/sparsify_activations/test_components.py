@@ -210,7 +210,7 @@ class TestPTSparsifyActivationsAlgoBackend:
 
         with mocker.patch.object(backend, "get_sparsifiers", return_value=[mock_sparsifier]):
             backend.calibrate_sparsifiers(model, graph, dataset)
-            assert mock_sparsifier._freeze is False
+            assert mock_sparsifier._freeze is True
             assert num_model_forward_calls == dataset.get_length()
 
     def create_model_and_dataset(self, compress_weights: bool = False):

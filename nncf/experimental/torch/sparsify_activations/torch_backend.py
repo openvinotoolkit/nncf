@@ -163,18 +163,15 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
         return transformed_model
 
     def calibrate_sparsifiers(self, model: NNCFNetwork, graph: NNCFGraph, dataset: Dataset) -> NNCFNetwork:
-        for sparsifier in self.get_sparsifiers(model):
+        sparsifiers = self.get_sparsifiers(model)
+        for sparsifier in sparsifiers:
             sparsifier.reset_running_stats()
             sparsifier.freeze(False)
         with training_mode_switcher(model, is_training=False):
             with torch.no_grad():
                 self.do_inference(model, dataset)
-        return model
-
-    def apply_sparsifiers(self, model: NNCFNetwork, graph: NNCFGraph) -> NNCFNetwork:
-        for sparsifier in self.get_sparsifiers(model):
+        for sparsifier in sparsifiers:
             sparsifier.freeze(True)
-        model.nncf.rebuild_graph()
         return model
 
     @staticmethod

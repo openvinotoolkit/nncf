@@ -91,16 +91,6 @@ class SparsifyActivationsAlgoBackend(ABC):
         :return: The model with calibrated activation sparsifiers.
         """
 
-    @abstractmethod
-    def apply_sparsifiers(self, model: TModel, graph: NNCFGraph) -> TModel:
-        """
-        Freezes the activation sparsifiers and applies the sparsification to the model.
-
-        :param model: The model with activation sparsifiers.
-        :param graph: The model's NNCF graph.
-        :return: The model with applied sparsification operations.
-        """
-
 
 class SparsifyActivationsAlgorithm:
     """
