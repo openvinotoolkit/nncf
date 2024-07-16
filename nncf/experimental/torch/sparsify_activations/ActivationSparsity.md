@@ -7,8 +7,8 @@ The algorithm sparsifies the input of a layer by applying the following function
 $$
 sparsify(X) =
 \begin{cases}
-X & \text{if } |X| \ge \tau \\
-0 & \text{if } |X| < \tau
+X & \text{if } |X| > \tau \\
+0 & \text{if } |X| \le \tau
 \end{cases}
 $$
 
