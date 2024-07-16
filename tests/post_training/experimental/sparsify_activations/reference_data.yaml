@@ -27,7 +27,7 @@ timm/deit3_small_patch16_224_backend_FP32:
   metric_value: 0.8135
   num_int4: 0
   num_int8: 0
-  num_sparse_activations: 36
+  num_sparse_activations: 0
 timm/deit3_small_patch16_224_qkv_sparse20_fc1_sparse20_fc2_sparse30_backend_TORCH:
   metric_value: 0.8097
   num_int4: 0
