@@ -116,7 +116,7 @@ class SparsifyActivationsAlgorithm:
         """
         self._target_sparsity_by_scope = target_sparsity_by_scope
         self._ignored_scope = ignored_scope
-        self._backend_entity = None
+        self._backend_entity: SparsifyActivationsAlgoBackend = None
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -134,7 +134,7 @@ class SparsifyActivationsAlgorithm:
         model_backend = get_backend(model)
         if model_backend == BackendType.TORCH:
             from nncf.experimental.torch.sparsify_activations.torch_backend import PTSparsifyActivationsAlgoBackend
-            self._backend_entity: SparsifyActivationsAlgoBackend = PTSparsifyActivationsAlgoBackend()
+            self._backend_entity = PTSparsifyActivationsAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
                 f"{model_backend.value} backend is not supported for `sparsify_activations`."
@@ -208,7 +208,7 @@ class SparsifyActivationsAlgorithm:
         target_sparsity_by_node = self._get_target_sparsity_by_node(graph)
         if not target_sparsity_by_node:
             raise nncf.ValidationError(
-                'No layers matched for activation sparsification.'
+                "No layers matched for activation sparsification."
             )
         sparse_model = self.do_sparsification(
             model, graph, target_sparsity_by_node, dataset,
