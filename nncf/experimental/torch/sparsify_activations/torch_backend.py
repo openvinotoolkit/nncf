@@ -45,12 +45,10 @@ class ActivationSparsifier(nn.Module):
         """
         super().__init__()
         self.target_sparsity = target_sparsity
-        if alpha <= 0. or alpha >= 1.:
-            raise ValueError(
-                'The decay factor `alpha` should be in range (0, 1).'
-            )
+        if alpha <= 0.0 or alpha >= 1.0:
+            raise ValueError("The decay factor `alpha` should be in range (0, 1).")
         self.alpha = alpha
-        self.register_buffer("running_threshold", torch.tensor(0.))
+        self.register_buffer("running_threshold", torch.tensor(0.0))
         self.register_buffer("num_batches_tracked", torch.tensor(0))
         self.running_threshold: torch.Tensor
         self.num_batches_tracked: torch.Tensor
@@ -60,10 +58,9 @@ class ActivationSparsifier(nn.Module):
         if not self._freeze:
             threshold = self._calculate_threshold(x, self.target_sparsity)
             self._update(threshold)
-            nncf_logger.info('Cur %f, Averaged %f', threshold,
-                             self.running_threshold)
+            nncf_logger.info("Cur %f, Averaged %f", threshold, self.running_threshold)
         mask = torch.le(x.abs(), self.running_threshold)
-        x = torch.masked_fill(x, mask, 0.)
+        x = torch.masked_fill(x, mask, 0.0)
         return x
 
     def reset_running_stats(self):
@@ -77,7 +74,7 @@ class ActivationSparsifier(nn.Module):
         self._freeze = freeze
 
     def extra_repr(self) -> str:
-        return f'target_sparsity={self.target_sparsity}'
+        return f"target_sparsity={self.target_sparsity}"
 
     def _calculate_threshold(self, x: torch.Tensor, target_sparsity: float) -> torch.Tensor:
         """
@@ -100,9 +97,7 @@ class ActivationSparsifier(nn.Module):
         """
         beta = 1.0 - self.alpha
         self.running_threshold = (
-            threshold * self.alpha +
-            self.running_threshold * beta *
-            (1 - beta ** self.num_batches_tracked)
+            threshold * self.alpha + self.running_threshold * beta * (1 - beta**self.num_batches_tracked)
         ) / (1 - beta ** (self.num_batches_tracked + 1))
         self.num_batches_tracked += 1
         return self.running_threshold
@@ -136,25 +131,26 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
     ) -> NNCFNetwork:
         transformation_layout = TransformationLayout()
         for node, target_sparsity in target_sparsity_by_node.items():
-            _, act_port_id = self._get_activation_node_and_port(
-                node, graph)
+            _, act_port_id = self._get_activation_node_and_port(node, graph)
             sparsifier = ActivationSparsifier(target_sparsity=target_sparsity)
             # temporarily freeze it for model transformation
             sparsifier.freeze(True)
             sparsifier_name = f"activation_sparsifier_{node.node_name.replace('.', '_')}"
-            transformation_layout.register(PTSharedFnInsertionCommand(
-                [
-                    PTTargetPoint(
-                        TargetType.PRE_LAYER_OPERATION,
-                        target_node_name=node.node_name,
-                        input_port_id=act_port_id)
-                ],
-                sparsifier,
-                sparsifier_name,
-            ))
+            transformation_layout.register(
+                PTSharedFnInsertionCommand(
+                    [
+                        PTTargetPoint(
+                            target_type=TargetType.PRE_LAYER_OPERATION,
+                            target_node_name=node.node_name,
+                            input_port_id=act_port_id,
+                        )
+                    ],
+                    sparsifier,
+                    sparsifier_name,
+                )
+            )
 
-        transformed_model = PTModelTransformer(
-            model).transform(transformation_layout)
+        transformed_model = PTModelTransformer(model).transform(transformation_layout)
         return transformed_model
 
     def calibrate_sparsifiers(self, model: NNCFNetwork, graph: NNCFGraph, dataset: Dataset) -> NNCFNetwork:
@@ -175,7 +171,7 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
     def _get_activation_port_id(self, node: NNCFNode, graph: NNCFGraph) -> NNCFNode:
         activation_ports = []
         for prev_node in graph.get_previous_nodes(node):
-            if 'weight' in prev_node.node_name.lower() or 'bias' in prev_node.node_name:
+            if "weight" in prev_node.node_name.lower() or "bias" in prev_node.node_name:
                 # TODO(yujie): find activation
                 continue
             edge = graph.get_edge(prev_node, node)

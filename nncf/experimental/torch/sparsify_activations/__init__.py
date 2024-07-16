@@ -9,4 +9,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import sparsify_activations
+from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import sparsify_activations  # noqa: F401

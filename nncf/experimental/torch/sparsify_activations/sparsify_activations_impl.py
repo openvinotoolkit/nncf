@@ -63,7 +63,10 @@ class SparsifyActivationsAlgoBackend(ABC):
 
     @abstractmethod
     def insert_sparsifiers(
-        self, model: TModel, graph: NNCFGraph, target_sparsity_by_node: Dict[NNCFNode, float],
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        target_sparsity_by_node: Dict[NNCFNode, float],
     ) -> TModel:
         """
         Inserts the activation sparsifiers to the model.
@@ -134,6 +137,7 @@ class SparsifyActivationsAlgorithm:
         model_backend = get_backend(model)
         if model_backend == BackendType.TORCH:
             from nncf.experimental.torch.sparsify_activations.torch_backend import PTSparsifyActivationsAlgoBackend
+
             self._backend_entity = PTSparsifyActivationsAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
@@ -182,10 +186,14 @@ class SparsifyActivationsAlgorithm:
         :return: The sparsified model.
         """
         model = self._backend_entity.insert_sparsifiers(
-            model, graph, target_sparsity_by_node,
+            model,
+            graph,
+            target_sparsity_by_node,
         )
         model = self._backend_entity.calibrate_sparsifiers(
-            model, graph, dataset,
+            model,
+            graph,
+            dataset,
         )
         model = self._backend_entity.freeze_sparsifiers(model, graph)
         return model
@@ -207,11 +215,12 @@ class SparsifyActivationsAlgorithm:
         self._set_backend_entity(model)
         target_sparsity_by_node = self._get_target_sparsity_by_node(graph)
         if not target_sparsity_by_node:
-            raise nncf.ValidationError(
-                "No layers matched for activation sparsification."
-            )
+            raise nncf.ValidationError("No layers matched for activation sparsification.")
         sparse_model = self.do_sparsification(
-            model, graph, target_sparsity_by_node, dataset,
+            model,
+            graph,
+            target_sparsity_by_node,
+            dataset,
         )
         return sparse_model
 
@@ -238,10 +247,8 @@ def sparsify_activations(
     """
 
     for scope, target_sparsity in target_sparsity_by_scope.items():
-        if target_sparsity < 0. or target_sparsity > 1.:
-            raise ValueError(
-                f'Target sparsity for scope "{scope}" should be in range [0, 1].'
-            )
+        if target_sparsity < 0.0 or target_sparsity > 1.0:
+            raise ValueError(f'Target sparsity for scope "{scope}" should be in range [0, 1].')
 
     if ignored_scope is None:
         ignored_scope = IgnoredScope()
@@ -255,8 +262,7 @@ def sparsify_activations(
             trace_parameters=True,
         )
 
-    algorithm = SparsifyActivationsAlgorithm(
-        target_sparsity_by_scope, ignored_scope)
+    algorithm = SparsifyActivationsAlgorithm(target_sparsity_by_scope, ignored_scope)
 
     graph = NNCFGraphFactory.create(model)
     sparse_model = algorithm.apply(model, graph, dataset)
