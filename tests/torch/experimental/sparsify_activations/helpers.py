@@ -41,5 +41,5 @@ def dummy_llama_model():
         use_cache=False,
         return_dict=False,
     )
-    model = transformers.AutoModelForCausalLM.from_config(config)
+    model = transformers.AutoModelForCausalLM.from_config(config, attn_implementation="eager")
     return model

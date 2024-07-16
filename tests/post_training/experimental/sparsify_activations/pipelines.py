@@ -57,7 +57,7 @@ class LMSparsifyActivations(LMWeightCompression):
                 raise RuntimeError(f"is_stateful={is_stateful} is not supported for PyTorch backend.")
 
             self.model_hf = AutoModelForCausalLM.from_pretrained(
-                self.model_id, torch_dtype=torch.float32, device_map="cpu"
+                self.model_id, torch_dtype=torch.float32, device_map="cpu", attn_implementation="eager",
             )
             self.model = self.model_hf
         elif self.backend in [BackendType.OV, BackendType.FP32]:
