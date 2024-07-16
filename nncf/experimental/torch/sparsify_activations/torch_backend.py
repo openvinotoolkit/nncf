@@ -11,6 +11,7 @@
 
 from typing import Dict, List, TypeVar
 
+import numpy as np
 import torch
 import torch.nn as nn
 
@@ -84,7 +85,12 @@ class ActivationSparsifier(nn.Module):
         :param target_sparsity: The target sparsity level on the input tensor.
         :return: The threshold value.
         """
-        return x.abs().float().view(-1).quantile(q=target_sparsity, dim=-1)
+        # uses numpy's quantile implementation as torch's cannot handle large tensor
+        value = np.quantile(
+            x.detach().abs().cpu().numpy(),
+            q=target_sparsity,
+        )
+        return torch.tensor(value, device=x.device, dtype=x.dtype)
 
     def _update(self, threshold: torch.Tensor) -> torch.Tensor:
         """

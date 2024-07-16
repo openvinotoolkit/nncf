@@ -49,7 +49,7 @@ class SparsifyActivationsAlgoBackend(ABC):
         for input_data in track(
             dataset.get_inference_data(),
             total=dataset.get_length(),
-            description="Activation sparsifier calibration",
+            description="Activation Sparsifier Calibration",
         ):
             engine.infer(input_data)
 
