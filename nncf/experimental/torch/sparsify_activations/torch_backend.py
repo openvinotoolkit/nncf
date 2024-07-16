@@ -9,17 +9,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Tuple, TypeVar
+from typing import Dict, List, TypeVar
 
 import torch
 import torch.nn as nn
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.logging import nncf_logger
 from nncf.data import Dataset
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
 from nncf.torch.graph import operator_metatypes as om
@@ -52,13 +53,12 @@ class ActivationSparsifier(nn.Module):
         self.register_buffer("num_batches_tracked", torch.tensor(0))
         self.running_threshold: torch.Tensor
         self.num_batches_tracked: torch.Tensor
-        self._freeze = True
+        self._freeze = False
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if not self._freeze:
             threshold = self._calculate_threshold(x, self.target_sparsity)
             self._update(threshold)
-            nncf_logger.info("Cur %f, Averaged %f", threshold, self.running_threshold)
         mask = torch.le(x.abs(), self.running_threshold)
         x = torch.masked_fill(x, mask, 0.0)
         return x
@@ -131,18 +131,18 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
     ) -> NNCFNetwork:
         transformation_layout = TransformationLayout()
         for node, target_sparsity in target_sparsity_by_node.items():
-            _, act_port_id = self._get_activation_node_and_port(node, graph)
+            activation_port_id = self._get_activation_port_id(node, graph)
             sparsifier = ActivationSparsifier(target_sparsity=target_sparsity)
             # temporarily freeze it for model transformation
             sparsifier.freeze(True)
-            sparsifier_name = f"activation_sparsifier_{node.node_name.replace('.', '_')}"
+            sparsifier_name = f"activations_sparsifier_{node.node_name.replace('.', '_')}"
             transformation_layout.register(
                 PTSharedFnInsertionCommand(
                     [
                         PTTargetPoint(
                             target_type=TargetType.PRE_LAYER_OPERATION,
                             target_node_name=node.node_name,
-                            input_port_id=act_port_id,
+                            input_port_id=activation_port_id,
                         )
                     ],
                     sparsifier,
@@ -168,27 +168,20 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
         model.nncf.rebuild_graph()
         return model
 
-    def _get_activation_port_id(self, node: NNCFNode, graph: NNCFGraph) -> NNCFNode:
+    def _get_activation_port_id(self, node: NNCFNode, graph: NNCFGraph) -> int:
+        """
+        Finds the input activation port id for the node.
+
+        :param node: The node to find its activation port id.
+        :param graph: The NNCF graph containing the node.
+        :return: The activation port id.
+        """
         activation_ports = []
         for prev_node in graph.get_previous_nodes(node):
-            if "weight" in prev_node.node_name.lower() or "bias" in prev_node.node_name:
-                # TODO(yujie): find activation
-                continue
             edge = graph.get_edge(prev_node, node)
+            if prev_node.metatype in CONST_NOOP_METATYPES or edge.input_port_id in node.metatype.weight_port_ids:
+                continue
             activation_ports.append(edge.input_port_id)
-        assert len(activation_ports) == 1
+        if len(activation_ports) != 1:
+            raise nncf.InternalError(f'Cannot find activation port for node "{node}".')
         return activation_ports[0]
-
-    def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[NNCFNode, int]:
-        """
-        Returns the activation layer and corresponding port id for the node.
-
-        :param node: NNCFGraph node for which the activation is sought.
-        :param nncf_graph: NNCFGraph instance with the node.
-        :return: Tuple with the activation node and port id.
-        """
-        activation_port = self._get_activation_port_id(node, nncf_graph)
-        activation_edge = nncf_graph.get_input_edges(node)[activation_port]
-        activation_node = activation_edge.from_node
-        port_id = activation_edge.output_port_id
-        return activation_node, port_id

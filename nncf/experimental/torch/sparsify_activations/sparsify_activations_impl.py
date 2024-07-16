@@ -72,7 +72,7 @@ class SparsifyActivationsAlgoBackend(ABC):
         Inserts the activation sparsifiers to the model.
 
         :param model: The model to conduct activation sparsification.
-        :param graph: The model's nncf graph.
+        :param graph: The model's NNCF graph.
         :param target_sparsity_by_node: The target sparsity level for the input activation in each given node layer.
         :return: The model with inserted activation sparsifiers.
         """
@@ -84,7 +84,7 @@ class SparsifyActivationsAlgoBackend(ABC):
         Calibrates the thresholds in the activation sparsifiers.
 
         :param model: The model with inserted activation sparsifiers.
-        :param graph: The model's nncf graph.
+        :param graph: The model's NNCF graph.
         :param dataset: The calibration dataset to update the thresholds in the sparsifiers.
         :return: The model with calibrated activation sparsifiers.
         """
@@ -96,7 +96,7 @@ class SparsifyActivationsAlgoBackend(ABC):
         Freezes the activation sparsifiers and applies the sparsification to the model.
 
         :param model: The model with activation sparsifiers.
-        :param graph: The model's nncf graph.
+        :param graph: The model's NNCF graph.
         :return: The model with applied sparsification operations.
         """
         return model
@@ -148,7 +148,7 @@ class SparsifyActivationsAlgorithm:
         """
         Collects nodes in the model's graph corresponding to the layers for sparsification.
 
-        :param nncf_graph: NNCFGraph instance.
+        :param graph: NNCFGraph instance.
         :return: A dictionary with nodes and the corresponding target sparsity level.
         """
         supported_metatypes = self._backend_entity.supported_metatypes
@@ -179,7 +179,7 @@ class SparsifyActivationsAlgorithm:
         Transforms the model into a sparsified one with node-specific target activation sparsity levels.
 
         :param model: The model to be sparsified.
-        :param graph: The model's nncf graph.
+        :param graph: The model's NNCF graph.
         :param target_sparsity_by_node: A dictionary that defines the target sparsity level
             for specified node layers.
         :param dataset: The dataset to calibrate the activation sparsifiers.
@@ -208,7 +208,7 @@ class SparsifyActivationsAlgorithm:
         Applies the algorithm to the given model.
 
         :param model: The model to be sparsified.
-        :param graph: The model's nncf graph.
+        :param graph: The model's NNCF graph.
         :param dataset: The dataset to calibrate the activation sparsifiers.
         :return: The sparsified model.
         """
@@ -238,7 +238,7 @@ def sparsify_activations(
     :param dataset: The dataset to calibrate the activation sparsifiers.
     :param target_sparsity_by_scope: A dictionary that defines the target activation sparsity
         level for specified layers. For each item, the key should be a complete scope name
-        in the nncf graph, or a regular expression specification starting with `{re}`; the
+        in the NNCF graph, or a regular expression specification starting with `{re}`; the
         corresponding value should be a float number in the range [0, 1] representing the
         target sparsity level.
     :param ignored_scope: An ignored scope that defines the list of model control flow graph
