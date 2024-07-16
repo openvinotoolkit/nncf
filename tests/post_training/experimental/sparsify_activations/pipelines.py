@@ -296,7 +296,7 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
     def _compress(self):
         super()._compress()
         if self.backend in PT_BACKENDS:
-            # This helps reproducibility but is not needed in actual usage.
+            # This helps reproducibility but is not needed in actual use.
             for sparsifier in PTSparsifyActivationsAlgoBackend.get_sparsifiers(self.compressed_model):
                 original_dtype = sparsifier.running_threshold.dtype
                 sparsifier.running_threshold = sparsifier.running_threshold.half().to(original_dtype)
