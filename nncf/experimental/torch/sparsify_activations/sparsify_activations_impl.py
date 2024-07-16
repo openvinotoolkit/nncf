@@ -156,7 +156,6 @@ class SparsifyActivationsAlgorithm:
         """
         model = self._backend_entity.insert_sparsifiers(model, graph, target_sparsity_by_node)
         model = self._backend_entity.calibrate_sparsifiers(model, graph, dataset)
-        model = self._backend_entity.apply_sparsifiers(model, graph)
         return model
 
     def _set_backend_entity(self, model: TModel) -> None:

@@ -69,16 +69,21 @@ class ActivationsSparsifier(nn.Module):
         """
         return quantile(x.detach().abs().view(-1), q=target_sparsity, axis=0)
 
+    @property
+    def freeze(self):
+        return self._freeze
+
+    @freeze.setter
+    def freeze(self, value: bool):
+        self._freeze = value
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if not self._freeze:
+        if not self.freeze:
             threshold = self.calculate_threshold(x, self.target_sparsity)
             self._update(threshold, dtype=x.dtype)
         mask = torch.le(x.abs(), self.running_threshold)
         x = torch.masked_fill(x, mask, 0.0)
         return x
-
-    def freeze(self, freeze: bool = True):
-        self._freeze = freeze
 
     def reset_running_stats(self):
         """
@@ -166,12 +171,12 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
         sparsifiers = self.get_sparsifiers(model)
         for sparsifier in sparsifiers:
             sparsifier.reset_running_stats()
-            sparsifier.freeze(False)
+            sparsifier.freeze = False
         with training_mode_switcher(model, is_training=False):
             with torch.no_grad():
                 self.do_inference(model, dataset)
         for sparsifier in sparsifiers:
-            sparsifier.freeze(True)
+            sparsifier.freeze = True
         return model
 
     @staticmethod

@@ -112,7 +112,7 @@ class TestActivationsSparsifier:
         device = self.device
         input_tensor = torch.rand([3, 3], device=device, dtype=dtype)
         sparsifier = ActivationsSparsifier(target_sparsity=0.9).to(device)
-        assert sparsifier._freeze is True
+        assert sparsifier.freeze is True
         assert not sparsifier.num_batches_tracked.is_nonzero()
         assert sparsifier.running_threshold.isneginf()
         output_tensor = sparsifier(input_tensor)
@@ -129,7 +129,7 @@ class TestActivationsSparsifier:
     def test_forward_during_calibration(self, use_cuda: bool, desc: SparsifierForwardTestDesc):
         device = self.device
         sparsifier = ActivationsSparsifier(desc.target_sparsity, desc.alpha).to(device)
-        sparsifier.freeze(False)
+        sparsifier.freeze = False
         running_thresholds = []
         outputs = []
         with torch.no_grad():
@@ -198,7 +198,7 @@ class TestPTSparsifyActivationsAlgoBackend:
         graph = model.nncf.get_graph()
         backend = PTSparsifyActivationsAlgoBackend()
         mock_sparsifier = ActivationsSparsifier(0.5, 0.1)
-        mock_sparsifier.freeze(True)
+        mock_sparsifier.freeze = True
         num_model_forward_calls = 0
 
         def model_forward_pre_hook(model: NNCFNetwork, args):
@@ -210,7 +210,7 @@ class TestPTSparsifyActivationsAlgoBackend:
 
         with mocker.patch.object(backend, "get_sparsifiers", return_value=[mock_sparsifier]):
             backend.calibrate_sparsifiers(model, graph, dataset)
-            assert mock_sparsifier._freeze is True
+            assert mock_sparsifier.freeze is True
             assert num_model_forward_calls == dataset.get_length()
 
     def create_model_and_dataset(self, compress_weights: bool = False):
