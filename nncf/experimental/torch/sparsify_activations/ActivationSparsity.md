@@ -1,4 +1,4 @@
-### Activation Sparsity
+### Activation Sparsity (experimental feature)
 
 The `sparsify_activations` algorithm is a post-training method designed to introduce sparsity into the activations of a neural network. This process reduces the number of active neurons during inference by masking out neurons based on their magnitude relative to a calibrated static threshold.
 
@@ -46,7 +46,7 @@ model = sparsify_activations(
         TargetScope(patterns=[".*up_proj.*", ".*gate_proj.*"]): 0.3,
         TargetScope(patterns=[".*down_proj.*",]): 0.5,
     },
-    ignored_scope=nncf.IgnoredScope(),
+    ignored_scope=None,
 )
 ```
 
@@ -69,7 +69,7 @@ In this example, we first conduct data-free INT8 asymmetric weight quantization 
     }
     ```
 
-- `ignored_scope`: Optional. It defines the nodes in the model graph that should be ignored by this algorithm. Note that unsupported layer types are already filtered out internally, so there is no need to mention them in `ignored_scope`. The algorithm currently only supports Linear layer.
+- `ignored_scope`: Optional. If specified, it should be an instance of `nncf.IgnoredScope` class that defines the nodes in the model graph to be ignored by this algorithm. Note that unsupported layer types are already filtered out internally, so there is no need to mention them in `ignored_scope`. The algorithm currently only supports Linear layers.
 
 #### Evaluation results
 
@@ -142,4 +142,4 @@ Here is the word perplexity for different language models on a subset of [wikite
 
 1. Currently activation sparsity only supports Torch backend. Consequently, this restricts the available compression modes to 8-bit integer modes when using `nncf.compress_weight` before activation sparsification. More information on supported modes can be found at [Weights Compression](../../../../docs/usage/post_training_compression/weights_compression/Usage.md#limitations).
 2. Actual activation sparsity during inference is dynamic and per input basis, deviation from the target should be expected. In our local experiments, the statistical mean of actual activation sparsity aligned to the target when thresholds are calibrated on datasets similar to the final task.
-3. Similar to other compression methods, model accuracy and activation sparsity are trade-off at play. For large language models like [Llama](https://llama.meta.com), it is recommended to start with 30%~50% sparsity for the linear layers in feed-forward networks.
+3. Similar to other compression methods, model accuracy and activation sparsity are trade-off at play. For Large Language Models like [Llama](https://llama.meta.com), it is recommended to start with 30%~50% sparsity for the linear layers in feed-forward networks.
