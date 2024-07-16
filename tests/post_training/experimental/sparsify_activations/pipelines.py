@@ -148,6 +148,7 @@ class SAPipelineMixin:
         self.run_info.stats_from_output = stats
 
     @set_torch_seed(seed=42)
+    @torch.no_grad()
     def _compress(self):
         """
         Actual call of weight compression and/or activation sparsification.
@@ -218,6 +219,10 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
         if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
             self._dump_model_fp32()
 
+        # Use FP16 for CUDA_TORCH backend as it is more common when running LLM on CUDA.
+        if self.backend == BackendType.CUDA_TORCH:
+            self.model_hf.half()
+
     def get_transform_calibration_fn(self):
         process_one = super().get_transform_calibration_fn()
 
@@ -259,7 +264,7 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
     def save_compressed_model(self):
         if self.backend == BackendType.CUDA_TORCH:
             export_from_model(
-                self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32", device="cuda"
+                self.model_hf.float(), self.output_model_dir, stateful=False, compression_option="fp32", device="cuda"
             )
         else:
             super().save_compressed_model()
