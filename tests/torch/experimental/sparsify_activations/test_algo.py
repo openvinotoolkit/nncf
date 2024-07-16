@@ -170,7 +170,7 @@ class TestSparsifyActivationsAlgorithm:
                 torch_outputs = (torch_outputs,)
 
         ov_model = ov.convert_model(model, example_input=example_input)
-        compiled_model = ov.compile_model(ov_model, "CPU")
+        compiled_model = ov.compile_model(ov_model, "CPU", config={ov.properties.hint.inference_precision: "f32"})
         ov_outputs = compiled_model(example_input.cpu()).to_tuple()
 
         assert len(torch_outputs) == len(ov_outputs)
