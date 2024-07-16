@@ -13,7 +13,6 @@
 import time
 import traceback
 from collections import OrderedDict
-from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -22,9 +21,9 @@ import pytest
 import yaml
 
 from tests.post_training.experimental.sparsify_activations.model_scope import SPARSIFY_ACTIVATIONS_TEST_CASES
+from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import RunInfo
-from tests.post_training.test_quantize_conformance import create_pipeline_kwargs
 from tests.post_training.test_quantize_conformance import create_short_run_info
 from tests.post_training.test_quantize_conformance import fixture_batch_size  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_data  # noqa: F401
@@ -44,17 +43,8 @@ def fixture_sparsify_activations_reference_data():
     path_reference = Path(__file__).parent / "reference_data.yaml"
     with path_reference.open() as f:
         data = yaml.safe_load(f)
-        fp32_test_cases = defaultdict(dict)
-        for test_case_name, test_case in data.items():
-            fp32_case = dict(metric_value=1.0)
-            fp32_case["num_int4"] = test_case.get("num_int4", 0)
-            fp32_case["num_int8"] = test_case.get("num_int8", 0)
-            reported_name = test_case_name.split("_backend_")[0]
-            fp32_case_name = f"{reported_name}_backend_FP32"
-            fp32_test_cases[fp32_case_name] = fp32_case
-        data.update(fp32_test_cases)
-        for test_case in data.values():
-            test_case["atol"] = test_case.get("atol", 1e-5)
+    for test_case in data.values():
+        test_case["atol"] = test_case.get("atol", 1e-5)
     return data
 
 
@@ -67,6 +57,39 @@ def fixture_sparsify_activations_report_data(output_dir):
         df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
         output_dir.mkdir(parents=True, exist_ok=True)
         df.to_csv(output_dir / "results.csv", index=False)
+
+
+def create_pipeline_kwargs(
+    test_model_param: Dict,
+    subset_size,
+    test_case_name: str,
+    reference_data: Dict[str, Dict],
+    fp32_model_params: Dict[str, Dict],
+):
+    if subset_size:
+        if "compression_params" not in test_model_param:
+            test_model_param["compression_params"] = {}
+        test_model_param["compression_params"]["subset_size"] = subset_size
+
+    print("\n")
+    print(f"Model: {test_model_param['reported_name']}")
+    print(f"Backend: {test_model_param['backend']}")
+    print(f"Comprssion params: {test_model_param['compression_params']}")
+
+    # Get target fp32 metric value
+    model_id = test_model_param["model_id"]
+    fp32_test_case_name = fp32_model_params[model_id]["reported_name"] + f"_backend_{BackendType.FP32.value}"
+    test_reference = reference_data[test_case_name]
+    test_reference["metric_value_fp32"] = reference_data[fp32_test_case_name]["metric_value"]
+
+    return {
+        "reported_name": test_model_param["reported_name"],
+        "model_id": test_model_param["model_id"],
+        "backend": test_model_param["backend"],
+        "compression_params": test_model_param["compression_params"],
+        "params": test_model_param.get("params"),
+        "reference_data": test_reference,
+    }
 
 
 @pytest.mark.parametrize("test_case_name", SPARSIFY_ACTIVATIONS_TEST_CASES.keys())
@@ -94,9 +117,12 @@ def test_sparsify_activations(
             raise RuntimeError(f"{test_case_name} is not defined in `sparsify_activations_reference_data` fixture")
         test_model_param = SPARSIFY_ACTIVATIONS_TEST_CASES[test_case_name]
         maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
+        fp32_model_params = {
+            tc["model_id"]: tc for tc in SPARSIFY_ACTIVATIONS_TEST_CASES.values() if tc["backend"] == BackendType.FP32
+        }
         pipeline_cls = test_model_param["pipeline_cls"]
         pipeline_kwargs = create_pipeline_kwargs(
-            test_model_param, subset_size, test_case_name, sparsify_activations_reference_data
+            test_model_param, subset_size, test_case_name, sparsify_activations_reference_data, fp32_model_params
         )
         calibration_batch_size = batch_size or test_model_param.get("batch_size", 1)
         pipeline_kwargs.update(

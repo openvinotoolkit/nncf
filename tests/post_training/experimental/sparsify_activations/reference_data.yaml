@@ -1,5 +1,5 @@
 tinyllama_backend_FP32:
-  metric_value: 1
+  metric_value: 1.0
   num_int4: 0
   num_int8: 0
 tinyllama_ffn_sparse20_backend_TORCH:

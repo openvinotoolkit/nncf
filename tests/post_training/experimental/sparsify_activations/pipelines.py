@@ -88,7 +88,8 @@ class LMSparsifyActivations(LMWeightCompression):
     def prepare_calibration_dataset(self):
         dataset = load_dataset("wikitext", "wikitext-2-v1", split="train", revision="b08601e")
         dataset = dataset.filter(lambda example: len(example["text"].split()) > 256)
-        dataset = dataset.select(range(64))
+        subset_size = self.compression_params.get("subset_size") or 64
+        dataset = dataset.select(range(subset_size))
         self.calibration_dataset = nncf.Dataset(dataset, partial(self.get_transform_calibration_fn(), max_tokens=256))
 
     def compress(self) -> None:
@@ -164,39 +165,20 @@ class ImageClassificationTimmSparsifyActivations(ImageClassificationTimm):
 
     def prepare_calibration_dataset(self):
         # TODO: for debugging only
-        import torch.utils
-        import torch.utils.data
+        subset_size = self.compression_params.get("subset_size") or 512
+        dataset = self._get_imagenet(subset_size=subset_size)
 
-        hf_dataset = load_dataset("imagenet-1k", split="validation")
-
-        class Dataset(torch.utils.data.Dataset):
-            def __init__(self, hf_dataset, transform):
-                super().__init__()
-                self.hf_dataset = hf_dataset
-                self.transform = transform  # will be assigned in timm internally
-
-            def __getitem__(self, index):
-                sample = self.hf_dataset[index]
-                image = sample["image"]
-                image = image.convert("RGB")
-                return self.transform(image), sample["label"]
-
-            def __len__(self):
-                return 512
-                return len(self.hf_dataset)
-
-        dataset = Dataset(hf_dataset, self.transform)
         generator = torch.Generator()
         generator.manual_seed(42)
-        loader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, num_workers=2, shuffle=True, generator=generator)
+        loader = torch.utils.data.DataLoader(
+            dataset, batch_size=self.batch_size, num_workers=4, shuffle=True, generator=generator
+        )
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
 
-
-    def _get_imagenet(self):
+    def _get_imagenet(self, subset_size=None):
         # TODO: for debugging only
         import torch.utils
         import torch.utils.data
-        import numpy as np
 
         hf_dataset = load_dataset("imagenet-1k", split="validation")
 
@@ -213,13 +195,7 @@ class ImageClassificationTimmSparsifyActivations(ImageClassificationTimm):
                 return self.transform(image), sample["label"]
 
             def __len__(self):
-                # return 24
-                return len(self.hf_dataset)
+                return subset_size or len(self.hf_dataset)
 
         dataset = Dataset(hf_dataset, self.transform)
         return dataset
-
-    def _validate(self):
-        return super()._validate()
-        with torch.autocast(device_type="cuda"):
-            return super()._validate()
