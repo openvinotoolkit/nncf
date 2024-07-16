@@ -128,6 +128,62 @@ class SparsifyActivationsAlgorithm:
         """
         return [BackendType.TORCH]
 
+    def apply(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        dataset: Dataset,
+    ) -> TModel:
+        """
+        Applies the algorithm to the given model.
+
+        :param model: The model to be sparsified.
+        :param graph: The model's NNCF graph.
+        :param dataset: The dataset to calibrate the activation sparsifiers.
+        :return: The sparsified model.
+        """
+        self._set_backend_entity(model)
+        target_sparsity_by_node = self._get_target_sparsity_by_node(graph)
+        if not target_sparsity_by_node:
+            raise nncf.ValidationError("No layers matched for activation sparsification.")
+        sparse_model = self.do_sparsification(
+            model,
+            graph,
+            target_sparsity_by_node,
+            dataset,
+        )
+        return sparse_model
+
+    def do_sparsification(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        target_sparsity_by_node: Dict[NNCFNode, float],
+        dataset: Dataset,
+    ):
+        """
+        Transforms the model into a sparsified one with node-specific target activation sparsity levels.
+
+        :param model: The model to be sparsified.
+        :param graph: The model's NNCF graph.
+        :param target_sparsity_by_node: A dictionary that defines the target sparsity level
+            for specified node layers.
+        :param dataset: The dataset to calibrate the activation sparsifiers.
+        :return: The sparsified model.
+        """
+        model = self._backend_entity.insert_sparsifiers(
+            model,
+            graph,
+            target_sparsity_by_node,
+        )
+        model = self._backend_entity.calibrate_sparsifiers(
+            model,
+            graph,
+            dataset,
+        )
+        model = self._backend_entity.freeze_sparsifiers(model, graph)
+        return model
+
     def _set_backend_entity(self, model: TModel) -> None:
         """
         Creates a helper class with a backend-specific logic of the algorithm.
@@ -167,62 +223,6 @@ class SparsifyActivationsAlgorithm:
                         )
                     target_sparsity_by_node[node] = target_sparsity
         return target_sparsity_by_node
-
-    def do_sparsification(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        target_sparsity_by_node: Dict[NNCFNode, float],
-        dataset: Dataset,
-    ):
-        """
-        Transforms the model into a sparsified one with node-specific target activation sparsity levels.
-
-        :param model: The model to be sparsified.
-        :param graph: The model's NNCF graph.
-        :param target_sparsity_by_node: A dictionary that defines the target sparsity level
-            for specified node layers.
-        :param dataset: The dataset to calibrate the activation sparsifiers.
-        :return: The sparsified model.
-        """
-        model = self._backend_entity.insert_sparsifiers(
-            model,
-            graph,
-            target_sparsity_by_node,
-        )
-        model = self._backend_entity.calibrate_sparsifiers(
-            model,
-            graph,
-            dataset,
-        )
-        model = self._backend_entity.freeze_sparsifiers(model, graph)
-        return model
-
-    def apply(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        dataset: Dataset,
-    ) -> TModel:
-        """
-        Applies the algorithm to the given model.
-
-        :param model: The model to be sparsified.
-        :param graph: The model's NNCF graph.
-        :param dataset: The dataset to calibrate the activation sparsifiers.
-        :return: The sparsified model.
-        """
-        self._set_backend_entity(model)
-        target_sparsity_by_node = self._get_target_sparsity_by_node(graph)
-        if not target_sparsity_by_node:
-            raise nncf.ValidationError("No layers matched for activation sparsification.")
-        sparse_model = self.do_sparsification(
-            model,
-            graph,
-            target_sparsity_by_node,
-            dataset,
-        )
-        return sparse_model
 
 
 def sparsify_activations(
