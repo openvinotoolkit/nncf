@@ -10,6 +10,9 @@
 # limitations under the License.
 
 
+from collections import defaultdict
+
+import openvino as ov
 import torch
 import torch.nn as nn
 import transformers.models
@@ -43,3 +46,26 @@ def dummy_llama_model():
     )
     model = transformers.AutoModelForCausalLM.from_config(config, attn_implementation="eager")
     return model
+
+
+def count_sparsifier_patterns_in_ov(model: ov.Model):
+    pattern = ("Abs", "LessEqual", "Select")
+    result = 0
+    connections = defaultdict(list)
+    for node in model.get_ops():
+        for output in node.outputs():
+            for input_ in output.get_target_inputs():
+                connections[node].append(input_.get_node())
+
+    def dfs(node, location=0):
+        nonlocal result
+        if location < len(pattern) and node.get_type_name() == pattern[location]:
+            if location == len(pattern) - 1:
+                result += 1
+            else:
+                for next_node in connections[node]:
+                    dfs(next_node, location + 1)
+
+    for node in model.get_ops():
+        dfs(node)
+    return result

@@ -30,6 +30,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 from tests.shared.paths import TEST_ROOT
 from tests.torch.experimental.sparsify_activations.helpers import ThreeLinearModel
+from tests.torch.experimental.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 from tests.torch.experimental.sparsify_activations.helpers import dummy_llama_model
 from tests.torch.helpers import set_torch_seed
 
@@ -43,6 +44,7 @@ class SparsifyActivationsAlgorithmTestDesc:
     ignored_scope: Optional[nncf.IgnoredScope]
     ref_sparsifier_target_sparsity: Dict[str, float]
     ref_num_batches_tracked: int
+    ref_num_patterns_in_ov: int
 
 
 sparsify_activations_algorithm_test_descs = [
@@ -58,9 +60,26 @@ sparsify_activations_algorithm_test_descs = [
             f"{ACTIVATIONS_SPARSIFIER_PREFIX}_Linear/linear_0": 0.3,
         },
         ref_num_batches_tracked=3,
+        ref_num_patterns_in_ov=1,
     ),
     SparsifyActivationsAlgorithmTestDesc(
         name="three_linear",
+        model_getter=ThreeLinearModel,
+        dataset_getter=lambda device: nncf.Dataset(torch.randint(0, 30, (3, 2, 8)).to(device)),
+        target_sparsity_by_scope={
+            "{re}.*linear.*": 0.4,
+        },
+        ignored_scope=None,
+        ref_sparsifier_target_sparsity={
+            f"{ACTIVATIONS_SPARSIFIER_PREFIX}_ThreeLinearModel/Linear[linear1]/linear_0": 0.4,
+            f"{ACTIVATIONS_SPARSIFIER_PREFIX}_ThreeLinearModel/Linear[linear2]/linear_0": 0.4,
+            f"{ACTIVATIONS_SPARSIFIER_PREFIX}_ThreeLinearModel/Linear[linear3]/linear_0": 0.4,
+        },
+        ref_num_batches_tracked=3,
+        ref_num_patterns_in_ov=2,  # Sparsifiers are combined in linear1 and linear2
+    ),
+    SparsifyActivationsAlgorithmTestDesc(
+        name="three_linear_ignore1",
         model_getter=ThreeLinearModel,
         dataset_getter=lambda device: nncf.Dataset(torch.randint(0, 30, (3, 2, 8)).to(device)),
         target_sparsity_by_scope={
@@ -72,6 +91,7 @@ sparsify_activations_algorithm_test_descs = [
             f"{ACTIVATIONS_SPARSIFIER_PREFIX}_ThreeLinearModel/Linear[linear3]/linear_0": 0.4,
         },
         ref_num_batches_tracked=3,
+        ref_num_patterns_in_ov=2,
     ),
     SparsifyActivationsAlgorithmTestDesc(
         name="dummy_llama",
@@ -92,6 +112,7 @@ sparsify_activations_algorithm_test_descs = [
             for layer_id in [0, 1]
         },
         ref_num_batches_tracked=3,
+        ref_num_patterns_in_ov=6,
     ),
 ]
 
@@ -165,9 +186,10 @@ class TestSparsifyActivationsAlgorithm:
                 torch_outputs = (torch_outputs,)
 
         ov_model = ov.convert_model(model, example_input=example_input)
+        assert count_sparsifier_patterns_in_ov(ov_model) == self.desc.ref_num_patterns_in_ov
+
         compiled_model = ov.compile_model(ov_model, "CPU", config={ov.properties.hint.inference_precision: "f32"})
         ov_outputs = compiled_model(example_input.cpu()).to_tuple()
-
         assert len(torch_outputs) == len(ov_outputs)
         for torch_output, ov_output in zip(torch_outputs, ov_outputs):
             torch.testing.assert_close(torch_output.cpu(), torch.from_numpy(ov_output), rtol=1e-3, atol=1e-3)

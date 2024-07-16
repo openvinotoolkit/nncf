@@ -39,6 +39,7 @@ from tests.post_training.pipelines.base import RunInfo
 from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
 from tests.post_training.pipelines.lm_weight_compression import LMWeightCompression
 from tests.post_training.pipelines.lm_weight_compression import WCTimeStats
+from tests.torch.experimental.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 from tests.torch.helpers import set_torch_seed
 
 
@@ -125,8 +126,6 @@ class SAPipelineMixin:
         num_fq_nodes = 0
         num_int8 = 0
         num_int4 = 0
-        num_sparse_activations = 0
-
         for node in model.get_ops():
             if node.type_info.name == "FakeQuantize":
                 num_fq_nodes += 1
@@ -135,6 +134,8 @@ class SAPipelineMixin:
                     num_int8 += 1
                 if node.get_output_element_type(i).get_type_name() in ["i4", "u4"]:
                     num_int4 += 1
+
+        num_sparse_activations = count_sparsifier_patterns_in_ov(model)
         return SANumCompressNodes(
             num_fq_nodes=num_fq_nodes,
             num_int8=num_int8,
@@ -154,8 +155,7 @@ class SAPipelineMixin:
         if num_sparse_activations != ref_num_sparse_activations:
             status_msg = f"Regression: The number of sparse activations is {num_sparse_activations}, \
                 which differs from reference {ref_num_sparse_activations}."
-            # raise ValueError(status_msg)
-            print(status_msg)
+            raise ValueError(status_msg)
 
     @set_torch_seed(seed=42)
     def _compress(self):
