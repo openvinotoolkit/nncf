@@ -131,8 +131,7 @@ class TestActivationsSparsifier:
 
 class TestPTSparsifyActivationsAlgoBackend:
     def test_get_sparsifiers(self):
-        model = ThreeLinearModel()
-        dataset = nncf.Dataset(torch.randint(0, 30, (3, 2, 8)))
+        model, dataset = self.create_model_and_dataset()
         sparse_model = nncf.experimental.torch.sparsify_activations.sparsify_activations(
             model, dataset, target_sparsity_by_scope={"{re}.*": 0.5}
         )

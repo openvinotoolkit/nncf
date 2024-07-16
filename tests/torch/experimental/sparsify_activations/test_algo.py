@@ -149,7 +149,6 @@ class TestSparsifyActivationsAlgorithm:
     def test_nncf_graph(self):
         desc: SparsifyActivationsAlgorithmTestDesc = self.desc
         model: NNCFNetwork = self.model
-        graph = model.nncf.get_graph()
         file_name = f"{desc.name}_compressed_weights" if self.compress_weights else desc.name
         ref_dot_path = Path(TEST_ROOT, "torch", "data", "experimental", "sparsify_activations", f"{file_name}.dot")
         graph = model.nncf.get_graph().get_graph_for_structure_analysis()

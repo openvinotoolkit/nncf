@@ -59,7 +59,7 @@ class ActivationsSparsifier(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if not self._freeze:
-            threshold = self._calculate_threshold(x, self.target_sparsity)
+            threshold = self.calculate_threshold(x, self.target_sparsity)
             self._update(threshold)
         mask = torch.le(x.abs(), self.running_threshold)
         x = torch.masked_fill(x, mask, 0.0)
@@ -78,7 +78,8 @@ class ActivationsSparsifier(nn.Module):
     def extra_repr(self) -> str:
         return f"target_sparsity={self.target_sparsity}"
 
-    def _calculate_threshold(self, x: torch.Tensor, target_sparsity: float) -> torch.Tensor:
+    @staticmethod
+    def calculate_threshold(x: torch.Tensor, target_sparsity: float) -> torch.Tensor:
         """
         Calculates the threshold so that the target sparsity can be achieved.
 
