@@ -1,1 +1,2 @@
 mdutils
+matplotlib<3.6
