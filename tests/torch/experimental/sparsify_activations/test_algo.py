@@ -11,7 +11,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 import openvino as ov
 import pytest
@@ -40,7 +40,7 @@ class SparsifyActivationsAlgorithmTestDesc:
     model_getter: Callable[[], nn.Module]
     dataset_getter: Callable[[torch.device], nncf.Dataset]
     target_sparsity_by_scope: Dict[str, float]
-    ignored_scope: nncf.IgnoredScope | None
+    ignored_scope: Optional[nncf.IgnoredScope]
     ref_sparsifier_target_sparsity: Dict[str, float]
     ref_num_batches_tracked: int
 
@@ -178,7 +178,7 @@ class TestSparsifyActivationsAlgorithm:
 class TargetSparsityByNodeTestDesc:
     target_sparsity_by_scope: Dict[str, float]
     ignored_scope: IgnoredScope
-    ref_target_sparsity_by_node_name: Dict[str, float] = None
+    ref_target_sparsity_by_node_name: Optional[Dict[str, float]] = None
     raise_error: bool = False
 
 
