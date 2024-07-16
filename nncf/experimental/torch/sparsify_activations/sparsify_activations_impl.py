@@ -38,7 +38,7 @@ class SparsifyActivationsAlgoBackend(ABC):
     Abstract class for activation sparsification algorithm backend.
     """
 
-    CALIBRATION_TRACKING_DESC = "Activations Sparsifier Calibration"
+    CALIBRATION_TRACKING_DESC = "Conducting Activations Sparsifier Calibration"
 
     def do_inference(self, model: TModel, dataset: Dataset):
         """

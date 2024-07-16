@@ -1,4 +1,12 @@
-tinyllama_int8_sparse20_ffn_backend_TORCH:
-  metric_value: 0.79924
+tinyllama_backend_FP32:
+  metric_value: 1
+  num_int4: 0
+  num_int8: 0
+tinyllama_ffn_sparse20_backend_TORCH:
+  metric_value: 0.7852
+  num_int4: 0
+  num_int8: 0
+tinyllama_int8_asym_data_free_ffn_sparse20_backend_TORCH:
+  metric_value: 0.7997
   num_int4: 0
   num_int8: 312

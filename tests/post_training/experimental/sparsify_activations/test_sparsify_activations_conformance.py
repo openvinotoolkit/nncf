@@ -15,14 +15,18 @@ import traceback
 from collections import OrderedDict
 from collections import defaultdict
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Dict, Optional
 
 import pandas as pd
 import pytest
+import torch
 import yaml
 from datasets import load_dataset
 from memory_profiler import memory_usage
+from optimum.intel.openvino import OVModelForCausalLM
+from transformers import AutoModelForCausalLM
 
 import nncf
 import nncf.experimental
@@ -49,6 +53,7 @@ from tests.post_training.test_quantize_conformance import fixture_run_torch_cuda
 from tests.post_training.test_quantize_conformance import fixture_subset_size  # noqa: F401
 from tests.post_training.test_quantize_conformance import maybe_skip_test_case
 from tests.post_training.test_quantize_conformance import write_logs
+from tests.torch.helpers import set_torch_seed
 
 
 @pytest.fixture(scope="session", name="sparsify_activations_reference_data")
@@ -57,15 +62,16 @@ def fixture_sparsify_activations_reference_data():
     with path_reference.open() as f:
         data = yaml.safe_load(f)
         fp32_test_cases = defaultdict(dict)
-        for test_case_name in data:
-            if "atol" not in data[test_case_name]:
-                data[test_case_name]["atol"] = 1e-3
+        for test_case_name, test_case in data.items():
+            fp32_case = dict(metric_value=1.0)
+            fp32_case["num_int4"] = test_case.get("num_int4", 0)
+            fp32_case["num_int8"] = test_case.get("num_int8", 0)
             reported_name = test_case_name.split("_backend_")[0]
             fp32_case_name = f"{reported_name}_backend_FP32"
-            fp32_test_cases[fp32_case_name]["metric_value"] = 1
-            if "atol" not in fp32_test_cases[fp32_case_name]:
-                fp32_test_cases[fp32_case_name]["atol"] = 1e-10
+            fp32_test_cases[fp32_case_name] = fp32_case
         data.update(fp32_test_cases)
+        for test_case in data.values():
+            test_case["atol"] = test_case.get("atol", 1e-5)
     return data
 
 
@@ -93,10 +99,42 @@ class SparsifyActivationsTimeStats(WCTimeStats):
 
 
 class LMSparsifyActivations(LMWeightCompression):
-    def collect_data_from_stdout(self, stdout: str):
-        stats = SparsifyActivationsTimeStats()
-        stats.fill(stdout)
-        self.run_info.stats_from_output = stats
+    def prepare_model(self) -> None:
+        is_stateful = self.params.get("is_stateful", False)
+
+        if self.backend == BackendType.TORCH:
+            if is_stateful:
+                raise RuntimeError(f"is_stateful={is_stateful} is not supported for PyTorch backend.")
+
+            self.model_hf = AutoModelForCausalLM.from_pretrained(
+                self.model_id, torch_dtype=torch.float32, device_map="cpu"
+            )
+            self.model = self.model_hf
+        elif self.backend in [BackendType.OV, BackendType.FP32]:
+            if is_stateful:
+                self.fp32_model_dir = self.fp32_model_dir.parent / (self.fp32_model_dir.name + "_sf")
+            if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
+                # export by model_id
+                self.model_hf = OVModelForCausalLM.from_pretrained(
+                    self.model_id, export=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                )
+            else:
+                # no export, load from IR. Applicable for sequential run of test cases in local environment.
+                self.model_hf = OVModelForCausalLM.from_pretrained(
+                    self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                )
+            self.model = self.model_hf.model
+        else:
+            raise RuntimeError(f"backend={self.backend.value} is not supported.")
+
+        if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
+            self._dump_model_fp32()
+
+    def prepare_calibration_dataset(self):
+        dataset = load_dataset("wikitext", "wikitext-2-v1", split="train", revision="b08601e")
+        dataset = dataset.filter(lambda example: len(example["text"].split()) > 256)
+        dataset = dataset.select(range(64))
+        self.calibration_dataset = nncf.Dataset(dataset, partial(self.get_transform_calibration_fn(), max_tokens=256))
 
     def compress(self) -> None:
         if self.backend == BackendType.FP32:
@@ -105,30 +143,54 @@ class LMSparsifyActivations(LMWeightCompression):
         self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
         self.run_info.time_compression = time.perf_counter() - start_time
 
-    def prepare_calibration_dataset(self):
-        dataset = load_dataset("wikitext", "wikitext-2-v1", split="train", revision="b08601e")
-        dataset = dataset.filter(lambda example: len(example["text"]) > 512)
-        dataset = dataset.select(range(64))
-        self.calibration_dataset = nncf.Dataset(dataset, self.get_transform_calibration_fn())
+    def collect_data_from_stdout(self, stdout: str):
+        stats = SparsifyActivationsTimeStats()
+        stats.fill(stdout)
+        self.run_info.stats_from_output = stats
 
+    @set_torch_seed(seed=42)
     def _compress(self):
         self.compressed_model = self.model
-        if self.compression_params["compress_weights"] is not None:
+        if self.compression_params.get("compress_weights", None) is not None:
             self.compressed_model = nncf.compress_weights(
                 self.compressed_model,
                 dataset=self.calibration_dataset,
                 **self.compression_params["compress_weights"],
             )
-        self.compressed_model = nncf.experimental.torch.sparsify_activations.sparsify_activations(
-            self.compressed_model,
-            dataset=self.calibration_dataset,
-            **self.compression_params["sparsify_activations"],
-        )
+        if self.compression_params.get("sparsify_activations", None) is not None:
+            self.compressed_model = nncf.experimental.torch.sparsify_activations.sparsify_activations(
+                self.compressed_model,
+                dataset=self.calibration_dataset,
+                **self.compression_params["sparsify_activations"],
+            )
 
 
 SPARSIFY_ACTIVATIONS_MODELS = [
     {
-        "reported_name": "tinyllama_int8_sparse20_ffn",
+        "reported_name": "tinyllama",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMSparsifyActivations,
+        "compression_params": None,
+        "backends": [BackendType.FP32],
+    },
+    {
+        "reported_name": "tinyllama_ffn_sparse20",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMSparsifyActivations,
+        "compression_params": {
+            "compress_weights": None,
+            "sparsify_activations": {
+                "target_sparsity_by_scope": {
+                    "{re}up_proj": 0.2,
+                    "{re}gate_proj": 0.2,
+                    "{re}down_proj": 0.2,
+                }
+            },
+        },
+        "backends": [BackendType.TORCH],
+    },
+    {
+        "reported_name": "tinyllama_int8_asym_data_free_ffn_sparse20",
         "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
         "pipeline_cls": LMSparsifyActivations,
         "compression_params": {
@@ -146,6 +208,7 @@ SPARSIFY_ACTIVATIONS_MODELS = [
         "backends": [BackendType.TORCH],
     },
 ]
+
 
 SPARSIFY_ACTIVATIONS_TEST_CASES = generate_tests_scope(SPARSIFY_ACTIVATIONS_MODELS)
 
