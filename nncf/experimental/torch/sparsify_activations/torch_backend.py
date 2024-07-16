@@ -8,6 +8,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.logging import nncf_logger
 from nncf.data import Dataset
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
 from nncf.torch.graph import operator_metatypes as om
@@ -15,6 +16,7 @@ from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.utils import training_mode_switcher
 
 TModel = TypeVar("TModel")
 
@@ -47,7 +49,8 @@ class ActivationSparsifier(nn.Module):
         if not self._freeze:
             threshold = self._calculate_threshold(x, self.target_sparsity)
             self._update(threshold)
-            print(threshold)
+            nncf_logger.info('Cur %f, Averaged %f', threshold,
+                             self.running_threshold)
         mask = torch.le(x.abs(), self.running_threshold)
         x = torch.masked_fill(x, mask, 0.)
         return x
@@ -61,6 +64,9 @@ class ActivationSparsifier(nn.Module):
 
     def freeze(self, freeze: bool = True):
         self._freeze = freeze
+
+    def extra_repr(self) -> str:
+        return f'target_sparsity={self.target_sparsity}'
 
     def _calculate_threshold(self, x: torch.Tensor, target_sparsity: float) -> torch.Tensor:
         """
@@ -122,6 +128,8 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
             _, act_port_id = self._get_activation_node_and_port(
                 node, graph)
             sparsifier = ActivationSparsifier(target_sparsity=target_sparsity)
+            # temporarily freeze it for model transformation
+            sparsifier.freeze(True)
             sparsifier_name = f"activation_sparsifier_{node.node_name.replace('.', '_')}"
             transformation_layout.register(PTSharedFnInsertionCommand(
                 [
@@ -142,7 +150,9 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
         for sparsifier in self.get_sparsifiers(model):
             sparsifier.reset_running_stats()
             sparsifier.freeze(False)
-        self.do_inference(model, dataset)
+        with training_mode_switcher(model, is_training=False):
+            with torch.no_grad():
+                self.do_inference(model, dataset)
         return model
 
     def freeze_sparsifiers(self, model: NNCFNetwork, graph: NNCFGraph) -> NNCFNetwork:
