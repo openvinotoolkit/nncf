@@ -128,7 +128,7 @@ class TestActivationsSparsifier:
 
 
 class TestPTSparsifyActivationsAlgoBackend:
-    def test_get_sparsifers(self):
+    def test_get_sparsifiers(self):
         model = ThreeLinearModel()
         dataset = nncf.Dataset(torch.randint(0, 30, (3, 2, 8)))
         sparse_model = nncf.experimental.torch.sparsify_activations.sparsify_activations(
@@ -151,8 +151,8 @@ class TestPTSparsifyActivationsAlgoBackend:
         model, dataset = self.create_model_and_dataset()
         graph = model.nncf.get_graph()
         backend = PTSparsifyActivationsAlgoBackend()
-        mock_sparsifer = ActivationsSparsifier(0.5, 0.1)
-        mock_sparsifer.freeze(True)
+        mock_sparsifier = ActivationsSparsifier(0.5, 0.1)
+        mock_sparsifier.freeze(True)
         num_model_forward_calls = 0
 
         def model_forward_pre_hook(model: NNCFNetwork, args):
@@ -162,9 +162,9 @@ class TestPTSparsifyActivationsAlgoBackend:
 
         model.register_forward_pre_hook(model_forward_pre_hook)
 
-        with mocker.patch.object(backend, "get_sparsifiers", return_value=[mock_sparsifer]):
+        with mocker.patch.object(backend, "get_sparsifiers", return_value=[mock_sparsifier]):
             backend.calibrate_sparsifiers(model, graph, dataset)
-            assert mock_sparsifer._freeze is False
+            assert mock_sparsifier._freeze is False
             assert num_model_forward_calls == dataset.get_length()
 
     def create_model_and_dataset(self, compress_weights: bool = False):

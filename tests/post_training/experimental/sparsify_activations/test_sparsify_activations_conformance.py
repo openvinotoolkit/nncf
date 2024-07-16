@@ -87,7 +87,7 @@ class SparsifyActivationsTimeStats(WCTimeStats):
     """
 
     time_sparsifier_calibration: Optional[str] = None
-    STAT_NAMES = [*WCTimeStats.STAT_NAMES, "Activations Sparsifer calibration time"]
+    STAT_NAMES = [*WCTimeStats.STAT_NAMES, "Activations Sparsifier calibration time"]
     VAR_NAMES = [*WCTimeStats.VAR_NAMES, "time_sparsifier_calibration"]
     REGEX_PREFIX = [*WCTimeStats.REGEX_PREFIX, SparsifyActivationsAlgoBackend.CALIBRATION_TRACKING_DESC]
 
