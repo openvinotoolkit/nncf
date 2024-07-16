@@ -67,13 +67,12 @@ class ActivationsSparsifier(nn.Module):
         :param target_sparsity: The target sparsity level on the input tensor.
         :return: The threshold value.
         """
-        value = quantile(x.detach().abs().view(-1), q=target_sparsity, axis=0)
-        return value.to(dtype=x.dtype)
+        return quantile(x.detach().abs().view(-1), q=target_sparsity, axis=0)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if not self._freeze:
             threshold = self.calculate_threshold(x, self.target_sparsity)
-            self._update(threshold)
+            self._update(threshold, dtype=x.dtype)
         mask = torch.le(x.abs(), self.running_threshold)
         x = torch.masked_fill(x, mask, 0.0)
         return x
@@ -91,22 +90,25 @@ class ActivationsSparsifier(nn.Module):
     def extra_repr(self) -> str:
         return f"target_sparsity={self.target_sparsity}"
 
-    def _update(self, threshold: torch.Tensor) -> torch.Tensor:
+    def _update(self, threshold: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:
         """
         Updates the running threshold by exponential moving average with decaying adjustment.
         The updating logic is similar to `pandas.DataFrame.ewm(adjust=True)`.
 
         :param threshold: The threshold value derived from this batch to update the running threshold.
+        :param dtype: Data type of the updated running threshold.
         :return: The updated running threshold.
         """
         if self.num_batches_tracked == 0:
-            self.running_threshold = threshold
+            running_threshold = threshold
         else:
             beta = 1.0 - self.alpha
-            self.running_threshold = (
-                threshold * self.alpha + self.running_threshold * beta * (1 - beta**self.num_batches_tracked)
+            old_running_threshold = self.running_threshold.to(device=threshold.device, dtype=torch.float64)
+            running_threshold = (
+                threshold.to(torch.float64) * self.alpha
+                + old_running_threshold * beta * (1 - beta**self.num_batches_tracked)
             ) / (1 - beta ** (self.num_batches_tracked + 1))
-            self.running_threshold = self.running_threshold.type(threshold.dtype)
+        self.running_threshold = running_threshold.type(dtype)
         self.num_batches_tracked += 1
         return self.running_threshold
 
