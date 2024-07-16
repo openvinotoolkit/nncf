@@ -196,22 +196,20 @@ class SparsifyActivationsAlgorithm:
         ignored_names = get_ignored_node_names_from_ignored_scope(
             self._ignored_scope, graph, strict=self._ignored_scope.validate
         )
-        target_scope_vs_target_names = {
-            scope: get_target_node_names_from_target_scope(scope, graph, strict=scope.validate)
-            for scope in self._target_sparsity_by_scope
-        }
         target_sparsity_by_node = {}
-        for node in graph.get_nodes_by_metatypes(supported_metatypes):
-            if not should_consider_scope(node.node_name, ignored_scopes=ignored_names):
-                continue
-            for scope, target_sparsity in self._target_sparsity_by_scope.items():
-                target_names = target_scope_vs_target_names[scope]
-                if should_consider_scope(node.node_name, ignored_scopes=[], target_scopes=target_names):
-                    if node in target_sparsity_by_node:
-                        raise nncf.ValidationError(
-                            f'"{node.node_name}" is matched by multiple items in `target_sparsity_by_scope`.'
-                        )
-                    target_sparsity_by_node[node] = target_sparsity
+        for scope, target_sparsity in self._target_sparsity_by_scope.items():
+            target_names = get_target_node_names_from_target_scope(scope, graph, strict=scope.validate)
+            for node_name in target_names:
+                node = graph.get_node_by_name(node_name)
+                if node.metatype not in supported_metatypes or not should_consider_scope(
+                    node.node_name, ignored_scopes=ignored_names
+                ):
+                    continue
+                if node in target_sparsity_by_node:
+                    raise nncf.ValidationError(
+                        f'"{node.node_name}" is matched by multiple items in `target_sparsity_by_scope`.'
+                    )
+                target_sparsity_by_node[node] = target_sparsity
         if not target_sparsity_by_node:
             raise nncf.ValidationError("No layers to conduct activation sparsification.")
         return target_sparsity_by_node
@@ -248,7 +246,7 @@ def sparsify_activations(
                 TargetScope(patterns=[".*up_proj.*", ".*down_proj.*"]): 0.3,
             }
 
-    :param ignored_scope: Optional. It defines the nodes in the model graph that should be be
+    :param ignored_scope: Optional. It defines the nodes in the model graph that should be
         ignored during activation sparsification. Note that unsupported layer types are already
         filtered out internally, so there is no need to mention them in `ignored_scope`.
     :return: The sparsified model.
