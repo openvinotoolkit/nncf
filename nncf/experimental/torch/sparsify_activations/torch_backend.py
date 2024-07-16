@@ -31,10 +31,11 @@ from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import training_mode_switcher
 
+ACTIVATIONS_SPARSIFIER_PREFIX = 'activations_sparsifier'
 TModel = TypeVar("TModel")
 
 
-class ActivationSparsifier(nn.Module):
+class ActivationsSparsifier(nn.Module):
     """
     Sparsifies input activations by masking out values around zero.
     """
@@ -48,7 +49,8 @@ class ActivationSparsifier(nn.Module):
         super().__init__()
         self.target_sparsity = target_sparsity
         if alpha <= 0.0 or alpha >= 1.0:
-            raise ValueError("The decay factor `alpha` should be in range (0, 1).")
+            raise ValueError(
+                "The decay factor `alpha` should be in range (0, 1).")
         self.alpha = alpha
         self.register_buffer("running_threshold", torch.tensor(0.0))
         self.register_buffer("num_batches_tracked", torch.tensor(0))
@@ -102,7 +104,8 @@ class ActivationSparsifier(nn.Module):
         """
         beta = 1.0 - self.alpha
         self.running_threshold = (
-            threshold * self.alpha + self.running_threshold * beta * (1 - beta**self.num_batches_tracked)
+            threshold * self.alpha + self.running_threshold *
+            beta * (1 - beta**self.num_batches_tracked)
         ) / (1 - beta ** (self.num_batches_tracked + 1))
         self.num_batches_tracked += 1
         return self.running_threshold
@@ -119,14 +122,14 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
     def supported_metatypes(self) -> List[type[OperatorMetatype]]:
         return PTSparsifyActivationsAlgoBackend.SUPPORTED_METATYPES
 
-    def get_sparsifiers(self, model: NNCFNetwork) -> List[ActivationSparsifier]:
+    def get_sparsifiers(self, model: NNCFNetwork) -> List[ActivationsSparsifier]:
         """
         Finds all the activation sparsifiers in the model.
 
         :param model: The model with activation sparsifiers.
         :return: List of activation sparsifiers.
         """
-        return [m for m in model.nncf.modules() if isinstance(m, ActivationSparsifier)]
+        return [m for m in model.nncf.modules() if isinstance(m, ActivationsSparsifier)]
 
     def insert_sparsifiers(
         self,
@@ -137,10 +140,10 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
         transformation_layout = TransformationLayout()
         for node, target_sparsity in target_sparsity_by_node.items():
             activation_port_id = self._get_activation_port_id(node, graph)
-            sparsifier = ActivationSparsifier(target_sparsity=target_sparsity)
+            sparsifier = ActivationsSparsifier(target_sparsity=target_sparsity)
             # temporarily freeze it for model transformation
             sparsifier.freeze(True)
-            sparsifier_name = f"activations_sparsifier_{node.node_name.replace('.', '_')}"
+            sparsifier_name = f"{ACTIVATIONS_SPARSIFIER_PREFIX}_{node.node_name.replace('.', '_')}"
             transformation_layout.register(
                 PTSharedFnInsertionCommand(
                     [
@@ -155,7 +158,8 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
                 )
             )
 
-        transformed_model = PTModelTransformer(model).transform(transformation_layout)
+        transformed_model = PTModelTransformer(
+            model).transform(transformation_layout)
         return transformed_model
 
     def calibrate_sparsifiers(self, model: NNCFNetwork, graph: NNCFGraph, dataset: Dataset) -> NNCFNetwork:
@@ -188,5 +192,6 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
                 continue
             activation_ports.append(edge.input_port_id)
         if len(activation_ports) != 1:
-            raise nncf.InternalError(f'Cannot find activation port for node "{node}".')
+            raise nncf.InternalError(
+                f'Cannot find activation port for node "{node}".')
         return activation_ports[0]
