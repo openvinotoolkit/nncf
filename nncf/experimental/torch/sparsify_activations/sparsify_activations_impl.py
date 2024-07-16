@@ -248,9 +248,9 @@ def sparsify_activations(
                 TargetScope(patterns=[".*up_proj.*", ".*down_proj.*"]): 0.3,
             }
 
-    :param ignored_scope: Optional. It defines the nodes in the model graph that should be be ignored
-        during activation sparsification. Note that layers other than linear type are already filtered
-        out internally, so there is no need to mention them in `ignored_scope`.
+    :param ignored_scope: Optional. It defines the nodes in the model graph that should be be
+        ignored during activation sparsification. Note that unsupported layer types are already
+        filtered out internally, so there is no need to mention them in `ignored_scope`.
     :return: The sparsified model.
     """
 
