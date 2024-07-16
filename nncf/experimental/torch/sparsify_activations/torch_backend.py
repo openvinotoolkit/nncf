@@ -11,7 +11,6 @@
 
 from typing import Dict, List, Type, TypeVar
 
-import numpy as np
 import torch
 import torch.nn as nn
 
@@ -23,6 +22,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.data import Dataset
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
+from nncf.tensor.functions.torch_numeric import quantile
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -60,18 +60,15 @@ class ActivationsSparsifier(nn.Module):
     @staticmethod
     def calculate_threshold(x: torch.Tensor, target_sparsity: float) -> torch.Tensor:
         """
-        Calculates the threshold for sparsifying the input tensor if locations of `x.abs() <= threshold` are zeroed.
+        Calculates the threshold to sparsify the input tensor with target sparsity if locations of
+        `x.abs() <= threshold` are zeroed out.
 
         :param x: The input tensor.
         :param target_sparsity: The target sparsity level on the input tensor.
         :return: The threshold value.
         """
-        # uses numpy's quantile implementation as torch's cannot handle large tensor
-        value = np.quantile(
-            x.detach().abs().cpu().numpy(),
-            q=target_sparsity,
-        )
-        return torch.tensor(value, device=x.device, dtype=x.dtype)
+        value = quantile(x.detach().abs().view(-1), q=target_sparsity, axis=0)
+        return value.to(dtype=x.dtype)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if not self._freeze:
