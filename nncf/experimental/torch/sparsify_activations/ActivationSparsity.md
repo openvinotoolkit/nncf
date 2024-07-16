@@ -1,6 +1,6 @@
 ### Activation Sparsity (experimental feature)
 
-The `sparsify_activations` algorithm is a post-training method designed to introduce sparsity into the activations of a neural network. This process reduces the number of active neurons during inference by masking out neurons based on their magnitude relative to a calibrated static threshold. Typically this can help accelerate inference for Transformer-based Large Language Models on edge devices; one such example is [Liu et al., 2023](https://arxiv.org/abs/2310.17157).
+The `sparsify_activations` algorithm is a post-training method designed to introduce sparsity into the activations of a neural network. This process reduces the number of active neurons during inference by masking out neurons based on their magnitude relative to a calibrated static threshold. 
 
 The algorithm sparsifies the input of a layer by applying the following function:
 
@@ -19,6 +19,9 @@ $$
 $$
 
 `sparsify_activations` automates the process of identifying the pruning thresholds based on user-specified layers, target sparsities and input dataset.
+
+> Note: This feature is **experimental** and intended solely for evaluation of sparsity-task performance. While activation sparsity can improve inference efficiency of LLM decoding phase [Liu et al., 2023](https://arxiv.org/abs/2310.17157), it neccessitates optimized runtime kernels, which are in development. 
+
 
 #### Example Usage
 
@@ -51,6 +54,7 @@ model = sparsify_activations(
 
 In this example, we first conduct data-free INT8 asymmetric weight quantization on the model. Then we do activation sparsification, setting the target activation sparsity to 30% for all the layers containing the keywords "up_proj" and "gate_proj", and 50% for layers with "down_proj" keyword.
 
+
 #### Interface Details
 
 - `model`: The model to be sparsified. Currently only Torch backend is supported.
@@ -68,7 +72,8 @@ In this example, we first conduct data-free INT8 asymmetric weight quantization 
     }
     ```
 
-- `ignored_scope`: Optional. If specified, it should be an instance of `nncf.IgnoredScope` class that defines the nodes in the model graph to be ignored by this algorithm. Note that unsupported layer types are already filtered out internally, so there is no need to mention them in `ignored_scope`. The algorithm currently only supports Linear layers.
+- `ignored_scope`: Optional. If specified, it should be an instance of `nncf.IgnoredScope` class that defines the nodes in the model graph to be ignored by this algorithm. Note that unsupported layer types are already filtered out internally, so there is no need to mention them in `ignored_scope`. The algorithm currently only supports Linear layers, as they benefit most from dynamic sparse activations by reducing memory read bandwidth for the large Linear weights used in LLMs.
+
 
 #### Evaluation results
 
@@ -137,8 +142,9 @@ Here is the word perplexity for different language models on a subset of [wikite
     </tr>
 </table>
 
+
 #### Known Limitations
 
 1. Currently activation sparsity only supports Torch backend. Consequently, this restricts the available compression modes to 8-bit integer modes when using `nncf.compress_weight` before activation sparsification. More information on supported modes can be found at [Weights Compression](../../../../docs/usage/post_training_compression/weights_compression/Usage.md#limitations).
 2. Actual activation sparsity during inference is dynamic and per input basis, deviation from the target should be expected. In our local experiments, the statistical mean of actual activation sparsity aligned to the target when thresholds are calibrated on datasets similar to the final task.
-3. Similar to other compression methods, model accuracy and activation sparsity are trade-off at play. For Large Language Models like [Llama](https://llama.meta.com), it is recommended to start with 30%~50% sparsity for the linear layers in feed-forward networks.
+3. Similar to other compression methods, model accuracy and activation sparsity are trade-off at play. For large language models like [Llama](https://llama.meta.com), it is recommended to start with 30%~50% sparsity for the linear layers in feed-forward networks.
