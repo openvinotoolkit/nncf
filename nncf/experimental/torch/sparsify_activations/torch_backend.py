@@ -21,12 +21,12 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.data import Dataset
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import training_mode_switcher
@@ -136,7 +136,7 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
         graph: NNCFGraph,
         target_sparsity_by_node: Dict[NNCFNode, float],
     ) -> NNCFNetwork:
-        transformation_layout = TransformationLayout()
+        transformation_layout = PTTransformationLayout()
         for node, target_sparsity in target_sparsity_by_node.items():
             activation_port_id = self._get_activation_port_id(node, graph)
             sparsifier = ActivationsSparsifier(target_sparsity=target_sparsity)
