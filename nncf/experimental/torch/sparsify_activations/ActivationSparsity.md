@@ -4,11 +4,11 @@ The `sparsify_activations` algorithm is a post-training method designed to intro
 
 The algorithm sparsifies the input of a layer by applying the following function:
 
-$$ 
-sparsify(X) = 
-\begin{cases} 
+$$
+sparsify(X) =
+\begin{cases}
 X & \text{if } |X| \ge \tau \\
-0 & \text{if } |X| < \tau 
+0 & \text{if } |X| < \tau
 \end{cases}
 $$
 
@@ -71,8 +71,8 @@ In this example, we first conduct data-free INT8 asymmetric weight quantization 
 
 - `ignored_scope`: Optional. It defines the nodes in the model graph that should be ignored by this algorithm. Note that unsupported layer types are already filtered out internally, so there is no need to mention them in `ignored_scope`. The algorithm currently only supports Linear layer.
 
-
 #### Evaluation results
+
 Here is the word perplexity for different language models on a subset of [wikitext dataset](https://arxiv.org/pdf/1609.07843.pdf), with maximum context length set as 2048. In the table, "int8_asym" means the model weights are asymmetrically quantized to int8. "Avg. Activation Sparsity" column shows the average activation sparsity on the evaluation samples. "up/gate/down" means the up, gate, and down projection layers in the [GLU](https://arxiv.org/abs/1612.08083)-style feed forward networks.
 <table>
     <tr bgcolor='#B4B5BB'>
