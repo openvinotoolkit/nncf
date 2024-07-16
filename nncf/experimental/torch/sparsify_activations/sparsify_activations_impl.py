@@ -61,7 +61,6 @@ class SparsifyActivationsAlgoBackend(ABC):
         """
         Property for the backend-specific metatypes for supported layers.
         """
-        return []
 
     @abstractmethod
     def insert_sparsifiers(
@@ -78,7 +77,6 @@ class SparsifyActivationsAlgoBackend(ABC):
         :param target_sparsity_by_node: The target sparsity level for the input activation in each given node layer.
         :return: The model with inserted activation sparsifiers.
         """
-        return model
 
     @abstractmethod
     def calibrate_sparsifiers(self, model: TModel, graph: NNCFGraph, dataset: Dataset) -> TModel:
@@ -90,7 +88,6 @@ class SparsifyActivationsAlgoBackend(ABC):
         :param dataset: The calibration dataset to update the thresholds in the sparsifiers.
         :return: The model with calibrated activation sparsifiers.
         """
-        return model
 
     @abstractmethod
     def freeze_sparsifiers(self, model: TModel, graph: NNCFGraph) -> TModel:
@@ -101,7 +98,6 @@ class SparsifyActivationsAlgoBackend(ABC):
         :param graph: The model's NNCF graph.
         :return: The model with applied sparsification operations.
         """
-        return model
 
 
 class SparsifyActivationsAlgorithm:
