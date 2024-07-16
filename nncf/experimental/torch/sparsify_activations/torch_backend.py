@@ -57,31 +57,10 @@ class ActivationsSparsifier(nn.Module):
         self.num_batches_tracked: torch.Tensor
         self._freeze = True
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if not self._freeze:
-            threshold = self.calculate_threshold(x, self.target_sparsity)
-            self._update(threshold)
-        mask = torch.le(x.abs(), self.running_threshold)
-        x = torch.masked_fill(x, mask, 0.0)
-        return x
-
-    def reset_running_stats(self):
-        """
-        Resets the running threshold and the number of tracked batches to the initial stage.
-        """
-        self.running_threshold.fill_(float("-inf"))
-        self.num_batches_tracked.zero_()
-
-    def freeze(self, freeze: bool = True):
-        self._freeze = freeze
-
-    def extra_repr(self) -> str:
-        return f"target_sparsity={self.target_sparsity}"
-
     @staticmethod
     def calculate_threshold(x: torch.Tensor, target_sparsity: float) -> torch.Tensor:
         """
-        Calculates the threshold so that the target sparsity can be achieved.
+        Calculates the threshold for sparsifying the input tensor if locations of `x.abs() <= threshold` are zeroed.
 
         :param x: The input tensor.
         :param target_sparsity: The target sparsity level on the input tensor.
@@ -93,6 +72,27 @@ class ActivationsSparsifier(nn.Module):
             q=target_sparsity,
         )
         return torch.tensor(value, device=x.device, dtype=x.dtype)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if not self._freeze:
+            threshold = self.calculate_threshold(x, self.target_sparsity)
+            self._update(threshold)
+        mask = torch.le(x.abs(), self.running_threshold)
+        x = torch.masked_fill(x, mask, 0.0)
+        return x
+
+    def freeze(self, freeze: bool = True):
+        self._freeze = freeze
+
+    def reset_running_stats(self):
+        """
+        Resets the running threshold and the number of tracked batches to the initial stage.
+        """
+        self.running_threshold.fill_(float("-inf"))
+        self.num_batches_tracked.zero_()
+
+    def extra_repr(self) -> str:
+        return f"target_sparsity={self.target_sparsity}"
 
     def _update(self, threshold: torch.Tensor) -> torch.Tensor:
         """
@@ -121,11 +121,8 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
 
     SUPPORTED_METATYPES = [om.PTLinearMetatype]
 
-    @property
-    def supported_metatypes(self) -> List[Type[OperatorMetatype]]:
-        return PTSparsifyActivationsAlgoBackend.SUPPORTED_METATYPES
-
-    def get_sparsifiers(self, model: NNCFNetwork) -> List[ActivationsSparsifier]:
+    @staticmethod
+    def get_sparsifiers(model: NNCFNetwork) -> List[ActivationsSparsifier]:
         """
         Finds all the activation sparsifiers in the model.
 
@@ -133,6 +130,10 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
         :return: List of activation sparsifiers.
         """
         return [m for m in model.nncf.modules() if isinstance(m, ActivationsSparsifier)]
+
+    @property
+    def supported_metatypes(self) -> List[Type[OperatorMetatype]]:
+        return PTSparsifyActivationsAlgoBackend.SUPPORTED_METATYPES
 
     def insert_sparsifiers(
         self,
@@ -171,13 +172,14 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
                 self.do_inference(model, dataset)
         return model
 
-    def freeze_sparsifiers(self, model: NNCFNetwork, graph: NNCFGraph) -> NNCFNetwork:
+    def apply_sparsifiers(self, model: NNCFNetwork, graph: NNCFGraph) -> NNCFNetwork:
         for sparsifier in self.get_sparsifiers(model):
             sparsifier.freeze(True)
         model.nncf.rebuild_graph()
         return model
 
-    def _get_activation_port_id(self, node: NNCFNode, graph: NNCFGraph) -> int:
+    @staticmethod
+    def _get_activation_port_id(node: NNCFNode, graph: NNCFGraph) -> int:
         """
         Finds the input activation port id for the node.
 

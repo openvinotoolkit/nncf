@@ -40,7 +40,8 @@ class SparsifyActivationsAlgoBackend(ABC):
 
     CALIBRATION_TRACKING_DESC = "Conducting Activations Sparsifier Calibration"
 
-    def do_inference(self, model: TModel, dataset: Dataset):
+    @staticmethod
+    def do_inference(model: TModel, dataset: Dataset):
         """
         Conducts model inference on given dataset to calibrate the activation sparsifiers.
 
@@ -90,7 +91,7 @@ class SparsifyActivationsAlgoBackend(ABC):
         """
 
     @abstractmethod
-    def freeze_sparsifiers(self, model: TModel, graph: NNCFGraph) -> TModel:
+    def apply_sparsifiers(self, model: TModel, graph: NNCFGraph) -> TModel:
         """
         Freezes the activation sparsifiers and applies the sparsification to the model.
 
@@ -164,7 +165,7 @@ class SparsifyActivationsAlgorithm:
         """
         model = self._backend_entity.insert_sparsifiers(model, graph, target_sparsity_by_node)
         model = self._backend_entity.calibrate_sparsifiers(model, graph, dataset)
-        model = self._backend_entity.freeze_sparsifiers(model, graph)
+        model = self._backend_entity.apply_sparsifiers(model, graph)
         return model
 
     def _set_backend_entity(self, model: TModel) -> None:
