@@ -22,12 +22,12 @@ from nncf.scopes import get_matched_ignored_scope_info
 @dataclass
 class TargetScope(IgnoredScope):
     """
-    Specifies the target portions of model to conduct activation sparsification.
+    Specifies the target portions in a model graph.
 
     Example:
 
     ..  code-block:: python
-        # Specified by node name:
+        # Specified by node names:
         node_names = ['node_1', 'node_2', 'node_3']
         target_scope = TargetScope(names=node_names)
 
@@ -35,7 +35,7 @@ class TargetScope(IgnoredScope):
         patterns = ['.*node_\\d']
         target_scope = TargetScope(patterns=patterns)
 
-        # Specified by operation type:
+        # Specified by operation types, e.g.,
 
         # OpenVINO opset https://docs.openvino.ai/latest/openvino_docs_ops_opset.html
         operation_types = ['Multiply', 'GroupConvolution', 'Interpolate']
@@ -44,6 +44,12 @@ class TargetScope(IgnoredScope):
         # ONNX opset https://github.com/onnx/onnx/blob/main/docs/Operators.md
         operation_types = ['Mul', 'Conv', 'Resize']
         target_scope = TargetScope(types=operation_types)
+
+        # Specifies by subgraphs:
+        from nncf import Subgraph
+        target_scope = TargetScope(subgraphs=[
+            Subgraph(inputs=["node_1"], outputs=["node_3"])
+        ])
 
     **Note:** Operation types must be specified according to the model framework.
 
