@@ -1,6 +1,5 @@
 from abc import ABC
 from abc import abstractmethod
-from pathlib import Path
 from typing import Dict, List, Optional, TypeVar
 
 import nncf
@@ -24,8 +23,17 @@ TModel = TypeVar("TModel")
 
 
 class SparsifyActivationsAlgoBackend(ABC):
+    """
+    Abstract class for activation sparsification algorithm backend.
+    """
 
     def do_inference(self, model: TModel, dataset: Dataset):
+        """
+        Conducts model inference on given dataset to calibrate the activation sparsifiers.
+
+        :param model: The model with activation sparsifiers.
+        :param dataset: The calibration dataset to update the sparsifiers.
+        """
         engine = factory.EngineFactory.create(model)
         for input_data in track(
             dataset.get_inference_data(),
@@ -36,76 +44,112 @@ class SparsifyActivationsAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def supported_metatypes(self) -> List[OperatorMetatype]:
-        pass
+    def supported_metatypes(self) -> List[type[OperatorMetatype]]:
+        """
+        Property for the backend-specific metatypes for supported layers.
+        """
+        return []
 
     @abstractmethod
-    def insert_sparsifiers(self, model: TModel, target_sparsity_by_node: Dict[NNCFNode, float]) -> TModel:
-        pass
+    def insert_sparsifiers(
+        self, model: TModel, graph: NNCFGraph, target_sparsity_by_node: Dict[NNCFNode, float],
+    ) -> TModel:
+        """
+        Inserts the activation sparsifiers to the model.
+
+        :param model: The model to conduct activation sparsification.
+        :param graph: The model's nncf graph.
+        :param target_sparsity_by_node: The target sparsity level for the input activation in each given node layer.
+        :return: The model with inserted activation sparsifiers.
+        """
+        return model
 
     @abstractmethod
-    def calibrate_sparsifiers(self, model: TModel, dataset: Dataset) -> TModel:
-        pass
+    def calibrate_sparsifiers(self, model: TModel, graph: NNCFGraph, dataset: Dataset) -> TModel:
+        """
+        Calibrates the thresholds in the activation sparsifiers.
+
+        :param model: The model with inserted activation sparsifiers.
+        :param graph: The model's nncf graph.
+        :param dataset: The calibration dataset to update the thresholds in the sparsifiers.
+        :return: The model with calibrated activation sparsifiers.
+        """
+        return model
 
     @abstractmethod
-    def freeze_sparsifiers(self, model: TModel) -> TModel:
-        pass
+    def freeze_sparsifiers(self, model: TModel, graph: NNCFGraph) -> TModel:
+        """
+        Freezes the activation sparsifiers and applies the sparsification to the model.
+
+        :param model: The model with activation sparsifiers.
+        :param graph: The model's nncf graph.
+        :return: The model with applied sparsification operations.
+        """
+        return model
 
 
 class SparsifyActivationsAlgorithm:
+    """
+    Implementation of activation sparsification algorithm.
+    """
 
     def __init__(
         self,
-        target_sparsity_by_scope: dict[str, float],
+        target_sparsity_by_scope: Dict[str, float],
         ignored_scope: IgnoredScope,
     ):
+        """
+        :param target_sparsity_by_scope: A dictionary that defines the target sparsity level for specified layers.
+        :param ignored_scope: An ignored scope that defines the list of model control flow
+            graph nodes to be ignored during activation sparsification.
+        """
         self._target_sparsity_by_scope = target_sparsity_by_scope
         self._ignored_scope = ignored_scope
         self._backend_entity = None
 
     @property
     def available_backends(self) -> List[BackendType]:
+        """
+        Supported backends for this algorithm.
+        """
         return [BackendType.TORCH]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
-        Creates a helper class with a backed-specific logic of the algorithm.
+        Creates a helper class with a backend-specific logic of the algorithm.
 
         :param model: Backend-specific input model.
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.TORCH:
             from nncf.experimental.torch.sparsify_activations.torch_backend import PTSparsifyActivationsAlgoBackend
-            self._backend_entity = PTSparsifyActivationsAlgoBackend()
+            self._backend_entity: SparsifyActivationsAlgoBackend = PTSparsifyActivationsAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
                 f"{model_backend.value} backend is not supported for `sparsify_activations`."
             )
 
-    def _get_target_sparsity_by_node(self, nncf_graph: NNCFGraph) -> Dict[NNCFNode, float]:
+    def _get_target_sparsity_by_node(self, graph: NNCFGraph) -> Dict[NNCFNode, float]:
         """
-        Collects nodes in the model's graph corresponding to the layers for weight compression.
+        Collects nodes in the model's graph corresponding to the layers for sparsification.
 
         :param nncf_graph: NNCFGraph instance.
-        :return: List with the data for each layer.
+        :return: A dictionary with nodes and the corresponding target sparsity level.
         """
         supported_metatypes = self._backend_entity.supported_metatypes
         ignored_names = get_ignored_node_names_from_ignored_scope(
-            self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
+            self._ignored_scope, graph, strict=self._ignored_scope.validate
         )
-        print(ignored_names)
         target_sparsity_by_node = {}
-        for node in nncf_graph.topological_sort():
-            print(node.metatype, node.node_name, ignored_names,
-                  'should_consider_scope=',
-                  should_consider_scope(node.node_name, ignored_names))
+        for node in graph.topological_sort():
             if node.metatype not in supported_metatypes or not should_consider_scope(node.node_name, ignored_names):
                 continue
             for scope, target_sparsity in self._target_sparsity_by_scope.items():
                 if matches_any(node.node_name, scope):
                     if node.node_name in target_sparsity_by_node:
                         raise nncf.ValidationError(
-                            f'"{node.node_name}" is matched by multiple items in `target_sparsity_by_scope`.')
+                            f'"{node.node_name}" is matched by multiple items in `target_sparsity_by_scope`.'
+                        )
                     target_sparsity_by_node[node] = target_sparsity
         return target_sparsity_by_node
 
@@ -116,10 +160,23 @@ class SparsifyActivationsAlgorithm:
         target_sparsity_by_node: Dict[NNCFNode, float],
         dataset: Dataset,
     ):
+        """
+        Transforms the model into a sparsified one with node-specific target activation sparsity levels.
+
+        :param model: The model to be sparsified.
+        :param graph: The model's nncf graph.
+        :param target_sparsity_by_node: A dictionary that defines the target sparsity level
+            for specified node layers.
+        :param dataset: The dataset to calibrate the activation sparsifiers.
+        :return: The sparsified model.
+        """
         model = self._backend_entity.insert_sparsifiers(
-            model, graph, target_sparsity_by_node)
-        model = self._backend_entity.calibrate_sparsifiers(model, dataset)
-        model = self._backend_entity.freeze_sparsifiers(model)
+            model, graph, target_sparsity_by_node,
+        )
+        model = self._backend_entity.calibrate_sparsifiers(
+            model, graph, dataset,
+        )
+        model = self._backend_entity.freeze_sparsifiers(model, graph)
         return model
 
     def apply(
@@ -128,12 +185,24 @@ class SparsifyActivationsAlgorithm:
         graph: NNCFGraph,
         dataset: Dataset,
     ) -> TModel:
+        """
+        Applies the algorithm to the given model.
+
+        :param model: The model to be sparsified.
+        :param graph: The model's nncf graph.
+        :param dataset: The dataset to calibrate the activation sparsifiers.
+        :return: The sparsified model.
+        """
         self._set_backend_entity(model)
         target_sparsity_by_node = self._get_target_sparsity_by_node(graph)
-        sparsified_model = self.do_sparsification(
+        if not target_sparsity_by_node:
+            raise nncf.ValidationError(
+                'No layers matched for activation sparsification.'
+            )
+        sparse_model = self.do_sparsification(
             model, graph, target_sparsity_by_node, dataset,
         )
-        return sparsified_model
+        return sparse_model
 
 
 def sparsify_activations(
@@ -141,11 +210,30 @@ def sparsify_activations(
     dataset: Dataset,
     target_sparsity_by_scope: Dict[str, float],
     ignored_scope: Optional[IgnoredScope] = None,
-    debug_folder=None,
 ) -> TModel:
     """
-    Implementation of the `compress_weights()` method.
+    Post-training activation sparsification on the given model.
+
+    :param model: The model to be sparsified.
+    :param dataset: The dataset to calibrate the activation sparsifiers.
+    :param target_sparsity_by_scope: A dictionary that defines the target activation sparsity
+        level for specified layers. For each item, the key should be a complete scope name
+        in the nncf graph, or a regular expression specification starting with `{re}`; the
+        corresponding value should be a float number in the range [0, 1] representing the
+        target sparsity level.
+    :param ignored_scope: An ignored scope that defines the list of model control flow graph
+        nodes to be ignored during activation sparsification.
+    :return: The sparsified model.
     """
+
+    for scope, target_sparsity in target_sparsity_by_scope.items():
+        if target_sparsity < 0. or target_sparsity > 1.:
+            raise ValueError(
+                f'Target sparsity for scope "{scope}" should be in range [0, 1].'
+            )
+
+    if ignored_scope is None:
+        ignored_scope = IgnoredScope()
 
     backend = get_backend(model)
     if backend == BackendType.TORCH and not is_wrapped_model(model):
@@ -156,19 +244,9 @@ def sparsify_activations(
             trace_parameters=True,
         )
 
-    if ignored_scope is None:
-        ignored_scope = IgnoredScope()
-
     algorithm = SparsifyActivationsAlgorithm(
         target_sparsity_by_scope, ignored_scope)
 
     graph = NNCFGraphFactory.create(model)
-    if debug_folder:
-        graph.dump_graph(
-            Path(debug_folder, './before-sparsification.dot').as_posix())
     sparse_model = algorithm.apply(model, graph, dataset)
-    graph = NNCFGraphFactory.create(sparse_model)
-    if debug_folder:
-        graph.dump_graph(
-            Path(debug_folder, './after-sparsification.dot').as_posix())
     return sparse_model
