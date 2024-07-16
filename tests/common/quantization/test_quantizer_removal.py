@@ -194,7 +194,7 @@ GRAPHS = {
 
 
 @dataclass
-class TestCase:
+class ParameterTestCase:
     """
     :param node_name: Quantizer node's name. We want to remove this
         quantizer from the model.
@@ -212,42 +212,46 @@ class TestCase:
 
 TEST_CASES = {
     "simple_graph": [
-        TestCase(
+        ParameterTestCase(
             "fake_quantize_119",
             ["fake_quantize_139", "fake_quantize_162", "fake_quantize_119"],
             ["add_117", "conv2d_161"],
         ),
-        TestCase("fake_quantize_128", ["fake_quantize_134", "fake_quantize_128"], ["conv2d_127"]),
-        TestCase("fake_quantize_134", ["fake_quantize_134", "fake_quantize_128"], ["conv2d_127"]),
-        TestCase(
+        ParameterTestCase("fake_quantize_128", ["fake_quantize_134", "fake_quantize_128"], ["conv2d_127"]),
+        ParameterTestCase("fake_quantize_134", ["fake_quantize_134", "fake_quantize_128"], ["conv2d_127"]),
+        ParameterTestCase(
             "fake_quantize_139",
             ["fake_quantize_139", "fake_quantize_162", "fake_quantize_119"],
             ["add_117", "conv2d_161"],
         ),
-        TestCase("fake_quantize_147", ["fake_quantize_153", "fake_quantize_147"], ["conv2d_146"]),
-        TestCase("fake_quantize_153", ["fake_quantize_153", "fake_quantize_147"], ["conv2d_146"]),
-        TestCase(
+        ParameterTestCase("fake_quantize_147", ["fake_quantize_153", "fake_quantize_147"], ["conv2d_146"]),
+        ParameterTestCase("fake_quantize_153", ["fake_quantize_153", "fake_quantize_147"], ["conv2d_146"]),
+        ParameterTestCase(
             "fake_quantize_162",
             ["fake_quantize_139", "fake_quantize_162", "fake_quantize_119"],
             ["add_117", "conv2d_161"],
         ),
     ],
-    "graph_with_shapeof": [TestCase("fake_quantize_105", ["fake_quantize_105"], ["interpolate_115"])],
+    "graph_with_shapeof": [ParameterTestCase("fake_quantize_105", ["fake_quantize_105"], ["interpolate_115"])],
     "simple_graph_quantize_dequantize": [
-        TestCase("quantize_37", ["quantize_37", "dequantize_38", "quantize_39", "dequantize_40"], ["conv2d_41"]),
-        TestCase("quantize_39", ["quantize_37", "dequantize_38", "quantize_39", "dequantize_40"], ["conv2d_41"]),
+        ParameterTestCase(
+            "quantize_37", ["quantize_37", "dequantize_38", "quantize_39", "dequantize_40"], ["conv2d_41"]
+        ),
+        ParameterTestCase(
+            "quantize_39", ["quantize_37", "dequantize_38", "quantize_39", "dequantize_40"], ["conv2d_41"]
+        ),
         #
-        TestCase(
+        ParameterTestCase(
             "quantize_42",
             ["quantize_42", "dequantize_43", "quantize_44", "dequantize_45", "quantize_63", "dequantize_64"],
             ["conv2d_46", "add_65"],
         ),
-        TestCase(
+        ParameterTestCase(
             "quantize_44",
             ["quantize_42", "dequantize_43", "quantize_44", "dequantize_45", "quantize_63", "dequantize_64"],
             ["conv2d_46", "add_65"],
         ),
-        TestCase(
+        ParameterTestCase(
             "quantize_63",
             ["quantize_42", "dequantize_43", "quantize_44", "dequantize_45", "quantize_63", "dequantize_64"],
             ["conv2d_46", "add_65"],
@@ -295,7 +299,7 @@ IDS, TEST_PARAMS = create_test_params()
 
 
 @pytest.mark.parametrize("nncf_graph,test_case", TEST_PARAMS, ids=IDS)
-def test_find_quantizer_nodes_to_cut(nncf_graph: NNCFGraph, test_case: TestCase):
+def test_find_quantizer_nodes_to_cut(nncf_graph: NNCFGraph, test_case: ParameterTestCase):
     quantizer_node = nncf_graph.get_node_by_name(test_case.node_name)
     # As test graphs are fully connected and does not have readvariable metatype,
     # this should work

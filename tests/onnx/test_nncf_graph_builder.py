@@ -42,16 +42,46 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
 
 
 CLASSIFICATION_MODEL_DEF_AND_OBJ = [
-    (ModelToTest("resnet18", [1, 3, 224, 224]), models.resnet18(pretrained=True)),
-    (ModelToTest("mobilenet_v2", [1, 3, 224, 224]), models.mobilenet_v2(pretrained=True)),
-    (ModelToTest("mobilenet_v3_small", [1, 3, 224, 224]), models.mobilenet_v3_small(pretrained=True)),
-    (ModelToTest("inception_v3", [1, 3, 224, 224]), models.inception_v3(pretrained=True)),
-    (ModelToTest("googlenet", [1, 3, 224, 224]), models.googlenet(pretrained=True)),
-    (ModelToTest("vgg16", [1, 3, 224, 224]), models.vgg16(pretrained=True)),
-    (ModelToTest("shufflenet_v2_x1_0", [1, 3, 224, 224]), models.shufflenet_v2_x1_0(pretrained=True)),
-    (ModelToTest("squeezenet1_0", [1, 3, 224, 224]), models.squeezenet1_0(pretrained=True)),
-    (ModelToTest("densenet121", [1, 3, 224, 224]), models.densenet121(pretrained=True)),
-    (ModelToTest("mnasnet0_5", [1, 3, 224, 224]), models.mnasnet0_5(pretrained=True)),
+    (
+        ModelToTest("resnet18", [1, 3, 224, 224]),
+        models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1),
+    ),
+    (
+        ModelToTest("mobilenet_v2", [1, 3, 224, 224]),
+        models.mobilenet_v2(weights=models.MobileNet_V2_Weights.IMAGENET1K_V1),
+    ),
+    (
+        ModelToTest("mobilenet_v3_small", [1, 3, 224, 224]),
+        models.mobilenet_v3_small(weights=models.MobileNet_V3_Small_Weights.IMAGENET1K_V1),
+    ),
+    (
+        ModelToTest("inception_v3", [1, 3, 224, 224]),
+        models.inception_v3(weights=models.Inception_V3_Weights.IMAGENET1K_V1),
+    ),
+    (
+        ModelToTest("googlenet", [1, 3, 224, 224]),
+        models.googlenet(weights=models.GoogLeNet_Weights.IMAGENET1K_V1),
+    ),
+    (
+        ModelToTest("vgg16", [1, 3, 224, 224]),
+        models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1),
+    ),
+    (
+        ModelToTest("shufflenet_v2_x1_0", [1, 3, 224, 224]),
+        models.shufflenet_v2_x1_0(weights=models.ShuffleNet_V2_X1_0_Weights.IMAGENET1K_V1),
+    ),
+    (
+        ModelToTest("squeezenet1_0", [1, 3, 224, 224]),
+        models.squeezenet1_0(weights=models.SqueezeNet1_0_Weights.IMAGENET1K_V1),
+    ),
+    (
+        ModelToTest("densenet121", [1, 3, 224, 224]),
+        models.densenet121(weights=models.DenseNet121_Weights.IMAGENET1K_V1),
+    ),
+    (
+        ModelToTest("mnasnet0_5", [1, 3, 224, 224]),
+        models.mnasnet0_5(weights=models.MNASNet0_5_Weights.IMAGENET1K_V1),
+    ),
 ]
 
 

@@ -17,7 +17,7 @@ from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
 
 
-class TestModel(nn.Module):
+class SimpleModel(nn.Module):
     def __init__(self, fq) -> None:
         super().__init__()
         self.fq = fq
@@ -64,7 +64,7 @@ def test_trace_asymmetric_quantizer(is_per_channel):
     quantizer.input_low.data = input_low
     quantizer.input_range.data = input_range
 
-    model = TestModel(quantizer)
+    model = SimpleModel(quantizer)
     traced = torch.jit.trace(model, torch.ones(1, 2, 1, 1))
     check_fq_op(traced, is_per_channel)
 
@@ -89,6 +89,6 @@ def test_trace_symmetric_quantizer(is_per_channel, is_signed):
     quantizer.scale.data = scale
     quantizer.signed = is_signed
 
-    model = TestModel(quantizer)
+    model = SimpleModel(quantizer)
     traced = torch.jit.trace(model, torch.ones(1, 2, 1, 1))
     check_fq_op(traced, is_per_channel)
