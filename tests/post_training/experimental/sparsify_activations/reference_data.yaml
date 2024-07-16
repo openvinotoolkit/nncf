@@ -11,8 +11,8 @@ tinyllama_int8_asym_data_free_ffn_sparse20_backend_TORCH:
   num_int4: 0
   num_int8: 312
 timm/deit3_small_patch16_224_backend_FP32:
-  metric_value: 0.81358
+  metric_value: 0.8135
 timm/deit3_small_patch16_224_qkv_sparse20_fc1_sparse20_fc2_sparse30_backend_TORCH:
-  metric_value: 0.6
+  metric_value: 0.8097
 timm/deit3_small_patch16_224_qkv_sparse20_fc1_sparse20_fc2_sparse30_backend_CUDA_TORCH:
-  metric_value: 0.6
+  metric_value: 0.8097

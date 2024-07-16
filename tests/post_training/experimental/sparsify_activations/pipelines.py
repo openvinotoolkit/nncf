@@ -17,6 +17,7 @@ from functools import partial
 from typing import Optional
 
 import torch
+import torch.utils
 from datasets import load_dataset
 from memory_profiler import memory_usage
 from optimum.intel.openvino import OVModelForCausalLM
@@ -160,3 +161,65 @@ class ImageClassificationTimmSparsifyActivations(ImageClassificationTimm):
                 dataset=self.calibration_dataset,
                 **self.compression_params["sparsify_activations"],
             )
+
+    def prepare_calibration_dataset(self):
+        # TODO: for debugging only
+        import torch.utils
+        import torch.utils.data
+
+        hf_dataset = load_dataset("imagenet-1k", split="validation")
+
+        class Dataset(torch.utils.data.Dataset):
+            def __init__(self, hf_dataset, transform):
+                super().__init__()
+                self.hf_dataset = hf_dataset
+                self.transform = transform  # will be assigned in timm internally
+
+            def __getitem__(self, index):
+                sample = self.hf_dataset[index]
+                image = sample["image"]
+                image = image.convert("RGB")
+                return self.transform(image), sample["label"]
+
+            def __len__(self):
+                return 512
+                return len(self.hf_dataset)
+
+        dataset = Dataset(hf_dataset, self.transform)
+        generator = torch.Generator()
+        generator.manual_seed(42)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, num_workers=2, shuffle=True, generator=generator)
+        self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
+
+
+    def _get_imagenet(self):
+        # TODO: for debugging only
+        import torch.utils
+        import torch.utils.data
+        import numpy as np
+
+        hf_dataset = load_dataset("imagenet-1k", split="validation")
+
+        class Dataset(torch.utils.data.Dataset):
+            def __init__(self, hf_dataset, transform):
+                super().__init__()
+                self.hf_dataset = hf_dataset
+                self.transform = transform  # will be assigned in timm internally
+
+            def __getitem__(self, index):
+                sample = self.hf_dataset[index]
+                image = sample["image"]
+                image = image.convert("RGB")
+                return self.transform(image), sample["label"]
+
+            def __len__(self):
+                # return 24
+                return len(self.hf_dataset)
+
+        dataset = Dataset(hf_dataset, self.transform)
+        return dataset
+
+    def _validate(self):
+        return super()._validate()
+        with torch.autocast(device_type="cuda"):
+            return super()._validate()

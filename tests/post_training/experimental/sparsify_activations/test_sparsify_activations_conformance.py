@@ -98,13 +98,14 @@ def test_sparsify_activations(
         pipeline_kwargs = create_pipeline_kwargs(
             test_model_param, subset_size, test_case_name, sparsify_activations_reference_data
         )
+        calibration_batch_size = batch_size or test_model_param.get("batch_size", 1)
         pipeline_kwargs.update(
             {
                 "output_dir": output_dir,
                 "data_dir": data_dir,
                 "no_eval": no_eval,
                 "run_benchmark_app": run_benchmark_app,
-                "batch_size": batch_size,
+                "batch_size": calibration_batch_size,
             }
         )
         pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
