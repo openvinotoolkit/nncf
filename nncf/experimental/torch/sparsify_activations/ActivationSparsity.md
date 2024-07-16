@@ -73,7 +73,8 @@ In this example, we first conduct data-free INT8 asymmetric weight quantization 
 
 #### Evaluation results
 
-Here is the word perplexity for different language models on a subset of [wikitext dataset](https://arxiv.org/pdf/1609.07843.pdf), with maximum context length set as 2048. In the table, "int8_asym" means the model weights are asymmetrically quantized to int8. "Avg. Activation Sparsity" column shows the average activation sparsity on the evaluation samples. "up/gate/down" means the up, gate, and down projection layers in the [GLU](https://arxiv.org/abs/1612.08083)-style feed forward networks.
+Here is the word perplexity for different language models on a subset of [wikitext dataset](https://arxiv.org/pdf/1609.07843.pdf), with maximum context length set as 2048. In the table, "int8_asym" means the model weights are asymmetrically quantized to INT8. "up/gate/down" means the up, gate, and down projection layers in the [Gated Linear Units](https://arxiv.org/abs/1612.08083) (GLU) style feed forward networks. "Avg. Activation Sparsity" column shows the average activation sparsity on the evaluation samples. For example, "down50%" means that on average the input activations of all "down" layers have a sparsity of 50%.
+
 <table>
     <tr bgcolor='#B4B5BB'>
         <td>Model</td>
