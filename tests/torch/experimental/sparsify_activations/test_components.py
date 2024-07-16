@@ -285,8 +285,8 @@ class TestTargetScope:
     @pytest.mark.parametrize("target_scope,ref_target_names", TARGET_SCOPE_MATCH_DATA)
     def test_get_target_node_names_from_target_scope(self, target_scope: TargetScope, ref_target_names: List[str]):
         nncf_graph = NNCFGraphToTestIgnoredScope(CONV_TYPE, LINEAR_TYPE).nncf_graph
-        ignored_names = get_target_node_names_from_target_scope(target_scope, nncf_graph)
-        assert sorted(ignored_names) == sorted(ref_target_names)
+        target_names = get_target_node_names_from_target_scope(target_scope, nncf_graph)
+        assert sorted(target_names) == sorted(ref_target_names)
 
     @pytest.mark.parametrize("target_scope", WRONG_TARGET_SCOPE_MATCH_DATA)
     def test_wrong_target_scope(self, target_scope: TargetScope):
