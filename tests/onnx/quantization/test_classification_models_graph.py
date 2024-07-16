@@ -30,7 +30,7 @@ TORCHVISION_TEST_DATA = [
     ),
     (
         ModelToTest("resnet50_cpu_spr", [1, 3, 224, 224]),
-        models.resnet50(pretrained=True),
+        models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1),
         {"target_device": TargetDevice.CPU_SPR},
     ),
     (
