@@ -1,6 +1,6 @@
 ### Activation Sparsity (experimental feature)
 
-The `sparsify_activations` algorithm is a post-training method designed to introduce sparsity into the activations of a neural network. This process reduces the number of active neurons during inference by masking out neurons based on their magnitude relative to a calibrated static threshold.
+The `sparsify_activations` algorithm is a post-training method designed to introduce sparsity into the activations of a neural network. This process reduces the number of active neurons during inference by masking out neurons based on their magnitude relative to a calibrated static threshold. Typically this can help accelerate inference for Transformer-based Large Language Models on edge devices; one such example is [Liu et al., 2023](https://arxiv.org/abs/2310.17157).
 
 The algorithm sparsifies the input of a layer by applying the following function:
 
