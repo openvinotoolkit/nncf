@@ -34,7 +34,7 @@ class SparsifierForwardTestDesc:
     ref_outputs: List[torch.Tensor]
 
 
-sparsifier_forward_test_descs = {
+sparsifier_forward_during_calibration_test_descs = {
     "fp16": SparsifierForwardTestDesc(
         target_sparsity=0.4,
         alpha=0.2,
@@ -93,14 +93,34 @@ sparsifier_forward_test_descs = {
 
 
 class TestActivationsSparsifier:
-    @pytest.mark.parametrize("desc", sparsifier_forward_test_descs.values(), ids=sparsifier_forward_test_descs.keys())
-    def test_forward(self, use_cuda: bool, desc: SparsifierForwardTestDesc):
+    @pytest.fixture(autouse=True)
+    def setup(self, use_cuda: bool):
         if use_cuda and not torch.cuda.is_available():
             pytest.skip("CUDA is not available")
-        device = torch.device("cuda" if use_cuda else "cpu")
+        self.device = torch.device("cuda" if use_cuda else "cpu")
+
+    @pytest.mark.parametrize("dtype", [torch.float32, torch.float16])
+    def test_forward_before_calibration(self, use_cuda: bool, dtype: torch.dtype):
+        device = self.device
+        input_tensor = torch.rand([3, 3], device=device, dtype=dtype)
+        sparsifier = ActivationsSparsifier(target_sparsity=0.9).to(device)
+        assert sparsifier._freeze is True
+        assert not sparsifier.num_batches_tracked.is_nonzero()
+        assert sparsifier.running_threshold.isneginf()
+        output_tensor = sparsifier(input_tensor)
+        assert not output_tensor.is_set_to(input_tensor)  # The output tensor is a new tensor
+        # Before calibration, the sparsifier does not change the input
+        torch.testing.assert_close(output_tensor, input_tensor, rtol=1e-4, atol=1e-4)
+
+    @pytest.mark.parametrize(
+        "desc",
+        sparsifier_forward_during_calibration_test_descs.values(),
+        ids=sparsifier_forward_during_calibration_test_descs.keys(),
+    )
+    def test_forward_during_calibration(self, use_cuda: bool, desc: SparsifierForwardTestDesc):
+        device = self.device
         sparsifier = ActivationsSparsifier(desc.target_sparsity, desc.alpha).to(device)
         sparsifier.freeze(False)
-
         running_thresholds = []
         outputs = []
         with torch.no_grad():
@@ -118,15 +138,23 @@ class TestActivationsSparsifier:
             assert output.device.type == device.type
             torch.testing.assert_close(output, ref_output, rtol=1e-4, atol=1e-4, check_device=False)
 
-        sparsifier.freeze()
-        with torch.no_grad():
-            batch = desc.input_batches[-1]
-            output = sparsifier(batch.to(device))
-        assert sparsifier.num_batches_tracked == len(desc.input_batches)
-        torch.testing.assert_close(
-            sparsifier.running_threshold, desc.ref_running_thresholds[-1], rtol=1e-4, atol=1e-4, check_device=False
-        )
-        torch.testing.assert_close(output, desc.ref_outputs[-1], rtol=1e-4, atol=1e-4, check_device=False)
+    @pytest.mark.parametrize("dtype", [torch.float32, torch.float16])
+    def test_forward_after_calibration(self, use_cuda: bool, dtype: torch.dtype):
+        device = self.device
+        sparsifier = ActivationsSparsifier(target_sparsity=0.9).to(device)
+        sparsifier.running_threshold.fill_(0.1)
+        sparsifier.num_batches_tracked.fill_(100)
+
+        for _ in range(2):
+            # The sparsifier does not change in the following forwards
+            input_tensor = torch.rand([2, 10], device=device, dtype=dtype)
+            ref_output = torch.where(input_tensor.abs() <= 0.1, 0.0, input_tensor)
+            output_tensor = sparsifier(ref_output)
+            assert sparsifier.num_batches_tracked == 100
+            torch.testing.assert_close(
+                sparsifier.running_threshold, torch.tensor(0.1, device=device), rtol=1e-4, atol=1e-4
+            )
+            torch.testing.assert_close(output_tensor, ref_output, rtol=1e-4, atol=1e-4)
 
 
 class TestPTSparsifyActivationsAlgoBackend:
@@ -141,12 +169,20 @@ class TestPTSparsifyActivationsAlgoBackend:
 
     @pytest.mark.parametrize("compress_weights", [False, True])
     def test_insert_sparsifiers(self, compress_weights: bool):
-        model, _ = self.create_model_and_dataset(compress_weights=compress_weights)
+        model, dataset = self.create_model_and_dataset(compress_weights=compress_weights)
+        example_input = next(iter(dataset.get_inference_data()))
+        ref_output = model(example_input)
+
         graph = model.nncf.get_graph()
         nodes = graph.get_nodes_by_metatypes(PTSparsifyActivationsAlgoBackend.SUPPORTED_METATYPES)
         backend = PTSparsifyActivationsAlgoBackend()
-        model_with_sparsifiers = backend.insert_sparsifiers(model, graph, {node: 0.5 for node in nodes})
+        model_with_sparsifiers = backend.insert_sparsifiers(model, graph, {node: 0.9 for node in nodes})
         assert len(backend.get_sparsifiers(model_with_sparsifiers)) == len(nodes)
+
+        output = model_with_sparsifiers(example_input)
+        torch.testing.assert_close(
+            output, ref_output, rtol=1e-4, atol=1e-4
+        )  # At this time the sparsifers do not change the output
 
     def test_calibrate_sparsifiers(self, mocker):
         model, dataset = self.create_model_and_dataset()
