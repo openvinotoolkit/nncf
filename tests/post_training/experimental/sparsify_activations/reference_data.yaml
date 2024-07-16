@@ -1,0 +1,4 @@
+tinyllama_int8_sparse20_ffn_backend_TORCH:
+  metric_value: 0.79924
+  num_int4: 0
+  num_int8: 312
