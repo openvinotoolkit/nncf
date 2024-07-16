@@ -45,8 +45,7 @@ model = sparsify_activations(
     target_sparsity_by_scope={
         TargetScope(patterns=[".*up_proj.*", ".*gate_proj.*"]): 0.3,
         TargetScope(patterns=[".*down_proj.*",]): 0.5,
-    },
-    ignored_scope=None,
+    }
 )
 ```
 
