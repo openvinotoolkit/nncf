@@ -142,8 +142,6 @@ class SparsifyActivationsAlgorithm:
         """
         self._set_backend_entity(model)
         target_sparsity_by_node = self._get_target_sparsity_by_node(graph)
-        if not target_sparsity_by_node:
-            raise nncf.ValidationError("No layers matched for activation sparsification.")
         sparse_model = self.do_sparsification(model, graph, target_sparsity_by_node, dataset)
         return sparse_model
 
@@ -207,6 +205,8 @@ class SparsifyActivationsAlgorithm:
                             f'"{node.node_name}" is matched by multiple items in `target_sparsity_by_scope`.'
                         )
                     target_sparsity_by_node[node] = target_sparsity
+        if not target_sparsity_by_node:
+            raise nncf.ValidationError("No layers matched for activation sparsification.")
         return target_sparsity_by_node
 
 

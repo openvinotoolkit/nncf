@@ -179,7 +179,7 @@ class TargetSparsityByNodeTestDesc:
     target_sparsity_by_scope: Dict[str, float]
     ignored_scope: IgnoredScope
     ref_target_sparsity_by_node_name: Optional[Dict[str, float]] = None
-    raise_error: bool = False
+    raised_error_message: Optional[str] = None
 
 
 @pytest.mark.parametrize(
@@ -205,12 +205,12 @@ class TargetSparsityByNodeTestDesc:
         TargetSparsityByNodeTestDesc(
             target_sparsity_by_scope={"{re}.*nonexist.*": 0.3},
             ignored_scope=IgnoredScope(patterns=[".*linear2.*"]),
-            ref_target_sparsity_by_node_name=dict(),
+            raised_error_message="No layers matched",
         ),
         TargetSparsityByNodeTestDesc(
             target_sparsity_by_scope={"{re}.*linear.*": 0.3, "{re}.*linear1.*": 0.4},
             ignored_scope=IgnoredScope(),
-            raise_error=True,  # multiple matches for one layer
+            raised_error_message="matched by multiple items",
         ),
     ],
 )
@@ -223,8 +223,8 @@ def test_get_target_sparsity_by_node(desc: TargetSparsityByNodeTestDesc):
     graph = model.nncf.get_graph()
     algo = SparsifyActivationsAlgorithm(desc.target_sparsity_by_scope, desc.ignored_scope)
     algo._set_backend_entity(model)
-    if desc.raise_error:
-        with pytest.raises(nncf.ValidationError):
+    if desc.raised_error_message is not None:
+        with pytest.raises(nncf.ValidationError, match=desc.raised_error_message):
             algo._get_target_sparsity_by_node(graph)
     else:
         target_sparsity_by_node = algo._get_target_sparsity_by_node(graph)
