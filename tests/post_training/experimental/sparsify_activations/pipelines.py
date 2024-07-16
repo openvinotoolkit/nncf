@@ -13,7 +13,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 import openvino as ov
@@ -28,7 +28,8 @@ from transformers import AutoModelForCausalLM
 
 import nncf
 from nncf.experimental.torch.sparsify_activations import sparsify_activations
-from nncf.experimental.torch.sparsify_activations.torch_backend import SparsifyActivationsAlgoBackend
+from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
+from nncf.experimental.torch.sparsify_activations.torch_backend import PTSparsifyActivationsAlgoBackend
 from tests.post_training.pipelines.base import LIMIT_LENGTH_OF_STATUS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
@@ -218,10 +219,24 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
             self._dump_model_fp32()
 
     def get_transform_calibration_fn(self):
-        original_fn = super().get_transform_calibration_fn()
+        process_one = super().get_transform_calibration_fn()
 
-        def transform_fn(data):
-            inputs = original_fn(data, max_tokens=128, filter_bad_tokens=False)
+        def transform_fn(chunk: List[Dict]):
+            samples = [process_one(data, max_tokens=128, filter_bad_tokens=False) for data in chunk]
+            inputs = {}
+            for input_name, sample_value in samples[0].items():
+                if isinstance(sample_value, torch.Tensor):
+                    inputs[input_name] = torch.cat([sample[input_name] for sample in samples], dim=0)
+                elif isinstance(sample_value, np.ndarray):
+                    inputs[input_name] = np.concatenate([sample[input_name] for sample in samples], axis=0)
+                elif isinstance(sample_value, ov.Tensor):
+                    shape = sample_value.get_shape()
+                    shape[0] = len(samples)
+                    inputs[input_name] = ov.Tensor(sample_value.get_element_type(), shape)
+                else:
+                    raise RuntimeError(
+                        f"Failed to generate calibration set for {input_name} in type {type(sample_value)}"
+                    )
             if self.backend == BackendType.CUDA_TORCH:
                 for input_name in inputs:
                     inputs[input_name] = torch.from_numpy(inputs[input_name]).cuda()
@@ -230,11 +245,16 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
         return transform_fn
 
     def prepare_calibration_dataset(self):
-        dataset = load_dataset("wikitext", "wikitext-2-v1", split="train", revision="b08601e")
-        dataset = dataset.filter(lambda example: len(example["text"].split()) > 256)
         subset_size = self.compression_params.get("subset_size") or self.DEFAULT_SUBSET_SIZE
-        dataset = dataset.select(range(subset_size))
-        self.calibration_dataset = nncf.Dataset(dataset, self.get_transform_calibration_fn())
+        dataset = (
+            load_dataset("wikitext", "wikitext-2-v1", split="train", revision="b08601e")
+            .filter(lambda example: len(example["text"].split()) > 256)
+            .shuffle(seed=42)
+            .select(range(subset_size))
+            .to_list()
+        )
+        chunks = [dataset[i : i + self.batch_size] for i in range(0, subset_size, self.batch_size)]
+        self.calibration_dataset = nncf.Dataset(chunks, self.get_transform_calibration_fn())
 
     def save_compressed_model(self):
         if self.backend == BackendType.CUDA_TORCH:
@@ -261,6 +281,14 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
             )
         else:
             super()._dump_model_fp32()
+
+    def _compress(self):
+        super()._compress()
+        if self.backend in PT_BACKENDS:
+            # This helps reproducibility but is not needed in actual usage.
+            for sparsifier in PTSparsifyActivationsAlgoBackend.get_sparsifiers(self.compressed_model):
+                original_dtype = sparsifier.running_threshold.dtype
+                sparsifier.running_threshold = sparsifier.running_threshold.half().to(original_dtype)
 
 
 class ImageClassificationTimmSparsifyActivations(SAPipelineMixin, ImageClassificationTimm):
