@@ -47,9 +47,7 @@ def test_writing_does_not_modify_original_graph(tmp_path: Path, ref_graph: nx.Di
 def test_colons_are_replaced_in_written_dot_file(tmp_path: Path, ref_graph: nx.DiGraph):
     tmp_path_to_graph = tmp_path / "graph.dot"
     write_dot_graph(ref_graph, tmp_path_to_graph)
-    assert filecmp.cmp(
-        tmp_path_to_graph, REF_DOT_REPRESENTATION_GRAPH_PATH
-    ), f"{Path(tmp_path_to_graph).read_text()}\n::::\n\n{Path(REF_DOT_REPRESENTATION_GRAPH_PATH).read_text()}"
+    assert filecmp.cmp(tmp_path_to_graph, REF_DOT_REPRESENTATION_GRAPH_PATH)
 
 
 def test_read_dot_file_gives_graph_with_colons(tmp_path: Path, ref_graph: nx.DiGraph):
