@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, TypeVar
+from typing import Dict, List, Type, TypeVar
 
 import numpy as np
 import torch
@@ -118,7 +118,7 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
     SUPPORTED_METATYPES = [om.PTLinearMetatype]
 
     @property
-    def supported_metatypes(self) -> List[type[OperatorMetatype]]:
+    def supported_metatypes(self) -> List[Type[OperatorMetatype]]:
         return PTSparsifyActivationsAlgoBackend.SUPPORTED_METATYPES
 
     def get_sparsifiers(self, model: NNCFNetwork) -> List[ActivationsSparsifier]:

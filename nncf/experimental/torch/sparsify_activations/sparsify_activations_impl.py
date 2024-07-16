@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, List, Optional, TypeVar
+from typing import Dict, List, Optional, Type, TypeVar
 
 import nncf
 from nncf.common import factory
@@ -57,7 +57,7 @@ class SparsifyActivationsAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def supported_metatypes(self) -> List[type[OperatorMetatype]]:
+    def supported_metatypes(self) -> List[Type[OperatorMetatype]]:
         """
         Property for the backend-specific metatypes for supported layers.
         """
