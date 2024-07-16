@@ -18,11 +18,19 @@ import torch
 import nncf
 import nncf.experimental
 import nncf.experimental.torch.sparsify_activations
+from nncf.experimental.torch.sparsify_activations.target_scope import TargetScope
+from nncf.experimental.torch.sparsify_activations.target_scope import get_target_node_names_from_target_scope
 from nncf.experimental.torch.sparsify_activations.torch_backend import ActivationsSparsifier
 from nncf.experimental.torch.sparsify_activations.torch_backend import PTSparsifyActivationsAlgoBackend
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.nncf_network import NNCFNetwork
+from tests.common.test_ignored_scope import CONV_TYPE
+from tests.common.test_ignored_scope import IGNORED_SCOPES_TEST_DATA
+from tests.common.test_ignored_scope import LINEAR_TYPE
+from tests.common.test_ignored_scope import WRONG_IGNORED_SCOPES_TEST_DATA
+from tests.common.test_ignored_scope import NNCFGraphToTestIgnoredScope
 from tests.torch.experimental.sparsify_activations.helpers import ThreeLinearModel
+from tests.torch.experimental.sparsify_activations.helpers import convert_ignored_scope_to_target_scope
 
 
 @dataclass
@@ -108,7 +116,8 @@ class TestActivationsSparsifier:
         assert not sparsifier.num_batches_tracked.is_nonzero()
         assert sparsifier.running_threshold.isneginf()
         output_tensor = sparsifier(input_tensor)
-        assert not output_tensor.is_set_to(input_tensor)  # The output tensor is a new tensor
+        # The output tensor is a new tensor
+        assert not output_tensor.is_set_to(input_tensor)
         # Before calibration, the sparsifier does not change the input
         torch.testing.assert_close(output_tensor, input_tensor, rtol=1e-4, atol=1e-4)
 
@@ -161,7 +170,7 @@ class TestPTSparsifyActivationsAlgoBackend:
     def test_get_sparsifiers(self):
         model, dataset = self.create_model_and_dataset()
         sparse_model = nncf.experimental.torch.sparsify_activations.sparsify_activations(
-            model, dataset, target_sparsity_by_scope={"{re}.*": 0.5}
+            model, dataset, target_sparsity_by_scope={TargetScope(patterns=[".*"]): 0.5}
         )
         backend = PTSparsifyActivationsAlgoBackend()
         sparsifiers = backend.get_sparsifiers(sparse_model)
@@ -220,3 +229,67 @@ class TestPTSparsifyActivationsAlgoBackend:
                 trace_parameters=True,
             )
         return model, dataset
+
+
+class TestTargetScope:
+    SAME_HASH_PAIRS = [
+        (TargetScope(), TargetScope()),
+        (
+            TargetScope(
+                names=["node_1", "node_2"],
+                patterns=["node\\d", "layer\\d"],
+                types=["Conv", "MatMul"],
+                subgraphs=[
+                    nncf.Subgraph(inputs=["node_1", "node_2"], outputs=["node_3", "node_4"]),
+                    nncf.Subgraph(inputs=["layer_1", "layer_2"], outputs=["layer_3", "layer_4", "layer_5"]),
+                ],
+            ),
+            TargetScope(
+                names=["node_2", "node_1"],
+                patterns=["layer\\d", "node\\d"],
+                types=["MatMul", "Conv"],
+                subgraphs=[
+                    nncf.Subgraph(inputs=["layer_2", "layer_1"], outputs=["layer_5", "layer_4", "layer_3"]),
+                    nncf.Subgraph(inputs=["node_2", "node_1"], outputs=["node_4", "node_3"]),
+                ],
+            ),
+        ),
+    ]
+
+    DIFFERENT_HASH_PAIRS = [
+        (TargetScope(), TargetScope(types=["Conv"])),
+        (
+            TargetScope(names=["node_1"]),
+            TargetScope(names=["node_1"], patterns=["layer\\d"]),
+        ),
+        (
+            TargetScope(subgraphs=[nncf.Subgraph(inputs=["node_1"], outputs=["node_2"])]),
+            TargetScope(subgraphs=[nncf.Subgraph(inputs=["node_1"], outputs=["node_3"])]),
+        ),
+    ]
+
+    TARGET_SCOPE_MATCH_DATA = [
+        (convert_ignored_scope_to_target_scope(ignored_scope), ref_ignored_names)
+        for ignored_scope, ref_ignored_names in IGNORED_SCOPES_TEST_DATA
+    ]
+    WRONG_TARGET_SCOPE_MATCH_DATA = list(map(convert_ignored_scope_to_target_scope, WRONG_IGNORED_SCOPES_TEST_DATA))
+
+    @pytest.mark.parametrize("target_scope1,target_scope2", SAME_HASH_PAIRS)
+    def test_same_hash(self, target_scope1: TargetScope, target_scope2: TargetScope):
+        assert hash(target_scope1) == hash(target_scope2)
+
+    @pytest.mark.parametrize("target_scope1,target_scope2", DIFFERENT_HASH_PAIRS)
+    def test_different_hash(self, target_scope1: TargetScope, target_scope2: TargetScope):
+        assert hash(target_scope1) != hash(target_scope2)
+
+    @pytest.mark.parametrize("target_scope,ref_target_names", TARGET_SCOPE_MATCH_DATA)
+    def test_get_target_node_names_from_target_scope(self, target_scope: TargetScope, ref_target_names: List[str]):
+        nncf_graph = NNCFGraphToTestIgnoredScope(CONV_TYPE, LINEAR_TYPE).nncf_graph
+        ignored_names = get_target_node_names_from_target_scope(target_scope, nncf_graph)
+        assert sorted(ignored_names) == sorted(ref_target_names)
+
+    @pytest.mark.parametrize("target_scope", WRONG_TARGET_SCOPE_MATCH_DATA)
+    def test_wrong_target_scope(self, target_scope: TargetScope):
+        nncf_graph = NNCFGraphToTestIgnoredScope(CONV_TYPE, LINEAR_TYPE).nncf_graph
+        with pytest.raises(nncf.ValidationError):
+            get_target_node_names_from_target_scope(target_scope, nncf_graph)

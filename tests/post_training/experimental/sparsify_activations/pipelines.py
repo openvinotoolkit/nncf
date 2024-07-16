@@ -27,9 +27,7 @@ from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoModelForCausalLM
 
 import nncf
-import nncf.experimental
-import nncf.experimental.torch
-import nncf.experimental.torch.sparsify_activations
+from nncf.experimental.torch.sparsify_activations import sparsify_activations
 from nncf.experimental.torch.sparsify_activations.torch_backend import SparsifyActivationsAlgoBackend
 from tests.post_training.pipelines.base import LIMIT_LENGTH_OF_STATUS
 from tests.post_training.pipelines.base import PT_BACKENDS
@@ -170,7 +168,7 @@ class SAPipelineMixin:
                 **self.compression_params["compress_weights"],
             )
         if self.compression_params.get("sparsify_activations", None) is not None:
-            self.compressed_model = nncf.experimental.torch.sparsify_activations.sparsify_activations(
+            self.compressed_model = sparsify_activations(
                 self.compressed_model,
                 dataset=self.calibration_dataset,
                 **self.compression_params["sparsify_activations"],

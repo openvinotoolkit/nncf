@@ -20,11 +20,12 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging.track_progress import track
-from nncf.common.scopes import matches_any
 from nncf.common.scopes import should_consider_scope
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
+from nncf.experimental.torch.sparsify_activations.target_scope import TargetScope
+from nncf.experimental.torch.sparsify_activations.target_scope import get_target_node_names_from_target_scope
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from nncf.torch.model_creation import is_wrapped_model
@@ -108,7 +109,7 @@ class SparsifyActivationsAlgorithm:
 
     def __init__(
         self,
-        target_sparsity_by_scope: Dict[str, float],
+        target_sparsity_by_scope: Dict[TargetScope, float],
         ignored_scope: IgnoredScope,
     ):
         """
@@ -195,26 +196,31 @@ class SparsifyActivationsAlgorithm:
         ignored_names = get_ignored_node_names_from_ignored_scope(
             self._ignored_scope, graph, strict=self._ignored_scope.validate
         )
+        target_scope_vs_target_names = {
+            scope: get_target_node_names_from_target_scope(scope, graph, strict=scope.validate)
+            for scope in self._target_sparsity_by_scope
+        }
         target_sparsity_by_node = {}
         for node in graph.get_nodes_by_metatypes(supported_metatypes):
-            if not should_consider_scope(node.node_name, ignored_names):
+            if not should_consider_scope(node.node_name, ignored_scopes=ignored_names):
                 continue
             for scope, target_sparsity in self._target_sparsity_by_scope.items():
-                if matches_any(node.node_name, scope):
+                target_names = target_scope_vs_target_names[scope]
+                if should_consider_scope(node.node_name, ignored_scopes=[], target_scopes=target_names):
                     if node in target_sparsity_by_node:
                         raise nncf.ValidationError(
                             f'"{node.node_name}" is matched by multiple items in `target_sparsity_by_scope`.'
                         )
                     target_sparsity_by_node[node] = target_sparsity
         if not target_sparsity_by_node:
-            raise nncf.ValidationError("No layers matched for activation sparsification.")
+            raise nncf.ValidationError("No layers to conduct activation sparsification.")
         return target_sparsity_by_node
 
 
 def sparsify_activations(
     model: TModel,
     dataset: Dataset,
-    target_sparsity_by_scope: Dict[str, float],
+    target_sparsity_by_scope: Dict[TargetScope, float],
     ignored_scope: Optional[IgnoredScope] = None,
 ) -> TModel:
     """

@@ -10,3 +10,4 @@
 # limitations under the License.
 
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import sparsify_activations  # noqa: F401
+from nncf.experimental.torch.sparsify_activations.target_scope import TargetScope  # noqa: F401

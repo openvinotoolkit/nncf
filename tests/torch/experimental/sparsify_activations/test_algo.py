@@ -22,6 +22,7 @@ import nncf
 import nncf.experimental
 import nncf.experimental.torch.sparsify_activations
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgorithm
+from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import TargetScope
 from nncf.experimental.torch.sparsify_activations.torch_backend import ACTIVATIONS_SPARSIFIER_PREFIX
 from nncf.experimental.torch.sparsify_activations.torch_backend import ActivationsSparsifier
 from nncf.scopes import IgnoredScope
@@ -40,7 +41,7 @@ class SparsifyActivationsAlgorithmTestDesc:
     name: str
     model_getter: Callable[[], nn.Module]
     dataset_getter: Callable[[torch.device], nncf.Dataset]
-    target_sparsity_by_scope: Dict[str, float]
+    target_sparsity_by_scope: Dict[TargetScope, float]
     ignored_scope: Optional[nncf.IgnoredScope]
     ref_sparsifier_target_sparsity: Dict[str, float]
     ref_num_batches_tracked: int
@@ -53,7 +54,7 @@ sparsify_activations_algorithm_test_descs = [
         model_getter=lambda: nn.Linear(4, 2),
         dataset_getter=lambda device: nncf.Dataset(torch.randn([3, 2, 4]).to(device)),
         target_sparsity_by_scope={
-            "{re}.*linear.*": 0.3,
+            TargetScope(names=["Linear/linear_0"]): 0.3,
         },
         ignored_scope=None,
         ref_sparsifier_target_sparsity={
@@ -67,7 +68,7 @@ sparsify_activations_algorithm_test_descs = [
         model_getter=ThreeLinearModel,
         dataset_getter=lambda device: nncf.Dataset(torch.randint(0, 30, (3, 2, 8)).to(device)),
         target_sparsity_by_scope={
-            "{re}.*linear.*": 0.4,
+            TargetScope(types=["linear"]): 0.4,
         },
         ignored_scope=None,
         ref_sparsifier_target_sparsity={
@@ -83,7 +84,8 @@ sparsify_activations_algorithm_test_descs = [
         model_getter=ThreeLinearModel,
         dataset_getter=lambda device: nncf.Dataset(torch.randint(0, 30, (3, 2, 8)).to(device)),
         target_sparsity_by_scope={
-            "{re}.*linear.*": 0.4,
+            TargetScope(names=["ThreeLinearModel/Linear[linear2]/linear_0"]): 0.4,
+            TargetScope(patterns=[".*linear3.*"]): 0.4,
         },
         ignored_scope=IgnoredScope(patterns=[".*linear1.*"]),
         ref_sparsifier_target_sparsity={
@@ -98,9 +100,9 @@ sparsify_activations_algorithm_test_descs = [
         model_getter=dummy_llama_model,
         dataset_getter=lambda device: nncf.Dataset(torch.randint(0, 30, (3, 2, 8)).to(device)),
         target_sparsity_by_scope={
-            "{re}.*gate_proj.*": 0.2,
-            "{re}.*up_proj.*": 0.3,
-            "{re}.*down_proj.*": 0.4,
+            TargetScope(patterns=[".*gate_proj.*"]): 0.2,
+            TargetScope(patterns=[".*up_proj.*"]): 0.3,
+            TargetScope(patterns=[".*down_proj.*"]): 0.4,
         },
         ignored_scope=None,
         ref_sparsifier_target_sparsity={
@@ -197,7 +199,7 @@ class TestSparsifyActivationsAlgorithm:
 
 @dataclass
 class TargetSparsityByNodeTestDesc:
-    target_sparsity_by_scope: Dict[str, float]
+    target_sparsity_by_scope: Dict[TargetScope, float]
     ignored_scope: IgnoredScope
     ref_target_sparsity_by_node_name: Optional[Dict[str, float]] = None
     raised_error_message: Optional[str] = None
@@ -207,7 +209,7 @@ class TargetSparsityByNodeTestDesc:
     "desc",
     [
         TargetSparsityByNodeTestDesc(
-            target_sparsity_by_scope={"{re}.*linear.*": 0.3},
+            target_sparsity_by_scope={TargetScope(patterns=[".*linear.*"]): 0.3},
             ignored_scope=IgnoredScope(),
             ref_target_sparsity_by_node_name={
                 "ThreeLinearModel/Linear[linear1]/linear_0": 0.3,
@@ -216,20 +218,65 @@ class TargetSparsityByNodeTestDesc:
             },
         ),
         TargetSparsityByNodeTestDesc(
-            target_sparsity_by_scope={"{re}.*linear.*": 0.3},
-            ignored_scope=IgnoredScope(patterns=[".*linear2.*"]),
+            target_sparsity_by_scope={TargetScope(patterns=[".*linear[23].*"], types=["linear"]): 0.3},
+            ignored_scope=IgnoredScope(),
             ref_target_sparsity_by_node_name={
                 "ThreeLinearModel/Linear[linear1]/linear_0": 0.3,
+                "ThreeLinearModel/Linear[linear2]/linear_0": 0.3,
                 "ThreeLinearModel/Linear[linear3]/linear_0": 0.3,
             },
         ),
         TargetSparsityByNodeTestDesc(
-            target_sparsity_by_scope={"{re}.*nonexist.*": 0.3},
-            ignored_scope=IgnoredScope(patterns=[".*linear2.*"]),
-            raised_error_message="No layers matched",
+            target_sparsity_by_scope={
+                TargetScope(
+                    subgraphs=[nncf.Subgraph(inputs=["/nncf_model_input_0"], outputs=["/nncf_model_output_0"])]
+                ): 0.1,
+            },
+            ignored_scope=IgnoredScope(),
+            ref_target_sparsity_by_node_name={
+                "ThreeLinearModel/Linear[linear1]/linear_0": 0.1,
+                "ThreeLinearModel/Linear[linear3]/linear_0": 0.1,
+            },
         ),
         TargetSparsityByNodeTestDesc(
-            target_sparsity_by_scope={"{re}.*linear.*": 0.3, "{re}.*linear1.*": 0.4},
+            target_sparsity_by_scope={
+                TargetScope(names=["ThreeLinearModel/Linear[linear1]/linear_0"]): 0.1,
+                TargetScope(patterns=[".*linear[23].*"]): 0.3,
+            },
+            ignored_scope=IgnoredScope(patterns=[".*linear2.*"]),
+            ref_target_sparsity_by_node_name={
+                "ThreeLinearModel/Linear[linear1]/linear_0": 0.1,
+                "ThreeLinearModel/Linear[linear3]/linear_0": 0.3,
+            },
+        ),
+        TargetSparsityByNodeTestDesc(
+            target_sparsity_by_scope={
+                TargetScope(patterns=[".*nonexist.*"], validate=False): 0.3,
+                TargetScope(names=["ThreeLinearModel/Linear[linear1]/linear_0"]): 0.3,
+            },
+            ignored_scope=IgnoredScope(),
+            ref_target_sparsity_by_node_name={
+                "ThreeLinearModel/Linear[linear1]/linear_0": 0.3,
+            },
+        ),
+        TargetSparsityByNodeTestDesc(
+            target_sparsity_by_scope={TargetScope(patterns=[".*nonexist.*"]): 0.3},
+            ignored_scope=IgnoredScope(),
+            raised_error_message="not found in the graph",
+        ),
+        TargetSparsityByNodeTestDesc(
+            target_sparsity_by_scope={
+                TargetScope(patterns=[".*linear2.*"]): 0.3,
+                TargetScope(types=["embedding"]): 0.3,  # Embedding is not supported
+            },
+            ignored_scope=IgnoredScope(patterns=[".*linear2.*"]),
+            raised_error_message="No layers to conduct activation sparsification",
+        ),
+        TargetSparsityByNodeTestDesc(
+            target_sparsity_by_scope={
+                TargetScope(names=["ThreeLinearModel/Linear[linear1]/linear_0"]): 0.3,
+                TargetScope(patterns=[".*linear1.*"]): 0.4,
+            },
             ignored_scope=IgnoredScope(),
             raised_error_message="matched by multiple items",
         ),

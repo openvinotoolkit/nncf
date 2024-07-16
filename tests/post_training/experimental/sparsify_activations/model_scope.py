@@ -13,6 +13,7 @@ import copy
 from typing import Dict, List
 
 import nncf
+from nncf.experimental.torch.sparsify_activations import TargetScope
 from nncf.parameters import CompressWeightsMode
 from tests.post_training.experimental.sparsify_activations.pipelines import ImageClassificationTimmSparsifyActivations
 from tests.post_training.experimental.sparsify_activations.pipelines import LMSparsifyActivations
@@ -34,9 +35,7 @@ SPARSIFY_ACTIVATIONS_MODELS = [
             "compress_weights": None,
             "sparsify_activations": {
                 "target_sparsity_by_scope": {
-                    "{re}up_proj": 0.2,
-                    "{re}gate_proj": 0.2,
-                    "{re}down_proj": 0.2,
+                    TargetScope(patterns=[".*up_proj.*", ".*gate_proj.*", ".*down_proj.*"]): 0.2,
                 }
             },
         },
@@ -52,9 +51,7 @@ SPARSIFY_ACTIVATIONS_MODELS = [
             },
             "sparsify_activations": {
                 "target_sparsity_by_scope": {
-                    "{re}up_proj": 0.2,
-                    "{re}gate_proj": 0.2,
-                    "{re}down_proj": 0.2,
+                    TargetScope(patterns=[".*up_proj.*", ".*gate_proj.*", ".*down_proj.*"]): 0.2,
                 }
             },
         },
@@ -75,9 +72,8 @@ SPARSIFY_ACTIVATIONS_MODELS = [
         "compression_params": {
             "sparsify_activations": {
                 "target_sparsity_by_scope": {
-                    "{re}qkv": 0.2,
-                    "{re}fc1": 0.2,
-                    "{re}fc2": 0.3,
+                    TargetScope(patterns=[".*qkv.*", ".*fc1.*"]): 0.2,
+                    TargetScope(patterns=[".*fc2.*"]): 0.3,
                 }
             },
         },

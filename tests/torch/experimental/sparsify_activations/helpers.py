@@ -17,6 +17,9 @@ import torch
 import torch.nn as nn
 import transformers.models
 
+from nncf import IgnoredScope
+from nncf.experimental.torch.sparsify_activations import TargetScope
+
 
 class ThreeLinearModel(nn.Module):
     def __init__(self) -> None:
@@ -48,7 +51,11 @@ def dummy_llama_model():
     return model
 
 
-def count_sparsifier_patterns_in_ov(model: ov.Model):
+def count_sparsifier_patterns_in_ov(model: ov.Model) -> int:
+    """
+    Counts the number of activation sparsification pattern "Abs -> LessEqual -> Select"
+    in the OpenVINO model.
+    """
     pattern = ("Abs", "LessEqual", "Select")
     result = 0
     connections = defaultdict(list)
@@ -69,3 +76,13 @@ def count_sparsifier_patterns_in_ov(model: ov.Model):
     for node in model.get_ops():
         dfs(node)
     return result
+
+
+def convert_ignored_scope_to_target_scope(ignored_scope: IgnoredScope) -> TargetScope:
+    return TargetScope(
+        ignored_scope.names,
+        ignored_scope.patterns,
+        ignored_scope.types,
+        ignored_scope.subgraphs,
+        ignored_scope.validate,
+    )
