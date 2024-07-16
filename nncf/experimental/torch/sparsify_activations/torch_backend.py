@@ -89,7 +89,6 @@ class ActivationSparsifier(nn.Module):
     def _update(self, threshold: torch.Tensor) -> torch.Tensor:
         """
         Updates the running threshold by exponential moving average with decaying adjustment.
-
         The updating logic is similar to `pandas.DataFrame.ewm(adjust=True)`.
 
         :param threshold: The threshold value derived from this batch to update the running threshold.
