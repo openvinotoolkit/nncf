@@ -195,8 +195,8 @@ class SparsifyActivationsAlgorithm:
             self._ignored_scope, graph, strict=self._ignored_scope.validate
         )
         target_sparsity_by_node = {}
-        for node in graph.topological_sort():
-            if node.metatype not in supported_metatypes or not should_consider_scope(node.node_name, ignored_names):
+        for node in graph.get_nodes_by_metatypes(supported_metatypes):
+            if not should_consider_scope(node.node_name, ignored_names):
                 continue
             for scope, target_sparsity in self._target_sparsity_by_scope.items():
                 if matches_any(node.node_name, scope):
