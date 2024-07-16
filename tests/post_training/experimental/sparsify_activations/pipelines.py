@@ -16,8 +16,11 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Optional
 
+import numpy as np
 import torch
 import torch.utils
+import torch.utils.data
+import torchvision
 from datasets import load_dataset
 from memory_profiler import memory_usage
 from optimum.intel.openvino import OVModelForCausalLM
@@ -57,7 +60,10 @@ class LMSparsifyActivations(LMWeightCompression):
                 raise RuntimeError(f"is_stateful={is_stateful} is not supported for PyTorch backend.")
 
             self.model_hf = AutoModelForCausalLM.from_pretrained(
-                self.model_id, torch_dtype=torch.float32, device_map="cpu", attn_implementation="eager",
+                self.model_id,
+                torch_dtype=torch.float32,
+                device_map="cpu",
+                attn_implementation="eager",
             )
             self.model = self.model_hf
         elif self.backend in [BackendType.OV, BackendType.FP32]:
@@ -164,38 +170,11 @@ class ImageClassificationTimmSparsifyActivations(ImageClassificationTimm):
             )
 
     def prepare_calibration_dataset(self):
-        # TODO: for debugging only
         subset_size = self.compression_params.get("subset_size") or 512
-        dataset = self._get_imagenet(subset_size=subset_size)
-
-        generator = torch.Generator()
-        generator.manual_seed(42)
-        loader = torch.utils.data.DataLoader(
-            dataset, batch_size=self.batch_size, num_workers=4, shuffle=True, generator=generator
+        val_dataset = torchvision.datasets.ImageFolder(
+            root=self.data_dir / "imagenet" / "val", transform=self.transform
         )
+        indices = np.random.default_rng(42).choice(len(val_dataset), size=subset_size, replace=False)
+        subset = torch.utils.data.Subset(val_dataset, indices=indices)
+        loader = torch.utils.data.DataLoader(subset, batch_size=self.batch_size, num_workers=2, shuffle=False)
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
-
-    def _get_imagenet(self, subset_size=None):
-        # TODO: for debugging only
-        import torch.utils
-        import torch.utils.data
-
-        hf_dataset = load_dataset("imagenet-1k", split="validation")
-
-        class Dataset(torch.utils.data.Dataset):
-            def __init__(self, hf_dataset, transform):
-                super().__init__()
-                self.hf_dataset = hf_dataset
-                self.transform = transform  # will be assigned in timm internally
-
-            def __getitem__(self, index):
-                sample = self.hf_dataset[index]
-                image = sample["image"]
-                image = image.convert("RGB")
-                return self.transform(image), sample["label"]
-
-            def __len__(self):
-                return subset_size or len(self.hf_dataset)
-
-        dataset = Dataset(hf_dataset, self.transform)
-        return dataset
