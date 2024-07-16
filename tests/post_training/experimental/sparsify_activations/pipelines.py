@@ -146,15 +146,6 @@ class SAPipelineMixin:
         stats.fill(stdout)
         self.run_info.stats_from_output = stats
 
-    def _validate(self):
-        super()._validate()
-        ref_num_sparse_activations = self.reference_data.get("num_sparse_activations", 0)
-        num_sparse_activations = self.run_info.num_compress_nodes.num_sparse_activations
-        if num_sparse_activations != ref_num_sparse_activations:
-            status_msg = f"Regression: The number of sparse activations is {num_sparse_activations}, \
-                which differs from reference {ref_num_sparse_activations}."
-            raise ValueError(status_msg)
-
     @set_torch_seed(seed=42)
     def _compress(self):
         """
@@ -173,6 +164,15 @@ class SAPipelineMixin:
                 dataset=self.calibration_dataset,
                 **self.compression_params["sparsify_activations"],
             )
+
+    def _validate(self):
+        super()._validate()
+        ref_num_sparse_activations = self.reference_data.get("num_sparse_activations", 0)
+        num_sparse_activations = self.run_info.num_compress_nodes.num_sparse_activations
+        if num_sparse_activations != ref_num_sparse_activations:
+            status_msg = f"Regression: The number of sparse activations is {num_sparse_activations}, \
+                which differs from reference {ref_num_sparse_activations}."
+            raise ValueError(status_msg)
 
 
 class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
