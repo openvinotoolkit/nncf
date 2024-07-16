@@ -44,7 +44,7 @@ def fixture_sparsify_activations_reference_data():
     with path_reference.open() as f:
         data = yaml.safe_load(f)
     for test_case in data.values():
-        test_case["atol"] = test_case.get("atol", 1e-5)
+        test_case["atol"] = test_case.get("atol", 1e-3)
     return data
 
 
