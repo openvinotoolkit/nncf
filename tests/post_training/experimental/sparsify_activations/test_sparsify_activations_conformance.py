@@ -21,9 +21,9 @@ import pytest
 import yaml
 
 from tests.post_training.experimental.sparsify_activations.model_scope import SPARSIFY_ACTIVATIONS_TEST_CASES
+from tests.post_training.experimental.sparsify_activations.pipelines import SARunInfo
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
-from tests.post_training.pipelines.base import RunInfo
 from tests.post_training.test_quantize_conformance import create_short_run_info
 from tests.post_training.test_quantize_conformance import fixture_batch_size  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_data  # noqa: F401
@@ -50,7 +50,7 @@ def fixture_sparsify_activations_reference_data():
 
 @pytest.fixture(scope="session", name="sparsify_activations_result_data")
 def fixture_sparsify_activations_report_data(output_dir):
-    data: Dict[str, RunInfo] = {}
+    data: Dict[str, SARunInfo] = {}
     yield data
     if data:
         test_results = OrderedDict(sorted(data.items()))
@@ -98,7 +98,7 @@ def test_sparsify_activations(
     test_case_name: str,
     data_dir: Path,
     output_dir: Path,
-    sparsify_activations_result_data: Dict[str, RunInfo],
+    sparsify_activations_result_data: Dict[str, SARunInfo],
     no_eval: bool,
     batch_size: int,
     run_fp32_backend: bool,

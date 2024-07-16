@@ -40,7 +40,7 @@ SPARSIFY_ACTIVATIONS_MODELS = [
                 }
             },
         },
-        "backends": [BackendType.TORCH],
+        "backends": [BackendType.TORCH, BackendType.CUDA_TORCH],
     },
     {
         "reported_name": "tinyllama_int8_asym_data_free_ffn_sparse20",
@@ -58,7 +58,7 @@ SPARSIFY_ACTIVATIONS_MODELS = [
                 }
             },
         },
-        "backends": [BackendType.TORCH],
+        "backends": [BackendType.TORCH, BackendType.CUDA_TORCH],
     },
     {
         "reported_name": "timm/deit3_small_patch16_224",

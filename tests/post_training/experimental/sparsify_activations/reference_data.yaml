@@ -6,7 +6,15 @@ tinyllama_ffn_sparse20_backend_TORCH:
   metric_value: 0.7929
   num_int4: 0
   num_int8: 0
+tinyllama_ffn_sparse20_backend_CUDA_TORCH:
+  metric_value: 0.7929
+  num_int4: 0
+  num_int8: 0
 tinyllama_int8_asym_data_free_ffn_sparse20_backend_TORCH:
+  metric_value: 0.7915
+  num_int4: 0
+  num_int8: 312
+tinyllama_int8_asym_data_free_ffn_sparse20_backend_CUDA_TORCH:
   metric_value: 0.7915
   num_int4: 0
   num_int8: 312

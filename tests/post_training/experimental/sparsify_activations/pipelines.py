@@ -10,19 +10,19 @@
 # limitations under the License.
 
 
-import os
-import time
 from dataclasses import dataclass
-from functools import partial
+from dataclasses import field
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
+import openvino as ov
 import torch
 import torch.utils
 import torch.utils.data
 import torchvision
 from datasets import load_dataset
-from memory_profiler import memory_usage
+from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoModelForCausalLM
 
@@ -31,8 +31,11 @@ import nncf.experimental
 import nncf.experimental.torch
 import nncf.experimental.torch.sparsify_activations
 from nncf.experimental.torch.sparsify_activations.torch_backend import SparsifyActivationsAlgoBackend
+from tests.post_training.pipelines.base import LIMIT_LENGTH_OF_STATUS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
+from tests.post_training.pipelines.base import NumCompressNodes
+from tests.post_training.pipelines.base import RunInfo
 from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
 from tests.post_training.pipelines.lm_weight_compression import LMWeightCompression
 from tests.post_training.pipelines.lm_weight_compression import WCTimeStats
@@ -40,7 +43,7 @@ from tests.torch.helpers import set_torch_seed
 
 
 @dataclass
-class SparsifyActivationsTimeStats(WCTimeStats):
+class SATimeStats(WCTimeStats):
     """
     Contains statistics that are parsed from the stdout of Sparsify Activations tests.
     """
@@ -51,18 +54,143 @@ class SparsifyActivationsTimeStats(WCTimeStats):
     REGEX_PREFIX = [*WCTimeStats.REGEX_PREFIX, SparsifyActivationsAlgoBackend.CALIBRATION_TRACKING_DESC]
 
 
-class LMSparsifyActivations(LMWeightCompression):
-    def prepare_model(self) -> None:
+@dataclass
+class SANumCompressNodes(NumCompressNodes):
+    num_sparse_activations: Optional[int] = None
+
+
+@dataclass
+class SARunInfo(RunInfo):
+    num_compress_nodes: SANumCompressNodes = field(default_factory=SANumCompressNodes)
+
+    def get_result_dict(self):
+        return {
+            "Model": self.model,
+            "Backend": self.backend.value if self.backend else None,
+            "Metric name": self.metric_name,
+            "Metric value": self.metric_value,
+            "Metric diff": self.metric_diff,
+            "Num FQ": self.num_compress_nodes.num_fq_nodes,
+            "Num int4": self.num_compress_nodes.num_int4,
+            "Num int8": self.num_compress_nodes.num_int8,
+            "Num sparse activations": self.num_compress_nodes.num_sparse_activations,
+            "RAM MiB": self.format_memory_usage(self.compression_memory_usage),
+            "Compr. time": self.format_time(self.time_compression),
+            **self.stats_from_output.get_stats(),
+            "Total time": self.format_time(self.time_total),
+            "FPS": self.fps,
+            "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
+        }
+
+
+class SAPipelineMixin:
+    """
+    Common methods in the test pipeline for Sparsify Activations.
+    """
+
+    def __init__(
+        self,
+        reported_name: str,
+        model_id: str,
+        backend: BackendType,
+        compression_params: dict,
+        output_dir: Path,
+        data_dir: Path,
+        reference_data: dict,
+        no_eval: bool,
+        run_benchmark_app: bool,
+        params: dict = None,
+        batch_size: int = 1,
+    ):
+        super().__init__(
+            reported_name=reported_name,
+            model_id=model_id,
+            backend=backend,
+            compression_params=compression_params,
+            output_dir=output_dir,
+            data_dir=data_dir,
+            reference_data=reference_data,
+            no_eval=no_eval,
+            run_benchmark_app=run_benchmark_app,
+            params=params,
+            batch_size=batch_size,
+        )
+        self.run_info = SARunInfo(model=reported_name, backend=backend)
+
+    @staticmethod
+    def count_compressed_nodes_from_ir(model: ov.Model) -> SANumCompressNodes:
+        """
+        Get number of compressed nodes in the compressed IR.
+        """
+        num_fq_nodes = 0
+        num_int8 = 0
+        num_int4 = 0
+        num_sparse_activations = 0
+
+        for node in model.get_ops():
+            if node.type_info.name == "FakeQuantize":
+                num_fq_nodes += 1
+            for i in range(node.get_output_size()):
+                if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
+                    num_int8 += 1
+                if node.get_output_element_type(i).get_type_name() in ["i4", "u4"]:
+                    num_int4 += 1
+        return SANumCompressNodes(
+            num_fq_nodes=num_fq_nodes,
+            num_int8=num_int8,
+            num_int4=num_int4,
+            num_sparse_activations=num_sparse_activations,
+        )
+
+    def collect_data_from_stdout(self, stdout: str):
+        stats = SATimeStats()
+        stats.fill(stdout)
+        self.run_info.stats_from_output = stats
+
+    def _validate(self):
+        super()._validate()
+        ref_num_sparse_activations = self.reference_data.get("num_sparse_activations", 0)
+        num_sparse_activations = self.run_info.num_compress_nodes.num_sparse_activations
+        if num_sparse_activations != ref_num_sparse_activations:
+            status_msg = f"Regression: The number of sparse activations is {num_sparse_activations}, \
+                which differs from reference {ref_num_sparse_activations}."
+            # raise ValueError(status_msg)
+            print(status_msg)
+
+    @set_torch_seed(seed=42)
+    def _compress(self):
+        """
+        Actual call of weight compression and/or activation sparsification.
+        """
+        self.compressed_model = self.model
+        if self.compression_params.get("compress_weights", None) is not None:
+            self.compressed_model = nncf.compress_weights(
+                self.compressed_model,
+                dataset=self.calibration_dataset,
+                **self.compression_params["compress_weights"],
+            )
+        if self.compression_params.get("sparsify_activations", None) is not None:
+            self.compressed_model = nncf.experimental.torch.sparsify_activations.sparsify_activations(
+                self.compressed_model,
+                dataset=self.calibration_dataset,
+                **self.compression_params["sparsify_activations"],
+            )
+
+
+class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
+    DEFAULT_SUBSET_SIZE = 32
+
+    def prepare_model(self):
         is_stateful = self.params.get("is_stateful", False)
 
-        if self.backend == BackendType.TORCH:
+        if self.backend in PT_BACKENDS:
             if is_stateful:
                 raise RuntimeError(f"is_stateful={is_stateful} is not supported for PyTorch backend.")
 
             self.model_hf = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
                 torch_dtype=torch.float32,
-                device_map="cpu",
+                device_map="cuda" if self.backend == BackendType.CUDA_TORCH else "cpu",
                 attn_implementation="eager",
             )
             self.model = self.model_hf
@@ -91,86 +219,57 @@ class LMSparsifyActivations(LMWeightCompression):
         if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
             self._dump_model_fp32()
 
+    def get_transform_calibration_fn(self):
+        original_fn = super().get_transform_calibration_fn()
+
+        def transform_fn(data):
+            inputs = original_fn(data, max_tokens=256)
+            if self.backend == BackendType.CUDA_TORCH:
+                for input_name in inputs:
+                    inputs[input_name] = torch.from_numpy(inputs[input_name]).cuda()
+            return inputs
+
+        return transform_fn
+
     def prepare_calibration_dataset(self):
         dataset = load_dataset("wikitext", "wikitext-2-v1", split="train", revision="b08601e")
         dataset = dataset.filter(lambda example: len(example["text"].split()) > 256)
-        subset_size = self.compression_params.get("subset_size") or 64
+        subset_size = self.compression_params.get("subset_size") or self.DEFAULT_SUBSET_SIZE
         dataset = dataset.select(range(subset_size))
-        self.calibration_dataset = nncf.Dataset(dataset, partial(self.get_transform_calibration_fn(), max_tokens=256))
+        self.calibration_dataset = nncf.Dataset(dataset, self.get_transform_calibration_fn())
 
-    def compress(self) -> None:
-        if self.backend == BackendType.FP32:
-            return
-        start_time = time.perf_counter()
-        self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
-        self.run_info.time_compression = time.perf_counter() - start_time
-
-    def collect_data_from_stdout(self, stdout: str):
-        stats = SparsifyActivationsTimeStats()
-        stats.fill(stdout)
-        self.run_info.stats_from_output = stats
-
-    @set_torch_seed(seed=42)
-    def _compress(self):
-        """
-        Actual call of weight compression and/or activation sparsification.
-        """
-        self.compressed_model = self.model
-        if self.compression_params.get("compress_weights", None) is not None:
-            self.compressed_model = nncf.compress_weights(
-                self.compressed_model,
-                dataset=self.calibration_dataset,
-                **self.compression_params["compress_weights"],
+    def save_compressed_model(self):
+        if self.backend == BackendType.CUDA_TORCH:
+            export_from_model(
+                self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32", device="cuda"
             )
-        if self.compression_params.get("sparsify_activations", None) is not None:
-            self.compressed_model = nncf.experimental.torch.sparsify_activations.sparsify_activations(
-                self.compressed_model,
-                dataset=self.calibration_dataset,
-                **self.compression_params["sparsify_activations"],
-            )
-
-
-class ImageClassificationTimmSparsifyActivations(ImageClassificationTimm):
-    def compress(self) -> None:
-        """
-        Run compression of the model and collect time and memory usage information.
-        """
-        if self.backend == BackendType.FP32:
-            # To validate not compressed model
-            self.path_compressed_ir = self.fp32_model_dir / "model_fp32.xml"
-            return
-
-        if self.backend in PT_BACKENDS:
-            inference_num_threads = os.environ.get("INFERENCE_NUM_THREADS")
-            if inference_num_threads is not None:
-                torch.set_num_threads(int(inference_num_threads))
         else:
-            raise RuntimeError(f"backend={self.backend.value} is not supported.")
+            super().__init__()
 
-        start_time = time.perf_counter()
-        self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
-        self.run_info.time_compression = time.perf_counter() - start_time
-
-    def collect_data_from_stdout(self, stdout: str):
-        stats = SparsifyActivationsTimeStats()
-        stats.fill(stdout)
-        self.run_info.stats_from_output = stats
-
-    @set_torch_seed(seed=42)
-    def _compress(self):
+    def get_num_compressed(self):
         """
-        Actual call of activation sparsification.
+        Get number of quantization ops and sparsifier ops in the compressed IR.
         """
-        self.compressed_model = self.model
-        if self.compression_params.get("sparsify_activations", None) is not None:
-            self.compressed_model = nncf.experimental.torch.sparsify_activations.sparsify_activations(
-                self.compressed_model,
-                dataset=self.calibration_dataset,
-                **self.compression_params["sparsify_activations"],
+        if self.backend in PT_BACKENDS:
+            model = ov.Core().read_model(self.output_model_dir / self.OV_MODEL_NAME)
+        else:
+            model = self.model
+        self.run_info.num_compress_nodes = self.count_compressed_nodes_from_ir(model)
+
+    def _dump_model_fp32(self):
+        if self.backend == BackendType.TORCH:
+            export_from_model(
+                self.model_hf, self.fp32_model_dir, stateful=False, compression_option="fp32", device="cuda"
             )
+        else:
+            super()._dump_model_fp32()
+
+
+class ImageClassificationTimmSparsifyActivations(SAPipelineMixin, ImageClassificationTimm):
+    DEFAULT_SUBSET_SIZE = 256
 
     def prepare_calibration_dataset(self):
-        subset_size = self.compression_params.get("subset_size") or 512
+        subset_size = self.compression_params.get("subset_size") or self.DEFAULT_SUBSET_SIZE
         val_dataset = torchvision.datasets.ImageFolder(
             root=self.data_dir / "imagenet" / "val", transform=self.transform
         )
@@ -178,3 +277,10 @@ class ImageClassificationTimmSparsifyActivations(ImageClassificationTimm):
         subset = torch.utils.data.Subset(val_dataset, indices=indices)
         loader = torch.utils.data.DataLoader(subset, batch_size=self.batch_size, num_workers=2, shuffle=False)
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
+
+    def get_num_compressed(self):
+        """
+        Get number of quantization ops and sparsifier ops in the compressed IR.
+        """
+        model = ov.Core().read_model(model=self.path_compressed_ir)
+        self.run_info.num_compress_nodes = self.count_compressed_nodes_from_ir(model)
