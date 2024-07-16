@@ -110,12 +110,14 @@ class LMWeightCompression(BaseTestPipeline):
         self.preprocessor = AutoTokenizer.from_pretrained(self.model_id)
 
     def get_transform_calibration_fn(self):
-        def transform_fn(data, max_tokens=128):
+        def transform_fn(data, max_tokens=128, filter_bad_tokens=True):
             tokenized_text = self.preprocessor(data["text"], return_tensors="np")
-
-            bad_tokens = self.preprocessor("<unk><s>", return_tensors="np")["input_ids"]
             raw_tokens = tokenized_text["input_ids"][0, :]
-            filtered_tokens = np.array(list(filter(lambda x: x not in bad_tokens, raw_tokens)))
+            if filter_bad_tokens:
+                bad_tokens = self.preprocessor("<unk><s>", return_tensors="np")["input_ids"]
+                filtered_tokens = np.array(list(filter(lambda x: x not in bad_tokens, raw_tokens)))
+            else:
+                filtered_tokens = raw_tokens
             tokenized_text["input_ids"] = np.expand_dims(filtered_tokens, 0)
             tokenized_text["attention_mask"] = tokenized_text["attention_mask"][:, : filtered_tokens.shape[0]]
 

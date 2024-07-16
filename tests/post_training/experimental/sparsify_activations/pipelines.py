@@ -221,7 +221,7 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
         original_fn = super().get_transform_calibration_fn()
 
         def transform_fn(data):
-            inputs = original_fn(data, max_tokens=256)
+            inputs = original_fn(data, max_tokens=128, filter_bad_tokens=False)
             if self.backend == BackendType.CUDA_TORCH:
                 for input_name in inputs:
                     inputs[input_name] = torch.from_numpy(inputs[input_name]).cuda()
