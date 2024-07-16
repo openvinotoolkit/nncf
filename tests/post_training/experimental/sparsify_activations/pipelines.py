@@ -244,7 +244,7 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
                 self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32", device="cuda"
             )
         else:
-            super().__init__()
+            super().save_compressed_model()
 
     def get_num_compressed(self):
         """
@@ -257,7 +257,7 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
         self.run_info.num_compress_nodes = self.count_compressed_nodes_from_ir(model)
 
     def _dump_model_fp32(self):
-        if self.backend == BackendType.TORCH:
+        if self.backend == BackendType.CUDA_TORCH:
             export_from_model(
                 self.model_hf, self.fp32_model_dir, stateful=False, compression_option="fp32", device="cuda"
             )
