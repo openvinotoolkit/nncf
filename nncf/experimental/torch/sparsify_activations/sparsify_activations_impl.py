@@ -226,15 +226,31 @@ def sparsify_activations(
     """
     Post-training activation sparsification on the given model.
 
+    This algorithm sparsifies the input activations in supported layers based on a calibration
+    dataset. The goal is to zero out neurons with small activation values around 0, thereby
+    roughly achieving the target sparsity at a statistical level.
+
+    Note that currently only linear layers are supported.
+
     :param model: The model to be sparsified.
     :param dataset: The dataset to calibrate the activation sparsifiers.
-    :param target_sparsity_by_scope: A dictionary that defines the target activation sparsity
-        level for specified layers. For each item, the key should be a complete scope name
-        in the NNCF graph, or a regular expression specification starting with `{re}`; the
-        corresponding value should be a float number in the range [0, 1] representing the
-        target sparsity level.
-    :param ignored_scope: An ignored scope that defines the list of model control flow graph
-        nodes to be ignored during activation sparsification.
+    :param target_sparsity_by_scope: Defines the target activation sparsity level
+        for specified layers. For each item, the key is an instance of `TargetScope` class
+        representing the layers to match in the model's NNCF graph; the corresponding value
+        is a float number in the range [0, 1] representing the target sparsity level.
+
+        Example:
+        ..  code-block:: python
+            {
+                # Target sparsity is 60% for node "Dummy/Linear[layer]/linear_0" in the model graph
+                TargetScope(names=["Dummy/Linear[layer]/linear_0"]): 0.6,
+                # Target sparsity is 30% for the layers whose name contains "up_proj" or "down_proj".
+                TargetScope(patterns=[".*up_proj.*", ".*down_proj.*"]): 0.3,
+            }
+
+    :param ignored_scope: Optional. It defines the nodes in the model graph that should be be ignored
+        during activation sparsification. Note that layers other than linear type are already filtered
+        out internally, so there is no need to mention them in `ignored_scope`.
     :return: The sparsified model.
     """
 

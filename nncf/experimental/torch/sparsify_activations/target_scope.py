@@ -27,37 +27,32 @@ class TargetScope(IgnoredScope):
     Example:
 
     ..  code-block:: python
-            # Specified by node name:
-            node_names = ['node_1', 'node_2', 'node_3']
-            target_scope = TargetScope(names=node_names)
+        # Specified by node name:
+        node_names = ['node_1', 'node_2', 'node_3']
+        target_scope = TargetScope(names=node_names)
 
-            # Specified using regular expressions:
-            patterns = ['.*node_\\d']
-            target_scope = TargetScope(patterns=patterns)
+        # Specified using regular expressions:
+        patterns = ['.*node_\\d']
+        target_scope = TargetScope(patterns=patterns)
 
-            # Specified by operation type:
+        # Specified by operation type:
 
-            # OpenVINO opset https://docs.openvino.ai/latest/openvino_docs_ops_opset.html
-            operation_types = ['Multiply', 'GroupConvolution', 'Interpolate']
-            target_scope = TargetScope(types=operation_types)
+        # OpenVINO opset https://docs.openvino.ai/latest/openvino_docs_ops_opset.html
+        operation_types = ['Multiply', 'GroupConvolution', 'Interpolate']
+        target_scope = TargetScope(types=operation_types)
 
-            # ONNX opset https://github.com/onnx/onnx/blob/main/docs/Operators.md
-            operation_types = ['Mul', 'Conv', 'Resize']
-            target_scope = TargetScope(types=operation_types)
+        # ONNX opset https://github.com/onnx/onnx/blob/main/docs/Operators.md
+        operation_types = ['Mul', 'Conv', 'Resize']
+        target_scope = TargetScope(types=operation_types)
 
     **Note:** Operation types must be specified according to the model framework.
 
     :param names: List of target node names.
-    :type names: List[str]
     :param patterns: List of regular expressions that define patterns for names of target nodes.
-    :type patterns: List[str]
     :param types: List of target operation types.
-    :type types: List[str]
     :param subgraphs: List of target subgraphs.
-    :type subgraphs: List[Subgraph]
     :param validate: If set to True, then a RuntimeError will be raised if any target scope does not match
       in the model graph.
-    :type types: bool
     """
 
     def __hash__(self) -> int:
