@@ -99,6 +99,8 @@ class TestActivationsSparsifier:
             pytest.skip("CUDA is not available")
         device = torch.device("cuda" if use_cuda else "cpu")
         sparsifier = ActivationsSparsifier(desc.target_sparsity, desc.alpha).to(device)
+        sparsifier.freeze(False)
+
         running_thresholds = []
         outputs = []
         with torch.no_grad():

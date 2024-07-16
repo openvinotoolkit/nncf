@@ -51,11 +51,11 @@ class ActivationsSparsifier(nn.Module):
         if alpha <= 0.0 or alpha >= 1.0:
             raise ValueError("The decay factor `alpha` should be in range (0, 1).")
         self.alpha = alpha
-        self.register_buffer("running_threshold", torch.tensor(0.0))
+        self.register_buffer("running_threshold", torch.tensor(float("-inf")))
         self.register_buffer("num_batches_tracked", torch.tensor(0))
         self.running_threshold: torch.Tensor
         self.num_batches_tracked: torch.Tensor
-        self._freeze = False
+        self._freeze = True
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if not self._freeze:
@@ -69,7 +69,7 @@ class ActivationsSparsifier(nn.Module):
         """
         Resets the running threshold and the number of tracked batches to the initial stage.
         """
-        self.running_threshold.zero_()
+        self.running_threshold.fill_(float("-inf"))
         self.num_batches_tracked.zero_()
 
     def freeze(self, freeze: bool = True):
@@ -101,11 +101,14 @@ class ActivationsSparsifier(nn.Module):
         :param threshold: The threshold value derived from this batch to update the running threshold.
         :return: The updated running threshold.
         """
-        beta = 1.0 - self.alpha
-        self.running_threshold = (
-            threshold * self.alpha + self.running_threshold * beta * (1 - beta**self.num_batches_tracked)
-        ) / (1 - beta ** (self.num_batches_tracked + 1))
-        self.running_threshold = self.running_threshold.type(threshold.dtype)
+        if self.num_batches_tracked == 0:
+            self.running_threshold = threshold
+        else:
+            beta = 1.0 - self.alpha
+            self.running_threshold = (
+                threshold * self.alpha + self.running_threshold * beta * (1 - beta**self.num_batches_tracked)
+            ) / (1 - beta ** (self.num_batches_tracked + 1))
+            self.running_threshold = self.running_threshold.type(threshold.dtype)
         self.num_batches_tracked += 1
         return self.running_threshold
 
@@ -140,8 +143,6 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
         for node, target_sparsity in target_sparsity_by_node.items():
             activation_port_id = self._get_activation_port_id(node, graph)
             sparsifier = ActivationsSparsifier(target_sparsity=target_sparsity)
-            # temporarily freeze it for model transformation
-            sparsifier.freeze(True)
             sparsifier_name = f"{ACTIVATIONS_SPARSIFIER_PREFIX}_{node.node_name.replace('.', '_')}"
             transformation_layout.register(
                 PTSharedFnInsertionCommand(
