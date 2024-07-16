@@ -49,7 +49,7 @@ class SparsifyActivationsAlgoBackend(ABC):
         for input_data in track(
             dataset.get_inference_data(),
             total=dataset.get_length(),
-            description="Activation Sparsifier Calibration",
+            description="Activations Sparsifier Calibration",
         ):
             engine.infer(input_data)
 
@@ -146,12 +146,7 @@ class SparsifyActivationsAlgorithm:
         target_sparsity_by_node = self._get_target_sparsity_by_node(graph)
         if not target_sparsity_by_node:
             raise nncf.ValidationError("No layers matched for activation sparsification.")
-        sparse_model = self.do_sparsification(
-            model,
-            graph,
-            target_sparsity_by_node,
-            dataset,
-        )
+        sparse_model = self.do_sparsification(model, graph, target_sparsity_by_node, dataset)
         return sparse_model
 
     def do_sparsification(
@@ -171,16 +166,8 @@ class SparsifyActivationsAlgorithm:
         :param dataset: The dataset to calibrate the activation sparsifiers.
         :return: The sparsified model.
         """
-        model = self._backend_entity.insert_sparsifiers(
-            model,
-            graph,
-            target_sparsity_by_node,
-        )
-        model = self._backend_entity.calibrate_sparsifiers(
-            model,
-            graph,
-            dataset,
-        )
+        model = self._backend_entity.insert_sparsifiers(model, graph, target_sparsity_by_node)
+        model = self._backend_entity.calibrate_sparsifiers(model, graph, dataset)
         model = self._backend_entity.freeze_sparsifiers(model, graph)
         return model
 
@@ -217,7 +204,7 @@ class SparsifyActivationsAlgorithm:
                 continue
             for scope, target_sparsity in self._target_sparsity_by_scope.items():
                 if matches_any(node.node_name, scope):
-                    if node.node_name in target_sparsity_by_node:
+                    if node in target_sparsity_by_node:
                         raise nncf.ValidationError(
                             f'"{node.node_name}" is matched by multiple items in `target_sparsity_by_scope`.'
                         )

@@ -31,7 +31,7 @@ from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import training_mode_switcher
 
-ACTIVATIONS_SPARSIFIER_PREFIX = 'activations_sparsifier'
+ACTIVATIONS_SPARSIFIER_PREFIX = "activations_sparsifier"
 TModel = TypeVar("TModel")
 
 
@@ -49,8 +49,7 @@ class ActivationsSparsifier(nn.Module):
         super().__init__()
         self.target_sparsity = target_sparsity
         if alpha <= 0.0 or alpha >= 1.0:
-            raise ValueError(
-                "The decay factor `alpha` should be in range (0, 1).")
+            raise ValueError("The decay factor `alpha` should be in range (0, 1).")
         self.alpha = alpha
         self.register_buffer("running_threshold", torch.tensor(0.0))
         self.register_buffer("num_batches_tracked", torch.tensor(0))
@@ -104,9 +103,9 @@ class ActivationsSparsifier(nn.Module):
         """
         beta = 1.0 - self.alpha
         self.running_threshold = (
-            threshold * self.alpha + self.running_threshold *
-            beta * (1 - beta**self.num_batches_tracked)
+            threshold * self.alpha + self.running_threshold * beta * (1 - beta**self.num_batches_tracked)
         ) / (1 - beta ** (self.num_batches_tracked + 1))
+        self.running_threshold = self.running_threshold.type(threshold.dtype)
         self.num_batches_tracked += 1
         return self.running_threshold
 
@@ -158,8 +157,7 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
                 )
             )
 
-        transformed_model = PTModelTransformer(
-            model).transform(transformation_layout)
+        transformed_model = PTModelTransformer(model).transform(transformation_layout)
         return transformed_model
 
     def calibrate_sparsifiers(self, model: NNCFNetwork, graph: NNCFGraph, dataset: Dataset) -> NNCFNetwork:
@@ -192,6 +190,5 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
                 continue
             activation_ports.append(edge.input_port_id)
         if len(activation_ports) != 1:
-            raise nncf.InternalError(
-                f'Cannot find activation port for node "{node}".')
+            raise nncf.InternalError(f'Cannot find activation port for node "{node}".')
         return activation_ports[0]

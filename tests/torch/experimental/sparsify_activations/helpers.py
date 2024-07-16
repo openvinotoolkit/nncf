@@ -9,38 +9,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Callable, Dict
 
-import openvino as ov
-import pytest
 import torch
 import torch.nn as nn
 import transformers.models
 
-import nncf
-import nncf.experimental
-import nncf.experimental.torch.sparsify_activations
-from nncf.experimental.torch.sparsify_activations.torch_backend import ACTIVATIONS_SPARSIFIER_PREFIX
-from nncf.experimental.torch.sparsify_activations.torch_backend import ActivationsSparsifier
-from nncf.scopes import IgnoredScope
-from nncf.torch.nncf_network import NNCFNetwork
-from tests.shared.nx_graph import compare_nx_graph_with_reference
-from tests.shared.paths import TEST_ROOT
-from tests.torch.helpers import set_torch_seed
 
-
-class TwoLinearModel(nn.Module):
+class ThreeLinearModel(nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.embedding = nn.Embedding(32, 2)
         self.linear1 = nn.Linear(2, 3)
         self.linear2 = nn.Linear(2, 4, bias=False)
+        self.linear3 = nn.Linear(3, 5)
 
     def forward(self, input_ids: torch.Tensor):
         x = self.embedding(input_ids)
-        y0 = self.linear1(x)
+        y0 = self.linear3(self.linear1(x))
         y1 = self.linear2(x)
         return y0, y1
 
