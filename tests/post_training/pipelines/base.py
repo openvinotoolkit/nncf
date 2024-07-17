@@ -356,7 +356,7 @@ class PTQTestPipeline(BaseTestPipeline):
                 torch.set_num_threads(int(inference_num_threads))
 
         start_time = time.perf_counter()
-        if self.memory_monitor or True:
+        if self.memory_monitor:
             max_value_per_memory_type = monitor_memory_for_callable(
                 self._compress,
                 interval=0.1,
