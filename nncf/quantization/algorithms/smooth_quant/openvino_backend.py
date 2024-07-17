@@ -147,7 +147,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @staticmethod
     def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         weight_port_id = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(node)
-        weight_node = nncf_graph.get_input_edges(node)[weight_port_id].from_node
+        weight_node = nncf_graph.get_input_edge_by_port_id(node, weight_port_id).from_node
         return len(nncf_graph.get_next_nodes(weight_node)) > 1
 
     @staticmethod

@@ -1117,8 +1117,8 @@ class MinMaxQuantization(Algorithm):
                 # In the case of the two quantizers without the branching after them,
                 # it needs to check that all quantizers follows after producer nodes.
                 if _is_node_after_producers(fq_1_producer) and _is_node_after_producers(fq_2_producer):
-                    fq_1_prod_shape = np.prod(nncf_graph.get_output_edges(fq_1_producer)[0].tensor_shape)
-                    fq_2_prod_shape = np.prod(nncf_graph.get_output_edges(fq_2_producer)[0].tensor_shape)
+                    fq_1_prod_shape = np.prod(nncf_graph.get_output_edges_by_port_id(fq_1_producer, 0).tensor_shape)
+                    fq_2_prod_shape = np.prod(nncf_graph.get_output_edges_by_port_id(fq_2_producer, 0).tensor_shape)
 
                     # Then it needs to remove quantizer with the smallest shape.
                     if fq_1_prod_shape >= fq_2_prod_shape:
