@@ -12,6 +12,7 @@
 import collections
 from typing import List, TypeVar
 
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -72,11 +73,11 @@ def remove_shapeof_subgraphs(
     for shape_of_node in shape_of_nodes:
         nodes_to_drop.add(shape_of_node.node_name)
 
-        shape_of_queue = collections.deque()
-        shape_of_queue.extend(nncf_graph.get_next_nodes(shape_of_node))
+        shape_of_queue = collections.deque(nncf_graph.get_next_nodes(shape_of_node))
         while shape_of_queue:
             node = shape_of_queue.pop()
-            if node.node_name in nodes_to_drop or node.node_name in infer_nodes:
+            all_output_edges_integer = all(e.dtype == Dtype.INTEGER for e in nncf_graph.get_output_edges(node))
+            if node.node_name in nodes_to_drop or node.node_name in infer_nodes or not all_output_edges_integer:
                 continue
             nodes_to_drop.add(node.node_name)
             # traverse forward and backward to exclude full shape of subgraph
