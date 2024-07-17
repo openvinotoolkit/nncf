@@ -19,7 +19,7 @@ import time
 from enum import Enum
 from functools import partial
 from pathlib import Path
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import psutil
@@ -270,33 +270,52 @@ class MemoryMonitor:
 def monitor_memory_for_callable(
     f: Callable,
     interval: Optional[float] = 0.1,
-    memory_type: Optional[MemoryType] = MemoryType.RSS,
     memory_unit: Optional[MemoryUnit] = MemoryUnit.MiB,
-    max_value: Optional[bool] = False,
-):
+    return_max_value: Optional[bool] = True,
+    save_dir: Optional[Path] = None,
+) -> Union[Dict[MemoryType, float], Dict[MemoryType, Tuple[List, List]]]:
     """
-    Monitor memory from the start to the end of execution of some callable function.
-    Works by subtracting the first memory measurement from all the other ones so that the resulting sequence starts
-    from 0. Hence, is not very reliable and may actually result in negative values.
+    Monitor memory from the start to the end of execution of some callable function. Returns the maximum memory
+    recorded if `return_max_value=True` or whole time-memory sequences. Works by subtracting the first memory
+    measurement from all the other ones so that the resulting sequence starts from 0. Hence, it can actually return
+    negative memory values.
 
     :param f: A callable to monitor.
     :param interval: Interval in seconds to take measurements.
-    :param memory_type: Memory type.
     :param memory_unit: Memory unit.
-    :param max_value: If True, only the maximum value will be reported. Otherwise, a tuple containing two list for
-        timestamps and memory values is returned.
-    :returns: If max_value=False, returns a tuple containing two list for timestamps and memory values. Otherwise,
-        returns a single float -- the maximum memory recorded.
+    :param return_max_value: Whether to return max value for each memory type or full memory sequences.
+    :param save_dir: If provided, will save memory logs at this location.
+    :returns: A dict with memory types (RSS or SYSTEM) as keys. The values are either a single float number if
+        return_max_value is provided, or a tuple with time and memory value lists.
     """
-    memory_monitor = MemoryMonitor(interval, memory_type, memory_unit)
-    memory_monitor.start()
-    f_result = f()
-    memory_monitor.stop()
+    memory_monitors = {}
+    for memory_type in [MemoryType.RSS, MemoryType.SYSTEM]:
+        memory_monitors[memory_type] = MemoryMonitor(
+            interval=interval, memory_type=memory_type, memory_unit=memory_unit
+        ).start()
 
-    time_values, memory_values = memory_monitor.get_data(memory_from_zero=True)
-    if max_value:
-        return f_result, max(memory_values)
-    return f_result, (time_values, memory_values)
+    f()
+
+    resulting_memory_data = {}
+    for mt, mm in memory_monitors.items():
+        mm.stop()
+        for fz in [False, True]:
+            time_values, memory_values = mm.get_data(memory_from_zero=fz)
+            if fz:
+                if return_max_value:
+                    resulting_memory_data[mt] = max(memory_values)
+                else:
+                    resulting_memory_data[mt] = time_values, memory_values
+
+            if save_dir:
+                mm.save_memory_logs(
+                    time_values,
+                    memory_values,
+                    save_dir=save_dir,
+                    filename_suffix="_from-zero" if fz else "",
+                )
+
+    return resulting_memory_data
 
 
 def _cast_bytes_to(bytes, memory_unit, round_to_int=False):
@@ -331,7 +350,6 @@ if __name__ == "__main__":
             *mm.get_data(memory_from_zero=fz), save_dir=Path("memory_logs"), filename_suffix="_from-zero" if fz else ""
         )
 
-    memory_monitors = []
     for memory_type, mem_from_zero in [(MemoryType.RSS, False), (MemoryType.SYSTEM, False), (MemoryType.SYSTEM, True)]:
         memory_monitor = MemoryMonitor(memory_type=memory_type)
         memory_monitor.start(at_exit_fn=partial(log, memory_monitor, mem_from_zero))

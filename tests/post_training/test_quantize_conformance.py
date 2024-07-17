@@ -75,6 +75,11 @@ def fixture_extra_columns(pytestconfig):
     return pytestconfig.getoption("extra_columns")
 
 
+@pytest.fixture(scope="session", name="memory_monitor")
+def fixture_memory_monitor(pytestconfig):
+    return pytestconfig.getoption("memory_monitor")
+
+
 @pytest.fixture(scope="session", name="ptq_reference_data")
 def fixture_ptq_reference_data():
     path_reference = Path(__file__).parent / "data" / "ptq_reference_data.yaml"
@@ -210,6 +215,7 @@ def test_ptq_quantization(
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
+    memory_monitor: bool,
 ):
     pipeline = None
     err_msg = None
@@ -235,6 +241,7 @@ def test_ptq_quantization(
                 "no_eval": no_eval,
                 "run_benchmark_app": run_benchmark_app,
                 "batch_size": batch_size,
+                "memory_monitor": memory_monitor,
             }
         )
         pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
@@ -279,6 +286,7 @@ def test_weight_compression(
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
+    memory_monitor: bool,
 ):
     pipeline = None
     err_msg = None
@@ -298,6 +306,7 @@ def test_weight_compression(
                 "no_eval": no_eval,
                 "run_benchmark_app": run_benchmark_app,
                 "batch_size": batch_size,
+                "memory_monitor": memory_monitor,
             }
         )
         pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)

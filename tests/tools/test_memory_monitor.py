@@ -108,17 +108,24 @@ def test_interval(interval):
 
 
 @pytest.mark.skipif(is_windows(), reason="Check on linux only")
-@pytest.mark.parametrize("max_value", (True, False))
-def test_monitor_memory_for_callable(max_value):
+@pytest.mark.parametrize("return_max_value", (True, False))
+def test_monitor_memory_for_callable(tmpdir, return_max_value):
+    tmpdir = Path(tmpdir)
     allocate_fn = lambda: allocate(BYTES_TO_ALLOCATE_SMALL)
-    fn_res, memory_data = monitor_memory_for_callable(allocate_fn, max_value=max_value)
-    assert fn_res is None
+    memory_data = monitor_memory_for_callable(allocate_fn, return_max_value=return_max_value, save_dir=tmpdir)
 
-    if max_value:
-        assert isinstance(memory_data, float)
+    assert isinstance(memory_data, dict)
+    assert MemoryType.RSS in memory_data
+    assert MemoryType.SYSTEM in memory_data
+    if return_max_value:
+        assert all(map(lambda v: isinstance(v, float), memory_data.values()))
     else:
-        time_values, memory_values = memory_data
-        assert len(time_values) == len(memory_values)
+        assert all(map(lambda v: isinstance(v, tuple) and len(v) == 2 and len(v[0]) == len(v[1]), memory_data.values()))
+
+    saved_files = tuple(tmpdir.glob("*"))
+    assert len(saved_files) == 8
+    assert sum(map(lambda fn: int(str(fn).endswith(".txt")), saved_files)) == 4
+    assert sum(map(lambda fn: int(str(fn).endswith(".png")), saved_files)) == 4
 
 
 @pytest.mark.skipif(is_windows(), reason="Check on linux only")
