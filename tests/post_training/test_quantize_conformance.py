@@ -114,7 +114,7 @@ def fixture_wc_reference_data():
 
 
 @pytest.fixture(scope="session", name="ptq_result_data")
-def fixture_ptq_report_data(output_dir, run_benchmark_app):
+def fixture_ptq_report_data(output_dir, run_benchmark_app, pytestconfig):
     data: Dict[str, RunInfo] = {}
 
     yield data
@@ -126,7 +126,14 @@ def fixture_ptq_report_data(output_dir, run_benchmark_app):
             df = df.drop(columns=["FPS"])
 
         output_dir.mkdir(parents=True, exist_ok=True)
-        df.to_csv(output_dir / "results.csv", index=False)
+        output_file = output_dir / "results.csv"
+
+        if pytestconfig.getoption("forked") and output_file.exists():
+            # When run test with --forked to run test in separate process
+            # Used in post_training_performance jobs
+            df.to_csv(output_file, index=False, mode="a", header=False)
+        else:
+            df.to_csv(output_file, index=False)
 
 
 @pytest.fixture(scope="session", name="wc_result_data")
