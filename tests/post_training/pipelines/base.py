@@ -173,6 +173,7 @@ class RunInfo:
             "Total time": self.format_time(self.time_total),
             "FPS": self.fps,
             "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
+            "Build url": os.environ.get("BUILD_URL", ""),
         }
 
 
