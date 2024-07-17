@@ -12,9 +12,9 @@
 import collections
 from typing import List, TypeVar
 
-from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 TModel = TypeVar("TModel")
