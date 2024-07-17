@@ -11,6 +11,7 @@
 
 import gc
 import os
+import queue
 import sys
 import time
 from pathlib import Path
@@ -76,7 +77,7 @@ def test_memory_monitor_api(tmpdir):
 
 
 @pytest.mark.skipif(is_windows(), reason="Check on linux only")
-@pytest.mark.parametrize("memory_type", MemoryType.__members__.values())
+@pytest.mark.parametrize("memory_type", (MemoryType.RSS, MemoryType.SYSTEM))
 def test_memory_type(memory_type):
     memory_monitor = MemoryMonitor(memory_type=memory_type).start()
     allocate(BYTES_TO_ALLOCATE_SMALL)
@@ -118,6 +119,16 @@ def test_monitor_memory_for_callable(max_value):
     else:
         time_values, memory_values = memory_data
         assert len(time_values) == len(memory_values)
+
+
+@pytest.mark.skipif(is_windows(), reason="Check on linux only")
+def test_empty_logs(tmpdir):
+    memory_monitor = MemoryMonitor().start()
+    memory_monitor.stop()
+    memory_monitor._memory_values_queue = queue.Queue()  # make sure no logs are recorded
+    time_values, memory_values = memory_monitor.get_data()
+    assert len(time_values) == len(memory_values) == 0
+    memory_monitor.save_memory_logs(time_values, memory_values, Path(tmpdir))
 
 
 @pytest.mark.skipif(ISOLATION_RUN_ENV_VAR not in os.environ, reason="Should be run via isolation proxy")

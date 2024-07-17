@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import atexit
+import logging
 import os
 import queue
 import subprocess
@@ -22,6 +23,8 @@ from typing import Callable, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import psutil
+
+logger = logging.getLogger("memory_monitor")
 
 
 class MemoryType(Enum):
@@ -80,6 +83,10 @@ class MemoryMonitor:
         """
         self.interval = interval
         self.memory_type = memory_type
+        if memory_type == MemoryType.SYSTEM:
+            logger.warning(
+                "Please be aware that MemoryType.SYSTEM is affected by other processes that change RAM availability."
+            )
         self.memory_unit = memory_unit
 
         self._monitoring_thread_should_stop = False
@@ -137,6 +144,8 @@ class MemoryMonitor:
         to memory values.
         """
         memory_usage_data = list(self._memory_values_queue.queue)
+        if len(memory_usage_data) == 0:
+            return [], []
         time_values, memory_values = tuple(zip(*memory_usage_data))
         time_values = _subtract_first_element(list(time_values))
         if memory_from_zero:
@@ -171,6 +180,9 @@ class MemoryMonitor:
         # Save measurements to text file
         log_filepath = save_dir / f"{filename_label}.txt"
         with open(log_filepath, "w") as log_file:
+            if len(time_values) == 0:
+                log_file.write("No measurements recorded.\nPlease make sure logging duration or interval were enough.")
+                return
             for timestamp, memory_usage in zip(time_values, memory_values):
                 log_file.write(f"{timestamp} {memory_usage:.3f}\n")
 
@@ -222,11 +234,19 @@ class MemoryMonitor:
                 header_line = -3
                 res_column = 5  # Resident Memory Size (KiB): The non-swapped physical memory a task is using.
 
-                res = subprocess.run(
-                    f"top -n 1 -p {os.getpid()}".split(" "),
-                    capture_output=True,
-                    text=True,
-                )
+                try:
+                    res = subprocess.run(
+                        f"top -n 1 -p {os.getpid()}".split(" "),
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                    )
+                except subprocess.CalledProcessError as e:
+                    raise RuntimeError(
+                        f"top command returned non-zero exit code. Can't collect memory values.\n"
+                        f"Make sure top is an available executable name. Possibly, running python "
+                        f"script through terminal may work.\nOriginal exception:\n{e}"
+                    )
                 stdout, _ = res.stdout, res.stderr
                 lines = stdout.split(new_line_delimiter)
                 if len(lines) < abs(header_line):
