@@ -115,6 +115,18 @@ def inv(a: Tensor) -> Tensor:
 
 @functools.singledispatch
 @tensor_guard
+def pinv(a: Tensor) -> Tensor:
+    """
+    Compute the (Moore-Penrose) pseudo-inverse of a matrix.
+
+    :param a: The input tensor of shape (*, M, N) where * is zero or more batch dimensions.
+    :return: The pseudo-inverse of input tensor.
+    """
+    return Tensor(pinv(a.data))
+
+
+@functools.singledispatch
+@tensor_guard
 def lstsq(a: Tensor, b: Tensor, driver: Optional[str] = None) -> Tensor:
     """
     Compute least-squares solution to equation Ax = b.

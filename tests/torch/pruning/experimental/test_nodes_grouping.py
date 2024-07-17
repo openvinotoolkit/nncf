@@ -488,14 +488,14 @@ def test_groups(desc: GroupTestDesc, mocker, tmp_path):
 BIG_MODEL_DESCS = [
     GroupTestDesc(
         model_desc=GeneralModelDesc(
-            model_name="MobileBERT big",
+            model_name="MobileBERT_big",
             input_info=[dict(sample_size=[1, 128], type="long")] * 4,
             model_builder=get_mobile_bert_big_model,
         ),
     ),
     GroupTestDesc(
         model_desc=GeneralModelDesc(
-            model_name="Swin big",
+            model_name="Swin_big",
             input_info=dict(sample_size=[1, 3, 224, 224]),
             model_builder=get_swin_tiny_model,
         )

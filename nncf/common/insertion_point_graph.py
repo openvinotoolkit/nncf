@@ -12,7 +12,7 @@
 from collections import defaultdict
 from copy import deepcopy
 from enum import Enum
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Set
 
 import networkx as nx
 
@@ -23,7 +23,6 @@ from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.patterns import GraphPattern
-from nncf.common.logging import nncf_logger
 
 
 class InsertionPointGraphNodeType(Enum):
@@ -393,34 +392,3 @@ class InsertionPointGraph(nx.DiGraph):
     @staticmethod
     def get_post_hook_node_key(node_key: str) -> str:
         return InsertionPointGraph.POST_HOOK_ID_PREFIX + node_key
-
-
-class ConstantNodesFilter:
-    @staticmethod
-    def filter(ip_graph: InsertionPointGraph, start_traversing_node_keys: Optional[List[str]]) -> InsertionPointGraph:
-        """
-        Removes all Constant nodes from InsertionPointGraph, making it inference graph.
-        The traversing starts from the input nodes and nodes with weights.
-
-        :param ip_graph: The original InsertionPointGraph.
-        :param start_traversing_node_keys: Keys of the nodes from which the traversing will be start.
-        :return: InsertionPointGraph without Constant nodes.
-        """
-        input_nodes = ip_graph.get_input_nodes()
-        if not input_nodes:
-            nncf_logger.debug("Skipped filtering - no input nodes found")
-            return ip_graph
-        weight_nodes = []
-        if start_traversing_node_keys is not None:
-            weight_nodes = [
-                ip_graph.get_merged_node_from_single_node_key(weight_node) for weight_node in start_traversing_node_keys
-            ]
-        visited_nodes = set()
-        start_nodes = input_nodes + weight_nodes
-        for node in start_nodes:
-            for node_from, node_to in nx.bfs_edges(ip_graph, source=node):
-                visited_nodes.add(node_from)
-                visited_nodes.add(node_to)
-        constant_nodes = [node for node in ip_graph.nodes if node not in visited_nodes]
-        ip_graph.remove_nodes_from(constant_nodes)
-        return ip_graph

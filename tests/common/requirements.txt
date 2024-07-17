@@ -1,5 +1,6 @@
 -c ../../constraints.txt
 pytest
 pytest-cov
+pytest-dependency
 pytest-mock
 pytest-xdist

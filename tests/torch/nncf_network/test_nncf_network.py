@@ -883,7 +883,7 @@ def test_torch_return_type_traced():
     assert visited_times == 1
 
 
-class TestWhisperDecoderModel(torch.nn.Module):
+class WhisperDecoderTestModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.embedding = torch.nn.Embedding(10, 3)
@@ -905,7 +905,7 @@ class ZeroHook(torch.nn.Module):
 
 
 def test_insert_hook_after_parameter():
-    model = TestWhisperDecoderModel()
+    model = WhisperDecoderTestModel()
     example_input = torch.randint(0, 9, (2,))
     nncf_model = wrap_model(model, example_input, trace_parameters=True)
     result = nncf_model(example_input)
