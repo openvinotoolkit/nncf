@@ -409,14 +409,18 @@ class PTQTestPipeline(BaseTestPipeline):
         """
         if not self.run_benchmark_app:
             return
-        runner = Command(f"benchmark_app -m {self.path_compressed_ir}")
-        runner.run(stdout=False)
-        cmd_output = " ".join(runner.output)
 
-        match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
-        if match is not None:
-            fps = match.group(1)
-            self.run_info.fps = float(fps)
+        try:
+            runner = Command(f"benchmark_app -m {self.path_compressed_ir}")
+            runner.run(stdout=False)
+            cmd_output = " ".join(runner.output)
+
+            match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
+            if match is not None:
+                fps = match.group(1)
+                self.run_info.fps = float(fps)
+        except Exception as e:
+            print(e)
 
     def cleanup_cache(self):
         """
