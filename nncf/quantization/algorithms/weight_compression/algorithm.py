@@ -537,7 +537,7 @@ class WeightCompression(Algorithm):
         for node_name, output_id in _collected_stat_inputs_map.items():
             act_node_name, output_port_id = output_id
             x_fp = self._get_fp_inputs(statistic_container, node_name=act_node_name, port_id=output_port_id)
-            x_fp = [i.squeeze() for i in x_fp]  # List[tensor(seq_length, hidden_dim)]
+            x_fp = [i.squeeze(0) if len(i.shape) == 3 else i for i in x_fp]  # List[tensor(seq_length, hidden_dim)]
             activations[node_name] = x_fp
 
             for shared_node_name in act_vs_shared_node_names_mapping[act_node_name]:
