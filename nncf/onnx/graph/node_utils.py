@@ -116,9 +116,7 @@ def is_port_quantized(node: NNCFNode, nncf_graph: NNCFGraph, port_id: int) -> bo
     :return: True if a port_id is quantized - have ONNXDequantizeLinearMetatype as a parent node.
     """
     edge = nncf_graph.get_input_edge_by_port_id(node, port_id)
-    if edge:
-        return edge.from_node.metatype == ONNXDequantizeLinearMetatype
-    return False
+    return edge.from_node.metatype == ONNXDequantizeLinearMetatype
 
 
 def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:

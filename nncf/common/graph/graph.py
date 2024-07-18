@@ -348,7 +348,7 @@ class NNCFGraph:
             edges.extend(self._get_edges(from_node, node))
         return sorted(edges, key=lambda x: x.input_port_id)
 
-    def get_input_edge_by_port_id(self, node: NNCFNode, port_id: int) -> Optional[NNCFGraphEdge]:
+    def get_input_edge_by_port_id(self, node: NNCFNode, port_id: int) -> NNCFGraphEdge:
         """
         Returns the input edge for a given node, where edge.input_port_id == port_id is True.
 
@@ -358,12 +358,16 @@ class NNCFGraph:
             given node.
         """
         edges = [e for e in self.get_input_edges(node) if e.input_port_id == port_id]
+        if len(edges) == 0:
+            raise nncf.ValidationError(
+                f"Node {node.node_name} does not contain input edge connected to {port_id} port ID."
+            )
+
         if len(edges) > 1:
             raise nncf.InternalError(
                 "Unsupported graph. More than one edge was found for a given node by the specified input port ID."
             )
-        edge = None if len(edges) == 0 else edges[0]
-        return edge
+        return edges[0]
 
     def get_output_edges(self, node: NNCFNode) -> List[NNCFGraphEdge]:
         """
