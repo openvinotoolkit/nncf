@@ -48,7 +48,7 @@ def validate(path_to_model: Path, validation_loader: torch.utils.data.DataLoader
     predictions = []
     references = []
 
-    compiled_model = ov.compile_model(path_to_model)
+    compiled_model = ov.compile_model(path_to_model, device_name="CPU")
     output = compiled_model.outputs[0]
 
     for images, target in tqdm(validation_loader):

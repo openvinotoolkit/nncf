@@ -38,6 +38,12 @@ OPERATOR_MAP = {
     "truediv": operator.truediv,
     "floordiv": operator.floordiv,
     "neg": lambda a, _: -a,
+    "iadd": operator.iadd,
+    "isub": operator.isub,
+    "imul": operator.imul,
+    "ipow": operator.ipow,
+    "itruediv": operator.itruediv,
+    "ifloordiv": operator.ifloordiv,
 }
 BINARY_OPERATORS = ["add", "sub", "pow", "mul", "truediv", "floordiv"]
 
@@ -93,8 +99,8 @@ class TemplateTestNNCFTensorOperators:
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
     def test_operators_tensor(self, op_name):
-        tensor_a = self.to_tensor([1, 2])
-        tensor_b = self.to_tensor([22, 11])
+        tensor_a = self.to_tensor([1.0, 2.0])
+        tensor_b = self.to_tensor([22.0, 11.0])
 
         nncf_tensor_a = Tensor(tensor_a)
         nncf_tensor_b = Tensor(tensor_b)
@@ -110,8 +116,8 @@ class TemplateTestNNCFTensorOperators:
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
     def test_operators_int(self, op_name):
-        tensor_a = self.to_tensor([1, 2])
-        value = 2
+        tensor_a = self.to_tensor([1.0, 2.0])
+        value = 2.0
 
         nncf_tensor_a = Tensor(tensor_a)
 
@@ -1090,6 +1096,12 @@ class TemplateTestNNCFTensorOperators:
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == tensor1.device
 
+        res = tensor1 @ tensor2
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor1.device
+
     @pytest.mark.parametrize(
         "val, axis, ref",
         (
@@ -1336,6 +1348,15 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == tensor_a.device
+
+    def test_fn_linalg_pinv(self):
+        a = [[1.0], [2.0]]
+        A = Tensor(self.to_tensor(a))
+        B = fns.linalg.pinv(A)
+        assert isinstance(B, Tensor)
+        assert B.device == A.device
+        assert fns.allclose(A, A @ B @ A)
+        assert fns.allclose(B, B @ A @ B)
 
     @pytest.mark.parametrize(
         "a, k, ref",

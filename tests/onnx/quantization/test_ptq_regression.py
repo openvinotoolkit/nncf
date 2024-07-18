@@ -86,7 +86,7 @@ def validate(quantized_model_path: Path, data_loader: torch.utils.data.DataLoade
         701: 9,  # parachute
     }
     core = Core()
-    compiled_model = core.compile_model(quantized_model_path, "CPU")
+    compiled_model = core.compile_model(quantized_model_path, device_name="CPU")
     infer_queue = ov.AsyncInferQueue(compiled_model)
 
     predictions = [0] * len(data_loader)

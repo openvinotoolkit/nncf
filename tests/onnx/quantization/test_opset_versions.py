@@ -22,7 +22,7 @@ TEST_OPSETS = [7, 10, 13]  # NON SUPPORTED  # PER-TENSOR ONLY  # FULLY SUPPORTED
 
 @pytest.mark.parametrize("opset_version", TEST_OPSETS)
 def test_model_opset_version(tmp_path, opset_version):
-    model = models.mobilenet_v2(pretrained=True)
+    model = models.mobilenet_v2(weights=models.MobileNet_V2_Weights.IMAGENET1K_V1)
     input_shape = [1, 3, 224, 224]
     x = torch.randn(input_shape, requires_grad=False)
     torch.onnx.export(model, x, tmp_path / "model.onnx", opset_version=opset_version)

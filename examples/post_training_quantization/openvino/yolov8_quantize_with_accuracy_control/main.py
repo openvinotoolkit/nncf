@@ -42,7 +42,7 @@ def validate(
     validator.batch_i = 1
     validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
     model.reshape({0: [1, 3, -1, -1]})
-    compiled_model = ov.compile_model(model)
+    compiled_model = ov.compile_model(model, device_name="CPU")
     num_outputs = len(model.outputs)
     for batch_i, batch in enumerate(data_loader):
         if num_samples is not None and batch_i == num_samples:

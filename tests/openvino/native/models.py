@@ -282,21 +282,21 @@ class ScaleShiftReluModel(OVReferenceModel):
 
 
 class FPModel(OVReferenceModel):
-    def __init__(self, const_dtype="FP32", input_dtype="FP32"):
-        self.const_dtype = np.float32 if const_dtype == "FP32" else np.float16
-        self.input_dtype = np.float32 if input_dtype == "FP32" else np.float16
+    def __init__(self, const_dtype: ov.Type = ov.Type.f32, input_dtype: ov.Type = ov.Type.f32):
+        self.const_dtype = const_dtype
+        self.input_dtype = input_dtype
         super().__init__()
 
     def _create_ov_model(self):
         input_shape = [1, 3, 4, 2]
         input_1 = opset.parameter(input_shape, name="Input", dtype=self.input_dtype)
-        data = self._rng.random((1, 3, 4, 5)).astype(self.const_dtype)
+        data = opset.constant(value=self._rng.random((1, 3, 4, 5)), dtype=self.const_dtype, name="MatMul_const")
         if self.const_dtype != self.input_dtype:
-            data = opset.convert(data, self.input_dtype)
+            data = opset.convert(data, self.input_dtype.to_string())
         matmul = opset.matmul(input_1, data, transpose_a=True, transpose_b=False, name="MatMul")
-        bias = self._rng.random((1, 3, 1, 1)).astype(self.const_dtype)
+        bias = opset.constant(value=self._rng.random((1, 3, 1, 1)), dtype=self.const_dtype, name="MatMul_bias")
         if self.const_dtype != self.input_dtype:
-            bias = opset.convert(bias, self.input_dtype)
+            bias = opset.convert(bias, self.input_dtype.to_string())
         add = opset.add(matmul, bias, name="Add")
         result = opset.result(add, name="Result_Add")
         result.get_output_tensor(0).set_names(set(["Result_Add"]))
@@ -1120,4 +1120,14 @@ class IfModel_2(OVReferenceModel):
         if_node.set_output(then_body.results[0], else_body.results[0])
         result = opset.result(if_node, name="Result")
         model = ov.Model([result], [input_1, input_2])
+        return model
+
+
+class PreluModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input = opset.parameter([1, 3, 4, 2], name="Input")
+        prelu = opset.prelu(input, slope=1)
+        result = opset.result(prelu, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input])
         return model

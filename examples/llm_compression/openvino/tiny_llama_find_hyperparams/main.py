@@ -241,7 +241,12 @@ def tiny_llama_transform_func(item, tokenizer, ov_model):  # <YOUR_TRANSFORMATIO
 
 def main():
     model_id = "TinyLlama/TinyLlama-1.1B-step-50K-105b"  # <YOUR_MODEL_ID>
-    ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": ""}
+    ov_config = {
+        "PERFORMANCE_HINT": "LATENCY",
+        "NUM_STREAMS": "1",
+        "CACHE_DIR": "",
+        "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0",
+    }
     model = OVModelForCausalLM.from_pretrained(
         model_id,
         export=True,

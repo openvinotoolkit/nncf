@@ -1,0 +1,6 @@
+tinyllama_data_aware_awq_scale_estimation_backend_OV:
+  metric_value: 0.84038
+tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
+  metric_value: 0.84038
+tinyllama_data_aware_gptq_backend_OV:
+  metric_value: 0.81936
