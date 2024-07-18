@@ -498,6 +498,14 @@ def create_arithmetic_activations() -> GraphPattern:
     return arithmetic
 
 
+@OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ARITHMETIC_ACTIVATIONS_ARITHMETIC)
+def create_arithmetic_activations_arithmetic() -> GraphPattern:
+    arithmetic_activations = create_arithmetic_activations()
+    arithmetic = arithmetic_operations()
+    arithmetic_activations.join_patterns(arithmetic)
+    return arithmetic_activations
+
+
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.BATCH_NORM_ACTIVATIONS)
 def create_batch_norm_activations() -> GraphPattern:
     batch_norm = batch_normalization_operations()

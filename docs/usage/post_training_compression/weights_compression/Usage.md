@@ -40,7 +40,7 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM) # 
 - Generally, `INT4_SYM` mode is the fastest mixed-precision mode, but it may lead to a significant accuracy degradation or perplexity increase.
   Compressing weights asymmetrically (`INT4_ASYM` mode) is the way to increase accuracy, however in turns it slows down inference a bit.
   If the accuracy or perplexity is still not satisfying, there are 2 more hyper-parameters to tune: `group_size` and `ratio`. Please refer to the [example](https://github.com/openvinotoolkit/nncf/blob/develop/examples/llm_compression/openvino/tiny_llama_find_hyperparams) how to automatically tune these parameters.
-  Lower group size and less ratio of 4-bit layers usually improve accuracy at the sacrifice of inference speed.
+  Lower group size and less ratio of 4-bit layers usually improve accuracy at the sacrifice of inference speed. To disable grouped quantization and quantize weights per-channel, set `group_size = -1`.
   Below is the example how to compress weights of 90% of layers to 4-bit integer asymmetrically with the group size 64, and
   the rest of layers to 8-bit asymmetric integer data type. The same parametrization is applicable for `INT4_SYM` mode.
 

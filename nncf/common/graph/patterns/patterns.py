@@ -330,6 +330,8 @@ class HWFusedPatternNames(Enum):
     ACTIVATIONS_SCALE_SHIFT = PatternDesc("activations_scale_shift")
     ARITHMETIC_ACTIVATIONS = PatternDesc("arithmetic_activations")
     ARITHMETIC_ACTIVATIONS_BATCH_NORM = PatternDesc("arithmetic_activations_batch_norm")
+    # StyleGan2
+    ARITHMETIC_ACTIVATIONS_ARITHMETIC = PatternDesc("arithmetic_activations_arithmetic")
     ARITHMETIC_ACTIVATIONS_SCALE_SHIFT = PatternDesc("arithmetic_activations_scale_shift")
     ARITHMETIC_BATCH_NORM = PatternDesc("arithmetic_batch_norm")
     ARITHMETIC_BATCH_NORM_ACTIVATIONS = PatternDesc("arithmetic_batch_norm_activations")

@@ -111,7 +111,7 @@ INSTALL_REQUIRES = [
     "packaging>=20.0",
     "pandas>=1.1.5,<2.3",
     "psutil",
-    "pydot>=1.4.1",
+    "pydot>=1.4.1, <3.0.0",
     "pymoo>=0.6.0.1",
     "rich>=13.5.2",
     "scikit-learn>=0.24.0",

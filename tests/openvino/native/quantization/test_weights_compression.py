@@ -747,8 +747,7 @@ def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
 def test_call_max_var_criterion_with_dataset_awq_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([8, 8])])
-    with pytest.raises(AttributeError):
-        compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, awq=True)
+    compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, awq=True)
 
 
 def test_data_type_for_num_weights(mocker):
@@ -857,8 +856,7 @@ def test_call_max_var_criterion_with_dataset_scale_estimation_neg_group_size(mod
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([8, 8])])
 
-    with pytest.raises(AttributeError):
-        compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, scale_estimation=True)
+    compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, scale_estimation=True)
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
@@ -943,3 +941,17 @@ def test_np_ov_compression_decompression(mode):
 
     assert np.allclose(compressed_weighs, compressed_weighs_ov)
     assert np.allclose(decompressed_weighs, decompressed_weighs_ov)
+
+
+@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+def test_call_max_var_criterion_with_dataset_gptq_neg_group_size(mode):
+    model = AWQMatmulModel().ov_model
+    sz = 8
+    dataset = Dataset([np.ones([sz, sz])])
+
+    compressed_model = compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, gptq=True)
+
+    for op in compressed_model.get_ordered_ops():
+        op_name = op.get_friendly_name()
+        if op.get_type_name() == "Constant" and ("/zero_point" in op_name or "/scale" in op_name):
+            assert op.get_shape() == [sz, 1]

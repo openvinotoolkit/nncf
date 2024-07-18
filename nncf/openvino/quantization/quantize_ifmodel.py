@@ -300,8 +300,8 @@ class OVBackend:
         commands = []
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         ov_node = name_to_node_mapping[if_node.node_name]
-        for port_id in range(len(ov_node.inputs())):
-            commands.append(
-                OVOutputInsertionCommand(OVTargetPoint(TargetType.PRE_LAYER_OPERATION, if_node.node_name, port_id))
-            )
+        for port_id, ov_input in enumerate(ov_node.inputs()):
+            target_point = OVTargetPoint(TargetType.PRE_LAYER_OPERATION, if_node.node_name, port_id)
+            ov_input_dtype = ov_input.get_element_type()
+            commands.append(OVOutputInsertionCommand(target_point, output_dtype=ov_input_dtype))
         return commands
