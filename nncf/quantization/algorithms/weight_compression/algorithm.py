@@ -482,6 +482,22 @@ class WeightCompression(Algorithm):
         self._fp_inputs[input_id] = input_fp
         return self._fp_inputs[input_id]
 
+    @staticmethod
+    def _get_dynamic_shape(x: List[Tensor]):
+        if len(x) == 0:
+            return []
+        res = list(x[0].shape)
+        sz = len(res)
+
+        for i in x:
+            i_shape = i.shape
+            for j in range(sz):
+                if i_shape[j] != res[j]:
+                    res[j] = -1
+        res = [i for i in res if i != 1]
+
+        return res
+
     def _get_activations(
         self, dataset: Dataset, subset_size: int, nodes_to_compress: List[NNCFNode], graph: NNCFGraph, model: TModel
     ) -> Dict[str, List[Tensor]]:
@@ -537,7 +553,9 @@ class WeightCompression(Algorithm):
         for node_name, output_id in _collected_stat_inputs_map.items():
             act_node_name, output_port_id = output_id
             x_fp = self._get_fp_inputs(statistic_container, node_name=act_node_name, port_id=output_port_id)
-            x_fp = [i.squeeze(0) if len(i.shape) == 3 else i for i in x_fp]  # List[tensor(seq_length, hidden_dim)]
+
+            d_shape = self._get_dynamic_shape(x_fp)
+            x_fp = [i.reshape(d_shape) for i in x_fp]  # List[tensor(seq_length, hidden_dim)]
             activations[node_name] = x_fp
 
             for shared_node_name in act_vs_shared_node_names_mapping[act_node_name]:
