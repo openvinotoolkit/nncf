@@ -705,16 +705,12 @@ class MinMaxQuantization(Algorithm):
             )
         # If quantization of node's output or Model Input node
         else:
-            # NOTE: The `quantization_point` object does not contain information about
-            # where exactly (on which `output_port_id`) the quantize operation should be
-            # inserted. Usually, `output_port_id = 0` is used because we haven't encountered
-            # models with operations that have multiple outputs with different output port ids.
-            # Currently, such models are not supported.
-            # The workaround below allows the insertion of the quantize operation for operations with
-            # multiple outputs that have different output port ids, but only when one is used.
-            # For example, an operation U has {0, 1, 2} output port ids, but only `output_port_id = 1` is used.
-            # This means that there are only edges in the graph that connect `output_port_id = 1` of node U with
-            # `input_port_id = i` of node W.
+            # NOTE: Assumes that the operation has output edges only from one output port because
+            # we haven't encountered a model with operations that have multiple output edges with different
+            # output port IDs. Currently, such models are not supported. Usually, `output_port_id = 0` is used.
+            # However, there are operations, such as LSTMSequence, where the `output_port_id` changes from case
+            # to case. Therefore, the code below is required to dynamically determine the `output_port_id` where
+            # the quantize operation should be inserted."
             node = nncf_graph.get_node_by_name(node_name)
             unique_output_port_ids = set(e.output_port_id for e in nncf_graph.get_output_edges(node))
             if len(unique_output_port_ids) > 1:
