@@ -267,7 +267,7 @@ class ScaleEstimation:
 
             # iterative rectification of scale based on grid search
             for scale_steps in range(self._scale_steps):
-                factor = 1.0 + 0.05 * scale_steps
+                factor = 1.0 - 0.05 * scale_steps
                 scaled_scale = factor * scale
 
                 input_tensors[1] = scaled_scale.data
