@@ -581,10 +581,11 @@ class OVModelTransformer(ModelTransformer):
             output_node = name_to_node_mapping[output_name]
 
             result_name = get_result_node_name(output_name, output_port_id)
-            if output_node.get_element_type() != outputs_type:
-                output_node = opset.convert(output_node, destination_type=outputs_type)
-            new_result = opset.result(output_node, name=result_name)
-            result_tensor_names = [result_name] + list(output_node.output(0).get_names())
+            output_port = output_node.output(output_port_id)
+            if output_port.get_element_type() != outputs_type:
+                output_port = opset.convert(output_node, destination_type=outputs_type).output(0)
+            new_result = opset.result(output_port, name=result_name)
+            result_tensor_names = [result_name] + list(output_port.get_names())
             OVModelTransformer._update_tensor_names([new_result.get_output_tensor(0)], result_tensor_names)
             results.append(new_result)
 
