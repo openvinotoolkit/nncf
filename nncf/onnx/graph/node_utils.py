@@ -115,11 +115,8 @@ def is_port_quantized(node: NNCFNode, nncf_graph: NNCFGraph, port_id: int) -> bo
     :param port_id: Input port id of a node.
     :return: True if a port_id is quantized - have ONNXDequantizeLinearMetatype as a parent node.
     """
-    input_nodes = [edge.from_node for edge in nncf_graph.get_input_edges(node)]
-    if len(input_nodes) > port_id:
-        weight_node = input_nodes[port_id]
-        return weight_node.metatype == ONNXDequantizeLinearMetatype
-    return False
+    edge = nncf_graph.get_input_edge_by_port_id(node, port_id)
+    return edge.from_node.metatype == ONNXDequantizeLinearMetatype
 
 
 def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
@@ -172,9 +169,13 @@ def _get_activation_tensor_shape(
     :return: None, if there is no shape info, otherwise - tensor shape.
     """
     if target_point.type == TargetType.PRE_LAYER_OPERATION:
-        shape = nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
+        edge = nncf_graph.get_input_edge_by_port_id(node, target_point.port_id)
+        shape = edge.tensor_shape
     elif target_point.type == TargetType.POST_LAYER_OPERATION:
-        shape = nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
+        # NOTE: Assumes that all output edges for the `node` with `output_port_id`
+        # equal to `target_point.port_id` should have the same `tensor_shape` value.
+        edges = nncf_graph.get_output_edges_by_port_id(node, target_point.port_id)
+        shape = edges[0].tensor_shape
     else:
         raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
     if not shape:  # ONNX model can not have a shape of a edge, even after shape inference.

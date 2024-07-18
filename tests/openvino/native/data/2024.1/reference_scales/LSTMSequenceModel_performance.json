@@ -45,11 +45,11 @@
             ]
         ]
     },
-    "LSTMSequence/fq_output_0": {
+    "LSTMSequence/fq_output_1": {
         "input_low": 0.0,
-        "input_high": 0.23005808889865875,
+        "input_high": 0.12186191976070404,
         "output_low": 0.0,
-        "output_high": 0.23005808889865875
+        "output_high": 0.12186191976070404
     },
     "LSTMSequence/fq_weights_5": {
         "input_low": [

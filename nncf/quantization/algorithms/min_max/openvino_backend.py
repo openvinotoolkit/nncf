@@ -138,10 +138,16 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: OVTargetPoint) -> Tuple[int, ...]:
         if target_point.is_weight_target_point():
             return node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
+
         if target_point.type == TargetType.PRE_LAYER_OPERATION:
-            return nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
+            edge = nncf_graph.get_input_edge_by_port_id(node, target_point.port_id)
+            return edge.tensor_shape
         elif target_point.type == TargetType.POST_LAYER_OPERATION:
-            return nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
+            # NOTE: Assumes that all output edges for the `node` with `output_port_id`
+            # equal to `target_point.port_id` should have the same `tensor_shape` value.
+            edges = nncf_graph.get_output_edges_by_port_id(node, target_point.port_id)
+            return edges[0].tensor_shape
+
         raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
 
     @staticmethod
