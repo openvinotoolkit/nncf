@@ -484,6 +484,15 @@ class WeightCompression(Algorithm):
 
     @staticmethod
     def _get_dynamic_shape(x: List[Tensor]):
+        """
+        Compute common shape for set of tensors.
+        For example: return [-1, 10] for tensors with shapes [[1, 10], [5, 10], [100, 10]]
+            or [-1, 10] for tensors with shapes [[1, 1, 10], [1, 1, 10], [1, 100, 10]]
+        :param x: (List[Tensor]): Set of tensors.
+
+        :return: resulting shape with -1 for dimension with dynamic axis,
+                 common size for dimension with static axis if size > 1 else None.
+        """
         if len(x) == 0:
             return []
         res = list(x[0].shape)
