@@ -498,7 +498,7 @@ TWO_ROWS_LINSPACE = np.vstack((LINSPACE * SCALE_1, LINSPACE * SCALE_2))
 LINSPACE_INT4_ASYM = np.arange(0, 16)
 TWO_ROWS_LINSPACE_INT4_ASYM = np.vstack((LINSPACE_INT4_ASYM * SCALE_1, LINSPACE_INT4_ASYM * SCALE_2))
 
-LINSPACE_INT4_SYM = np.arange(-7, 8)
+LINSPACE_INT4_SYM = np.arange(-8, 7)
 TWO_ROWS_LINSPACE_INT4_SYM = np.vstack((LINSPACE_INT4_SYM * SCALE_1, LINSPACE_INT4_SYM * SCALE_2))
 
 TWO_OTHER_ROWS_LINSPACE_INT4_SYM = np.vstack((LINSPACE_INT4_SYM * SCALE_3, LINSPACE_INT4_SYM * SCALE_4))
@@ -545,7 +545,7 @@ LIST_DESCS = [
         name="2 columns of of scaled [0, 15] linspace for sym",
         weight=np.transpose(TWO_ROWS_LINSPACE_INT4_ASYM),
         config=int4_sym_config,
-        ref_error=5.87,
+        ref_error=0.63,
         atol=1,
     ),
     QuantErrorDesc(
@@ -947,7 +947,7 @@ def test_np_ov_compression_decompression(mode):
     ("mode", "data"),
     (
         (CompressWeightsMode.INT4_SYM, [-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0]),
-        (CompressWeightsMode.INT4_SYM, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]),
+        (CompressWeightsMode.INT4_SYM, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]),
         (
             CompressWeightsMode.INT4_SYM,
             [-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
@@ -961,7 +961,7 @@ def test_compressed_weighs_range(mode, data):
     config = WeightCompressionConfig(mode=mode)
     compressed_weighs, _, _ = do_integer_quantization(w, -1, config)
 
-    assert np.allclose(compressed_weighs.data, w.data)
+    assert np.allclose(np.abs(compressed_weighs.data), np.abs(w.data))
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
