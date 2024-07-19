@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.experimental.torch.sparsify_activations.sparsify_activations_impl`
+================================================================================
+
+.. py:module:: nncf.experimental.torch.sparsify_activations.sparsify_activations_impl
+
+
