@@ -50,6 +50,10 @@ def post_training_quantization_openvino_mobilenet_v2_quantize() -> Dict[str, flo
 
 
 def post_training_quantization_tensorflow_mobilenet_v2() -> Dict[str, float]:
+    import tensorflow_datasets as tfds
+
+    tfds.display_progress_bar(enable=False)
+
     example_root = str(PROJECT_ROOT / "examples" / "post_training_quantization" / "tensorflow" / "mobilenet_v2")
     return post_training_quantization_mobilenet_v2(example_root)
 
