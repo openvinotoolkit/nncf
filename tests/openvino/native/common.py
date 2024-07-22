@@ -88,9 +88,8 @@ def get_openvino_major_minor_version() -> Tuple[int]:
 
 
 def get_openvino_version() -> str:
-    major_verison, minor_version = get_openvino_major_minor_version()
-
-    return f"{major_verison}.{minor_version}"
+    major_version, minor_version = get_openvino_major_minor_version()
+    return f"{major_version}.{minor_version}"
 
 
 def get_actual_reference_for_current_openvino(rel_path: Path) -> Path:
