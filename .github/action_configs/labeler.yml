@@ -74,3 +74,8 @@ NNCF Common:
       - 'examples/common/**/*!(.md)'
       - 'nncf/common/**/*!(.md)'
       - 'tests/common/**/*!(.md)'
+
+release target:
+- any:
+  - base-branch:
+    - '^release_v*'
