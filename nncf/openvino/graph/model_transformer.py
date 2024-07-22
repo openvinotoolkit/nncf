@@ -269,16 +269,27 @@ class OVModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def _create_constant(value: np.ndarray, dtype: ov.Type, name: str) -> ov.Node:
+    def _create_constant(value: np.ndarray, dtype: ov.Type, name: str, shared_memory: bool = False) -> ov.Node:
         """
         Creates constant using opset.
 
         :param value: Numpy value.
         :param type: Constant type.
         :param name: Name for the constant.
+        :param shared_memory: Shared memory option.
         :return: ov.Node instance.
         """
-        return opset.constant(value, dtype=dtype, name=name)
+
+        def _convert_to_dtype(value, dtype):
+            clip_data = np.clip(value, np.finfo(dtype).min, np.finfo(dtype).max)
+            return clip_data.astype(dtype)
+
+        constant_value = value
+        constant_dtype = dtype.to_dtype()
+        if constant_value.dtype != constant_dtype:
+            constant_value = _convert_to_dtype(constant_value, constant_dtype)
+
+        return opset.constant(constant_value, dtype=constant_dtype, name=name, shared_memory=shared_memory)
 
     @staticmethod
     def _create_fake_quantize(
@@ -511,7 +522,7 @@ class OVModelTransformer(ModelTransformer):
             # Shared memory does not work for BF16 precision
             shared_memory = False
 
-        new_const_node = opset.constant(
+        new_const_node = OVModelTransformer._create_constant(
             const_value,
             dtype=const_port.get_element_type(),
             name=const_node.get_friendly_name(),
