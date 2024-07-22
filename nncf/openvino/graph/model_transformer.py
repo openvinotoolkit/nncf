@@ -68,6 +68,11 @@ class OVModelTransformer(ModelTransformer):
         ]
 
     @staticmethod
+    def _convert_to_dtype(value, dtype):
+        clip_data = np.clip(value, np.finfo(dtype).min, np.finfo(dtype).max)
+        return clip_data.astype(dtype)
+
+    @staticmethod
     def _get_name_to_node_mapping(model: ov.Model) -> Dict[str, ov.Node]:
         """
         Returns name to node mapping.
@@ -279,17 +284,12 @@ class OVModelTransformer(ModelTransformer):
         :param shared_memory: Shared memory option.
         :return: ov.Node instance.
         """
-
-        def _convert_to_dtype(value, dtype):
-            clip_data = np.clip(value, np.finfo(dtype).min, np.finfo(dtype).max)
-            return clip_data.astype(dtype)
-
         constant_value = value
-        constant_dtype = dtype.to_dtype()
-        if constant_value.dtype != constant_dtype:
-            constant_value = _convert_to_dtype(constant_value, constant_dtype)
+        # BF16 does not support type conversion in numpy
+        if dtype != ov.Type.bf16 and constant_value.dtype != dtype.to_dtype():
+            constant_value = OVModelTransformer._convert_to_dtype(constant_value, dtype.to_dtype())
 
-        return opset.constant(constant_value, dtype=constant_dtype, name=name, shared_memory=shared_memory)
+        return opset.constant(constant_value, dtype=dtype, name=name, shared_memory=shared_memory)
 
     @staticmethod
     def _create_fake_quantize(
