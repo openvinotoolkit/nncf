@@ -18,7 +18,6 @@ from torch.ao.quantization.pt2e.duplicate_dq_pass import DuplicateDQPass
 from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
 from torch.ao.quantization.pt2e.qat_utils import _fold_conv_bn_qat
 from torch.ao.quantization.pt2e.utils import _disallow_eval_train
-from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
 
@@ -26,7 +25,6 @@ import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.quantization.structs import QuantizationScheme
 from nncf.data import Dataset
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.experimental.torch.fx.transformations import revert_quantization_transformations
@@ -34,7 +32,6 @@ from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.scopes import IgnoredScope
 
@@ -72,15 +69,6 @@ def quantize_impl(
 
     copied_model = deepcopy(model)
 
-    if advanced_parameters is None:
-        advanced_parameters = AdvancedQuantizationParameters()
-    # Default quantization mode is asymmetric
-    activations_quantization_params = advanced_parameters.activations_quantization_params
-    if activations_quantization_params is None:
-        activations_quantization_params = QuantizationParameters()
-        activations_quantization_params.mode = QuantizationScheme.ASYMMETRIC
-        advanced_parameters.activations_quantization_params = activations_quantization_params
-
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,
         target_device=target_device,
@@ -90,12 +78,6 @@ def quantize_impl(
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
     )
-
-    # BatchNorm operations have 3 output ports,
-    # to make it easier for alorithms to work
-    # with the target graph BatchNorm operations
-    # are being fused
-    _fuse_conv_bn_(copied_model)
 
     # To make it easier for bias correction algorithms,
     # biases are being separated by the followng calls.

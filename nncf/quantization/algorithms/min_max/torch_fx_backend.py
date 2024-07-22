@@ -340,8 +340,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return types
 
     @staticmethod
-    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> List[str]:
-        return []
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
+        return set()
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
