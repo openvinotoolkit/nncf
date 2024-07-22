@@ -157,7 +157,7 @@ def calculate_e2m1_scale(weight: Tensor, reduction_axes: ReductionAxes, max_val=
 
 def calculate_signed_scale(weight: Tensor, reduction_axes: ReductionAxes, num_bits=4) -> Tensor:
     """
-    Calculates the scale for e2m1 quantization.
+    Calculates the signed scale for symmetric quantization.
 
     :param weight: Weight array to compress.
     :param reduction_axes: Axes along which to reduce (collect) different statistics (e.g., min, max).
