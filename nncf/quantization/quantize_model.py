@@ -359,6 +359,7 @@ def compress_weights(
     awq: Optional[bool] = None,
     scale_estimation: Optional[bool] = None,
     gptq: Optional[bool] = None,
+    lora_correction: Optional[bool] = None,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> TModel:
     """
@@ -405,8 +406,10 @@ def compress_weights(
     :param scale_estimation: Indicates whether a scale estimation algorithm is used that minimizes the L2 error
         between the original and compressed layers.
     :type scale_estimation: bool
-    :param gptq: Indicates whether use GPTQ algorithm.
+    :param gptq: Indicates whether to use GPTQ algorithm.
     :type gptq: bool
+    :param lora_correction: Indicates whether to use Lora Correction algorithm.
+    :type lora_correction: bool
     :param advanced_parameters: Advanced parameters for compression algorithms.
     :type advanced_parameters: nncf.AdvancedCompressionParameters
     :return: The non-trainable model with compressed weights.
@@ -431,10 +434,10 @@ def compress_weights(
                 f"but given {mode.value} mode."
             )
 
-        if True in [awq, scale_estimation, gptq]:
+        if True in [awq, scale_estimation, gptq, lora_correction]:
             raise AttributeError(
-                "Torch backend doesn`t supports scale estimation and AWQ algorithm, "
-                "but awq=True or scale_estimation=True or gptq=True is specified."
+                "Torch backend does not support 'awq', 'scale_estimation', 'gptq' and 'lora_correction' options. "
+                "Set them to None."
             )
 
         if is_wrapped_model(model):
@@ -460,10 +463,10 @@ def compress_weights(
             dataset is None or mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
         ):
             raise AttributeError(
-                "Scale estimation or AWQ algorithm defined, but dataset is None or mode is (NF4 or E2M1)."
+                "Scale estimation or AWQ algorithm is defined, but dataset is None or mode is (NF4 or E2M1)."
             )
-        if gptq and (dataset is None or mode == CompressWeightsMode.E2M1):
-            raise AttributeError("GPTQ algorithm defined, but dataset is None or mode is E2M1.")
+        if any((gptq, lora_correction)) and (dataset is None or mode == CompressWeightsMode.E2M1):
+            raise AttributeError("GPTQ or Lora Correction algorithm is defined, but dataset is None or mode is E2M1.")
 
         if gptq and scale_estimation:
             raise AttributeError(
@@ -482,7 +485,7 @@ def compress_weights(
                 "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
-        options = [all_layers, sensitivity_metric, dataset, awq, scale_estimation, gptq]
+        options = [all_layers, sensitivity_metric, dataset, awq, scale_estimation, gptq, lora_correction]
         if any(option is not None for option in options):
             raise AttributeError(
                 "INT8 modes do not support `all_layers`, `sensitivity_metric`, `awq`, `scale_estimation`, `gptq` "
@@ -501,6 +504,8 @@ def compress_weights(
         scale_estimation = False
     if gptq is None:
         gptq = False
+    if lora_correction is None:
+        lora_correction = False
     if ignored_scope is None:
         ignored_scope = IgnoredScope()
     if sensitivity_metric is None:
@@ -535,6 +540,7 @@ def compress_weights(
         subset_size,
         scale_estimation,
         gptq,
+        lora_correction,
         advanced_parameters,
     )
 
