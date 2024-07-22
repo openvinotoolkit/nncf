@@ -268,6 +268,7 @@ class TestONNXExport:
         pruned_file_bytes = pruned_file.stat().st_size
         not_pruned_file_bytes = not_pruned_file.stat().st_size
         file_size_ratio = 1 - pruned_file_bytes / not_pruned_file_bytes
+        assert pytest.approx(compression_rate, abs=1e-2) == desc.nncf_weight_ratio
         assert (
             pytest.approx(file_size_ratio, abs=3e-2) == desc.ov_weight_ratio
         ), f"IR's size ratio: 1 - {pruned_file_bytes}/{not_pruned_file_bytes}"
