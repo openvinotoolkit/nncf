@@ -203,10 +203,7 @@ class MinMaxQuantization(Algorithm):
 
         # preset definition
         if self._preset is None:
-            if model_type == ModelType.TRANSFORMER:
-                self._preset = QuantizationPreset.MIXED
-            else:
-                self._preset = QuantizationPreset.PERFORMANCE
+            self._preset = QuantizationPreset.MIXED
 
         self._override_device()
         self._set_mode_based_defaults()
