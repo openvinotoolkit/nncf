@@ -28,7 +28,6 @@ LINEAR_OPERATIONS = {
         om.PTModuleConv2dMetatype,
         om.PTModuleDepthwiseConv2dSubtype,
         # Conv3D
-        om.PTConv2dMetatype,
         om.PTConv3dMetatype,
         om.PTDepthwiseConv3dSubtype,
         om.PTModuleConv3dMetatype,
@@ -69,7 +68,6 @@ LAYER_NORMALIZATION_OPERATIONS = {
 RELU_OPERATIONS = {
     GraphPattern.METATYPE_ATTR: [
         om.PTRELUMetatype,
-        om.PTRELU6Metatype,
         om.PTHardTanhMetatype,
     ],
     GraphPattern.LABEL_ATTR: "RELU",
@@ -79,7 +77,6 @@ NON_RELU_ACTIVATIONS_OPERATIONS = {
     GraphPattern.METATYPE_ATTR: [
         om.PTELUMetatype,
         om.PTPRELUMetatype,
-        om.PTLeakyRELUMetatype,
         om.PTLeakyRELUMetatype,
         om.PTSigmoidMetatype,
         om.PTGELUMetatype,
