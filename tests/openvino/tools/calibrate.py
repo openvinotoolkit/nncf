@@ -1137,7 +1137,8 @@ def main():
     # TEST CODE
     fqs_nodes = get_fq_before_elementwise(output_model)
     nodes_names_to_remove = [node.get_friendly_name() for node in fqs_nodes]
-    print(nodes_names_to_remove)
+    print(f"number of removed FQs = {len(nodes_names_to_remove)}")
+    print(f"names of removed FQs = {nodes_names_to_remove}")
     for name in nodes_names_to_remove:
         output_model = remove_node(output_model, name)
     ov.serialize(output_model, output_model_path)
