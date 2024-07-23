@@ -236,15 +236,15 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return types
 
     @staticmethod
-    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> List[str]:
-        ignored_names = []
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
+        ignored_names = set()
         target_nodes = nncf_graph.get_nodes_by_metatypes([om.OVGRUSequenceMetatype])
         for node in target_nodes:
             if (
                 isinstance(node.layer_attributes, OVLayerAttributes)
                 and node.layer_attributes.input_attributes["linear_before_reset"]
             ):
-                ignored_names.append(node.node_name)
+                ignored_names.add(node.node_name)
         return ignored_names
 
     @staticmethod
