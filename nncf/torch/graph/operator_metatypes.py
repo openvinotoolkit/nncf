@@ -545,7 +545,13 @@ class PTSigmoidMetatype(PTOperatorMetatype):
 class PTAddMetatype(PTOperatorMetatype):
     name = "AddOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["add", "__add__", "__iadd__", "__radd__"],
+        NamespaceTarget.TORCH_TENSOR: [
+            "add",
+            "add_",
+            "__add__",
+            "__iadd__",
+            "__radd__",
+        ],
         NamespaceTarget.TORCH: ["add"],
     }
     hw_config_names = [HWConfigOpName.ADD]
@@ -556,7 +562,13 @@ class PTAddMetatype(PTOperatorMetatype):
 class PTSubMetatype(PTOperatorMetatype):
     name = "SubOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["sub", "__sub__", "__isub__", "__rsub__"],
+        NamespaceTarget.TORCH_TENSOR: [
+            "sub",
+            "sub_",
+            "__sub__",
+            "__isub__",
+            "__rsub__",
+        ],
         NamespaceTarget.TORCH: ["sub"],
     }
     hw_config_names = [HWConfigOpName.SUBTRACT]
@@ -567,7 +579,7 @@ class PTSubMetatype(PTOperatorMetatype):
 class PTMulMetatype(PTOperatorMetatype):
     name = "MulOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["mul", "__mul__", "__imul__", "__rmul__"],
+        NamespaceTarget.TORCH_TENSOR: ["mul", "mul_", "__mul__", "__imul__", "__rmul__"],
         NamespaceTarget.TORCH: ["mul"],
     }
     hw_config_names = [HWConfigOpName.MULTIPLY]
@@ -580,6 +592,7 @@ class PTDivMetatype(PTOperatorMetatype):
     module_to_function_names = {
         NamespaceTarget.TORCH_TENSOR: [
             "div",
+            "div_",
             "__div__",
             "__idiv__",
             "__rdiv__",
@@ -691,13 +704,17 @@ class PTThresholdMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleBatchNormMetatype(PTModuleOperatorSubtype):
     name = "BatchNormOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"]}
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"],
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTBatchNormMetatype(PTOperatorMetatype):
     name = "BatchNormOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"]}
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"],
+    }
     subtypes = [PTModuleBatchNormMetatype]
     weight_port_ids = [3]
     bias_port_id = 4
@@ -826,7 +843,7 @@ class PTGatherMetatype(PTOperatorMetatype):
     name = "GatherOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_TENSOR: ["index_select", "__getitem__"],
-        NamespaceTarget.TORCH: ["gather", "index_select", "where"],
+        NamespaceTarget.TORCH: ["gather", "index_select", "select", "where"],
     }
 
 
@@ -841,7 +858,7 @@ class PTReshapeMetatype(PTOperatorMetatype):
     name = "ReshapeOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_TENSOR: ["reshape", "view", "flatten", "unsqueeze"],
-        NamespaceTarget.TORCH: ["flatten", "unsqueeze"],
+        NamespaceTarget.TORCH: ["flatten", "unflatten", "unsqueeze"],
     }
     hw_config_names = [HWConfigOpName.RESHAPE, HWConfigOpName.UNSQUEEZE, HWConfigOpName.FLATTEN]
 
@@ -1028,7 +1045,9 @@ class PTSqrtMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTInterpolateMetatype(PTOperatorMetatype):
     name = "InterpolateOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["interpolate"]}
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["interpolate"],
+    }
     hw_config_names = [HWConfigOpName.INTERPOLATE]
     num_expected_input_edges = 1
 
