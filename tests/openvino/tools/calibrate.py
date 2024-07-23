@@ -43,6 +43,7 @@ from find_elementwise_quantized import get_fq_before_elementwise
 
 import nncf
 from nncf.common.deprecation import warning_deprecated
+from nncf.common.logging.logger import nncf_logger
 from nncf.common.logging.logger import set_log_file
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
@@ -1137,8 +1138,8 @@ def main():
     # TEST CODE
     fqs_nodes = get_fq_before_elementwise(output_model)
     nodes_names_to_remove = [node.get_friendly_name() for node in fqs_nodes]
-    print(f"number of removed FQs = {len(nodes_names_to_remove)}")
-    print(f"names of removed FQs = {nodes_names_to_remove}")
+    nncf_logger.info(f"number of removed FQs = {len(nodes_names_to_remove)}")
+    nncf_logger.info(f"names of removed FQs = {nodes_names_to_remove}")
     for name in nodes_names_to_remove:
         output_model = remove_node(output_model, name)
     ov.serialize(output_model, output_model_path)
