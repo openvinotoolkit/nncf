@@ -95,7 +95,15 @@ class GPTQQuantizer(torch.nn.Module):
             self.zero = xmin
         else:
             if self.sym:
-                self.scale = (xmax - xmin) / (self.maxq - 1)
+                maxq2 = self.maxq // 2 + 1
+                self.scale = xmax
+                denum = torch.ones_like(self.scale) * maxq2
+                tmp = torch.zeros(x.shape[0], device=dev)
+                xmin_abs = torch.abs(torch.minimum(x.min(1)[0], tmp))
+                xmax_abs = torch.maximum(x.max(1)[0], tmp)
+                tmp = xmax_abs > xmin_abs
+                denum[tmp] = -maxq2
+                self.scale /= denum
                 self.zero = torch.full_like(self.scale, (self.maxq + 1) / 2)
             else:
                 self.scale = (xmax - xmin) / self.maxq
