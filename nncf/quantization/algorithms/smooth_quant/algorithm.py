@@ -108,8 +108,8 @@ class SmoothQuant(Algorithm):
 
         node_groups = self._group_nodes_by_source(nodes_to_smooth_data, graph)
 
-        best_scale = None
         for group_id, nodes in track(node_groups.items(), description="Applying Smooth Quant"):
+            best_scale = None
             best_ratio = 0.0
             empty_statistic = False
             for node_to_smooth in nodes:
