@@ -39,6 +39,8 @@ except ImportError:
     from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
     from openvino.tools.accuracy_checker.utils import extract_image_representations
 
+from find_elementwise_quantized import get_fq_before_elementwise
+
 import nncf
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging.logger import set_log_file
@@ -1076,6 +1078,19 @@ def update_nncf_algorithms_config(nncf_algorithms_config: Dict[str, Dict[str, An
         print(f"Updated subset_size value for {nncf_method} method to {new_subset_size} ")
 
 
+# TEST CODE
+def remove_node(model, node_name):
+    name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
+    node = name_to_node_mapping[node_name]
+
+    node_input = node.input_value(0)
+    for node_output in node.outputs():
+        for target_in in node_output.get_target_inputs():
+            target_in.replace_source_output(node_input)
+    del name_to_node_mapping[node_name]
+    return model
+
+
 def main():
     args = parse_args()
     if args.impl is not None:
@@ -1119,6 +1134,12 @@ def main():
 
     model_name = config.model.model_name
     output_model_path = os.path.join(output_dir, f"{model_name}.xml")
+    # TEST CODE
+    fqs_nodes = get_fq_before_elementwise(output_model)
+    nodes_names_to_remove = [node.get_friendly_name() for node in fqs_nodes]
+    print(nodes_names_to_remove)
+    for name in nodes_names_to_remove:
+        output_model = remove_node(output_model, name)
     ov.serialize(output_model, output_model_path)
 
 
