@@ -224,8 +224,9 @@ def _set_module_to_the_graph_module(
     :return: A graph module attribute name which keep given module.
     """
     module_to_insert = module_to_insert
+    # TODO(dlyakhov) Make module name human readable.
     module_name_in_model = (
-        ";".join(
+        "__".join(
             "_".join((tp.target_node_name, str(tp.input_port_id), str(tp.target_type.value))) for tp in target_points
         )
         + "_"
