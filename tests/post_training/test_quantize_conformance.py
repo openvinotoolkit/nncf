@@ -137,7 +137,7 @@ def fixture_ptq_report_data(output_dir, run_benchmark_app, pytestconfig):
 
 
 @pytest.fixture(scope="session", name="wc_result_data")
-def fixture_wc_report_data(output_dir):
+def fixture_wc_report_data(output_dir, run_benchmark_app, pytestconfig):
     data: Dict[str, RunInfo] = {}
 
     yield data
@@ -145,10 +145,22 @@ def fixture_wc_report_data(output_dir):
     if data:
         test_results = OrderedDict(sorted(data.items()))
         df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
-        df = df.drop(columns=["FPS", "Num FQ"])
+        if not run_benchmark_app:
+            df = df.drop(columns=["FPS"])
+
+        df = df.drop(columns=["Num FQ"])
 
         output_dir.mkdir(parents=True, exist_ok=True)
-        df.to_csv(output_dir / "results.csv", index=False)
+        output_file = output_dir / "results.csv"
+
+        df.to_csv(output_file, index=False)
+
+        if pytestconfig.getoption("forked") and output_file.exists():
+            # When run test with --forked to run test in separate process
+            # Used in post_training_performance jobs
+            df.to_csv(output_file, index=False, mode="a", header=False)
+        else:
+            df.to_csv(output_file, index=False)
 
 
 def maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size):
