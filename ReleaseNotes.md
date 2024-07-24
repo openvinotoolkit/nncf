@@ -17,7 +17,16 @@ Post-training Quantization:
 - Deprecations/Removals:
   - ...
 - Tutorials:
-  - ...
+  - [Post-Training Optimization of Stable Audio Open Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-audio/stable-audio.ipynb)
+  - [Post-Training Optimization of Phi3-Vision Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/phi-3-vision/phi-3-vision.ipynb)
+  - [Post-Training Optimization of MiniCPM-V2 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/minicpm-v-multimodal-chatbot/minicpm-v-multimodal-chatbot.ipynb)
+  - [Post-Training Optimization of Jina CLIP Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/jina-clip/jina-clip.ipynb)
+  - [Post-Training Optimization of Stable Diffusion v3 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-diffusion-v3/stable-diffusion-v3.ipynb)
+  - [Post-Training Optimization of HunyuanDIT Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/hunyuan-dit-image-generation/hunyuan-dit-image-generation.ipynb)
+  - [Post-Training Optimization of DDColor Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/ddcolor-image-colorization/ddcolor-image-colorization.ipynb)
+  - [Post-Training Optimization of DynamiCrafter Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/dynamicrafter-animating-images/dynamicrafter-animating-images.ipynb)
+  - [Post-Training Optimization of DepthAnythingV2 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/depth-anything/depth-anything-v2.ipynb)
+  - [Post-Training Optimization of Kosmos-2 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/kosmos2-multimodal-large-language-model/kosmos2-multimodal-large-language-model.ipynb)
 - Known issues:
   - ...
 
