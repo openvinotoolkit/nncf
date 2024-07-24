@@ -25,7 +25,7 @@
             0
         ]
     },
-    "QuantizeLinear_Embedding_Y_1": {
+    "QuantizeLinear_Gather_Y_1": {
         "scale": 0.003666950622573495,
         "zero_point": 0
     },
