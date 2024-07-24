@@ -51,10 +51,17 @@ def get_ops_with_FQ_activation_inputs(elementwise_nodes):
             constant_port, activation_port = 1, 0
         assert constant_port in [0, 1] and activation_port in [0, 1]
         activation_port_input_node = node.input_value(activation_port).get_node()
-        if get_node_metatype(activation_port_input_node) == OVFakeQuantizeMetatype:
+        if get_node_metatype(activation_port_input_node) == OVFakeQuantizeMetatype and is_single_output(
+            activation_port_input_node
+        ):
             fq_nodes.append(activation_port_input_node)
 
     return fq_nodes
+
+
+def is_single_output(node):
+    out = node.output(0)
+    return len(out.get_target_inputs()) == 1
 
 
 def get_fq_before_elementwise(model):
