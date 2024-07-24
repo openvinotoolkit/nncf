@@ -1,11 +1,11 @@
 strict digraph  {
 "0 /nncf_model_input_0" [id=0, type=nncf_model_input];
-"1 SymmetricQuantizer/symmetric_quantize_0" [id=1, type=symmetric_quantize];
-"2 MobileNetSSD/__getitem___0" [id=2, type=__getitem__];
-"3 MobileNetSSD/clone_0" [id=3, type=clone];
-"4 MobileNetSSD/unsqueeze_0" [id=4, type=unsqueeze];
-"5 basenet.0.0.weight" [id=5, type=nncf_model_const];
-"6 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/SymmetricQuantizer/symmetric_quantize_0" [id=6, type=symmetric_quantize];
+"1 MobileNetSSD/__getitem___0" [id=1, type=__getitem__];
+"2 MobileNetSSD/clone_0" [id=2, type=clone];
+"3 MobileNetSSD/unsqueeze_0" [id=3, type=unsqueeze];
+"4 basenet.0.0.weight" [id=4, type=nncf_model_const];
+"5 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/SymmetricQuantizer/symmetric_quantize_0" [id=5, type=symmetric_quantize];
+"6 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/SymmetricQuantizer/symmetric_quantize_1" [id=6, type=symmetric_quantize];
 "7 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/conv2d_0" [id=7, type=conv2d];
 "8 basenet.0.1.weight" [id=8, type=nncf_model_const];
 "9 basenet.0.1.bias" [id=9, type=nncf_model_const];
@@ -372,13 +372,13 @@ strict digraph  {
 "370 MobileNetSSD/SSDDetectionOutput[detection_head]/cat_1" [id=370, type=cat];
 "371 MobileNetSSD/SSDDetectionOutput[detection_head]/view_12" [id=371, type=view];
 "372 MobileNetSSD/SSDDetectionOutput[detection_head]/softmax_0" [id=372, type=softmax];
-"0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
-"1 SymmetricQuantizer/symmetric_quantize_0" -> "2 MobileNetSSD/__getitem___0";
-"1 SymmetricQuantizer/symmetric_quantize_0" -> "7 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/conv2d_0";
-"2 MobileNetSSD/__getitem___0" -> "3 MobileNetSSD/clone_0";
-"3 MobileNetSSD/clone_0" -> "4 MobileNetSSD/unsqueeze_0";
-"5 basenet.0.0.weight" -> "6 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/SymmetricQuantizer/symmetric_quantize_0";
-"6 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/SymmetricQuantizer/symmetric_quantize_0" -> "7 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/conv2d_0";
+"0 /nncf_model_input_0" -> "1 MobileNetSSD/__getitem___0";
+"0 /nncf_model_input_0" -> "5 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/SymmetricQuantizer/symmetric_quantize_0";
+"1 MobileNetSSD/__getitem___0" -> "2 MobileNetSSD/clone_0";
+"2 MobileNetSSD/clone_0" -> "3 MobileNetSSD/unsqueeze_0";
+"4 basenet.0.0.weight" -> "6 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/SymmetricQuantizer/symmetric_quantize_1";
+"5 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/SymmetricQuantizer/symmetric_quantize_0" -> "7 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/conv2d_0";
+"6 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/SymmetricQuantizer/symmetric_quantize_1" -> "7 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/conv2d_0";
 "7 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/Conv2d[0]/conv2d_0" -> "10 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/BatchNorm2d[1]/batch_norm_0";
 "8 basenet.0.1.weight" -> "10 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/BatchNorm2d[1]/batch_norm_0";
 "9 basenet.0.1.bias" -> "10 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/BatchNorm2d[1]/batch_norm_0";
