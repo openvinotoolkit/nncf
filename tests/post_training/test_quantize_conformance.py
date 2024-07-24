@@ -247,7 +247,7 @@ def test_ptq_quantization(
     err_msg = None
     test_model_param = None
     start_time = time.perf_counter()
-    try:
+    if True:
         if test_case_name not in ptq_reference_data:
             raise nncf.ValidationError(f"{test_case_name} does not exist in 'reference_data.yaml'")
         test_model_param = PTQ_TEST_CASES[test_case_name]
@@ -271,9 +271,6 @@ def test_ptq_quantization(
         )
         pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
         pipeline.run()
-    except Exception as e:
-        err_msg = str(e)
-        traceback.print_exc()
 
     if pipeline is not None:
         pipeline.cleanup_cache()

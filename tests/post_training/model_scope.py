@@ -27,6 +27,7 @@ from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.causal_language_model import CausalLMHF
 from tests.post_training.pipelines.gpt import GPT
 from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
+from tests.post_training.pipelines.image_classification_torchvision import ImageClassificationTorchvision
 from tests.post_training.pipelines.lm_weight_compression import LMWeightCompression
 from tests.post_training.pipelines.masked_language_modeling import MaskedLanguageModelingHF
 
@@ -64,6 +65,15 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
         },
         "backends": [BackendType.TORCH, BackendType.OV, BackendType.OPTIMUM],
+    },
+    # Torchvision
+    {
+        "reported_name": "torchvision/resnet18",
+        "model_id": "resnet18",
+        "pipeline_cls": ImageClassificationTorchvision,
+        "compression_params": {},
+        "backends": [BackendType.FX_TORCH, BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.OV],
+        "batch_size": 1,
     },
     # Timm models
     {

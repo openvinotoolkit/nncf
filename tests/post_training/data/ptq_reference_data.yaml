@@ -22,6 +22,16 @@ hf/hf-internal-testing/tiny-random-gpt2_backend_OV:
   metric_value: null
 hf/hf-internal-testing/tiny-random-gpt2_backend_TORCH:
   metric_value: null
+torchvision/resnet18_backend_FP32:
+  metric_value: 0.6978
+torchvision/resnet18_backend_OV:
+  metric_value: 0.6948
+torchvision/resnet18_backend_TORCH:
+  metric_value: 0.69152
+torchvision/resnet18_backend_CUDA_TORCH:
+  metric_value: 0.69152
+torchvision/resnet18_backend_FX_TORCH:
+  metric_value: 0.6946
 timm/crossvit_9_240_backend_CUDA_TORCH:
   metric_value: 0.689
 timm/crossvit_9_240_backend_FP32:
