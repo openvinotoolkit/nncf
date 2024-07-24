@@ -153,8 +153,6 @@ def fixture_wc_report_data(output_dir, run_benchmark_app, pytestconfig):
         output_dir.mkdir(parents=True, exist_ok=True)
         output_file = output_dir / "results.csv"
 
-        df.to_csv(output_file, index=False)
-
         if pytestconfig.getoption("forked") and output_file.exists():
             # When run test with --forked to run test in separate process
             # Used in post_training_performance jobs
