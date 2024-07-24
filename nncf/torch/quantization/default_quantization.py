@@ -75,7 +75,6 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: Dict[QuantizationTrait, List[PTOperatorMetaty
         operator_metatypes.PTMaxMetatype,
         operator_metatypes.PTMinMetatype,
         operator_metatypes.PTTransposeMetatype,
-        operator_metatypes.PTGatherMetatype,
         operator_metatypes.PTScatterMetatype,
         operator_metatypes.PTReshapeMetatype,
         operator_metatypes.PTSqueezeMetatype,
