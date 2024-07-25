@@ -85,7 +85,7 @@ class MemoryMonitor:
         self.memory_type = memory_type
         if memory_type == MemoryType.SYSTEM:
             logger.warning(
-                "Please be aware that MemoryType.SYSTEM is affected by other processes that change RAM availability."
+                "Note: MemoryType.SYSTEM in general is affected by other processes that change RAM availability."
             )
         self.memory_unit = memory_unit
 
@@ -227,7 +227,6 @@ class MemoryMonitor:
         while not self._monitoring_thread_should_stop:
             if self.memory_type == MemoryType.RSS:
                 bytes_used = psutil.Process().memory_info().rss
-                # print(_cast_bytes_to(bytes_used, MemoryUnit.MiB))
             elif self.memory_type == MemoryType.RSS_TOP:
                 elem_filter = lambda it: "\x1b" not in it
                 new_line_delimiter = "\x1b(B\x1b[m\x1b[39;49m"
