@@ -1,5 +1,17 @@
 {
-    "Input/fq_output_0": {
+    "Gather_159588/fq_output_0": {
+        "input_low": 0.0,
+        "input_high": 7.999999797903001e-05,
+        "output_low": 0.0,
+        "output_high": 7.999999797903001e-05
+    },
+    "GreaterEqual/fq_input_0": {
+        "input_low": 0.0,
+        "input_high": 0.9350724220275879,
+        "output_low": 0.0,
+        "output_high": 0.9350724220275879
+    },
+    "Add/fq_input_0": {
         "input_low": 0.0,
         "input_high": 0.9350724220275879,
         "output_low": 0.0,

@@ -87,7 +87,7 @@
             ]
         ]
     },
-    "Gather_4/fq_input_0": {
+    "Gather_4/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.91275554895401,
         "output_low": 0.0,
@@ -181,7 +181,7 @@
             ]
         ]
     },
-    "Gather_2/fq_output_0": {
+    "Gather_3/fq_output_0": {
         "input_low": 0.0,
         "input_high": 0.91275554895401,
         "output_low": 0.0,
