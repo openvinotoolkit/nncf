@@ -1,10 +1,10 @@
 strict digraph  {
 "0 /nncf_model_input_0" [id=0, label="nncf_model_input_#0", style=filled, type=nncf_model_input];
-"1 SymmetricQuantizer/symmetric_quantize_0" [color=green, id=1, label="AFQ_[B:8 M:S SGN:S PC:N]_#1_G0", style=filled, type=symmetric_quantize];
-"2 SSD_VGG/__getitem___0" [id=2, label="__getitem___#2", style=filled, type=__getitem__];
-"3 SSD_VGG/clone_0" [id=3, label="clone_#3", style=filled, type=clone];
-"4 SSD_VGG/unsqueeze_0" [id=4, label="unsqueeze_#4", style=filled, type=unsqueeze];
-"5 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [color=green, id=5, label="WFQ_[B:8 M:S SGN:S PC:Y]_#5_G0", style=filled, type=symmetric_quantize];
+"1 SSD_VGG/__getitem___0" [id=1, label="__getitem___#1", style=filled, type=__getitem__];
+"2 SSD_VGG/clone_0" [id=2, label="clone_#2", style=filled, type=clone];
+"3 SSD_VGG/unsqueeze_0" [id=3, label="unsqueeze_#3", style=filled, type=unsqueeze];
+"4 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [color=green, id=4, label="WFQ_[B:8 M:S SGN:S PC:Y]_#4_G0", style=filled, type=symmetric_quantize];
+"5 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/SymmetricQuantizer/symmetric_quantize_0" [color=green, id=5, label="AFQ_[B:8 M:S SGN:S PC:N]_#5_G0", style=filled, type=symmetric_quantize];
 "6 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/conv2d_0" [color=lightblue, id=6, label="conv2d_k3x3_PAD_#6", style=filled, type=conv2d];
 "7 SSD_VGG/MultiOutputSequential[basenet]/ReLU[1]/relu__0" [id=7, label="relu__#7", style=filled, type=relu_];
 "8 SSD_VGG/MultiOutputSequential[basenet]/ReLU[1]/SymmetricQuantizer/symmetric_quantize_0" [color=green, id=8, label="AFQ_[B:8 M:S SGN:U PC:N]_#8_G1", style=filled, type=symmetric_quantize];
@@ -274,12 +274,12 @@ strict digraph  {
 "216 SSD_VGG/SSDDetectionOutput[detection_head]/cat_1" [id=216, label="cat_#216", style=filled, type=cat];
 "217 SSD_VGG/SSDDetectionOutput[detection_head]/view_14" [id=217, label="view_#217", style=filled, type=view];
 "218 SSD_VGG/SSDDetectionOutput[detection_head]/softmax_0" [id=218, label="softmax_#218", style=filled, type=softmax];
-"0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
-"1 SymmetricQuantizer/symmetric_quantize_0" -> "2 SSD_VGG/__getitem___0";
-"1 SymmetricQuantizer/symmetric_quantize_0" -> "6 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/conv2d_0";
-"2 SSD_VGG/__getitem___0" -> "3 SSD_VGG/clone_0";
-"3 SSD_VGG/clone_0" -> "4 SSD_VGG/unsqueeze_0";
-"5 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "6 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/conv2d_0";
+"0 /nncf_model_input_0" -> "1 SSD_VGG/__getitem___0";
+"0 /nncf_model_input_0" -> "5 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/SymmetricQuantizer/symmetric_quantize_0";
+"1 SSD_VGG/__getitem___0" -> "2 SSD_VGG/clone_0";
+"2 SSD_VGG/clone_0" -> "3 SSD_VGG/unsqueeze_0";
+"4 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "6 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/conv2d_0";
+"5 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/SymmetricQuantizer/symmetric_quantize_0" -> "6 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/conv2d_0";
 "6 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/conv2d_0" -> "7 SSD_VGG/MultiOutputSequential[basenet]/ReLU[1]/relu__0";
 "7 SSD_VGG/MultiOutputSequential[basenet]/ReLU[1]/relu__0" -> "8 SSD_VGG/MultiOutputSequential[basenet]/ReLU[1]/SymmetricQuantizer/symmetric_quantize_0";
 "8 SSD_VGG/MultiOutputSequential[basenet]/ReLU[1]/SymmetricQuantizer/symmetric_quantize_0" -> "10 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[2]/conv2d_0";
