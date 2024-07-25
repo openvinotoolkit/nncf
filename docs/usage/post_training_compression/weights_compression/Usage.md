@@ -538,5 +538,4 @@ List of notebooks demonstrating OpenVINO conversion and inference together with 
 
 - [LLM Instruction Following](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-question-answering)
 - [Dolly 2.0](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/dolly-2-instruction-following)
-- [Stable-Zephyr-3b](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-zephyr-3b-chatbot)
 - [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-chatbot)
