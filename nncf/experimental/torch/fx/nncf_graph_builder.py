@@ -57,7 +57,7 @@ class GraphConverter:
             node_type = node.op
             node_metatype = UnknownMetatype
         if node_metatype is UnknownMetatype:
-            nncf_logger.info(f"Unknown metatype for node: {node}")
+            nncf_logger.debug(f"Unknown metatype for node: {node}")
         return node_type, node_metatype
 
     @staticmethod
@@ -134,7 +134,8 @@ class GraphConverter:
                 tensor = source_node.meta["val"]
             tensor_shape = tuple(tensor.shape)
         else:
-            nncf_logger.info(f"Edge shape between {source_node.name} and {dist_node.name} is unknown.")
+            # TODO(dlyakhov): Refactor algorithms to always have knowns edges shapes.
+            nncf_logger.debug(f"Edge shape between {source_node.name} and {dist_node.name} is unknown.")
             tensor_shape = None
 
         input_port_id = dist_node.all_input_nodes.index(source_node)

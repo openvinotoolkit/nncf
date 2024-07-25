@@ -22,7 +22,8 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.torch.fx.model_transformer import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.transformations import bias_update_transformation_builder
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
@@ -82,11 +83,9 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: torch.fx.GraphModule) -> Tensor:
-        # TODO(dlyakhov): make a node_name_vs_node map to speed up the process
-        from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
-
         bias_node = nncf_graph.get_next_nodes(node)[0]
-        graph_bias_node = FXModelTransformer.get_graph_node_by_name(model.graph, bias_node.node_name)
+        # TODO(dlyakhov): make a node_name_vs_node map to speed up the process
+        graph_bias_node = get_graph_node_by_name(model.graph, bias_node.node_name)
         return Tensor(_get_tensor_constant_from_node(graph_bias_node.all_input_nodes[1], model))
 
     @staticmethod
@@ -100,7 +99,7 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         weight_node = nncf_graph.get_previous_nodes(node)[1]
-        return weight_node.node_type == "dequantize_per_channel"
+        return "dequantize" in weight_node.node_type
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:

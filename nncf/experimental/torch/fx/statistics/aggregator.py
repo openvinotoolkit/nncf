@@ -21,7 +21,7 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.torch.fx.model_transformer import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.transformations import leaf_module_insertion_transformation_builder
 from nncf.tensor import Tensor
 from nncf.torch.nncf_network import NNCFNetwork

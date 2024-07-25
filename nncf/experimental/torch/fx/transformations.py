@@ -18,9 +18,10 @@ from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.ao.quantization.pt2e.utils import _get_tensor_constant_from_node
 from torch.quantization.fake_quantize import FakeQuantize
 
+import nncf
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
+from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 TransformationFNType = Callable[[torch.fx.GraphModule], None]
@@ -62,11 +63,16 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
     def bias_update_transformation(model: torch.fx.GraphModule):
         graph = model.graph
         target_node_name = node.node_name
-        graph_node = FXModelTransformer.get_graph_node_by_name(graph, target_node_name)
+        graph_node = get_graph_node_by_name(graph, target_node_name)
+        if len(graph_node.users) != 1:
+            raise nncf.InternalError(f"Node with bias have {len(graph_node.users)} users, 1 expected.")
+
         bias_node = next(iter(graph_node.users))
         with graph.inserting_before(bias_node):
             new_constant = create_getattr_from_value(model, graph, target_node_name + "_shifted_bias", value)
+
         args = list(bias_node.args)
+        # A bias node suppose to have constant on the second input port.
         args[1] = new_constant
         bias_node.args = tuple(args)
         graph.eliminate_dead_code()
@@ -203,7 +209,7 @@ def _get_target_node(graph: torch.fx.Graph, target_point: PTTargetPoint) -> torc
     """
     # TODO(dlyakhov): Support node insertion on a specific input port id.
     target_type = target_point.target_type
-    target_node = FXModelTransformer.get_graph_node_by_name(graph, target_point.target_node_name)
+    target_node = get_graph_node_by_name(graph, target_point.target_node_name)
     if target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
         target_node = target_node.all_input_nodes[target_point.input_port_id]
     elif target_type != TargetType.OPERATOR_POST_HOOK:
@@ -345,16 +351,7 @@ def separate_conv_and_bias(model: torch.fx.GraphModule):
         conv_node.args = tuple(args)
         with model.graph.inserting_after(conv_node):
             new_conv_bias_node = create_getattr_from_value(
-                model,
-                model.graph,
-                conv_bias_node.name + "_",
-                conv_bias_value.reshape(
-                    (
-                        1,
-                        -1,
-                    )
-                    + (1,) * (dims - 2)
-                ),
+                model, model.graph, conv_bias_node.name + "_", conv_bias_value.reshape((1, -1) + (1,) * (dims - 2))
             )
         with model.graph.inserting_after(new_conv_bias_node):
             add_node = model.graph.create_node("call_function", add_node_target, (conv_node, new_conv_bias_node), {})

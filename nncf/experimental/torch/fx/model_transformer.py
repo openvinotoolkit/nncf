@@ -10,29 +10,16 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Callable, List, Union
+from typing import List
 
 import torch
 import torch.fx
 from torch.fx.passes.split_utils import split_by_tags
 
 from nncf.common.graph.model_transformer import ModelTransformer
-from nncf.common.graph.transformations.commands import Command
-from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.graph.transformations.commands import TransformationType
+from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-
-
-class FXApplyTransformationCommand(Command):
-    def __init__(
-        self,
-        transformation_fn: Callable[[torch.fx.GraphModule], None],
-        priority: Union[TransformationPriority, int] = TransformationPriority.DEFAULT_PRIORITY,
-    ):
-        super().__init__(TransformationType.INSERT)
-        self.tranformation_fn = transformation_fn
-        self.priority = priority
 
 
 class FXModelTransformer(ModelTransformer):
@@ -107,22 +94,10 @@ class FXModelTransformer(ModelTransformer):
                 continue
             node.tag = tags[i]
 
+        # TODO(dlyakhov): reduce memory consumption by
+        # more optimal splitting implementation.
         splitted_gm = split_by_tags(model, tags)
         return splitted_gm.extracted
-
-    @staticmethod
-    def get_graph_node_by_name(graph: torch.fx.Graph, name: str) -> torch.fx.Node:
-        """
-        Retrieves a node with the specified name from the grpah.
-
-        :param graph: Given torch fx graph.
-        :param name: Target node name.
-        :return: A graph node with the given name.
-        """
-        for node in graph.nodes:
-            if node.name == name:
-                return node
-        raise RuntimeError(f"Node with name {name} is not found")
 
     @staticmethod
     def _apply_transformation(

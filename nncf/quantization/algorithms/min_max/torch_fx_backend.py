@@ -27,7 +27,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.torch.fx.model_transformer import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.transformations import qdq_insertion_tranformation_builder
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -254,6 +254,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = quantizer_cls(quantizer_spec)
 
         # Fill it with minmax
+        # TODO(dlyakhov) Prevent creation of intermediate objects like nncf quantizer.
         FXMinMaxAlgoBackend._fill_quantizer_parameters(quantizer, parameters, quantizer_spec.scale_shape)
         # Convert to the torch fake quantizer
         torch_fq = convert_to_torch_fakequantizer(quantizer)
