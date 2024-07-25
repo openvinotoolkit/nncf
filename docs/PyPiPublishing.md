@@ -20,16 +20,16 @@ add different compression algorithms for both PyTorch and TensorFlow deep
 learning frameworks.
 
 
-NNCF provides [samples](#demos-tutorials-and-samples) that demonstrate the
-usage of compression algorithms for different use cases and models. See
-compression results achievable with the NNCF-powered samples on the
+NNCF provides samples that demonstrate the usage of compression algorithms
+for different use cases and models. See compression results achievable
+with the NNCF-powered samples on the
 [NNCF Model Zoo page](https://github.com/openvinotoolkit/nncf/blob/develop/docs/ModelZoo.md).
 
 For more information about NNCF, see:
 - [NNCF repository](https://github.com/openvinotoolkit/nncf)
-- [user documentation](https://docs.openvino.ai/nncf)
+- [User documentation](https://docs.openvino.ai/nncf)
 - [NNCF API documentation](https://openvinotoolkit.github.io/nncf/autoapi/nncf/)
-- [usage examples](https://github.com/openvinotoolkit/nncf/tree/develop/docs/usage)
+- [Usage examples](https://github.com/openvinotoolkit/nncf/tree/develop/docs/usage)
 - [Notebook tutorials](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/README.md#model-training)
 
 
@@ -40,18 +40,19 @@ For more information about NNCF, see:
 - [Key Features](#key-features)
 - [Installation](#installation-guide)
 - [Third-party integration](#third-party-repository-integration)
-- [NNCF Model Zoo](#nncf-compressed-model-zoo)
+- [NNCF Compressed Model Zoo](#nncf-compressed-model-zoo)
 
 
 
-## Key Features
+## Key Features<a id="key-features"></a>
 
 ### Post-Training Compression Algorithms
 
 | Compression algorithm                                                                                                                                       | OpenVINO  | PyTorch   | TensorFlow    | ONNX          |
 | :---------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------: | :-------: | :-----------: | :-----------: |
 | [Post-Training Quantization](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/post_training_compression/post_training_quantization/Usage.md) | Supported | Supported | Supported     | Supported     |
-| [Weights Compression](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/post_training_compression/weights_compression/Usage.md)               | Supported | Supported | Not supported | Not supported |
+| [Weight Compression](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/post_training_compression/weights_compression/Usage.md)                | Supported | Supported | Not supported | Not supported |
+| [Activation Sparsity](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/sparsify_activations/ActivationSparsity.md)              | Not supported | Experimental |Not supported| Not supported |
 
 ### Training-Time Compression Algorithms
 
@@ -86,7 +87,7 @@ For more information about NNCF, see:
 
 
 
-## Installation Guide
+## Installation Guide<a id="installation-guide"></a>
 
 NNCF can be installed as a regular PyPI package:
 
@@ -96,7 +97,6 @@ pip install nncf
 
 For detailed installation instructions, refer to the
 [Installation](https://github.com/openvinotoolkit/nncf/blob/develop/docs/Installation.md) guide.
-
 
 
 ### System Requirements
@@ -110,7 +110,7 @@ For detailed installation instructions, refer to the
   - OpenVINO >=2022.3.0
 
 
-## Third-party Repository Integration
+## Third-party Repository Integration<a id="third-party-repository-integration"></a>
 
 NNCF may be easily integrated into training/evaluation pipelines of third-party
 repositories.
@@ -127,10 +127,11 @@ repositories.
   repository in HuggingFace Optimum Intel.
 
 
-## NNCF Compressed Model Zoo
+## NNCF Compressed Model Zoo<a id="nncf-compressed-model-zoo"></a>
 
 A list of models and compression results for them can be found at our
 [NNCF Model Zoo page](https://github.com/openvinotoolkit/nncf/blob/develop/docs/ModelZoo.md).
+
 
 
 ## Citing
