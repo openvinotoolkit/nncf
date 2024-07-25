@@ -11,6 +11,7 @@
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.patterns.patterns import IgnoredPatternNames
 from nncf.common.utils.registry import Registry
+from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
 
@@ -19,11 +20,11 @@ PT_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
 
 def _add_softmax_matmul(
     pattern: GraphPattern,
-    matmul_aliases,
-    reshape_squeeze_aliases,
-    gather_aliases,
-    transpose_aliases,
-    concat_aliases,
+    matmul_metatypes,
+    reshape_squeeze_metatypes,
+    gather_metatypes,
+    transpose_metatypes,
+    concat_metatypes,
 ) -> None:
     #       SOFTMAX  RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT
     #           \              /
@@ -32,9 +33,9 @@ def _add_softmax_matmul(
     #              \        /
     #               \      /
     #                MATMUL
-    branch_matmul_nodes = reshape_squeeze_aliases + gather_aliases + transpose_aliases + concat_aliases
-    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: "softmax"})
-    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: matmul_aliases})
+    branch_matmul_nodes = reshape_squeeze_metatypes + gather_metatypes + transpose_metatypes + concat_metatypes
+    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.PTSoftmaxMetatype})
+    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: matmul_metatypes})
     matmul_branch_nodes = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "NON_PATTERN", GraphPattern.METATYPE_ATTR: branch_matmul_nodes}
     )
@@ -44,11 +45,11 @@ def _add_softmax_matmul(
 
 def _add_softmax_reshape_matmul(
     pattern: GraphPattern,
-    matmul_aliases,
-    reshape_squeeze_aliases,
-    gather_aliases,
-    transpose_aliases,
-    concat_aliases,
+    matmul_metatypes,
+    reshape_squeeze_metatypes,
+    gather_metatypes,
+    transpose_metatypes,
+    concat_metatypes,
 ) -> None:
     #       SOFTMAX
     #           \
@@ -62,12 +63,12 @@ def _add_softmax_reshape_matmul(
     #                     \         /
     #                      \       /
     #                        MATMUL
-    branch_matmul_nodes = reshape_squeeze_aliases + gather_aliases + transpose_aliases + concat_aliases
-    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: "softmax"})
+    branch_matmul_nodes = reshape_squeeze_metatypes + gather_metatypes + transpose_metatypes + concat_metatypes
+    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.PTSoftmaxMetatype})
     reshape = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: reshape_squeeze_aliases}
+        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: reshape_squeeze_metatypes}
     )
-    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: matmul_aliases})
+    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: matmul_metatypes})
     matmul_branch_nodes = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER", GraphPattern.METATYPE_ATTR: branch_matmul_nodes}
     )
@@ -79,35 +80,28 @@ def _add_softmax_reshape_matmul(
 
 @PT_IGNORED_PATTERNS.register(IgnoredPatternNames.MULTIHEAD_ATTENTION_OUTPUT)
 def create_multihead_attention_output() -> GraphPattern:
-    matmul_aliases = ["linear", "addmm", "matmul", "bmm", "mm", "baddbmm", "__matmul__"]
-    reshape_squeeze_aliases = [
-        "reshape",
-        "view",
-        "flatten",
-        "unsqueeze",
-        "squeeze",
-        "unbind",
-    ]
-    gather_aliases = ["gather", "index_select", "where", "index_select", "__getitem__"]
-    transpose_aliases = ["transpose", "permute", "transpose_"]
-    concat_aliases = ["cat", "stack"]
+    matmul_metatypes = [om.PTLinearMetatype, om.PTAddmmMetatype, om.PTMatMulMetatype]
+    reshape_squeeze_metatypes = [om.PTReshapeMetatype, om.PTSqueezeMetatype, om.PTSplitMetatype]
+    gather_metatypes = [om.PTGatherMetatype]
+    transpose_metatypes = [om.PTTransposeMetatype]
+    concat_metatypes = [om.PTCatMetatype]
 
     pattern = GraphPattern()
     _add_softmax_matmul(
         pattern,
-        matmul_aliases=matmul_aliases,
-        reshape_squeeze_aliases=reshape_squeeze_aliases,
-        gather_aliases=gather_aliases,
-        transpose_aliases=transpose_aliases,
-        concat_aliases=concat_aliases,
+        matmul_metatypes=matmul_metatypes,
+        reshape_squeeze_metatypes=reshape_squeeze_metatypes,
+        gather_metatypes=gather_metatypes,
+        transpose_metatypes=transpose_metatypes,
+        concat_metatypes=concat_metatypes,
     )
     _add_softmax_reshape_matmul(
         pattern,
-        matmul_aliases=matmul_aliases,
-        reshape_squeeze_aliases=reshape_squeeze_aliases,
-        gather_aliases=gather_aliases,
-        transpose_aliases=transpose_aliases,
-        concat_aliases=concat_aliases,
+        matmul_metatypes=matmul_metatypes,
+        reshape_squeeze_metatypes=reshape_squeeze_metatypes,
+        gather_metatypes=gather_metatypes,
+        transpose_metatypes=transpose_metatypes,
+        concat_metatypes=concat_metatypes,
     )
     return pattern
 
@@ -117,16 +111,16 @@ def create_multihead_attention_output() -> GraphPattern:
 def create_se_block() -> GraphPattern:
     MEAN_OPERATIONS = {
         GraphPattern.LABEL_ATTR: "REDUCE_MEAN",
-        GraphPattern.METATYPE_ATTR: ["avg_pool2d", "adaptive_avg_pool2d", "avg_pool3d", "adaptive_avg_pool3d", "mean"],
+        GraphPattern.METATYPE_ATTR: [om.PTAvgPool2dMetatype, om.PTAvgPool3dMetatype, om.PTMeanMetatype],
         GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
     }
     SYGMOID_OPERATIONS = {
         GraphPattern.LABEL_ATTR: "SIGMOID",
-        GraphPattern.METATYPE_ATTR: ["sigmoid", "hardsigmoid"],
+        GraphPattern.METATYPE_ATTR: [om.PTSigmoidMetatype, om.PTHardSigmoidMetatype],
     }
     MUL_OPERATION = {
         GraphPattern.LABEL_ATTR: "MUL",
-        GraphPattern.METATYPE_ATTR: "__mul__",
+        GraphPattern.METATYPE_ATTR: om.PTMulMetatype,
         GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
     }
 
@@ -154,10 +148,10 @@ def create_se_block() -> GraphPattern:
         any_node = pattern.add_node(label="NON_PATTERN_NODE", type=GraphPattern.NON_PATTERN_NODE_TYPE)
         reduce_mean_node = pattern.add_node(**MEAN_OPERATIONS)
         linear_node_1 = pattern.add_node(**LINEAR_OPERATIONS)
-        add_node_1 = pattern.add_node(label="ADD_BIAS", type=["__add__", "__sub__"])
+        add_node_1 = pattern.add_node(label="ADD_BIAS", type=[om.PTAddMetatype, om.PTSubMetatype])
         activation_node_1 = pattern.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
         linear_node_2 = pattern.add_node(**LINEAR_OPERATIONS)
-        add_node_2 = pattern.add_node(label="ADD_BIAS", type=["__add__", "__sub__"])
+        add_node_2 = pattern.add_node(label="ADD_BIAS", type=[om.PTAddMetatype, om.PTSubMetatype])
         activation_node_2 = pattern.add_node(**SYGMOID_OPERATIONS)
         multiply_node = pattern.add_node(**MUL_OPERATION)
 
@@ -174,7 +168,7 @@ def create_se_block() -> GraphPattern:
 
     RESHAPE_NODES = {
         GraphPattern.LABEL_ATTR: "RESHAPE",
-        GraphPattern.METATYPE_ATTR: ["reshape", "view", "flatten", "unsqueeze"],
+        GraphPattern.METATYPE_ATTR: om.PTReshapeMetatype,
     }
 
     def get_se_block_with_reshape() -> GraphPattern:
@@ -206,10 +200,10 @@ def create_se_block() -> GraphPattern:
         reduce_mean_node = pattern.add_node(**MEAN_OPERATIONS)
         reshape_node_1 = pattern.add_node(**RESHAPE_NODES)
         linear_node_1 = pattern.add_node(**LINEAR_OPERATIONS)
-        add_node_1 = pattern.add_node(label="ADD_BIAS", type=["__add__", "__sub__"])
+        add_node_1 = pattern.add_node(label="ADD_BIAS", type=[om.PTAddMetatype, om.PTSubMetatype])
         activation_node_1 = pattern.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
         linear_node_2 = pattern.add_node(**LINEAR_OPERATIONS)
-        add_node_2 = pattern.add_node(label="ADD_BIAS", type=["__add__", "__sub__"])
+        add_node_2 = pattern.add_node(label="ADD_BIAS", type=[om.PTAddMetatype, om.PTSubMetatype])
         activation_node_2 = pattern.add_node(**SYGMOID_OPERATIONS)
         reshape_node_2 = pattern.add_node(**RESHAPE_NODES)
         multiply_node = pattern.add_node(**MUL_OPERATION)

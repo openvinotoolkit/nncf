@@ -22,7 +22,6 @@ from tqdm import tqdm
 
 import nncf
 
-tfds.display_progress_bar(enable=False)
 ROOT = Path(__file__).parent.resolve()
 WEIGHTS_URL = "https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/tf_model.h5"
 DATASET_CLASSES = 10

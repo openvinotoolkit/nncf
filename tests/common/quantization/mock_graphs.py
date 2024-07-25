@@ -21,6 +21,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
@@ -188,16 +189,26 @@ def get_mock_nncf_node_attrs(op_name=None, scope_str=None, metatype=None, type_=
 
 
 def _add_nodes_with_layer_attrs(
-    nx_graph: nx.DiGraph, node_keys: List[str], layer_attrs: Dict[str, BaseLayerAttributes]
+    nx_graph: nx.DiGraph,
+    node_keys: List[str],
+    layer_attrs: Dict[str, BaseLayerAttributes],
+    metatypes: Dict[str, OperatorMetatype] = None,
 ) -> nx.DiGraph:
     for node_key in node_keys:
-        nx_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
+        metatype = None
+        if metatypes is not None and node_key in metatypes:
+            metatype = metatypes[node_key]
+        nx_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key, metatype=metatype))
+
         if node_key in layer_attrs:
             nx_graph.nodes[node_key][NNCFNode.LAYER_ATTRIBUTES] = layer_attrs[node_key]
+
     return nx_graph
 
 
-def get_mock_model_graph_with_mergeable_pattern() -> NNCFGraph:
+def get_mock_model_graph_with_mergeable_pattern(
+    conv2d_metatype=None, batchnorm_metatype=None, relu_metatype=None
+) -> NNCFGraph:
     mock_nx_graph = nx.DiGraph()
 
     #   (A)
@@ -225,7 +236,12 @@ def get_mock_model_graph_with_mergeable_pattern() -> NNCFGraph:
             padding_values=[0, 0, 0, 0],
         )
     }
-    mock_nx_graph = _add_nodes_with_layer_attrs(mock_nx_graph, node_keys, layer_attrs)
+    metatypes = {
+        "conv2d": conv2d_metatype,
+        "batch_norm": batchnorm_metatype,
+        "relu": relu_metatype,
+    }
+    mock_nx_graph = _add_nodes_with_layer_attrs(mock_nx_graph, node_keys, layer_attrs, metatypes)
 
     mock_nx_graph.add_edges_from(
         [
@@ -238,7 +254,9 @@ def get_mock_model_graph_with_mergeable_pattern() -> NNCFGraph:
     return get_nncf_graph_from_mock_nx_graph(mock_nx_graph)
 
 
-def get_mock_model_graph_with_no_mergeable_pattern() -> NNCFGraph:
+def get_mock_model_graph_with_no_mergeable_pattern(
+    conv2d_metatype=None, batchnorm_metatype=None, relu_metatype=None
+) -> NNCFGraph:
     mock_nx_graph = nx.DiGraph()
 
     #   (A)
@@ -270,7 +288,12 @@ def get_mock_model_graph_with_no_mergeable_pattern() -> NNCFGraph:
             padding_values=[0, 0, 0, 0],
         )
     }
-    mock_nx_graph = _add_nodes_with_layer_attrs(mock_nx_graph, node_keys, layer_attrs)
+    metatypes = {
+        "conv2d": conv2d_metatype,
+        "batch_norm": batchnorm_metatype,
+        "relu": relu_metatype,
+    }
+    mock_nx_graph = _add_nodes_with_layer_attrs(mock_nx_graph, node_keys, layer_attrs, metatypes)
 
     mock_nx_graph.add_edges_from(
         [
@@ -285,7 +308,9 @@ def get_mock_model_graph_with_no_mergeable_pattern() -> NNCFGraph:
     return get_nncf_graph_from_mock_nx_graph(mock_nx_graph)
 
 
-def get_mock_model_graph_with_broken_output_edge_pattern() -> NNCFGraph:
+def get_mock_model_graph_with_broken_output_edge_pattern(
+    conv2d_metatype=None, batchnorm_metatype=None, relu_metatype=None
+) -> NNCFGraph:
     mock_nx_graph = nx.DiGraph()
 
     #   (A)
@@ -314,7 +339,12 @@ def get_mock_model_graph_with_broken_output_edge_pattern() -> NNCFGraph:
             padding_values=[0, 0, 0, 0],
         )
     }
-    mock_nx_graph = _add_nodes_with_layer_attrs(mock_nx_graph, node_keys, layer_attrs)
+    metatypes = {
+        "conv2d": conv2d_metatype,
+        "batch_norm": batchnorm_metatype,
+        "relu": relu_metatype,
+    }
+    mock_nx_graph = _add_nodes_with_layer_attrs(mock_nx_graph, node_keys, layer_attrs, metatypes)
 
     mock_nx_graph.add_edges_from(
         [

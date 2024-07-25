@@ -100,7 +100,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
             return False
         const_port_ids = node.layer_attributes.get_const_port_ids()
         assert len(const_port_ids) == 1
-        weight_node = nncf_graph.get_input_edges(node)[const_port_ids[0]].from_node
+        weight_node = nncf_graph.get_input_edge_by_port_id(node, const_port_ids[0]).from_node
         return weight_node.metatype in FAKE_QUANTIZE_OPERATIONS
 
     @staticmethod

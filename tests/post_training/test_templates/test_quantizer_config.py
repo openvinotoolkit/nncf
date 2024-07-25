@@ -277,7 +277,7 @@ class TemplateTestQuantizerConfig:
             port_id = None if TargetType.POST_LAYER_OPERATION else 0
             ip = ActivationQuantizationInsertionPoint(params.target_node_name, port_id)
             qp = SingleConfigQuantizationPoint(ip, q_config, [params.target_node_name])
-            min_max_algo._add_activation_quantization_target_point(qp)
+            min_max_algo._add_activation_quantization_target_point(qp, conv_sum_aggregation_nncf_graph.nncf_graph)
         else:
             ip = WeightQuantizationInsertionPoint(params.target_node_name)
             qp = SingleConfigQuantizationPoint(ip, q_config, [params.target_node_name])
