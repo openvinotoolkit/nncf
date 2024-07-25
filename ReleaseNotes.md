@@ -11,9 +11,10 @@ Post-training Quantization:
 - Features:
   - ...
 - Fixes:
-  - ...
+  - [OpenVINO] Fix ignored_scope for models with IF node.
 - Improvements:
   - Reduced the amount of memory required for applying weight compression to OpenVINO models.
+  - Improved ignored_scope logging.
 - Deprecations/Removals:
   - ...
 - Tutorials:
