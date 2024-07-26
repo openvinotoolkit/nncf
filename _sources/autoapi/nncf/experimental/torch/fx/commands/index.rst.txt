@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.experimental.torch.fx.commands`
+=============================================
+
+.. py:module:: nncf.experimental.torch.fx.commands
+
+

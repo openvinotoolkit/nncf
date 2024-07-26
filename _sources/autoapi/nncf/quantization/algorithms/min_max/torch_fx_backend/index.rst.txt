@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.quantization.algorithms.min_max.torch_fx_backend`
+===============================================================
+
+.. py:module:: nncf.quantization.algorithms.min_max.torch_fx_backend
+
+

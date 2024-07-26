@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.experimental.torch.fx.quantization.quantize_model`
+================================================================
+
+.. py:module:: nncf.experimental.torch.fx.quantization.quantize_model
+
+
