@@ -4,19 +4,22 @@
 
 Post-training Quantization:
 
-- Breaking changes:
-  - ...
-- General:
-  - (Common): Changed the representation of symmetrically quantized weights from an unsigned integer with a fixed zero-point to a signed data type without zero-point in the weights compression algorithm.
 - Features:
-  - ...
+  - (OpenVINO, PyTorch, ONNX) Excluded comparison operators from the quantization scope for `nncf.ModelType.TRANSFORMER`.
+  - (OpenVINO, PyTorch) Changed the representation of symmetrically quantized weights from an unsigned integer with a fixed zero-point to a signed data type without a zero-point in the `nncf.compress_weights()` method.
+  - (OpenVINO) Extended patterns support of the AWQ algorithm as part of `nncf.compress_weights()`. This allows apply AWQ for the wider scope of the models.
+  - (OpenVINO) Introduced `nncf.CompressWeightsMode.E2M1` as the new precision for the `mode` option of `nncf.compress_weights()`.
+  - (OpenVINO) Added support for models with BF16 precision in the `nncf.quantize()` method.
+  - (PyTorch) Added quantization support for the `torch.addmm`.
+  - (PyTorch) Added quantization support for the `torch.nn.functional.scaled_dot_product_attention`.
 - Fixes:
-  - [OpenVINO] Fix ignored_scope for models with IF node.
+  - (OpenVINO, PyTorch, ONNX) Fixed Fast-/BiasCorrection algorithms with correct support of transposed MatMul layers.
+  - (OpenVINO) Fixed `nncf.IgnoredScope()` functionality for models with If operation.
+  - (OpenVINO) Fixed patterns with PReLU operations.
+  - Fixed runtime error while importing NNCF without Matplotlib package.
 - Improvements:
-  - Reduced the amount of memory required for applying weight compression to OpenVINO models.
-  - Improved ignored_scope logging.
-- Deprecations/Removals:
-  - ...
+  - Reduced the amount of memory required for applying `nncf.compress_weights()` to OpenVINO models.
+  - Improved logging in case of the not empty `nncf.IgnoredScope()`.
 - Tutorials:
   - [Post-Training Optimization of Stable Audio Open Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-audio/stable-audio.ipynb)
   - [Post-Training Optimization of Phi3-Vision Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/phi-3-vision/phi-3-vision.ipynb)
@@ -28,35 +31,16 @@ Post-training Quantization:
   - [Post-Training Optimization of DynamiCrafter Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/dynamicrafter-animating-images/dynamicrafter-animating-images.ipynb)
   - [Post-Training Optimization of DepthAnythingV2 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/depth-anything/depth-anything-v2.ipynb)
   - [Post-Training Optimization of Kosmos-2 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/kosmos2-multimodal-large-language-model/kosmos2-multimodal-large-language-model.ipynb)
-- Known issues:
-  - ...
 
 Compression-aware training:
 
-- Breaking changes:
-  - ...
-- General:
-  - ...
-- Features:
-  - ...
 - Fixes:
-  - ...
-- Improvements:
-  - ...
-- Deprecations/Removals:
-  - ...
-- Tutorials:
-  - ...
-- Known issues:
-  - ...
-
-Deprecations/Removals:
-
-- ...
+  - (PyTorch) Fixed issue with wrapping for operator without patched state.
 
 Requirements:
 
-- ...
+- Updated Tensorflow (2.15) version. This version requires Python 3.9-3.11.
+- Added NumPy 2.0 support.
 
 ## New in Release 2.11.0
 
