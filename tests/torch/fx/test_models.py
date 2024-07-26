@@ -26,6 +26,7 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
+from diffusers import StableDiffusionPipeline
 from torch._export import capture_pre_autograd_graph
 
 from nncf.common.graph.graph import NNCFNodeName
@@ -86,13 +87,18 @@ def get_full_path_to_json(model_json_name: str) -> str:
 
 
 def get_ref_metatypes_from_json(
-    model_name: str, model_metatypes: Dict[NNCFNodeName, Type[OperatorMetatype]]
+    model_name: str, model_metatypes: Dict[NNCFNodeName, Type[OperatorMetatype]], fx_dir: str
 ) -> Dict[NNCFNodeName, Type[OperatorMetatype]]:
 
     model_json_name = get_json_filename(model_name)
     complete_path = get_full_path_to_json(model_json_name)
 
     json_parent_dir = Path(complete_path).parent
+
+    pipeline_model_dir = fx_dir.split("/")
+    if len(pipeline_model_dir) > 1:
+        json_parent_dir = json_parent_dir / "/".join(pipeline_model_dir[1:])
+        complete_path = json_parent_dir / model_json_name
 
     if os.getenv("NNCF_TEST_REGEN_JSON") is not None:
         if not os.path.exists(json_parent_dir):
@@ -107,10 +113,10 @@ def get_ref_metatypes_from_json(
 @pytest.mark.parametrize("test_case", TEST_MODELS, ids=[m.model_id for m in TEST_MODELS])
 def test_models(test_case: ModelCase):
     with disable_patching():
-        device = torch.device("cpu")
         model_name = test_case.model_id
         model = test_case.model_builder()
         model.to(device)
+        model.eval()
 
         with torch.no_grad():
             ex_input = torch.ones(test_case.input_shape)
