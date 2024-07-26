@@ -24,4 +24,3 @@ timm==0.9.2
 # Required for torch/fx tests
 torchvision
 fastdownload==0.0.7
-ultralytics==8.2.56  # TODO(dlyakhov) move ultralytics requirements to the nightly test
