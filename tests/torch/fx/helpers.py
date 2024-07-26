@@ -19,6 +19,10 @@ import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
+from torch._export import capture_pre_autograd_graph
+
+from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
+from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 
 
 class TinyImagenetDatasetManager:
@@ -103,3 +107,16 @@ class TinyImagenetDatasetManager:
         )
 
         return train_loader, val_loader, calibration_dataset
+
+
+def get_fx_model(model: torch.nn.Module):
+    device = next(model.named_parameters())[1].device
+    input_shape = model.INPUT_SIZE
+    if input_shape is None:
+        input_shape = [1, 3, 32, 32]
+    ex_input = torch.ones(input_shape).to(device)
+    model.eval()
+    with disable_patching():
+        exported_model = capture_pre_autograd_graph(model, args=(ex_input,))
+    apply_quantization_transformations(exported_model)
+    return exported_model
