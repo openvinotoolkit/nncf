@@ -444,7 +444,7 @@ class PTHardTanhMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTHardSwishMetatype(PTOperatorMetatype):
     name = "HardSwishOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["hardswish"]}
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["hardswish", "hardswish_"]}
     num_expected_input_edges = 1
 
 
@@ -693,7 +693,7 @@ class PTRoundMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTDropoutMetatype(PTOperatorMetatype):
     name = "DropoutOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["dropout"]}
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["dropout"], NamespaceTarget.TORCH: ["dropout_"]}
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -1099,6 +1099,24 @@ class PTScaledDotProductAttentionMetatype(PTOperatorMetatype):
     }
     hw_config_names = [HWConfigOpName.SCALED_DOT_PRODUCT_ATTENTION]
     target_input_ports = [0, 1]
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTEmptyMetatype(PTOperatorMetatype):
+    name = "EmptyOp"
+    module_to_function_names = {NamespaceTarget.TORCH: ["empty"]}
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTVectorNormMetatype(PTOperatorMetatype):
+    name = "VectorNormOp"
+    module_to_function_names = {NamespaceTarget.ATEN: ["linalg_vector_norm"]}
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTClampMetatype(PTOperatorMetatype):
+    name = "ClampOp"
+    module_to_function_names = {NamespaceTarget.TORCH: ["clamp", "clamp_min"]}
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
