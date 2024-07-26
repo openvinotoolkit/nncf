@@ -12,6 +12,8 @@
 import torch
 
 
+# TODO(dlyakhov): Use torch.fx.graph.find_nodes method instead after
+# torch version update (>= 2.4)
 def get_graph_node_by_name(graph: torch.fx.Graph, name: str) -> torch.fx.Node:
     """
     Retrieves a node with the specified name from the grpah.
