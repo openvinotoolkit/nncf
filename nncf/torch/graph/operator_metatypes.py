@@ -707,7 +707,7 @@ class PTModuleBatchNormMetatype(PTModuleOperatorSubtype):
     name = "BatchNormOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"],
-        NamespaceTarget.ATEN: ["_native_batch_norm_legit_no_training"],
+        NamespaceTarget.ATEN: ["_native_batch_norm_legit_no_training", "cudnn_batch_norm"],
     }
 
 
@@ -716,7 +716,7 @@ class PTBatchNormMetatype(PTOperatorMetatype):
     name = "BatchNormOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"],
-        NamespaceTarget.ATEN: ["_native_batch_norm_legit_no_training"],
+        NamespaceTarget.ATEN: ["_native_batch_norm_legit_no_training", "cudnn_batch_norm"],
     }
     subtypes = [PTModuleBatchNormMetatype]
     weight_port_ids = [3]
