@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import datetime as dt
+import gc
 import os
 import re
 import time
@@ -357,6 +358,7 @@ class PTQTestPipeline(BaseTestPipeline):
 
         start_time = time.perf_counter()
         if self.memory_monitor:
+            gc.collect()
             max_value_per_memory_type = monitor_memory_for_callable(
                 self._compress,
                 interval=0.1,

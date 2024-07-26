@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import gc
 import os
 import re
 import shutil
@@ -182,6 +182,7 @@ class LMWeightCompression(BaseTestPipeline):
         print("Weight compression...")
         start_time = time.perf_counter()
         if self.memory_monitor:
+            gc.collect()
             max_value_per_memory_type = monitor_memory_for_callable(
                 self._compress,
                 interval=0.1,
