@@ -60,6 +60,9 @@ class MemoryMonitor:
         can be obtained by calling get_data(). Memory logs can be saved by calling save_memory_logs(). There are two
         log files: one with data values in a .txt format and another one in a form of a 2D time-memory plot.
 
+        Memory monitor itself allocates some memory itself, especially during figure saving. It is advised to use it
+        for measuring large memory processes.
+
         :param interval: How frequently to take memory measurements (in seconds).
         :param memory_type: Type of memory to log. Accepts four possible values:
             - MemoryType.RSS: Resident Set Size is the portion of memory occupied by a process that is held in RAM.
@@ -217,7 +220,7 @@ class MemoryMonitor:
         plt.plot(time_values, memory_values)
         plt.xlabel("Time (seconds)")
         plt.ylabel(f"Memory Usage ({self.memory_type.value}, {self.memory_unit.value})")
-        plt.title(plot_title)
+        plt.title(f"{plot_title} Max: {max(memory_values):.2f} {self.memory_unit.value}")
         plt.grid(True)
         plt.tight_layout()
         plt.savefig(str(log_filepath).replace(".txt", f"{filename_suffix}.png"))
@@ -355,7 +358,7 @@ if __name__ == "__main__":
 
     a = []
     for i in tqdm(range(10)):
-        a.append(np.random.random((1 << 20,)))
+        a.append(np.random.random((1 << 25,)))
         time.sleep(1)
     del a
     time.sleep(1)
