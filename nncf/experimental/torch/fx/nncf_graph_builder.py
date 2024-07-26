@@ -122,7 +122,8 @@ class GraphConverter:
         """
         output_port_id = 0
         if source_node.op in ("get_attr",):
-            tensor_shape = tuple(getattr(model, source_node.target).shape)
+            tensor = getattr(model, source_node.target)
+            tensor_shape = tuple(tensor.shape)
         elif "val" in source_node.meta:
             if source_nncf_node.metatype is om.PTBatchNormMetatype:
                 tensor = source_node.meta["val"][0]
@@ -137,6 +138,7 @@ class GraphConverter:
             # TODO(dlyakhov): Refactor algorithms to always have knowns edges shapes.
             nncf_logger.debug(f"Edge shape between {source_node.name} and {dist_node.name} is unknown.")
             tensor_shape = None
-
+        if "quantize" in dist_node.name:
+            dist_node.meta["val"] = tensor
         input_port_id = dist_node.all_input_nodes.index(source_node)
         return input_port_id, output_port_id, tensor_shape
