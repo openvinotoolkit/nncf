@@ -32,7 +32,6 @@ from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
 from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
-from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
@@ -230,55 +229,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: ov.Model, parameters: Dict, algo_name: Optional[str] = "quantization", path: Optional[List] = None
     ) -> None:
         dump_parameters(model, parameters, algo_name, path)
-
-    @staticmethod
-    def get_compress_decompress_pipeline(config: WeightCompressionConfig, w_shape, s_shape, z_p_shape=None):
-        parameters, clamp = OVWeightCompressionAlgoBackend.get_compress_pipeline(
-            config, w_shape, s_shape, z_p_shape, True
-        )
-
-        if len(parameters) == 3:
-            _, s, zp = parameters
-            result = (clamp - zp) * s
-        else:
-            s = parameters[1]
-            result = clamp * s
-
-        model = ov.Model([result], parameters)
-
-        compiled_model = ov.compile_model(model, device_name="CPU")
-
-        return lambda parameters: compiled_model(parameters)[0]
-
-    @staticmethod
-    def get_compress_pipeline(config: WeightCompressionConfig, w_shape, s_shape, z_p_shape=None, return_nodes=False):
-        mode = config.mode
-        assert mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]
-        num_bits = config.num_bits
-
-        asym_quant = mode in [CompressWeightsMode.INT4_ASYM]
-        level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
-        level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
-
-        w = opset.parameter(w_shape, name="w")
-        s = opset.parameter(s_shape, name="s")
-        parameters = [w, s]
-        compressed_w = w / s
-        if z_p_shape is not None:
-            zp = opset.parameter(z_p_shape, name="zp")
-            parameters.append(zp)
-            compressed_w += zp
-
-        result = opset.clamp(opset.round(compressed_w), level_low, level_high, name="compressed_weights")
-
-        if return_nodes:
-            return parameters, result
-
-        model = ov.Model([result], parameters)
-
-        compiled_model = ov.compile_model(model, device_name="CPU")
-
-        return lambda parameters: compiled_model(parameters)[0]
 
 
 class OVAWQAlgoAlgoBackend(AWQAlgoBackend, OVWeightCompressionAlgoBackend):

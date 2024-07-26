@@ -8,19 +8,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import logging
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import numpy as np
 
 import nncf
+from nncf.common.logging.logger import log_once
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
+from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
+from nncf.utils import is_openvino_available
 
 ReductionAxes = Tuple[int, ...]
 
@@ -289,27 +292,71 @@ def calculate_quantized_weight(
     :param invert_scale: applies inversion for scale and then multiply by weights instead of division.
     :return: Quantized weight tensor of uint8 or int8 type.
     """
-    if weight.dtype != TensorDataType.float32:
-        weight = weight.astype(TensorDataType.float32)
-    if scale.dtype != TensorDataType.float32:
-        scale = scale.astype(TensorDataType.float32)
 
-    num_bits = config.num_bits
     asym_quant = config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]
-    dtype = TensorDataType.uint8 if asym_quant else TensorDataType.int8
-    level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
-    level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
 
-    if invert_scale:
-        scale = fns.power(scale, -1)
-        compressed_weights = weight * scale
+    if weight.backend == TensorBackend.numpy and not is_openvino_available():
+        log_once(logging.INFO, "Compression time may improve after installing OpenVINO")
+
+    if weight.backend == TensorBackend.numpy and is_openvino_available():
+        from nncf.openvino.quantization.compression_primitives import OV_COMPRESSION_PRIMITIVE_CACHE
+
+        zero_point_shape = None if zero_point is None else zero_point.shape
+        compress_weight_primitive = OV_COMPRESSION_PRIMITIVE_CACHE.get_compress_weight_primitive(
+            config, weight.shape, scale.shape, zero_point_shape
+        )
+        input_tensors = weight.data, scale.data
+        if zero_point is not None:
+            input_tensors += (zero_point.data,)
+        compressed_weights = Tensor(compress_weight_primitive(input_tensors))
     else:
-        compressed_weights = weight / scale
-    if zero_point is not None:
-        compressed_weights += zero_point.astype(weight.dtype)
-    compressed_weights = fns.round(compressed_weights)
-    compressed_weights = fns.clip(compressed_weights, level_low, level_high).astype(dtype)
+        if weight.dtype != TensorDataType.float32:
+            weight = weight.astype(TensorDataType.float32)
+        if scale.dtype != TensorDataType.float32:
+            scale = scale.astype(TensorDataType.float32)
+
+        num_bits = config.num_bits
+        level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
+        level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
+
+        if invert_scale:
+            scale = fns.power(scale, -1)
+            compressed_weights = weight * scale
+        else:
+            compressed_weights = weight / scale
+        if zero_point is not None:
+            compressed_weights += zero_point.astype(weight.dtype)
+        compressed_weights = fns.round(compressed_weights)
+        compressed_weights = fns.clip(compressed_weights, level_low, level_high)
+
+    dtype = TensorDataType.uint8 if asym_quant else TensorDataType.int8
+    compressed_weights = compressed_weights.astype(dtype)
+
     return compressed_weights
+
+
+def calculate_quantized_dequantized_weight(
+    weight: Tensor, config: WeightCompressionConfig, scale: Tensor, zero_point: Optional[Tensor] = None
+) -> Tensor:
+
+    if weight.backend == TensorBackend.numpy and not is_openvino_available():
+        log_once(logging.INFO, "Compression time may improve after installing OpenVINO")
+
+    if weight.backend == TensorBackend.numpy and is_openvino_available():
+        from nncf.openvino.quantization.compression_primitives import OV_COMPRESSION_PRIMITIVE_CACHE
+
+        zero_point_shape = None if zero_point is None else zero_point.shape
+        compress_decompress_weight_primitive = OV_COMPRESSION_PRIMITIVE_CACHE.get_compress_decompress_weight_primitive(
+            config, weight.shape, scale.shape, zero_point_shape
+        )
+        input_tensors = weight.data, scale.data
+        if zero_point is not None:
+            input_tensors += (zero_point.data,)
+        decompressed_weight = Tensor(compress_decompress_weight_primitive(input_tensors))
+    else:
+        compressed_weight = calculate_quantized_weight(weight, config, scale, zero_point)
+        decompressed_weight = do_dequantization(compressed_weight, scale, zero_point)
+    return decompressed_weight
 
 
 def do_integer_quantization(
