@@ -371,7 +371,7 @@ def patch_torch_operators():
 
     functions_to_patch = {}
     for namespace in NamespaceTarget:
-        if namespace == NamespaceTarget.EXTERNAL:
+        if namespace in [NamespaceTarget.ATEN, NamespaceTarget.EXTERNAL]:
             continue
         functions_to_patch[namespace] = get_all_functions_from_namespace(namespace)
 
