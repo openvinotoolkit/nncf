@@ -13,12 +13,16 @@ from typing import List
 
 import pytest
 import torch
+from torch._export import capture_pre_autograd_graph
+
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend import FXFastBiasCorrectionAlgoBackend
 from nncf.torch.model_graph_manager import OPERATORS_WITH_BIAS_METATYPES
 from tests.post_training.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
-from tests.torch.fx.helpers import get_fx_model
+from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
+from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
+
 
 
 class TestTorchFXFBCAlgorithm(TemplateTestFBCAlgorithm):
@@ -30,9 +34,21 @@ class TestTorchFXFBCAlgorithm(TemplateTestFBCAlgorithm):
     def get_backend() -> FXFastBiasCorrectionAlgoBackend:
         return FXFastBiasCorrectionAlgoBackend
 
+    def _get_fx_model(model: torch.nn.Module):
+        device = next(model.named_parameters())[1].device
+        input_shape = model.INPUT_SIZE
+        if input_shape is None:
+            input_shape = [1, 3, 32, 32]
+        ex_input = torch.ones(input_shape).to(device)
+        model.eval()
+        with disable_patching():
+            exported_model = capture_pre_autograd_graph(model, args=(ex_input,))
+        apply_quantization_transformations(exported_model)
+        return exported_model
+
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str):
-        fx_model = get_fx_model(model)
+        fx_model = TestTorchFXFBCAlgorithm._get_fx_model(model)
         return fx_model
 
     @staticmethod
@@ -71,7 +87,7 @@ class TestTorchCudaFBCAlgorithm(TestTorchFXFBCAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: bool, tmp_dir: str):
-        fx_cuda_model = get_fx_model(model.cuda())
+        fx_cuda_model = super(TestTorchCudaFBCAlgorithm, TestTorchCudaFBCAlgorithm)._get_fx_model(model.cuda())
         return fx_cuda_model
 
     @staticmethod
@@ -80,5 +96,4 @@ class TestTorchCudaFBCAlgorithm(TestTorchFXFBCAlgorithm):
 
     @staticmethod
     def check_bias(model: torch.fx.GraphModule, ref_bias: list):
-
-        TestTorchFXFBCAlgorithm.check_bias(model, ref_bias)
+        super(TestTorchCudaFBCAlgorithm, TestTorchCudaFBCAlgorithm).check_bias(model, ref_bias)
