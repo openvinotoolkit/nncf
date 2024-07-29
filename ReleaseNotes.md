@@ -8,7 +8,7 @@ Post-training Quantization:
   - (OpenVINO, PyTorch, ONNX) Excluded comparison operators from the quantization scope for `nncf.ModelType.TRANSFORMER`.
   - (OpenVINO, PyTorch) Changed the representation of symmetrically quantized weights from an unsigned integer with a fixed zero-point to a signed data type without a zero-point in the `nncf.compress_weights()` method.
   - (OpenVINO) Extended patterns support of the AWQ algorithm as part of `nncf.compress_weights()`. This allows apply AWQ for the wider scope of the models.
-  - (OpenVINO) Introduced `nncf.CompressWeightsMode.E2M1` as the new precision for the `mode` option of `nncf.compress_weights()`.
+  - (OpenVINO) Introduced `nncf.CompressWeightsMode.E2M1`  `mode` option of `nncf.compress_weights()` as the new MXFP4 precision (Experimental).
   - (OpenVINO) Added support for models with BF16 precision in the `nncf.quantize()` method.
   - (PyTorch) Added quantization support for the `torch.addmm`.
   - (PyTorch) Added quantization support for the `torch.nn.functional.scaled_dot_product_attention`.
