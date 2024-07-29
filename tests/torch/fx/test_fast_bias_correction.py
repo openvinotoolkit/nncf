@@ -13,8 +13,8 @@ from typing import List
 
 import pytest
 import torch
-from torch._export import capture_pre_autograd_graph
 import torch.fx
+from torch._export import capture_pre_autograd_graph
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
