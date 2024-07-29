@@ -21,7 +21,6 @@ import torchvision.transforms as transforms
 from fastdownload import FastDownload
 
 
-
 class TinyImagenetDatasetManager:
     DATASET_URL = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
     DATASET_PATH = "~/.cache/nncf/tests/datasets"
@@ -104,4 +103,3 @@ class TinyImagenetDatasetManager:
         )
 
         return train_loader, val_loader, calibration_dataset
-
