@@ -26,18 +26,17 @@ ifdef NUM_WORKERS
 	NUM_WORKERS_ARG := -n${NUM_WORKERS}
 endif
 
-export PIP_CONSTRAINT = constraints.txt
-
 install-pre-commit:
 	pip install pre-commit==3.2.2
 
+install-ac:
+	PIP_CONSTRAINT=constraints.txt pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 
 ###############################################################################
 # ONNX backend
-install-onnx-test:
+install-onnx-test: install-ac
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/onnx/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
@@ -62,10 +61,9 @@ test-examples-onnx:
 
 ###############################################################################
 # OpenVino backend
-install-openvino-test:
+install-openvino-test: install-ac
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/openvino/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
@@ -92,10 +90,9 @@ test-examples-openvino:
 
 ###############################################################################
 # TensorFlow backend
-install-tensorflow-test:
+install-tensorflow-test: install-ac
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/tensorflow/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
@@ -122,10 +119,9 @@ test-examples-tensorflow:
 
 ###############################################################################
 # PyTorch backend
-install-torch-test:
+install-torch-test: install-ac
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/torch/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
