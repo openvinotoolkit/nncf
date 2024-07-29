@@ -1101,24 +1101,6 @@ class PTScaledDotProductAttentionMetatype(PTOperatorMetatype):
     target_input_ports = [0, 1]
 
 
-@PT_OPERATOR_METATYPES.register()
-class PTEmptyMetatype(PTOperatorMetatype):
-    name = "EmptyOp"
-    module_to_function_names = {NamespaceTarget.TORCH: ["empty"]}
-
-
-@PT_OPERATOR_METATYPES.register()
-class PTVectorNormMetatype(PTOperatorMetatype):
-    name = "VectorNormOp"
-    module_to_function_names = {NamespaceTarget.ATEN: ["linalg_vector_norm"]}
-
-
-@PT_OPERATOR_METATYPES.register()
-class PTClampMetatype(PTOperatorMetatype):
-    name = "ClampOp"
-    module_to_function_names = {NamespaceTarget.TORCH: ["clamp", "clamp_min"]}
-
-
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.
