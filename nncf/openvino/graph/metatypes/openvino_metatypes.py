@@ -566,6 +566,12 @@ class OVStridedSliceMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVSliceMetatype(OVOpMetatype):
+    name = "SliceOp"
+    op_names = ["Slice"]
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVExpMetatype(OVOpMetatype):
     name = "ExpOp"
     op_names = ["Exp"]
