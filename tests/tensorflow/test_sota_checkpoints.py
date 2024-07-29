@@ -28,6 +28,7 @@ from pytest import FixtureRequest
 from tests.shared.command import Command
 from tests.shared.metric_thresholds import DIFF_FP32_MAX_GLOBAL
 from tests.shared.metric_thresholds import DIFF_FP32_MIN_GLOBAL
+from tests.shared.openvino_version import get_openvino_version
 from tests.shared.paths import DATASET_DEFINITIONS_PATH
 from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
@@ -85,6 +86,7 @@ class EvalRunParamsStruct:
     diff_target_ov_min: float
     diff_target_ov_max: float
     skip_ov: Optional[str]
+    skip_ov_version: Optional[str]
     xfail_ov: Optional[str]
 
 
@@ -163,6 +165,7 @@ def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
                         diff_target_tf_min=sample_dict.get("diff_target_tf_min", DIFF_TARGET_TF_MIN),
                         diff_target_tf_max=sample_dict.get("diff_target_tf_max", DIFF_TARGET_TF_MAX),
                         skip_ov=sample_dict.get("skip_ov"),
+                        skip_ov_version=sample_dict.get("skip_ov_version"),
                         xfail_ov=sample_dict.get("xfail_ov"),
                     )
                 )
@@ -473,7 +476,9 @@ class TestSotaCheckpoints:
     ):
         if not openvino:
             pytest.skip()
-        if eval_test_struct.skip_ov:
+        if eval_test_struct.skip_ov and (
+            eval_test_struct.skip_ov_version is None or eval_test_struct.skip_ov_version == get_openvino_version()
+        ):
             status = f"Skip by: {eval_test_struct.skip_ov}"
             collected_data.append(ResultInfo(model_name=eval_test_struct.model_name, backend="OV", status=status))
             pytest.skip(status)

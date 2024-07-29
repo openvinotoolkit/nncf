@@ -35,7 +35,9 @@
                     "model_description": "Inception V3",
                     "compression_description": "INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 61% (RB)",
                     "target_tf": 77.52,
-                    "target_ov": 77.51
+                    "target_ov": 77.51,
+                    "skip_ov": "CVS-147730 only for OV 2024.3",
+                    "skip_ov_version": "2024.3"
                 },
                 "inception_v3_imagenet_magnitude_sparsity": {
                     "config": "examples/tensorflow/classification/configs/sparsity/inception_v3_imagenet_magnitude_sparsity.json",
