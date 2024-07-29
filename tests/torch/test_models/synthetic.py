@@ -325,6 +325,19 @@ class Baddbmm(torch.nn.Module):
         return torch.baddbmm(x, y, z)
 
 
+class ScaledDotProductModel(nn.Module):
+    # EMBED_DIM = 4
+    EMBED_DIM = 4 * 3
+    INPUT_SIZES = [2, 1, EMBED_DIM]
+
+    def forward(self, x):
+        shape = x.shape
+        x = x.view(-1).view(shape)
+        # k, q, v = torch.split(x, 4, -1)
+        # return nn.functional.scaled_dot_product_attention(k, q, v)
+        return nn.functional.scaled_dot_product_attention(x, x, x)
+
+
 class MHA_single_input(torch.nn.Module):
     EMBED_DIM = 4
     INPUT_SIZES = [2, 1, EMBED_DIM]
