@@ -255,16 +255,6 @@ def _is_supported_batch_norm_for_training(node: torch.fx.Node):
     return node.target in supported_ops
 
 
-def _is_conv_node(node: torch.fx.Node):
-    """
-    Return whether the node refers to an aten conv op.
-    """
-    return node.op == "call_function" and node.target in [
-        torch.ops.aten.conv1d.default,
-        torch.ops.aten.conv2d.default,
-    ]
-
-
 def _is_bn_node(node: torch.fx.Node):
     return (
         _is_supported_batch_norm_for_training(node)
@@ -289,7 +279,7 @@ def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
         bn_node = node
 
         node = bn_node.args[0]
-        if not _is_conv_node(node):
+        if not _is_conv(node):
             continue
         conv_node = node
         conv_weight_node = conv_node.args[1]
