@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import datetime as dt
-import gc
 import os
 import re
 import time
@@ -31,9 +30,6 @@ from optimum.intel import OVQuantizer
 import nncf
 from nncf import TargetDevice
 from tests.shared.command import Command
-from tools.memory_monitor import MemoryType
-from tools.memory_monitor import MemoryUnit
-from tools.memory_monitor import monitor_memory_for_callable
 
 DEFAULT_VAL_THREADS = 4
 
@@ -198,7 +194,6 @@ class BaseTestPipeline(ABC):
         run_benchmark_app: bool,
         params: dict = None,
         batch_size: int = 1,
-        memory_monitor: bool = False,
     ) -> None:
         self.reported_name = reported_name
         self.model_id = model_id
@@ -209,7 +204,6 @@ class BaseTestPipeline(ABC):
         self.reference_data = reference_data
         self.params = params or {}
         self.batch_size = batch_size
-        self.memory_monitor = memory_monitor
         self.no_eval = no_eval
         self.run_benchmark_app = run_benchmark_app
         self.output_model_dir: Path = self.output_dir / self.reported_name / self.backend.value
@@ -357,18 +351,7 @@ class PTQTestPipeline(BaseTestPipeline):
                 torch.set_num_threads(int(inference_num_threads))
 
         start_time = time.perf_counter()
-        if self.memory_monitor:
-            gc.collect()
-            max_value_per_memory_type = monitor_memory_for_callable(
-                self._compress,
-                interval=0.1,
-                memory_unit=MemoryUnit.MiB,
-                return_max_value=True,
-                save_dir=self.output_model_dir / "ptq_memory_logs",
-            )
-            self.run_info.compression_memory_usage = max_value_per_memory_type[MemoryType.SYSTEM]
-        else:
-            self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
+        self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
         self.run_info.time_compression = time.perf_counter() - start_time
 
     def save_compressed_model(self) -> None:
