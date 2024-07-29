@@ -243,7 +243,7 @@ def _set_module_to_the_graph_module(
     return module_name_in_model
 
 
-def is_supported_batch_norm_for_training(node: torch.fx.Node):
+def _is_supported_batch_norm_for_training(node: torch.fx.Node):
     """
     Return True if the given node refers to an aten batch norm op QAT supports.
     """
@@ -255,7 +255,7 @@ def is_supported_batch_norm_for_training(node: torch.fx.Node):
     return node.target in supported_ops
 
 
-def is_conv_node(node: torch.fx.Node):
+def _is_conv_node(node: torch.fx.Node):
     """
     Return whether the node refers to an aten conv op.
     """
@@ -265,9 +265,9 @@ def is_conv_node(node: torch.fx.Node):
     ]
 
 
-def is_bn_node(node: torch.fx.Node):
+def _is_bn_node(node: torch.fx.Node):
     return (
-        is_supported_batch_norm_for_training(node)
+        _is_supported_batch_norm_for_training(node)
         or node.target == torch.ops.aten._native_batch_norm_legit_no_training.default
     )
 
@@ -279,17 +279,17 @@ def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
 
     :param model: Model to apply transformations to.
     """
-    has_bn = any(is_bn_node(node) for node in model.graph.nodes)
+    has_bn = any(_is_bn_node(node) for node in model.graph.nodes)
     if not has_bn:
         return
 
     for node in model.graph.nodes:
-        if node.op != "call_function" or not is_bn_node(node):
+        if node.op != "call_function" or not _is_bn_node(node):
             continue
         bn_node = node
 
         node = bn_node.args[0]
-        if not is_conv_node(node):
+        if not _is_conv_node(node):
             continue
         conv_node = node
         conv_weight_node = conv_node.args[1]
