@@ -444,7 +444,7 @@ class PTHardTanhMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTHardSwishMetatype(PTOperatorMetatype):
     name = "HardSwishOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["hardswish"]}
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["hardswish", "hardswish_"]}
     num_expected_input_edges = 1
 
 
@@ -693,7 +693,7 @@ class PTRoundMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTDropoutMetatype(PTOperatorMetatype):
     name = "DropoutOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["dropout"]}
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["dropout"], NamespaceTarget.TORCH: ["dropout_"]}
 
 
 @PT_OPERATOR_METATYPES.register()
