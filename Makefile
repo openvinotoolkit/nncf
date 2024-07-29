@@ -26,7 +26,7 @@ ifdef NUM_WORKERS
 	NUM_WORKERS_ARG := -n${NUM_WORKERS}
 endif
 
-PIP_CONSTRAINT=constraints.txt
+export PIP_CONSTRAINT = constraints.txt
 
 install-pre-commit:
 	pip install pre-commit==3.2.2
