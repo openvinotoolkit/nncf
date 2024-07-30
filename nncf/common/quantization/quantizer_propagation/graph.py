@@ -769,6 +769,38 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         recursive_helper(node_key, ret_node_key_list)
         return ret_node_key_list
 
+    def all_outputs_are_quantized(self, node_key) -> bool:
+        """
+        Returns True if all pathes from the given node to the first
+        input quantable nodes have an activation quantizer, False otherwise.
+
+        :param node_key: Given node key.
+        :return: True if all pathes from the given node to the first
+        input quantable nodes have an activation quantizer, False otherwise.
+        """
+
+        def recursive_helper(curr_node_key: str):
+            successors = self.successors(curr_node_key)
+            for successor_key in successors:
+                successor = self.nodes[successor_key]
+                successor_node_type = successor[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
+                if successor_node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
+                    trait = successor[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
+                    if trait != QuantizationTrait.QUANTIZATION_AGNOSTIC:
+                        return False
+                elif successor_node_type in [
+                    QuantizerPropagationStateGraphNodeType.PRE_HOOK,
+                    QuantizerPropagationStateGraphNodeType.POST_HOOK,
+                ]:
+                    successor_quantizer = successor[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR]
+                    if successor_quantizer:
+                        continue
+                if not recursive_helper(successor_key):
+                    return False
+            return True
+
+        return recursive_helper(node_key)
+
     def get_paths_to_immediately_dominating_insertion_points(
         self, insertion_point_node_key: str
     ) -> List[PropagationPath]:
