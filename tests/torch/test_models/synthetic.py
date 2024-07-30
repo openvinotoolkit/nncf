@@ -326,29 +326,12 @@ class Baddbmm(torch.nn.Module):
 
 
 class ScaledDotProductModel(nn.Module):
-    # EMBED_DIM = 4
-    EMBED_DIM = 4 * 3
+    EMBED_DIM = 4
     INPUT_SIZES = [2, 1, EMBED_DIM]
-
-    def __init__(self):
-        super().__init__()
-        self.conv1 = create_conv(2, 2, 1)
-        self.conv2 = create_conv(2, 2, 1)
-        self.conv3 = create_conv(2, 2, 1)
 
     def forward(self, x):
         shape = x.shape
         x = x.view(-1).view(shape)
-
-        a, b, c = self.conv1(x), self.conv2(x), self.conv3(x)
-        return a + b + c
-        # x = a + x
-        # x = x.view(-1).view(shape)
-        # return x, b
-
-        # k, q, v = torch.split(x, 4, -1)
-        # return nn.functional.scaled_dot_product_attention(k, q, v)
-
         return nn.functional.scaled_dot_product_attention(x, x, x)
 
 

@@ -871,26 +871,15 @@ class GatherAndMatmulShareData(OVReferenceModel):
 
 class ScaledDotProductAttentionModel(OVReferenceModel):
     def _create_ov_model(self):
-        import openvino
-        import torch
-
-        from tests.torch.test_models.synthetic import ScaledDotProductModel
-
-        return openvino.convert_model(
-            ScaledDotProductModel(),
-            input=ScaledDotProductModel.INPUT_SIZES,
-            example_input=torch.ones(ScaledDotProductModel.INPUT_SIZES),
-        )
-
-        x = opset.parameter([1, 1, 1, 64], name="Input_1")
+        input_ = opset.parameter([1, 1, 1, 64], name="Input_1")
         attn_mask = opset.parameter([1, 1, 1, 1], name="Input_2")
-        x = opset.reshape(x, [64], False)
+        x = opset.reshape(input_, [64], False)
         x = opset.reshape(x, [1, 1, 1, 64], False)
 
         attn = opset.scaled_dot_product_attention(x, x, x, attn_mask)
         result = opset.result(attn, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
-        model = ov.Model([result], [x, attn_mask])
+        model = ov.Model([result], [input_, attn_mask])
         return model
 
 
