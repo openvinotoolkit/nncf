@@ -485,12 +485,18 @@ def compress_weights(
                 "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
-        options = [all_layers, sensitivity_metric, dataset, awq, scale_estimation, gptq, lora_correction]
-        if any(option is not None for option in options):
-            raise AttributeError(
-                "INT8 modes do not support `all_layers`, `sensitivity_metric`, `awq`, `scale_estimation`, `gptq` "
-                "and `dataset` options. Set them to None."
-            )
+        options = {
+            "all_layers": all_layers,
+            "sensitivity_metric": sensitivity_metric,
+            "dataset": dataset,
+            "awq": awq,
+            "scale_estimation": scale_estimation,
+            "gptq": gptq,
+            "lora_correction": lora_correction,
+        }
+        unsupported_for_int8 = [name for name, value in options.items() if value is not None]
+        if unsupported_for_int8:
+            raise AttributeError(f"INT8 modes do not support {unsupported_for_int8} option(s). Set them to None.")
 
     if ratio is None:
         ratio = 1
