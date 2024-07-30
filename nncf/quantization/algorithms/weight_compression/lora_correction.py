@@ -172,17 +172,17 @@ class LoraCorrectionAlgorithm:
         # fq_w + residual = w   =>  residual = w - fq_w
         # O stands for output dimension, H - input dimension or hidden size, SS - samples size, R - rank.
         svd_residual = fns.astype(weight - fq_weights, TensorDataType.float32)  # [O, H]
-        if wc_params.reduction_axes == 0:
+        if wc_params.reduction_axes != 0:
             # TODO: always [O, H] or [H, O] ???
             # TODO: clone afterwards ???
             # in which cases its needed??
-            svd_residual = fns.transpose(svd_residual)
+            svd_residual = fns.transpose(svd_residual)  # [H, O] now
 
         residual = svd_residual.clone()  # [O, H] ??? after transpose??
 
         # TODO: is it always has input dimension on the first position?
         s, X = process_stats(activations[layer_name], subset_size)  # [H], [H, SS]
-
+        X = fns.transpose(X)  # [SS, H]
         if wc_params.compression_config.group_size > 0:
             # Multiply residual of weights by maximum channel magnitude of activations normalized per quantization
             # group. As a consequence, weights corresponding to a "noisy" activations has a higher error to correct.
@@ -195,76 +195,69 @@ class LoraCorrectionAlgorithm:
                 s[offset : offset + gs] = s[offset : offset + gs] / denum
                 denum = fns.max(s[offset : offset + gs])
                 s[offset : offset + gs] = s[offset : offset + gs] / denum
-            s = fns.expand_dims(s, 0)  # [1, H]
-            svd_residual = svd_residual * s  # [O, H]
+            s = fns.expand_dims(s, 1)  # [H, 1]
+            svd_residual = svd_residual * s  # [H, O]
 
         # Low-rank approximation.
         U_full, S_full, V_full = fns.linalg.svd(svd_residual, full_matrices=False)
-        U = U_full[:, :rank]  # [O, R]
+        U = U_full[:, :rank]  # [H, R]
         S = fns.diag(S_full[:rank])  # [R, R]
-        V = V_full[:rank, :]  # [R, H]
-        V = S @ V  # [R, H]
+        V = V_full[:rank, :]  # [R, O]
+        V = S @ V  # [R, O]
 
         # An iterative algorithm for correction (refinement) of the low-rank adapters.
-
         mean_noises = []
-        noise = residual @ X  # [O, SS]
+        noise = X @ residual  # [SS, H] * [H, O] = [SS, O]
         for i in range(n_iters):
-            # Part 1: V is fixed, find U.
-            VX = V @ X  # [R, SS]
+            # Part 1: U is fixed, find V.
+            XU = X @ U  # [SS, R]
             if not w_regularization:
-                # 1) U @ V @ X = noise
-                # (V @ X).t @ U.t = noise.t  ---> a @ x = b
-                sol = fns.linalg.lstsq(
-                    fns.transpose(VX), fns.transpose(noise), driver="gelsy"
-                )  # [SS, R]*[R, O]=[SS, O]
+                # X @ U @ V = noise      ---> a @ x = b
+                new_V = fns.linalg.lstsq(XU, noise, driver="gelsy")
             else:
                 # 1) U @ V = res         <--- regularization
-                # 2) U @ V @ X = noise
-                # U @ |V V @ X| = |res noise|
-                VVX = fns.concatenate([V, VX], axis=1)  # [R, H + SS]
-                noiseR = fns.concatenate([residual, noise], axis=1)  # [O, H + SS]
-                sol = fns.linalg.lstsq(fns.transpose(VVX), fns.transpose(noiseR), driver="gelsy")
-            if debug_interface is not None and i == 0:
-                init_noise = noise
-                mean_noise_before_svd = fns.mean(fns.abs(init_noise)).item()
-                mean_noise_after_svd = fns.mean(fns.abs(init_noise - (U @ V) @ X)).item()
-                mean_noises.extend([mean_noise_before_svd, mean_noise_after_svd])
-            U = fns.transpose(sol)
+                # 2) X @ U @ V = noise
+                # |U X @ U| @ V = |res noise|
+                UXU = fns.concatenate([U, XU], axis=0)  # [H + SS, R]
+                noiseR = fns.concatenate([residual, noise], axis=0)  # [H + SS, O]
+                new_V = fns.linalg.lstsq(UXU, noiseR, driver="gelsy")
             if debug_interface is not None:
-                mean_noise_after_correct_U = fns.mean(fns.abs(init_noise - (U @ V) @ X)).item()
+                if i == 0:
+                    init_noise = noise
+                    mean_noise_before_svd = fns.mean(fns.abs(init_noise)).item()
+                    mean_noise_after_svd = fns.mean(fns.abs(init_noise - XU @ V)).item()
+                    mean_noises.extend([mean_noise_before_svd, mean_noise_after_svd])
+                mean_noise_after_correct_U = fns.mean(fns.abs(init_noise - XU @ new_V)).item()
                 mean_noises.append(mean_noise_after_correct_U)
                 nncf_logger.debug(
                     f"{i} Correction U: ", mean_noise_before_svd, mean_noise_after_svd, mean_noise_after_correct_U
                 )
+            V = new_V
 
-            # Part 2: U is fixed, find V.
-            UI = fns.linalg.pinv(U)  # [R, O]
-            noiseU = UI @ noise  # [R, SS]
+            # Part 2: V is fixed, find U.
+            VI = fns.linalg.pinv(V)  # [O, R]
+            noiseVI = noise @ VI  # [R, SS]
             if not w_regularization:
-                # UI = U^-1
-                # 1) U @ V @ X = noise
-                # 1) V @ X = UI @ noise
-                # X.t @ V.t = (UI @ noise).t  ---> a @ x = b
-                sol = fns.linalg.lstsq(fns.transpose(X), fns.transpose(noiseU), driver="gelsy")
+                # VI = V^-1
+                # 1) X @ U @ V = noise
+                # 1) X @ U = noise @ VI     ---> a @ x = b
+                U = fns.linalg.lstsq(X, noiseVI, driver="gelsy")
             else:
-                # UI = U^-1, E - identity matrix
+                # VI = V^-1, E - identity matrix
                 # 1) U @ V = res           <--- regularization
-                # 1) V @ E = UI @ res
-                # 2) U @ V @ X = noise
-                # 2) V @ X = UI @ noise
-                # V @ |E X| = | (UI @ res) (UI @ noise) |
-                E = fns.eye(V.shape[1], backend=V.backend, dtype=V.dtype)  # [H, H]
-                IX = fns.concatenate([E, X], axis=1)  # [H, H + SS]
-                wU = UI @ residual  # [R, H]
-                noiseR = fns.concatenate([wU, noiseU], axis=1)  # [R, H + SS]
-                sol = fns.linalg.lstsq(fns.transpose(IX), fns.transpose(noiseR), driver="gelsy")
-            V = fns.transpose(sol)
+                # 1) E @ U = res @ VI
+                # 2) X @ U @ V = noise
+                # 2) X @ U = noise @ VI
+                # |E X| = | (UI @ res) (UI @ noise) |
+                E = fns.eye(U.shape[0], backend=U.backend, dtype=U.dtype)  # [H, H]
+                EX = fns.concatenate([E, X], axis=0)  # [H + SS, H]
+                noiseR = fns.concatenate([residual @ VI, noiseVI], axis=0)  # [H + SS, R]
+                U = fns.linalg.lstsq(EX, noiseR, driver="gelsy")
             if debug_interface is not None:
-                mean_noise_after_correct_V = fns.mean(fns.abs(init_noise - (U @ V) @ X)).item()
-                mean_noises.append(mean_noise_after_correct_V)
+                mean_noise_after_correct_U = fns.mean(fns.abs(init_noise - X @ U @ V)).item()
+                mean_noises.append(mean_noise_after_correct_U)
                 nncf_logger.debug(
-                    f"{i} Correction V: ", mean_noise_before_svd, mean_noise_after_svd, mean_noise_after_correct_V
+                    f"{i} Correction V: ", mean_noise_before_svd, mean_noise_after_svd, mean_noise_after_correct_U
                 )
                 debug_interface.add_noises(layer_name, mean_noises)
-        return V, U
+        return fns.transpose(U), fns.transpose(V)
