@@ -14,8 +14,8 @@ from typing import Callable, List, Optional
 import torch
 import torch.fx
 from torch.ao.quantization.fx.utils import create_getattr_from_value
-from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.ao.quantization.pt2e.utils import _get_tensor_constant_from_node
+from torch.ao.quantization.pt2e.utils import fold_bn_weights_into_conv_node
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
@@ -243,6 +243,53 @@ def _set_module_to_the_graph_module(
     return module_name_in_model
 
 
+def _is_supported_batch_norm_for_training(node: torch.fx.Node):
+    """
+    Return True if the given node refers to an aten batch norm op QAT supports.
+    """
+    supported_ops = [
+        torch.ops.aten._native_batch_norm_legit.default,
+        torch.ops.aten.cudnn_batch_norm.default,
+        torch.ops.aten.miopen_batch_norm.default,
+    ]
+    return node.target in supported_ops
+
+
+def _is_bn_node(node: torch.fx.Node):
+    return (
+        _is_supported_batch_norm_for_training(node)
+        or node.target == torch.ops.aten._native_batch_norm_legit_no_training.default
+    )
+
+
+def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
+    """
+    BatchNorm operations have 3 output ports, to make it easier for alorithms to work with
+    the target graph BatchNorm operations are being fused
+
+    :param model: Model to apply transformations to.
+    """
+    has_bn = any(_is_bn_node(node) for node in model.graph.nodes)
+    if not has_bn:
+        return
+
+    for node in model.graph.nodes:
+        if node.op != "call_function" or not _is_bn_node(node):
+            continue
+        bn_node = node
+
+        node = bn_node.args[0]
+        if not _is_conv(node):
+            continue
+        conv_node = node
+        conv_weight_node = conv_node.args[1]
+        conv_bias_node = conv_node.args[2] if len(conv_node.args) > 2 else None
+        fold_bn_weights_into_conv_node(conv_node, conv_weight_node, conv_bias_node, bn_node, model)
+
+    model.graph.eliminate_dead_code()
+    model.recompile()
+
+
 def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     """
     Applies quantization transformations to the model.
@@ -252,7 +299,7 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     # to make it easier for alorithms to work
     # with the target graph BatchNorm operations
     # are being fused
-    _fuse_conv_bn_(model)
+    fuse_conv_bn(model)
     separate_conv_and_bias(model)
     separate_linear_and_bias(model)
 
