@@ -15,16 +15,17 @@ import numpy as np
 import pytest
 import torch
 from torch import nn
+from torch._export import capture_pre_autograd_graph
+
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.experimental.torch.fx.statistics.aggregator import FXStatisticsAggregator
 from nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend import FXFastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
-from nncf.torch.graph.graph import PTTargetPoint
-from nncf.experimental.torch.fx.statistics.aggregator import FXStatisticsAggregator
-from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
-from torch._export import capture_pre_autograd_graph
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
+from nncf.torch.graph.graph import PTTargetPoint
+from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
 
 IDENTITY_NODE_NAME = "add"
 CONV_NODE_NAME = "conv2d"
@@ -35,7 +36,9 @@ class IdentityConv(nn.Module):
     def __init__(self, kernel) -> None:
         super().__init__()
         self.conv = nn.Conv2d(
-            in_channels=3, out_channels=3, kernel_size=3,
+            in_channels=3,
+            out_channels=3,
+            kernel_size=3,
         )
         self.conv.weight.data = torch.tensor(kernel, dtype=torch.float32)
 
@@ -60,16 +63,16 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         with disable_patching():
             model = capture_pre_autograd_graph(IdentityConv(conv_w), args=(torch.randn(1, 3, 3, 3),))
             return model
-  
+
     def get_statistics_aggregator(self, dataset):
         return FXStatisticsAggregator(dataset)
-    
+
     def get_dataset(self, samples):
         def transform_fn(data_item):
             return data_item
 
         return Dataset(samples, transform_fn)
-    
+
     @staticmethod
     def get_target_point(target_type: TargetType):
         target_node_name = IDENTITY_NODE_NAME
@@ -78,14 +81,14 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
             target_node_name = CONV_NODE_NAME
             port_id = 1
         return FXMinMaxAlgoBackend.target_point(target_type, target_node_name, port_id)
-    
+
     def get_target_point_cls(self):
         return PTTargetPoint
-    
+
     @pytest.fixture(scope="session")
     def test_params(self):
         return
-    
+
     @pytest.fixture
     def dataset_samples(self, dataset_values):
         input_shape = INPUT_SHAPE
@@ -96,7 +99,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
             dataset_samples[0][0, i, 0, 1] = value["min"]
 
         return torch.tensor(dataset_samples, dtype=torch.float32)
-    
+
     @pytest.fixture(params=[False], ids=["out_of_palce"])
     def inplace_statistics(self, request) -> bool:
         return request.param
