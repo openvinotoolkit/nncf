@@ -822,6 +822,7 @@ def test_synthetic_model_quantization(synthetic_model_desc: IModelDesc):
     )
     register_bn_adaptation_init_args(config)
 
+    # config["compression"]["ignored_scopes"] = ["ScaledDotProductModel/NNCFConv2d[conv3]/conv2d_0"]
     compressed_model, _ = create_compressed_model_and_algo_for_test(
         model, config, wrap_inputs_fn=synthetic_model_desc.get_wrap_inputs_fn()
     )
