@@ -205,7 +205,7 @@ class LoraCorrectionAlgorithm:
             # Part 1: Vr is fixed, find Ur.
             VX = Vr @ X
             if not w_regularization:
-                sol = fns.linalg.lstsq(fns.transpose(VX), fns.transpose(dY))
+                sol = fns.linalg.lstsq(fns.transpose(VX), fns.transpose(dY), driver="gelsy")
             else:
                 # Ur @ Vr = res
                 # Ur @ Vr @ X = dY
