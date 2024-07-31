@@ -20,6 +20,7 @@ from nncf.common.utils.debug import is_debug
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
+from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_fake_quantization_from_norm_weight
@@ -87,6 +88,10 @@ class LoraCorrectionAlgorithm:
         self._lora_correction_params = lora_correction_params
         self._debug_interface = DebugInterface() if is_debug() else None
 
+    def __del__(self):
+        if self._debug_interface is not None:
+            self._debug_interface.dump_data()
+
     @property
     def is_int8_adapters(self) -> bool:
         return self._lora_correction_params.is_int8_adapters
@@ -96,7 +101,7 @@ class LoraCorrectionAlgorithm:
 
     def calculate_adapters(
         self, weight: Tensor, compressed_weight: Tensor, wc_params: WeightCompressionParameters
-    ) -> Tuple[Tensor, Tensor]:
+    ) -> Tuple[Tensor, Tensor, List[float]]:
         """
         Calculates low rank matrices for a given original and compressed weights.
 
@@ -105,28 +110,31 @@ class LoraCorrectionAlgorithm:
         :param wc_params: parameters of weight compression.
         :return: two low rank matrices in the order of execution of corresponding linear layers.
         """
-        try:
-            low_rank_matrices = self.calculate_low_rank_matrices(
-                weight,
-                compressed_weight,
-                wc_params,
-                self._lora_correction_params,
-                self._activations,
-                self._debug_interface,
-            )
-        finally:
-            if self._debug_interface is not None:
-                self._debug_interface.dump_data()
+        layer_name = wc_params.node_with_weight.node_name
+        layer_activations = self._activations[layer_name]
+        is_debug = self._debug_interface is not None
+        low_rank_matrices, mean_noises = self.calculate_low_rank_matrices(
+            weight,
+            compressed_weight,
+            wc_params.compression_config,
+            wc_params.reduction_axes,
+            self._lora_correction_params,
+            layer_activations,
+            is_debug,
+        )
+        if is_debug:
+            self._debug_interface.add_noises(layer_name, mean_noises)
         return low_rank_matrices
 
     @staticmethod
     def calculate_low_rank_matrices(
         weight: Tensor,
         compressed_weight: Tensor,
-        wc_params: WeightCompressionParameters,
+        compression_config: WeightCompressionConfig,
+        reduction_axes: Tuple[int, ...],
         lora_correction_params: AdvancedLoraCorrectionParameters,
-        activations: Dict[str, List[Tensor]],
-        debug_interface: Optional[DebugInterface] = None,
+        layer_activations: List[Tensor],
+        is_debug: Optional[bool] = False,
     ):
         """
         Calculates low rank matrices for a given original and compressed weights.
@@ -137,11 +145,14 @@ class LoraCorrectionAlgorithm:
 
         :param weight: original floating-point weight matrix.
         :param compressed_weight: compressed weight matrix.
-        :param wc_params: parameters of weight compression.
+        :param compression_config: configuration of weight compression for the weight node.
+        :param reduction_axes: axes along which different statistics reduced.
         :param lora_correction_params: parameters to configure the algorithm.
-        :param activations: The input activations of the layers considered for compression.
-        :param debug_interface: utility class to collect and dump debug information, defaults to None
-        :return: two low rank matrices in the order of execution of corresponding linear layers.
+        :param layer_activations: list of activation statistics for a layer that contains
+            N tensors with shape [SeqLen, HiddenDim].
+        :param is_debug: whether to collect debug information, defaults to False.
+        :return: two low rank matrices in the order of execution of corresponding linear layers and list of mean noises
+            collected from each step of the algorithm if debug was enabled.
         """
         rank, num_iters, add_regularization, subset_size = (
             lora_correction_params.rank,
@@ -149,9 +160,9 @@ class LoraCorrectionAlgorithm:
             lora_correction_params.add_regularization,
             lora_correction_params.subset_size,
         )
-        layer_name = wc_params.node_with_weight.node_name
-        mode = wc_params.compression_config.mode
-        reduction_axis = wc_params.reduction_axes[0] if wc_params.compression_config.group_size != -1 else -1
+        mode = compression_config.mode
+        # TODO: reduction axes should not be mixed up with grouping, reduction_axes=-1 is not valid!
+        reduction_axis = reduction_axes[0] if compression_config.group_size != -1 else -1
         if mode in (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM):
             fq_weights = do_dequantization(
                 compressed_weight.tensor,
@@ -172,7 +183,8 @@ class LoraCorrectionAlgorithm:
         # fq_w + residual = w   =>  residual = w - fq_w
         # O stands for output dimension, H - input dimension or hidden size, SS - samples size, R - rank.
         svd_residual = fns.astype(weight - fq_weights, TensorDataType.float32)  # [O, H]
-        if wc_params.reduction_axes != 0:
+        # TODO: axes! not axis!
+        if reduction_axes != 0:
             # TODO: always [O, H] or [H, O] ???
             # TODO: clone afterwards ???
             # in which cases its needed??
@@ -181,13 +193,13 @@ class LoraCorrectionAlgorithm:
         residual = svd_residual.clone()  # [O, H] ??? after transpose??
 
         # TODO: is it always has input dimension on the first position?
-        s, X = process_stats(activations[layer_name], subset_size)  # [H], [H, SS]
+        s, X = process_stats(layer_activations, subset_size)  # [H], [H, SS]
         X = fns.transpose(X)  # [SS, H]
-        if wc_params.compression_config.group_size > 0:
+        if compression_config.group_size > 0:
             # Multiply residual of weights by maximum channel magnitude of activations normalized per quantization
             # group. As a consequence, weights corresponding to a "noisy" activations has a higher error to correct.
             # Empirically, it leads to a better accuracy.
-            gs = wc_params.compression_config.group_size
+            gs = compression_config.group_size
             n_gs = s.shape[0] // gs
             for i in range(n_gs):
                 offset = i * gs
@@ -221,7 +233,7 @@ class LoraCorrectionAlgorithm:
                 UXU = fns.concatenate([U, XU], axis=0)  # [H + SS, R]
                 noiseR = fns.concatenate([residual, noise], axis=0)  # [H + SS, O]
                 new_V = fns.linalg.lstsq(UXU, noiseR, driver="gelsy")
-            if debug_interface is not None:
+            if is_debug:
                 if i == 0:
                     init_noise = noise
                     mean_noise_before_svd = fns.mean(fns.abs(init_noise)).item()
@@ -253,11 +265,10 @@ class LoraCorrectionAlgorithm:
                 EX = fns.concatenate([E, X], axis=0)  # [H + SS, H]
                 noiseR = fns.concatenate([residual @ VI, noiseVI], axis=0)  # [H + SS, R]
                 U = fns.linalg.lstsq(EX, noiseR, driver="gelsy")
-            if debug_interface is not None:
+            if is_debug:
                 mean_noise_after_correct_U = fns.mean(fns.abs(init_noise - X @ U @ V)).item()
                 mean_noises.append(mean_noise_after_correct_U)
                 nncf_logger.debug(
                     f"{i} Correction V: ", mean_noise_before_svd, mean_noise_after_svd, mean_noise_after_correct_U
                 )
-                debug_interface.add_noises(layer_name, mean_noises)
-        return fns.transpose(U), fns.transpose(V)
+        return fns.transpose(U), fns.transpose(V), mean_noises
