@@ -175,7 +175,9 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     ):
         pass
 
-    def insert_adapters(self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool):
+    def insert_adapters(
+        self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
+    ) -> None:
         pass
 
     def transform_model(

@@ -473,6 +473,11 @@ def compress_weights(
                 "Simultaneous use of Scale estimation and GPTQ algorithms is not supported. Select one of them."
             )
 
+        if gptq and lora_correction:
+            raise AttributeError(
+                "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
+            )
+
         compression_weights_impl = ov_compress_weights_impl
 
     if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:

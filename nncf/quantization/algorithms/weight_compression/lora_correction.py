@@ -106,7 +106,7 @@ class LoraCorrectionAlgorithm:
         :return: two low rank matrices in the order of execution of corresponding linear layers.
         """
         try:
-            adapters = self.calculate_adapters_fn(
+            low_rank_matrices = self.calculate_low_rank_matrices(
                 weight,
                 compressed_weight,
                 wc_params,
@@ -117,10 +117,10 @@ class LoraCorrectionAlgorithm:
         finally:
             if self._debug_interface is not None:
                 self._debug_interface.dump_data()
-        return adapters
+        return low_rank_matrices
 
     @staticmethod
-    def calculate_adapters_fn(
+    def calculate_low_rank_matrices(
         weight: Tensor,
         compressed_weight: Tensor,
         wc_params: WeightCompressionParameters,
@@ -143,10 +143,10 @@ class LoraCorrectionAlgorithm:
         :param debug_interface: utility class to collect and dump debug information, defaults to None
         :return: two low rank matrices in the order of execution of corresponding linear layers.
         """
-        rank, n_iters, w_regularization, subset_size = (
+        rank, num_iters, add_regularization, subset_size = (
             lora_correction_params.rank,
-            lora_correction_params.n_iters,
-            lora_correction_params.w_regularization,
+            lora_correction_params.num_iters,
+            lora_correction_params.add_regularization,
             lora_correction_params.subset_size,
         )
         layer_name = wc_params.node_with_weight.node_name
@@ -208,10 +208,10 @@ class LoraCorrectionAlgorithm:
         # An iterative algorithm for correction (refinement) of the low-rank adapters.
         mean_noises = []
         noise = X @ residual  # [SS, H] * [H, O] = [SS, O]
-        for i in range(n_iters):
+        for i in range(num_iters):
             # Part 1: U is fixed, find V.
             XU = X @ U  # [SS, R]
-            if not w_regularization:
+            if not add_regularization:
                 # X @ U @ V = noise      ---> a @ x = b
                 new_V = fns.linalg.lstsq(XU, noise, driver="gelsy")
             else:
@@ -237,7 +237,7 @@ class LoraCorrectionAlgorithm:
             # Part 2: V is fixed, find U.
             VI = fns.linalg.pinv(V)  # [O, R]
             noiseVI = noise @ VI  # [R, SS]
-            if not w_regularization:
+            if not add_regularization:
                 # VI = V^-1
                 # 1) X @ U @ V = noise
                 # 1) X @ U = noise @ VI     ---> a @ x = b

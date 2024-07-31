@@ -133,7 +133,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         del const_node
 
-    def insert_adapters(self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool):
+    def insert_adapters(
+        self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
+    ) -> None:
         input_node = self.name_to_node_mapping[wc_params.node_with_weight.node_name].input_value(0)
         activation_dtype = input_node.get_element_type()
         should_add_convert_node = activation_dtype != ov.Type.f16

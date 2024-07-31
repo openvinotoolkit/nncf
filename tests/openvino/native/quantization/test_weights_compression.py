@@ -1040,14 +1040,14 @@ def test_lora_adapters_in_the_graph(params):
 
 
 @pytest.mark.parametrize(
-    "mode, w_regularization, is_per_channel",
+    "mode, add_regularization, is_per_channel",
     (
         (CompressWeightsMode.INT4_SYM, False, False),
         (CompressWeightsMode.NF4, True, False),
         (CompressWeightsMode.NF4, True, True),
     ),
 )
-def test_lora_adapters_reduce_noise(zero_seed, mode, w_regularization, is_per_channel, mocker, tmp_path):
+def test_lora_adapters_reduce_noise(zero_seed, mode, add_regularization, is_per_channel, mocker, tmp_path):
     mocker.patch("nncf.quantization.algorithms.weight_compression.lora_correction.DEBUG_LOG_DIR", str(tmp_path))
     mocker.patch("nncf.quantization.algorithms.weight_compression.lora_correction.is_debug", side_effect=lambda: True)
 
@@ -1080,7 +1080,7 @@ def test_lora_adapters_reduce_noise(zero_seed, mode, w_regularization, is_per_ch
         all_layers=True,
         lora_correction=True,
         advanced_parameters=CompressionParams(
-            lora_correction_params=LoraParams(w_regularization=w_regularization, n_iters=n_iters, rank=2)
+            lora_correction_params=LoraParams(add_regularization=add_regularization, num_iters=n_iters, rank=2)
         ),
     )
     compiled_model = ie.compile_model(int4_model, "CPU")
@@ -1126,7 +1126,7 @@ def test_compression_with_lora_for_different_dtypes(activation_dtype, weight_dty
         all_layers=True,
         lora_correction=True,
         advanced_parameters=CompressionParams(
-            lora_correction_params=LoraParams(n_iters=0, rank=3, is_int8_adapters=True)
+            lora_correction_params=LoraParams(num_iters=0, rank=3, is_int8_adapters=True)
         ),
     )
 
@@ -1161,7 +1161,7 @@ def test_compression_with_lora_with_subset_size(mocker):
         all_layers=True,
         lora_correction=True,
         advanced_parameters=CompressionParams(
-            lora_correction_params=LoraParams(n_iters=0, rank=3, is_int8_adapters=False, subset_size=subset_size)
+            lora_correction_params=LoraParams(num_iters=0, rank=3, is_int8_adapters=False, subset_size=subset_size)
         ),
     )
 
