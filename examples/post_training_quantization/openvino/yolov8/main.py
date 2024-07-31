@@ -39,7 +39,7 @@ def validate(
     validator.stats = []
     validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
     model.reshape({0: [1, 3, -1, -1]})
-    compiled_model = ov.compile_model(model)
+    compiled_model = ov.compile_model(model, device_name="CPU")
     output_layer = compiled_model.output(0)
     for batch_i, batch in enumerate(data_loader):
         if num_samples is not None and batch_i == num_samples:
@@ -72,8 +72,6 @@ def prepare_validation(model: YOLO, args: Any) -> Tuple[Validator, torch.utils.d
     print(f"{dataset}")
 
     data_loader = validator.get_dataloader(f"{DATASETS_DIR}/coco128", 1)
-
-    validator = model.smart_load("validator")(args)
 
     validator.is_coco = True
     validator.class_map = coco80_to_coco91_class()

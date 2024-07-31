@@ -17,24 +17,12 @@ import pytest
 
 from nncf.common.graph.utils import get_reduction_axes
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 
 
 class TemplateTestTensorCollectorBatchSize(ABC):
-    @staticmethod
-    @abstractmethod
-    def get_tensor_statistics_class():
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def get_tensor_processor():
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def get_nncf_tensor_class():
-        pass
-
     @pytest.fixture
     @abstractmethod
     def reducers(self):
@@ -83,14 +71,13 @@ class TemplateTestTensorCollectorBatchSize(ABC):
     def _create_tensor_collector(self, shape, inplace, reducer, aggregator) -> TensorCollector:
         batch_axis = 0
         statistic_branch_random_name = "1"
-        collector = TensorCollector(self.get_tensor_statistics_class())
+        collector = TensorCollector(MinMaxTensorStatistic)
         reduction_axes = get_reduction_axes([batch_axis], shape)
         aggregation_axes = (0, 1)
         kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
         reducer = reducer(**kwargs)
         aggregator = aggregator(
             aggregation_axes=aggregation_axes,
-            tensor_processor=self.get_tensor_processor(),
         )
         collector.register_statistic_branch(statistic_branch_random_name, reducer, aggregator)
         return collector, reducer, aggregator
@@ -98,7 +85,7 @@ class TemplateTestTensorCollectorBatchSize(ABC):
     def _register_inputs(self, collector, dataitems, reducer):
         for item in dataitems:
             item = self.to_backend_tensor(item)
-            input_ = {hash(reducer): [self.get_nncf_tensor_class()(item)]}
+            input_ = {hash(reducer): [Tensor(item)]}
             collector.register_inputs(input_)
 
     def test_statistics_batch_size_equal(self, reducers, aggregators, inplace):
@@ -117,4 +104,4 @@ class TemplateTestTensorCollectorBatchSize(ABC):
         self._register_inputs(collector, dataitems_batch_10, reducer)
         aggregated_tensor_batch_10 = list(collector._aggregate().values())
 
-        assert np.array_equal(aggregated_tensor_batch_1, aggregated_tensor_batch_10)
+        assert fns.allclose(fns.stack(aggregated_tensor_batch_1), fns.stack(aggregated_tensor_batch_10))

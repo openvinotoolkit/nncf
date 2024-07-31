@@ -19,8 +19,8 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.experimental.tensor import Tensor
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.tensor import Tensor
 
 TModel = TypeVar("TModel")
 
@@ -181,4 +181,10 @@ class AWQAlgoBackend(WeightCompressionAlgoBackend):
     def get_awq_patterns() -> Dict:
         """
         Returns patterns of nodes in network graph for applying AWQ algorithm.
+        """
+
+    @staticmethod
+    def scale_insertion_command(source_node, next_nodes, source_node_output_port, scale):
+        """
+        Returns scale insertion command/transformation for applying AWQ algorithm.
         """

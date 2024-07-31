@@ -22,19 +22,13 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.tensor import Tensor
 
 TModel = TypeVar("TModel")
 OutputType = TypeVar("OutputType")
 
 
 class BiasCorrectionAlgoBackend(ABC):
-    @property
-    @abstractmethod
-    def tensor_processor(self):
-        """
-        Returns backend-specific instance of the NNCFCollectorTensorProcessor.
-        """
-
     @staticmethod
     @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
@@ -43,13 +37,13 @@ class BiasCorrectionAlgoBackend(ABC):
 
         :param target_type: Type of the location that should be modified.
         :param target_node_name: Name of the located node.
-        :param port_id: id of the port for the statistics disctribution.
+        :param port_id: id of the port for the statistics distribution.
         :return: Backend-specific TargetPoint.
         """
 
     @staticmethod
     @abstractmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> TransformationCommand:
+    def create_bias_correction_command(node: NNCFNode, bias_value: Tensor) -> TransformationCommand:
         """
         Creates backend-specific command to update bias value.
 

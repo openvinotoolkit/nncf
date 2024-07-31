@@ -22,7 +22,6 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.fake_quantize import FakeConvertParameters
@@ -193,19 +192,9 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
-        """
-        Returns backend-specific unified statistics.
-
-        :param statistics: List of MinMaxTensorStatistic instances.
-        :return: Unified MinMaxTensorStatistic value.
-        """
-
-    @staticmethod
-    @abstractmethod
     def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: TargetPoint) -> Tuple[int, ...]:
         """
-        Returns shape of a targer point tensor.
+        Returns shape of a target point tensor.
 
         :param nncf_graph: NNCFGraph instance.
         :param node: NNCFNode.
@@ -215,12 +204,13 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_quantization_axes(node: NNCFNode, target_point: TargetPoint) -> Tuple[int, ...]:
+    def get_weight_quantization_axes(node: NNCFNode, target_point: TargetPoint, ndims: int) -> Tuple[int, ...]:
         """
         Returns axes for per-channel quantization of weights of the node placed on a input port_id.
 
-        :param node: Quantized node with the wieght.
+        :param node: Quantized node with the weight.
         :param target_point: Corresponding target point.
+        :param ndims: Number of dimensions of weight.
         :return: Axes for per-channel quantization of weights.
         """
 
@@ -248,11 +238,12 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
         """
         Returns node's input port indices with weight tensors.
 
         :param node: NNCFNode to find its weight input port indices.
+        :param graph: NNCFGraph instance.
         :return: Weights input port indices.
         """
 

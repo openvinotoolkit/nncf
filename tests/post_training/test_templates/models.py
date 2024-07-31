@@ -15,8 +15,8 @@ from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from tests.common.quantization.metatypes import ConstantTestMetatype
 from tests.common.quantization.mock_graphs import NodeWithType
-from tests.common.quantization.test_filter_constant_nodes import create_mock_graph
-from tests.common.quantization.test_filter_constant_nodes import get_nncf_graph_from_mock_nx_graph
+from tests.common.quantization.mock_graphs import create_mock_graph
+from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
 
 
 class NNCFGraphToTest:
@@ -27,24 +27,28 @@ class NNCFGraphToTest:
         nncf_graph_cls=NNCFGraph,
         input_layer_attrs=None,
         output_layer_attrs=None,
+        const_metatype=None,
+        const_layer_attrs=None,
     ):
         #       Original graph
-        #          Input_1
-        #             |
+        #          Input_1  Const_1
+        #             |    /
         #           Conv_1
         #             |
         #           Output_1
         nodes = [
             NodeWithType("Input_1", InputNoopMetatype, layer_attributes=input_layer_attrs),
             NodeWithType("Conv_1", conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("Const_1", const_metatype, layer_attributes=const_layer_attrs),
             NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=output_layer_attrs),
         ]
-        node_edges = [("Input_1", "Conv_1"), ("Conv_1", "Output_1")]
+        node_edges = [("Input_1", "Conv_1"), ("Const_1", "Conv_1"), ("Conv_1", "Output_1")]
         original_mock_graph = create_mock_graph(
             nodes,
             node_edges,
             (
                 {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: (1, 3, 224, 224)},
+                {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: (3, 10, 4, 4), NNCFGraph.INPUT_PORT_ID_EDGE_ATTR: 1},
                 {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: (1, 10, 224, 224)},
             ),
         )
@@ -59,20 +63,31 @@ class NNCFGraphToTestDepthwiseConv:
         input_layer_attrs=None,
         output_layer_attrs=None,
         nncf_graph_cls=NNCFGraph,
+        const_metatype=None,
+        const_layer_attrs=None,
     ):
         #       Original graph
-        #          Input_1
-        #             |
+        #          Input_1   Const_1
+        #             |       /
         #        DepthwiseConv_1
         #             |
         #           Output_1
         nodes = [
             NodeWithType("Input_1", InputNoopMetatype, layer_attributes=input_layer_attrs),
             NodeWithType("Conv_1", depthwise_conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("Const_1", const_metatype, layer_attributes=const_layer_attrs),
             NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=output_layer_attrs),
         ]
         node_edges = [("Input_1", "Conv_1"), ("Conv_1", "Output_1")]
-        original_mock_graph = create_mock_graph(nodes, node_edges)
+        original_mock_graph = create_mock_graph(
+            nodes,
+            node_edges,
+            (
+                {},
+                {NNCFGraph.INPUT_PORT_ID_EDGE_ATTR: 1},
+                {},
+            ),
+        )
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
 
 
@@ -86,10 +101,12 @@ class NNCFGraphToTestSumAggregation:
         sum_layer_attrs=None,
         input_layer_attrs=None,
         output_layer_attrs=None,
+        const_metatype=None,
+        const_layer_attrs=None,
     ):
         #       Original graph
-        #          Input_1
-        #             |
+        #          Input_1  Const1
+        #             |     /
         #          Conv_1
         #             |
         #           Sum_1
@@ -98,16 +115,30 @@ class NNCFGraphToTestSumAggregation:
         nodes = [
             NodeWithType("Input_1", InputNoopMetatype, layer_attributes=input_layer_attrs),
             NodeWithType("Conv_1", conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("Const_1", const_metatype, layer_attributes=const_layer_attrs),
             NodeWithType("Sum_1", sum_metatype, layer_attributes=sum_layer_attrs),
+            NodeWithType("Const_2", const_metatype, layer_attributes=const_layer_attrs),
             NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=output_layer_attrs),
         ]
-        node_edges = [("Input_1", "Conv_1"), ("Conv_1", "Sum_1"), ("Sum_1", "Output_1")]
-        original_mock_graph = create_mock_graph(nodes, node_edges)
+        node_edges = [
+            ("Input_1", "Conv_1"),
+            ("Const_1", "Conv_1"),
+            ("Conv_1", "Sum_1"),
+            ("Const_2", "Sum_1"),
+            ("Sum_1", "Output_1"),
+        ]
+        original_mock_graph = create_mock_graph(
+            nodes,
+            node_edges,
+            (
+                {},
+                {NNCFGraph.INPUT_PORT_ID_EDGE_ATTR: 1},
+                {},
+                {NNCFGraph.INPUT_PORT_ID_EDGE_ATTR: 1},
+                {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: [1, 1, 1]},
+            ),
+        )
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
-        # Hack output size of the Sum_1 operation
-        self.nncf_graph._nx_graph.out_edges[("2 /Sum_1_0", "3 /Output_1_0")][
-            self.nncf_graph.ACTIVATION_SHAPE_EDGE_ATTR
-        ] = [1, 1, 1]
 
 
 class NNCFGraphToTestMatMul:

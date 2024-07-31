@@ -28,9 +28,9 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -117,7 +117,7 @@ class SmoothQuant(Algorithm):
                 activations_value = self._get_statistics_for_node(
                     statistic_points, node_to_smooth.node_name, input_port_id
                 )
-                if any(val.data is None for val in activations_value):
+                if any(val is None for val in activations_value):
                     empty_statistic = True
                     break
                 if len(activations_value) != 1:
@@ -239,7 +239,7 @@ class SmoothQuant(Algorithm):
             self._algorithm_key,
         ):
             statistic = tensor_collector.get_statistics()[STATISTIC_BRANCH_KEY]
-            statistics_for_node.append(Tensor(statistic))
+            statistics_for_node.append(statistic)
         return statistics_for_node
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:

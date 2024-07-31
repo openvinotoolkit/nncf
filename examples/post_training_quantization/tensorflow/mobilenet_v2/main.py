@@ -22,13 +22,14 @@ from tqdm import tqdm
 
 import nncf
 
+tfds.display_progress_bar(enable=False)
 ROOT = Path(__file__).parent.resolve()
 WEIGHTS_URL = "https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/tf_model.h5"
 DATASET_CLASSES = 10
 
 
 def validate(model: ov.Model, val_loader: tf.data.Dataset) -> tf.Tensor:
-    compiled_model = ov.compile_model(model)
+    compiled_model = ov.compile_model(model, device_name="CPU")
     output = compiled_model.outputs[0]
 
     metric = tf.keras.metrics.CategoricalAccuracy(name="acc@1")

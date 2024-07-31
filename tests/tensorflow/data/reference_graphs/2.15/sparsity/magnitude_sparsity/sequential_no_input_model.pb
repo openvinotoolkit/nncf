@@ -1,0 +1,1 @@
+../../../2.12/sparsity/magnitude_sparsity/sequential_no_input_model.pb

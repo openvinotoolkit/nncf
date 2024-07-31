@@ -50,7 +50,7 @@ def validate(model: ov.Model, val_loader: torch.utils.data.DataLoader) -> float:
     predictions = []
     references = []
 
-    compiled_model = ov.compile_model(model)
+    compiled_model = ov.compile_model(model, device_name="CPU")
     output = compiled_model.outputs[0]
 
     for images, target in track(val_loader, description="Validating"):

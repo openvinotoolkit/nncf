@@ -26,8 +26,6 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
@@ -40,6 +38,8 @@ from nncf.quantization.algorithms.weight_compression.scale_estimation import Sca
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
+from nncf.tensor import Tensor
+from nncf.tensor.definitions import TensorDataType
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -50,7 +50,7 @@ class WeightCompression(Algorithm):
     Post-training Weight Compression algorithm implementation.
 
     Compresses weights of Linear and Embedding layers to 8-bit integer or
-    to nf4 depending on mode, ratio and group size.
+    to 4-bit integer/float depending on mode, ratio and group size.
     """
 
     def __init__(
@@ -70,17 +70,18 @@ class WeightCompression(Algorithm):
         """
         :param mode: Defines a mode for weight compression.
             INT8_SYM stands for 8-bit integer symmetric quantization of all weights.
-                Weights are quantized symmetrically with a fixed zero point equals to 128.
+                Weights are quantized symmetrically without zero point.
             INT8_ASYM is the same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically
                 with a typical non-fixed zero point.
             INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
-                Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
+                Weights are quantized to a primary precision symmetrically without zero point.
                 All embeddings and the last layer are always compressed to a backup precision, which is INT8_ASYM,
                 by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
                 criteria and the given ratio.
             INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
                 with a typical non-fixed zero point.
             NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
+            E2M1 is the same as INT4_SYM mode, but primary precision is E2M1 data type without zero point.
         :param ratio: the ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to INT8_ASYM).
         :param group_size: number of weights (e.g. 128) in the channel dimension
@@ -351,7 +352,11 @@ class WeightCompression(Algorithm):
         self._set_weight_compression_config(ratio_defining_params, model, graph, activations)
         nncf_logger.info(self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
 
-        if self._awq and activations is not None and self._mode != CompressWeightsMode.NF4:
+        if (
+            self._awq
+            and activations is not None
+            and self._mode not in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
+        ):
             awq_params = self._advanced_parameters.awq_params
             awq_algo = AWQ(
                 model,
@@ -369,7 +374,11 @@ class WeightCompression(Algorithm):
 
         scales = {}
         zero_points = {}
-        if self._scale_estimation and activations is not None and self._mode != CompressWeightsMode.NF4:
+        if (
+            self._scale_estimation
+            and activations is not None
+            and self._mode not in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
+        ):
             scale_estimation_params = self._advanced_parameters.scale_estimation_params
             scale_algo = ScaleEstimation(
                 model,
@@ -393,6 +402,9 @@ class WeightCompression(Algorithm):
                 statistic_points=self._gptq_statistics,
                 backend_entity=self._backend_entity,
             )
+
+        # Sort weight params to start compression with the bigger constants. This lowers peak memory footprint.
+        all_weight_params = sorted(all_weight_params, key=lambda wp: wp.num_weights, reverse=True)
 
         # Compress model using weight compression parameters
         transformed_model = self._backend_entity.transform_model(
@@ -466,7 +478,7 @@ class WeightCompression(Algorithm):
             node_name, input_filter_func, self._algorithm_key
         ):
             for value in tensor_collector.get_statistics().values:
-                input_fp.append(Tensor(value))
+                input_fp.append(value)
         self._fp_inputs[input_id] = input_fp
         return self._fp_inputs[input_id]
 

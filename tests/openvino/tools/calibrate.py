@@ -33,9 +33,11 @@ from openvino.runtime import PartialShape
 try:
     from accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
     from accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
+    from accuracy_checker.utils import extract_image_representations
 except ImportError:
     from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
     from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
+    from openvino.tools.accuracy_checker.utils import extract_image_representations
 
 import nncf
 from nncf.common.deprecation import warning_deprecated
@@ -347,7 +349,7 @@ def map_ignored_scope(ignored):
             if op.get("attributes") is not None:
                 raise ValueError('"attributes" in the ignored operations ' "are not supported")
             ignored_operations.append(op["type"])
-    return {"ignored_scope": IgnoredScope(names=ignored.get("scope"), types=ignored_operations)}
+    return {"ignored_scope": IgnoredScope(names=ignored.get("scope", []), types=ignored_operations)}
 
 
 def map_preset(preset):
@@ -835,8 +837,8 @@ def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
 
 
 def get_transform_fn(model_evaluator: ModelEvaluator, ov_model):
-    if model_evaluator.launcher._lstm_inputs:
-        compiled_original_model = ov.Core().compile_model(ov_model)
+    if isinstance(model_evaluator, ModelEvaluator) and model_evaluator.launcher._lstm_inputs:
+        compiled_original_model = ov.Core().compile_model(ov_model, device_name="CPU")
         model_outputs = None
 
         def transform_fn(data_item: ACDattasetWrapper.DataItem):
@@ -889,34 +891,46 @@ class ACDattasetWrapper:
         self.batch_size = self.model_evaluator.dataset.batch
 
     def __iter__(self):
-        for sequence in self.model_evaluator.dataset:
-            _, batch_annotation, batch_input, _ = sequence
-            filled_inputs, _, _ = self.model_evaluator._get_batch_input(batch_input, batch_annotation)
-            for idx, filled_input in enumerate(filled_inputs):
-                input_data = {}
-                for name, value in filled_input.items():
-                    input_data[self.model_evaluator.launcher.input_to_tensor_name[name]] = value
-                status = self.Status.SEQUENCE_IS_GOING
-                if idx == len(filled_inputs) - 1:
-                    status = self.Status.END_OF_SEQUENCE
-                yield self.DataItem(input_data, status)
+        if isinstance(self.model_evaluator, ModelEvaluator):
+            for sequence in self.model_evaluator.dataset:
+                _, batch_annotation, batch_input, _ = sequence
+                filled_inputs, _, _ = self.model_evaluator._get_batch_input(batch_input, batch_annotation)
+                for idx, filled_input in enumerate(filled_inputs):
+                    input_data = {}
+                    for name, value in filled_input.items():
+                        input_data[self.model_evaluator.launcher.input_to_tensor_name[name]] = value
+                    status = self.Status.SEQUENCE_IS_GOING
+                    if idx == len(filled_inputs) - 1:
+                        status = self.Status.END_OF_SEQUENCE
+                    yield self.DataItem(input_data, status)
+        else:
+            for sequence in self.model_evaluator.dataset:
+                _, batch_annotation, batch_input, _ = sequence
+                batch_inputs = self.model_evaluator._internal_module.preprocessor.process(batch_input, batch_annotation)
+                batch_data, _ = extract_image_representations(batch_inputs)
+                input_data = np.expand_dims(batch_data[0], axis=0)
+                yield self.DataItem(input_data, self.Status.END_OF_SEQUENCE)
 
     def __len__(self):
         return len(self.model_evaluator.dataset)
 
     def calculate_per_sample_subset_size(self, sequence_subset_size):
-        subset_size = 0
-        for data_item in islice(self.model_evaluator.dataset, sequence_subset_size):
-            _, batch_annotation, batch_input, _ = data_item
-            filled_inputs, _, _ = self.model_evaluator._get_batch_input(batch_input, batch_annotation)
-            subset_size += len(filled_inputs)
-        return subset_size
+        if isinstance(self.model_evaluator, ModelEvaluator):
+            subset_size = 0
+            for data_item in islice(self.model_evaluator.dataset, sequence_subset_size):
+                _, batch_annotation, batch_input, _ = data_item
+                filled_inputs, _, _ = self.model_evaluator._get_batch_input(batch_input, batch_annotation)
+                subset_size += len(filled_inputs)
+            return subset_size
+        else:
+            return sequence_subset_size
 
 
 def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_parameters):
     ov_model = ov.Core().read_model(model=xml_path, weights=bin_path)
     model_evaluator = create_model_evaluator(accuracy_checker_config)
-    model_evaluator.load_network([{"model": ov_model}])
+    if isinstance(model_evaluator, ModelEvaluator):
+        model_evaluator.load_network([{"model": ov_model}])
     model_evaluator.select_dataset("")
 
     advanced_parameters = quantization_parameters.get("advanced_parameters", AdvancedQuantizationParameters())

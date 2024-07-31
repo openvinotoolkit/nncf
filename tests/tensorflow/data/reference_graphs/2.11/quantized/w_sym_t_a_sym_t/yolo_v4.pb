@@ -1,1 +1,3 @@
-../../../2.8/quantized/w_sym_t_a_sym_t/yolo_v4.pb
+version https://git-lfs.github.com/spec/v1
+oid sha256:511bc6ba17334dd9ee2d468d01716fae6469301121b944e0852ec12bd61e2c14
+size 1014666

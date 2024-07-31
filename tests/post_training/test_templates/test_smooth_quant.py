@@ -28,7 +28,6 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
-from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
 from tests.post_training.test_templates.helpers import ConvTestModel
 from tests.post_training.test_templates.helpers import LinearMultiShapeModel
 from tests.post_training.test_templates.helpers import NonZeroLinearModel
@@ -213,9 +212,6 @@ class TemplateTestSQAlgorithm:
         model = self.backend_specific_model(model_cls(), tmpdir)
         nncf_graph = NNCFGraphFactory.create(model)
 
-        if isinstance(self.get_backend(), OVSmoothQuantAlgoBackend) and model_cls is ShareWeghtsConvAndShareLinearModel:
-            pytest.xfail("Matmuls don't share one weight in OV ir. Ticket 130912.")
-
         algo = SmoothQuant()
         algo._set_backend_entity(model)
         alpha_map = algo._get_alpha_map()
@@ -268,13 +264,14 @@ class TemplateTestSQAlgorithm:
         }
         node = NNCFNode(attributes)
 
-        try:  # noqa
+        if reference_value is nncf.InternalError:
+            with pytest.raises(
+                nncf.InternalError, match=f"{node.metatype.name} can not take more than 2 input tensors."
+            ):
+                backend.get_activation_channel_axis(node, port_id)
+        else:
             activation_channel_axis = backend.get_activation_channel_axis(node, port_id)
-        except nncf.InternalError as e:  # noqa
-            # TODO: this is wrong, should only expect an exception for cases where the exception is known to be raised
-            #  with pytest.raises(...)
-            pytest.xfail("FIXME")
-        assert activation_channel_axis == reference_value
+            assert activation_channel_axis == reference_value
 
     def test_get_weight_channel_axis(self, node_metatype, layer_attributes, reference_value):
         backend = self.get_backend()

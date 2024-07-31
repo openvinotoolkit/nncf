@@ -20,9 +20,10 @@ import nncf
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.experimental.tensor import functions as fns
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
+from nncf.tensor import functions as fns
 from tests.post_training.conftest import FQ_CALCULATED_PARAMETERS_PATH
 from tests.shared.helpers import dump_to_json
 from tests.shared.helpers import load_json
@@ -190,9 +191,8 @@ TO_TEST = [
 
 
 class TemplateTestFQParams(ABC):
-    @property
     @abstractmethod
-    def tensor_statistic(self):
+    def to_nncf_tensor(self, t: np.array):
         raise NotImplementedError
 
     @pytest.mark.parametrize("case_to_test", TO_TEST)
@@ -215,11 +215,13 @@ class TemplateTestFQParams(ABC):
         else:
             max_values = np.amax(data, axis=axes, keepdims=q_config.per_channel)
 
-        statistics = self.tensor_statistic(min_values=min_values, max_values=max_values)
-
+        statistics = MinMaxTensorStatistic(
+            min_values=self.to_nncf_tensor(min_values),
+            max_values=self.to_nncf_tensor(max_values),
+        )
         if not case_to_test.should_fail:
             fq_params = calculate_quantizer_parameters(statistics, q_config, quant_group, narrow_range, half_range)
-            # Unkomment lines below to generate reference for new models.
+            # Uncomment lines below to generate reference for new models.
             # dump_fq_params(fq_params, quant_group, q_config, narrow_range, half_range)
             ref_fq_params = read_ref_fq_params(quant_group, q_config, narrow_range, half_range)
             compare_fq_parameters(fq_params, ref_fq_params)

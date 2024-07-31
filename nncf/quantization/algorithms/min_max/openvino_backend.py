@@ -11,8 +11,6 @@
 
 from typing import Dict, List, Optional, Set, Tuple
 
-import numpy as np
-
 import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -22,6 +20,7 @@ from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
@@ -33,8 +32,6 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.hardware.config import OVHWConfig
 from nncf.openvino.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
-from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
-from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
@@ -138,16 +135,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVConvertInsertionCommand(target_point, parameters)
 
     @staticmethod
-    def unify_statistics(statistics: List[OVMinMaxTensorStatistic]) -> OVMinMaxTensorStatistic:
-        max_values, min_values = [], []
-        for statistic in statistics:
-            max_values.append(np.array(statistic.max_values).flatten())
-            min_values.append(np.array(statistic.min_values).flatten())
-        max_values = np.max(max_values, axis=0)
-        min_values = np.min(min_values, axis=0)
-        return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
-
-    @staticmethod
     def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: OVTargetPoint) -> Tuple[int, ...]:
         if target_point.is_weight_target_point():
             return node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
@@ -158,7 +145,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
 
     @staticmethod
-    def get_weight_quantization_axes(node: NNCFNode, target_point: OVTargetPoint) -> Tuple[int]:
+    def get_weight_quantization_axes(node: NNCFNode, target_point: OVTargetPoint, ndims: int) -> Tuple[int]:
         return tuple(get_weight_channel_axes(node))
 
     @staticmethod
@@ -170,10 +157,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         inplace: bool,
         num_samples: Optional[int] = None,
     ) -> TensorCollector:
-        collector = TensorCollector(OVMinMaxTensorStatistic)
+        collector = TensorCollector(MinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
-            [OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT],
+            [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
         ):
             if params.statistics_type not in OV_REDUCERS_MAP:
                 raise nncf.InternalError(
@@ -185,7 +172,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 )
             kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
             if params.statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
-                if container_key == OVMinMaxTensorStatistic.MIN_STAT:
+                if container_key == MinMaxTensorStatistic.MIN_STAT:
                     quantile = params.quantile_outlier_prob
                 else:
                     quantile = 1 - params.quantile_outlier_prob
@@ -199,7 +186,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             kwargs = {
                 "num_samples": num_samples,
                 "aggregation_axes": aggregation_axes,
-                "tensor_processor": OVNNCFCollectorTensorProcessor,
             }
             if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
                 kwargs.update({"quantile": params.quantile_outlier_prob})
@@ -209,7 +195,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return collector
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
         return node.layer_attributes.get_const_port_ids()
 
     @staticmethod
@@ -231,6 +217,13 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.OVDivideMetatype,
                 om.OVSqrtMetatype,
                 om.OVMaximumMetatype,
+                # Сomparison operations
+                om.OVGreaterEqualMetatype,
+                om.OVGreaterMetatype,
+                om.OVLessEqualMetatype,
+                om.OVLessMetatype,
+                om.OVNotEqualMetatype,
+                om.OVEqualMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 types.append(om.OVMultiplyMetatype)

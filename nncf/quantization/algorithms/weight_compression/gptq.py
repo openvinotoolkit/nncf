@@ -20,9 +20,6 @@ from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import functions as fns
-from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.layerwise.engine import LayerwiseEngine
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
@@ -34,6 +31,9 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import calc
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import decompress_nf4_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
+from nncf.tensor.definitions import TensorDataType
 
 TModel = TypeVar("TModel")
 
@@ -119,7 +119,10 @@ class GPTQ:
         )
         for node, inputs in track(target_node_iterator, total=len(target_nodes), description="Applying GPTQ"):
             wc_params = target_nodes_wc_params_map[node]
-            if wc_params.compression_config.group_size == -1:
+            if wc_params.compression_config.mode in [
+                CompressWeightsMode.INT8_ASYM,
+                CompressWeightsMode.INT8_SYM,
+            ]:
                 continue
             assert len(inputs) == 1
             _, input_tensors = next(iter(inputs.items()))
@@ -222,7 +225,11 @@ class GPTQ:
         quantized_tensor = fns.zeros_like(weight_tensor)
 
         columns = hessian.shape[0]
-        group_size = wc_params.compression_config.group_size
+        group_size = (
+            wc_params.compression_config.group_size
+            if wc_params.compression_config.group_size != -1
+            else weight_tensor.shape[1]
+        )
         reduction_axes = wc_params.reduction_axes
         block_compression_config = WeightCompressionConfig(mode=wc_params.compression_config.mode)
 
@@ -248,7 +255,7 @@ class GPTQ:
                 weight_col = weight_block[:, i]
                 hessian_diag_val = hessian_inv_block[i, i]
 
-                if group_size != -1 and (i1 + i) % group_size == 0:
+                if (i1 + i) % group_size == 0:
                     if block_compression_config.mode == CompressWeightsMode.NF4:
                         scale = calculate_nf4_scale(weight_tensor[:, (i1 + i) : (i1 + i + group_size)], reduction_axes)
                         scales.append(scale)
@@ -263,7 +270,7 @@ class GPTQ:
                     quantized_col = decompress_nf4_weight(compressed_weights, scales[-1])
                 else:
                     compressed_weights = calculate_quantized_weight(
-                        fns.unsqueeze(weight_col, 1), scales[-1], zero_points[-1], block_compression_config
+                        fns.unsqueeze(weight_col, 1), block_compression_config, scales[-1], zero_points[-1]
                     )
                     quantized_col = do_dequantization(compressed_weights, scales[-1], zero_points[-1])
                 quantized_col = fns.flatten(quantized_col)
@@ -287,13 +294,15 @@ class GPTQ:
         )
 
         scales = fns.stack(scales, axis=1)
-        if wc_params.compression_config.mode == CompressWeightsMode.NF4:
-            zero_points = None
-        elif wc_params.compression_config.mode in [
-            CompressWeightsMode.INT8_SYM,
-            CompressWeightsMode.INT4_SYM,
+        if wc_params.compression_config.group_size == -1:
+            scales = fns.squeeze(scales, axis=-1)
+        if wc_params.compression_config.mode in [
+            CompressWeightsMode.INT8_ASYM,
+            CompressWeightsMode.INT4_ASYM,
         ]:
-            zero_points = fns.squeeze(zero_points[0])
-        else:
             zero_points = fns.stack(zero_points, axis=1)
+            if wc_params.compression_config.group_size == -1:
+                zero_points = fns.squeeze(zero_points, axis=-1)
+        else:
+            zero_points = None
         return scales, zero_points

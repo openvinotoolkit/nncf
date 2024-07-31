@@ -16,10 +16,15 @@ import pytest
 import torch
 
 import nncf
+from nncf.common.utils.os import is_windows
 from nncf.config import NNCFConfig
+from nncf.torch import wrap_model
 from nncf.torch.dynamic_graph.context import TracingContext
+from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.patch_pytorch import _ORIG_JIT_SCRIPT
 from nncf.torch.dynamic_graph.patch_pytorch import MagicFunctionsToPatch
+from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
+from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
@@ -108,6 +113,7 @@ def test_jit_script_exception_preserves_patching():
     run_pytest_case_function_in_separate_process(test_jit_script_exception_preserves_patching_isolated)
 
 
+@pytest.mark.xfail(is_windows(), reason="https://github.com/pytorch/pytorch/issues/122094")
 def test_torch_compile():
     # Run test case in a separate process to track patching of torch by NNCF
     run_pytest_case_function_in_separate_process(test_compile)
@@ -188,3 +194,32 @@ def get_test_quantization_config(model):
     )
     register_bn_adaptation_init_args(config)
     return config
+
+
+def test_operator_unpatching():
+    unwrapped_operator_expected = False
+
+    class TestModel(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.op = torch.nn.functional.gelu
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            ctx = get_current_context()
+            original_in_operator_value = ctx.in_operator
+            ctx.in_operator = "unexpected_value"
+            result = self.op(x)
+            # If ctx.in_operator value was not changed, then operator wrapper exited early
+            assert not unwrapped_operator_expected or ctx.in_operator == "unexpected_value"
+            ctx.in_operator = original_in_operator_value
+            return result
+
+    test_model = TestModel()
+    example_input = torch.ones((1,))
+    wrapped_operator = wrap_model(test_model, example_input)
+    with disable_patching():
+        assert not PATCHING_STATE.operators_are_wrapped
+        # Despite patching is disabled, test_model holds a reference to a patched operator
+        assert "_original_op" in test_model.op.__dict__
+        unwrapped_operator_expected = True
+        wrapped_operator(example_input)

@@ -21,6 +21,7 @@ from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.data.dataset import Dataset
+from nncf.tensor import Tensor
 
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")
@@ -140,10 +141,10 @@ class StatisticsAggregator(ABC):
 
     @staticmethod
     @abstractmethod
-    def _process_outputs(outputs: Any) -> Dict[str, NNCFTensor]:
+    def _process_outputs(outputs: Any) -> Dict[str, Tensor]:
         """
         Post-process model outputs for the further statistics collection.
 
         :param outputs: raw model outputs
-        :return: processed model outputs in Dict[str, NNCFTensor] format
+        :return: processed model outputs in Dict[str, Tensor] format
         """

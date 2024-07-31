@@ -35,7 +35,6 @@ install-pre-commit:
 install-onnx-test:
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
 	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/onnx/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
@@ -64,9 +63,7 @@ test-examples-onnx:
 install-openvino-test:
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
 	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
-	pip install tensorflow==2.12.0 # Install tensorflow before to avoid conflict on install for typing-extensions
 	pip install -r tests/openvino/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
@@ -78,7 +75,8 @@ install-openvino-dev: install-openvino-test install-pre-commit
 	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
 
 test-openvino:
-	ONEDNN_MAX_CPU_ISA=AVX2 pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	ONEDNN_MAX_CPU_ISA=AVX2 pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/openvino $(DATA_ARG) \
+		--junitxml ${JUNITXML_PATH} --dist loadscope
 
 test-install-openvino:
 	pytest tests/cross_fw/install -s        \
@@ -95,7 +93,6 @@ test-examples-openvino:
 install-tensorflow-test:
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
 	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/tensorflow/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
@@ -126,7 +123,6 @@ test-examples-tensorflow:
 install-torch-test:
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
 	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/torch/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt

@@ -77,7 +77,7 @@ class GraphBuilder:
 
 class GraphConverter:
     @staticmethod
-    def convert(dynamic_graph: DynamicGraph, traced_parameters) -> PTNNCFGraph:
+    def convert(dynamic_graph: DynamicGraph, traced_parameters: bool) -> PTNNCFGraph:
         module_id_vs_known_op_addrs_map: Dict[int, Set[Scope]] = defaultdict(set)
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
             # Skip const nodes to detect shared nodes

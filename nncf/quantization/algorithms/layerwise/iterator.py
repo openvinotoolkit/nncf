@@ -15,7 +15,7 @@ from collections.abc import Iterator
 from typing import Dict, List, Tuple
 
 from nncf.common.graph.graph import NNCFNode
-from nncf.experimental.tensor.tensor import Tensor
+from nncf.tensor import Tensor
 
 
 class LayerwiseIterator(Iterator, ABC):

@@ -10,11 +10,11 @@
 # limitations under the License.
 from contextlib import contextmanager
 
-from matplotlib import pyplot as plt
-
 
 @contextmanager
 def noninteractive_plotting():
+    from matplotlib import pyplot as plt
+
     backend = plt.get_backend()
     plt.switch_backend("agg")
     plt.ioff()

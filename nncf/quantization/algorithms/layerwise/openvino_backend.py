@@ -17,13 +17,13 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.data.dataset import Dataset
-from nncf.experimental.tensor.tensor import Tensor
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.collectors import get_raw_stat_collector
 from nncf.quantization.algorithms.layerwise.backend import LayerwiseEngineBackend
 from nncf.quantization.algorithms.layerwise.openvino_iterator import OVLayerwiseIterator
 from nncf.quantization.algorithms.layerwise.scheduler import LayerwiseStep
 from nncf.quantization.algorithms.layerwise.scheduler import NodeOutputPort
+from nncf.tensor import Tensor
 
 
 class OVLayerwiseEngineBackend(LayerwiseEngineBackend):

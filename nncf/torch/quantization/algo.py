@@ -74,6 +74,8 @@ from nncf.config.schemata.defaults import QUANTIZATION_OVERFLOW_FIX
 from nncf.config.schemata.defaults import QUANTIZATION_PRESET
 from nncf.config.schemata.defaults import QUANTIZE_INPUTS
 from nncf.config.schemata.defaults import QUANTIZE_OUTPUTS
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
@@ -133,8 +135,6 @@ from nncf.torch.quantization.translator import PTTargetPointTranslator
 from nncf.torch.structures import AutoQPrecisionInitArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder
-from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.torch.tensor_statistics.statistics import TensorStatistic
 from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_model_dtype
@@ -1089,14 +1089,14 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                     continue
 
                 if min_values is None:
-                    min_values = minmax_stat.min_values
+                    min_values = minmax_stat.min_values.data
                 else:
-                    min_values = torch.min(min_values, minmax_stat.min_values)
+                    min_values = torch.min(min_values, minmax_stat.min_values.data)
 
                 if max_values is None:
-                    max_values = minmax_stat.max_values
+                    max_values = minmax_stat.max_values.data
                 else:
-                    max_values = torch.max(max_values, minmax_stat.max_values)
+                    max_values = torch.max(max_values, minmax_stat.max_values.data)
             if min_values is not None and max_values is not None:
                 range_init_minmax_values = min_values, max_values
 
@@ -1150,8 +1150,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             # AMP autocast model (and therefore be FP16 since AMP autocast switches precision of activations
             # at forward pass time)
             own_type = get_model_dtype(target_model)
-            min_values = range_init_minmax_values[0].type(own_type)
-            max_values = range_init_minmax_values[1].type(own_type)
+            min_values = range_init_minmax_values[0].data.type(own_type)
+            max_values = range_init_minmax_values[1].data.type(own_type)
 
             quantizer.apply_minmax_init(min_values=min_values, max_values=max_values, log_module_name=str(primary_ip))
 

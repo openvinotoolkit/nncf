@@ -424,3 +424,11 @@ class ShareWeghtsConvAndShareLinearModel(nn.Module):
             x = self.conv(x)
             x = self.linear(x)
         return x
+
+
+class ScaledDotProductAttentionModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, query, key, value):
+        return nn.functional.scaled_dot_product_attention(query, key, value)

@@ -12,8 +12,8 @@ import warnings
 
 import numpy as np
 
-from nncf.experimental.tensor import Tensor
 from nncf.quantization.fake_quantize import tune_range
+from nncf.tensor import Tensor
 
 
 def test_tune_range_zero_division_warning():

@@ -1,6 +1,7 @@
 -c ../../constraints.txt
 PyYAML
-tensorflow_addons==0.20.0
+tensorflow_addons==0.20.0; python_version < '3.9'
+tensorflow_addons==0.23.0; python_version >= '3.9'
 tensorflow-metadata==1.13.0
 pytest
 pytest-cov
@@ -11,7 +12,4 @@ pydot
 tensorflow_hub
 virtualenv
 
-# filelock 3.12.3 requires typing-extensions>=4.7.1, but tensorflow 2.12.1 requires typing-extensions<4.6.0,>=3.6.6
-# TODO: remove after upgrade to TF 2.13
-filelock<3.12.3
 openvino
