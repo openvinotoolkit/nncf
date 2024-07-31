@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import gc
 import os
 import re
 import shutil
@@ -32,6 +32,9 @@ from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import StatsFromOutput
 from tests.shared.paths import TEST_ROOT
+from tools.memory_monitor import MemoryType
+from tools.memory_monitor import MemoryUnit
+from tools.memory_monitor import monitor_memory_for_callable
 
 
 @dataclass
@@ -178,7 +181,18 @@ class LMWeightCompression(BaseTestPipeline):
 
         print("Weight compression...")
         start_time = time.perf_counter()
-        self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
+        if self.memory_monitor:
+            gc.collect()
+            max_value_per_memory_type = monitor_memory_for_callable(
+                self._compress,
+                interval=0.1,
+                memory_unit=MemoryUnit.MiB,
+                return_max_value=True,
+                save_dir=self.output_model_dir / "wc_memory_logs",
+            )
+            self.run_info.compression_memory_usage = max_value_per_memory_type[MemoryType.SYSTEM]
+        else:
+            self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
         self.run_info.time_compression = time.perf_counter() - start_time
 
     def collect_data_from_stdout(self, stdout: str):

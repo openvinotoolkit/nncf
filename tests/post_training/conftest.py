@@ -29,3 +29,8 @@ def pytest_addoption(parser):
         action="store_true",
         help="Add additional columns to reports.csv",
     )
+    parser.addoption(
+        "--memory-monitor",
+        action="store_true",
+        help="Report memory using MemoryMonitor from tools/memory_monitor.py.",
+    )
