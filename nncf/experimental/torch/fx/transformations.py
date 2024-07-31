@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Tuple
 
 import torch
 import torch.fx
@@ -45,8 +45,7 @@ def leaf_module_insertion_transformation_builder(
         # Insert call_module nodes to the model
         graph = model.graph
         for target_point in target_points:
-            target_node = _get_target_node(graph, target_point)
-            _insert_call_module(graph, target_node, module_attr_name)
+            _insert_call_module(graph, target_point, module_attr_name)
 
     return leaf_module_insertion_transformation
 
@@ -100,13 +99,12 @@ def qdq_insertion_tranformation_builder(
                 " Please use non shared qdq pairs for the weights quantization."
             )
         for target_point in target_points:
-            target_node = _get_target_node(model.graph, target_point)
-            insert_one_qdq_after_node(model, target_node, quantizer)
+            insert_one_qdq(model, target_point, quantizer)
 
     return qdq_insertion_tranformation
 
 
-def insert_one_qdq_after_node(model: torch.fx.GraphModule, target_node: torch.fx.Node, quantizer: FakeQuantize):
+def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, quantizer: FakeQuantize):
     """
     Inserts quantize-dequantize after the target node to the target model.
 
@@ -146,6 +144,7 @@ def insert_one_qdq_after_node(model: torch.fx.GraphModule, target_node: torch.fx
 
     # 2. replace activation_post_process node with quantize and dequantize
     graph = model.graph
+    target_node = get_graph_node_by_name(graph, target_point.target_node_name)
     # TODO(dlyakhov): use metatype to get correct input_port_id
     # Do not quantize already quantized nodes
     # inserting_before handle only order in the graph generated code.
@@ -170,22 +169,34 @@ def insert_one_qdq_after_node(model: torch.fx.GraphModule, target_node: torch.fx
                 # for qparams that are not scale/zero_point (like axis, dtype) we store
                 # them as literals in the graph.
                 quantize_op_inputs.append(value_or_node)
-    with graph.inserting_after(target_node):
+
+    _, feed_node, ctx_manager = _get_data_for_insertion(graph, target_point)
+    quantize_op_inputs[0] = feed_node
+    with ctx_manager(target_node):
         quantized_node = graph.create_node(node_type, quantize_op, tuple(quantize_op_inputs), {})
-        # use the same qparams from quantize op
+
+    # use the same qparams from quantize op
     dq_inputs = [quantized_node] + quantize_op_inputs[1:]
-    user_dq_nodes = []
-    with graph.inserting_after(quantized_node):
-        for user in target_node.users:
-            if user is quantized_node:
-                continue
-            user_dq_nodes.append((user, graph.call_function(dequantize_op, tuple(dq_inputs), {})))
+    if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
+        user_dq_nodes = []
+        with graph.inserting_after(quantized_node):
+            for user in target_node.users:
+                if user is quantized_node:
+                    continue
+                user_dq_nodes.append((user, graph.call_function(dequantize_op, tuple(dq_inputs), {})))
 
-    for user, dq_node in user_dq_nodes:
-        user.replace_input_with(target_node, dq_node)
+        for user, dq_node in user_dq_nodes:
+            user.replace_input_with(target_node, dq_node)
+    else:
+        with graph.inserting_after(quantized_node):
+            dq_node = graph.call_function(dequantize_op, tuple(dq_inputs), {})
+
+        args = list(target_node.args)
+        args[target_point.input_port_id] = dq_node
+        target_node.args = tuple(args)
 
 
-def _insert_call_module(graph: torch.fx.Graph, target_node: torch.fx.Node, module_attr_name: str):
+def _insert_call_module(graph: torch.fx.Graph, target_point: PTTargetPoint, module_attr_name: str):
     """
     Inserts module call node to the graph after the target node.
 
@@ -193,28 +204,28 @@ def _insert_call_module(graph: torch.fx.Graph, target_node: torch.fx.Node, modul
     :param target_node: Target node, module call node is being iserted just after the target node.
     :param module_attr_name: The name of the graph attribute which keeps the target module.
     """
-    with graph.inserting_after(target_node):
+    target_node, feed_node, ctx_manager = _get_data_for_insertion(graph, target_point)
+    with ctx_manager(target_node):
         return graph.create_node(
-            "call_module", module_attr_name, (target_node,), {}, name=module_attr_name + "_graph_node"
+            "call_module",
+            module_attr_name,
+            (feed_node,),
+            {},
+            name=f"{module_attr_name}_{str(target_point.target_type)}_graph_node",
         )
 
 
-def _get_target_node(graph: torch.fx.Graph, target_point: PTTargetPoint) -> torch.fx.Node:
-    """
-    Returns TorchFX graph node correspondent to the target point.
-
-    :param graph: Target torch.fx.Graph.
-    :param target_point: A target point to find the target node.
-    :return: TorchFX graph node correspondent to the target point.
-    """
-    # TODO(dlyakhov): Support node insertion on a specific input port id.
+def _get_data_for_insertion(
+    graph: torch.fx.Graph, target_point: PTTargetPoint
+) -> Tuple[torch.fx.Node, torch.fx.Node, Callable]:
     target_type = target_point.target_type
+    ctx_manager = graph.inserting_after if target_type == TargetType.OPERATOR_POST_HOOK else graph.inserting_before
     target_node = get_graph_node_by_name(graph, target_point.target_node_name)
+    feed_node = target_node
     if target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
-        target_node = target_node.all_input_nodes[target_point.input_port_id]
-    elif target_type != TargetType.OPERATOR_POST_HOOK:
-        raise RuntimeError(f"Unsupported target type: {target_type} for target_point: {target_point}")
-    return target_node
+        feed_node = target_node.args[target_point.input_port_id]
+
+    return target_node, feed_node, ctx_manager
 
 
 def _set_module_to_the_graph_module(
