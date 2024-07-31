@@ -32,5 +32,6 @@ def pytest_addoption(parser):
     parser.addoption(
         "--memory-monitor",
         action="store_true",
-        help="Report memory using MemoryMonitor from tools/memory_monitor.py.",
+        help="Report memory using MemoryMonitor from tools/memory_monitor.py. "
+        "Warning: currently, reported memory values are not always reproducible.",
     )
