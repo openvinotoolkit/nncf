@@ -29,12 +29,17 @@ import torchvision.models as models
 from torch._export import capture_pre_autograd_graph
 from ultralytics.models.yolo import YOLO
 
+from nncf import Dataset
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.utils.os import safe_open
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
+from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from tests.shared.paths import TEST_ROOT
+from tests.torch import test_models
 from tests.torch.test_compressed_graph import check_graph
 
 FX_DIR_NAME = "fx"
@@ -108,7 +113,7 @@ def get_ref_metatypes_from_json(
 
 
 @pytest.mark.parametrize("test_case", TEST_MODELS, ids=[m.model_id for m in TEST_MODELS])
-def test_models(test_case: ModelCase):
+def test_model(test_case: ModelCase):
     with disable_patching():
         device = torch.device("cpu")
         model_name = test_case.model_id
@@ -129,3 +134,28 @@ def test_models(test_case: ModelCase):
         model_metatypes = {n.node_name: n.metatype.name for n in nncf_graph.get_all_nodes()}
         ref_metatypes = get_ref_metatypes_from_json(model_name, model_metatypes)
         assert model_metatypes == ref_metatypes
+
+
+TEST_MODELS_QUANIZED = ((ModelCase(lambda: test_models.UNet(), "unet", [1, 3, 224, 224]), {}),)
+
+
+@pytest.mark.parametrize(("model_case", "quantization_parameters"), TEST_MODELS_QUANIZED)
+def test_quantized_model(model_case: ModelCase, quantization_parameters):
+    with disable_patching():
+        model = model_case.model_builder()
+
+        example_input = torch.ones(model_case.input_shape)
+
+        fx_model = capture_pre_autograd_graph(model, args=(example_input,))
+        quantization_parameters["advanced_parameters"] = AdvancedQuantizationParameters(disable_bias_correction=True)
+        quantization_parameters["subset_size"] = 1
+        quantization_algorithm = PostTrainingQuantization(**quantization_parameters)
+        apply_quantization_transformations(fx_model)
+        nncf_graph = GraphConverter.create_nncf_graph(fx_model)
+        quantized_model = quantization_algorithm.apply(
+            fx_model,
+            nncf_graph,
+            dataset=Dataset([example_input]),
+        )
+        quantized_model = GraphConverter.create_nncf_graph(quantized_model)
+        check_graph(quantized_model, get_dot_filename(model_case.model_id), FX_DIR_NAME)
