@@ -14,7 +14,6 @@ from typing import Callable, List, Optional
 import torch
 import torch.fx
 from torch.ao.quantization.fx.utils import create_getattr_from_value
-from torch.ao.quantization.pt2e.utils import _get_tensor_constant_from_node
 from torch.ao.quantization.pt2e.utils import fold_bn_weights_into_conv_node
 from torch.quantization.fake_quantize import FakeQuantize
 
@@ -25,6 +24,58 @@ from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 TransformationFNType = Callable[[torch.fx.GraphModule], None]
+
+
+def _get_node_tesnor_output(node: torch.fx.Node) -> List[torch.Tensor]:
+    val = node.meta["val"]
+    val = val if isinstance(val, tuple) else (val,)
+    retval = []
+    for t in val:
+        retval.append(torch.ones(t.shape))
+    return retval
+
+
+def _set_new_node_meta(new_node: torch.fx.Node, prev_node: torch.fx.Node, target_module: torch.nn.Module):
+    with torch.no_grad():
+        new_node.meta["val"] = target_module(*_get_node_tesnor_output(prev_node))
+
+
+def module_insertion_transformation_builder(
+    module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint]
+) -> TransformationFNType:
+    """
+    Returns transformation which inserts given module to a target model
+    and calls given module after each target points replacing inputs/outputs
+    of the target node.
+
+    :param module_to_insert: Given torch.nn.Module to insert.
+    :param target_points: Target points to insert the target module.
+    :returns: Transformation which which inserts given module to a target model
+        and calls given module after each target points.
+    """
+
+    def module_insertion_transformation(model: torch.fx.GraphModule):
+        module_attr_name = _set_module_to_the_graph_module(model, module_to_insert, target_points)
+        # Insert call_module nodes to the model
+        graph = model.graph
+        for target_point in target_points:
+            new_node = _insert_call_module(graph, target_point, module_attr_name)
+            target_node = get_graph_node_by_name(graph, target_point.target_node_name)
+
+            if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
+                _set_new_node_meta(new_node, target_node, module_to_insert)
+                with graph.inserting_after(target_node):
+                    for user in target_node.users:
+                        if user is new_node:
+                            continue
+                        user.replace_input_with(target_node, new_node)
+
+            else:
+                prev_node = target_node.args[target_point.input_port_id]
+                _set_new_node_meta(new_node, prev_node, module_to_insert)
+                target_node.replace_input_with(prev_node, new_node)
+
+    return module_insertion_transformation
 
 
 def leaf_module_insertion_transformation_builder(
@@ -67,19 +118,38 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
             raise nncf.InternalError(f"Node with bias have {len(graph_node.users)} users, 1 expected.")
 
         bias_node = next(iter(graph_node.users))
-        with graph.inserting_before(bias_node):
-            new_constant = create_getattr_from_value(model, graph, target_node_name + "_shifted_bias", value)
-
-        args = list(bias_node.args)
-        # A bias node suppose to have constant on the second input port.
-        args[1] = new_constant
-        bias_node.args = tuple(args)
-        graph.eliminate_dead_code()
+        constant_update_fn(model, bias_node, value, input_port_id=1)
 
     return bias_update_transformation
 
 
-def qdq_insertion_transformation_builder(
+def constant_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> TransformationFNType:
+    def constant_update_transformation(model: torch.fx.GraphModule):
+        constant_update_fn(model, get_graph_node_by_name(model.graph, node.node_name), value, input_port_id=1)
+
+    return constant_update_transformation
+
+
+def constant_update_fn(
+    model: torch.fx.GraphModule, graph_node: torch.fx.Node, value: torch.Tensor, input_port_id: int = 1
+):
+    graph = model.graph
+    with graph.inserting_before(graph_node):
+        new_constant = create_getattr_from_value(model, graph, graph_node.name + "_updated_constant", value)
+
+    args = list(graph_node.args)
+    # A bias node suppose to have constant on the second input port.
+    if args[input_port_id].op != "get_attr":
+        raise nncf.InternalError(
+            f"Constant on input port {input_port_id} for {graph_node} is expected,"
+            f" but node {args[input_port_id]} is present."
+        )
+    args[input_port_id] = new_constant
+    graph_node.args = tuple(args)
+    graph.eliminate_dead_code()
+
+
+def qdq_insertion_tranformation_builder(
     quantizer: FakeQuantize, target_points: List[PTTargetPoint]
 ) -> TransformationFNType:
     """
@@ -207,6 +277,7 @@ def _insert_call_module(graph: torch.fx.Graph, target_point: PTTargetPoint, modu
     :param graph: Graph to insert module call node.
     :param target_node: Target node, module call node is being iserted just after the target node.
     :param module_attr_name: The name of the graph attribute which keeps the target module.
+    :return: Target node used
     """
     target_node = get_graph_node_by_name(graph, target_point.target_node_name)
     input_node = get_input_node(target_point, target_node)
@@ -397,7 +468,7 @@ def separate_linear_and_bias(model: torch.fx.GraphModule):
         while linear_bias_node.op != "get_attr":
             # Assume zero argument is on a path to the constant
             linear_bias_node = linear_bias_node.args[0]
-        linear_bias_value = _get_tensor_constant_from_node(linear_bias_node, model)
+        linear_bias_value = get_tensor_constant_from_node(linear_bias_node, model)
         args = list(n.args)
         args[2] = None
         linear_node.args = tuple(args)
@@ -436,9 +507,9 @@ def separate_conv_and_bias(model: torch.fx.GraphModule):
         if len(n.args) < 3 or n.args[2] is None:
             continue
         conv_node = n
-        dims = len(_get_tensor_constant_from_node(conv_node.args[1], model).shape)
+        dims = len(get_tensor_constant_from_node(conv_node.args[1], model).shape)
         conv_bias_node = conv_node.args[2]
-        conv_bias_value = _get_tensor_constant_from_node(conv_bias_node, model)
+        conv_bias_value = get_tensor_constant_from_node(conv_bias_node, model)
         args = list(n.args)
         args[2] = None
         conv_node.args = tuple(args)
@@ -502,7 +573,7 @@ def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[
                 const_node = node
                 break
         assert const_node is not None
-        bias_value = _get_tensor_constant_from_node(const_node, model).squeeze()
+        bias_value = get_tensor_constant_from_node(const_node, model).squeeze()
         with model.graph.inserting_before(conv_node):
             new_bias_node = create_getattr_from_value(model, model.graph, const_node.name + "_", bias_value)
         args = list(conv_node.args)
@@ -513,3 +584,24 @@ def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[
 
     model.graph.eliminate_dead_code()
     model.recompile()
+
+
+def get_tensor_constant_from_node(constant_node: torch.fx.Node, model: torch.fx.GraphModule) -> torch.nn.Parameter:
+    """
+    Retrieves tensor from the given constant node.
+
+    :param constant_node: Given constant node.
+    :param model: Given model.
+    :return: Torch tensor referenced by the given constant node.
+    """
+    if constant_node is None:
+        return None
+    if constant_node.op != "get_attr":
+        raise RuntimeError(f"Given node op == {constant_node.op}, but get_attr is expected.")
+    target_atoms = constant_node.target.split(".")
+    attr_itr = model
+    for i, atom in enumerate(target_atoms):
+        if not hasattr(attr_itr, atom):
+            raise RuntimeError(f"Node referenced nonexistent target {'.'.join(target_atoms[:i])}")
+        attr_itr = getattr(attr_itr, atom)
+    return attr_itr

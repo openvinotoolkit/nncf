@@ -82,6 +82,10 @@ class TensorReducerBase(ABC):
         """
 
     def __call__(self, x: List[Tensor]):
+        # try:
+        #     any(t.isempty() for t in x)
+        # except:
+        #     breakpoint()
         if any(t.isempty() for t in x):
             return None
 
