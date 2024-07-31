@@ -91,6 +91,12 @@ class SparsifyActivationsAlgoBackend(ABC):
         :return: The model with calibrated activation sparsifiers.
         """
 
+    @abstractmethod
+    def do_sparsification(self, model, graph, target_sparsity_by_node, dataset):
+        """
+
+        """
+
 
 class SparsifyActivationsAlgorithm:
     """
@@ -154,8 +160,11 @@ class SparsifyActivationsAlgorithm:
         :param dataset: The dataset to calibrate the activation sparsifiers.
         :return: The sparsified model.
         """
-        model = self._backend_entity.insert_sparsifiers(model, graph, target_sparsity_by_node)
-        model = self._backend_entity.calibrate_sparsifiers(model, graph, dataset)
+        if get_backend(model) == BackendType.TORCH:
+            model = self._backend_entity.insert_sparsifiers(model, graph, target_sparsity_by_node)
+            model = self._backend_entity.calibrate_sparsifiers(model, graph, dataset)
+        else:
+            model = self._backend_entity.do_sparsification(model, graph, target_sparsity_by_node, dataset)
         return model
 
     def _set_backend_entity(self, model: TModel) -> None:
@@ -169,6 +178,10 @@ class SparsifyActivationsAlgorithm:
             from nncf.experimental.torch.sparsify_activations.torch_backend import PTSparsifyActivationsAlgoBackend
 
             self._backend_entity = PTSparsifyActivationsAlgoBackend()
+        elif model_backend == BackendType.OPENVINO:
+            from nncf.experimental.torch.sparsify_activations.openvino_backend import OVSparsifyActivationsAlgoBackend
+
+            self._backend_entity = OVSparsifyActivationsAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
                 f"{model_backend.value} backend is not supported for `sparsify_activations`."
