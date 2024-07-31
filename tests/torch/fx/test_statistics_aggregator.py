@@ -61,7 +61,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
         conv_w = self.dataset_samples_to_conv_w(np.array(sample))
         with disable_patching():
-            model = capture_pre_autograd_graph(IdentityConv(conv_w), args=(torch.randn(1, 3, 3, 3),))
+            model = capture_pre_autograd_graph(IdentityConv(conv_w), args=(torch.ones(INPUT_SHAPE),))
             return model
 
     def get_statistics_aggregator(self, dataset):
@@ -91,8 +91,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
     @pytest.fixture
     def dataset_samples(self, dataset_values):
-        input_shape = INPUT_SHAPE
-        dataset_samples = [np.zeros(input_shape), np.ones(input_shape)]
+        dataset_samples = [np.zeros(INPUT_SHAPE), np.ones(INPUT_SHAPE)]
 
         for i, value in enumerate(dataset_values):
             dataset_samples[0][0, i, 0, 0] = value["max"]
