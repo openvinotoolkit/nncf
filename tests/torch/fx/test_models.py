@@ -27,6 +27,7 @@ import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
 from torch._export import capture_pre_autograd_graph
+from ultralytics.models.yolo import YOLO
 
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -35,7 +36,6 @@ from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from tests.shared.paths import TEST_ROOT
 from tests.torch.test_compressed_graph import check_graph
-from tests.torch.test_models.yolov8.model import YoloV8Model
 
 FX_DIR_NAME = "fx"
 
@@ -54,9 +54,12 @@ def torchvision_model_case(model_id: str, input_shape: Tuple[int,]):
 
 def yolo_v8_case(model_id, input_shape):
     def get_model() -> torch.nn.Module:
-        model = YoloV8Model().eval()
+        model_config = model_id + ".yaml"
+        model = YOLO(model_config)
+        model = model.model
+        model.eval()
         # Warmup model
-        model(torch.empty(input_shape))
+        model(torch.ones(input_shape))
         return model
 
     return ModelCase(get_model, model_id, input_shape)
