@@ -54,6 +54,7 @@ class HWConfigOpName:
     EMBEDDINGBAG = "EmbeddingBag"
     PAD = "Pad"
     STRIDEDSLICE = "StridedSlice"
+    SLICE = "Slice"
     GELU = "Gelu"
     LSTMSEQUENCE = "LSTMSequence"
     GRUSEQUENCE = "GRUSequence"

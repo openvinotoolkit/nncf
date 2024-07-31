@@ -569,6 +569,7 @@ class OVStridedSliceMetatype(OVOpMetatype):
 class OVSliceMetatype(OVOpMetatype):
     name = "SliceOp"
     op_names = ["Slice"]
+    hw_config_names = [HWConfigOpName.SLICE]
 
 
 @OV_OPERATOR_METATYPES.register()
