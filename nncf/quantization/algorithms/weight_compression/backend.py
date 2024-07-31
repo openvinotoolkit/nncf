@@ -128,7 +128,9 @@ class WeightCompressionAlgoBackend(ABC):
         """
 
     @abstractmethod
-    def insert_adapters(self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool):
+    def insert_adapters(
+        self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
+    ) -> None:
         """
         Expands a model's execution graph following the Low-Rank Adaptation (LoRA) concept.
 
@@ -148,13 +150,9 @@ class WeightCompressionAlgoBackend(ABC):
                    orig.MM--------------------------/
 
         :param wc_params: Parameters for weight compression.
-        :type wc_params: WeightCompressionParameters
         :param lora_A: weights for the first LoRA matrix.
-        :type lora_A: Tensor
         :param lora_B: weights for the second LoRA matrix.
-        :type lora_B: Tensor
         :param int8_lora: indicates whether the LoRA matrices should be compressed to 8-bit.
-        :type int8_lora: bool
         """
 
     @staticmethod

@@ -25,8 +25,8 @@ def process_stats(stats: List[TTensor], subset_size: int) -> Tuple[TTensor, TTen
     :param subset_size: The number of samples for AWQ.
     :type subset_size: int
     :return: tuple of the following tensors:
-        s - maximum channel magnitude across samples
-        X - average channel magnitude across tokens in the sequence
+        s - maximum channel magnitude across samples [HiddenDim]
+        X - average channel magnitude across tokens in the sequence [HiddenDim, SampleSize]
     :rtype: Tuple[TTensor, TTensor]
     """
     X = fns.stack([fns.mean(stat, axis=0) for stat in stats])  # [Batch, HiddenDim]
