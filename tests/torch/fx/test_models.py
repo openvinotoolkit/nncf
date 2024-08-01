@@ -141,11 +141,6 @@ TEST_MODELS_QUANIZED = ((ModelCase(lambda: test_models.UNet(), "unet", [1, 3, 22
 @pytest.mark.parametrize(("model_case", "quantization_parameters"), TEST_MODELS_QUANIZED)
 def test_quantized_model(model_case: ModelCase, quantization_parameters):
     with disable_patching():
-        seed = 42
-        torch.manual_seed(
-            seed
-        )  # add seed for model initialization is the same all the time and bias correction is applied the same.
-
         model = model_case.model_builder()
         example_input = torch.ones(model_case.input_shape)
 
@@ -158,7 +153,7 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters):
 
         calibration_dataset = nncf.Dataset([example_input], transform_fn)
 
-        quantization_parameters["advanced_parameters"] = AdvancedQuantizationParameters()
+        quantization_parameters["advanced_parameters"] = AdvancedQuantizationParameters(disable_bias_correction=True)
         quantization_parameters["subset_size"] = 1
 
         quantized_model = nncf.quantize(fx_model, calibration_dataset, **quantization_parameters)
