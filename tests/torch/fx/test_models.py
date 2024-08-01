@@ -29,6 +29,7 @@ import torchvision.models as models
 from torch._export import capture_pre_autograd_graph
 from ultralytics.models.yolo import YOLO
 
+import nncf
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -43,6 +44,7 @@ from tests.torch import test_models
 from tests.torch.test_compressed_graph import check_graph
 
 FX_DIR_NAME = "fx"
+FX_QUANTIZED_DIR_NAME = "fx/quantized"
 
 
 @dataclass
@@ -143,19 +145,21 @@ TEST_MODELS_QUANIZED = ((ModelCase(lambda: test_models.UNet(), "unet", [1, 3, 22
 def test_quantized_model(model_case: ModelCase, quantization_parameters):
     with disable_patching():
         model = model_case.model_builder()
-
         example_input = torch.ones(model_case.input_shape)
+        
+        with torch.no_grad():
+            model.eval()
+            fx_model = capture_pre_autograd_graph(model, args=(example_input,))
 
-        fx_model = capture_pre_autograd_graph(model, args=(example_input,))
-        quantization_parameters["advanced_parameters"] = AdvancedQuantizationParameters(disable_bias_correction=True)
+        def transform_fn(data_item):
+            return data_item.to("cpu")
+
+        calibration_dataset = nncf.Dataset([example_input], transform_fn)
+
+        quantization_parameters["advanced_parameters"] = AdvancedQuantizationParameters(disable_bias_correction=False)
         quantization_parameters["subset_size"] = 1
-        quantization_algorithm = PostTrainingQuantization(**quantization_parameters)
-        apply_quantization_transformations(fx_model)
-        nncf_graph = GraphConverter.create_nncf_graph(fx_model)
-        quantized_model = quantization_algorithm.apply(
-            fx_model,
-            nncf_graph,
-            dataset=Dataset([example_input]),
-        )
+
+        quantized_model = nncf.quantize(fx_model, calibration_dataset, **quantization_parameters)
         quantized_model = GraphConverter.create_nncf_graph(quantized_model)
-        check_graph(quantized_model, get_dot_filename(model_case.model_id), FX_DIR_NAME)
+
+        check_graph(quantized_model, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME)
