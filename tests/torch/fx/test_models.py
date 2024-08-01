@@ -153,7 +153,7 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters):
 
         calibration_dataset = nncf.Dataset([example_input], transform_fn)
 
-        quantization_parameters["advanced_parameters"] = AdvancedQuantizationParameters(disable_bias_correction=False)
+        quantization_parameters["advanced_parameters"] = AdvancedQuantizationParameters()
         quantization_parameters["subset_size"] = 1
 
         quantized_model = nncf.quantize(fx_model, calibration_dataset, **quantization_parameters)
