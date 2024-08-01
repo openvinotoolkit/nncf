@@ -14,16 +14,15 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import torch
 import torch.fx
-from torch.ao.quantization.pt2e.utils import _get_tensor_constant_from_node
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
-from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
+from nncf.experimental.torch.fx.node_utils import get_bias_value
+from nncf.experimental.torch.fx.node_utils import target_point
 from nncf.experimental.torch.fx.transformations import bias_update_transformation_builder
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
@@ -34,18 +33,9 @@ from nncf.torch.tensor_statistics.collectors import get_mean_statistic_collector
 
 
 class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
-    TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
-        TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
-        TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
-    }
-
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
-        if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
-            port_id = None
-        if target_type in FXFastBiasCorrectionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
-            target_type = FXFastBiasCorrectionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]
-        return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
+        return target_point(target_type, target_node_name, port_id)
 
     @staticmethod
     def create_bias_correction_command(
@@ -83,10 +73,7 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: torch.fx.GraphModule) -> Tensor:
-        bias_node = nncf_graph.get_next_nodes(node)[0]
-        # TODO(dlyakhov): make a node_name_vs_node map to speed up the process
-        graph_bias_node = get_graph_node_by_name(model.graph, bias_node.node_name)
-        return Tensor(_get_tensor_constant_from_node(graph_bias_node.all_input_nodes[1], model))
+        return Tensor(get_bias_value(node, nncf_graph, model))
 
     @staticmethod
     def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:

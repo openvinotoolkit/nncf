@@ -17,6 +17,7 @@ import torch.fx
 from torch._export import capture_pre_autograd_graph
 
 from nncf.common.factory import NNCFGraphFactory
+from nncf.experimental.torch.fx.node_utils import get_bias_value
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend import FXFastBiasCorrectionAlgoBackend
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
@@ -69,8 +70,7 @@ class TestTorchFXFBCAlgorithm(TemplateTestFBCAlgorithm):
         for node in nncf_graph.get_all_nodes():
             if node.metatype not in OPERATORS_WITH_BIAS_METATYPES:
                 continue
-            bias_value = FXFastBiasCorrectionAlgoBackend.get_bias_value(node, nncf_graph, model)
-            bias_value = torch.flatten(bias_value.data).cpu()
+            bias_value = get_bias_value(node, nncf_graph, model).cpu()
             # TODO(AlexanderDokuchaev): return atol=0.0001 after fix 109189
             assert torch.all(torch.isclose(bias_value, ref_bias, atol=0.02)), f"{bias_value} != {ref_bias}"
             return
