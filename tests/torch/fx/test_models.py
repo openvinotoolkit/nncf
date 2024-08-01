@@ -30,14 +30,11 @@ from torch._export import capture_pre_autograd_graph
 from ultralytics.models.yolo import YOLO
 
 import nncf
-from nncf import Dataset
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.utils.os import safe_open
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
-from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from tests.shared.paths import TEST_ROOT
 from tests.torch import test_models
@@ -146,7 +143,7 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters):
     with disable_patching():
         model = model_case.model_builder()
         example_input = torch.ones(model_case.input_shape)
-        
+
         with torch.no_grad():
             model.eval()
             fx_model = capture_pre_autograd_graph(model, args=(example_input,))
