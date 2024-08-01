@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Tuple
+
 import numpy as np
 import pytest
 
@@ -18,7 +20,9 @@ from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.utils.backend import BackendType
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
@@ -30,7 +34,9 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 from nncf.scopes import IgnoredScope
+from tests.common.quantization.metatypes import AddTestMetatype
 from tests.common.quantization.metatypes import CatTestMetatype
+from tests.common.quantization.metatypes import ConstantTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
@@ -59,6 +65,23 @@ def test_target_device(target_device):
 class TestPTQParams(TemplateTestPTQParams):
     def get_algo_backend(self):
         return ONNXMinMaxAlgoBackend()
+
+    def get_backend_label(self):
+        return BackendType.ONNX
+
+    @staticmethod
+    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> ONNXLayerAttributes:
+        return ONNXLayerAttributes(weight_attrs={weight_port_id: {"shape": weight_shape}}, bias_attrs={})
+
+    @staticmethod
+    def get_default_node_attrs() -> ONNXLayerAttributes:
+        return ONNXLayerAttributes({})
+
+    @staticmethod
+    def get_input_port_id(target_point: ONNXTargetPoint):
+        if target_point.type == TargetType.POST_LAYER_OPERATION:
+            return None
+        return target_point.port_id
 
     def check_quantize_outputs_fq_num(self, quantize_outputs, act_num_q, weight_num_q):
         if quantize_outputs:
@@ -89,6 +112,8 @@ class TestPTQParams(TemplateTestPTQParams):
             LinearTestMetatype: ONNXGemmMetatype,
             SoftmaxTestMetatype: ONNXSoftmaxMetatype,
             CatTestMetatype: ONNXConcatMetatype,
+            ConstantTestMetatype: ONNXConstantMetatype,
+            AddTestMetatype: ONNXAddLayerMetatype,
         }
 
     @property

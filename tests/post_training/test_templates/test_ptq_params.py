@@ -11,15 +11,17 @@
 from abc import abstractmethod
 from collections import Counter
 from copy import deepcopy
-from typing import Dict
+from typing import Dict, Optional, Tuple
 
 import pytest
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
+from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
@@ -39,7 +41,9 @@ from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
+from tests.common.quantization.metatypes import AddTestMetatype
 from tests.common.quantization.metatypes import CatTestMetatype
+from tests.common.quantization.metatypes import ConstantTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import IdentityTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
@@ -125,6 +129,45 @@ class ModelWithUnifiedScales:
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls=nncf_graph_cls)
 
 
+class ConstantBranchWithWeightedNodeModel:
+    # Const_1 Const_2  Const_3 Input_1
+    #     \     /         \    /
+    #    Const_conv      Conv_1
+    #             \     /
+    #             Add_1
+    #               |
+    #            Output_1
+
+    def __init__(
+        self,
+        metatypes: Dict[TestMetatype, OperatorMetatype],
+        conv_layer_attrs: BaseLayerAttributes,
+        default_layer_attrs: Optional[BaseLayerAttributes],
+        nncf_graph_cls=NNCFGraph,
+    ):
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Const_1", metatypes[ConstantTestMetatype], layer_attributes=default_layer_attrs),
+            NodeWithType("Const_2", metatypes[ConstantTestMetatype], layer_attributes=default_layer_attrs),
+            NodeWithType("Const_3", metatypes[ConstantTestMetatype], layer_attributes=default_layer_attrs),
+            NodeWithType("Conv_1", metatypes[Conv2dTestMetatype], layer_attributes=conv_layer_attrs),
+            NodeWithType("Add_1", metatypes[AddTestMetatype], layer_attributes=default_layer_attrs),
+            NodeWithType("Const_conv", metatypes[Conv2dTestMetatype], layer_attributes=conv_layer_attrs),
+            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=default_layer_attrs),
+        ]
+        node_edges = [
+            ("Const_1", "Const_conv"),
+            ("Const_2", "Const_conv"),
+            ("Input_1", "Conv_1"),
+            ("Const_3", "Conv_1"),
+            ("Const_conv", "Add_1"),
+            ("Conv_1", "Add_1"),
+            ("Add_1", "Output_1"),
+        ]
+        original_mock_graph = create_mock_graph(nodes, node_edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls=nncf_graph_cls)
+
+
 class DummyMinMaxTensorStatistic(MinMaxTensorStatistic):
     def tensor_eq(self):
         return True
@@ -141,6 +184,25 @@ class DummyMinMaxTensorCollector:
 class TemplateTestPTQParams:
     @abstractmethod
     def get_algo_backend(self):
+        pass
+
+    @abstractmethod
+    def get_backend_label(self):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> BaseLayerAttributes:
+        "Returns backend specific layer attributes for Convolution."
+
+    @staticmethod
+    @abstractmethod
+    def get_default_node_attrs():
+        "Returns default backend specific layer attributes."
+
+    @staticmethod
+    @abstractmethod
+    def get_input_port_id(target_point: TargetPoint):
         pass
 
     def check_is_min_max_statistic_collector(self, tensor_collector: TensorCollector):
@@ -423,3 +485,27 @@ class TemplateTestPTQParams:
             algo.apply(None, None, stat_points)
 
         assert str(exc_info.value) == "Statistics were not collected for the node A"
+
+    def test_constant_branch_weighted_node_quantization(self, mocker):
+        model = ConstantBranchWithWeightedNodeModel(
+            self.metatypes_mapping,
+            self.get_conv_node_attrs(1, (1, 1, 1, 1)),
+            self.get_default_node_attrs(),
+            self.nncf_graph_cls,
+        )
+        algo = MinMaxQuantization()
+        algo._backend_entity = self.get_algo_backend()
+
+        mocker.patch("nncf.quantization.algorithms.min_max.algorithm.get_backend", lambda _: self.get_backend_label())
+        target_points, unify_scales = algo._get_quantization_target_points(None, model.nncf_graph)
+        assert unify_scales == []
+
+        assert len(target_points) == 2
+        ref_target_points = {
+            "/Input_1_0": (False, None),
+            "/Conv_1_0": (True, 1),
+        }
+        for target_point in target_points:
+            ref = ref_target_points[target_point.target_node_name]
+            assert target_point.is_weight_target_point() == ref[0]
+            assert self.get_input_port_id(target_point) == ref[1]

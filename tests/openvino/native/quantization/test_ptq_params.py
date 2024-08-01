@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Tuple
+
 import numpy as np
 import pytest
 
@@ -19,7 +21,10 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.utils.backend import BackendType
+from nncf.openvino.graph.layer_attributes import OVLayerAttributes
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
@@ -30,7 +35,9 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 from nncf.scopes import IgnoredScope
+from tests.common.quantization.metatypes import AddTestMetatype
 from tests.common.quantization.metatypes import CatTestMetatype
+from tests.common.quantization.metatypes import ConstantTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
@@ -58,6 +65,24 @@ def test_target_device(target_device):
 class TestPTQParams(TemplateTestPTQParams):
     def get_algo_backend(self):
         return OVMinMaxAlgoBackend()
+
+    def get_backend_label(self):
+        return BackendType.OPENVINO
+
+    @staticmethod
+    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> OVLayerAttributes:
+        constant_attributes = {weight_port_id: {"name": "dummy", "shape": weight_shape}}
+        return OVLayerAttributes(constant_attributes, {}, {})
+
+    @staticmethod
+    def get_default_node_attrs() -> OVLayerAttributes:
+        return OVLayerAttributes({})
+
+    @staticmethod
+    def get_input_port_id(target_point: OVTargetPoint):
+        if target_point.type == TargetType.POST_LAYER_OPERATION:
+            return None
+        return target_point.port_id
 
     def check_quantize_outputs_fq_num(self, quantize_outputs, act_num_q, weight_num_q):
         if quantize_outputs:
@@ -88,6 +113,8 @@ class TestPTQParams(TemplateTestPTQParams):
             LinearTestMetatype: OVMatMulMetatype,
             SoftmaxTestMetatype: OVSoftmaxMetatype,
             CatTestMetatype: OVConcatMetatype,
+            ConstantTestMetatype: OVConstantMetatype,
+            AddTestMetatype: OVAddMetatype,
         }
 
     @property

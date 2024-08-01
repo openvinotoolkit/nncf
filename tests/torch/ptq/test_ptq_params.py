@@ -9,10 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Tuple
+
 import pytest
 import torch
 from torch import nn
 
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
@@ -24,12 +27,16 @@ from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBacke
 from nncf.scopes import IgnoredScope
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
+from nncf.torch.graph.operator_metatypes import PTAddMetatype
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
+from nncf.torch.graph.operator_metatypes import PTConstNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSoftmaxMetatype
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
+from tests.common.quantization.metatypes import AddTestMetatype
 from tests.common.quantization.metatypes import CatTestMetatype
+from tests.common.quantization.metatypes import ConstantTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
@@ -96,6 +103,31 @@ class TestPTQParams(TemplateTestPTQParams):
     def get_algo_backend(self):
         return PTMinMaxAlgoBackend()
 
+    def get_backend_label(self):
+        return BackendType.TORCH
+
+    @staticmethod
+    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> ConvolutionLayerAttributes:
+        return ConvolutionLayerAttributes(
+            weight_requires_grad=False,
+            in_channels=weight_shape[0],
+            out_channels=weight_shape[1],
+            kernel_size=weight_shape[2:],
+            stride=1,
+            dilations=1,
+            groups=1,
+            transpose=False,
+            padding_values=[],
+        )
+
+    @staticmethod
+    def get_default_node_attrs() -> None:
+        return None
+
+    @staticmethod
+    def get_input_port_id(target_point: PTTargetPoint):
+        return target_point.input_port_id
+
     def check_quantize_outputs_fq_num(self, quantize_outputs, act_num_q, weight_num_q):
         if quantize_outputs:
             assert act_num_q == 2
@@ -125,6 +157,8 @@ class TestPTQParams(TemplateTestPTQParams):
             LinearTestMetatype: PTLinearMetatype,
             SoftmaxTestMetatype: PTSoftmaxMetatype,
             CatTestMetatype: PTCatMetatype,
+            ConstantTestMetatype: PTConstNoopMetatype,
+            AddTestMetatype: PTAddMetatype,
         }
 
     @property
