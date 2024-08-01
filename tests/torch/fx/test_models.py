@@ -74,6 +74,7 @@ TEST_MODELS = (
     torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)),
     torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
     torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
+    ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
     yolo_v8_case("yolov8n", (1, 3, 224, 224)),
 )
 
@@ -135,7 +136,11 @@ def test_model(test_case: ModelCase):
         assert model_metatypes == ref_metatypes
 
 
-TEST_MODELS_QUANIZED = ((ModelCase(lambda: test_models.UNet(), "unet", [1, 3, 224, 224]), {}),)
+TEST_MODELS_QUANIZED = (
+    (ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]), {}),
+    (torchvision_model_case("resnet18", (1, 3, 224, 224)), {}),
+    (torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)), {}),
+)
 
 
 @pytest.mark.parametrize(("model_case", "quantization_parameters"), TEST_MODELS_QUANIZED)
