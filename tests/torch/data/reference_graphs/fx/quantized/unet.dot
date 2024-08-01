@@ -7,7 +7,7 @@ strict digraph  {
 "5 _param_constant0" [id=5, type=get_attr];
 "6 quantize_per_channel_default" [id=6, type=quantize_per_channel];
 "7 dequantize_per_channel_default" [id=7, type=dequantize_per_channel];
-"8 conv2d_shifted_bias0_0" [id=8, type=get_attr];
+"8 _param_constant1_0_0" [id=8, type=get_attr];
 "9 conv2d" [id=9, type=conv2d];
 "10 relu" [id=10, type=relu];
 "11 quantize_per_tensor_default_9" [id=11, type=quantize_per_tensor];
@@ -17,7 +17,7 @@ strict digraph  {
 "15 _param_constant4" [id=15, type=get_attr];
 "16 quantize_per_channel_default_1" [id=16, type=quantize_per_channel];
 "17 dequantize_per_channel_default_1" [id=17, type=dequantize_per_channel];
-"18 conv2d_1_shifted_bias0_0" [id=18, type=get_attr];
+"18 _param_constant5_0_0" [id=18, type=get_attr];
 "19 conv2d_1" [id=19, type=conv2d];
 "20 relu_1" [id=20, type=relu];
 "21 quantize_per_tensor_default" [id=21, type=quantize_per_tensor];
@@ -51,7 +51,7 @@ strict digraph  {
 "49 _param_constant16" [id=49, type=get_attr];
 "50 quantize_per_channel_default_4" [id=50, type=quantize_per_channel];
 "51 dequantize_per_channel_default_4" [id=51, type=dequantize_per_channel];
-"52 conv2d_4_shifted_bias0_0" [id=52, type=get_attr];
+"52 _param_constant17_0_0" [id=52, type=get_attr];
 "53 conv2d_4" [id=53, type=conv2d];
 "54 relu_4" [id=54, type=relu];
 "55 quantize_per_tensor_default_11" [id=55, type=quantize_per_tensor];
@@ -83,7 +83,7 @@ strict digraph  {
 "81 _param_constant28" [id=81, type=get_attr];
 "82 quantize_per_channel_default_7" [id=82, type=quantize_per_channel];
 "83 dequantize_per_channel_default_7" [id=83, type=dequantize_per_channel];
-"84 conv2d_7_shifted_bias0_0" [id=84, type=get_attr];
+"84 _param_constant29_0_0" [id=84, type=get_attr];
 "85 conv2d_7" [id=85, type=conv2d];
 "86 relu_7" [id=86, type=relu];
 "87 quantize_per_tensor_default_7" [id=87, type=quantize_per_tensor];
@@ -185,7 +185,7 @@ strict digraph  {
 "183 _param_constant62" [id=183, type=get_attr];
 "184 quantize_per_channel_default_14" [id=184, type=quantize_per_channel];
 "185 dequantize_per_channel_default_14" [id=185, type=dequantize_per_channel];
-"186 conv2d_14_shifted_bias0_0" [id=186, type=get_attr];
+"186 _param_constant63_0_0" [id=186, type=get_attr];
 "187 conv2d_14" [id=187, type=conv2d];
 "188 relu_14" [id=188, type=relu];
 "189 quantize_per_tensor_default_19" [id=189, type=quantize_per_tensor];
@@ -195,7 +195,7 @@ strict digraph  {
 "193 _param_constant66" [id=193, type=get_attr];
 "194 quantize_per_channel_default_15" [id=194, type=quantize_per_channel];
 "195 dequantize_per_channel_default_15" [id=195, type=dequantize_per_channel];
-"196 _param_constant67_0_0" [id=196, type=get_attr];
+"196 conv2d_15_shifted_bias0_0" [id=196, type=get_attr];
 "197 conv2d_15" [id=197, type=conv2d];
 "198 relu_15" [id=198, type=relu];
 "199 quantize_per_tensor_default_20" [id=199, type=quantize_per_tensor];
@@ -248,7 +248,7 @@ strict digraph  {
 "5 _param_constant0" -> "6 quantize_per_channel_default";
 "6 quantize_per_channel_default" -> "7 dequantize_per_channel_default";
 "7 dequantize_per_channel_default" -> "9 conv2d";
-"8 conv2d_shifted_bias0_0" -> "9 conv2d";
+"8 _param_constant1_0_0" -> "9 conv2d";
 "9 conv2d" -> "10 relu";
 "10 relu" -> "11 quantize_per_tensor_default_9";
 "11 quantize_per_tensor_default_9" -> "12 dequantize_per_tensor_default_13";
@@ -260,7 +260,7 @@ strict digraph  {
 "15 _param_constant4" -> "16 quantize_per_channel_default_1";
 "16 quantize_per_channel_default_1" -> "17 dequantize_per_channel_default_1";
 "17 dequantize_per_channel_default_1" -> "19 conv2d_1";
-"18 conv2d_1_shifted_bias0_0" -> "19 conv2d_1";
+"18 _param_constant5_0_0" -> "19 conv2d_1";
 "19 conv2d_1" -> "20 relu_1";
 "20 relu_1" -> "21 quantize_per_tensor_default";
 "21 quantize_per_tensor_default" -> "22 dequantize_per_tensor_default_1";
@@ -302,7 +302,7 @@ strict digraph  {
 "49 _param_constant16" -> "50 quantize_per_channel_default_4";
 "50 quantize_per_channel_default_4" -> "51 dequantize_per_channel_default_4";
 "51 dequantize_per_channel_default_4" -> "53 conv2d_4";
-"52 conv2d_4_shifted_bias0_0" -> "53 conv2d_4";
+"52 _param_constant17_0_0" -> "53 conv2d_4";
 "53 conv2d_4" -> "54 relu_4";
 "54 relu_4" -> "55 quantize_per_tensor_default_11";
 "55 quantize_per_tensor_default_11" -> "56 dequantize_per_tensor_default_15";
@@ -341,7 +341,7 @@ strict digraph  {
 "81 _param_constant28" -> "82 quantize_per_channel_default_7";
 "82 quantize_per_channel_default_7" -> "83 dequantize_per_channel_default_7";
 "83 dequantize_per_channel_default_7" -> "85 conv2d_7";
-"84 conv2d_7_shifted_bias0_0" -> "85 conv2d_7";
+"84 _param_constant29_0_0" -> "85 conv2d_7";
 "85 conv2d_7" -> "86 relu_7";
 "86 relu_7" -> "87 quantize_per_tensor_default_7";
 "87 quantize_per_tensor_default_7" -> "88 dequantize_per_tensor_default_11";
@@ -458,7 +458,7 @@ strict digraph  {
 "183 _param_constant62" -> "184 quantize_per_channel_default_14";
 "184 quantize_per_channel_default_14" -> "185 dequantize_per_channel_default_14";
 "185 dequantize_per_channel_default_14" -> "187 conv2d_14";
-"186 conv2d_14_shifted_bias0_0" -> "187 conv2d_14";
+"186 _param_constant63_0_0" -> "187 conv2d_14";
 "187 conv2d_14" -> "188 relu_14";
 "188 relu_14" -> "189 quantize_per_tensor_default_19";
 "189 quantize_per_tensor_default_19" -> "190 dequantize_per_tensor_default_23";
@@ -470,7 +470,7 @@ strict digraph  {
 "193 _param_constant66" -> "194 quantize_per_channel_default_15";
 "194 quantize_per_channel_default_15" -> "195 dequantize_per_channel_default_15";
 "195 dequantize_per_channel_default_15" -> "197 conv2d_15";
-"196 _param_constant67_0_0" -> "197 conv2d_15";
+"196 conv2d_15_shifted_bias0_0" -> "197 conv2d_15";
 "197 conv2d_15" -> "198 relu_15";
 "198 relu_15" -> "199 quantize_per_tensor_default_20";
 "199 quantize_per_tensor_default_20" -> "200 dequantize_per_tensor_default_24";
