@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import UserDict
-from typing import Callable, Generator, Optional, Tuple
+from typing import Any, Callable, Generator, Optional, Tuple
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.tensor import TensorType
@@ -29,19 +29,19 @@ class StatisticPoint:
         self.target_point = target_point
         self.algorithm_to_tensor_collectors = {algorithm: [tensor_collector]}
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> Any:
         return (
             self.target_point == other.target_point
             and self.algorithm_to_tensor_collectors == other.self.algorithm_to_tensor_collectors
         )
 
-    def register_tensor(self, x: TensorType):
+    def register_tensor(self, x: TensorType) -> None:
         for tensor_collectors in self.algorithm_to_tensor_collectors.values():
             for tensor_collector in tensor_collectors:
                 tensor_collector.register_input(x)
 
 
-class StatisticPointsContainer(UserDict):
+class StatisticPointsContainer(UserDict[Any, Any]):
     """
     Container with iteration interface for handling a composition of StatisticPoint.
     """
@@ -52,7 +52,7 @@ class StatisticPointsContainer(UserDict):
 
         :param statistic_point: Statistic point to add.
         """
-        target_node_name = statistic_point.target_point.target_node_name
+        target_node_name = statistic_point.target_point.get_state
         if target_node_name not in self.data:
             self.data[target_node_name] = [statistic_point]
         else:
@@ -73,7 +73,7 @@ class StatisticPointsContainer(UserDict):
 
     def iter_through_statistic_points_in_target_node(
         self, target_node_name: str, filter_fn: Callable[[StatisticPoint], bool]
-    ) -> StatisticPoint:
+    ) -> Generator[StatisticPoint, None, None]:
         """
         Returns iterable through all statistic points in node with target_node_name.
 
@@ -98,7 +98,7 @@ class StatisticPointsContainer(UserDict):
         """
         if filter_fn is None:
 
-            def default_filter_fn(stat_point: StatisticPoint):
+            def default_filter_fn(stat_point: StatisticPoint) -> bool:
                 return True
 
             filter_fn = default_filter_fn
