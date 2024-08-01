@@ -35,8 +35,8 @@ BASELINE_MEMORY_VAR = "TEST_BASELINE_MEMORY"
 TEMP_DIR_VAR = "TEST_TEMP_DIR"
 
 
-def is_windows() -> bool:
-    return "win32" in sys.platform
+if "win32" in sys.platform:
+    pytest.skip("Windows is not supported", allow_module_level=True)
 
 
 def allocate(n_bytes, sleep_before_deallocation=False, sleep_after_deallocation=False):
@@ -50,7 +50,6 @@ def allocate(n_bytes, sleep_before_deallocation=False, sleep_after_deallocation=
         time.sleep(DEALLOCATE_DURATION)
 
 
-@pytest.mark.skipif(is_windows(), reason="Check on linux only")
 def test_memory_monitor_api(tmpdir):
     tmpdir = Path(tmpdir)
 
@@ -76,7 +75,6 @@ def test_memory_monitor_api(tmpdir):
     assert any(map(lambda fn: str(fn).endswith(f"{filename_suffix2}.png"), saved_files))
 
 
-@pytest.mark.skipif(is_windows(), reason="Check on linux only")
 @pytest.mark.parametrize("memory_type", (MemoryType.RSS, MemoryType.SYSTEM))
 def test_memory_type(memory_type):
     memory_monitor = MemoryMonitor(memory_type=memory_type).start()
@@ -85,7 +83,6 @@ def test_memory_type(memory_type):
     memory_monitor.get_data()
 
 
-@pytest.mark.skipif(is_windows(), reason="Check on linux only")
 @pytest.mark.parametrize("memory_unit", MemoryUnit.__members__.values())
 def test_memory_unit(memory_unit):
     memory_monitor = MemoryMonitor(memory_unit=memory_unit).start()
@@ -94,7 +91,6 @@ def test_memory_unit(memory_unit):
     memory_monitor.get_data()
 
 
-@pytest.mark.skipif(is_windows(), reason="Check on linux only")
 @pytest.mark.parametrize("interval", (5e-2, 1e-1))
 def test_interval(interval):
     memory_monitor = MemoryMonitor(interval=interval).start()
@@ -107,7 +103,6 @@ def test_interval(interval):
     )
 
 
-@pytest.mark.skipif(is_windows(), reason="Check on linux only")
 @pytest.mark.parametrize("return_max_value", (True, False))
 def test_monitor_memory_for_callable(tmpdir, return_max_value):
     tmpdir = Path(tmpdir)
@@ -128,7 +123,6 @@ def test_monitor_memory_for_callable(tmpdir, return_max_value):
     assert sum(map(lambda fn: int(str(fn).endswith(".png")), saved_files)) == 4
 
 
-@pytest.mark.skipif(is_windows(), reason="Check on linux only")
 def test_empty_logs(tmpdir):
     memory_monitor = MemoryMonitor().start()
     memory_monitor.stop()
@@ -158,7 +152,6 @@ def test_memory_values_isolated():
         assert abs(memory_values[-1]) < BYTES_TO_ALLOCATE_LARGE * rel
 
 
-@pytest.mark.skipif(is_windows(), reason="Check on linux only")
 def test_memory_values():
     # The first run of the test collects the memory that is allocated by default
     _, stdout, _ = run_pytest_case_function_in_separate_process(test_memory_values_isolated)
@@ -179,7 +172,6 @@ def test_at_exit_isolated():
     allocate(BYTES_TO_ALLOCATE_SMALL)
 
 
-@pytest.mark.skipif(is_windows(), reason="Check on linux only")
 def test_at_exit(tmpdir):
     os.environ[TEMP_DIR_VAR] = str(tmpdir)
     run_pytest_case_function_in_separate_process(test_at_exit_isolated)

@@ -44,9 +44,6 @@ class MemoryUnit(Enum):
 
 
 class MemoryMonitor:
-    MemoryType = MemoryType
-    MemoryUnit = MemoryUnit
-
     def __init__(
         self,
         interval: float = 0.1,
@@ -220,7 +217,7 @@ class MemoryMonitor:
         plt.plot(time_values, memory_values)
         plt.xlabel("Time (seconds)")
         plt.ylabel(f"Memory Usage ({self.memory_type.value}, {self.memory_unit.value})")
-        plt.title(f"{plot_title} Max: {max(memory_values):.2f} {self.memory_unit.value}")
+        plt.title(f"{plot_title} Max_{self.memory_type.value}: {max(memory_values):.2f} {self.memory_unit.value}")
         plt.grid(True)
         plt.tight_layout()
         plt.savefig(str(log_filepath).replace(".txt", f"{filename_suffix}.png"))
