@@ -71,7 +71,7 @@ class StatisticsAggregator(ABC):
 
         iterations_number = self._get_iterations_number()
         empty_statistics = True
-        for input_data in track(  # type:ignore
+        for input_data in track(  # type: ignore
             islice(self.dataset.get_inference_data(), iterations_number),
             total=iterations_number,
             description="Statistics collection",

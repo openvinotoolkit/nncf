@@ -12,13 +12,12 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Any, Deque, Dict, List, Optional, Tuple
+from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple, cast
 
 import numpy as np
 from numpy import typing as npt
 
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 
 ReductionAxes = Tuple[int, ...]
@@ -43,20 +42,20 @@ class TensorStatisticCollectorBase(ABC):
     def num_samples(self) -> int | None:
         return self._num_samples
 
-    def register_input(self, x: TensorType) -> TensorType:
+    def register_input(self, x: NNCFTensor) -> NNCFTensor:
         """Registers input tensor"""
         if not self._enabled:
             return x
         if self._num_samples is not None and self._collected_samples >= self._num_samples:
             return x
         if self._reduction_shape is None:
-            self._reduction_shape = tuple(range(len(x.shape)))  # type:ignore
+            self._reduction_shape = tuple(range(len(x.shape)))
         self._register_input(x)
         self._collected_samples += 1
         return x
 
     @abstractmethod
-    def _register_input(self, x: TensorType) -> None:
+    def _register_input(self, x: NNCFTensor) -> None:
         pass
 
     def get_statistics(self) -> None:
@@ -273,7 +272,7 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
             self._all_values.append(self._tensor_processor.batch_mean(x))
         else:
             self._all_values.append(self._tensor_processor.mean_per_channel(x, self._channel_axis))
-        self._all_shapes.append(x.shape)  # type:ignore
+        self._all_shapes.append(cast(int | None, x.shape))
 
     def _reset(self) -> None:
         self._all_values.clear()
@@ -307,7 +306,7 @@ class RawStatisticCollector(OfflineTensorStatisticCollector):
         pass
 
     def _register_input_common(self, x: NNCFTensor) -> None:
-        self._all_values.append(x.tensor)  # type:ignore
+        self._all_values.append(cast(int | None, x.tensor))
 
     def _reset(self) -> None:
         self._all_values.clear()
@@ -320,7 +319,7 @@ class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
 
     def _prepare_statistics(self) -> Tuple[npt.NDArray[Any], npt.NDArray[Any]]:
         per_channel_history = get_per_channel_history(
-            self._samples, list(self._reduction_shape), discard_zeros=True  # type:ignore
+            self._samples, list(cast(Iterable[int], self._reduction_shape)), discard_zeros=True
         )
         per_channel_median = [np.median(channel_hist) for channel_hist in per_channel_history]
         per_channel_mad = []
@@ -347,7 +346,7 @@ class PercentileStatisticCollector(OfflineTensorStatisticCollector):
         self._percentiles_to_collect = percentiles_to_collect
 
     def _prepare_statistics(self) -> Dict[Any, Any]:
-        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_shape))  # type:ignore
+        per_channel_history = get_per_channel_history(self._samples, list(cast(Iterable[int], self._reduction_shape)))
         percentile_vs_values_dict = {}
         for pc in self._percentiles_to_collect:
             per_channel_percentiles = [np.percentile(channel_hist, pc) for channel_hist in per_channel_history]

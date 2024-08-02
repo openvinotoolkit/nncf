@@ -13,7 +13,7 @@ from collections import UserDict
 from typing import Any, Callable, Generator, Optional, Tuple
 
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.tensor import TensorType
+from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 
 
@@ -35,7 +35,7 @@ class StatisticPoint:
             and self.algorithm_to_tensor_collectors == other.self.algorithm_to_tensor_collectors
         )
 
-    def register_tensor(self, x: TensorType) -> None:
+    def register_tensor(self, x: NNCFTensor) -> None:
         for tensor_collectors in self.algorithm_to_tensor_collectors.values():
             for tensor_collector in tensor_collectors:
                 tensor_collector.register_input(x)
@@ -52,7 +52,7 @@ class StatisticPointsContainer(UserDict[Any, Any]):
 
         :param statistic_point: Statistic point to add.
         """
-        target_node_name = statistic_point.target_point.get_state
+        target_node_name = statistic_point.target_point.target_node_name  # type: ignore
         if target_node_name not in self.data:
             self.data[target_node_name] = [statistic_point]
         else:
