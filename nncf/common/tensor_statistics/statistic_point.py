@@ -41,7 +41,7 @@ class StatisticPoint:
                 tensor_collector.register_input(x)
 
 
-class StatisticPointsContainer(UserDict[Any, Any]):
+class StatisticPointsContainer(UserDict): # type: ignore
     """
     Container with iteration interface for handling a composition of StatisticPoint.
     """
