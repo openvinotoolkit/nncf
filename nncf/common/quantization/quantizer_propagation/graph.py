@@ -779,27 +779,24 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         input quantable nodes have an activation quantizer, False otherwise.
         """
 
-        def recursive_helper(curr_node_key: str):
-            successors = self.successors(curr_node_key)
-            for successor_key in successors:
-                successor = self.nodes[successor_key]
-                successor_node_type = successor[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
-                if successor_node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
-                    trait = successor[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
-                    if trait != QuantizationTrait.QUANTIZATION_AGNOSTIC:
-                        return False
-                elif successor_node_type in [
-                    QuantizerPropagationStateGraphNodeType.PRE_HOOK,
-                    QuantizerPropagationStateGraphNodeType.POST_HOOK,
-                ]:
-                    successor_quantizer = successor[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR]
-                    if successor_quantizer:
-                        continue
-                if not recursive_helper(successor_key):
+        nodes_keys_stack = deque(self.successors(node_key))
+        while nodes_keys_stack:
+            node_key = nodes_keys_stack.popleft()
+            node = self.nodes[node_key]
+            node_type = node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
+            if node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
+                trait = node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
+                if trait != QuantizationTrait.QUANTIZATION_AGNOSTIC:
                     return False
-            return True
-
-        return recursive_helper(node_key)
+            elif node_type in [
+                QuantizerPropagationStateGraphNodeType.PRE_HOOK,
+                QuantizerPropagationStateGraphNodeType.POST_HOOK,
+            ]:
+                quantizer = node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR]
+                if quantizer:
+                    continue
+            nodes_keys_stack.extend(self.successors(node_key))
+        return True
 
     def get_paths_to_immediately_dominating_insertion_points(
         self, insertion_point_node_key: str
