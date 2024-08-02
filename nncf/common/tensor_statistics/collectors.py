@@ -18,6 +18,7 @@ import numpy as np
 from numpy import typing as npt
 
 from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 
 ReductionAxes = Tuple[int, ...]
@@ -42,20 +43,20 @@ class TensorStatisticCollectorBase(ABC):
     def num_samples(self) -> int | None:
         return self._num_samples
 
-    def register_input(self, x: NNCFTensor) -> NNCFTensor:
+    def register_input(self, x: TensorType) -> TensorType:
         """Registers input tensor"""
         if not self._enabled:
             return x
         if self._num_samples is not None and self._collected_samples >= self._num_samples:
             return x
         if self._reduction_shape is None:
-            self._reduction_shape = tuple(range(len(x.shape)))
+            self._reduction_shape = tuple(range(len(cast(NNCFTensor, x).shape)))
         self._register_input(x)
         self._collected_samples += 1
         return x
 
     @abstractmethod
-    def _register_input(self, x: NNCFTensor) -> None:
+    def _register_input(self, x: TensorType) -> None:
         pass
 
     def get_statistics(self) -> None:
