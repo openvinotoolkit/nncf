@@ -103,7 +103,7 @@ class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
         self, reduction_shape: Optional[ReductionAxes] = None, num_samples: int = None, window_size: int = None
     ):
         super().__init__(reduction_shape, num_samples)
-        self._samples: Deque[int | None] = deque(maxlen=window_size)
+        self._samples: Deque[int, None] = deque(maxlen=window_size)
 
     def _reset(self) -> None:
         self._samples.clear()
@@ -165,8 +165,8 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
         self._use_abs_max = use_abs_max
         self._tensor_processor = self._get_processor()
 
-        self._all_min_values: Deque[int | None] = deque(maxlen=window_size)
-        self._all_max_values: Deque[int | None] = deque(maxlen=window_size)
+        self._all_min_values: Deque[int, None] = deque(maxlen=window_size)
+        self._all_max_values: Deque[int, None] = deque(maxlen=window_size)
 
     @staticmethod
     @abstractmethod
@@ -260,8 +260,8 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         super().__init__(num_samples=num_samples)
         self._channel_axis = channel_axis
         self._tensor_processor = self._get_processor()
-        self._all_values: Deque[int | None] = deque(maxlen=window_size)
-        self._all_shapes: Deque[int | None] = deque(maxlen=window_size)
+        self._all_values: Deque[int, None] = deque(maxlen=window_size)
+        self._all_shapes: Deque[int, None] = deque(maxlen=window_size)
 
     @staticmethod
     @abstractmethod
@@ -299,7 +299,7 @@ class RawStatisticCollector(OfflineTensorStatisticCollector):
             the number of samples that will be processed.
         """
         super().__init__(num_samples=num_samples)
-        self._all_values: List[int | None] = []
+        self._all_values: List[int, None] = []
 
     @staticmethod
     @abstractmethod
