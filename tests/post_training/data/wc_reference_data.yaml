@@ -11,7 +11,7 @@ tinyllama_data_aware_awq_stateful_backend_OV:
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_backend_OV:
-  metric_value: 0.85508
+  metric_value: 0.85502
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
@@ -23,7 +23,7 @@ tinyllama_int8_data_free_backend_TORCH:
   num_int4: 0
   num_int8: 312
 tinyllama_data_aware_gptq_backend_OV:
-  metric_value: 0.84652
+  metric_value: 0.87134
   num_int4: 94
   num_int8: 124
 tinyllama_scale_estimation_per_channel_backend_OV:
