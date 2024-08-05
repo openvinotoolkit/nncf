@@ -29,15 +29,19 @@ import torchvision.models as models
 from torch._export import capture_pre_autograd_graph
 from ultralytics.models.yolo import YOLO
 
+import nncf
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.utils.os import safe_open
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from tests.shared.paths import TEST_ROOT
+from tests.torch import test_models
 from tests.torch.test_compressed_graph import check_graph
 
 FX_DIR_NAME = "fx"
+FX_QUANTIZED_DIR_NAME = "fx/quantized"
 
 
 @dataclass
@@ -70,6 +74,7 @@ TEST_MODELS = (
     torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)),
     torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
     torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
+    ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
     yolo_v8_case("yolov8n", (1, 3, 224, 224)),
 )
 
@@ -108,7 +113,7 @@ def get_ref_metatypes_from_json(
 
 
 @pytest.mark.parametrize("test_case", TEST_MODELS, ids=[m.model_id for m in TEST_MODELS])
-def test_models(test_case: ModelCase):
+def test_model(test_case: ModelCase):
     with disable_patching():
         device = torch.device("cpu")
         model_name = test_case.model_id
@@ -129,3 +134,34 @@ def test_models(test_case: ModelCase):
         model_metatypes = {n.node_name: n.metatype.name for n in nncf_graph.get_all_nodes()}
         ref_metatypes = get_ref_metatypes_from_json(model_name, model_metatypes)
         assert model_metatypes == ref_metatypes
+
+
+TEST_MODELS_QUANIZED = (
+    (ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]), {}),
+    (torchvision_model_case("resnet18", (1, 3, 224, 224)), {}),
+    (torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)), {}),
+)
+
+
+@pytest.mark.parametrize(("model_case", "quantization_parameters"), TEST_MODELS_QUANIZED)
+def test_quantized_model(model_case: ModelCase, quantization_parameters):
+    with disable_patching():
+        model = model_case.model_builder()
+        example_input = torch.ones(model_case.input_shape)
+
+        with torch.no_grad():
+            model.eval()
+            fx_model = capture_pre_autograd_graph(model, args=(example_input,))
+
+        def transform_fn(data_item):
+            return data_item.to("cpu")
+
+        calibration_dataset = nncf.Dataset([example_input], transform_fn)
+
+        quantization_parameters["advanced_parameters"] = AdvancedQuantizationParameters(disable_bias_correction=True)
+        quantization_parameters["subset_size"] = 1
+
+        quantized_model = nncf.quantize(fx_model, calibration_dataset, **quantization_parameters)
+        quantized_model = GraphConverter.create_nncf_graph(quantized_model)
+
+        check_graph(quantized_model, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME)
