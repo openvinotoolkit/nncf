@@ -10,7 +10,7 @@ dataset = nncf.Dataset([np.random.random((2, 8)) for _ in range(3)])
 sparse_model = sparsify_activations(
     model,
     # dataset=dataset,
-    # target_sparsity_by_scope={TargetScope(patterns=["aten::linear"]): 0.3}
+    # target_sparsity_by_scope={TargetScope(patterns=[".*linear.*"]): 0.3}
     dataset=nncf.Dataset(np.random.randint(0, 30, (3, 2, 8))),
     target_sparsity_by_scope={
         TargetScope(patterns=[".*gate_proj.*"]): 0.2,

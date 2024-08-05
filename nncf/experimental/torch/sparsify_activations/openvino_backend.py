@@ -102,8 +102,9 @@ class OVSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
                 reducer=OVAbsQuantileReducer(quantile=[sparsity,]),
                 aggregator=EMAAggregator(alpha=0.2)
             )
+            activation_port_id = self._get_activation_port_id(node, graph)
             statistic_point = StatisticPoint(
-                target_point=OVTargetPoint(TargetType.PRE_LAYER_OPERATION, node.node_name, port_id=0),
+                target_point=OVTargetPoint(TargetType.PRE_LAYER_OPERATION, node.node_name, port_id=activation_port_id),
                 tensor_collector=stat_collector,
                 algorithm=ALGORITHM_KEY,
             )
@@ -118,9 +119,10 @@ class OVSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
             for tensor_collector in statistic_points_container.get_algo_statistics_for_node(
                 nncf_node.node_name, lambda args: True, ALGORITHM_KEY
             ):
+                activation_port_id = self._get_activation_port_id(nncf_node, graph)
                 threshold = tensor_collector.get_statistics()[STATISTIC_BRANCH_KEY].data
                 matmul_node = name_to_node_mapping[nncf_node.node_name]
-                dense_activation = matmul_node.input(0).get_source_output().get_node()
+                dense_activation = matmul_node.input(activation_port_id).get_source_output().get_node()
 
                 dtype = dense_activation.get_element_type()
                 threshold_const = opset.constant(threshold, dtype=dtype, name=f"{matmul_node.name}/sparsity_threshold")
@@ -128,26 +130,16 @@ class OVSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
 
                 less_mask = opset.less_equal(opset.abs(dense_activation), threshold_const)
                 sparse_activation = opset.select(less_mask, zero_const, dense_activation, name=f"{matmul_node.name}/sparse_input")
-                matmul_node.input(0).replace_source_output(sparse_activation.output(0))
+                matmul_node.input(activation_port_id).replace_source_output(sparse_activation.output(0))
 
         return model
 
 
     @staticmethod
-    def _get_activation_port_id(node: NNCFNode, graph: NNCFGraph) -> int:
-        """
-        Finds the input activation port id for the node.
-
-        :param node: The node to find its activation port id.
-        :param graph: The NNCF graph containing the node.
-        :return: The activation port id.
-        """
-        activation_ports = []
-        for prev_node in graph.get_previous_nodes(node):
-            edge = graph.get_edge(prev_node, node)
-            if prev_node.metatype in CONST_NOOP_METATYPES or edge.input_port_id in node.metatype.weight_port_ids:
-                continue
-            activation_ports.append(edge.input_port_id)
-        if len(activation_ports) != 1:
-            raise nncf.InternalError(f'Cannot find activation port for node "{node}".')
+    def _get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
+        constant_ports = node.layer_attributes.get_const_port_ids()
+        activation_ports = [
+            e.input_port_id for e in nncf_graph.get_input_edges(node) if e.input_port_id not in constant_ports
+        ]
+        assert len(activation_ports) == 1
         return activation_ports[0]
