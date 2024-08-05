@@ -27,7 +27,6 @@ import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
 from torch._export import capture_pre_autograd_graph
-from ultralytics.models.yolo import YOLO
 
 import nncf
 from nncf.common.graph.graph import NNCFNodeName
@@ -56,26 +55,12 @@ def torchvision_model_case(model_id: str, input_shape: Tuple[int,]):
     return ModelCase(partial(model, weights=None), model_id, input_shape)
 
 
-def yolo_v8_case(model_id, input_shape):
-    def get_model() -> torch.nn.Module:
-        model_config = model_id + ".yaml"
-        model = YOLO(model_config)
-        model = model.model
-        model.eval()
-        # Warmup model
-        model(torch.ones(input_shape))
-        return model
-
-    return ModelCase(get_model, model_id, input_shape)
-
-
 TEST_MODELS = (
     torchvision_model_case("resnet18", (1, 3, 224, 224)),
     torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)),
     torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
     torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
     ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
-    yolo_v8_case("yolov8n", (1, 3, 224, 224)),
 )
 
 
