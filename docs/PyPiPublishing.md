@@ -9,7 +9,6 @@ Neural Network Compression Framework (NNCF) provides a suite of post-training
 and training-time algorithms for optimizing inference of neural networks in
 [OpenVINO&trade;](https://docs.openvino.ai) with a minimal accuracy drop.
 
-
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/),
 [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and
 [OpenVINO&trade;](https://docs.openvino.ai).
@@ -19,30 +18,25 @@ in a standalone mode. Its architecture is unified to make it easy to
 add different compression algorithms for both PyTorch and TensorFlow deep
 learning frameworks.
 
-
 NNCF provides samples that demonstrate the usage of compression algorithms
 for different use cases and models. See compression results achievable
 with the NNCF-powered samples on the
 [NNCF Model Zoo page](https://github.com/openvinotoolkit/nncf/blob/develop/docs/ModelZoo.md).
 
 For more information about NNCF, see:
+
 - [NNCF repository](https://github.com/openvinotoolkit/nncf)
 - [User documentation](https://docs.openvino.ai/nncf)
 - [NNCF API documentation](https://openvinotoolkit.github.io/nncf/autoapi/nncf/)
 - [Usage examples](https://github.com/openvinotoolkit/nncf/tree/develop/docs/usage)
 - [Notebook tutorials](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/README.md#model-training)
 
-
-
-
-## Table of contents:
+## Table of contents
 
 - [Key Features](#key-features)
 - [Installation](#installation-guide)
 - [Third-party integration](#third-party-repository-integration)
 - [NNCF Compressed Model Zoo](#nncf-compressed-model-zoo)
-
-
 
 ## Key Features<a id="key-features"></a>
 
@@ -85,8 +79,6 @@ For more information about NNCF, see:
   pipelines via the [Adaptive Compression Level Training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md)
   and [Early Exit Training](https://github.com/openvinotoolkit/nncf/blob/develop/docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
-
-
 ## Installation Guide<a id="installation-guide"></a>
 
 NNCF can be installed as a regular PyPI package:
@@ -98,7 +90,6 @@ pip install nncf
 For detailed installation instructions, refer to the
 [Installation](https://github.com/openvinotoolkit/nncf/blob/develop/docs/Installation.md) guide.
 
-
 ### System Requirements
 
 - Ubuntu 18.04 or later (64-bit)
@@ -108,7 +99,6 @@ For detailed installation instructions, refer to the
   - TensorFlow >=2.8.4, <=2.15.1
   - ONNX ==1.16.0
   - OpenVINO >=2022.3.0
-
 
 ## Third-party Repository Integration<a id="third-party-repository-integration"></a>
 
@@ -126,13 +116,10 @@ repositories.
   NNCF is used as a compression backend within the renowned `transformers`
   repository in HuggingFace Optimum Intel.
 
-
 ## NNCF Compressed Model Zoo<a id="nncf-compressed-model-zoo"></a>
 
 A list of models and compression results for them can be found at our
 [NNCF Model Zoo page](https://github.com/openvinotoolkit/nncf/blob/develop/docs/ModelZoo.md).
-
-
 
 ## Citing
 
@@ -145,16 +132,12 @@ A list of models and compression results for them can be found at our
 }
 ```
 
-
 ## Telemetry
 
 NNCF as part of the OpenVINO™ toolkit collects anonymous usage data for the
 purpose of improving OpenVINO™ tools. You can opt-out at any time by running
 the following command in the Python environment where you have NNCF installed:
 
-```
-opt_in_out --opt_out
-```
+`opt_in_out --opt_out`
 
-More information available on
-[OpenVINO telemetry](https://docs.openvino.ai/nightly/about-openvino/additional-resources/telemetry.html).
+More information available on [OpenVINO telemetry](https://docs.openvino.ai/nightly/about-openvino/additional-resources/telemetry.html).
