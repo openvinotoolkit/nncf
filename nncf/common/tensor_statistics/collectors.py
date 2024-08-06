@@ -15,7 +15,6 @@ from collections import deque
 from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple, Union, cast
 
 import numpy as np
-from numpy import typing as npt
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorType
@@ -273,7 +272,7 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
             self._all_values.append(self._tensor_processor.batch_mean(x))
         else:
             self._all_values.append(self._tensor_processor.mean_per_channel(x, self._channel_axis))
-        self._all_shapes.append(cast(Union[int, None], x.shape))
+        self._all_shapes.append(cast(int, x.shape))
 
     def _reset(self) -> None:
         self._all_values.clear()
@@ -307,7 +306,7 @@ class RawStatisticCollector(OfflineTensorStatisticCollector):
         pass
 
     def _register_input_common(self, x: NNCFTensor) -> None:
-        self._all_values.append(cast(Union[int, None], x.tensor))
+        self._all_values.append(cast(int, x.tensor))
 
     def _reset(self) -> None:
         self._all_values.clear()
@@ -318,7 +317,7 @@ class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
     Collector estimates median and median absolute deviation (MAD).
     """
 
-    def _prepare_statistics(self) -> Tuple[npt.NDArray[Any], npt.NDArray[Any]]:
+    def _prepare_statistics(self) -> Tuple[np.typing.NDArray[Any], np.typing.NDArray[Any]]:
         per_channel_history = get_per_channel_history(
             self._samples, list(cast(Iterable[int], self._reduction_shape)), discard_zeros=True
         )
