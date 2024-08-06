@@ -118,5 +118,5 @@ class RawTensorStatistic(TensorStatistic):
 
     def __eq__(self, other: object) -> Any:
         if not isinstance(other, RawTensorStatistic):
-            return NotImplemented
+            return False
         return self.tensor_eq(self.values, other.values)
