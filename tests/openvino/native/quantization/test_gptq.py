@@ -23,10 +23,10 @@ from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.tensor.tensor import Tensor
 
 
-def quantize(x, scale, zero, maxq):
+def quantize(x, scale, zero, minq, maxq):
     if maxq < 0:
         return (x > scale / 2).float() * scale + (x < zero / 2).float() * zero
-    q = torch.clamp(torch.round(x / scale) + zero, 0, maxq)
+    q = torch.clamp(torch.round(x / scale) + zero, minq, maxq)
     return scale * (q - zero)
 
 
@@ -81,11 +81,6 @@ class GPTQQuantizer(torch.nn.Module):
         xmin = torch.minimum(x.min(1)[0], tmp)
         xmax = torch.maximum(x.max(1)[0], tmp)
 
-        if self.sym:
-            xmax = torch.maximum(torch.abs(xmin), xmax)
-            tmp = xmin < 0
-            if torch.any(tmp):
-                xmin[tmp] = -xmax[tmp]
         tmp = (xmin == 0) & (xmax == 0)
         xmin[tmp] = -1
         xmax[tmp] = +1
@@ -95,16 +90,9 @@ class GPTQQuantizer(torch.nn.Module):
             self.zero = xmin
         else:
             if self.sym:
-                maxq2 = self.maxq // 2 + 1
-                self.scale = xmax
-                denum = torch.ones_like(self.scale) * maxq2
-                tmp = torch.zeros(x.shape[0], device=dev)
-                xmin_abs = torch.abs(torch.minimum(x.min(1)[0], tmp))
-                xmax_abs = torch.maximum(x.max(1)[0], tmp)
-                tmp = xmax_abs > xmin_abs
-                denum[tmp] = -maxq2
-                self.scale /= denum
-                self.zero = torch.full_like(self.scale, (self.maxq + 1) / 2)
+                self.scale = torch.where(-xmin > xmax, -xmin, -xmax)
+                self.scale = self.scale / ((self.maxq + 1) / 2)
+                self.zero = torch.zeros_like(self.scale)
             else:
                 self.scale = (xmax - xmin) / self.maxq
                 self.zero = torch.round(-xmin / self.scale)
@@ -152,7 +140,12 @@ class GPTQQuantizer(torch.nn.Module):
 
     def quantize(self, x):
         if self.ready():
-            return quantize(x, self.scale, self.zero, self.maxq)
+            minq = 0
+            maxq = self.maxq
+            if self.sym:
+                minq = -(self.maxq + 1) / 2
+                maxq = (self.maxq + 1) / 2 - 1
+            return quantize(x, self.scale, self.zero, minq, maxq)
         return x
 
     def enabled(self):
