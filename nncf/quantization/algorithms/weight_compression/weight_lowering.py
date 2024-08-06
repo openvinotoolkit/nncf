@@ -165,15 +165,13 @@ def calculate_signed_scale(weight: Tensor, reduction_axes: ReductionAxes, num_bi
     :return: Scale tensor.
     """
     level_high = 2 ** (num_bits - 1)
-    scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)  # [a1, r//gs, 1, a2]
 
-    w_min = fns.abs(fns.min(weight, axis=reduction_axes, keepdims=True))
-    w_max = fns.abs(fns.max(weight, axis=reduction_axes, keepdims=True))
+    w_abs_min = fns.abs(fns.min(weight, axis=reduction_axes, keepdims=True))
+    w_max = fns.max(weight, axis=reduction_axes, keepdims=True)
 
-    denum = fns.ones_like(scale) * level_high
-    denum = fns.where(w_min < w_max, -denum, denum)
+    scale = fns.where(w_abs_min >= w_max, w_abs_min, -w_max)
+    scale /= level_high
 
-    scale /= denum
     eps = fns.finfo(scale).eps
     scale = fns.where(fns.abs(scale) < eps, eps, scale)
 
