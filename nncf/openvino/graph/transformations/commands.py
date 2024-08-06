@@ -48,6 +48,10 @@ class OVInsertionCommand(TransformationCommand):
 
 
 class OVOutputInsertionCommand(OVInsertionCommand):
+    def __init__(self, target_point: OVTargetPoint, output_dtype: ov.Type = ov.Type.f32):
+        super().__init__(target_point)
+        self.output_dtype = output_dtype
+
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()
@@ -60,11 +64,13 @@ class OVInplaceFnInsertionCommand(OVInsertionCommand):
         inplace_op_fn: InplaceInsertionFnType,
         fn_output_port_id: int,
         last_inplace_node_name: str,
+        output_dtype: ov.Type = ov.Type.f32,
     ):
         super().__init__(target_point)
         self.inplace_op_fn = inplace_op_fn
         self.fn_output_port_id = fn_output_port_id
         self.last_inplace_node_name = last_inplace_node_name
+        self.output_dtype = output_dtype
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
@@ -131,6 +137,23 @@ class OVModelExtractionCommand(Command):
     def __init__(self, input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]):
         """
         :param input_ids: List of the input IDs: pairs of node names and correspondent input port ids.
+            Each pair denotes the sub-graph beginning.
+        :param output_ids: List of the output IDs: pairs of node names and correspondent output port ids.
+            Each pair denotes the sub-graph ending.
+        """
+        super().__init__(TransformationType.EXTRACT)
+        self.input_ids = input_ids
+        self.output_ids = output_ids
+
+
+class OVStateLessModelExtractionCommand(Command):
+    """
+    Extracts stateless sub-graph based on the sub-model input and output names.
+    """
+
+    def __init__(self, input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]):
+        """
+        :param input_ids: List of the input IDs: pairs of node names and correspondent output port ids.
             Each pair denotes the sub-graph beginning.
         :param output_ids: List of the output IDs: pairs of node names and correspondent output port ids.
             Each pair denotes the sub-graph ending.

@@ -11,9 +11,9 @@
 
 from typing import Optional
 
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import TensorDataType
-from nncf.experimental.tensor.functions import numeric as fns
+from nncf.tensor import Tensor
+from nncf.tensor import TensorDataType
+from nncf.tensor import functions as fns
 
 
 def mean_per_channel(x: Tensor, axis: int, dtype: Optional[TensorDataType] = None) -> Tensor:

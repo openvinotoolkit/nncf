@@ -22,6 +22,7 @@ QUANTIZE_AGNOSTIC_OPERATIONS = [
     ov_metatypes.OVTransposeMetatype,
     ov_metatypes.OVTileMetatype,
     ov_metatypes.OVStridedSliceMetatype,
+    ov_metatypes.OVSliceMetatype,
     ov_metatypes.OVShuffleChannelsMetatype,
     ov_metatypes.OVBroadcastMetatype,
     ov_metatypes.OVPadMetatype,

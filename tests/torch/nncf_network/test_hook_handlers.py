@@ -33,7 +33,7 @@ from tests.torch.nncf_network.helpers import SimplestModel
     ],
 )
 class TestHookHandles:
-    class TestHook(torch.nn.Module):
+    class HookTest(torch.nn.Module):
         def __init__(self):
             super().__init__()
             self._p = torch.nn.Parameter(torch.zeros((1,)))
@@ -66,7 +66,7 @@ class TestHookHandles:
         self, target_type: TargetType, target_node_name: str, input_port_id: int
     ):
         nncf_model, ip, _check = self._prepare_hook_handles_test(target_type, target_node_name, input_port_id)
-        permanent_hook = self.TestHook()
+        permanent_hook = self.HookTest()
         TEMPORARY_HOOK_GROUP_NAME = "tmp"
         # Make temporary hook a ref to the permanent hook
         # to check tmp hooks are not removed by their id()
@@ -76,7 +76,7 @@ class TestHookHandles:
         _check(ref_hooks)
 
         for _ in range(2):
-            temporary_hook = self.TestHook()
+            temporary_hook = self.HookTest()
             nncf_model.nncf.insert_at_point(ip, temporary_hook, TEMPORARY_HOOK_GROUP_NAME)
             ref_hooks.append(temporary_hook)
             _check(ref_hooks)
@@ -92,7 +92,7 @@ class TestHookHandles:
 
     def test_insert_at_point_hook_handles(self, target_type: TargetType, target_node_name: str, input_port_id: int):
         nncf_model, ip, _check = self._prepare_hook_handles_test(target_type, target_node_name, input_port_id)
-        permanent_hook = self.TestHook()
+        permanent_hook = self.HookTest()
         # Make temporary hook a ref to the permanent hook
         # to check tmp hooks are not removed by their id()
         temporary_hook = permanent_hook
@@ -103,7 +103,7 @@ class TestHookHandles:
         _check(ref_hooks)
 
         for _ in range(2):
-            temporary_hook = self.TestHook()
+            temporary_hook = self.HookTest()
             tmp_hh.append(nncf_model.nncf.insert_at_point(ip, temporary_hook))
             ref_hooks.append(temporary_hook)
             _check(ref_hooks)

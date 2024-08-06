@@ -129,7 +129,7 @@ class OVEluMetatype(OVOpMetatype):
 @OV_OPERATOR_METATYPES.register()
 class OVPReluMetatype(OVOpMetatype):
     name = "PReluOp"
-    op_names = ["PReLU"]
+    op_names = ["PRelu"]
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -563,6 +563,13 @@ class OVStridedSliceMetatype(OVOpMetatype):
     name = "StridedSliceOp"
     op_names = ["StridedSlice"]
     hw_config_names = [HWConfigOpName.STRIDEDSLICE]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVSliceMetatype(OVOpMetatype):
+    name = "SliceOp"
+    op_names = ["Slice"]
+    hw_config_names = [HWConfigOpName.SLICE]
 
 
 @OV_OPERATOR_METATYPES.register()

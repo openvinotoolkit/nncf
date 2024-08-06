@@ -831,9 +831,9 @@ class QuantizerPropagationSolver:
                 trait = self._operator_quantization_trait_map.get(quant_det_id, QuantizationTrait.NON_QUANTIZABLE)
                 node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] = trait
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
-                    node[
-                        QuantizerPropagationStateGraph.ALLOWED_INPUT_QUANTIZATION_TYPES_NODE_ATTR
-                    ] = self.get_allowed_quantizer_configs_for_operator(quant_det_id)
+                    node[QuantizerPropagationStateGraph.ALLOWED_INPUT_QUANTIZATION_TYPES_NODE_ATTR] = (
+                        self.get_allowed_quantizer_configs_for_operator(quant_det_id)
+                    )
         return quant_prop_graph
 
     def get_operator_quantization_traits_map(self) -> Dict[OperatorMetatype, QuantizationTrait]:
@@ -1233,6 +1233,13 @@ class QuantizerPropagationSolver:
         dom_op_quantizers = set()
         for op_node_key in dom_op_node_keys:
             op_node = quant_prop_graph.nodes[op_node_key]
+
+            # Check all branches have a quantizer on it before the merge
+            if op_node["op_meta"].target_input_ports is not None:
+                all_branches_are_quantized = quant_prop_graph.all_outputs_are_quantized(branching_node_key)
+                if not all_branches_are_quantized:
+                    return TransitionStatus.SHOULD_NOT_TRANSITION
+
             trait = op_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
             affecting_prop_quantizers = op_node[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
             if affecting_prop_quantizers:

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import onnx
@@ -122,18 +122,6 @@ def is_port_quantized(node: NNCFNode, nncf_graph: NNCFGraph, port_id: int) -> bo
     return False
 
 
-def transpose_axis(shape: List[int], axis: int) -> int:
-    """
-    Returns transpose axis.
-
-    :param shape: Tensor shape.
-    :param axis: Axis before transpose (only positive).
-    :return: Axis after transpose.
-    """
-    assert axis >= 0
-    return range(len(shape) - 1, -1, -1)[axis]  # Iterate backward throug axis
-
-
 def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
     """
     Returns weight tensor axis, along which quantizer parameters are calculated.
@@ -143,19 +131,31 @@ def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
     :return: Axis, along which quantizer parameters are calculated.
     """
     weight_channel_axis = node.metatype.weight_channel_axis
-    if node.layer_attributes.has_node_attrs() and node.metatype == om.ONNXGemmMetatype:
-        weight_shape = node.layer_attributes.weight_attrs[port_id]["shape"]
-        weight_channel_axis %= len(weight_shape)  # Make axis positive
-        if port_id == 0:
-            weight_channel_axis -= 1
-        if (
-            port_id == 0
-            and node.layer_attributes.node_attrs["transA"] == 1
-            or port_id == 1
-            and node.layer_attributes.node_attrs["transB"] == 1
-        ):
-            weight_channel_axis = transpose_axis(weight_shape, weight_channel_axis)
+
+    if node.metatype == om.ONNXGemmMetatype:
+        trans_attr = "transB" if port_id else "transA"
+        transpose = node.layer_attributes.node_attrs[trans_attr]
+        # 0 - (M, K), 1 - (K, N)
+        weight_channel_axis = -1 - port_id if transpose else -2 + port_id
     return weight_channel_axis
+
+
+def get_act_quantization_axis(node: NNCFNode, port_id: int) -> int:
+    """
+    Returns activation tensor axis, along which quantizer parameters are calculated.
+
+    :param node: NNCFNode, with the activation on input port_id.
+    :param port_id: Input port id on which there is a activation of a node.
+    :return: Axis, along which quantizer parameters are calculated.
+    """
+    act_channel_axis = node.metatype.output_channel_axis
+
+    if node.metatype == om.ONNXGemmMetatype:
+        trans_attr = "transB" if port_id else "transA"
+        transpose = node.layer_attributes.node_attrs[trans_attr]
+        # 0 - (M, K), 1 - (K, N)
+        act_channel_axis = -2 + port_id if transpose else -1 - port_id
+    return act_channel_axis
 
 
 def _get_activation_tensor_shape(
@@ -172,9 +172,13 @@ def _get_activation_tensor_shape(
     :return: None, if there is no shape info, otherwise - tensor shape.
     """
     if target_point.type == TargetType.PRE_LAYER_OPERATION:
-        shape = nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
+        edge = nncf_graph.get_input_edge_by_port_id(node, target_point.port_id)
+        shape = edge.tensor_shape
     elif target_point.type == TargetType.POST_LAYER_OPERATION:
-        shape = nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
+        # NOTE: Assumes that all output edges for the `node` with `output_port_id`
+        # equal to `target_point.port_id` should have the same `tensor_shape` value.
+        edges = nncf_graph.get_output_edges_by_port_id(node, target_point.port_id)
+        shape = edges[0].tensor_shape
     else:
         raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
     if not shape:  # ONNX model can not have a shape of a edge, even after shape inference.

@@ -17,7 +17,7 @@ strict digraph  {
 "15 TestModel/MultiheadAttention[_layer]/transpose_1" [id=15, type=transpose];
 "16 TestModel/MultiheadAttention[_layer]/view_2" [id=16, type=view];
 "17 TestModel/MultiheadAttention[_layer]/transpose_2" [id=17, type=transpose];
-"18 TestModel/MultiheadAttention[_layer]/__truediv___0" [id=18, type=__truediv__];
+"18 TestModel/MultiheadAttention[_layer]/__mul___0" [id=18, type=__mul__];
 "19 TestModel/MultiheadAttention[_layer]/SymmetricQuantizer/symmetric_quantize_3" [id=19, type=symmetric_quantize];
 "20 TestModel/MultiheadAttention[_layer]/transpose_3" [id=20, type=transpose];
 "21 TestModel/MultiheadAttention[_layer]/bmm_0" [id=21, type=bmm];
@@ -47,12 +47,12 @@ strict digraph  {
 "10 TestModel/MultiheadAttention[_layer]/linear_2" -> "11 TestModel/MultiheadAttention[_layer]/SymmetricQuantizer/symmetric_quantize_2";
 "11 TestModel/MultiheadAttention[_layer]/SymmetricQuantizer/symmetric_quantize_2" -> "16 TestModel/MultiheadAttention[_layer]/view_2";
 "12 TestModel/MultiheadAttention[_layer]/view_0" -> "13 TestModel/MultiheadAttention[_layer]/transpose_0";
-"13 TestModel/MultiheadAttention[_layer]/transpose_0" -> "18 TestModel/MultiheadAttention[_layer]/__truediv___0";
+"13 TestModel/MultiheadAttention[_layer]/transpose_0" -> "18 TestModel/MultiheadAttention[_layer]/__mul___0";
 "14 TestModel/MultiheadAttention[_layer]/view_1" -> "15 TestModel/MultiheadAttention[_layer]/transpose_1";
 "15 TestModel/MultiheadAttention[_layer]/transpose_1" -> "20 TestModel/MultiheadAttention[_layer]/transpose_3";
 "16 TestModel/MultiheadAttention[_layer]/view_2" -> "17 TestModel/MultiheadAttention[_layer]/transpose_2";
 "17 TestModel/MultiheadAttention[_layer]/transpose_2" -> "24 TestModel/MultiheadAttention[_layer]/bmm_1";
-"18 TestModel/MultiheadAttention[_layer]/__truediv___0" -> "19 TestModel/MultiheadAttention[_layer]/SymmetricQuantizer/symmetric_quantize_3";
+"18 TestModel/MultiheadAttention[_layer]/__mul___0" -> "19 TestModel/MultiheadAttention[_layer]/SymmetricQuantizer/symmetric_quantize_3";
 "19 TestModel/MultiheadAttention[_layer]/SymmetricQuantizer/symmetric_quantize_3" -> "21 TestModel/MultiheadAttention[_layer]/bmm_0";
 "20 TestModel/MultiheadAttention[_layer]/transpose_3" -> "21 TestModel/MultiheadAttention[_layer]/bmm_0";
 "21 TestModel/MultiheadAttention[_layer]/bmm_0" -> "22 TestModel/MultiheadAttention[_layer]/softmax_0";

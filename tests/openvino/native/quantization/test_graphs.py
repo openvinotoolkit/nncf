@@ -26,18 +26,19 @@ from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
+from nncf.scopes import IgnoredScope
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import convert_torch_model
 from tests.openvino.native.common import dump_model
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.common import get_dataset_for_test
-from tests.openvino.native.common import get_openvino_major_minor_version
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import DepthwiseConv3DModel
 from tests.openvino.native.models import DepthwiseConv4DModel
 from tests.openvino.native.models import DepthwiseConv5DModel
 from tests.openvino.native.models import GRUSequenceModel
 from tests.openvino.native.models import IfModel
+from tests.openvino.native.models import IfModel_2
 from tests.openvino.native.models import MatmulSoftmaxMatmulBlock
 from tests.openvino.native.models import ScaledDotProductAttentionModel
 from tests.openvino.native.models import get_torch_model_info
@@ -202,11 +203,33 @@ def test_if_model_fq_placement():
     )
 
 
+def test_if_model_fq_placement_ignored_scope():
+    if_model = IfModel_2()
+    ov_model = if_model.ov_model
+    dataset = get_dataset_for_if_model(ov_model)
+    quantized_model = quantize_impl(
+        ov_model, dataset, subset_size=2, fast_bias_correction=True, ignored_scope=IgnoredScope(names=["MatMul"])
+    )
+    if_ops = [op for op in quantized_model.get_ops() if op.get_type_name() == "If"]
+    assert len(if_ops) == 1
+    if_op = if_ops[0]
+    main_model_path = if_model.ref_model_name + "_ignored_scope_main.dot"
+    then_body_path = if_model.ref_model_name + "_ignored_scope_then.dot"
+    else_body_path = if_model.ref_model_name + "_ignored_scope_else.dot"
+
+    compare_nncf_graphs(
+        quantized_model, get_actual_reference_for_current_openvino(QUANTIZED_REF_GRAPHS_DIR / main_model_path)
+    )
+    compare_nncf_graphs(
+        if_op.get_function(0), get_actual_reference_for_current_openvino(QUANTIZED_REF_GRAPHS_DIR / then_body_path)
+    )
+    compare_nncf_graphs(
+        if_op.get_function(1), get_actual_reference_for_current_openvino(QUANTIZED_REF_GRAPHS_DIR / else_body_path)
+    )
+
+
 @pytest.mark.parametrize("q_params", [{}, {"model_type": ModelType.TRANSFORMER}], ids=["default", "transformer"])
 def test_scaled_dot_product_attention_placement(q_params, tmp_path):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
-        pytest.xfail("ScaledDotProductAttention is not supported until 2023.3")
     model = ScaledDotProductAttentionModel().ov_model
     quantized_model = quantize_model(model, q_params)
 
@@ -230,9 +253,6 @@ def test_scaled_dot_product_attention_placement(q_params, tmp_path):
     [SYNTHETIC_MODELS.get("LinearModel"), SYNTHETIC_MODELS.get("ConvModel"), SYNTHETIC_MODELS.get("SharedConvModel")],
 )
 def test_synthetic_models_fc_placement(model_creator_func):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
-        pytest.xfail("FakeConvert is not supported until 2023.3")
     model = model_creator_func()
     quantized_model = quantize_model(
         model.ov_model,

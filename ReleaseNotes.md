@@ -1,5 +1,96 @@
 # Release Notes
 
+## New in Release 2.12.0
+
+Post-training Quantization:
+
+- Features:
+  - (OpenVINO, PyTorch, ONNX) Excluded comparison operators from the quantization scope for `nncf.ModelType.TRANSFORMER`.
+  - (OpenVINO, PyTorch) Changed the representation of symmetrically quantized weights from an unsigned integer with a fixed zero-point to a signed data type without a zero-point in the `nncf.compress_weights()` method.
+  - (OpenVINO) Extended patterns support of the AWQ algorithm as part of `nncf.compress_weights()`. This allows apply AWQ for the wider scope of the models.
+  - (OpenVINO) Introduced `nncf.CompressWeightsMode.E2M1`  `mode` option of `nncf.compress_weights()` as the new MXFP4 precision (Experimental).
+  - (OpenVINO) Added support for models with BF16 precision in the `nncf.quantize()` method.
+  - (PyTorch) Added quantization support for the `torch.addmm`.
+  - (PyTorch) Added quantization support for the `torch.nn.functional.scaled_dot_product_attention`.
+- Fixes:
+  - (OpenVINO, PyTorch, ONNX) Fixed Fast-/BiasCorrection algorithms with correct support of transposed MatMul layers.
+  - (OpenVINO) Fixed `nncf.IgnoredScope()` functionality for models with If operation.
+  - (OpenVINO) Fixed patterns with PReLU operations.
+  - Fixed runtime error while importing NNCF without Matplotlib package.
+- Improvements:
+  - Reduced the amount of memory required for applying `nncf.compress_weights()` to OpenVINO models.
+  - Improved logging in case of the not empty `nncf.IgnoredScope()`.
+- Tutorials:
+  - [Post-Training Optimization of Stable Audio Open Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-audio/stable-audio.ipynb)
+  - [Post-Training Optimization of Phi3-Vision Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/phi-3-vision/phi-3-vision.ipynb)
+  - [Post-Training Optimization of MiniCPM-V2 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/minicpm-v-multimodal-chatbot/minicpm-v-multimodal-chatbot.ipynb)
+  - [Post-Training Optimization of Jina CLIP Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/jina-clip/jina-clip.ipynb)
+  - [Post-Training Optimization of Stable Diffusion v3 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-diffusion-v3/stable-diffusion-v3.ipynb)
+  - [Post-Training Optimization of HunyuanDIT Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/hunyuan-dit-image-generation/hunyuan-dit-image-generation.ipynb)
+  - [Post-Training Optimization of DDColor Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/ddcolor-image-colorization/ddcolor-image-colorization.ipynb)
+  - [Post-Training Optimization of DynamiCrafter Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/dynamicrafter-animating-images/dynamicrafter-animating-images.ipynb)
+  - [Post-Training Optimization of DepthAnythingV2 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/depth-anything/depth-anything-v2.ipynb)
+  - [Post-Training Optimization of Kosmos-2 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/kosmos2-multimodal-large-language-model/kosmos2-multimodal-large-language-model.ipynb)
+
+Compression-aware training:
+
+- Fixes:
+  - (PyTorch) Fixed issue with wrapping for operator without patched state.
+
+Requirements:
+
+- Updated Tensorflow (2.15) version. This version requires Python 3.9-3.11.
+- Added NumPy 2.0 support.
+
+## New in Release 2.11.0
+
+Post-training Quantization:
+
+- Features:
+  - (OpenVINO) Added Scale Estimation algorithm for 4-bit data-aware weights compression. The optional `scale_estimation` parameter was introduced to `nncf.compress_weights()` and can be used to minimize accuracy degradation of compressed models (note that this algorithm increases the compression time).
+  - (OpenVINO) Added GPTQ algorithm for 8/4-bit data-aware weights compression, supporting INT8, INT4, and NF4 data types. The optional `gptq` parameter was introduced to `nncf.compress_weights()` to enable the [GPTQ](https://arxiv.org/abs/2210.17323) algorithm.
+  - (OpenVINO) Added support for models with BF16 weights in the weights compression method, `nncf.compress_weights()`.
+  - (PyTorch) Added support for quantization and weight compression of the custom modules.
+- Fixes:
+  - (OpenVINO) Fixed incorrect node with bias determination in Fast-/BiasCorrection and ChannelAlighnment algorithms.
+  - (OpenVINO, PyTorch) Fixed incorrect behaviour of `nncf.compress_weights()` in case of compressed model as input.
+  - (OpenVINO, PyTorch) Fixed SmoothQuant algorithm to work with Split ports correctly.
+- Improvements:
+  - (OpenVINO) Aligned resulting compression subgraphs for the `nncf.compress_weights()` in different FP precisions.
+  - Aligned 8-bit scheme for NPU target device with the CPU.
+- Examples:
+  - (OpenVINO, ONNX) Updated ignored scope for YOLOv8 examples utilizing a subgraphs approach.
+- Tutorials:
+  - [Post-Training Optimization of Stable Video Diffusion Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-video-diffusion/stable-video-diffusion.ipynb)
+  - [Post-Training Optimization of YOLOv10 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov10-optimization/yolov10-optimization.ipynb)
+  - [Post-Training Optimization of LLaVA Next Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/nano-llava-multimodal-chatbot/nano-llava-multimodal-chatbot.ipynb)
+  - [Post-Training Optimization of S3D MIL-NCE Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/s3d-mil-nce-text-to-video-retrieval/s3d-mil-nce-text-to-video-retrieval.ipynb)
+  - [Post-Training Optimization of Stable Cascade Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-cascade-image-generation/stable-cascade-image-generation.ipynb)
+
+Compression-aware training:
+
+- Features:
+  - (PyTorch) `nncf.quantize` method is now the recommended path for the quantization initialization for Quantization-Aware Training.
+  - (PyTorch) Compression modules placement in the model now can be serialized and restored with new API functions: `compressed_model.nncf.get_config()` and `nncf.torch.load_from_config`. The [documentation](/docs/usage/training_time_compression/quantization_aware_training/Usage.md#saving-and-loading-compressed-models) for the saving/loading of a quantized model is available, and Resnet18 [example](examples/quantization_aware_training/torch/resnet18) was updated to use the new API.
+- Fixes:
+  - (PyTorch) Fixed compatibility with `torch.compile`.
+- Improvements:
+  - (PyTorch) Base parameters were extended for the EvolutionOptimizer (LeGR algorithm part).
+  - (PyTorch) Improved wrapping for parameters which are not tensors.
+- Examples:
+  - (PyTorch) Added [an example](examples/quantization_aware_training/torch/anomalib) for STFPM model from Anomalib.
+- Tutorials:
+  - [Quantization-Sparsity Aware Training of PyTorch ResNet-50 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/pytorch-quantization-sparsity-aware-training/pytorch-quantization-sparsity-aware-training.ipynb)
+
+Deprecations/Removals:
+
+- Removed extra dependencies to install backends from setup.py (like `[torch]` are `[tf]`, `[onnx]` and `[openvino]`).
+- Removed `openvino-dev` dependency.
+
+Requirements:
+
+- Updated PyTorch (2.2.1) and Torchvision (0.18.0) versions.
+
 ## New in Release 2.10.0
 
 Post-training Quantization:
@@ -198,7 +289,7 @@ Post-training Quantization:
   - (OpenVINO) Added HyperparameterTuner algorithm.
   - (PyTorch) Added FastBiasCorrection algorithm support.
   - (OpenVINO, ONNX) Added embedding weights quantization.
-  - (OpenVINO, PyTorch) Added new `compress_weights` method that provides data-free [INT8 weights compression](docs/compression_algorithms/CompressWeights.md).
+  - (OpenVINO, PyTorch) Added new `compress_weights` method that provides data-free [INT8 weights compression](docs/usage/post_training_compression/weights_compression/Usage.md).
 - Fixes:
   - Fixed detection of decomposed post-processing in models.
   - Multiple fixes (new patterns, bugfixes, etc.) to solve [#1936](https://github.com/openvinotoolkit/nncf/issues/1936) issue.
@@ -256,7 +347,7 @@ Post-training Quantization:
     - Added quantizer scales unification.
     - Added support for models with 3D and 5D Depthwise convolution.
     - Added FP16 OpenVINO models support.
-  - Added `"overflow_fix"` parameter (for `quantize(...)` & `quantize_with_accuracy_control(...)` methods) support & functionality. It improves accuracy for optimized model for affected devices. More details in [Quantization section](docs/compression_algorithms/Quantization.md).
+  - Added `"overflow_fix"` parameter (for `quantize(...)` & `quantize_with_accuracy_control(...)` methods) support & functionality. It improves accuracy for optimized model for affected devices. More details in [Quantization section](docs/usage/post_training_compression/post_training_quantization/Usage.md).
   - (OpenVINO) Added support for in-place statistics collection (reduce memory footprint during optimization).
   - (OpenVINO) Added Quantization with accuracy control algorithm.
   - (OpenVINO) Added YOLOv8 examples for [`quantize(...)`](examples/post_training_quantization/openvino/yolov8) & [`quantize_with_accuracy_control(...)`](examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control) methods.
@@ -552,7 +643,7 @@ Removed features:
 
 ## New in Release 1.5
 
-- Switched to using the propagation-based mode for quantizer setup by default. Compared to the previous default, pattern-based mode, the propagation-based mode better ensures that all the inputs to operations that can be quantized on a given type of hardware are quantized in accordance with what this hardware allows. Default target hardware is CPU - adjustable via `"target_device"` option in the NNCF config. More details can be found in [Quantization.md](./docs/compression_algorithms/Quantization.md#quantizer-setup-and-hardware-config-files).
+- Switched to using the propagation-based mode for quantizer setup by default. Compared to the previous default, pattern-based mode, the propagation-based mode better ensures that all the inputs to operations that can be quantized on a given type of hardware are quantized in accordance with what this hardware allows. Default target hardware is CPU - adjustable via `"target_device"` option in the NNCF config. More details can be found in [Quantization.md](./docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#quantizer-setup-and-hardware-config-files).
 - HAWQ mixed-precision initialization now supports a compression ratio parameter setting - set to 1 for a fully INT8 model, > 1 to increasingly allow lower bitwidth. The level of compression for each layer is defined by a product of the layer FLOPS and the quantization bitwidth.
 - HAWQ mixed-precision initialization allows specifying a more generic `criterion_fn` callable to calculate the related loss in case of complex output's post-processing or multiple losses.
 - Improved algorithm of assigning bitwidth for activation quantizers in HAWQ mixed-precision initialization. If after taking into account the corresponding rules of hardware config there're
@@ -572,7 +663,7 @@ Removed features:
 ## New in Release 1.4
 
 - Models with filter pruning applied are now exportable to ONNX
-- BatchNorm adaptation now available as a common compression algorithm initialization step - currently disabled by default, see `"batchnorm_adaptation"` config parameters in compression algorithm documentation (e.g. [Quantizer.md](docs/compression_algorithms/Quantization.md)) for instructions on how to enable it in NNCF config
+- BatchNorm adaptation now available as a common compression algorithm initialization step - currently disabled by default, see `"batchnorm_adaptation"` config parameters in compression algorithm documentation (e.g. [Quantizer.md](docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md)) for instructions on how to enable it in NNCF config
 - Major performance improvements for per-channel quantization training - now performs almost as fast as the per-tensor quantization training
 - nn.Embedding and nn.Conv1d weights are now quantized by default
 - Compression level querying is now available to determine current compression level (for purposes of choosing a correct "best" checkpoint during training)

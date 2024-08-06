@@ -11,8 +11,11 @@
 
 import tensorflow as tf
 import tensorflow.keras.backend as K
+from packaging import version
 
 from examples.tensorflow.common.object_detection.architecture import nn_ops
+
+tensorflow_version = version.parse(version.parse(tf.__version__).base_version)
 
 
 class CSPDarknet53:
@@ -25,12 +28,17 @@ class CSPDarknet53:
         """Darknet Convolution2D followed by SyncBatchNormalization and Mish."""
         no_bias_kwargs = {"use_bias": False}
         no_bias_kwargs.update(kwargs)
+
+        if tensorflow_version < version.parse("2.15"):
+            mish = tf.keras.layers.Activation(self.mish)
+        else:
+            mish = tf.keras.layers.Activation("mish")
+
         return nn_ops.compose(
             nn_ops.DarknetConv2D(*args, **no_bias_kwargs),
             # TODO(nsavelyev) replace by BatchNormalization(synchronized=True) once support for TF < 2.12 is dropped
             tf.keras.layers.experimental.SyncBatchNormalization(),
-            # TODO(nsavelyev) change to tf.keras.activations.mish after upgrade to TF 2.13
-            tf.keras.layers.Activation(self.mish),
+            mish,
         )
 
     def csp_resblock_body(self, x, num_filters, num_blocks, all_narrow=True):

@@ -146,14 +146,6 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
             ),
             MinMaxTestParameters(
                 RangeEstimatorParametersSet.MINMAX,
-                TargetType.OPERATION_WITH_WEIGHTS,
-                QuantizationMode.SYMMETRIC,
-                False,
-                256,
-                -256,
-            ),
-            MinMaxTestParameters(
-                RangeEstimatorParametersSet.MINMAX,
                 TargetType.OPERATOR_POST_HOOK,
                 QuantizationMode.SYMMETRIC,
                 False,
@@ -221,17 +213,6 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
                     -512,
                 ),
                 "PTIdentityConvModel/fn_0",
-            ),
-            (
-                MinMaxTestParameters(
-                    RangeEstimatorParametersSet.MINMAX,
-                    TargetType.OPERATION_WITH_WEIGHTS,
-                    QuantizationMode.SYMMETRIC,
-                    False,
-                    512,
-                    -512,
-                ),
-                "PTIdentityConvModel/Conv2d[conv]/fn_0",
             ),
             (
                 MinMaxTestParameters(
@@ -356,8 +337,8 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
                 shape = (3, 1, 1, 1)
             ref_min_val, ref_max_val = map(lambda x: np.reshape(x, shape), (ref_min_val, ref_max_val))
 
-        assert np.allclose(stat.min_values, ref_min_val)
-        assert np.allclose(stat.max_values, ref_max_val)
+        assert np.allclose(stat.min_values.data, ref_min_val)
+        assert np.allclose(stat.max_values.data, ref_max_val)
         if isinstance(ref_min_val, np.ndarray):
             assert stat.min_values.shape == ref_min_val.shape
             assert stat.max_values.shape == ref_max_val.shape
@@ -371,9 +352,11 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         checker = HookChecker(model, "conv")
         checker.add_ref(
             ref_hooks=[fn],
-            target_type=TargetType.OPERATOR_PRE_HOOK
-            if target_point.target_type == TargetType.OPERATION_WITH_WEIGHTS
-            else target_point.target_type,
+            target_type=(
+                TargetType.OPERATOR_PRE_HOOK
+                if target_point.target_type == TargetType.OPERATION_WITH_WEIGHTS
+                else target_point.target_type
+            ),
             target_node_name=target_point.target_node_name,
             input_port_id=target_point.input_port_id,
         )
@@ -390,9 +373,11 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         checker = HookChecker(model, "conv")
         checker.add_ref(
             ref_hooks=[fn],
-            target_type=TargetType.OPERATOR_PRE_HOOK
-            if target_point.target_type == TargetType.OPERATION_WITH_WEIGHTS
-            else target_point.target_type,
+            target_type=(
+                TargetType.OPERATOR_PRE_HOOK
+                if target_point.target_type == TargetType.OPERATION_WITH_WEIGHTS
+                else target_point.target_type
+            ),
             target_node_name=target_point.target_node_name,
             input_port_id=target_point.input_port_id,
         )

@@ -64,9 +64,9 @@ class StatisticPointsContainer(UserDict):
                                 statistic_point.algorithm_to_tensor_collectors[algorithm]
                             )
                         else:
-                            _statistic_point.algorithm_to_tensor_collectors[
-                                algorithm
-                            ] = statistic_point.algorithm_to_tensor_collectors[algorithm]
+                            _statistic_point.algorithm_to_tensor_collectors[algorithm] = (
+                                statistic_point.algorithm_to_tensor_collectors[algorithm]
+                            )
                     return
 
             self.data[target_node_name].append(statistic_point)

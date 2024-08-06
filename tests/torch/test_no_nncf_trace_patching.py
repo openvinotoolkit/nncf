@@ -20,7 +20,7 @@ from tests.torch.helpers import create_conv
 from tests.torch.helpers import get_empty_config
 
 
-class TestModel(nn.Module):
+class SimpleModel(nn.Module):
     """
     A test model with an operation resulting in an ambiguous graph.
     Ambiguous operation output is put into the model output for testing convenience.
@@ -50,10 +50,10 @@ def test_no_trace_model_patching():
     config["input_info"] = {"sample_size": [1, 1, 4, 4], "filler": "random"}
 
     # Not patching anything: all output nodes are traced
-    _, compressed_model = create_compressed_model(TestModel(True), config)
+    _, compressed_model = create_compressed_model(SimpleModel(True), config)
     assert len(compressed_model.nncf.get_original_graph().get_output_nodes()) == 2
 
     # Patching a function results with no_nncf_trace in method not producing an output node
-    disable_tracing(TestModel.ambiguous_op)
-    _, compressed_model = create_compressed_model(TestModel(False), get_empty_config())
+    disable_tracing(SimpleModel.ambiguous_op)
+    _, compressed_model = create_compressed_model(SimpleModel(False), get_empty_config())
     assert len(compressed_model.nncf.get_original_graph().get_output_nodes()) == 1

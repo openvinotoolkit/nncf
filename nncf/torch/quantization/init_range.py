@@ -260,9 +260,9 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
         self.modules_to_init = modules_to_init_vs_init_configs
         self.progressbar_description = "Range parameters initialization"
 
-        self.collectors_and_modules_to_init: Dict[
-            str, Tuple[TensorStatisticCollectorBase, BaseQuantizer]
-        ] = OrderedDict()
+        self.collectors_and_modules_to_init: Dict[str, Tuple[TensorStatisticCollectorBase, BaseQuantizer]] = (
+            OrderedDict()
+        )
         self.hook_handles = []
         self.batch_size = batch_size
 
@@ -320,5 +320,5 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
             target_stat = collector.get_statistics()
             minmax_stats = pt_convert_stat_to_min_max_tensor_stat(target_stat)
             quantizer_module.apply_minmax_init(
-                minmax_stats.min_values, minmax_stats.max_values, log_module_name=scope_str
+                minmax_stats.min_values.data, minmax_stats.max_values.data, log_module_name=scope_str
             )

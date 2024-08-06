@@ -13,15 +13,13 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Dict, List, Optional, Tuple, TypeVar, Union
 
-import numpy as np
-
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.experimental.tensor import Tensor
+from nncf.tensor import Tensor
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -44,7 +42,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def create_bias_correction_command(
-        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+        node: NNCFNode, bias_value: Tensor, nncf_graph: NNCFGraph
     ) -> TransformationCommand:
         """
         Creates backend-specific command to update bias value.
@@ -183,4 +181,16 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :return:
             Name of node to collect input statistics
             Name of node to collect output statistics
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
+        """
+        Returns axis number of the activation tensor which correspond to it channel.
+
+        :param node: NNCFNode instance.
+        :param port_id: Port ID for input.
+        :param input_shape: Shape of the input.
+        :return: Channel axis number.
         """

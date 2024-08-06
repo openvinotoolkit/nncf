@@ -17,6 +17,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.command_creation import CommandCreator
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.openvino.graph.node_utils import get_add_bias_node
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
@@ -39,7 +40,7 @@ class OVCommandCreator(CommandCreator):
     def create_command_to_update_bias(
         node_with_bias: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
     ) -> OVBiasCorrectionCommand:
-        add_node = nncf_graph.get_next_nodes(node_with_bias)[0]
+        add_node = get_add_bias_node(node_with_bias, nncf_graph)
         const_port_ids = add_node.layer_attributes.get_const_port_ids()
         assert len(const_port_ids) == 1
         bias_port_id = const_port_ids[0]

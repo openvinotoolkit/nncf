@@ -20,6 +20,7 @@ TModel = TypeVar("TModel")
 
 class BackendType(Enum):
     TORCH = "Torch"
+    TORCH_FX = "TorchFX"
     TENSORFLOW = "Tensorflow"
     ONNX = "ONNX"
     OPENVINO = "OpenVINO"
@@ -33,6 +34,7 @@ def get_available_backends() -> List[BackendType]:
     """
     frameworks = [
         ("torch", BackendType.TORCH),
+        ("torch.fx", BackendType.TORCH_FX),
         ("tensorflow", BackendType.TENSORFLOW),
         ("onnx", BackendType.ONNX),
         ("openvino.runtime", BackendType.OPENVINO),
@@ -51,14 +53,27 @@ def get_available_backends() -> List[BackendType]:
 
 def is_torch_model(model: TModel) -> bool:
     """
-    Returns True if the model is an instance of torch.nn.Module, otherwise False.
+    Returns True if the model is an instance of torch.nn.Module and not a torch.fx.GraphModule, otherwise False.
 
     :param model: A target model.
-    :return: True if the model is an instance of torch.nn.Module, otherwise False.
+    :return: True if the model is an instance of torch.nn.Module and not torch.fx.GraphModule, otherwise False.
     """
-    import torch
+    import torch  # type: ignore
+    import torch.fx  # type: ignore
 
-    return isinstance(model, torch.nn.Module)
+    return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
+
+
+def is_torch_fx_model(model: TModel) -> bool:
+    """
+    Returns True if the model is an instance of torch.fx.GraphModule, otherwise False.
+
+    :param model: A target model.
+    :return: True if the model is an instance of torch.fx.GraphModule, otherwise False.
+    """
+    import torch.fx
+
+    return isinstance(model, torch.fx.GraphModule)
 
 
 def is_tensorflow_model(model: TModel) -> bool:
@@ -68,7 +83,7 @@ def is_tensorflow_model(model: TModel) -> bool:
     :param model: A target model.
     :return: True if the model is an instance of tensorflow.Module, otherwise False.
     """
-    import tensorflow
+    import tensorflow  # type: ignore
 
     return isinstance(model, tensorflow.Module)
 
@@ -80,7 +95,7 @@ def is_onnx_model(model: TModel) -> bool:
     :param model: A target model.
     :return: True if the model is an instance of onnx.ModelProto, otherwise False.
     """
-    import onnx
+    import onnx  # type: ignore
 
     return isinstance(model, onnx.ModelProto)
 
@@ -92,7 +107,7 @@ def is_openvino_model(model: TModel) -> bool:
     :param model: A target model.
     :return: True if the model is an instance of openvino.runtime.Model, otherwise False.
     """
-    import openvino.runtime as ov
+    import openvino.runtime as ov  # type: ignore
 
     return isinstance(model, ov.Model)
 
@@ -117,6 +132,9 @@ def get_backend(model: TModel) -> BackendType:
     :return: A BackendType representing the correct NNCF backend to be used when working with the framework.
     """
     available_backends = get_available_backends()
+
+    if BackendType.TORCH_FX in available_backends and is_torch_fx_model(model):
+        return BackendType.TORCH_FX
 
     if BackendType.TORCH in available_backends and is_torch_model(model):
         return BackendType.TORCH
@@ -147,7 +165,7 @@ def copy_model(model: TModel) -> TModel:
     model_backend = get_backend(model)
     if model_backend == BackendType.OPENVINO:
         # TODO(l-bat): Remove after fixing ticket: 100919
-        return model.clone()
+        return model.clone()  # type: ignore
     if model_backend == BackendType.TENSORFLOW:
         # deepcopy and tensorflow.keras.models.clone_model does not work correctly on 2.8.4 version
         from nncf.tensorflow.graph.model_transformer import TFModelTransformer

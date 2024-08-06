@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 import tensorflow as tf
+from tensorflow.python.eager import context
 
 import nncf
 from examples.common.sample_config import EVAL_ONLY_ERROR_TEXT
@@ -112,9 +113,11 @@ GLOBAL_BATCH_SIZE = get_global_batch_size()
 
 DATASET_PATHS = {
     "classification": {
-        x: lambda dataset_root, dataset_name=x: os.path.join(dataset_root, dataset_name)
-        if dataset_root
-        else os.path.join(tempfile.gettempdir(), dataset_name)
+        x: lambda dataset_root, dataset_name=x: (
+            os.path.join(dataset_root, dataset_name)
+            if dataset_root
+            else os.path.join(tempfile.gettempdir(), dataset_name)
+        )
         for x, _ in DATASETS["classification"]
     },
     "object_detection": {
@@ -213,6 +216,7 @@ def test_model_eval(_config, tmp_path):
 @pytest.mark.nightly
 @pytest.mark.dependency(name="tf_test_model_train")
 def test_model_train(_config, tmp_path, _case_common_dirs):
+    context._reset_context()
     if _config["sample_type"] == "segmentation":
         pytest.skip("ticket #58759")
     checkpoint_save_dir = os.path.join(_case_common_dirs["checkpoint_save_dir"], _config["tid"])

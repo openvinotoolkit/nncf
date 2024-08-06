@@ -28,9 +28,9 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -108,8 +108,8 @@ class SmoothQuant(Algorithm):
 
         node_groups = self._group_nodes_by_source(nodes_to_smooth_data, graph)
 
-        best_scale = None
         for group_id, nodes in track(node_groups.items(), description="Applying Smooth Quant"):
+            best_scale = None
             best_ratio = 0.0
             empty_statistic = False
             for node_to_smooth in nodes:
@@ -117,7 +117,7 @@ class SmoothQuant(Algorithm):
                 activations_value = self._get_statistics_for_node(
                     statistic_points, node_to_smooth.node_name, input_port_id
                 )
-                if any(val.data is None for val in activations_value):
+                if any(val is None for val in activations_value):
                     empty_statistic = True
                     break
                 if len(activations_value) != 1:
@@ -161,7 +161,8 @@ class SmoothQuant(Algorithm):
                 weight_update_command = self._backend_entity.weight_update_command(node_to_smooth, scaled_weight.data)
                 transformation_layout.register(weight_update_command)
 
-            activations_shape = graph.get_output_edges(source_node)[source_output_port_id].tensor_shape
+            activations_by_output_id = {e.output_port_id: e for e in graph.get_output_edges(source_node)}
+            activations_shape = activations_by_output_id[source_output_port_id].tensor_shape
             activation_scale = self._calculate_activation_scale(best_scale, activations_shape, nodes, graph)
 
             scale_node_name = self._create_scale_node_name(source_node.node_name, source_output_port_id)
@@ -209,8 +210,7 @@ class SmoothQuant(Algorithm):
         for node_data in nodes_to_smooth:
             node_to_smooth = node_data["node_to_smooth"]
             input_act_port = node_data["input_act_port"]
-
-            source_node = nncf_graph.get_input_edges(node_to_smooth)[input_act_port].from_node
+            source_node = nncf_graph.get_input_edge_by_port_id(node_to_smooth, input_act_port).from_node
             edge = nncf_graph.get_edge(source_node, node_to_smooth)
             # Such group_id (with node, ports, and shape as a hash) allows us to be confident
             # that all sensitive parameters are equal for successor nodes are equal.
@@ -238,7 +238,7 @@ class SmoothQuant(Algorithm):
             self._algorithm_key,
         ):
             statistic = tensor_collector.get_statistics()[STATISTIC_BRANCH_KEY]
-            statistics_for_node.append(Tensor(statistic))
+            statistics_for_node.append(statistic)
         return statistics_for_node
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
@@ -287,8 +287,7 @@ class SmoothQuant(Algorithm):
                 continue
 
             activation_port_id = self._backend_entity.get_activations_port_id(node_with_weight, nncf_graph)
-            input_edges = nncf_graph.get_input_edges(node_with_weight)
-            activation_node = input_edges[activation_port_id].from_node
+            activation_node = nncf_graph.get_input_edge_by_port_id(node_with_weight, activation_port_id).from_node
 
             # Skipping agnostic layers as inputs to propagate quantizer
             # Only for Convolution layers
@@ -366,7 +365,7 @@ class SmoothQuant(Algorithm):
         :param input_port: Specified input port id.
         :return: Calculated reduction axes.
         """
-        shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
+        shape = nncf_graph.get_input_edge_by_port_id(node, input_port).tensor_shape
         reduction_axes = tuple([])
         if len(shape) > 1:
             channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port)

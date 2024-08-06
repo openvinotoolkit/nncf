@@ -110,12 +110,14 @@ class LMWeightCompression(BaseTestPipeline):
         self.preprocessor = AutoTokenizer.from_pretrained(self.model_id)
 
     def get_transform_calibration_fn(self):
-        def transform_fn(data, max_tokens=128):
+        def transform_fn(data, max_tokens=128, filter_bad_tokens=True):
             tokenized_text = self.preprocessor(data["text"], return_tensors="np")
-
-            bad_tokens = self.preprocessor("<unk><s>", return_tensors="np")["input_ids"]
             raw_tokens = tokenized_text["input_ids"][0, :]
-            filtered_tokens = np.array(list(filter(lambda x: x not in bad_tokens, raw_tokens)))
+            if filter_bad_tokens:
+                bad_tokens = self.preprocessor("<unk><s>", return_tensors="np")["input_ids"]
+                filtered_tokens = np.array(list(filter(lambda x: x not in bad_tokens, raw_tokens)))
+            else:
+                filtered_tokens = raw_tokens
             tokenized_text["input_ids"] = np.expand_dims(filtered_tokens, 0)
             tokenized_text["attention_mask"] = tokenized_text["attention_mask"][:, : filtered_tokens.shape[0]]
 
@@ -268,7 +270,12 @@ class LMWeightCompression(BaseTestPipeline):
         compressed_model_hf = self.model_hf
         if self.backend != BackendType.FP32:
             compressed_model_hf = OVModelForCausalLM.from_pretrained(
-                self.output_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                self.output_model_dir,
+                trust_remote_code=True,
+                load_in_8bit=False,
+                compile=False,
+                stateful=is_stateful,
+                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
             )
         print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)

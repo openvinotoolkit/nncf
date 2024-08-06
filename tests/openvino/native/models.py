@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from functools import partial
-from typing import Callable, Tuple
+from typing import Callable, Optional, Tuple
 
 import numpy as np
 import openvino.runtime as ov
@@ -282,21 +282,21 @@ class ScaleShiftReluModel(OVReferenceModel):
 
 
 class FPModel(OVReferenceModel):
-    def __init__(self, const_dtype="FP32", input_dtype="FP32"):
-        self.const_dtype = np.float32 if const_dtype == "FP32" else np.float16
-        self.input_dtype = np.float32 if input_dtype == "FP32" else np.float16
+    def __init__(self, const_dtype: ov.Type = ov.Type.f32, input_dtype: ov.Type = ov.Type.f32):
+        self.const_dtype = const_dtype
+        self.input_dtype = input_dtype
         super().__init__()
 
     def _create_ov_model(self):
         input_shape = [1, 3, 4, 2]
         input_1 = opset.parameter(input_shape, name="Input", dtype=self.input_dtype)
-        data = self._rng.random((1, 3, 4, 5)).astype(self.const_dtype)
+        data = opset.constant(value=self._rng.random((1, 3, 4, 5)), dtype=self.const_dtype, name="MatMul_const")
         if self.const_dtype != self.input_dtype:
-            data = opset.convert(data, self.input_dtype)
+            data = opset.convert(data, self.input_dtype.to_string())
         matmul = opset.matmul(input_1, data, transpose_a=True, transpose_b=False, name="MatMul")
-        bias = self._rng.random((1, 3, 1, 1)).astype(self.const_dtype)
+        bias = opset.constant(value=self._rng.random((1, 3, 1, 1)), dtype=self.const_dtype, name="MatMul_bias")
         if self.const_dtype != self.input_dtype:
-            bias = opset.convert(bias, self.input_dtype)
+            bias = opset.convert(bias, self.input_dtype.to_string())
         add = opset.add(matmul, bias, name="Add")
         result = opset.result(add, name="Result_Add")
         result.get_output_tensor(0).set_names(set(["Result_Add"]))
@@ -490,7 +490,7 @@ class LSTMSequenceModel(OVReferenceModel):
             x, initial_hidden_state, initial_cell_state, seq_len, W, R, B, 128, "FORWARD", name="LSTMSequence"
         )
         data = self._rng.random((1, 1, 128, 3)).astype(np.float32)
-        matmul = opset.matmul(lstm.output(0), data, transpose_a=False, transpose_b=False, name="MatMul")
+        matmul = opset.matmul(lstm.output(1), data, transpose_a=False, transpose_b=False, name="MatMul")
 
         result = opset.result(matmul, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
@@ -812,13 +812,13 @@ class SequentialMatmulModel(OVReferenceModel):
 
 
 class IdentityMatmul(OVReferenceModel):
-    def _create_ov_model(self, weights_dtype=None, activation_dtype=None):
+    def _create_ov_model(self, weights_dtype: Optional[ov.Type] = None, activation_dtype: Optional[ov.Type] = None):
         """
-        :param: weights_dtype: precision of weights, should be either np.float32 or np.float16
-        :param: activation_dtype: precision of activations, should be either np.float32 or np.float16
+        :param: weights_dtype: precision of weights
+        :param: activation_dtype: precision of activations
         """
-        weights_dtype = np.float32 if weights_dtype is None else weights_dtype
-        activation_dtype = np.float32 if activation_dtype is None else activation_dtype
+        weights_dtype = ov.Type.f32 if weights_dtype is None else weights_dtype
+        activation_dtype = ov.Type.f32 if activation_dtype is None else activation_dtype
 
         input_node = opset.parameter([3, 3], dtype=activation_dtype, name="Input_1")
         weights_data = np.eye(3) * 255
@@ -871,15 +871,23 @@ class GatherAndMatmulShareData(OVReferenceModel):
 
 class ScaledDotProductAttentionModel(OVReferenceModel):
     def _create_ov_model(self):
-        query = opset.parameter([1, 1, 1, 64], name="Input_1")
-        key = opset.parameter([1, 1, 1, 64], name="Input_2")
-        value = opset.parameter([1, 1, 1, 64], name="Input_3")
-        attn_mask = opset.parameter([1, 1, 1, 1], name="Input_4")
+        input_ = opset.parameter([1, 1, 1, 64], name="Input_1")
+        attn_mask = opset.parameter([1, 1, 1, 1], name="Input_2")
+        x = opset.reshape(input_, [64], False)
+        x = opset.reshape(x, [1, 1, 1, 64], False)
 
-        attn = opset.scaled_dot_product_attention(query, key, value, attn_mask)
+        # Parallel edges are not supported by PTQ for now.
+        # Ref 148498
+        inputs = []
+        for _ in range(3):
+            x_ = opset.reshape(x, [64], False)
+            x_ = opset.reshape(x_, [1, 1, 1, 64], False)
+            inputs.append(x_)
+
+        attn = opset.scaled_dot_product_attention(*inputs, attn_mask)
         result = opset.result(attn, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
-        model = ov.Model([result], [query, key, value, attn_mask])
+        model = ov.Model([result], [input_, attn_mask])
         return model
 
 
@@ -925,7 +933,8 @@ class AWQMatmulModel(OVReferenceModel):
     Model for testing AWQ algorithm. Contains MatMul->Multiply->MatMul pattern.
     """
 
-    def _get_weights(self, weights_data, is_int8, name):
+    @staticmethod
+    def get_weights(weights_data, is_int8, name):
         if not is_int8:
             return opset.constant(weights_data, dtype=np.float32, name=name)
         else:
@@ -945,39 +954,83 @@ class AWQMatmulModel(OVReferenceModel):
 
         weights_data1 = np.arange(0, 64).reshape(8, 8)
         weights_data1[:] = 2.0
-        weights1 = self._get_weights(weights_data1, is_int8, name="weights_1")
+        weights1 = self.get_weights(weights_data1, is_int8, name="weights_1")
         node1 = opset.matmul(input_node, weights1, transpose_a=False, transpose_b=True, name="MatMul_1")
 
         weights_data2 = np.arange(0, 64).reshape(8, 8)
         weights_data2[:] = 3.0
-        weights2 = self._get_weights(weights_data2, is_int8, name="weights_2")
+        weights2 = self.get_weights(weights_data2, is_int8, name="weights_2")
         node2 = opset.matmul(input_node, weights2, transpose_a=False, transpose_b=True, name="MatMul_2")
 
         node_multiply = opset.multiply(node1, node2, name="Multiply")
 
         weights_data3 = np.arange(0, 64).reshape(8, 8)
         weights_data3[:] = 4.0
-        weights3 = self._get_weights(weights_data3, is_int8, name="weights_3")
+        weights3 = self.get_weights(weights_data3, is_int8, name="weights_3")
         node3 = opset.matmul(node_multiply, weights3, transpose_a=False, transpose_b=True, name="MatMul_3")
 
         weights_data4 = np.arange(0, 64).reshape(8, 8)
         weights_data4[:] = 2.0
-        weights4 = self._get_weights(weights_data4, is_int8, name="weights_4")
+        weights4 = self.get_weights(weights_data4, is_int8, name="weights_4")
         node4 = opset.matmul(node3, weights4, transpose_a=False, transpose_b=True, name="MatMul_4")
 
         weights_data5 = np.arange(0, 64).reshape(8, 8)
         weights_data5[:] = 3.0
-        weights5 = self._get_weights(weights_data5, is_int8, name="weights_5")
+        weights5 = self.get_weights(weights_data5, is_int8, name="weights_5")
         node5 = opset.matmul(node3, weights5, transpose_a=False, transpose_b=True, name="MatMul_5")
 
         node_multiply_2 = opset.multiply(node4, node5, name="Multiply_2")
 
         weights_data6 = np.arange(0, 64).reshape(8, 8)
         weights_data6[:] = 4.0
-        weights6 = self._get_weights(weights_data6, is_int8, name="weights_6")
+        weights6 = self.get_weights(weights_data6, is_int8, name="weights_6")
         node6 = opset.matmul(node_multiply_2, weights6, transpose_a=False, transpose_b=True, name="MatMul_6")
 
         result = opset.result(node6, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input_node])
+        return model
+
+
+class AWQActMatmulModel(OVReferenceModel):
+    """
+    Model for testing AWQ algorithm. Contains MatMul->Multiply->MatMul pattern.
+    """
+
+    def _create_ov_model(self, is_int8=False, with_multiply=False, n_layers=8):
+        input_node = opset.parameter([8, 8], name="Input_1")
+        weights_data = np.arange(0, 64).reshape(8, 8) - 32
+        weights = AWQMatmulModel.get_weights(weights_data, is_int8, name="weights_emb")
+        out_node = opset.matmul(input_node, weights, transpose_a=False, transpose_b=True, name="MatMul_emb")
+
+        for i in range(n_layers):
+            weights_data = np.arange(0, 64).reshape(8, 8) - 32
+            weights = AWQMatmulModel.get_weights(weights_data, is_int8, name=f"weights_1_{i}")
+            mm1 = opset.matmul(out_node, weights, transpose_a=False, transpose_b=True, name=f"MatMul_1_{i}")
+            node1 = opset.relu(mm1, name=f"ReLU_{i}")
+
+            if with_multiply:
+                weights_data = np.arange(0, 64).reshape(8, 8) - 32
+                weights = AWQMatmulModel.get_weights(weights_data, is_int8, name=f"weights_2_{i}")
+                mm2 = opset.matmul(out_node, weights, transpose_a=False, transpose_b=True, name=f"MatMul_2_{i}")
+
+                alpha = np.array([1.5], dtype=np.float32)
+                alpha = opset.constant(alpha, dtype=np.float32)
+                lambda_value = np.array([1.5], dtype=np.float32)
+                lambda_value = opset.constant(alpha, dtype=np.float32)
+                node2 = opset.selu(mm2, alpha, lambda_value, name=f"SeLU_{i}")
+
+                node_multiply = opset.multiply(node1, node2, name=f"Multiply_{i}")
+            else:
+                node_multiply = node1
+
+            out_node = node_multiply
+
+        weights_data = np.arange(0, 64).reshape(8, 8) - 32
+        weights = AWQMatmulModel.get_weights(weights_data, is_int8, name="weights_lm_head")
+        out_node = opset.matmul(out_node, weights, transpose_a=False, transpose_b=True, name="MatMul_lm_head")
+
+        result = opset.result(out_node, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_node])
         return model
@@ -1043,14 +1096,46 @@ class StatefulModel(OVReferenceModel):
             rv = opset.read_value(init_val, "var_id_667", data_type, input_shape)
             add = opset.add(rv, input_data, name="MemoryAdd")
             node = opset.assign(add, "var_id_667")
-            result = opset.result(add, name="Result")
+            scale_val = opset.constant(np.ones(input_shape), data_type)
+            scale = opset.multiply(add, scale_val, name="Scale")
+            result = opset.result(scale, name="Result")
             result.get_output_tensor(0).set_names(set(["Result"]))
             model = ov.Model(results=[result], sinks=[node], parameters=[input_data], name="TestModel")
         else:
             bias = opset.constant(init_val, data_type)
             add = opset.add(input_data, bias, name="Add")
-            result = opset.result(add, name="Result")
+            scale_val = opset.constant(np.ones(input_shape), data_type)
+            scale = opset.multiply(add, scale_val, name="Scale")
+            result = opset.result(scale, name="Result")
             result.get_output_tensor(0).set_names(set(["Result"]))
             model = ov.Model(results=[result], parameters=[input_data], name="TestModel")
 
+        return model
+
+
+class IfModel_2(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 3, 4, 2], name="Input_1")
+        input_2 = opset.parameter([], dtype=bool, name="Cond_input")
+
+        then_body = ConvNotBiasModel().ov_model
+        else_body = FPModel().ov_model
+
+        if_node = opset.if_op(input_2)
+        if_node.set_then_body(then_body)
+        if_node.set_else_body(else_body)
+        if_node.set_input(input_1.outputs()[0], then_body.get_parameters()[0], else_body.get_parameters()[0])
+        if_node.set_output(then_body.results[0], else_body.results[0])
+        result = opset.result(if_node, name="Result")
+        model = ov.Model([result], [input_1, input_2])
+        return model
+
+
+class PreluModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input = opset.parameter([1, 3, 4, 2], name="Input")
+        prelu = opset.prelu(input, slope=1)
+        result = opset.result(prelu, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input])
         return model

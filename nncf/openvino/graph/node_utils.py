@@ -26,7 +26,8 @@ from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.layout import get_conv_weights_layout
 from nncf.openvino.graph.layout import get_conv_weights_layout_from_node
-from nncf.openvino.graph.layout import get_linear_weights_layout
+from nncf.openvino.graph.layout import get_linear_activations_layout_from_node
+from nncf.openvino.graph.layout import get_linear_input_layout
 from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
 from nncf.openvino.graph.metatypes.groups import CONV_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS
@@ -42,6 +43,22 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
+
+
+def get_add_bias_node(node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
+    """
+    Returns Add node which stores bias for node.
+
+    :param node: NNCFGraph node.
+    :param nncf_graph: NNCFGraph.
+    :return: Add node if exists.
+    """
+    for child in nncf_graph.get_next_nodes(node):
+        if child.metatype == OVAddMetatype:
+            bias_constant = get_node_with_bias_value(child, nncf_graph)
+            if bias_constant is not None:
+                return child
+    return None
 
 
 def is_node_with_bias(
@@ -63,12 +80,12 @@ def is_node_with_bias(
     if node.metatype not in metatypes_with_bias:
         return False
 
-    add_node = nncf_graph.get_next_nodes(node)[0]
-    if add_node.metatype != OVAddMetatype:
+    # Since we do not verify bias constant shape, we need to verify the weight's existence at least.
+    # layer_attributes adds only for nodes with weights, according to the nncf_graph_builder.py for the backend.
+    if node.layer_attributes is None:
         return False
 
-    bias_constant = get_node_with_bias_value(add_node, nncf_graph)
-    return bias_constant is not None
+    return get_add_bias_node(node, nncf_graph) is not None
 
 
 def get_number_if_op(model: ov.Model) -> int:
@@ -93,10 +110,14 @@ def get_number_if_op(model: ov.Model) -> int:
 def get_const_value(const_node: ov.Node) -> np.ndarray:
     """
     Returns the constant tensor for the node.
+    This method is applicable only for the floating-point constant data.
 
     :param const_node: OpenVINO node.
     :return: The constant value.
     """
+    if const_node.get_element_type() == ov.Type.bf16:
+        # Fixed FP32 data type as the result for BF16 constant
+        return const_node.get_data(dtype=np.float32)
     return const_node.data
 
 
@@ -110,9 +131,7 @@ def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Mo
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
     ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
-
-    add_node = nncf_graph.get_next_nodes(node_with_bias)[0]
-    bias_constant = get_node_with_bias_value(add_node, nncf_graph)
+    bias_constant = get_node_with_bias_value(get_add_bias_node(node_with_bias, nncf_graph), nncf_graph)
     ov_bias_constant = ops_dict[bias_constant.node_name]
     return get_const_value(ov_bias_constant)
 
@@ -148,10 +167,10 @@ def get_node_with_bias_value(add_node: NNCFNode, nncf_graph: NNCFGraph) -> Optio
     const_port_ids = add_node.layer_attributes.get_const_port_ids()
     assert len(const_port_ids) == 1
     bias_port_id = const_port_ids[0]
-    bias_constant = nncf_graph.get_input_edges(add_node)[bias_port_id].from_node
+    bias_constant = nncf_graph.get_input_edge_by_port_id(add_node, bias_port_id).from_node
 
     if bias_constant.metatype == OVConvertMetatype:
-        bias_constant = nncf_graph.get_input_edges(bias_constant)[0].from_node
+        bias_constant = nncf_graph.get_input_edge_by_port_id(bias_constant, 0).from_node
 
     return bias_constant if bias_constant.metatype == OVConstantMetatype else None
 
@@ -353,7 +372,7 @@ def get_weight_channel_axes(node: NNCFNode) -> List[int]:
     """
     Returns axes numbers of the weight tensor which correspond to its channels.
 
-    :param node: NNCCFNode with weights.
+    :param node: NNCFNode with weights.
     :param weights_port_id: Weight port id of the target node.
     :return: Axes numbers of the weight tensor which correspond to its channels.
     """
@@ -399,7 +418,7 @@ def get_weighted_layer_attributes(
     ov_node: ov.Node, ov_metatype: OVOpMetatype, constant_attributes: Dict[int, Any]
 ) -> WeightedLayerAttributes:
     """
-    Funciton retrieves common layer attributes from the given node.
+    Function retrieves common layer attributes from the given node.
 
     :param ov_node: TargetOpenvino graph node instance.
     :param ov_metatype: NNCF Openvino metatype of the given node.
@@ -429,26 +448,50 @@ def get_weighted_layer_attributes(
                 "kernel_size": tuple(
                     dim for dim, elem in zip(weights_shape, weights_layout) if elem == OVLayoutElem.SPATIAL
                 ),
-                "groups": weights_shape[weights_layout.index(OVLayoutElem.GROUPS)]
-                if OVLayoutElem.GROUPS in weights_layout
-                else 1,
+                "groups": (
+                    weights_shape[weights_layout.index(OVLayoutElem.GROUPS)]
+                    if OVLayoutElem.GROUPS in weights_layout
+                    else 1
+                ),
             }
         )
 
         return ConvolutionLayerAttributes(**kwargs)
     if ov_metatype == OVMatMulMetatype:
         weights_shape = attrs["shape"]
-        weights_layout = get_linear_weights_layout(
-            weights_shape=weights_shape, transpose=attrs["transpose"], port_id=port_id
+        weights_layout = get_linear_input_layout(
+            input_shape=weights_shape, transpose=attrs["transpose"], port_id=port_id
         )
 
         kwargs = {
             "weight_requires_grad": False,
             "in_features": weights_shape[weights_layout.index(OVLayoutElem.C_IN)],
-            "out_features": weights_shape[weights_layout.index(OVLayoutElem.C_OUT)]
-            if OVLayoutElem.C_OUT in weights_layout
-            else None,
+            "out_features": (
+                weights_shape[weights_layout.index(OVLayoutElem.C_OUT)]
+                if OVLayoutElem.C_OUT in weights_layout
+                else None
+            ),
             "with_bias": False,
         }
         return LinearLayerAttributes(**kwargs)
     return GenericWeightedLayerAttributes(weight_requires_grad=False, weight_shape=attrs.get("shape", None))
+
+
+def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
+    """
+    Returns axis number of the activation tensor which correspond to it channel.
+
+    :param node: NNCFNode instance.
+    :param port_id: Port ID for input.
+    :param input_shape: Shape of the input.
+    :return: Channel axis number.
+    """
+    # In case of the OpenVINO, [N, C, ..] layout applicable for most quantizable layers.
+    channel_axis = 1
+
+    # But the MatMul layers may transpose inputs internally.
+    if node.metatype == OVMatMulMetatype:
+        activations_layout = get_linear_activations_layout_from_node(node, port_id, input_shape)
+        channel_axis = activations_layout.index(OVLayoutElem.C_IN)
+
+    return channel_axis

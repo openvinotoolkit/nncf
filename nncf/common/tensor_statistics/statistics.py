@@ -14,6 +14,9 @@ from abc import abstractmethod
 from collections import Counter
 from typing import TypeVar
 
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
+
 TensorType = TypeVar("TensorType")
 
 
@@ -23,9 +26,8 @@ class TensorStatistic(ABC):
     TENSOR_STATISTIC_OUTPUT_KEY = "tensor_statistic_output"
 
     @staticmethod
-    @abstractmethod
-    def tensor_eq(tensor1: TensorType, tensor2: TensorType, rtol=1e-6) -> bool:
-        pass
+    def tensor_eq(tensor1: Tensor, tensor2: Tensor, rtol=1e-6) -> bool:
+        return fns.allclose(tensor1, tensor2)
 
     @abstractmethod
     def __eq__(self, other):

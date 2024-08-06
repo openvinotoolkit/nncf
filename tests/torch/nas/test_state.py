@@ -37,7 +37,7 @@ from tests.torch.nas.test_elastic_width import TwoConvAddConvTestModel
 from tests.torch.nas.test_elastic_width import TwoSequentialConvBNTestModel
 
 
-@pytest.yield_fixture()
+@pytest.fixture
 def _nncf_caplog(caplog):
     nncf_logger.propagate = True
     yield caplog

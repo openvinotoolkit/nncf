@@ -476,6 +476,24 @@ class EmptyModel(nn.Module):
         return None
 
 
+class ModelWithReloadedForward(nn.Module):
+    """
+    Model accepts tensor or a dict in format
+    {"tensor": input_tensor}
+    """
+
+    INPUT_SHAPE = [1, 1]
+
+    def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(1, 1)
+
+    def forward(self, x):
+        if isinstance(x, dict):
+            self.forward(x["tensor"])
+        return self.linear(x)
+
+
 def check_correct_nncf_modules_replacement(
     model: torch.nn.Module, compressed_model: NNCFNetwork
 ) -> Tuple[Dict[Scope, Module], Dict[Scope, Module]]:

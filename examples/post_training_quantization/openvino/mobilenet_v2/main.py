@@ -43,7 +43,7 @@ def validate(model: ov.Model, val_loader: torch.utils.data.DataLoader) -> float:
     predictions = []
     references = []
 
-    compiled_model = ov.compile_model(model)
+    compiled_model = ov.compile_model(model, device_name="CPU")
     output = compiled_model.outputs[0]
 
     for images, target in tqdm(val_loader):
@@ -142,7 +142,7 @@ print(f"[1/7] Save FP32 model: {fp32_ir_path}")
 fp32_model_size = get_model_size(fp32_ir_path, verbose=True)
 
 int8_ir_path = ROOT / "mobilenet_v2_int8.xml"
-ov.save_model(ov_quantized_model, int8_ir_path, compress_to_fp16=False)
+ov.save_model(ov_quantized_model, int8_ir_path)
 print(f"[2/7] Save INT8 model: {int8_ir_path}")
 int8_model_size = get_model_size(int8_ir_path, verbose=True)
 

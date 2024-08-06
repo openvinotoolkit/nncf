@@ -8,6 +8,7 @@
 # PR commit is generated.
 
 name: Post-PR merge actions
+permissions: read-all
 
 on:
   pull_request_target:
@@ -15,6 +16,9 @@ on:
       - develop
     types:
       - closed
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**/*'
 
 jobs:
   upload-coverage-common:
@@ -45,5 +49,35 @@ jobs:
       last_sha_in_pr: ${{ github.event.pull_request.head.sha }}
       coverage_artifact_name_in_pr: coverage_openvino
       coverage_flags: OPENVINO
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  upload-coverage-torch-cpu:
+    if: github.event.pull_request.merged == true
+    uses: ./.github/workflows/upload_coverage_for_develop.yml
+    with:
+      merge_commit_sha: ${{ github.event.pull_request.merge_commit_sha }}
+      last_sha_in_pr: ${{ github.event.pull_request.head.sha }}
+      coverage_artifact_name_in_pr: coverage_pt_cpu
+      coverage_flags: TORCH
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  upload-coverage-torch-cuda:
+    if: github.event.pull_request.merged == true
+    uses: ./.github/workflows/upload_coverage_for_develop.yml
+    with:
+      merge_commit_sha: ${{ github.event.pull_request.merge_commit_sha }}
+      last_sha_in_pr: ${{ github.event.pull_request.head.sha }}
+      coverage_artifact_name_in_pr: coverage_pt_cuda
+      coverage_flags: TORCH
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  upload-coverage-tensorflow:
+    if: github.event.pull_request.merged == true
+    uses: ./.github/workflows/upload_coverage_for_develop.yml
+    with:
+      merge_commit_sha: ${{ github.event.pull_request.merge_commit_sha }}
+      last_sha_in_pr: ${{ github.event.pull_request.head.sha }}
+      coverage_artifact_name_in_pr: coverage_tensorflow
+      coverage_flags: TENSORFLOW
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

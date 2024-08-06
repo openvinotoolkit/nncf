@@ -20,8 +20,8 @@ from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.mock_graphs import NodeWithType
-from tests.common.quantization.test_filter_constant_nodes import create_mock_graph
-from tests.common.quantization.test_filter_constant_nodes import get_nncf_graph_from_mock_nx_graph
+from tests.common.quantization.mock_graphs import create_mock_graph
+from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
 
 LINEAR_TYPE = "linear"
 CONV_TYPE = "conv"

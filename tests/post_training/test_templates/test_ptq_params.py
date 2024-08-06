@@ -27,17 +27,18 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
+from nncf.tensor import Tensor
 from tests.common.quantization.metatypes import CatTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import IdentityTestMetatype
@@ -366,7 +367,9 @@ class TemplateTestPTQParams:
         )
         stats = StatisticPointsContainer()
         for idx, tp in enumerate(unified_scales_group):
-            tc = DummyMinMaxTensorCollector(self.get_backend_tensor(idx - 1), self.get_backend_tensor(idx + 2))
+            tc = DummyMinMaxTensorCollector(
+                Tensor(self.get_backend_tensor(idx - 1)), Tensor(self.get_backend_tensor(idx + 2))
+            )
             stats.add_statistic_point(StatisticPoint(tp, tc, algo._algorithm_key))
         algo.apply(model, model.nncf_graph, stats)
         mock_transformer.transform.assert_called_once()
@@ -388,7 +391,7 @@ class TemplateTestPTQParams:
         )
         algo._backend_entity = self.get_algo_backend()
         if validate_scopes:
-            with pytest.raises(nncf.ValidationError, match="Ignored nodes with name"):
+            with pytest.raises(nncf.ValidationError, match="Ignored nodes that matches names"):
                 algo._get_ignored_names(nncf_graph, inference_nncf_graph, ignored_patterns)
         else:
             algo._get_ignored_names(nncf_graph, inference_nncf_graph, ignored_patterns)

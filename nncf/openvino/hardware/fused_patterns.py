@@ -498,6 +498,14 @@ def create_arithmetic_activations() -> GraphPattern:
     return arithmetic
 
 
+@OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.ARITHMETIC_ACTIVATIONS_ARITHMETIC)
+def create_arithmetic_activations_arithmetic() -> GraphPattern:
+    arithmetic_activations = create_arithmetic_activations()
+    arithmetic = arithmetic_operations()
+    arithmetic_activations.join_patterns(arithmetic)
+    return arithmetic_activations
+
+
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.BATCH_NORM_ACTIVATIONS)
 def create_batch_norm_activations() -> GraphPattern:
     batch_norm = batch_normalization_operations()
@@ -658,6 +666,32 @@ def create_linear_biased_activation_scale_shift() -> GraphPattern:
     return linear_biased
 
 
+@OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_BATCH_TO_SPACE_SCALE_SHIFT_ACTIVATIONS)
+def create_linear_batch_to_space_scale_shift_activations() -> GraphPattern:
+    linear = linear_operations()
+    batch_to_space = batch_to_space_operation()
+    scale_shift = create_scale_shift()
+    activations = atomic_activations_operations()
+
+    linear.join_patterns(batch_to_space)
+    linear.join_patterns(scale_shift)
+    linear.join_patterns(activations)
+    return linear
+
+
+@OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_BATCH_TO_SPACE_ARITHMETIC_ACTIVATIONS)
+def create_linear_batch_to_space_arithmetic_activations() -> GraphPattern:
+    linear = linear_operations()
+    batch_to_space = batch_to_space_operation()
+    arithmetic = arithmetic_operations()
+    activations = atomic_activations_operations()
+
+    linear.join_patterns(batch_to_space)
+    linear.join_patterns(arithmetic)
+    linear.join_patterns(activations)
+    return linear
+
+
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ELEMENTWISE)
 def create_linear_elementwise() -> GraphPattern:
     linear = linear_operations()
@@ -737,6 +771,14 @@ def squeeze_operation() -> GraphPattern:
 def unsqueeze_operation() -> GraphPattern:
     pattern = GraphPattern()
     pattern.add_node(**{GraphPattern.LABEL_ATTR: "UNSQUEEZE", GraphPattern.METATYPE_ATTR: om.OVUnsqueezeMetatype})
+    return pattern
+
+
+def batch_to_space_operation() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "BATCH_TO_SPACE", GraphPattern.METATYPE_ATTR: om.OVBatchToSpaceMetatype}
+    )
     return pattern
 
 

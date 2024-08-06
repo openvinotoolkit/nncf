@@ -79,7 +79,7 @@ class TemplateTestQuantizerConfig:
         pass
 
     @dataclass
-    class TestGetStatisticsCollectorParameters:
+    class GetStatisticsCollectorParameters:
         target_type: TargetType
         target_node_name: str
         batchwise_statistics: bool
@@ -89,31 +89,31 @@ class TemplateTestQuantizerConfig:
     @pytest.fixture(
         params=[
             pytest.param(
-                TestGetStatisticsCollectorParameters(TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", True, (2,), (1, 2)),
+                GetStatisticsCollectorParameters(TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", True, (2,), (1, 2)),
             ),
-            TestGetStatisticsCollectorParameters(
+            GetStatisticsCollectorParameters(
                 TargetType.POST_LAYER_OPERATION,
                 "/Conv_1_0",
                 True,
                 (2, 3),
                 (1, 2, 3),
             ),
-            TestGetStatisticsCollectorParameters(
+            GetStatisticsCollectorParameters(
                 TargetType.OPERATION_WITH_WEIGHTS,
                 "/Conv_1_0",
                 True,
                 (1, 2, 3),
                 (0, 1, 2, 3),
             ),
-            TestGetStatisticsCollectorParameters(TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", False, (0, 2), (0, 1, 2)),
-            TestGetStatisticsCollectorParameters(
+            GetStatisticsCollectorParameters(TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", False, (0, 2), (0, 1, 2)),
+            GetStatisticsCollectorParameters(
                 TargetType.POST_LAYER_OPERATION,
                 "/Conv_1_0",
                 False,
                 (0, 2, 3),
                 (0, 1, 2, 3),
             ),
-            TestGetStatisticsCollectorParameters(
+            GetStatisticsCollectorParameters(
                 TargetType.OPERATION_WITH_WEIGHTS,
                 "/Conv_1_0",
                 False,
@@ -122,7 +122,7 @@ class TemplateTestQuantizerConfig:
             ),
         ]
     )
-    def statistic_collector_parameters(self, request) -> TestGetStatisticsCollectorParameters:
+    def statistic_collector_parameters(self, request) -> GetStatisticsCollectorParameters:
         return request.param
 
     def test_default_quantizer_config(self, single_conv_nncf_graph):
@@ -263,20 +263,21 @@ class TemplateTestQuantizerConfig:
         q_config_per_channel,
         num_samples,
         conv_sum_aggregation_nncf_graph,
-        statistic_collector_parameters: TestGetStatisticsCollectorParameters,
+        statistic_collector_parameters: GetStatisticsCollectorParameters,
     ):
         params = statistic_collector_parameters
         min_max_algo = MinMaxQuantization(
             subset_size=num_samples, activations_range_estimator_params=range_estimator_params
         )
         min_max_algo._backend_entity = self.get_algo_backend()
+        min_max_algo._init_cache()
         q_config = QuantizerConfig(num_bits=8, mode=q_config_mode, per_channel=q_config_per_channel)
 
         if params.target_type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
             port_id = None if TargetType.POST_LAYER_OPERATION else 0
             ip = ActivationQuantizationInsertionPoint(params.target_node_name, port_id)
             qp = SingleConfigQuantizationPoint(ip, q_config, [params.target_node_name])
-            min_max_algo._add_activation_quantization_target_point(qp)
+            min_max_algo._add_activation_quantization_target_point(qp, conv_sum_aggregation_nncf_graph.nncf_graph)
         else:
             ip = WeightQuantizationInsertionPoint(params.target_node_name)
             qp = SingleConfigQuantizationPoint(ip, q_config, [params.target_node_name])

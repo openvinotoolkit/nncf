@@ -452,15 +452,20 @@ def test_compressed_model_has_controller_references(algos: List[str]):
 ALGOS_SUPPORTING_SINGLE_LINE_CONFIGS = [
     x
     for x in sorted(PT_COMPRESSION_ALGORITHMS.registry_dict.keys())
-    if x not in ["knowledge_distillation", "movement_sparsity", "elasticity", "progressive_shrinking"]
+    if x
+    not in [
+        "knowledge_distillation",
+        "movement_sparsity",
+        "elasticity",
+        "progressive_shrinking",
+        "NoCompressionAlgorithm",
+    ]
 ]
 
 
 @pytest.mark.parametrize("algo_name", ALGOS_SUPPORTING_SINGLE_LINE_CONFIGS)
 def test_can_apply_algo_with_single_line(algo_name, nncf_caplog):
     model = BasicLinearTestModel()
-    if algo_name == "NoCompressionAlgorithm":
-        pytest.skip()
     config = ConfigCreator().add_algo(algo_name).create()
     with nncf_caplog.at_level(logging.INFO):
         create_compressed_model_and_algo_for_test(model, config)

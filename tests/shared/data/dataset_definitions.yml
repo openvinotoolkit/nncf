@@ -1,0 +1,126 @@
+datasets:
+  - name: ms_coco_mask_rcnn_short_80_classes
+    annotation_conversion:
+      converter: mscoco_mask_rcnn
+      annotation_file: annotations/instances_val2017.json
+      has_background: True
+      sort_annotations: True
+    annotation: mscoco_mask_rcnn_80.pickle
+    dataset_meta: mscoco_mask_rcnn_80.json
+    data_source: val2017
+
+  - name: ms_coco_detection_80_class_without_background
+    data_source: val2017
+    annotation_conversion:
+      converter: mscoco_detection
+      annotation_file: annotations/instances_val2017.json
+      has_background: False
+      sort_annotations: True
+      use_full_label_map: False
+    annotation: mscoco_det_80.pickle
+    dataset_meta: mscoco_det_80.json
+
+  - name: ms_coco_detection_80_class_with_background
+    data_source: val2017
+    annotation_conversion:
+      converter: mscoco_detection
+      annotation_file: annotations/instances_val2017.json
+      has_background: True
+      sort_annotations: True
+      use_full_label_map: False
+    annotation: mscoco_det_80_bkgr.pickle
+    dataset_meta: mscoco_det_80_bkgr.json
+
+  - name: ms_coco_detection_90_class_without_background
+    data_source: val2017
+    annotation_conversion:
+      converter: mscoco_detection
+      annotation_file: annotations/instances_val2017.json
+      has_background: False
+      sort_annotations: True
+      use_full_label_map: True
+    annotation:  mscoco_det_90.pickle
+    dataset_meta:  mscoco_det_90.json
+
+  - name: imagenet_1000_classes
+    annotation_conversion:
+      converter: imagenet
+      annotation_file: val.txt
+    annotation: imagenet1000.pickle
+    data_source: ILSVRC2012_img_val
+    metrics:
+      - name: accuracy@top1
+        type: accuracy
+        top_k: 1
+      - name: accuracy@top5
+        type: accuracy
+        top_k: 5
+
+  - name: imagenet_1001_classes
+    annotation_conversion:
+      converter: imagenet
+      annotation_file: val.txt
+      has_background: True
+    annotation: imagenet1001.pickle
+    data_source: ILSVRC2012_img_val
+    metrics:
+      - name: accuracy@top1
+        type: accuracy
+        top_k: 1
+      - name: accuracy@top5
+        type: accuracy
+        top_k: 5
+
+  - name: VOC2012_without_background
+    annotation_conversion:
+      converter: voc_detection
+      annotations_dir: VOCdevkit/VOC2012/Annotations
+      images_dir: VOCdevkit/VOC2012/JPEGImages
+      imageset_file: VOCdevkit/VOC2012/ImageSets/Main/val.txt
+      has_background: False
+    data_source: VOCdevkit/VOC2012/JPEGImages
+    annotation: voc12_without_background.pickle
+    dataset_meta: voc12_without_background.json
+    postprocessing:
+      - type: resize_prediction_boxes
+    metrics:
+      - type: map
+        integral: 11point
+        ignore_difficult: True
+        presenter: print_scalar
+
+  - name: mapillary_vistas
+    data_source: mapillary_vistas/validation/images
+    segmentation_masks_source: mapillary_vistas/validation/labels
+    annotation_conversion:
+      converter: mapillary_vistas
+      data_dir: mapillary_vistas/validation
+    annotation: mapillary_vistas.pickle
+    dataset_meta: mapillary_vistas.json
+
+  - name: CamVid
+    data_source: CamVid
+    annotation_conversion:
+      converter: camvid
+      annotation_file: CamVid/val.txt
+    annotation: camvid.pickle
+    dataset_meta: camvid.json
+
+  - name: cityscapes
+    annotation_conversion:
+      converter: cityscapes
+      dataset_root_dir: Cityscapes/data
+
+    data_source: Cityscapes/data
+    annotation: cityscapes.pickle
+    dataset_meta: cityscapes.json
+
+  - name: VOC2007_detection
+    data_source: VOCdevkit/VOC2007/JPEGImages
+    annotation_conversion:
+      converter: voc_detection
+      annotations_dir: VOCdevkit/VOC2007/Annotations
+      images_dir: VOCdevkit/VOC2007/JPEGImages
+      imageset_file: VOCdevkit/VOC2007/ImageSets/Main/test.txt
+    annotation: voc07.pickle
+    dataset_meta: voc07.json

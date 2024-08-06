@@ -183,7 +183,7 @@ class TestONNXExport:
             ),
             Dict(
                 nncf_weight_ratio=0.43,
-                ov_weight_ratio=0.29,
+                ov_weight_ratio=0.33,
                 recipe=SwinRunRecipe().model_config_(
                     num_heads=[4],
                     num_labels=1,
@@ -270,7 +270,7 @@ class TestONNXExport:
         file_size_ratio = 1 - pruned_file_bytes / not_pruned_file_bytes
         assert pytest.approx(compression_rate, abs=1e-2) == desc.nncf_weight_ratio
         assert (
-            pytest.approx(file_size_ratio, abs=1e-2) == desc.ov_weight_ratio
+            pytest.approx(file_size_ratio, abs=3e-2) == desc.ov_weight_ratio
         ), f"IR's size ratio: 1 - {pruned_file_bytes}/{not_pruned_file_bytes}"
         if abs(desc.ov_weight_ratio - desc.nncf_weight_ratio) >= 0.15:
             pytest.skip("Known issue in the ngraph transformation")

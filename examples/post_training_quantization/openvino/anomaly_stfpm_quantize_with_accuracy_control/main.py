@@ -177,7 +177,7 @@ def run_example():
     # nncf.quantize_with_accuracy_control(...) keeps the most impactful operations within
     # the model in the original precision to achieve the specified model accuracy.
     int8_ir_path = f"{ROOT}/stfpm_int8.xml"
-    ov.save_model(ov_quantized_model, int8_ir_path, compress_to_fp16=False)
+    ov.save_model(ov_quantized_model, int8_ir_path)
     print(f"[2/7] Save INT8 model: {int8_ir_path}")
     int8_size = get_model_size(int8_ir_path, verbose=True)
 
@@ -187,12 +187,12 @@ def run_example():
     int8_fps = run_benchmark(int8_ir_path, shape=[1, 3, 256, 256], verbose=True)
 
     print("[5/7] Validate OpenVINO FP32 model:")
-    compiled_model = ov.compile_model(ov_model)
+    compiled_model = ov.compile_model(ov_model, device_name="CPU")
     fp32_top1, _ = validate(compiled_model, test_loader, validation_params)
     print(f"Accuracy @ top1: {fp32_top1:.3f}")
 
     print("[6/7] Validate OpenVINO INT8 model:")
-    quantized_compiled_model = ov.compile_model(ov_quantized_model)
+    quantized_compiled_model = ov.compile_model(ov_quantized_model, device_name="CPU")
     int8_top1, _ = validate(quantized_compiled_model, test_loader, validation_params)
     print(f"Accuracy @ top1: {int8_top1:.3f}")
 
