@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple, Union, cast
+from typing import Any, Deque, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
 
@@ -319,7 +319,7 @@ class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
 
     def _prepare_statistics(self) -> Tuple[np.typing.NDArray[Any], np.typing.NDArray[Any]]:
         per_channel_history = get_per_channel_history(
-            self._samples, list(cast(Iterable[int], self._reduction_shape)), discard_zeros=True
+            self._samples, cast(List[int], self._reduction_shape), discard_zeros=True
         )
         per_channel_median = [np.median(channel_hist) for channel_hist in per_channel_history]
         per_channel_mad = []
@@ -346,7 +346,7 @@ class PercentileStatisticCollector(OfflineTensorStatisticCollector):
         self._percentiles_to_collect = percentiles_to_collect
 
     def _prepare_statistics(self) -> Dict[Any, Any]:
-        per_channel_history = get_per_channel_history(self._samples, list(cast(Iterable[int], self._reduction_shape)))
+        per_channel_history = get_per_channel_history(self._samples, cast(List[int], self._reduction_shape))
         percentile_vs_values_dict = {}
         for pc in self._percentiles_to_collect:
             per_channel_percentiles = [np.percentile(channel_hist, pc) for channel_hist in per_channel_history]
