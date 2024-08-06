@@ -103,7 +103,7 @@ class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
         self, reduction_shape: Optional[ReductionAxes] = None, num_samples: int = None, window_size: int = None
     ):
         super().__init__(reduction_shape, num_samples)
-        self._samples: Deque[Union[int, None]] = deque(maxlen=window_size)
+        self._samples: Deque[int] = deque(maxlen=window_size)
 
     def _reset(self) -> None:
         self._samples.clear()
