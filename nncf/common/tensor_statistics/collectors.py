@@ -299,7 +299,7 @@ class RawStatisticCollector(OfflineTensorStatisticCollector):
             the number of samples that will be processed.
         """
         super().__init__(num_samples=num_samples)
-        self._all_values: List[Union[int, None]] = []
+        self._all_values: List[int] = []
 
     @staticmethod
     @abstractmethod
