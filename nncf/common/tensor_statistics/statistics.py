@@ -94,7 +94,7 @@ class PercentileTensorStatistic(TensorStatistic):
 
     def __eq__(self, other: object, rtol: float = 1e-9) -> Any:
         if not isinstance(other, PercentileTensorStatistic):
-            return NotImplemented
+            return False
         if Counter(self.percentile_vs_values_dict.keys()) != Counter(other.percentile_vs_values_dict.keys()):
             return False
         for pct in self.percentile_vs_values_dict:
