@@ -165,8 +165,8 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
         self._use_abs_max = use_abs_max
         self._tensor_processor = self._get_processor()
 
-        self._all_min_values: Deque[Union[int, None]] = deque(maxlen=window_size)
-        self._all_max_values: Deque[Union[int, None]] = deque(maxlen=window_size)
+        self._all_min_values: Deque[int] = deque(maxlen=window_size)
+        self._all_max_values: Deque[int] = deque(maxlen=window_size)
 
     @staticmethod
     @abstractmethod
