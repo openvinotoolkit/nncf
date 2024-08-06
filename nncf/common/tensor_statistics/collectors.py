@@ -260,8 +260,8 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         super().__init__(num_samples=num_samples)
         self._channel_axis = channel_axis
         self._tensor_processor = self._get_processor()
-        self._all_values: Deque[Union[int, None]] = deque(maxlen=window_size)
-        self._all_shapes: Deque[Union[int, None]] = deque(maxlen=window_size)
+        self._all_values: Deque[int] = deque(maxlen=window_size)
+        self._all_shapes: Deque[int] = deque(maxlen=window_size)
 
     @staticmethod
     @abstractmethod
