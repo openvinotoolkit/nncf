@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import UserDict
-from typing import Any, Callable, Generator, Optional, Tuple
+from typing import Any, Callable, Generator, List, Optional, Tuple
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.tensor import NNCFTensor
@@ -41,7 +41,7 @@ class StatisticPoint:
                 tensor_collector.register_input(x)
 
 
-class StatisticPointsContainer(UserDict[Any, Any]):
+class StatisticPointsContainer(UserDict[str, List[StatisticPoint]]):
     """
     Container with iteration interface for handling a composition of StatisticPoint.
     """
