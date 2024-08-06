@@ -12,7 +12,6 @@
 from typing import Any, Deque, List, Tuple
 
 import numpy as np
-from numpy import typing as npt
 
 
 def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
@@ -25,7 +24,7 @@ def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
     return channel_count, channel_dim_idx
 
 
-def split_into_channels(input_: npt.NDArray[Any], scale_shape: List[int]) -> List[npt.NDArray[Any]]:
+def split_into_channels(input_: np.typing.NDArray[Any], scale_shape: List[int]) -> List[np.typing.NDArray[Any]]:
     channel_count, channel_dim_idx = get_channel_count_and_dim_idx(scale_shape)
     channel_first_tensor = np.moveaxis(input_, channel_dim_idx, 0)
     if channel_count == 1:
@@ -61,7 +60,9 @@ def get_per_channel_history(
     return per_channel_history
 
 
-def np_percentile_reduce_like(input_: npt.NDArray[Any], ref_tensor_shape: Tuple[int], q: float) -> npt.NDArray[Any]:
+def np_percentile_reduce_like(
+    input_: np.typing.NDArray[Any], ref_tensor_shape: Tuple[int], q: float
+) -> np.typing.NDArray[Any]:
     numel = np.prod(ref_tensor_shape)
     if numel == 1:
         return np.array([np.percentile(input_, q)])
