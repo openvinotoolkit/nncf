@@ -42,9 +42,9 @@ class MinMaxTensorStatistic(TensorStatistic):
         self.min_values = min_values
         self.max_values = max_values
 
-    def __eq__(self, other: object) -> Any:
+    def __eq__(self, other: Any) -> Any:
         if not isinstance(other, MinMaxTensorStatistic):
-            return NotImplemented
+            return False
         return self.tensor_eq(self.min_values, other.min_values) and self.tensor_eq(self.max_values, other.max_values)
 
 
@@ -64,9 +64,9 @@ class MeanTensorStatistic(TensorStatistic):
         self.mean_values = mean_values
         self.shape = shape
 
-    def __eq__(self, other: object) -> Any:
+    def __eq__(self, other: Any) -> Any:
         if not isinstance(other, MeanTensorStatistic):
-            return NotImplemented
+            return False
         return self.tensor_eq(self.mean_values, other.mean_values) and self.tensor_eq(self.shape, other.shape)
 
 
@@ -78,7 +78,7 @@ class MedianMADTensorStatistic(TensorStatistic):
         self.median_values = median_values
         self.mad_values = mad_values
 
-    def __eq__(self, other: object) -> Any:
+    def __eq__(self, other: Any) -> Any:
         if not isinstance(other, MedianMADTensorStatistic):
             return False
         return self.tensor_eq(self.median_values, other.median_values) and self.tensor_eq(
@@ -92,7 +92,7 @@ class PercentileTensorStatistic(TensorStatistic):
     def __init__(self, percentile_vs_values_dict: Dict[Any, Any]):
         self.percentile_vs_values_dict = percentile_vs_values_dict
 
-    def __eq__(self, other: object, rtol: float = 1e-9) -> Any:
+    def __eq__(self, other: Any, rtol: float = 1e-9) -> Any:
         if not isinstance(other, PercentileTensorStatistic):
             return False
         if Counter(self.percentile_vs_values_dict.keys()) != Counter(other.percentile_vs_values_dict.keys()):
@@ -116,7 +116,7 @@ class RawTensorStatistic(TensorStatistic):
         """
         self.values = values
 
-    def __eq__(self, other: object) -> Any:
+    def __eq__(self, other: Any) -> Any:
         if not isinstance(other, RawTensorStatistic):
             return False
         return self.tensor_eq(self.values, other.values)
