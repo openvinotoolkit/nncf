@@ -26,6 +26,8 @@ torchvision/resnet18_backend_FP32:
   metric_value: 0.6978
 torchvision/resnet18_backend_OV:
   metric_value: 0.6948
+torchvision/resnet18_backend_ONNX:
+  metric_value: 0.6948
 torchvision/resnet18_backend_TORCH:
   metric_value: 0.69152
 torchvision/resnet18_backend_CUDA_TORCH:
@@ -190,16 +192,6 @@ timm/resnest14d_backend_OV:
   metric_value: 0.75
 timm/resnest14d_backend_TORCH:
   metric_value: 0.7485
-timm/resnet18_backend_CUDA_TORCH:
-  metric_value: 0.69748
-timm/resnet18_backend_FP32:
-  metric_value: 0.71502
-timm/resnet18_backend_ONNX:
-  metric_value: 0.71102
-timm/resnet18_backend_OV:
-  metric_value: 0.71116
-timm/resnet18_backend_TORCH:
-  metric_value: 0.70982
 timm/swin_base_patch4_window7_224_backend_FP32:
   metric_value: 0.85274
 timm/swin_base_patch4_window7_224_backend_OV:

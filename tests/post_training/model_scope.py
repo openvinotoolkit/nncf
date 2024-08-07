@@ -66,14 +66,14 @@ QUANTIZATION_MODELS = [
         },
         "backends": [BackendType.TORCH, BackendType.OV, BackendType.OPTIMUM],
     },
-    # Torchvision
+    # Torchvision models
     {
         "reported_name": "torchvision/resnet18",
         "model_id": "resnet18",
         "pipeline_cls": ImageClassificationTorchvision,
         "compression_params": {},
-        "backends": [BackendType.FX_TORCH, BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.OV],
-        "batch_size": 1,
+        "backends": [BackendType.FX_TORCH, BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.OV, BackendType.ONNX],
+        "batch_size": 128,
     },
     # Timm models
     {
@@ -253,14 +253,6 @@ QUANTIZATION_MODELS = [
         "compression_params": {
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": ALL_PTQ_BACKENDS,
-        "batch_size": 128,
-    },
-    {
-        "reported_name": "timm/resnet18",
-        "model_id": "resnet18",
-        "pipeline_cls": ImageClassificationTimm,
-        "compression_params": {},
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
     },

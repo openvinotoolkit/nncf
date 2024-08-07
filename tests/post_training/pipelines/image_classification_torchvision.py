@@ -9,27 +9,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
-import os
-
 import numpy as np
+import onnx
 import openvino as ov
 import torch
-from sklearn.metrics import accuracy_score
 from torch._export import capture_pre_autograd_graph
-from torchvision import datasets
 from torchvision import models
 
-import nncf
-from nncf.common.logging.track_progress import track
 from nncf.torch import disable_patching
-from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
-from tests.post_training.pipelines.base import PTQTestPipeline
+from tests.post_training.pipelines.image_classification_base import ImageClassificationBase
 
 
-class ImageClassificationTorchvision(PTQTestPipeline):
+class ImageClassificationTorchvision(ImageClassificationBase):
     """Pipeline for Image Classification model from torchvision repository"""
 
     models_vs_imagenet_weights = {
@@ -45,26 +38,37 @@ class ImageClassificationTorchvision(PTQTestPipeline):
         self.input_name: str = None
 
     def prepare_model(self) -> None:
-        if self.backend not in [BackendType.FP32, BackendType.FX_TORCH, BackendType.OV] + PT_BACKENDS:
-            raise RuntimeError(
-                f"Torchvision classification models does not support quantization for {self.backend} backend."
-            )
-
         model_cls = models.__dict__.get(self.model_id)
         self.model_weights = self.models_vs_imagenet_weights[model_cls]
         model = model_cls(weights=self.model_weights)
         model.eval()
 
-        self.input_size = [self.batch_size, 3, 224, 224]
-        self.dummy_tensor = torch.rand(self.input_size)
+        self.static_input_size = [self.batch_size, 3, 224, 224]
+        self.input_size = self.static_input_size.copy()
+        if self.batch_size > 1:  # Dynamic batch_size shape export
+            self.input_size[0] = -1
+
+        self.dummy_tensor = torch.rand(self.static_input_size)
 
         if self.backend == BackendType.FX_TORCH:
             with torch.no_grad():
                 with disable_patching():
-                    self.model = capture_pre_autograd_graph(model, (torch.ones(self.input_size),))
+                    self.model = capture_pre_autograd_graph(model, (self.dummy_tensor,))
 
         elif self.backend in PT_BACKENDS:
             self.model = model
+
+        if self.backend == BackendType.ONNX:
+            onnx_path = self.fp32_model_dir / "model_fp32.onnx"
+            additional_kwargs = {}
+            if self.batch_size > 1:
+                additional_kwargs["input_names"] = ["image"]
+                additional_kwargs["dynamic_axes"] = {"image": {0: "batch"}}
+            torch.onnx.export(
+                model, self.dummy_tensor, onnx_path, export_params=True, opset_version=13, **additional_kwargs
+            )
+            self.model = onnx.load(onnx_path)
+            self.input_name = self.model.graph.input[0].name
 
         elif self.backend in [BackendType.OV, BackendType.FP32]:
             with torch.no_grad():
@@ -115,55 +119,3 @@ class ImageClassificationTorchvision(PTQTestPipeline):
                 return {self.input_name: np.array(images, dtype=np.float32)}
 
         return transform_fn
-
-    def prepare_calibration_dataset(self):
-        dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
-        loader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, num_workers=2, shuffle=False)
-
-        self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
-
-    def _validate(self):
-        val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=2, shuffle=False)
-
-        dataset_size = len(val_loader)
-
-        # Initialize result tensors for async inference support.
-        predictions = np.zeros((dataset_size))
-        references = -1 * np.ones((dataset_size))
-
-        core = ov.Core()
-
-        if os.environ.get("INFERENCE_NUM_THREADS"):
-            # Set CPU_THREADS_NUM for OpenVINO inference
-            inference_num_threads = os.environ.get("INFERENCE_NUM_THREADS")
-            core.set_property("CPU", properties={"INFERENCE_NUM_THREADS": str(inference_num_threads)})
-
-        ov_model = core.read_model(self.path_compressed_ir)
-        compiled_model = core.compile_model(ov_model, device_name="CPU")
-
-        jobs = int(os.environ.get("NUM_VAL_THREADS", DEFAULT_VAL_THREADS))
-        infer_queue = ov.AsyncInferQueue(compiled_model, jobs)
-
-        with track(total=dataset_size, description="Validation") as pbar:
-
-            def process_result(request, userdata):
-                output_data = request.get_output_tensor().data
-                predicted_label = np.argmax(output_data, axis=1)
-                predictions[userdata] = predicted_label
-                pbar.progress.update(pbar.task, advance=1)
-
-            infer_queue.set_callback(process_result)
-
-            for i, (images, target) in enumerate(val_loader):
-                # W/A for memory leaks when using torch DataLoader and OpenVINO
-                image_copies = copy.deepcopy(images.numpy())
-                infer_queue.start_async(image_copies, userdata=i)
-                references[i] = target
-
-            infer_queue.wait_all()
-
-        acc_top1 = accuracy_score(predictions, references)
-
-        self.run_info.metric_name = "Acc@1"
-        self.run_info.metric_value = acc_top1
