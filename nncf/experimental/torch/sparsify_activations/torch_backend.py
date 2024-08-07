@@ -197,3 +197,6 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
         if len(activation_ports) != 1:
             raise nncf.InternalError(f'Cannot find activation port for node "{node}".')
         return activation_ports[0]
+
+    def do_sparsification(self, model, graph, target_sparsity_by_node, dataset):
+        raise NotImplementedError

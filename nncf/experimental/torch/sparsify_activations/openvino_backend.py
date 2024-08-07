@@ -137,6 +137,7 @@ class OVSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
 
     @staticmethod
     def _get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
+        return 0
         constant_ports = node.layer_attributes.get_const_port_ids()
         activation_ports = [
             e.input_port_id for e in nncf_graph.get_input_edges(node) if e.input_port_id not in constant_ports
