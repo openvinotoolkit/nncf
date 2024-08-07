@@ -12,34 +12,51 @@
 import numpy as np
 import onnx
 import openvino as ov
-import timm
 import torch
-from timm.data.transforms_factory import transforms_imagenet_eval
-from timm.layers.config import set_fused_attn
+from torch._export import capture_pre_autograd_graph
+from torchvision import models
 
-from tests.post_training.pipelines.base import OV_BACKENDS
+from nncf.torch import disable_patching
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.image_classification_base import ImageClassificationBase
 
-# Disable using aten::scaled_dot_product_attention
-set_fused_attn(False, False)
 
+class ImageClassificationTorchvision(ImageClassificationBase):
+    """Pipeline for Image Classification model from torchvision repository"""
 
-class ImageClassificationTimm(ImageClassificationBase):
-    """Pipeline for Image Classification model from timm repository"""
+    models_vs_imagenet_weights = {
+        models.resnet18: models.ResNet18_Weights.DEFAULT,
+        models.mobilenet_v3_small: models.MobileNet_V3_Small_Weights.DEFAULT,
+        models.vit_b_16: models.ViT_B_16_Weights.DEFAULT,
+        models.swin_v2_s: models.Swin_V2_S_Weights.DEFAULT,
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.model_weights: models.WeightsEnum = None
+        self.input_name: str = None
 
     def prepare_model(self) -> None:
-        timm_model = timm.create_model(self.model_id, num_classes=1000, in_chans=3, pretrained=True, checkpoint_path="")
-        timm_model.eval()
-        self.model_cfg = timm_model.default_cfg
-        self.input_size = [self.batch_size] + list(timm_model.default_cfg["input_size"])
-        self.dummy_tensor = torch.rand(self.input_size)
+        model_cls = models.__dict__.get(self.model_id)
+        self.model_weights = self.models_vs_imagenet_weights[model_cls]
+        model = model_cls(weights=self.model_weights)
+        model.eval()
+
+        self.static_input_size = [self.batch_size, 3, 224, 224]
+        self.input_size = self.static_input_size.copy()
         if self.batch_size > 1:  # Dynamic batch_size shape export
             self.input_size[0] = -1
 
-        if self.backend in PT_BACKENDS:
-            self.model = timm_model
+        self.dummy_tensor = torch.rand(self.static_input_size)
+
+        if self.backend == BackendType.FX_TORCH:
+            with torch.no_grad():
+                with disable_patching():
+                    self.model = capture_pre_autograd_graph(model, (self.dummy_tensor,))
+
+        elif self.backend in PT_BACKENDS:
+            self.model = model
 
         if self.backend == BackendType.ONNX:
             onnx_path = self.fp32_model_dir / "model_fp32.onnx"
@@ -48,13 +65,14 @@ class ImageClassificationTimm(ImageClassificationBase):
                 additional_kwargs["input_names"] = ["image"]
                 additional_kwargs["dynamic_axes"] = {"image": {0: "batch"}}
             torch.onnx.export(
-                timm_model, self.dummy_tensor, onnx_path, export_params=True, opset_version=13, **additional_kwargs
+                model, self.dummy_tensor, onnx_path, export_params=True, opset_version=13, **additional_kwargs
             )
             self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name
 
-        if self.backend in OV_BACKENDS + [BackendType.FP32]:
-            self.model = ov.convert_model(timm_model, example_input=self.dummy_tensor, input=self.input_size)
+        elif self.backend in [BackendType.OV, BackendType.FP32]:
+            with torch.no_grad():
+                self.model = ov.convert_model(model, example_input=self.dummy_tensor, input=self.input_size)
             self.input_name = list(inp.get_any_name() for inp in self.model.inputs)[0]
 
         self._dump_model_fp32()
@@ -67,31 +85,27 @@ class ImageClassificationTimm(ImageClassificationBase):
     def _dump_model_fp32(self) -> None:
         """Dump IRs of fp32 models, to help debugging."""
         if self.backend in PT_BACKENDS:
-            ov_model = ov.convert_model(self.model, example_input=self.dummy_tensor, input=self.input_size)
+            with disable_patching():
+                ov_model = ov.convert_model(
+                    torch.export.export(self.model, args=(self.dummy_tensor,)),
+                    example_input=self.dummy_tensor,
+                    input=self.input_size,
+                )
             ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
 
-        if self.backend == BackendType.ONNX:
-            onnx_path = self.fp32_model_dir / "model_fp32.onnx"
-            ov_model = ov.convert_model(onnx_path)
-            ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
+        if self.backend == BackendType.FX_TORCH:
+            exported_model = torch.export.export(self.model, (self.dummy_tensor,))
+            ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor, input=self.input_size)
+            ov.serialize(ov_model, self.fp32_model_dir / "fx_model_fp32.xml")
 
-        if self.backend in OV_BACKENDS + [BackendType.FP32]:
+        if self.backend in [BackendType.FP32, BackendType.OV]:
             ov.serialize(self.model, self.fp32_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:
-        config = self.model_cfg
-        self.transform = transforms_imagenet_eval(
-            img_size=config["input_size"][-2:],
-            crop_pct=config["crop_pct"],
-            crop_mode=config["crop_mode"],
-            interpolation=config["interpolation"],
-            use_prefetcher=False,
-            mean=config["mean"],
-            std=config["std"],
-        )
+        self.transform = self.model_weights.transforms()
 
     def get_transform_calibration_fn(self):
-        if self.backend in PT_BACKENDS:
+        if self.backend in [BackendType.FX_TORCH] + PT_BACKENDS:
             device = torch.device("cuda" if self.backend == BackendType.CUDA_TORCH else "cpu")
 
             def transform_fn(data_item):
