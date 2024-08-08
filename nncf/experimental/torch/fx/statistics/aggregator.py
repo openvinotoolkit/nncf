@@ -75,8 +75,15 @@ class FXStatisticsAggregator(StatisticsAggregator):
             for _statistic_point in _statistic_points:
                 for collectors in _statistic_point.algorithm_to_tensor_collectors.values():
                     for collector in collectors:
+                        tp = _statistic_point.target_point
+                        module_to_insert = TensorCollectorModule(collector)
+                        target_module_name = (
+                            "_".join([tp.target_node_name, str(tp.input_port_id), str(tp.target_type.value)])
+                            + "_"
+                            + str(id(module_to_insert))
+                        )
                         transformation = leaf_module_insertion_transformation_builder(
-                            TensorCollectorModule(collector), [_statistic_point.target_point]
+                            module_to_insert, [tp], target_module_name
                         )
                         transformation_commands.append(
                             FXApplyTransformationCommand(

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, Type
+from typing import Any, Callable, Dict, Type
 
 import numpy as np
 import openvino.runtime as ov
@@ -17,39 +17,33 @@ import pytest
 import torch
 from torch._export import capture_pre_autograd_graph
 
-from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf import IgnoredScope
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
-from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
+from nncf.parameters import ModelType
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
+from nncf.quantization.advanced_parameters import OverflowFix
+from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.smooth_quant.torch_fx_backend import FXSmoothQuantAlgoBackend
+from nncf.quantization.algorithms.smooth_quant.torch_fx_backend import FXSQMultiply
 from nncf.torch import disable_patching
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
-from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
-from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from tests.post_training.test_templates.helpers import ConvTestModel
 from tests.post_training.test_templates.helpers import LinearMultiShapeModel
 from tests.post_training.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
 from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
 
-PT_LINEAR_MODEL_SQ_MAP = {
-    ("Linear1",): "LinearMultiShapeModel/split_0_1_0/nncf_smooth_quant",
-    ("Linear2",): "LinearMultiShapeModel/split_0_0_0/nncf_smooth_quant",
-    ("Linear3", "Linear4"): "LinearMultiShapeModel/add_0_0_0/nncf_smooth_quant",
-}
+PT_LINEAR_MODEL_MM_MAP = {"Linear1": "linear_3", "Linear2": "linear_2", "Linear3": "linear", "Linear4": "linear_1"}
 
-PT_LINEAR_MODEL_MM_MAP = {
-    "Linear1": "LinearMultiShapeModel/Linear[linear_2]/linear_0",
-    "Linear2": "LinearMultiShapeModel/Linear[linear_1]/linear_0",
-    "Linear3": "LinearMultiShapeModel/Linear[linear_3]/linear_0",
-    "Linear4": "LinearMultiShapeModel/Linear[linear_4]/linear_0",
-}
-
-PT_CONV_MODEL_SQ_MAP = {("Conv1",): "/nncf_model_input_0_0_0/nncf_smooth_quant"}
-
-PT_CONV_MODEL_MM_MAP = {"Conv1": "ConvTestModel/Conv2d[conv]/conv2d_0"}
+PT_CONV_MODEL_MM_MAP = {"Conv1": "conv2d"}
 
 
 class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
+    @staticmethod
+    def backend_supports_shared_layers() -> bool:
+        return False
+
     @staticmethod
     def fn_to_type(tensor) -> torch.Tensor:
         return torch.tensor(tensor)
@@ -68,10 +62,27 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
         raise NotImplementedError
 
     @staticmethod
-    def get_target_node_name(command: TransformationCommand):
-        if isinstance(command, PTSharedFnInsertionCommand):
-            return command.target_points[0].target_node_name
-        return command.target_point.target_node_name
+    def get_ignored_scope(model_cls: Any) -> IgnoredScope:
+        if model_cls is LinearMultiShapeModel:
+            # Ignore matmul nodes before the min/max nodes as
+            # min/max operatons could  not be quantized
+            # due to nncf propagation algo  restrictions.
+            return IgnoredScope(names=["matmul_5", "matmul_6"])
+        return IgnoredScope()
+
+    @staticmethod
+    def get_quantization_algorithm(ignored_scope: IgnoredScope):
+        return PostTrainingQuantization(
+            subset_size=1,
+            model_type=ModelType.TRANSFORMER,
+            ignored_scope=ignored_scope,
+            advanced_parameters=AdvancedQuantizationParameters(
+                overflow_fix=OverflowFix.DISABLE,
+                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=0.95, convolution=0.95),
+                inplace_statistics=False,
+                disable_bias_correction=True,
+            ),
+        )
 
     @staticmethod
     def get_transform_fn() -> Callable:
@@ -93,16 +104,24 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
 
     @staticmethod
     def check_scales(model: torch.nn.Module, reference_values: Dict[str, np.ndarray], model_cls) -> None:
-        names_map = PT_LINEAR_MODEL_SQ_MAP if model_cls is LinearMultiShapeModel else PT_CONV_MODEL_SQ_MAP
-        modules = model.nncf.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_OP)
+        names_map = PT_LINEAR_MODEL_MM_MAP if model_cls is LinearMultiShapeModel else PT_CONV_MODEL_MM_MAP
+        ops_list = {node.name: node for node in model.graph.nodes}
         for ref_names, ref_value in reference_values.items():
             if not all(name.startswith("Linear") or name.startswith("Conv") for name in ref_names):
                 # Pytorch SQ algorithm supports only linear and conv modules by far,
                 # so other multiplies are skipped
                 continue
-            sq_node = modules[names_map[ref_names]]
+            sq_modules = []
+            for ref_name in ref_names:
+                node = ops_list[names_map[ref_name]]
+                while node.op != "call_module":
+                    node = node.all_input_nodes[0]
 
-            assert isinstance(sq_node, SQMultiply)
+                sq_modules.append(getattr(model, node.target))
+            # Check unified group acutally shares one constant
+            assert all(node is sq_modules[0] for node in sq_modules[1:])
+            sq_node = sq_modules[0]
+            assert isinstance(sq_node, FXSQMultiply)
 
             value = sq_node._scale_value
             ref_value = torch.tensor(ref_value)
