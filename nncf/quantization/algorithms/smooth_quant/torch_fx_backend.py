@@ -130,7 +130,9 @@ class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        return node.is_shared()
+        # TODO(dlyakvho): Support shared layers in TorchFX.
+        # Ref: 149316
+        return False
 
     @staticmethod
     def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:

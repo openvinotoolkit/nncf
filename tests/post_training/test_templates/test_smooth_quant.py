@@ -10,11 +10,12 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import Callable, Dict, Type, TypeVar
+from typing import Any, Callable, Dict, Type, TypeVar
 
 import pytest
 
 import nncf
+from nncf import IgnoredScope
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFNode
@@ -39,6 +40,12 @@ TTensor = TypeVar("TTensor")
 
 
 class TemplateTestSQAlgorithm:
+    @staticmethod
+    def backend_supports_shared_layers() -> bool:
+        """
+        Returns False if backend does not support shared layers yet.
+        """
+
     @staticmethod
     def fn_to_type(tensor) -> TTensor:
         return tensor
@@ -100,10 +107,19 @@ class TemplateTestSQAlgorithm:
         """
 
     @staticmethod
-    def get_quantization_algorithm():
+    def get_ignored_scope(model_cls: Any) -> IgnoredScope:
+        """
+        Returns quantization ignored scope for given model class.
+        Default implementation is an empty ignored scope.
+        """
+        return IgnoredScope()
+
+    @staticmethod
+    def get_quantization_algorithm(ignored_scope: IgnoredScope):
         return PostTrainingQuantization(
             subset_size=1,
             model_type=ModelType.TRANSFORMER,
+            ignored_scope=ignored_scope,
             advanced_parameters=AdvancedQuantizationParameters(
                 overflow_fix=OverflowFix.DISABLE,
                 smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=0.95, convolution=0.95),
@@ -156,7 +172,7 @@ class TemplateTestSQAlgorithm:
         model = self.backend_specific_model(model_cls(), tmpdir)
         dataset = get_static_dataset(model_cls.INPUT_SIZE, self.get_transform_fn(), self.fn_to_type)
 
-        quantization_algorithm = self.get_quantization_algorithm()
+        quantization_algorithm = self.get_quantization_algorithm(self.get_ignored_scope(model_cls))
         graph = NNCFGraphFactory.create(model)
         quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
 
@@ -209,6 +225,9 @@ class TemplateTestSQAlgorithm:
         ),
     )
     def test__get_nodes_to_smooth_data(self, model_cls, references, tmpdir):
+        if not self.backend_supports_shared_layers() and model_cls is ShareWeghtsConvAndShareLinearModel:
+            pytest.skip("Current backend does not support shared weights yet.")
+
         model = self.backend_specific_model(model_cls(), tmpdir)
         nncf_graph = NNCFGraphFactory.create(model)
 

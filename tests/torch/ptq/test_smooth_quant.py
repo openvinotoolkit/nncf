@@ -49,6 +49,10 @@ PT_CONV_MODEL_MM_MAP = {"Conv1": "ConvTestModel/Conv2d[conv]/conv2d_0"}
 
 class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
     @staticmethod
+    def backend_supports_shared_layers() -> bool:
+        return True
+
+    @staticmethod
     def fn_to_type(tensor) -> torch.Tensor:
         return torch.tensor(tensor)
 

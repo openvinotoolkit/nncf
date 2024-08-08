@@ -69,6 +69,10 @@ OV_CONV_MODEL_SQ_OP_MAP = {
 
 class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
     @staticmethod
+    def backend_supports_shared_layers() -> bool:
+        return True
+
+    @staticmethod
     def fn_to_type(tensor) -> np.ndarray:
         return np.array(tensor)
 

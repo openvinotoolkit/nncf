@@ -98,25 +98,6 @@ class GraphConverter:
                     output_port_id=output_port_id,
                     dtype=Dtype.FLOAT,
                 )
-            if source_nncf_node.metatype in [om.PTMinMetatype, om.PTMaxMetatype]:
-                offset = len(source_node.users)
-                output_tensors = source_node.meta.get("val", [])
-                output_tensors = (output_tensors,) if isinstance(output_tensors, torch.Tensor) else output_tensors
-
-                for idx, tensor in enumerate(output_tensors[offset:]):
-                    curr_idx = offset + idx
-                    result = nncf_graph.add_nncf_node(
-                        f"{source_nncf_node.node_name}_output_{curr_idx}", "output", om.PTOutputNoopMetatype
-                    )
-                    nncf_graph.add_edge_between_nncf_nodes(
-                        source_nncf_node.node_id,
-                        result.node_id,
-                        tensor_shape=tuple(tensor.shape),
-                        input_port_id=0,
-                        output_port_id=curr_idx,
-                        dtype=Dtype.FLOAT,
-                    )
-
         return nncf_graph
 
     @staticmethod
