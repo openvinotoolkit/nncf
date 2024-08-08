@@ -320,25 +320,25 @@ class AdvancedLoraCorrectionParameters:
     """
     Contains advanced parameters for lora correction algorithm.
 
-    :param rank: rank of lora adapters. Defaults to 8.
+    :param rank: rank of lora adapters. Defaults to 16.
     :type rank: int
     :param num_iters: number of correction iterations. Defaults to 3.
     :type num_iters: int
-    :param add_regularization: Whether to add a regularization during the correction process. Defaults to False.
+    :param add_regularization: Whether to add a regularization during the correction process. Defaults to True.
         Helpful for big rank values to avoid overfitting.
     :type add_regularization: bool
-    :param subset_size: Number of data samples for lora correction algorithm. Defaults to 32.
+    :param subset_size: Number of data samples for lora correction algorithm. Defaults to 128.
     :type subset_size: int
     :param is_int8_adapters: Whether to 8-bit quantize lora adapters, otherwise they kept in the original weights
-        precision. Defaults to True.
+        precision. Defaults to False.
     :type is_int8_adapters: bool
     """
 
-    rank: int = 8
+    rank: int = 16
     num_iters: int = 3
-    add_regularization: bool = False
-    subset_size: int = 32
-    is_int8_adapters: bool = True
+    add_regularization: bool = True
+    subset_size: int = 128
+    is_int8_adapters: bool = False
 
 
 @api()

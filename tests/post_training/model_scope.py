@@ -18,6 +18,7 @@ from nncf import QuantizationPreset
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedScaleEstimationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
@@ -424,6 +425,11 @@ WEIGHT_COMPRESSION_MODELS = [
             "ratio": 0.8,
             "mode": CompressWeightsMode.INT4_SYM,
             "lora_correction": True,
+            "advanced_parameters": AdvancedCompressionParameters(
+                lora_correction_params=AdvancedLoraCorrectionParameters(
+                    rank=8, num_iters=3, add_regularization=False, subset_size=32, is_int8_adapters=True
+                )
+            ),
         },
         "params": {"is_stateful": True},
         "backends": [BackendType.OV],
