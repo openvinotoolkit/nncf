@@ -485,3 +485,5 @@ You can opt-out at any time by running the following command in the Python envir
 `opt_in_out --opt_out`
 
 More information available on [OpenVINO telemetry](https://docs.openvino.ai/2024/about-openvino/additional-resources/telemetry.html).
+
+
