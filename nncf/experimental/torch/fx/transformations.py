@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional
 
 import torch
 import torch.fx
@@ -170,8 +170,10 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
                 # them as literals in the graph.
                 quantize_op_inputs.append(value_or_node)
 
-    _, feed_node, ctx_manager = _get_data_for_insertion(graph, target_point)
-    quantize_op_inputs[0] = feed_node
+    input_node = get_input_node(target_point, target_node)
+    quantize_op_inputs[0] = input_node
+
+    ctx_manager = get_ctx_manager(graph, target_point)
     with ctx_manager(target_node):
         quantized_node = graph.create_node(node_type, quantize_op, tuple(quantize_op_inputs), {})
 
@@ -187,13 +189,15 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
 
         for user, dq_node in user_dq_nodes:
             user.replace_input_with(target_node, dq_node)
-    else:
+    elif target_point.target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
         with graph.inserting_after(quantized_node):
             dq_node = graph.call_function(dequantize_op, tuple(dq_inputs), {})
 
         args = list(target_node.args)
         args[target_point.input_port_id] = dq_node
         target_node.args = tuple(args)
+    else:
+        raise nncf.InternalError(f"Unexpected target type: {target_point.target_type}")
 
 
 def _insert_call_module(graph: torch.fx.Graph, target_point: PTTargetPoint, module_attr_name: str):
@@ -204,28 +208,50 @@ def _insert_call_module(graph: torch.fx.Graph, target_point: PTTargetPoint, modu
     :param target_node: Target node, module call node is being iserted just after the target node.
     :param module_attr_name: The name of the graph attribute which keeps the target module.
     """
-    target_node, feed_node, ctx_manager = _get_data_for_insertion(graph, target_point)
+    target_node = get_graph_node_by_name(graph, target_point.target_node_name)
+    input_node = get_input_node(target_point, target_node)
+    ctx_manager = get_ctx_manager(graph, target_point)
     with ctx_manager(target_node):
         return graph.create_node(
             "call_module",
             module_attr_name,
-            (feed_node,),
+            (input_node,),
             {},
             name=f"{module_attr_name}_{str(target_point.target_type)}_graph_node",
         )
 
 
-def _get_data_for_insertion(
-    graph: torch.fx.Graph, target_point: PTTargetPoint
-) -> Tuple[torch.fx.Node, torch.fx.Node, Callable]:
-    target_type = target_point.target_type
-    ctx_manager = graph.inserting_after if target_type == TargetType.OPERATOR_POST_HOOK else graph.inserting_before
-    target_node = get_graph_node_by_name(graph, target_point.target_node_name)
-    feed_node = target_node
-    if target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
-        feed_node = target_node.args[target_point.input_port_id]
+def get_input_node(target_point: PTTargetPoint, target_node: torch.fx.Node) -> torch.fx.Node:
+    """
+    Returns an input node according to the given target point.
 
-    return target_node, feed_node, ctx_manager
+    :param target_point: Given target point.
+    :param target_node: The target node of the given target point.
+    :return: An input node according to the given target point.
+    """
+    target_type = target_point.target_type
+    if target_type not in [
+        TargetType.OPERATOR_PRE_HOOK,
+        TargetType.OPERATOR_POST_HOOK,
+        TargetType.OPERATION_WITH_WEIGHTS,
+    ]:
+        raise nncf.InternalError(f"Unexpected target type: {target_type}")
+    if target_type == TargetType.OPERATOR_POST_HOOK:
+        return target_node
+    return target_node.args[target_point.input_port_id]
+
+
+def get_ctx_manager(graph: torch.fx.Graph, target_point: PTTargetPoint) -> Callable:
+    """
+    Return insertion context manager according to the given target point.
+
+    :param graph: torch.fx.Graph instance.
+    :param target_point: Given target point.
+    :return: Insertion context manager according to the given target point.
+    """
+    if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
+        return graph.inserting_after
+    return graph.inserting_before
 
 
 def _set_module_to_the_graph_module(
