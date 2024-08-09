@@ -125,10 +125,14 @@ TEST_MODELS_QUANIZED = (
     (ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]), {}),
     (torchvision_model_case("resnet18", (1, 3, 224, 224)), {}),
     (torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)), {}),
+    (torchvision_model_case("vit_b_16", (1, 3, 224, 224)), {"model_type": nncf.ModelType.TRANSFORMER}),
+    (torchvision_model_case("swin_v2_s", (1, 3, 224, 224)), {"model_type": nncf.ModelType.TRANSFORMER}),
 )
 
 
-@pytest.mark.parametrize(("model_case", "quantization_parameters"), TEST_MODELS_QUANIZED)
+@pytest.mark.parametrize(
+    ("model_case", "quantization_parameters"), TEST_MODELS_QUANIZED, ids=[m[0].model_id for m in TEST_MODELS_QUANIZED]
+)
 def test_quantized_model(model_case: ModelCase, quantization_parameters):
     with disable_patching():
         model = model_case.model_builder()
