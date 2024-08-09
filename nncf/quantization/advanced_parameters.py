@@ -330,15 +330,15 @@ class AdvancedLoraCorrectionParameters:
     :param subset_size: Number of data samples for lora correction algorithm. Defaults to 128.
     :type subset_size: int
     :param is_int8_adapters: Whether to 8-bit quantize lora adapters, otherwise they kept in the original weights
-        precision. Defaults to False.
+        precision. Defaults to True.
     :type is_int8_adapters: bool
     """
 
-    rank: int = 16
+    rank: int = 8
     num_iters: int = 3
     add_regularization: bool = True
     subset_size: int = 128
-    is_int8_adapters: bool = False
+    is_int8_adapters: bool = True
 
 
 @api()
