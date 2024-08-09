@@ -114,7 +114,9 @@ class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
         sq_multiply = SQMultiply(scale_value.shape)
         sq_multiply.scale = scale_value
-        return FXApplyTransformationCommand(module_insertion_transformation_builder(sq_multiply, target_points))
+        return FXApplyTransformationCommand(
+            module_insertion_transformation_builder(sq_multiply, target_points, scale_node_name)
+        )
 
     @staticmethod
     def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:

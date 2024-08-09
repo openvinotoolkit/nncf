@@ -41,7 +41,7 @@ def _set_new_node_meta(new_node: torch.fx.Node, prev_node: torch.fx.Node, target
 
 
 def module_insertion_transformation_builder(
-    module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint]
+    module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint], target_module_name: str
 ) -> TransformationFNType:
     """
     Returns transformation which inserts given module to a target model
@@ -50,16 +50,17 @@ def module_insertion_transformation_builder(
 
     :param module_to_insert: Given torch.nn.Module to insert.
     :param target_points: Target points to insert the target module.
+    :param target_module_name: Target model attribute name for the module_to_insert.
     :returns: Transformation which which inserts given module to a target model
         and calls given module after each target points.
     """
 
     def module_insertion_transformation(model: torch.fx.GraphModule):
-        module_attr_name = _set_module_to_the_graph_module(model, module_to_insert, target_points)
+        module_attr_name = _set_module_to_the_graph_module(model, module_to_insert, target_module_name)
         # Insert call_module nodes to the model
         graph = model.graph
-        for target_point in target_points:
-            new_node = _insert_call_module(graph, target_point, module_attr_name)
+        for idx, target_point in enumerate(target_points):
+            new_node = _insert_call_module(graph, target_point, module_attr_name, f"{module_attr_name}_{idx}")
             target_node = get_graph_node_by_name(graph, target_point.target_node_name)
 
             if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
@@ -79,7 +80,7 @@ def module_insertion_transformation_builder(
 
 
 def leaf_module_insertion_transformation_builder(
-    module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint]
+    module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint], target_module_name: str
 ) -> TransformationFNType:
     """
     Returns transformation which inserts given module to a target model
@@ -87,16 +88,17 @@ def leaf_module_insertion_transformation_builder(
 
     :param module_to_insert: Given torch.nn.Module to insert.
     :param target_points: Target points to insert the target module.
+    :param target_module_name: Target model attribute name for the module_to_insert.
     :returns: Transformation which which inserts given module to a target model
         and calls given module after each target points.
     """
 
     def leaf_module_insertion_transformation(model: torch.fx.GraphModule):
-        module_attr_name = _set_module_to_the_graph_module(model, module_to_insert, target_points)
+        module_attr_name = _set_module_to_the_graph_module(model, module_to_insert, target_module_name)
         # Insert call_module nodes to the model
         graph = model.graph
-        for target_point in target_points:
-            _insert_call_module(graph, target_point, module_attr_name)
+        for idx, target_point in enumerate(target_points):
+            _insert_call_module(graph, target_point, module_attr_name, f"{module_attr_name}_{idx}")
 
     return leaf_module_insertion_transformation
 
@@ -266,24 +268,21 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
         target_node.args = tuple(args)
 
 
-def _insert_call_module(graph: torch.fx.Graph, target_point: PTTargetPoint, module_attr_name: str):
+def _insert_call_module(
+    graph: torch.fx.Graph, target_point: PTTargetPoint, module_attr_name: str, graph_node_name: str
+):
     """
     Inserts module call node to the graph after the target node.
 
     :param graph: Graph to insert module call node.
     :param target_node: Target node, module call node is being iserted just after the target node.
     :param module_attr_name: The name of the graph attribute which keeps the target module.
-    :return: Target node used
+    :param graph_node_name: Target name for module call node.
+    :return: Inserted module call node.
     """
     target_node, feed_node, ctx_manager = _get_data_for_insertion(graph, target_point)
     with ctx_manager(target_node):
-        return graph.create_node(
-            "call_module",
-            module_attr_name,
-            (feed_node,),
-            {},
-            name=f"{module_attr_name}_{str(target_point.target_type)}_graph_node",
-        )
+        return graph.create_node("call_module", module_attr_name, (feed_node,), {}, name=graph_node_name)
 
 
 def _get_data_for_insertion(
@@ -300,26 +299,18 @@ def _get_data_for_insertion(
 
 
 def _set_module_to_the_graph_module(
-    model: torch.fx.GraphModule, module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint]
+    model: torch.fx.GraphModule,
+    module_to_insert: torch.nn.Module,
+    module_name_in_model: str,
 ) -> str:
     """
     Sets given module to the given torch.fx.GraphModule with unique name.
 
     :param graph: Target torch.fx.Graph.
     :param module_to_insert: Module to insert to the target graph.
-    :param target_points: Target points which will be used to insert target module
-        to the graph.
+    :param module_name_in_model: Target model attribute name for the module_to_insert.
     :return: A graph module attribute name which keep given module.
     """
-    module_to_insert = module_to_insert
-    # TODO(dlyakhov) Make module name human readable.
-    module_name_in_model = (
-        "__".join(
-            "_".join((tp.target_node_name, str(tp.input_port_id), str(tp.target_type.value))) for tp in target_points
-        )
-        + "_"
-        + str(id(module_to_insert))
-    )
     assert not hasattr(model, module_name_in_model)
     setattr(model, module_name_in_model, module_to_insert)
     return module_name_in_model
