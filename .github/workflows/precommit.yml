@@ -243,4 +243,4 @@ jobs:
         run: |
           pip install -r tests/tools/requirements.txt
       - name: Run tools precommit test scope
-        run: python -m pytest -ra tests/tools
+        run: PYTHONPATH=./ pytest -ra tests/tools
