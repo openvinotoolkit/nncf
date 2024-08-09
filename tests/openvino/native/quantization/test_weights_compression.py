@@ -1169,3 +1169,19 @@ def test_compression_with_lora_with_subset_size(mocker):
     s, X = get_stats_spy.spy_return
     assert X.shape == (LMLinearModel.HIDDEN_DIM, subset_size)
     assert s.shape == (LMLinearModel.HIDDEN_DIM,)
+
+
+def test_lora_with_mixed_precision(tmp_path):
+    model = AWQMatmulModel().ov_model
+    ov.save_model(model, tmp_path / "fp32.xml")
+    sz = 8
+    dataset = Dataset([np.ones([sz, sz])])
+
+    compressed_model = compress_weights(
+        model, mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, group_size=-1, dataset=dataset, lora_correction=True
+    )
+    ov.save_model(compressed_model, tmp_path / "model.xml")
+    for op in compressed_model.get_ordered_ops():
+        op_name = op.get_friendly_name()
+        if op.get_type_name() == "Constant" and ("/zero_point" in op_name or "/scale" in op_name):
+            assert op.get_shape() == [sz, 1]

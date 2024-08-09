@@ -142,6 +142,7 @@ class LoraCorrectionAlgorithm:
         :param activations: The input activations of the layers considered for compression.
         :param debug_interface: utility class to collect and dump debug information, defaults to None
         :return: two low rank matrices in the order of execution of corresponding linear layers.
+            First matrix has shape=[R, H], the second - [O, R], where R - rank, H/O - hidden/output dimension.
         """
         rank, num_iters, add_regularization, subset_size = (
             lora_correction_params.rank,
@@ -170,17 +171,14 @@ class LoraCorrectionAlgorithm:
                 f"{mode.value} mode is invalid for Lora Correction algorithm. Supported modes: INT4_SYM, INT4_ASYM, NF4"
             )
         # fq_w + residual = w   =>  residual = w - fq_w
+        svd_residual = fns.astype(weight - fq_weights, TensorDataType.float32)
+
         # O stands for output dimension, H - input dimension or hidden size, SS - samples size, R - rank.
-        svd_residual = fns.astype(weight - fq_weights, TensorDataType.float32)  # [O, H]
-        if wc_params.reduction_axes != 0:
-            # TODO: always [O, H] or [H, O] ???
-            # TODO: clone afterwards ???
-            # in which cases its needed??
-            svd_residual = fns.transpose(svd_residual)  # [H, O] now
+        # reduction axes is all axes except output dimension in linear/conv layers.
+        if wc_params.reduction_axes[0] == 1:
+            svd_residual = fns.transpose(svd_residual)
+        residual = svd_residual.clone()  # [H, O]
 
-        residual = svd_residual.clone()  # [O, H] ??? after transpose??
-
-        # TODO: is it always has input dimension on the first position?
         s, X = process_stats(activations[layer_name], subset_size)  # [H], [H, SS]
         X = fns.transpose(X)  # [SS, H]
         if wc_params.compression_config.group_size > 0:
