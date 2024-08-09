@@ -19,7 +19,6 @@ from nncf import IgnoredScope
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.parameters import ModelType
@@ -62,13 +61,6 @@ class TemplateTestSQAlgorithm:
         """
         Return backend specific map from the given model class labels
         to nncf_grpah nodes names.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_target_node_name(command: TransformationCommand):
-        """
-        Get target node name from a transformation command.
         """
 
     @staticmethod
@@ -259,6 +251,13 @@ class TemplateTestSQAlgorithm:
         statistics_aggregator.register_statistic_points(algo_statistic_points)
         statistics_aggregator.collect_statistics(model, graph)
 
+        weight_update_mock = mocker.MagicMock()
+        scale_insertion_mock = mocker.MagicMock()
+        backend_entity = algo._backend_entity
+        backend_entity.weight_update_command = weight_update_mock
+        backend_entity.scale_insertion_command = scale_insertion_mock
+        algo._set_backend_entity = lambda model: backend_entity
+
         mocked_transformer = mocker.MagicMock()
         mocker.patch("nncf.common.factory.ModelTransformerFactory.create", return_value=mocked_transformer)
         algo.apply(model, graph, algo_statistic_points)
@@ -268,9 +267,16 @@ class TemplateTestSQAlgorithm:
         assert len(arg.transformations) == 2
 
         mm_metatype = self.get_matmul_metatype()
-        matmuls = [node for node in graph.topological_sort() if node.metatype == mm_metatype]
-        for transformation in arg.transformations:
-            assert self.get_target_node_name(transformation) != matmuls[0].node_name
+        target_matmul = [node for node in graph.topological_sort() if node.metatype == mm_metatype][1]
+
+        # Check weights update command
+        weight_update_mock.assert_called_once()
+        assert target_matmul == target_matmul
+
+        # Check scale insertion command
+        scale_insertion_mock.assert_called_once()
+        target_nodes = scale_insertion_mock.call_args.args[3]
+        assert target_nodes == [target_matmul]
 
     def test_get_activation_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):
         backend = self.get_backend()

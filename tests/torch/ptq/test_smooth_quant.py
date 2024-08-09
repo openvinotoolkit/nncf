@@ -16,13 +16,11 @@ import openvino.runtime as ov
 import pytest
 import torch
 
-from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.quantization.algorithms.smooth_quant.torch_backend import PTSmoothQuantAlgoBackend
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
-from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.model_creation import wrap_model
 from tests.post_training.test_templates.helpers import ConvTestModel
 from tests.post_training.test_templates.helpers import LinearMultiShapeModel
@@ -68,12 +66,6 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
         if model_cls is ShareWeghtsConvAndShareLinearModel:
             return {}
         raise NotImplementedError
-
-    @staticmethod
-    def get_target_node_name(command: TransformationCommand):
-        if isinstance(command, PTSharedFnInsertionCommand):
-            return command.target_points[0].target_node_name
-        return command.target_point.target_node_name
 
     @staticmethod
     def get_transform_fn() -> Callable:

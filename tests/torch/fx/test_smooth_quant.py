@@ -18,7 +18,6 @@ import torch
 from torch._export import capture_pre_autograd_graph
 
 from nncf import IgnoredScope
-from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -30,7 +29,6 @@ from nncf.quantization.algorithms.smooth_quant.torch_fx_backend import FXSmoothQ
 from nncf.torch import disable_patching
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
-from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from tests.post_training.test_templates.helpers import ConvTestModel
 from tests.post_training.test_templates.helpers import LinearMultiShapeModel
 from tests.post_training.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
@@ -85,12 +83,6 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
                 disable_bias_correction=True,
             ),
         )
-
-    @staticmethod
-    def get_target_node_name(command: TransformationCommand):
-        if isinstance(command, PTSharedFnInsertionCommand):
-            return command.target_points[0].target_node_name
-        return command.target_point.target_node_name
 
     @staticmethod
     def get_transform_fn() -> Callable:
