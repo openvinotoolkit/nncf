@@ -11,15 +11,13 @@
 
 import atexit
 import logging
-import os
 import queue
-import subprocess
 import threading
 import time
 from enum import Enum
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import psutil
@@ -84,7 +82,8 @@ class MemoryMonitor:
         self.memory_type = memory_type
         if memory_type == MemoryType.SYSTEM:
             logger.warning(
-                "Please note that MemoryType.SYSTEM in general is affected by other processes that change RAM availability."
+                "Please note that MemoryType.SYSTEM is in general affected by other processes that change RAM "
+                "availability."
             )
         elif memory_type == MemoryType.RSS:
             if include_child_processes is None:
@@ -258,19 +257,19 @@ class memory_monitor_context:
         save_dir: Optional[Path] = None,
     ):
         """
-            User-friendly memory monitor context which monitors both RSS and SYSTEM memory types. After, stores the
-            result for the maximum memory recorded if `return_max_value=True` or the whole time-memory sequences. Works
-            by subtracting the first memory measurement from all the other ones so that the resulting sequence starts
-            from 0. Hence, it can actually return negative memory values.
+        User-friendly memory monitor context which monitors both RSS and SYSTEM memory types. After, stores the
+        result for the maximum memory recorded if `return_max_value=True` or the whole time-memory sequences. Works
+        by subtracting the first memory measurement from all the other ones so that the resulting sequence starts
+        from 0. Hence, it can actually return negative memory values.
 
-            After exiting, the result is stored at .memory_data field -- a dict with memory types (RSS or SYSTEM)
-            as keys. The values are either a single float number if return_max_value is provided, or a tuple with time
-            and memory value lists.
+        After exiting, the result is stored at .memory_data field -- a dict with memory types (RSS or SYSTEM)
+        as keys. The values are either a single float number if return_max_value is provided, or a tuple with time
+        and memory value lists.
 
-            :param interval: Interval in seconds to take measurements.
-            :param memory_unit: Memory unit.
-            :param return_max_value: Whether to return max value for each memory type or full memory sequences.
-            :param save_dir: If provided, will save memory logs at this location.
+        :param interval: Interval in seconds to take measurements.
+        :param memory_unit: Memory unit.
+        :param return_max_value: Whether to return max value for each memory type or full memory sequences.
+        :param save_dir: If provided, will save memory logs at this location.
         """
 
         self.memory_monitors = {}

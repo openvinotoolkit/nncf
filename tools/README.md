@@ -12,7 +12,7 @@ RSS and SYSTEM behave differently when mmap is used, e.g. during OV model loadin
 
 It is advised to use `MemoryType.SYSTEM` when analyzing memory of python scripts involving OpenVINO model reading. Also, memory monitor itself allocates some memory itself, especially during figure saving. It is advised to use it for measuring large memory processes.
 
-### Example 1.
+### Example 1
 
 ```python
 import gc
@@ -61,9 +61,10 @@ gc.collect()
 time.sleep(1)
 ```
 
-### Example 2. Memory Monitor Context.
+### Example 2. Memory Monitor Context
 
 Alternatively, you may use `memory_monitor_context` that envelops logic for creating MemoryMonitors and saving logs. It can also return only the maximal memory value if needed. Memory data will be available at `context.memory_data`.
+
 ```python
 import gc
 import time
