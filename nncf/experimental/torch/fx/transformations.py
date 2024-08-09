@@ -244,11 +244,20 @@ def get_input_node(target_point: PTTargetPoint, target_node: torch.fx.Node) -> t
 def get_ctx_manager(graph: torch.fx.Graph, target_point: PTTargetPoint) -> Callable:
     """
     Return insertion context manager according to the given target point.
+    An insertion context manager sets the point at which create_node and
+    companion methods will insert into the torch.fx.Graph.
 
     :param graph: torch.fx.Graph instance.
     :param target_point: Given target point.
     :return: Insertion context manager according to the given target point.
     """
+    if target_point.target_type not in [
+        TargetType.OPERATOR_PRE_HOOK,
+        TargetType.OPERATOR_POST_HOOK,
+        TargetType.OPERATION_WITH_WEIGHTS,
+    ]:
+        raise nncf.InternalError(f"Unexpected target type: {target_point.target_type}")
+
     if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
         return graph.inserting_after
     return graph.inserting_before
