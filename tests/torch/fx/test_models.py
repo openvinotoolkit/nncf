@@ -125,10 +125,14 @@ TEST_MODELS_QUANIZED = (
     (ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]), {}),
     (torchvision_model_case("resnet18", (1, 3, 224, 224)), {}),
     (torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)), {}),
+    (torchvision_model_case("vit_b_16", (1, 3, 224, 224)), {"model_type": nncf.ModelType.TRANSFORMER}),
+    (torchvision_model_case("swin_v2_s", (1, 3, 224, 224)), {"model_type": nncf.ModelType.TRANSFORMER}),
 )
 
 
-@pytest.mark.parametrize(("model_case", "quantization_parameters"), TEST_MODELS_QUANIZED)
+@pytest.mark.parametrize(
+    ("model_case", "quantization_parameters"), TEST_MODELS_QUANIZED, ids=[m[0].model_id for m in TEST_MODELS_QUANIZED]
+)
 def test_quantized_model(model_case: ModelCase, quantization_parameters):
     with disable_patching():
         model = model_case.model_builder()
@@ -147,6 +151,9 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters):
         quantization_parameters["subset_size"] = 1
 
         quantized_model = nncf.quantize(fx_model, calibration_dataset, **quantization_parameters)
-        quantized_model = GraphConverter.create_nncf_graph(quantized_model)
+        # Uncomment to visualize torch fx graph
+        # from tests.torch.fx.helpers import visualize_fx_model
+        # visualize_fx_model(quantized_model, f"{model_case.model_id}_int8.svg")
 
-        check_graph(quantized_model, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME)
+        nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
+        check_graph(nncf_graph, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME)

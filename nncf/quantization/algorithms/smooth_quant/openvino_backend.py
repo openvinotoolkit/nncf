@@ -86,7 +86,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return collector
 
     @staticmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: ov.Model) -> Tensor:
+    def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, nncf_graph: NNCFGraph) -> Tensor:
         port_id = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(node_with_weight)
         return Tensor(get_weight_value(node_with_weight, model, port_id))
 

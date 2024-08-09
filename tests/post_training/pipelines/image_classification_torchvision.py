@@ -43,12 +43,13 @@ class ImageClassificationTorchvision(ImageClassificationBase):
         model = model_cls(weights=self.model_weights)
         model.eval()
 
-        self.static_input_size = [self.batch_size, 3, 224, 224]
+        default_input_size = [self.batch_size, 3, 224, 224]
+        self.dummy_tensor = self.model_weights.transforms()(torch.rand(default_input_size))
+        self.static_input_size = list(self.dummy_tensor.shape)
+
         self.input_size = self.static_input_size.copy()
         if self.batch_size > 1:  # Dynamic batch_size shape export
             self.input_size[0] = -1
-
-        self.dummy_tensor = torch.rand(self.static_input_size)
 
         if self.backend == BackendType.FX_TORCH:
             with torch.no_grad():
