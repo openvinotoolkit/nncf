@@ -926,6 +926,7 @@ class MinMaxQuantization(Algorithm):
                     transformation_layout.register(
                         self._backend_entity.create_convert_insertion_command(quantization_target_point, parameters)
                     )
+                    unified_ops_list.add(quantization_target_point)
                 continue
             parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
             commands = self._backend_entity.create_unified_scales_quantizers_insertion_commands(

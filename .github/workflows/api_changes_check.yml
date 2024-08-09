@@ -2,7 +2,7 @@ name: API changes check
 permissions: read-all
 
 on:
-  pull_request_target:
+  pull_request:
     branches:
       - develop
 
