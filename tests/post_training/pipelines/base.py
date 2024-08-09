@@ -33,7 +33,7 @@ from nncf import TargetDevice
 from tests.shared.command import Command
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
-from tools.memory_monitor import monitor_memory_for_callable
+from tools.memory_monitor import memory_monitor_context
 
 DEFAULT_VAL_THREADS = 4
 
@@ -359,14 +359,14 @@ class PTQTestPipeline(BaseTestPipeline):
         start_time = time.perf_counter()
         if self.memory_monitor:
             gc.collect()
-            max_value_per_memory_type = monitor_memory_for_callable(
-                self._compress,
+            with memory_monitor_context(
                 interval=0.1,
                 memory_unit=MemoryUnit.MiB,
                 return_max_value=True,
                 save_dir=self.output_model_dir / "ptq_memory_logs",
-            )
-            self.run_info.compression_memory_usage = max_value_per_memory_type[MemoryType.SYSTEM]
+            ) as mmc:
+                self._compress()
+            self.run_info.compression_memory_usage = mmc.memory_data[MemoryType.SYSTEM]
         else:
             self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
         self.run_info.time_compression = time.perf_counter() - start_time

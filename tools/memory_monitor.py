@@ -29,7 +29,6 @@ logger = logging.getLogger("memory_monitor")
 
 class MemoryType(Enum):
     RSS = "rss"
-    RSS_TOP = "rss_top"
     SYSTEM = "system"
 
 
@@ -46,9 +45,10 @@ class MemoryUnit(Enum):
 class MemoryMonitor:
     def __init__(
         self,
-        interval: float = 0.1,
-        memory_type: MemoryType = MemoryType.RSS,
-        memory_unit: MemoryUnit = MemoryUnit.MiB,
+        interval: Optional[float] = 0.1,
+        memory_type: Optional[MemoryType] = MemoryType.RSS,
+        memory_unit: Optional[MemoryUnit] = MemoryUnit.MiB,
+        include_child_processes: Optional[bool] = None,
     ):
         """
         Memory monitoring utility to measure python process memory footprint. After start() is called, it
@@ -65,10 +65,6 @@ class MemoryMonitor:
             - MemoryType.RSS: Resident Set Size is the portion of memory occupied by a process that is held in RAM.
               Values are obtained through psutil library. If some data is read using mmap, RSS will report this data
               as allocated, however this is not necessarily the case.
-            - MemoryType.RSS_TOP: The same type of memory as above, but the values are parsed from a table output of
-              the *top* command. Usually, reports the same values as RSS, but with worse resolution.
-              Note: There can be issues when measuring with RSS_TOP a python script which is run from IDE, in this case
-              it should be run from terminal.
             - MemoryType.SYSTEM: This metric is defined as the difference between total system virtual memory
               and system available memory. Be aware, that this way it is affected by other processes that can change
               RAM availability. It is advised to call get_data(memory_from_zero=True) for this type of memory logging,
@@ -80,14 +76,23 @@ class MemoryMonitor:
             report memory loaded with mmap. So it can be used to analyze "pure" memory usage without contribution of
             mmap pages which are actually free, but are reported as allocated by RSS.
         :param memory_unit: Unit to report memory in.
+        :param include_child_processes: For MemoryType.RSS only: whether to include memory of child processes. If not
+            provided, child processes won't be counted. Be aware that checking for children takes somewhat significant
+            time (~0.02 sec.) and may add to sampling interval.
         """
         self.interval = interval
         self.memory_type = memory_type
         if memory_type == MemoryType.SYSTEM:
             logger.warning(
-                "Note: MemoryType.SYSTEM in general is affected by other processes that change RAM availability."
+                "Please note that MemoryType.SYSTEM in general is affected by other processes that change RAM availability."
             )
+        elif memory_type == MemoryType.RSS:
+            if include_child_processes is None:
+                include_child_processes = False
+        else:
+            raise ValueError("Unknown memory type to log")
         self.memory_unit = memory_unit
+        self.include_child_processes = include_child_processes
 
         self._monitoring_thread_should_stop = False
         self._monitoring_in_progress = False
@@ -223,41 +228,19 @@ class MemoryMonitor:
         plt.savefig(str(log_filepath).replace(".txt", f"{filename_suffix}.png"))
         plt.close(fig)
 
+    def __enter__(self) -> "MemoryMonitor":
+        return self.start()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()
+
     def _monitor_memory(self):
         while not self._monitoring_thread_should_stop:
             if self.memory_type == MemoryType.RSS:
                 bytes_used = psutil.Process().memory_info().rss
-            elif self.memory_type == MemoryType.RSS_TOP:
-                elem_filter = lambda it: "\x1b" not in it
-                new_line_delimiter = "\x1b(B\x1b[m\x1b[39;49m"
-                header_line = -3
-                res_column = 5  # Resident Memory Size (KiB): The non-swapped physical memory a task is using.
-
-                try:
-                    res = subprocess.run(
-                        f"top -n 1 -p {os.getpid()}".split(" "),
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                    )
-                except subprocess.CalledProcessError as e:
-                    raise RuntimeError(
-                        f"top command returned non-zero exit code. Can't collect memory values.\n"
-                        f"Make sure top is an available executable name. Possibly, running python "
-                        f"script through terminal may work.\nOriginal exception:\n{e}"
-                    )
-                stdout, _ = res.stdout, res.stderr
-                lines = stdout.split(new_line_delimiter)
-                if len(lines) < abs(header_line):
-                    continue
-                assert tuple(filter(elem_filter, lines[header_line].split()))[res_column] == "RES"
-                line_elems = tuple(filter(elem_filter, lines[header_line + 1].split()))
-                res_data = line_elems[res_column]
-                if res_data.endswith("m") or res_data.endswith("g"):
-                    float_value = float(res_data.replace(",", "."))
-                    bytes_used = float_value * 2 ** (30 if "g" in res_data else 20)
-                else:
-                    bytes_used = float(res_data) * 2**10
+                if self.include_child_processes:
+                    for child_process in psutil.Process().children(recursive=True):
+                        bytes_used += psutil.Process(child_process.pid).memory_info().rss
             elif self.memory_type == MemoryType.SYSTEM:
                 bytes_used = psutil.virtual_memory().total - psutil.virtual_memory().available
             else:
@@ -266,55 +249,60 @@ class MemoryMonitor:
             time.sleep(self.interval)
 
 
-def monitor_memory_for_callable(
-    f: Callable,
-    interval: Optional[float] = 0.1,
-    memory_unit: Optional[MemoryUnit] = MemoryUnit.MiB,
-    return_max_value: Optional[bool] = True,
-    save_dir: Optional[Path] = None,
-) -> Union[Dict[MemoryType, float], Dict[MemoryType, Tuple[List, List]]]:
-    """
-    Monitor memory from the start to the end of execution of some callable function. Returns the maximum memory
-    recorded if `return_max_value=True` or whole time-memory sequences. Works by subtracting the first memory
-    measurement from all the other ones so that the resulting sequence starts from 0. Hence, it can actually return
-    negative memory values.
+class memory_monitor_context:
+    def __init__(
+        self,
+        interval: Optional[float] = 0.1,
+        memory_unit: Optional[MemoryUnit] = MemoryUnit.MiB,
+        return_max_value: Optional[bool] = True,
+        save_dir: Optional[Path] = None,
+    ):
+        """
+            User-friendly memory monitor context which monitors both RSS and SYSTEM memory types. After, stores the
+            result for the maximum memory recorded if `return_max_value=True` or the whole time-memory sequences. Works
+            by subtracting the first memory measurement from all the other ones so that the resulting sequence starts
+            from 0. Hence, it can actually return negative memory values.
 
-    :param f: A callable to monitor.
-    :param interval: Interval in seconds to take measurements.
-    :param memory_unit: Memory unit.
-    :param return_max_value: Whether to return max value for each memory type or full memory sequences.
-    :param save_dir: If provided, will save memory logs at this location.
-    :returns: A dict with memory types (RSS or SYSTEM) as keys. The values are either a single float number if
-        return_max_value is provided, or a tuple with time and memory value lists.
-    """
-    memory_monitors = {}
-    for memory_type in [MemoryType.RSS, MemoryType.SYSTEM]:
-        memory_monitors[memory_type] = MemoryMonitor(
-            interval=interval, memory_type=memory_type, memory_unit=memory_unit
-        ).start()
+            After exiting, the result is stored at .memory_data field -- a dict with memory types (RSS or SYSTEM)
+            as keys. The values are either a single float number if return_max_value is provided, or a tuple with time
+            and memory value lists.
 
-    f()
+            :param interval: Interval in seconds to take measurements.
+            :param memory_unit: Memory unit.
+            :param return_max_value: Whether to return max value for each memory type or full memory sequences.
+            :param save_dir: If provided, will save memory logs at this location.
+        """
 
-    resulting_memory_data = {}
-    for mt, mm in memory_monitors.items():
-        mm.stop()
-        for fz in [False, True]:
-            time_values, memory_values = mm.get_data(memory_from_zero=fz)
-            if fz:
-                if return_max_value:
-                    resulting_memory_data[mt] = max(memory_values)
-                else:
-                    resulting_memory_data[mt] = time_values, memory_values
+        self.memory_monitors = {}
+        for memory_type in [MemoryType.RSS, MemoryType.SYSTEM]:
+            self.memory_monitors[memory_type] = MemoryMonitor(
+                interval=interval, memory_type=memory_type, memory_unit=memory_unit
+            )
+        self.return_max_value = return_max_value
+        self.save_dir = save_dir
 
-            if save_dir:
-                mm.save_memory_logs(
-                    time_values,
-                    memory_values,
-                    save_dir=save_dir,
-                    filename_suffix="_from-zero" if fz else "",
-                )
+        self.memory_data = {}
 
-    return resulting_memory_data
+    def __enter__(self):
+        for mm in self.memory_monitors.values():
+            mm.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for mt, mm in self.memory_monitors.items():
+            mm.stop()
+            for fz in [False, True]:
+                time_values, memory_values = mm.get_data(memory_from_zero=fz)
+                if fz:
+                    self.memory_data[mt] = max(memory_values) if self.return_max_value else (time_values, memory_values)
+
+                if self.save_dir:
+                    mm.save_memory_logs(
+                        time_values,
+                        memory_values,
+                        save_dir=self.save_dir,
+                        filename_suffix="_from-zero" if fz else "",
+                    )
 
 
 def _cast_bytes_to(bytes, memory_unit, round_to_int=False):

@@ -24,7 +24,7 @@ from tests.shared.isolation_runner import run_pytest_case_function_in_separate_p
 from tools.memory_monitor import MemoryMonitor
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
-from tools.memory_monitor import monitor_memory_for_callable
+from tools.memory_monitor import memory_monitor_context
 
 BYTES_TO_ALLOCATE_SMALL = 2**20  # 1 MiB
 BYTES_TO_ALLOCATE_LARGE = 100 * 2**20  # 100 MiB
@@ -104,10 +104,11 @@ def test_interval(interval):
 
 
 @pytest.mark.parametrize("return_max_value", (True, False))
-def test_monitor_memory_for_callable(tmpdir, return_max_value):
+def test_memory_monitor_context(tmpdir, return_max_value):
     tmpdir = Path(tmpdir)
-    allocate_fn = lambda: allocate(BYTES_TO_ALLOCATE_SMALL)
-    memory_data = monitor_memory_for_callable(allocate_fn, return_max_value=return_max_value, save_dir=tmpdir)
+    with memory_monitor_context(return_max_value=return_max_value, save_dir=tmpdir) as mmc:
+        allocate(BYTES_TO_ALLOCATE_SMALL)
+    memory_data = mmc.memory_data
 
     assert isinstance(memory_data, dict)
     assert MemoryType.RSS in memory_data
