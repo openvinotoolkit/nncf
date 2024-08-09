@@ -257,7 +257,7 @@ class memory_monitor_context:
         save_dir: Optional[Path] = None,
     ):
         """
-        User-friendly memory monitor context which monitors both RSS and SYSTEM memory types. After, stores the
+        User-friendly memory monitor context manager which monitors both RSS and SYSTEM memory types. After, stores the
         result for the maximum memory recorded if `return_max_value=True` or the whole time-memory sequences. Works
         by subtracting the first memory measurement from all the other ones so that the resulting sequence starts
         from 0. Hence, it can actually return negative memory values.
