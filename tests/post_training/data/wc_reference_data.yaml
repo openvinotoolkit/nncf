@@ -1,32 +1,32 @@
 tinyllama_data_free_backend_OV:
-  metric_value: 0.73873
+  metric_value: 0.72494
   num_int4: 114
   num_int8: 84
 tinyllama_data_aware_backend_OV:
-  metric_value: 0.85767
+  metric_value: 0.85635
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_stateful_backend_OV:
-  metric_value: 0.85616
+  metric_value: 0.84951
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_backend_OV:
-  metric_value: 0.85502
+  metric_value: 0.85299
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
-  metric_value: 0.85502
+  metric_value: 0.84125
   num_int4: 94
   num_int8: 124
 tinyllama_int8_data_free_backend_TORCH:
-  metric_value: 0.95624
+  metric_value: 0.94924
   num_int4: 0
   num_int8: 312
 tinyllama_data_aware_gptq_backend_OV:
-  metric_value: 0.87134
+  metric_value: 0.86621
   num_int4: 94
   num_int8: 124
 tinyllama_scale_estimation_per_channel_backend_OV:
-  metric_value: 0.81389
+  metric_value: 0.82356
   num_int4: 188
   num_int8: 124
