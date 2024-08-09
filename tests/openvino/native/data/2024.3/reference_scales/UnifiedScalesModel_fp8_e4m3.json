@@ -47,11 +47,11 @@
             ]
         ]
     },
-    "Cos_5/fc_output_0": {
+    "Cos/fc_output_0": {
         "scale": 224.00006103515625,
         "shift": 0.0
     },
-    "Sin_4/fc_output_0": {
+    "Sin/fc_output_0": {
         "scale": 224.00006103515625,
         "shift": 0.0
     }

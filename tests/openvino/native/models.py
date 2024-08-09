@@ -1145,8 +1145,8 @@ class UnifiedScalesModel(OVReferenceModel):
     def _create_ov_model(self):
         input = opset.parameter([1, 3, 4, 2], name="Input")
         multiply = opset.multiply(input, self._rng.random((1, 2)).astype(np.float32), name="Mul")
-        sin = opset.sin(multiply)
-        cos = opset.cos(multiply)
+        sin = opset.sin(multiply, name="Sin")
+        cos = opset.cos(multiply, name="Cos")
         concat = opset.concat([sin, cos], axis=0)
         kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32)
         strides = [1, 1]
