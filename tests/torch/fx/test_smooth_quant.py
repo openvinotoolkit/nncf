@@ -24,8 +24,8 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
 from nncf.quantization.algorithms.smooth_quant.torch_fx_backend import FXSmoothQuantAlgoBackend
+from nncf.quantization.algorithms.smooth_quant.torch_fx_backend import FXSQMultiply
 from nncf.torch import disable_patching
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
@@ -121,7 +121,7 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
             # Check unified group acutally shares one constant
             assert all(node is sq_modules[0] for node in sq_modules[1:])
             sq_node = sq_modules[0]
-            assert isinstance(sq_node, SQMultiply)
+            assert isinstance(sq_node, FXSQMultiply)
 
             value = sq_node._scale_value
             ref_value = torch.tensor(ref_value)

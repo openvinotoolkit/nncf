@@ -30,7 +30,6 @@ from nncf.experimental.torch.fx.transformations import module_insertion_transfor
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
-from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
 from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_node
@@ -38,6 +37,15 @@ from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_
 from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
 
 PT_PRE_LAYER_TARGET_TYPE = TargetType.OPERATOR_PRE_HOOK
+
+
+class FXSQMultiply(torch.nn.Module):
+    def __init__(self, scale: torch.Tensor):
+        super().__init__()
+        self._scale_value = scale
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.mul(x, self._scale_value)
 
 
 class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
@@ -112,8 +120,7 @@ class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         for node in nodes:
             target_points.append(PTTargetPoint(PT_PRE_LAYER_TARGET_TYPE, node.node_name, input_port_id=input_port_id))
 
-        sq_multiply = SQMultiply(scale_value.shape)
-        sq_multiply.scale = scale_value
+        sq_multiply = FXSQMultiply(scale_value)
         return FXApplyTransformationCommand(
             module_insertion_transformation_builder(sq_multiply, target_points, scale_node_name)
         )

@@ -120,6 +120,7 @@ class GraphConverter:
             edge tensor shape.
         """
         output_port_id = 0
+        tensor_shape = None
         if source_node.op in ("get_attr",):
             tensor_shape = tuple(getattr(model, source_node.target).shape)
         elif "val" in source_node.meta:
@@ -131,8 +132,10 @@ class GraphConverter:
                 output_port_id = output_idx
             else:
                 tensor = source_node.meta["val"]
-            tensor_shape = tuple(tensor.shape)
-        else:
+            if isinstance(tensor, torch.Tensor):
+                tensor_shape = tuple(tensor.shape)
+
+        if tensor_shape is None:
             # TODO(dlyakhov): Refactor algorithms to always have knowns edges shapes.
             nncf_logger.debug(f"Edge shape between {source_node.name} and {dist_node.name} is unknown.")
             tensor_shape = None
