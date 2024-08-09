@@ -76,6 +76,17 @@ QUANTIZATION_MODELS = [
         "batch_size": 128,
     },
     {
+        "reported_name": "torchvision/vit_b_16",
+        "model_id": "vit_b_16",
+        "pipeline_cls": ImageClassificationTorchvision,
+        "compression_params": {
+            "model_type": ModelType.TRANSFORMER,
+            "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.15),
+        },
+        "backends": [BackendType.FX_TORCH, BackendType.OV],
+        "batch_size": 1,
+    },
+    {
         "reported_name": "torchvision/swin_v2_s",
         "model_id": "swin_v2_s",
         "pipeline_cls": ImageClassificationTorchvision,

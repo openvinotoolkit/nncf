@@ -34,6 +34,12 @@ torchvision/resnet18_backend_CUDA_TORCH:
   metric_value: 0.69152
 torchvision/resnet18_backend_FX_TORCH:
   metric_value: 0.6946
+torchvision/vit_b_16_backend_FP32:
+  metric_value: 0.8107
+torchvision/vit_b_16_backend_OV:
+  metric_value: 0.8092
+torchvision/vit_b_16_backend_FX_TORCH:
+  metric_value: 1.
 torchvision/swin_v2_s_backend_FP32:
   metric_value: 0.83712
 torchvision/swin_v2_s_backend_OV:
