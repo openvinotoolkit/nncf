@@ -19,16 +19,16 @@ class Cluster(Generic[T]):
     Represents element of Сlusterization. Groups together elements.
     """
 
-    def __init__(self, cluster_id: int, elements: List[T], nodes_orders: List[int]):
+    def __init__(self, cluster_id: int, elements: List[T], nodes_orders: List[int]) -> None:
         self.id = cluster_id
         self.elements = list(elements)
         self.importance = max(nodes_orders)
 
-    def clean_cluster(self):
+    def clean_cluster(self) -> None:
         self.elements = []
         self.importance = 0
 
-    def add_elements(self, elements: List[T], importance: int):
+    def add_elements(self, elements: List[T], importance: int) -> None:
         self.elements.extend(elements)
         self.importance = max(self.importance, importance)
 
@@ -39,11 +39,11 @@ class Clusterization(Generic[T]):
     delete existing one or merge existing clusters.
     """
 
-    def __init__(self, id_fn: Callable[[T], Hashable] = None):
+    def __init__(self, id_fn: Callable[[T], Hashable] = None) -> None:
         self.clusters: Dict[int, Cluster[T]] = {}
         self._element_to_cluster: Dict[Hashable, int] = {}
         if id_fn is None:
-            self._id_fn = lambda x: x.id
+            self._id_fn: Callable[[T], Hashable] = lambda x: x.id  # type:ignore
         else:
             self._id_fn = id_fn
 
@@ -78,7 +78,7 @@ class Clusterization(Generic[T]):
         """
         return node_id in self._element_to_cluster
 
-    def add_cluster(self, cluster: Cluster[T]):
+    def add_cluster(self, cluster: Cluster[T]) -> None:
         """
         Adds provided cluster to clusterization.
 
@@ -91,7 +91,7 @@ class Clusterization(Generic[T]):
         for elt in cluster.elements:
             self._element_to_cluster[self._id_fn(elt)] = cluster_id
 
-    def delete_cluster(self, cluster_id: int):
+    def delete_cluster(self, cluster_id: int) -> None:
         """
         Removes cluster with `cluster_id` from clusterization.
 
@@ -123,7 +123,7 @@ class Clusterization(Generic[T]):
             all_elements.extend(cluster.elements)
         return all_elements
 
-    def merge_clusters(self, first_id: int, second_id: int):
+    def merge_clusters(self, first_id: int, second_id: int) -> None:
         """
         Merges two clusters with provided ids.
 
@@ -143,7 +143,7 @@ class Clusterization(Generic[T]):
                 self._element_to_cluster[self._id_fn(elt)] = second_id
             self.clusters.pop(first_id)
 
-    def merge_list_of_clusters(self, clusters: List[int]):
+    def merge_list_of_clusters(self, clusters: List[int]) -> None:
         """
         Merges provided clusters.
 
