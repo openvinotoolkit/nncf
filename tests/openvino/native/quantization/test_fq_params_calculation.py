@@ -18,6 +18,7 @@ import torch
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
+from nncf.parameters import QuantizationMode
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from tests.openvino.native.common import convert_torch_model
@@ -28,6 +29,7 @@ from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import MatMul2DModel
+from tests.openvino.native.models import UnifiedScalesModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.models import get_torch_model_info
 from tests.shared.helpers import compare_stats
@@ -50,6 +52,14 @@ def get_fq_nodes_stats_algo(model):
                 "input_high": input_high,
                 "output_low": output_low,
                 "output_high": output_high,
+            }
+        elif op.get_type_name() == "FakeConvert":
+            scale = op.input_value(1).get_node().data
+            shift = op.input_value(2).get_node().data
+
+            nodes[op.get_friendly_name()] = {
+                "scale": scale,
+                "shift": shift,
             }
     return nodes
 
@@ -92,6 +102,31 @@ def test_synthetic_models_fq_scales(model_creator_func, preset, inplace_statisti
 
     ref_nodes = load_json(ref_stats_path)
     compare_stats(ref_nodes, nodes)
+
+
+@pytest.mark.parametrize(
+    "mode",
+    [QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2],
+    ids=[QuantizationMode.FP8_E4M3.value, QuantizationMode.FP8_E5M2.value],
+)
+@pytest.mark.parametrize("model_creator_func", [UnifiedScalesModel])
+def test_synthetic_models_fc_scales(model_creator_func, mode):
+    model = model_creator_func()
+    quantized_model = quantize_model(model.ov_model, {"mode": mode})
+    real_nodes = [op for op in quantized_model.get_ops() if op.get_type_name() == "FakeConvert"]
+
+    ref_stats_name = model.ref_graph_name.split(".")[0] + f"_{mode.value}.json"
+    ref_stats_path = get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / ref_stats_name)
+    ref_nodes = load_json(ref_stats_path)
+
+    assert len(ref_nodes) == len(real_nodes), "The number of the real FakeConvert nodes is not correct"
+    stat_nodes = get_fq_nodes_stats_algo(quantized_model)
+
+    # Uncomment lines below to generate reference for new models.
+    # from tests.shared.helpers import dump_to_json
+    # dump_to_json(ref_stats_path, nodes)
+
+    compare_stats(ref_nodes, stat_nodes)
 
 
 @pytest.mark.parametrize(
