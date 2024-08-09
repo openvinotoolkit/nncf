@@ -25,6 +25,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
@@ -101,9 +102,6 @@ class AWQ(Algorithm):
         Creates a helper class with a backed-specific logic of the algorithm.
 
         :param model: Backend-specific input model.
-        :param all_weight_params: List of all weight parameters.
-        :param nodes_to_compress: List of nodes for processing.
-        :param activations: The input activations of the layers considered for compression.
         """
 
         model_backend = get_backend(model)
@@ -197,17 +195,7 @@ class AWQ(Algorithm):
 
             config = wp.compression_config
 
-            stats = self._activations[k]
-            X = fns.stack([fns.mean(stat, axis=0) for stat in stats])
-            X = fns.transpose(X)
-
-            s = fns.max(fns.abs(X), axis=1)
-
-            if X.shape[1] > self._subset_size:
-                lens = [stat.shape[0] for stat in stats]
-                step = X.shape[1] // self._subset_size
-                idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
-                X = X[:, idxs]
+            s, X = process_stats(self._activations[k], self._subset_size)
 
             top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
             topk_idxs = fns.argsort(-s)[:top_k]

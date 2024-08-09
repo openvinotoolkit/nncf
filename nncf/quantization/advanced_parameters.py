@@ -316,6 +316,34 @@ class AdvancedGPTQParameters:
 
 @api()
 @dataclass
+class AdvancedLoraCorrectionParameters:
+    """
+    Contains advanced parameters for lora correction algorithm.
+
+    :param rank: rank of lora adapters. Defaults to 8.
+    :type rank: int
+    :param n_iters: number of correction steps. Defaults to 3.
+    :type n_iters: int
+    :param w_regularization: Whether to do regularization during the correction process. Defaults to False.
+        Helpful for big rank values to avoid overfitting.
+    :type w_regularization: bool
+    :param subset_size: Number of data samples for lora correction algorithm. Defaults to 32.
+    :type subset_size: int
+    :param is_int8_adapters: Whether to 8-bit quantize lora adapters. Defaults to True.
+        Reasonable with dynamic quantization of activation to achieve the best acceleration.
+    :type is_int8_adapters: bool
+
+    """
+
+    rank: int = 8
+    n_iters: int = 3
+    w_regularization: bool = False
+    subset_size: int = 32
+    is_int8_adapters: bool = True
+
+
+@api()
+@dataclass
 class AdvancedCompressionParameters:
     """
     Contains advanced parameters for compression algorithms.
@@ -336,6 +364,9 @@ class AdvancedCompressionParameters:
 
     # Advanced GPTQ algorithm parameters
     gptq_params: AdvancedGPTQParameters = field(default_factory=AdvancedGPTQParameters)
+
+    # Advanced Lora Correction algorithm parameters
+    lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
 
 
 @api()

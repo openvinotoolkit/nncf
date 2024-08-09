@@ -93,6 +93,7 @@ def compress_weights_impl(
     subset_size: int,
     scale_estimation: bool,
     gptq: bool,
+    lora_correction: bool,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> torch.nn.Module:
     """
@@ -110,6 +111,7 @@ def compress_weights_impl(
         subset_size,
         scale_estimation,
         gptq,
+        lora_correction,
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)
