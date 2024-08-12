@@ -8,13 +8,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import argparse
 import atexit
 import logging
 import queue
+import subprocess
 import threading
 import time
 from enum import Enum
+from functools import lru_cache
 from functools import partial
 from pathlib import Path
 from typing import Callable, List, Optional, Tuple
@@ -38,6 +40,14 @@ class MemoryUnit(Enum):
     KB = "KB"  # Kilobyte
     MB = "MB"  # Megabyte
     GB = "GB"  # Gigabyte
+
+
+@lru_cache
+def system_memory_warning():
+    # Log once
+    logger.warning(
+        "Please note that MemoryType.SYSTEM in general is affected by other processes that change RAM availability."
+    )
 
 
 class MemoryMonitor:
@@ -75,19 +85,15 @@ class MemoryMonitor:
             mmap pages which are actually free, but are reported as allocated by RSS.
         :param memory_unit: Unit to report memory in.
         :param include_child_processes: For MemoryType.RSS only: whether to include memory of child processes. If not
-            provided, child processes won't be counted. Be aware that checking for children takes somewhat significant
-            time (~0.02 sec.) and may add to sampling interval.
+            provided, child processes are counted.
         """
         self.interval = interval
         self.memory_type = memory_type
         if memory_type == MemoryType.SYSTEM:
-            logger.warning(
-                "Please note that MemoryType.SYSTEM is in general affected by other processes that change RAM "
-                "availability."
-            )
+            system_memory_warning()
         elif memory_type == MemoryType.RSS:
             if include_child_processes is None:
-                include_child_processes = False
+                include_child_processes = True
         else:
             raise ValueError("Unknown memory type to log")
         self.memory_unit = memory_unit
@@ -235,6 +241,7 @@ class MemoryMonitor:
 
     def _monitor_memory(self):
         while not self._monitoring_thread_should_stop:
+            _last_measurement_time = time.perf_counter()
             if self.memory_type == MemoryType.RSS:
                 bytes_used = psutil.Process().memory_info().rss
                 if self.include_child_processes:
@@ -245,7 +252,7 @@ class MemoryMonitor:
             else:
                 raise Exception("Unknown memory type to log")
             self._memory_values_queue.put((time.perf_counter(), bytes_used))
-            time.sleep(self.interval)
+            time.sleep(max(0.0, self.interval - (time.perf_counter() - _last_measurement_time)))
 
 
 class memory_monitor_context:
@@ -257,14 +264,16 @@ class memory_monitor_context:
         save_dir: Optional[Path] = None,
     ):
         """
-        User-friendly memory monitor context manager which monitors both RSS and SYSTEM memory types. After, stores the
-        result for the maximum memory recorded if `return_max_value=True` or the whole time-memory sequences. Works
+        A memory monitor context manager which monitors both RSS and SYSTEM memory types. After, it stores the
+        result for the maximum memory recorded if `return_max_value=True or the whole time-memory sequences. Works
         by subtracting the first memory measurement from all the other ones so that the resulting sequence starts
         from 0. Hence, it can actually return negative memory values.
 
         After exiting, the result is stored at .memory_data field -- a dict with memory types (RSS or SYSTEM)
         as keys. The values are either a single float number if return_max_value is provided, or a tuple with time
         and memory value lists.
+
+        Additionally, memory logs may be saved by providing save_dir argument.
 
         :param interval: Interval in seconds to take measurements.
         :param memory_unit: Memory unit.
@@ -326,23 +335,27 @@ def _subtract_first_element(data):
 
 
 if __name__ == "__main__":
-    # Example usage
-
-    import numpy as np
-    from tqdm import tqdm
+    parser = argparse.ArgumentParser(
+        description="Memory Monitor Tool. Monitors memory for an executable and saves logs at specified location.",
+        epilog="Examples:\n"
+        "   python memory_monitor.py --log-dir ./allocation_logs python allocate.py\n"
+        "   python memory_monitor.py optimum-cli export openvino ...",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser.add_argument(
+        "--log-dir", type=str, default="memory_logs", help="A directory to save logs at. './memory_logs' by default."
+    )
+    parser.add_argument("executable", type=str, nargs="+", help="Target executable to monitor memory for.")
+    args = parser.parse_args()
 
     def log(mm, fz):
         mm.save_memory_logs(
-            *mm.get_data(memory_from_zero=fz), save_dir=Path("memory_logs"), filename_suffix="_from-zero" if fz else ""
+            *mm.get_data(memory_from_zero=fz), save_dir=Path(args.log_dir), filename_suffix="_from-zero" if fz else ""
         )
 
     for memory_type, mem_from_zero in [(MemoryType.RSS, False), (MemoryType.SYSTEM, False), (MemoryType.SYSTEM, True)]:
-        memory_monitor = MemoryMonitor(memory_type=memory_type)
+        memory_monitor = MemoryMonitor(memory_type=memory_type, include_child_processes=True)
         memory_monitor.start(at_exit_fn=partial(log, memory_monitor, mem_from_zero))
 
-    a = []
-    for i in tqdm(range(10)):
-        a.append(np.random.random((1 << 25,)))
-        time.sleep(1)
-    del a
-    time.sleep(1)
+    with subprocess.Popen(" ".join(args.executable), shell=True) as p:
+        p.wait()
