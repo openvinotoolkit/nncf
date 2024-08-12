@@ -190,7 +190,8 @@ class LMWeightCompression(BaseTestPipeline):
                 save_dir=self.output_model_dir / "wc_memory_logs",
             ) as mmc:
                 self._compress()
-            self.run_info.compression_memory_usage = mmc.memory_data[MemoryType.SYSTEM]
+            self.run_info.compression_memory_usage_rss = mmc.memory_data[MemoryType.RSS]
+            self.run_info.compression_memory_usage_system = mmc.memory_data[MemoryType.SYSTEM]
         else:
             self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
         self.run_info.time_compression = time.perf_counter() - start_time

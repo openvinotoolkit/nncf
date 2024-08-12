@@ -142,6 +142,8 @@ class RunInfo:
     metric_value: Optional[float] = None
     metric_diff: Optional[float] = None
     compression_memory_usage: Optional[int] = None
+    compression_memory_usage_rss: Optional[int] = None
+    compression_memory_usage_system: Optional[int] = None
     status: Optional[str] = None
     fps: Optional[float] = None
     time_total: Optional[float] = None
@@ -162,7 +164,7 @@ class RunInfo:
         return int(memory)
 
     def get_result_dict(self):
-        return {
+        result = {
             "Model": self.model,
             "Backend": self.backend.value if self.backend else None,
             "Metric name": self.metric_name,
@@ -171,13 +173,21 @@ class RunInfo:
             "Num FQ": self.num_compress_nodes.num_fq_nodes,
             "Num int4": self.num_compress_nodes.num_int4,
             "Num int8": self.num_compress_nodes.num_int8,
-            "RAM MiB": self.format_memory_usage(self.compression_memory_usage),
             "Compr. time": self.format_time(self.time_compression),
             **self.stats_from_output.get_stats(),
             "Total time": self.format_time(self.time_total),
             "FPS": self.fps,
             "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
         }
+
+        if self.compression_memory_usage_rss is None and self.compression_memory_usage_system is None:
+            result["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage),
+        if self.compression_memory_usage_rss is not None:
+            result["RAM MiB RSS"] = self.format_memory_usage(self.compression_memory_usage_rss)
+        if self.compression_memory_usage_system is not None:
+            result["RAM MiB System"] = self.format_memory_usage(self.compression_memory_usage_system)
+
+        return result
 
 
 class BaseTestPipeline(ABC):
@@ -366,7 +376,8 @@ class PTQTestPipeline(BaseTestPipeline):
                 save_dir=self.output_model_dir / "ptq_memory_logs",
             ) as mmc:
                 self._compress()
-            self.run_info.compression_memory_usage = mmc.memory_data[MemoryType.SYSTEM]
+            self.run_info.compression_memory_usage_rss = mmc.memory_data[MemoryType.RSS]
+            self.run_info.compression_memory_usage_system = mmc.memory_data[MemoryType.SYSTEM]
         else:
             self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
         self.run_info.time_compression = time.perf_counter() - start_time
