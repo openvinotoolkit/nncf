@@ -11,7 +11,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple
+from typing import Any, Tuple
 
 import pytest
 import torch
@@ -35,7 +35,7 @@ class ModelExtractionTestCase:
     ref: None = None
 
 
-EXTRAXCTED_GRAPHS_DIR_NAME = Path("fx") / "extracted"
+EXTRACTED_GRAPHS_DIR_NAME = Path("fx") / "extracted"
 
 MODEL_EXTRACTION_CASES = (
     ModelExtractionTestCase(ModelExtractionModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["conv2d"])),
@@ -45,7 +45,13 @@ MODEL_EXTRACTION_CASES = (
 )
 
 
-@pytest.mark.parametrize("test_case", MODEL_EXTRACTION_CASES)
+def idfn(value: Any):
+    if isinstance(value, ModelExtractionTestCase):
+        return value.model.__name__
+    return None
+
+
+@pytest.mark.parametrize("test_case", MODEL_EXTRACTION_CASES, ids=idfn)
 def test_model_extraction(test_case: ModelExtractionTestCase):
     with torch.no_grad():
         with disable_patching():
@@ -54,4 +60,4 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
     layout.register(test_case.command)
     extracted_model = FXModelTransformer(captured_model).transform(layout)
     nncf_graph = GraphConverter.create_nncf_graph(extracted_model)
-    check_graph(nncf_graph, f"{test_case.model.__name__}.dot", EXTRAXCTED_GRAPHS_DIR_NAME)
+    check_graph(nncf_graph, f"{test_case.model.__name__}.dot", str(EXTRACTED_GRAPHS_DIR_NAME))

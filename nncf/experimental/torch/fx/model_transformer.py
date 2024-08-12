@@ -129,5 +129,5 @@ class FXModelTransformer(ModelTransformer):
         :return: Target model after all transformations were applied.
         """
         for transformation in transformations:
-            transformation.tranformation_fn(model)
+            transformation.transformation_fn(model)
         return model

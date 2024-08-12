@@ -33,5 +33,5 @@ class FXApplyTransformationCommand(Command):
         :param priority: Transformation priority.
         """
         super().__init__(TransformationType.INSERT)
-        self.tranformation_fn = transformation_fn
+        self.transformation_fn = transformation_fn
         self.priority = priority

@@ -79,7 +79,7 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
     return bias_update_transformation
 
 
-def qdq_insertion_tranformation_builder(
+def qdq_insertion_transformation_builder(
     quantizer: FakeQuantize, target_points: List[PTTargetPoint]
 ) -> TransformationFNType:
     """
@@ -92,7 +92,7 @@ def qdq_insertion_tranformation_builder(
         inherited from the given quantizer to each given target point.
     """
 
-    def qdq_insertion_tranformation(model: torch.fx.GraphModule):
+    def qdq_insertion_transformation(model: torch.fx.GraphModule):
         if any(tp.target_type != TargetType.OPERATION_WITH_WEIGHTS for tp in target_points) and len(target_points) > 1:
             raise RuntimeError(
                 "Insertion of shared qdq pair for the weights is not supported."
@@ -101,7 +101,7 @@ def qdq_insertion_tranformation_builder(
         for target_point in target_points:
             insert_one_qdq(model, target_point, quantizer)
 
-    return qdq_insertion_tranformation
+    return qdq_insertion_transformation
 
 
 def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, quantizer: FakeQuantize):
@@ -310,7 +310,7 @@ def _is_bn_node(node: torch.fx.Node):
 
 def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
     """
-    BatchNorm operations have 3 output ports, to make it easier for alorithms to work with
+    BatchNorm operations have 3 output ports, to make it easier for algorithms to work with
     the target graph BatchNorm operations are being fused
 
     :param model: Model to apply transformations to.
@@ -342,7 +342,7 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     :param model: Model to apply transformations to.
     """
     # BatchNorm operations have 3 output ports,
-    # to make it easier for alorithms to work
+    # to make it easier for algorithms to work
     # with the target graph BatchNorm operations
     # are being fused
     fuse_conv_bn(model)
@@ -484,7 +484,7 @@ def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[
     Check which node should be merged by the given `is_target_node` predicate.
 
     :param model: Target model.
-    :param is_target_node: Predicate to specify nodes which shoudld be merged with the bias
+    :param is_target_node: Predicate to specify nodes which should be merged with the bias
     """
     add_node_targets = (torch.ops.aten.add_.Tensor,)
     for n in model.graph.nodes:
