@@ -153,57 +153,42 @@ def calculate_normalized_weight(weight: Tensor, scale: Tensor) -> Tensor:
     return weight / scale
 
 
-def do_nf4_fake_quantization_from_norm_weight(norm_weight: Tensor, scale: Tensor, reduction_axis: int = -1) -> Tensor:
+def do_nf4_quantization(weight: Tensor, scale: Tensor, is_normalized_weight: bool = False) -> Tensor:
     """
-    Does NF4 quantization and dequantization (fake quantization) for the weights normalized by the given scale.
+    Performs NF4 quantization - the floating point value is represented by floating point scale, look-up table of
+        16 NF4 values Quantizes the weight tensor to NF4 format.
 
-    :param norm_weight: weight divided by the given scale.
+    :param weight: Weight tensor to quantize.
     :param scale: Scale tensor used for normalization.
-    :param reduction_axis: axis along which weights were reshaped for group quantization and will be reshaped back to
-        original shapes. If equals to -1: weights are not reshaped, assumed not a group quantization. Default to -1.
-    :return: NF4 fake-quantized weight tensor.
+    :param is_normalized_weight: Whether weight was scaled to [-1, 1] interval. Defaults to False.
+    :return: Tensor of indexes from 0 to 15 that represents the position in look-up table with the corresponding
+        NF4 values from -1 to 1.
     """
+    norm_weight = weight if is_normalized_weight else calculate_normalized_weight(weight, scale)
     center_nf4_quantiles = fns.from_numpy(CENTER_OF_NF4_QUANTILES, backend=norm_weight.backend)
-    nf4_quantiles = fns.from_numpy(NF4_QUANTILES, backend=norm_weight.backend)
+    indexes = fns.searchsorted(center_nf4_quantiles, norm_weight)
+    return indexes
 
-    index_of_quantile = fns.searchsorted(center_nf4_quantiles, norm_weight)
-    nf4_weight = nf4_quantiles[index_of_quantile]
+
+def do_nf4_dequantization(indexes: Tensor, scale: Tensor, reduction_axis: int = -1) -> Tensor:
+    """
+    Decompresses the NF4 quantized weight tensor.
+
+    :param indexes: Tensor of indexes from 0 to 15 that represents the position in look-up table with the corresponding
+        NF4 values from -1 to 1.
+    :param scale: Scale tensor used for decompression.
+    :param reduction_axis: axis along which weights were reshaped for group quantization and will be reshaped back to
+        original shapes. If equals to -1, weights are not reshaped, assumed not a group quantization. Defaults to -1.
+    :return: Decompressed weight tensor.
+    """
+    nf4_quantiles = fns.from_numpy(NF4_QUANTILES, backend=indexes.backend)
+    nf4_weight = nf4_quantiles[indexes]
 
     decompressed_weight = nf4_weight * scale
     if reduction_axis != -1:
         decompressed_weight = ungroup_weights(decompressed_weight, reduction_axis)
 
     return decompressed_weight
-
-
-def calculate_nf4_weight(weight: Tensor, scale: Tensor) -> Tensor:
-    """
-    Quantizes the weight tensor to NF4 format.
-
-    :param weight: Weight tensor to quantize.
-    :param scale: Scale tensor used for normalization.
-    :return: Quantized weight tensor in NF4 format.
-    """
-    norm_weight = calculate_normalized_weight(weight, scale)
-
-    center_nf4_quantiles = fns.from_numpy(CENTER_OF_NF4_QUANTILES, backend=norm_weight.backend)
-    nf4_quantiles = fns.from_numpy(NF4_QUANTILES, backend=norm_weight.backend)
-
-    index_of_quantile = fns.searchsorted(center_nf4_quantiles, norm_weight)
-    nf4_weight = nf4_quantiles[index_of_quantile]
-
-    return nf4_weight
-
-
-def decompress_nf4_weight(weight: Tensor, scale: Tensor) -> Tensor:
-    """
-    Decompresses the NF4 quantized weight tensor.
-
-    :param weight: Quantized weight tensor in NF4 format.
-    :param scale: Scale tensor used for decompression.
-    :return: Decompressed weight tensor.
-    """
-    return weight * scale
 
 
 def calculate_normalized_weight_and_fp4_scale(
@@ -244,7 +229,8 @@ def calculate_integer_quantization_params(
     weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig
 ) -> Tuple[Tensor, Tensor]:
     """
-    Calculates the scale and zero point for integer quantization.
+    Calculates the scale and zero point for uniform quantization (INT4, INT8), when the range of values is divided into
+    equal intervals, and each interval is assigned a quant.
 
     :param weight: Weight array to compress.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
@@ -317,7 +303,7 @@ def calculate_quantized_weight(
     return compressed_weights
 
 
-def do_integer_quantization(
+def do_int_quantization(
     weight: Tensor,
     reduction_axes: ReductionAxes,
     config: WeightCompressionConfig,
@@ -326,7 +312,7 @@ def do_integer_quantization(
     invert_scale=False,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
-    The method quantizes the given weights to integer data type in accordance with the compression config.
+    The method quantizes the given weights to integer data type uniformly in accordance with the compression config.
     The config defines a quantization mode:
         INT8_SYM mode refers to signed int8 symmetric weight compression without zero point -
             quantization to [-128, 127] range.
@@ -389,8 +375,8 @@ def get_integer_quantization_error(
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
-    compressed_weights, scale, zero_point = do_integer_quantization(weight, reduction_axes, config)
-    decompressed_weight = do_dequantization(compressed_weights, scale, zero_point)
+    compressed_weights, scale, zero_point = do_int_quantization(weight, reduction_axes, config)
+    decompressed_weight = do_int_dequantization(compressed_weights, scale, zero_point)
 
     decompressed_weight = decompressed_weight.reshape(orig_shape)
     diff = (decompressed_weight - weight) ** 2
@@ -421,7 +407,7 @@ def compress_weight(
             weight, reduction_axes, config.group_size, precomputed_scale, config.mode
         )
         return CompressedWeight(compressed_weight, scale)
-    compressed_weight, scale, zero_point = do_integer_quantization(
+    compressed_weight, scale, zero_point = do_int_quantization(
         weight, reduction_axes, config, precomputed_scale, precomputed_zero_point
     )
 
@@ -446,7 +432,7 @@ def ungroup_weights(weights: Tensor, reduction_axis: int) -> Tensor:
     return weights
 
 
-def do_dequantization(
+def do_int_dequantization(
     compressed_weights: Tensor, scale: Tensor, zero_point: Optional[Tensor] = None, reduction_axis: int = -1
 ) -> Tensor:
     """

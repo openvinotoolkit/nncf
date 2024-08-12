@@ -33,8 +33,8 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
@@ -954,8 +954,8 @@ def test_np_ov_compression_decompression(mode):
 
     config = WeightCompressionConfig(mode)
 
-    compressed_weighs, scale, zp = do_integer_quantization(w, -1, config, invert_scale=True)
-    decompressed_weighs = do_dequantization(compressed_weighs, scale, zp)
+    compressed_weighs, scale, zp = do_int_quantization(w, -1, config, invert_scale=True)
+    decompressed_weighs = do_int_dequantization(compressed_weighs, scale, zp)
 
     compressed_weighs = compressed_weighs.data
     decompressed_weighs = decompressed_weighs.data

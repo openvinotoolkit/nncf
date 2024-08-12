@@ -21,8 +21,8 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.tensor import TensorDataType
 from nncf.tensor import functions as fns
@@ -152,10 +152,10 @@ class ScaleEstimation:
 
             original_weight = fns.zeros_like(weight) + weight
 
-            compressed_weights, scale, zp = do_integer_quantization(original_weight, reduction_axis, cur_config)
+            compressed_weights, scale, zp = do_int_quantization(original_weight, reduction_axis, cur_config)
             if zp is not None:
                 zp = zp.astype(scale.dtype)
-            q_weights = do_dequantization(compressed_weights, scale, zp, reduction_axis)
+            q_weights = do_int_dequantization(compressed_weights, scale, zp, reduction_axis)
 
             s = fns.unsqueeze(s, 0)
             s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, group_size)

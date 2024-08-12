@@ -27,8 +27,8 @@ from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.tensor import functions as fns
 
@@ -245,10 +245,10 @@ class AWQ(Algorithm):
                 for _ in range(self._steps):
                     cur_scale = gscale**alpha
 
-                    g_compressed_weighs, g_c_scale, g_c_zp = do_integer_quantization(
+                    g_compressed_weighs, g_c_scale, g_c_zp = do_int_quantization(
                         gweight * cur_scale, reduction_axis, awq_config
                     )
-                    g_decompressed_weighs = do_dequantization(g_compressed_weighs, g_c_scale, g_c_zp)
+                    g_decompressed_weighs = do_int_dequantization(g_compressed_weighs, g_c_scale, g_c_zp)
                     sacts = gacts / fns.unsqueeze(cur_scale, 1)
 
                     cur_out = fns.matmul(g_decompressed_weighs, sacts)
