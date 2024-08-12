@@ -25,6 +25,7 @@ from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
 from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
+from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 
 
 @dataclass
@@ -32,7 +33,6 @@ class ModelExtractionTestCase:
     model: torch.nn.Module
     input_shape: Tuple[int, ...]
     command: PTModelExtractionCommand
-    ref: None = None
 
 
 EXTRACTED_GRAPHS_DIR_NAME = Path("fx") / "extracted"
@@ -44,12 +44,31 @@ MODEL_EXTRACTION_CASES = (
     ModelExtractionTestCase(
         ConvolutionWithAllConstantInputsModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["conv2d"])
     ),
+    ModelExtractionTestCase(
+        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d_1"], ["add__1"])
+    ),
+    ModelExtractionTestCase(
+        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d"], ["add_", "add"])
+    ),
+    ModelExtractionTestCase(
+        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d", "conv2d_1"], ["add_", "add__1"])
+    ),
+    ModelExtractionTestCase(
+        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d"], ["conv2d_2"])
+    ),
+    ModelExtractionTestCase(
+        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d"], ["add__1"])
+    ),
 )
+
+
+def get_test_id(test_case: ModelExtractionTestCase):
+    return test_case.model.__name__ + "_".join(test_case.command.input_node_names + test_case.command.output_node_names)
 
 
 def idfn(value: Any):
     if isinstance(value, ModelExtractionTestCase):
-        return value.model.__name__
+        return get_test_id(value)
     return None
 
 
@@ -62,4 +81,4 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
     layout.register(test_case.command)
     extracted_model = FXModelTransformer(captured_model).transform(layout)
     nncf_graph = GraphConverter.create_nncf_graph(extracted_model)
-    check_graph(nncf_graph, f"{test_case.model.__name__}.dot", str(EXTRACTED_GRAPHS_DIR_NAME))
+    check_graph(nncf_graph, f"{get_test_id(test_case)}.dot", str(EXTRACTED_GRAPHS_DIR_NAME))

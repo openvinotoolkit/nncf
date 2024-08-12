@@ -58,8 +58,6 @@ def quantize_impl(
         " Torch FX PTQ is an experimental feature, consider using Torch or OpenVino PTQ backends"
         " in case of errors or a poor model performance."
     )
-    if fast_bias_correction is False:
-        raise ValueError(f"fast_bias_correction={fast_bias_correction} is not supported")
     if target_device == TargetDevice.CPU_SPR:
         raise nncf.InternalError("target_device == CPU_SPR is not supported")
     if mode is not None:
