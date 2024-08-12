@@ -695,6 +695,7 @@ def test_raise_error_channel_size_is_not_divisible_by_group_size():
         *({"sensitivity_metric": metric} for metric in ALL_SENSITIVITY_METRICS),
         {"dataset": "anything"},
         {"scale_estimation": True},
+        {"lora_correction": True},
         {"gptq": True},
         {"awq": True},
     ),
@@ -705,7 +706,13 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 
 
 @pytest.mark.parametrize("mode", INT4_MODES)
-@pytest.mark.parametrize("params", ({"dataset": "anything", "scale_estimation": True, "gptq": True},))
+@pytest.mark.parametrize(
+    "params",
+    (
+        {"dataset": "anything", "scale_estimation": True, "gptq": True},
+        {"dataset": "anything", "lora_correction": True, "gptq": True},
+    ),
+)
 def test_raise_error_with_unsupported_params_for_int4(mode, params):
     with pytest.raises(AttributeError):
         compress_weights(ov.Model([], []), mode=mode, **params)
