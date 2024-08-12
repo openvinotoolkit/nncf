@@ -41,7 +41,7 @@ class StatisticPoint:
                 tensor_collector.register_input(x)
 
 
-class StatisticPointsContainer(UserDict[str, List[StatisticPoint]]):
+class StatisticPointsContainer(UserDict): # type: ignore
     """
     Container with iteration interface for handling a composition of StatisticPoint.
     """
@@ -52,7 +52,7 @@ class StatisticPointsContainer(UserDict[str, List[StatisticPoint]]):
 
         :param statistic_point: Statistic point to add.
         """
-        target_node_name: str = statistic_point.target_point.target_node_name
+        target_node_name = statistic_point.target_point.target_node_name # type: ignore
         if target_node_name not in self.data:
             self.data[target_node_name] = [statistic_point]
         else:
