@@ -503,7 +503,7 @@ class ModelForGraphBuildingTestWithSplit(ModelForGraphBuildingTest):
         return y
 
 
-class ModelExtractionModel(torch.nn.Module):
+class ConvolutionWithNotTensorBiasModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self._conv_w = nn.Parameter(torch.ones((1, 1, 1, 1)))
@@ -513,7 +513,7 @@ class ModelExtractionModel(torch.nn.Module):
         return nn.functional.conv2d(x, w)
 
 
-class ConstantModelExtractionModel(torch.nn.Module):
+class ConvolutionWithAllConstantInputsModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self._conv_w = nn.Parameter(torch.ones((1, 1, 1, 1)))

@@ -23,8 +23,8 @@ from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.torch import disable_patching
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from tests.torch.test_compressed_graph import check_graph
-from tests.torch.test_models.synthetic import ConstantModelExtractionModel
-from tests.torch.test_models.synthetic import ModelExtractionModel
+from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
+from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
 
 
 @dataclass
@@ -38,9 +38,11 @@ class ModelExtractionTestCase:
 EXTRACTED_GRAPHS_DIR_NAME = Path("fx") / "extracted"
 
 MODEL_EXTRACTION_CASES = (
-    ModelExtractionTestCase(ModelExtractionModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["conv2d"])),
     ModelExtractionTestCase(
-        ConstantModelExtractionModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["conv2d"])
+        ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["conv2d"])
+    ),
+    ModelExtractionTestCase(
+        ConvolutionWithAllConstantInputsModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["conv2d"])
     ),
 )
 

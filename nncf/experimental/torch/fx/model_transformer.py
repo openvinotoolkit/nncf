@@ -103,7 +103,7 @@ class FXModelTransformer(ModelTransformer):
         graph: torch.fx.Graph = extracted_model.graph
         # Check extracted model has inputs.
         # It is possible to have two constant inputs
-        # for a linear layer, an placeholder is being
+        # for the target layer, an placeholder is being
         # placed to the input port.
         target_node = get_graph_node_by_name(graph, node_name)
         input_node = target_node.all_input_nodes[0]
