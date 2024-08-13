@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import datetime as dt
+import gc
 import os
 import re
 import time
@@ -30,6 +31,9 @@ from optimum.intel import OVQuantizer
 import nncf
 from nncf import TargetDevice
 from tests.shared.command import Command
+from tools.memory_monitor import MemoryType
+from tools.memory_monitor import MemoryUnit
+from tools.memory_monitor import memory_monitor_context
 
 DEFAULT_VAL_THREADS = 4
 
@@ -139,6 +143,8 @@ class RunInfo:
     metric_value: Optional[float] = None
     metric_diff: Optional[float] = None
     compression_memory_usage: Optional[int] = None
+    compression_memory_usage_rss: Optional[int] = None
+    compression_memory_usage_system: Optional[int] = None
     status: Optional[str] = None
     fps: Optional[float] = None
     time_total: Optional[float] = None
@@ -159,7 +165,7 @@ class RunInfo:
         return int(memory)
 
     def get_result_dict(self):
-        return {
+        result = {
             "Model": self.model,
             "Backend": self.backend.value if self.backend else None,
             "Metric name": self.metric_name,
@@ -168,13 +174,21 @@ class RunInfo:
             "Num FQ": self.num_compress_nodes.num_fq_nodes,
             "Num int4": self.num_compress_nodes.num_int4,
             "Num int8": self.num_compress_nodes.num_int8,
-            "RAM MiB": self.format_memory_usage(self.compression_memory_usage),
             "Compr. time": self.format_time(self.time_compression),
             **self.stats_from_output.get_stats(),
             "Total time": self.format_time(self.time_total),
             "FPS": self.fps,
             "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
         }
+
+        if self.compression_memory_usage_rss is None and self.compression_memory_usage_system is None:
+            result["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage)
+        if self.compression_memory_usage_rss is not None:
+            result["RAM MiB RSS"] = self.format_memory_usage(self.compression_memory_usage_rss)
+        if self.compression_memory_usage_system is not None:
+            result["RAM MiB System"] = self.format_memory_usage(self.compression_memory_usage_system)
+
+        return result
 
 
 class BaseTestPipeline(ABC):
@@ -195,6 +209,7 @@ class BaseTestPipeline(ABC):
         run_benchmark_app: bool,
         params: dict = None,
         batch_size: int = 1,
+        memory_monitor: bool = False,
     ) -> None:
         self.reported_name = reported_name
         self.model_id = model_id
@@ -205,6 +220,7 @@ class BaseTestPipeline(ABC):
         self.reference_data = reference_data
         self.params = params or {}
         self.batch_size = batch_size
+        self.memory_monitor = memory_monitor
         self.no_eval = no_eval
         self.run_benchmark_app = run_benchmark_app
         self.output_model_dir: Path = self.output_dir / self.reported_name / self.backend.value
@@ -352,7 +368,19 @@ class PTQTestPipeline(BaseTestPipeline):
                 torch.set_num_threads(int(inference_num_threads))
 
         start_time = time.perf_counter()
-        self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
+        if self.memory_monitor:
+            gc.collect()
+            with memory_monitor_context(
+                interval=0.1,
+                memory_unit=MemoryUnit.MiB,
+                return_max_value=True,
+                save_dir=self.output_model_dir / "ptq_memory_logs",
+            ) as mmc:
+                self._compress()
+            self.run_info.compression_memory_usage_rss = mmc.memory_data[MemoryType.RSS]
+            self.run_info.compression_memory_usage_system = mmc.memory_data[MemoryType.SYSTEM]
+        else:
+            self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
         self.run_info.time_compression = time.perf_counter() - start_time
 
     def save_compressed_model(self) -> None:
