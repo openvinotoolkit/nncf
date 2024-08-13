@@ -12,6 +12,7 @@
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import HWFusedPatternNames
 from nncf.common.utils.registry import Registry
+from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
 from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
@@ -30,12 +31,12 @@ def create_l2_norm_operations() -> GraphPattern:
     pattern = GraphPattern()
 
     outside_pattern_node = pattern.add_node(label="*OUTSIDE_PATTERN_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    pow_node = pattern.add_node(label="POW", type="pow")
-    sum_node = pattern.add_node(label="SUM", type="sum")
-    sqrt_node = pattern.add_node(label="SQRT", type="sqrt")
-    add_node = pattern.add_node(label="ADD", type="__add__")
-    div_node = pattern.add_node(label="DIV", type="div")
-    mul_node = pattern.add_node(label="MUL", type="__rmul__")
+    pow_node = pattern.add_node(label="POW", type=om.PTPowerMetatype)
+    sum_node = pattern.add_node(label="SUM", type=om.PTSumMetatype)
+    sqrt_node = pattern.add_node(label="SQRT", type=om.PTSqrtMetatype)
+    add_node = pattern.add_node(label="ADD", type=om.PTAddMetatype)
+    div_node = pattern.add_node(label="DIV", type=om.PTDivMetatype)
+    mul_node = pattern.add_node(label="MUL", type=om.PTMulMetatype)
 
     pattern.add_edge(outside_pattern_node, pow_node)
     pattern.add_edge(pow_node, sum_node)
@@ -53,8 +54,8 @@ def create_l2_norm_operations() -> GraphPattern:
 @PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SHIFT_SCALE)
 def create_shift_scale() -> GraphPattern:
     pattern = GraphPattern()
-    add_node = pattern.add_node(label="ADD, SUB", type=["__add__", "__sub__"])
-    truediv_node = pattern.add_node(label="MUL, DIV", type=["__mul__", "__truediv__"])
+    add_node = pattern.add_node(label="ADD, SUB", type=[om.PTAddMetatype, om.PTSubMetatype])
+    truediv_node = pattern.add_node(label="MUL, DIV", type=[om.PTMulMetatype, om.PTDivMetatype])
     pattern.add_edge(add_node, truediv_node)
     return pattern
 
@@ -62,7 +63,7 @@ def create_shift_scale() -> GraphPattern:
 @PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SHIFT_SCALE)
 def create_input_shift_scale() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: PTInputNoopMetatype})
+    pattern.add_node(label="MODEL_INPUT", type=PTInputNoopMetatype)
     shift_scale = create_shift_scale()
     pattern.join_patterns(shift_scale)
     return pattern
@@ -177,8 +178,8 @@ def create_group_norm_relu_operations() -> GraphPattern:
 @PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_CONST_MULTIPLY)
 def create_linear_const_multiply() -> GraphPattern:
     pattern = GraphPattern()
-    linear_node = pattern.add_node(label="linear", type="linear")
-    mul_node = pattern.add_node(label="MUL", type="__mul__")
+    linear_node = pattern.add_node(label="linear", type=[om.PTLinearMetatype, om.PTModuleLinearMetatype])
+    mul_node = pattern.add_node(label="MUL", type=om.PTMulMetatype)
     pattern.add_edge(linear_node, mul_node)
 
     return pattern
@@ -220,8 +221,8 @@ def activation_operations() -> GraphPattern:
 def create_swish_act() -> GraphPattern:
     pattern = GraphPattern()
     input_pattern_node = pattern.add_node(label="*INPUT_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    sigmoid_node = pattern.add_node(label="SIGMOID", type="sigmoid")
-    mul_node = pattern.add_node(label="MUL", type="__mul__")
+    sigmoid_node = pattern.add_node(label="SIGMOID", type=om.PTSigmoidMetatype)
+    mul_node = pattern.add_node(label="MUL", type=om.PTMulMetatype)
 
     pattern.add_edge(input_pattern_node, sigmoid_node)
     pattern.add_edge(sigmoid_node, mul_node)
@@ -235,10 +236,10 @@ def create_h_swish_act() -> GraphPattern:
     # Mul -> Div version
     pattern = GraphPattern()
     input_pattern_node = pattern.add_node(label="*INPUT_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    add_node = pattern.add_node(label="ADD", type="__add__")
-    hardtanh_node = pattern.add_node(label="HARDTANH", type="hardtanh")
-    truediv_node = pattern.add_node(label="DIV", type="__truediv__")
-    mul_node = pattern.add_node(label="MUL", type="__mul__")
+    add_node = pattern.add_node(label="ADD", type=om.PTAddMetatype)
+    hardtanh_node = pattern.add_node(label="HARDTANH", type=om.PTHardTanhMetatype)
+    truediv_node = pattern.add_node(label="DIV", type=om.PTDivMetatype)
+    mul_node = pattern.add_node(label="MUL", type=om.PTMulMetatype)
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(input_pattern_node, mul_node)
@@ -250,10 +251,10 @@ def create_h_swish_act() -> GraphPattern:
     # Div -> Mul version
     pattern = GraphPattern()
     input_pattern_node = pattern.add_node(label="*INPUT_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    add_node = pattern.add_node(label="ADD", type="__add__")
-    hardtanh_node = pattern.add_node(label="HARDTANH", type="hardtanh")
-    mul_node = pattern.add_node(label="MUL", type="__mul__")
-    truediv_node = pattern.add_node(label="DIV", type="__truediv__")
+    add_node = pattern.add_node(label="ADD", type=om.PTAddMetatype)
+    hardtanh_node = pattern.add_node(label="HARDTANH", type=om.PTHardTanhMetatype)
+    mul_node = pattern.add_node(label="MUL", type=om.PTMulMetatype)
+    truediv_node = pattern.add_node(label="DIV", type=om.PTDivMetatype)
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(input_pattern_node, mul_node)
@@ -265,10 +266,10 @@ def create_h_swish_act() -> GraphPattern:
     # ReLU6 version - Mul -> Div
     pattern = GraphPattern()
     input_pattern_node = pattern.add_node(label="*INPUT_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    add_node = pattern.add_node(label="ADD", type="__add__")
-    relu6_node = pattern.add_node(label="RELU6", type="relu6")
-    mul_node = pattern.add_node(label="MUL", type="__mul__")
-    truediv_node = pattern.add_node(label="DIV", type="__truediv__")
+    add_node = pattern.add_node(label="ADD", type=om.PTAddMetatype)
+    relu6_node = pattern.add_node(label="RELU6", type=om.PTRELU6Metatype)
+    mul_node = pattern.add_node(label="MUL", type=om.PTMulMetatype)
+    truediv_node = pattern.add_node(label="DIV", type=om.PTDivMetatype)
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(input_pattern_node, mul_node)
@@ -280,10 +281,10 @@ def create_h_swish_act() -> GraphPattern:
     # ReLU6 version - Div -> Mul
     pattern = GraphPattern()
     input_pattern_node = pattern.add_node(label="*INPUT_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    add_node = pattern.add_node(label="ADD", type="__add__")
-    relu6_node = pattern.add_node(label="RELU6", type="relu6")
-    truediv_node = pattern.add_node(label="DIV", type="__truediv__")
-    mul_node = pattern.add_node(label="MUL", type="__mul__")
+    add_node = pattern.add_node(label="ADD", type=om.PTAddMetatype)
+    relu6_node = pattern.add_node(label="RELU6", type=om.PTRELU6Metatype)
+    truediv_node = pattern.add_node(label="DIV", type=om.PTDivMetatype)
+    mul_node = pattern.add_node(label="MUL", type=om.PTMulMetatype)
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(input_pattern_node, mul_node)
@@ -303,9 +304,9 @@ def create_h_sigmoid_act() -> GraphPattern:
     pattern = GraphPattern()
 
     input_pattern_node = pattern.add_node(label="*INPUT_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    add_node = pattern.add_node(label="ADD", type="__add__")
-    hardtanh_node = pattern.add_node(label="HARDTANH", type="hardtanh")
-    truediv_node = pattern.add_node(label="DIV", type="__truediv__")
+    add_node = pattern.add_node(label="ADD", type=om.PTAddMetatype)
+    hardtanh_node = pattern.add_node(label="HARDTANH", type=om.PTHardTanhMetatype)
+    truediv_node = pattern.add_node(label="DIV", type=om.PTDivMetatype)
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(add_node, hardtanh_node)
@@ -317,9 +318,9 @@ def create_h_sigmoid_act() -> GraphPattern:
     pattern = GraphPattern()
 
     input_pattern_node = pattern.add_node(label="*INPUT_NODE*", type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    add_node = pattern.add_node(label="ADD", type="__add__")
-    relu6_node = pattern.add_node(label="RELU6", type="relu6")
-    truediv_node = pattern.add_node(label="DIV", type="__truediv__")
+    add_node = pattern.add_node(label="ADD", type=om.PTAddMetatype)
+    relu6_node = pattern.add_node(label="RELU6", type=om.PTRELU6Metatype)
+    truediv_node = pattern.add_node(label="DIV", type=om.PTDivMetatype)
 
     pattern.add_edge(input_pattern_node, add_node)
     pattern.add_edge(add_node, relu6_node)

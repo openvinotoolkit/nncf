@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 import time
 import traceback
 from collections import OrderedDict
@@ -19,14 +20,17 @@ from typing import Dict, Optional
 import pandas as pd
 import pytest
 import yaml
+from packaging import version
 
 import nncf
-from tests.openvino.native.common import get_openvino_version
 from tests.post_training.model_scope import PTQ_TEST_CASES
 from tests.post_training.model_scope import WC_TEST_CASES
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import RunInfo
+from tests.shared.openvino_version import get_openvino_version
+
+DATA_ROOT = Path(__file__).parent / "data"
 
 
 @pytest.fixture(scope="session", name="data_dir")
@@ -76,20 +80,41 @@ def fixture_extra_columns(pytestconfig):
     return pytestconfig.getoption("extra_columns")
 
 
-def ref_data_correction(data: Dict, file_name: str):
-    correction_data_path = Path(__file__).parent / "data" / f"{file_name}_{get_openvino_version()}.yaml"
-    if correction_data_path.exists():
-        with correction_data_path.open() as f:
-            correction_data = yaml.safe_load(f)
+@pytest.fixture(scope="session", name="memory_monitor")
+def fixture_memory_monitor(pytestconfig):
+    return pytestconfig.getoption("memory_monitor")
 
+
+def _parse_version(s: Path):
+    version_str = re.search(r".*_(\d+\.\d+).(?:yaml|yml)", s.name).group(1)
+    return version.parse(version_str)
+
+
+def ref_data_correction(data: Dict, file_name: str):
+    """
+    Apply corrections from reference YAML files according current of OV version to the provided data dictionary.
+
+    This function reads correction data from YAML files that match the given
+    file name pattern (ptq|wc)_reference_data_(ov_version).yaml
+    """
+    ov_version = version.parse(get_openvino_version())
+
+    for file_path in sorted(DATA_ROOT.glob(f"{file_name}_*.yaml"), key=_parse_version):
+        file_ov_version = _parse_version(file_path)
+        if file_ov_version > ov_version:
+            break
+        with file_path.open() as f:
+            correction_data = yaml.safe_load(f)
         for m_name, c_data in correction_data.items():
             data[m_name].update(c_data)
+        print(f"Applied correction file {file_path}")
+
     return data
 
 
 @pytest.fixture(scope="session", name="ptq_reference_data")
 def fixture_ptq_reference_data():
-    path_reference = Path(__file__).parent / "data" / "ptq_reference_data.yaml"
+    path_reference = DATA_ROOT / "ptq_reference_data.yaml"
     with path_reference.open() as f:
         data = yaml.safe_load(f)
     return ref_data_correction(data, "ptq_reference_data")
@@ -97,7 +122,7 @@ def fixture_ptq_reference_data():
 
 @pytest.fixture(scope="session", name="wc_reference_data")
 def fixture_wc_reference_data():
-    path_reference = Path(__file__).parent / "data" / "wc_reference_data.yaml"
+    path_reference = DATA_ROOT / "wc_reference_data.yaml"
     with path_reference.open() as f:
         data = yaml.safe_load(f)
         fp32_test_cases = defaultdict(dict)
@@ -239,6 +264,7 @@ def test_ptq_quantization(
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
+    memory_monitor: bool,
 ):
     pipeline = None
     err_msg = None
@@ -264,6 +290,7 @@ def test_ptq_quantization(
                 "no_eval": no_eval,
                 "run_benchmark_app": run_benchmark_app,
                 "batch_size": batch_size,
+                "memory_monitor": memory_monitor,
             }
         )
         pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
@@ -308,6 +335,7 @@ def test_weight_compression(
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
+    memory_monitor: bool,
 ):
     pipeline = None
     err_msg = None
@@ -327,6 +355,7 @@ def test_weight_compression(
                 "no_eval": no_eval,
                 "run_benchmark_app": run_benchmark_app,
                 "batch_size": batch_size,
+                "memory_monitor": memory_monitor,
             }
         )
         pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)

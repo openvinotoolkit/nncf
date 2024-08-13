@@ -68,6 +68,11 @@ class OVModelTransformer(ModelTransformer):
         ]
 
     @staticmethod
+    def _convert_to_dtype(value, dtype):
+        clip_data = np.clip(value, np.finfo(dtype).min, np.finfo(dtype).max)
+        return clip_data.astype(dtype)
+
+    @staticmethod
     def _get_name_to_node_mapping(model: ov.Model) -> Dict[str, ov.Node]:
         """
         Returns name to node mapping.
@@ -269,16 +274,22 @@ class OVModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def _create_constant(value: np.ndarray, dtype: ov.Type, name: str) -> ov.Node:
+    def _create_constant(value: np.ndarray, dtype: ov.Type, name: str, shared_memory: bool = False) -> ov.Node:
         """
         Creates constant using opset.
 
         :param value: Numpy value.
         :param type: Constant type.
         :param name: Name for the constant.
+        :param shared_memory: Shared memory option.
         :return: ov.Node instance.
         """
-        return opset.constant(value, dtype=dtype, name=name)
+        constant_value = value
+        # BF16 does not support type conversion in numpy
+        if dtype != ov.Type.bf16 and constant_value.dtype != dtype.to_dtype():
+            constant_value = OVModelTransformer._convert_to_dtype(constant_value, dtype.to_dtype())
+
+        return opset.constant(constant_value, dtype=dtype, name=name, shared_memory=shared_memory)
 
     @staticmethod
     def _create_fake_quantize(
@@ -511,7 +522,7 @@ class OVModelTransformer(ModelTransformer):
             # Shared memory does not work for BF16 precision
             shared_memory = False
 
-        new_const_node = opset.constant(
+        new_const_node = OVModelTransformer._create_constant(
             const_value,
             dtype=const_port.get_element_type(),
             name=const_node.get_friendly_name(),
@@ -581,10 +592,11 @@ class OVModelTransformer(ModelTransformer):
             output_node = name_to_node_mapping[output_name]
 
             result_name = get_result_node_name(output_name, output_port_id)
-            if output_node.get_element_type() != outputs_type:
-                output_node = opset.convert(output_node, destination_type=outputs_type)
-            new_result = opset.result(output_node, name=result_name)
-            result_tensor_names = [result_name] + list(output_node.output(0).get_names())
+            output_port = output_node.output(output_port_id)
+            if output_port.get_element_type() != outputs_type:
+                output_port = opset.convert(output_node, destination_type=outputs_type).output(0)
+            new_result = opset.result(output_port, name=result_name)
+            result_tensor_names = [result_name] + list(output_port.get_names())
             OVModelTransformer._update_tensor_names([new_result.get_output_tensor(0)], result_tensor_names)
             results.append(new_result)
 

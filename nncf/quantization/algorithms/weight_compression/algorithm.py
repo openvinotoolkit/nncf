@@ -444,7 +444,7 @@ class WeightCompression(Algorithm):
         :return: Tuple with the activation node and port id.
         """
         activation_port = self._backend_entity.get_activation_port_id(node, nncf_graph)
-        activation_edge = nncf_graph.get_input_edges(node)[activation_port]
+        activation_edge = nncf_graph.get_input_edge_by_port_id(node, activation_port)
         activation_node = activation_edge.from_node
         port_id = activation_edge.output_port_id
         return activation_node, port_id

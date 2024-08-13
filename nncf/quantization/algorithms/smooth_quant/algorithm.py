@@ -108,8 +108,8 @@ class SmoothQuant(Algorithm):
 
         node_groups = self._group_nodes_by_source(nodes_to_smooth_data, graph)
 
-        best_scale = None
         for group_id, nodes in track(node_groups.items(), description="Applying Smooth Quant"):
+            best_scale = None
             best_ratio = 0.0
             empty_statistic = False
             for node_to_smooth in nodes:
@@ -210,8 +210,7 @@ class SmoothQuant(Algorithm):
         for node_data in nodes_to_smooth:
             node_to_smooth = node_data["node_to_smooth"]
             input_act_port = node_data["input_act_port"]
-
-            source_node = nncf_graph.get_input_edges(node_to_smooth)[input_act_port].from_node
+            source_node = nncf_graph.get_input_edge_by_port_id(node_to_smooth, input_act_port).from_node
             edge = nncf_graph.get_edge(source_node, node_to_smooth)
             # Such group_id (with node, ports, and shape as a hash) allows us to be confident
             # that all sensitive parameters are equal for successor nodes are equal.
@@ -288,8 +287,7 @@ class SmoothQuant(Algorithm):
                 continue
 
             activation_port_id = self._backend_entity.get_activations_port_id(node_with_weight, nncf_graph)
-            input_edges = nncf_graph.get_input_edges(node_with_weight)
-            activation_node = input_edges[activation_port_id].from_node
+            activation_node = nncf_graph.get_input_edge_by_port_id(node_with_weight, activation_port_id).from_node
 
             # Skipping agnostic layers as inputs to propagate quantizer
             # Only for Convolution layers
@@ -367,7 +365,7 @@ class SmoothQuant(Algorithm):
         :param input_port: Specified input port id.
         :return: Calculated reduction axes.
         """
-        shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
+        shape = nncf_graph.get_input_edge_by_port_id(node, input_port).tensor_shape
         reduction_axes = tuple([])
         if len(shape) > 1:
             channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port)

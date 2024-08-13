@@ -490,7 +490,7 @@ class LSTMSequenceModel(OVReferenceModel):
             x, initial_hidden_state, initial_cell_state, seq_len, W, R, B, 128, "FORWARD", name="LSTMSequence"
         )
         data = self._rng.random((1, 1, 128, 3)).astype(np.float32)
-        matmul = opset.matmul(lstm.output(0), data, transpose_a=False, transpose_b=False, name="MatMul")
+        matmul = opset.matmul(lstm.output(1), data, transpose_a=False, transpose_b=False, name="MatMul")
 
         result = opset.result(matmul, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
@@ -871,15 +871,23 @@ class GatherAndMatmulShareData(OVReferenceModel):
 
 class ScaledDotProductAttentionModel(OVReferenceModel):
     def _create_ov_model(self):
-        query = opset.parameter([1, 1, 1, 64], name="Input_1")
-        key = opset.parameter([1, 1, 1, 64], name="Input_2")
-        value = opset.parameter([1, 1, 1, 64], name="Input_3")
-        attn_mask = opset.parameter([1, 1, 1, 1], name="Input_4")
+        input_ = opset.parameter([1, 1, 1, 64], name="Input_1")
+        attn_mask = opset.parameter([1, 1, 1, 1], name="Input_2")
+        x = opset.reshape(input_, [64], False)
+        x = opset.reshape(x, [1, 1, 1, 64], False)
 
-        attn = opset.scaled_dot_product_attention(query, key, value, attn_mask)
+        # Parallel edges are not supported by PTQ for now.
+        # Ref 148498
+        inputs = []
+        for _ in range(3):
+            x_ = opset.reshape(x, [64], False)
+            x_ = opset.reshape(x_, [1, 1, 1, 64], False)
+            inputs.append(x_)
+
+        attn = opset.scaled_dot_product_attention(*inputs, attn_mask)
         result = opset.result(attn, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
-        model = ov.Model([result], [query, key, value, attn_mask])
+        model = ov.Model([result], [input_, attn_mask])
         return model
 
 
@@ -1129,5 +1137,22 @@ class PreluModel(OVReferenceModel):
         prelu = opset.prelu(input, slope=1)
         result = opset.result(prelu, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input])
+        return model
+
+
+class UnifiedScalesModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input = opset.parameter([1, 3, 4, 2], name="Input")
+        multiply = opset.multiply(input, self._rng.random((1, 2)).astype(np.float32), name="Mul")
+        sin = opset.sin(multiply, name="Sin")
+        cos = opset.cos(multiply, name="Cos")
+        concat = opset.concat([sin, cos], axis=0)
+        kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32)
+        strides = [1, 1]
+        pads = [0, 0]
+        dilations = [1, 1]
+        conv = opset.convolution(concat, kernel, strides, pads, pads, dilations, name="Conv")
+        result = opset.result(conv, name="Result")
         model = ov.Model([result], [input])
         return model

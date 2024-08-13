@@ -54,7 +54,7 @@ class TargetType(IntEnum):
     `PRE_LAYER_OPERATION` - a location before the associated PT-module or TF-layer
                             execution, for which the local attributes of said
                             PT-module or TF-layer are accessible
-    `POST_LAYER_OPERATION` - a location before the associated PT-module or TF-layer
+    `POST_LAYER_OPERATION` - a location after the associated PT-module or TF-layer
                              execution, for which the local attributes of said
                              PT-module or TF-layer are accessible
     `OPERATION_WITH_WEIGHTS` - same as PRE_LAYER_OPERATION, but targets weights

@@ -1,0 +1,47 @@
+tinyllama_backend_FP32:
+  metric_value: 1.0
+  num_int4: 0
+  num_int8: 0
+  num_sparse_activations: 0
+tinyllama_ffn_sparse20_backend_CUDA_TORCH:
+  metric_value: 0.7818
+  atol: 0.025
+  num_int4: 0
+  num_int8: 0
+  num_sparse_activations: 44
+tinyllama_ffn_sparse20_backend_TORCH:
+  metric_value: 0.7879
+  atol: 0.025
+  num_int4: 0
+  num_int8: 0
+  num_sparse_activations: 44
+tinyllama_int8_asym_data_free_ffn_sparse20_backend_CUDA_TORCH:
+  metric_value: 0.8044
+  atol: 0.025
+  num_int4: 0
+  num_int8: 312
+  num_sparse_activations: 44
+tinyllama_int8_asym_data_free_ffn_sparse20_backend_TORCH:
+  metric_value: 0.7846
+  atol: 0.030
+  num_int4: 0
+  num_int8: 312
+  num_sparse_activations: 44
+timm/deit3_small_patch16_224_backend_FP32:
+  metric_value: 0.8135
+  atol: 0.001
+  num_int4: 0
+  num_int8: 0
+  num_sparse_activations: 0
+timm/deit3_small_patch16_224_qkv_sparse20_fc1_sparse20_fc2_sparse30_backend_CUDA_TORCH:
+  metric_value: 0.8102
+  atol: 0.001
+  num_int4: 0
+  num_int8: 0
+  num_sparse_activations: 36
+timm/deit3_small_patch16_224_qkv_sparse20_fc1_sparse20_fc2_sparse30_backend_TORCH:
+  metric_value: 0.8102
+  atol: 0.001
+  num_int4: 0
+  num_int8: 0
+  num_sparse_activations: 36
