@@ -1,7 +1,7 @@
 name: "Pull Request Labeler"
 permissions: read-all
 
-on: [pull_request]
+on: [pull_request_target]
 
 jobs:
   set-label:
