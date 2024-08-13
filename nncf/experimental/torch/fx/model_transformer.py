@@ -18,6 +18,7 @@ from torch.fx.passes.split_utils import split_by_tags
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 
@@ -97,7 +98,23 @@ class FXModelTransformer(ModelTransformer):
         # TODO(dlyakhov): reduce memory consumption by
         # more optimal splitting implementation.
         splitted_gm = split_by_tags(model, tags)
-        return splitted_gm.extracted
+
+        extracted_model = splitted_gm.extracted
+        graph: torch.fx.Graph = extracted_model.graph
+        # Check extracted model has inputs.
+        # It is possible to have two constant inputs
+        # for the target layer, an placeholder is being
+        # placed to the input port.
+        target_node = get_graph_node_by_name(graph, node_name)
+        input_node = target_node.all_input_nodes[0]
+        if input_node.op != "placeholder":
+            with graph.inserting_before(target_node):
+                new_input_node = graph.create_node(
+                    "placeholder", "placeholder_node", (), {}, name="placeholder_graph_node"
+                )
+            target_node.replace_input_with(input_node, new_input_node)
+        extracted_model.graph.eliminate_dead_code()
+        return extracted_model
 
     @staticmethod
     def _apply_transformation(
@@ -112,5 +129,5 @@ class FXModelTransformer(ModelTransformer):
         :return: Target model after all transformations were applied.
         """
         for transformation in transformations:
-            transformation.tranformation_fn(model)
+            transformation.transformation_fn(model)
         return model

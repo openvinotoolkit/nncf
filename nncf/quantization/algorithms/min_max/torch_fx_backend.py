@@ -28,7 +28,7 @@ from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MA
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
-from nncf.experimental.torch.fx.transformations import qdq_insertion_tranformation_builder
+from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import StatisticsType
@@ -288,7 +288,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = FXMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_point.target_type
         )
-        transformation = qdq_insertion_tranformation_builder(quantizer, [target_point])
+        transformation = qdq_insertion_transformation_builder(quantizer, [target_point])
         return FXApplyTransformationCommand(transformation)
 
     @staticmethod
@@ -308,7 +308,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         transformations = []
         for tp in target_points:
-            transformation = qdq_insertion_tranformation_builder(quantizer, [tp])
+            transformation = qdq_insertion_transformation_builder(quantizer, [tp])
             transformations.append(FXApplyTransformationCommand(transformation))
         return transformations
 

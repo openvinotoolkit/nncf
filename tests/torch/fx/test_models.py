@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import json
 import os
 from dataclasses import dataclass
@@ -39,8 +38,8 @@ from tests.shared.paths import TEST_ROOT
 from tests.torch import test_models
 from tests.torch.test_compressed_graph import check_graph
 
-FX_DIR_NAME = "fx"
-FX_QUANTIZED_DIR_NAME = "fx/quantized"
+FX_DIR_NAME = Path("fx")
+FX_QUANTIZED_DIR_NAME = Path("fx") / "quantized"
 
 
 @dataclass
