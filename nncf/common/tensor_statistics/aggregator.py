@@ -75,6 +75,7 @@ class StatisticsAggregator(ABC):
             total=iterations_number,
             description="Statistics collection",
         ):
+            print(input_data)
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
             self._register_statistics(processed_outputs, merged_statistics)
