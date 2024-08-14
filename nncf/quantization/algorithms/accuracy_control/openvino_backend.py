@@ -33,7 +33,8 @@ from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.backend import PreparedModel
-
+from openvino import Type
+from openvino.properties.hint import inference_precision
 
 class OVPreparedModel(PreparedModel):
     """
@@ -42,7 +43,10 @@ class OVPreparedModel(PreparedModel):
 
     def __init__(self, model: ov.Model):
         self._stateful = model_has_state(model)
-        self._compiled_model = ov.compile_model(model)
+        infer_config={inference_precision: Type.f32}
+        print("add config for nccf:{} in backend 5".format(infer_config))
+        self._compiled_model = ov.compile_model(model, "CPU", infer_config)
+        print("================================5")
         self._engine = None
 
     @property

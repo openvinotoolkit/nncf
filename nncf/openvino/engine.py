@@ -18,6 +18,8 @@ from nncf.common.engine import Engine
 from nncf.openvino.graph.model_utils import model_has_state
 from nncf.parameters import TargetDevice
 
+from openvino import Type
+from openvino.properties.hint import inference_precision
 
 class OVCompiledModelEngine(Engine):
     """
@@ -69,7 +71,10 @@ class OVNativeEngine(Engine):
 
         ie = ov.Core()
         stateful = model_has_state(model)
-        compiled_model = ie.compile_model(model, target_device.value)
+        infer_config={inference_precision: Type.f32}
+        print("add config for nccf:{}".format(infer_config))
+        compiled_model = ie.compile_model(model, target_device.value, infer_config)
+        print("================================4")
         self.engine = OVCompiledModelEngine(compiled_model, stateful)
 
     def infer(

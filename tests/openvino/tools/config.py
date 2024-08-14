@@ -284,7 +284,7 @@ class Config(Dict):
             ConfigReader._filter_launchers(ac_conf, filtering_params, mode=mode)
         for req_num in ["stat_requests_number", "eval_requests_number"]:
             ac_conf[req_num] = self.engine.get(req_num, None)
-
+        print(ac_conf)
         self["engine"] = ac_conf
 
     def _configure_algo_params(self):

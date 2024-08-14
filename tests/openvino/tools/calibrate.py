@@ -837,6 +837,7 @@ def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
 def get_transform_fn(model_evaluator: ModelEvaluator, ov_model):
     if model_evaluator.launcher._lstm_inputs:
         compiled_original_model = ov.Core().compile_model(ov_model)
+        print("================================3")
         model_outputs = None
 
         def transform_fn(data_item: ACDattasetWrapper.DataItem):

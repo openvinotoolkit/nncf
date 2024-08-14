@@ -224,6 +224,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model = ov.Model([result], [w, s, zp])
 
         compiled_model = ov.compile_model(model)
+        print("================================1")
 
         return lambda w, s, zp: compiled_model([w, s, zp])[0]
 
@@ -251,6 +252,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model = ov.Model([result], [w, s, zp])
 
         compiled_model = ov.compile_model(model)
+        print("================================2")
 
         return lambda w, s, zp: compiled_model([w, s, zp])[0]
 
