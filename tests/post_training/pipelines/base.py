@@ -191,13 +191,6 @@ class RunInfo:
             "Build url": os.environ.get("BUILD_URL", ""),
         }
 
-        if self.compression_memory_usage_rss is None and self.compression_memory_usage_system is None:
-            result["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage)
-        if self.compression_memory_usage_rss is not None:
-            result["RAM MiB RSS"] = self.format_memory_usage(self.compression_memory_usage_rss)
-        if self.compression_memory_usage_system is not None:
-            result["RAM MiB System"] = self.format_memory_usage(self.compression_memory_usage_system)
-
         return result
 
 
