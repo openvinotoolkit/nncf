@@ -138,7 +138,6 @@ class GraphConverter:
         if tensor_shape is None:
             # TODO(dlyakhov): Refactor algorithms to always have knowns edges shapes.
             nncf_logger.debug(f"Edge shape between {source_node.name} and {dist_node.name} is unknown.")
-            tensor_shape = None
 
         input_port_id = dist_node.all_input_nodes.index(source_node)
         return input_port_id, output_port_id, tensor_shape

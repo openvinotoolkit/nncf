@@ -75,8 +75,14 @@ class FXStatisticsAggregator(StatisticsAggregator):
         :param module_to_insert: Given statistic collection module.
         :return: Unique statistic collector name according to given target point and module.
         """
-        tp_name = "_".join([tp.target_node_name, str(tp.input_port_id), str(tp.target_type.value)])
-        return f"{tp_name}_{str(id(module_to_insert))}"
+        return "_".join(
+            [
+                tp.target_node_name,
+                str(tp.input_port_id),
+                str(tp.target_type.value),
+                str(id(module_to_insert)),
+            ]
+        )
 
     def _get_transformation_layout_extra_outputs(
         self, statistic_points: StatisticPointsContainer
