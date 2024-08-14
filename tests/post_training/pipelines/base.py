@@ -165,6 +165,14 @@ class RunInfo:
         return int(memory)
 
     def get_result_dict(self):
+        ram_data = {}
+        if self.compression_memory_usage_rss is None and self.compression_memory_usage_system is None:
+            ram_data["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage)
+        if self.compression_memory_usage_rss is not None:
+            ram_data["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage_rss)
+        if self.compression_memory_usage_system is not None:
+            ram_data["RAM MiB System"] = self.format_memory_usage(self.compression_memory_usage_system)
+
         result = {
             "Model": self.model,
             "Backend": self.backend.value if self.backend else None,
@@ -178,6 +186,7 @@ class RunInfo:
             **self.stats_from_output.get_stats(),
             "Total time": self.format_time(self.time_total),
             "FPS": self.fps,
+            **ram_data,
             "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
             "Build url": os.environ.get("BUILD_URL", ""),
         }
