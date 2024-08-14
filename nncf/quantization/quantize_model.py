@@ -467,6 +467,23 @@ def compress_weights(
         dataset = None
         compression_weights_impl = pt_compression_weights_impl
 
+    if backend == BackendType.TORCH_FX:
+        from nncf.experimental.torch.fx.quantization.quantize_model import compress_weights_impl as fx_compression_weights_impl
+
+        if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
+            raise AttributeError(
+                "Torch backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
+                f"but given {mode.value} mode."
+            )
+
+        if True in [awq, scale_estimation, gptq]:
+            raise AttributeError(
+                "Torch backend doesn`t supports scale estimation and AWQ algorithm, "
+                "but awq=True or scale_estimation=True or gptq=True is specified."
+            )
+
+        compression_weights_impl = fx_compression_weights_impl
+
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import compress_weights_impl as ov_compress_weights_impl
 
