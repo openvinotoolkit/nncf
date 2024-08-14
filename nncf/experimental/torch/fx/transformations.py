@@ -21,6 +21,7 @@ import nncf
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
+from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 TransformationFNType = Callable[[torch.fx.GraphModule], None]
@@ -170,7 +171,7 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
     graph.eliminate_dead_code()
 
 
-def qdq_insertion_tranformation_builder(
+def qdq_insertion_transformation_builder(
     quantizer: FakeQuantize, target_points: List[PTTargetPoint]
 ) -> TransformationFNType:
     """
@@ -594,24 +595,3 @@ def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[
 
     model.graph.eliminate_dead_code()
     model.recompile()
-
-
-def get_tensor_constant_from_node(constant_node: torch.fx.Node, model: torch.fx.GraphModule) -> torch.nn.Parameter:
-    """
-    Retrieves tensor from the given constant node.
-
-    :param constant_node: Given constant node.
-    :param model: Given model.
-    :return: Torch tensor referenced by the given constant node.
-    """
-    if constant_node is None:
-        return None
-    if constant_node.op != "get_attr":
-        raise RuntimeError(f"Given node op == {constant_node.op}, but get_attr is expected.")
-    target_atoms = constant_node.target.split(".")
-    attr_itr = model
-    for i, atom in enumerate(target_atoms):
-        if not hasattr(attr_itr, atom):
-            raise RuntimeError(f"Node referenced nonexistent target {'.'.join(target_atoms[:i])}")
-        attr_itr = getattr(attr_itr, atom)
-    return attr_itr
