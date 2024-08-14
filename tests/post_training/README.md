@@ -128,5 +128,4 @@ Run test as in benchmark jobs:
 
 ```bash
 pytest --data=<path_to_datasets> --forked --no-eval --subset-size 300 --batch-size 1 --benchmark --extra-columns --memory-monitor tests/post_training/test_quantize_conformance.py::test_ptq_quantization
-
 ```
