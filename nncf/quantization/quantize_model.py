@@ -481,7 +481,6 @@ def compress_weights(
                 "Torch backend doesn`t supports scale estimation and AWQ algorithm, "
                 "but awq=True or scale_estimation=True or gptq=True is specified."
             )
-
         compression_weights_impl = fx_compression_weights_impl
 
     if backend == BackendType.OPENVINO:

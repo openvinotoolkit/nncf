@@ -79,7 +79,7 @@ def module_insertion_transformation_builder(
 
             else:
                 prev_node = target_node.args[target_point.input_port_id]
-                _set_new_node_meta(new_node, prev_node, module_to_insert)
+                # _set_new_node_meta(new_node, prev_node, module_to_insert)
                 target_node.replace_input_with(prev_node, new_node)
 
     return module_insertion_transformation

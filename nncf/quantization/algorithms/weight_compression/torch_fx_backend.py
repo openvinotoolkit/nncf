@@ -28,6 +28,7 @@ from nncf.quantization.algorithms.weight_compression.backend import WeightCompre
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
+import nncf.tensor
 from nncf.tensor.definitions import TensorDataType
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph import operator_metatypes as om
@@ -37,14 +38,15 @@ from nncf.torch.model_graph_manager import find_const_node_in_constant_subgraph
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
-from nncf.experimental.torch.fx import FXModelTransformer
 from nncf.torch.quantization.layers import AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import SymmetricWeightsDecompressor
 from nncf.torch.tensor_statistics.collectors import get_raw_stat_collector
 from torch.ao.quantization.pt2e.utils import _get_tensor_constant_from_node
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from torch.ao.quantization.fx.utils import create_getattr_from_value
-
+from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.transformations import module_insertion_transformation_builder
+from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 
 class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
@@ -103,14 +105,15 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 continue
             edge = graph.get_edge(prev_node, node)
             if edge.input_port_id in node.metatype.weight_port_ids:
-                weight_port_ids.append((weight_node.layer_attributes.name, edge.input_port_id))
+                weight_port_ids.append((weight_node.node_name, edge.input_port_id))
         return weight_port_ids
 
     @staticmethod
     def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[Tuple[int]]:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
+        edge = graph.get_edge(weight_node, graph.get_next_nodes(weight_node)[0])
 
-        ndims = len(weight_node.layer_attributes.shape)
+        ndims = len(edge.tensor_shape)
         reduction_axes = None
         if node_with_weight.metatype == om.PTEmbeddingMetatype:
             reduction_axes = [1]
@@ -162,34 +165,31 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.fx.GraphModule, graph: NNCFGraph
     ) -> Tensor:
-        weight_node = graph.get_input_nodes(node_with_weight)[weight_port_id]
+        weight_node = graph.get_previous_nodes(node_with_weight)[weight_port_id]
         # TODO(dlyakhov): make a node_name_vs_node map to speed up the process
-        graph_weight_node = get_graph_node_by_name(model.graph, node_with_weight.node_name)
-        weight = _get_tensor_constant_from_node(graph_weight_node.all_input_nodes[1], model)
+        graph_weight_node = get_graph_node_by_name(model.graph, weight_node.node_name)
+        weight = _get_tensor_constant_from_node(graph_weight_node, model).data
         if weight is None:
             raise nncf.InternalError(f"Could not find a node in the model by name {weight_node}.")
 
         return Tensor(weight)
 
     def set_weight(
-        self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph, weight: Tensor
+        self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.fx.GraphModule, graph: NNCFGraph, weight: Tensor
     ):
-        graph = model.grap
-        weight_node = graph.get_input_nodes(node_with_weight)[weight_port_id]
-        target_node_name = weight_node.node_name
-        graph_node = get_graph_node_by_name(graph, target_node_name)
+        weight_node = graph.get_previous_nodes(node_with_weight)[weight_port_id]
+        graph_node = get_graph_node_by_name(model.graph, weight_node.node_name)
         if len(graph_node.users) != 1:
             raise nncf.InternalError(f"Weight Node has {len(graph_node.users)} users, 1 expected.")
 
-        bias_node = next(iter(graph_node.users))
-        with graph.inserting_before(bias_node):
-            new_constant = create_getattr_from_value(model, graph, target_node_name + "_compressed_weight", weight)
+        node_with_weight_graph = next(iter(graph_node.users))
+        with model.graph.inserting_before(node_with_weight_graph):
+            new_constant = create_getattr_from_value(model, model.graph, node_with_weight.node_name + "_compressed_weight", weight.data)
 
-        args = list(bias_node.args)
-        # A bias node suppose to have constant on the second input port.
+        args = list(node_with_weight_graph.args)
         args[weight_port_id] = new_constant
-        bias_node.args = tuple(args)
-        graph.eliminate_dead_code()
+        node_with_weight_graph.args = tuple(args)
+        model.graph.eliminate_dead_code()
 
     def transform_model(
         self,
@@ -210,10 +210,11 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             ]:
                 raise ValueError(f"{compression_config.mode.value} is not supported.")
             weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
-            weight_name = weight_node.layer_attributes.name
+            weight_name = weight_node.node_name
             weight = self.get_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph)
-            if weight is None or not isinstance(weight, torch.nn.Parameter):
-                raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
+            print("Weight is: ", weight)
+            if weight is None or not isinstance(weight, Tensor):
+                raise nncf.InternalError(f"Could not find a nncf.tensor in the model by name {weight_name}.")
 
             # calculates compressed weights and decompression parameters
             compressed_weight = compress_weight(
@@ -234,13 +235,13 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             self.set_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph, packed_tensor)
 
-            consumer_nodes = graph.get_next_nodes(weight_node)
-            if len(consumer_nodes) > 1:
-                for c_node in consumer_nodes:
-                    c_module = model.nncf.get_module_by_scope(Scope.from_str(c_node.layer_name))
-                    for name, param in c_module.named_parameters(recurse=False, remove_duplicate=False):
-                        if id(param) == id(weight):
-                            setattr(c_module, name, compressed_parameter)
+            # consumer_nodes = graph.get_next_nodes(weight_node)
+            # if len(consumer_nodes) > 1:
+            #     for c_node in consumer_nodes:
+            #         c_module = model.nncf.get_module_by_scope(Scope.from_str(c_node.layer_name))
+            #         for name, param in c_module.named_parameters(recurse=False, remove_duplicate=False):
+            #             if id(param) == id(weight):
+            #                 setattr(c_module, name, compressed_parameter)
 
             # creates weight decompressor
             if compression_config.mode == CompressWeightsMode.INT8_SYM:
@@ -252,14 +253,13 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 )
 
             # registry weight decompression module in the model
-            decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
+            compressed_weight_name = wc_params.node_with_weight.node_name
+            decompressor_name = f"weights_decompressor_{compressed_weight_name.replace('.', '_')}"
 
             # inserts the weight decompressor into the model as the post hook on the model weight
             transformation_layout.register(
-                PTSharedFnInsertionCommand(
-                    [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name)],
-                    decompressor,
-                    decompressor_name,
+                FXApplyTransformationCommand(module_insertion_transformation_builder(
+                    decompressor, [PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, target_node_name=wc_params.node_with_weight.node_name, input_port_id=wc_params.weight_port_id)], decompressor_name)
                 )
             )
 

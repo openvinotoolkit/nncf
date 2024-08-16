@@ -21,6 +21,8 @@ from nncf.torch.quantization.layers import AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import SymmetricWeightsDecompressor
 from torch._export import capture_pre_autograd_graph
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
+from torch.ao.quantization.pt2e.utils import _get_tensor_constant_from_node
+from nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend import get_graph_node_by_name
 
 DATA_BASED_SENSITIVITY_METRICS = (
     SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
@@ -120,24 +122,30 @@ def test_compress_weights(mode):
         exported_model = capture_pre_autograd_graph(model, args=(input_ids,))
     from nncf.common.factory import NNCFGraphFactory
     nncf_graph = NNCFGraphFactory.create(exported_model)
-    for parameter in exported_model.parameters():
-        print(type(parameter))
-    print("Current node: ", type(nncf_graph.get_all_nodes()[1]))
-    print(nncf_graph.get_next_nodes(nncf_graph.get_all_nodes()[2]))
+    print("Current node: ", nncf_graph.get_all_nodes()[3])
+    linear_node = nncf_graph.get_all_nodes()[3]
+    graph_bias_node = get_graph_node_by_name(exported_model.graph, linear_node.node_name)
+    print(_get_tensor_constant_from_node(graph_bias_node, exported_model))
     nncf_graph.visualize_graph('graph.dot')
+    compressed_model = compress_weights(exported_model, mode=mode)
+    nncf_graph_compressed = NNCFGraphFactory.create(compressed_model)
+    nncf_graph_compressed.visualize_graph('compressed_graph.dot')
+    n_compressed_weights = 0
+    n_target_modules = 0
+
+    for node in compressed_model.graph.nodes:
+        print(node.all_input_nodes)
+        # if isinstance(module, (torch.nn.Linear, torch.nn.Embedding)):
+        #     print("dwedwe")
+        #     n_target_modules += 1
+        #     if module.weight.dtype == dtype:
+        #         n_compressed_weights += 1
+        if node.op == "call_function" and hasattr(node.target, "overloadpacket"):
+            node_type = str(node.target.overloadpacket).split(".")[1]
+            if node_type in ["linear", "embedding"]:
+                n_target_modules += 1
+
     assert False
-    # compressed_model = compress_weights(exported_model, mode=mode)
-
-    # n_compressed_weights = 0
-    # n_target_modules = 0
-
-    # for _, module in compressed_model.named_children():
-    #     if isinstance(module, (torch.nn.Linear, torch.nn.Embedding)):
-    #         n_target_modules += 1
-    #         if module.weight.dtype == dtype:
-    #             n_compressed_weights += 1
-
-    # assert n_compressed_weights == n_target_modules
 
 
 # @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
