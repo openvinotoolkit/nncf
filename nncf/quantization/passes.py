@@ -83,7 +83,7 @@ def classify_nodes(
             node_markers[node] = NodeMarker.CONSTANT_SUBGRAPH
         else:
             raise ValueError(
-                "The input graph contains a node {node} that does not have input edges but is not classified "
+                f"The input graph contains a node {node} that does not have input edges but is not classified "
                 " as a constant node or a start node."
             )
 
