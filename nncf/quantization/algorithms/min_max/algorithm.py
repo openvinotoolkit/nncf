@@ -61,7 +61,7 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.fake_quantize import calculate_convert_parameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
-from nncf.quantization.passes import transform_to_inference_graph
+from nncf.quantization.passes import transform_graph
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
@@ -741,11 +741,12 @@ class MinMaxQuantization(Algorithm):
         )
         hw_patterns = PatternsManager.get_full_hw_pattern_graph(backend=backend, device=device, model_type=model_type)
 
-        inference_nncf_graph = transform_to_inference_graph(
+        inference_nncf_graph = transform_graph(
             deepcopy(nncf_graph),
             self._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             self._backend_entity.shapeof_metatypes,
             self._backend_entity.dropout_metatypes,
+            self._backend_entity.constant_metatypes,
         )
 
         quantizer_setup = self._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
