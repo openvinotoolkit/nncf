@@ -14,7 +14,6 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import torch
 import torch.fx
-from torch.ao.quantization.pt2e.utils import _get_tensor_constant_from_node
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFGraph
@@ -24,6 +23,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
+from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.transformations import bias_update_transformation_builder
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
@@ -86,7 +86,7 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         bias_node = nncf_graph.get_next_nodes(node)[0]
         # TODO(dlyakhov): make a node_name_vs_node map to speed up the process
         graph_bias_node = get_graph_node_by_name(model.graph, bias_node.node_name)
-        return Tensor(_get_tensor_constant_from_node(graph_bias_node.all_input_nodes[1], model))
+        return Tensor(get_tensor_constant_from_node(graph_bias_node.all_input_nodes[1], model))
 
     @staticmethod
     def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
