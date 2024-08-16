@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,10 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Callable, List, Tuple
 
-import numpy as np
-import torch
+import torch.fx
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFGraph
@@ -23,54 +22,33 @@ from nncf.common.quantization.quantizer_propagation.structs import QuantizationT
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
+from nncf.experimental.torch.fx.transformations import get_graph_node_by_name
+from nncf.experimental.torch.fx.transformations import module_insertion_transformation_builder
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 from nncf.tensor import Tensor
-from nncf.torch.graph.transformations.command_creation import create_command_to_update_weight
-from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.layer_utils import COMPRESSION_MODULES
-from nncf.torch.layer_utils import CompressionParameter
-from nncf.torch.layer_utils import StatefullModuleInterface
-from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
-
-
-@COMPRESSION_MODULES.register()
-class SQMultiply(torch.nn.Module, StatefullModuleInterface):
-    SCALE_SHAPE_KEY = "scale_shape"
-
-    def __init__(self, scale_shape: Tuple[int, ...]):
-        super().__init__()
-        self._scale_value = CompressionParameter(torch.empty(scale_shape))
-
-    @property
-    def scale(self) -> torch.nn.Parameter:
-        return self._scale_value
-
-    @scale.setter
-    def scale(self, value: torch.tensor):
-        self._scale_value.data = value
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return torch.mul(x, self._scale_value)
-
-    def get_config(self) -> Dict[str, Any]:
-        return {self.SCALE_SHAPE_KEY: list(self._scale_value.shape)}
-
-    @classmethod
-    def from_config(cls, state) -> "SQMultiply":
-        return SQMultiply(state[cls.SCALE_SHAPE_KEY])
-
 
 PT_PRE_LAYER_TARGET_TYPE = TargetType.OPERATOR_PRE_HOOK
 
 
-class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
+class FXSQMultiply(torch.nn.Module):
+    def __init__(self, scale: torch.Tensor):
+        super().__init__()
+        self._scale_value = scale
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.mul(x, self._scale_value)
+
+
+class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @property
     def convolution_metatypes(self) -> List[OperatorMetatype]:
         return [
@@ -104,8 +82,6 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_activations_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        # Metatypes of linears and convolutions guarantee
-        # all nodes with the metatypes have 0 activation port id.
         return 0
 
     @staticmethod
@@ -119,16 +95,17 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return collector
 
     @staticmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: NNCFNetwork, nncf_graph: NNCFGraph) -> Tensor:
+    def get_weight_value(node_with_weight: NNCFNode, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> Tensor:
         weight_node = get_const_node(node_with_weight, node_with_weight.metatype.weight_port_ids[0], nncf_graph)
         if weight_node is None:
             raise RuntimeError(f"{node_with_weight} node has no weight node.")
-        weight_data = get_const_data(weight_node, model)
-        return Tensor(weight_data)
+        graph_node = get_graph_node_by_name(model.graph, weight_node.node_name)
+        weight_data = get_tensor_constant_from_node(graph_node, model)
+        return Tensor(weight_data.data)
 
     @staticmethod
-    def weight_update_command(node_with_weight: NNCFNode, weight_value: np.ndarray) -> OVWeightUpdateCommand:
-        return create_command_to_update_weight(node_with_weight, weight_value)
+    def weight_update_command(node_with_weight: NNCFNode, weight_value: torch.Tensor) -> OVWeightUpdateCommand:
+        return FXApplyTransformationCommand(constant_update_transformation_builder(node_with_weight, weight_value.data))
 
     @staticmethod
     def scale_insertion_command(
@@ -143,9 +120,10 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         for node in nodes:
             target_points.append(PTTargetPoint(PT_PRE_LAYER_TARGET_TYPE, node.node_name, input_port_id=input_port_id))
 
-        sq_multiply = SQMultiply(scale_value.shape)
-        sq_multiply.scale = scale_value
-        return PTSharedFnInsertionCommand(target_points, sq_multiply, scale_node_name)
+        sq_multiply = FXSQMultiply(scale_value)
+        return FXApplyTransformationCommand(
+            module_insertion_transformation_builder(sq_multiply, target_points, scale_node_name)
+        )
 
     @staticmethod
     def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
@@ -161,7 +139,9 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        return node.is_shared()
+        # TODO(dlyakhov): Support shared layers in TorchFX.
+        # Ref: 149316
+        return False
 
     @staticmethod
     def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:

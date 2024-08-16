@@ -24,6 +24,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.transformations import leaf_module_insertion_transformation_builder
 from nncf.tensor import Tensor
+from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 
@@ -65,6 +66,24 @@ class FXStatisticsAggregator(StatisticsAggregator):
     def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
         return
 
+    @staticmethod
+    def _get_statistic_collector_name(tp: PTTargetPoint, module_to_insert: torch.nn.Module) -> str:
+        """
+        Compouses unique statistic collector name according to given target point and module.
+
+        :param tp: Given target point.
+        :param module_to_insert: Given statistic collection module.
+        :return: Unique statistic collector name according to given target point and module.
+        """
+        return "_".join(
+            [
+                tp.target_node_name,
+                str(tp.input_port_id),
+                str(tp.target_type.value),
+                str(id(module_to_insert)),
+            ]
+        )
+
     def _get_transformation_layout_extra_outputs(
         self, statistic_points: StatisticPointsContainer
     ) -> TransformationLayout:
@@ -75,8 +94,11 @@ class FXStatisticsAggregator(StatisticsAggregator):
             for _statistic_point in _statistic_points:
                 for collectors in _statistic_point.algorithm_to_tensor_collectors.values():
                     for collector in collectors:
+                        tp = _statistic_point.target_point
+                        module_to_insert = TensorCollectorModule(collector)
+                        target_module_name = self._get_statistic_collector_name(tp, module_to_insert)
                         transformation = leaf_module_insertion_transformation_builder(
-                            TensorCollectorModule(collector), [_statistic_point.target_point]
+                            module_to_insert, [tp], target_module_name
                         )
                         transformation_commands.append(
                             FXApplyTransformationCommand(

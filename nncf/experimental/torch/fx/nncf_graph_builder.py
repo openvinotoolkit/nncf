@@ -98,7 +98,6 @@ class GraphConverter:
                     output_port_id=output_port_id,
                     dtype=Dtype.FLOAT,
                 )
-
         return nncf_graph
 
     @staticmethod
@@ -121,22 +120,24 @@ class GraphConverter:
             edge tensor shape.
         """
         output_port_id = 0
+        tensor_shape = None
         if source_node.op in ("get_attr",):
             tensor_shape = tuple(getattr(model, source_node.target).shape)
         elif "val" in source_node.meta:
             if source_nncf_node.metatype is om.PTBatchNormMetatype:
                 tensor = source_node.meta["val"][0]
-            elif source_nncf_node.metatype is om.PTSplitMetatype:
+            elif source_nncf_node.metatype in [om.PTSplitMetatype, om.PTMaxMetatype, om.PTMinMetatype]:
                 tensor = source_node.meta["val"][output_idx]
-                # Assume every split outputs corresponds to an unique output_port_id
+                # Assume every outputs corresponds to an unique output_port_id
                 output_port_id = output_idx
             else:
                 tensor = source_node.meta["val"]
-            tensor_shape = tuple(tensor.shape)
-        else:
+            if isinstance(tensor, torch.Tensor):
+                tensor_shape = tuple(tensor.shape)
+
+        if tensor_shape is None:
             # TODO(dlyakhov): Refactor algorithms to always have knowns edges shapes.
             nncf_logger.debug(f"Edge shape between {source_node.name} and {dist_node.name} is unknown.")
-            tensor_shape = None
 
         input_port_id = dist_node.all_input_nodes.index(source_node)
         return input_port_id, output_port_id, tensor_shape

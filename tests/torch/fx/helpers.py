@@ -11,7 +11,7 @@
 
 from pathlib import Path
 
-import torch
+import torch.fx
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
@@ -19,6 +19,7 @@ import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
+from torch.fx.passes.graph_drawer import FxGraphDrawer
 
 
 class TinyImagenetDatasetManager:
@@ -103,3 +104,8 @@ class TinyImagenetDatasetManager:
         )
 
         return train_loader, val_loader, calibration_dataset
+
+
+def visualize_fx_model(model: torch.fx.GraphModule, output_svg_path: str):
+    g = FxGraphDrawer(model, output_svg_path)
+    g.get_dot_graph().write_svg(output_svg_path)
