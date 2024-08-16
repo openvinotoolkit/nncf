@@ -44,6 +44,10 @@ from nncf.quantization.range_estimator import AggregatorType
 
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
+    def constant_metatypes(self) -> List[OperatorMetatype]:
+        return [om.OVConstantMetatype]
+
+    @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVMatMulMetatype]
 
