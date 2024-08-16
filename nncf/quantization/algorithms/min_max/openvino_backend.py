@@ -82,10 +82,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
-        return [om.OVReadValueMetatype]
-
-    @property
     def scaled_dot_product_attention_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVScaledDotProductAttentionMetatype]
 

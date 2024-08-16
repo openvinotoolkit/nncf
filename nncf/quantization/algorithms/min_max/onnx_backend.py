@@ -83,10 +83,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
-        return []
-
-    @property
     def scaled_dot_product_attention_metatypes(self) -> List[OperatorMetatype]:
         return []
 
