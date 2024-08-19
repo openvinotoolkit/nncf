@@ -122,3 +122,26 @@ Run test with calibration dataset having batch-size=10 for all models:
 ```bash
 pytest --data=<path_to_datasets> --batch-size 10 tests/post_training/test_quantize_conformance.py
 ```
+
+## Reference data
+
+The reference data section outlines the expected format for defining reference values used during parallel testing.
+
+```yml
+<Name from model scopes>_backend_<BACKEND>:
+  metric_value: <expected value>
+```
+
+> [!IMPORTANT]
+> The reference file is used for parallel testing.
+> The path to the *_reference_data.yaml files is used during testing and should not be changed without updating Jenkins scripts.
+
+### Marking tests as xfail
+
+To mark a test as expected to fail (xfail) when a validation metric does not meet expectations, add the following line to the reference data:
+
+```yml
+<Name from model scopes>_backend_<BACKEND>:
+  ...
+  metrics_xfail_reason: "Issue-<jira ticket number>"
+```
