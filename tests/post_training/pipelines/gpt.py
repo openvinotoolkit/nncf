@@ -64,10 +64,11 @@ class GPT(PTQTestPipeline):
         else:
 
             def transform_func(data):
+                ids = np.expand_dims(data["input_ids"], axis=0)
                 inputs = {
-                    "input_ids": np.expand_dims(data["input_ids"], axis=0),
+                    "input_ids": ids,
                     "attention_mask": np.expand_dims(data["attention_mask"], axis=0),
-                    "position_ids": np.ones((1, 128), dtype=np.int64),
+                    "position_ids": np.ones(ids.shape, dtype=np.int64),
                     "beam_idx": np.zeros((1,), dtype=np.int64),
                 }
                 return inputs

@@ -36,6 +36,7 @@ from tools.memory_monitor import MemoryUnit
 from tools.memory_monitor import memory_monitor_context
 
 DEFAULT_VAL_THREADS = 4
+METRICS_XFAIL_REASON = "metrics_xfail_reason"
 
 
 class BackendType(Enum):
@@ -165,6 +166,14 @@ class RunInfo:
         return int(memory)
 
     def get_result_dict(self):
+        ram_data = {}
+        if self.compression_memory_usage_rss is None and self.compression_memory_usage_system is None:
+            ram_data["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage)
+        if self.compression_memory_usage_rss is not None:
+            ram_data["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage_rss)
+        if self.compression_memory_usage_system is not None:
+            ram_data["RAM MiB System"] = self.format_memory_usage(self.compression_memory_usage_system)
+
         result = {
             "Model": self.model,
             "Backend": self.backend.value if self.backend else None,
@@ -178,15 +187,10 @@ class RunInfo:
             **self.stats_from_output.get_stats(),
             "Total time": self.format_time(self.time_total),
             "FPS": self.fps,
+            **ram_data,
             "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
+            "Build url": os.environ.get("BUILD_URL", ""),
         }
-
-        if self.compression_memory_usage_rss is None and self.compression_memory_usage_system is None:
-            result["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage)
-        if self.compression_memory_usage_rss is not None:
-            result["RAM MiB RSS"] = self.format_memory_usage(self.compression_memory_usage_rss)
-        if self.compression_memory_usage_system is not None:
-            result["RAM MiB System"] = self.format_memory_usage(self.compression_memory_usage_system)
 
         return result
 
@@ -307,6 +311,7 @@ class BaseTestPipeline(ABC):
         if metric_value is not None and metric_value_fp32 is not None:
             self.run_info.metric_diff = round(self.run_info.metric_value - self.reference_data["metric_value_fp32"], 5)
 
+        status_msg = None
         if (
             metric_value is not None
             and metric_reference is not None
@@ -314,9 +319,13 @@ class BaseTestPipeline(ABC):
         ):
             if metric_value < metric_reference:
                 status_msg = f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
-                raise ValueError(status_msg)
             if metric_value > metric_reference:
                 status_msg = f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
+
+        if status_msg is not None:
+            if METRICS_XFAIL_REASON in self.reference_data:
+                self.run_info.status = f"XFAIL: {self.reference_data[METRICS_XFAIL_REASON]} - {status_msg}"
+            else:
                 raise ValueError(status_msg)
 
     def run(self) -> None:
@@ -443,14 +452,18 @@ class PTQTestPipeline(BaseTestPipeline):
         """
         if not self.run_benchmark_app:
             return
-        runner = Command(f"benchmark_app -m {self.path_compressed_ir}")
-        runner.run(stdout=False)
-        cmd_output = " ".join(runner.output)
 
-        match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
-        if match is not None:
-            fps = match.group(1)
-            self.run_info.fps = float(fps)
+        try:
+            runner = Command(f"benchmark_app -m {self.path_compressed_ir}")
+            runner.run(stdout=False)
+            cmd_output = " ".join(runner.output)
+
+            match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
+            if match is not None:
+                fps = match.group(1)
+                self.run_info.fps = float(fps)
+        except Exception as e:
+            print(e)
 
     def cleanup_cache(self):
         """

@@ -129,7 +129,7 @@ EXTRAS_REQUIRE = {
     ],
 }
 
-with open("{}/README.md".format(here), "r", encoding="utf8") as fh:
+with open("{}/docs/PyPiPublishing.md".format(here), "r", encoding="utf8") as fh:
     long_description = fh.read()
 
 setup(
