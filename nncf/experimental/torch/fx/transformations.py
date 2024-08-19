@@ -27,7 +27,9 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 TransformationFNType = Callable[[torch.fx.GraphModule], None]
 
 
-def _set_new_node_meta(new_node: torch.fx.Node, prev_node: torch.fx.Node, target_module: torch.nn.Module):
+def _set_new_node_meta(
+    new_node: torch.fx.Node, prev_node: torch.fx.Node, target_module: torch.nn.Module, model: torch.fx.GraphModule
+):
     """
     Sets correct meta \"val\" value to the new node.
 
@@ -36,7 +38,11 @@ def _set_new_node_meta(new_node: torch.fx.Node, prev_node: torch.fx.Node, target
         New node expected to have only one input node.
     :param target_module: Module which is being called by the new node.
     """
-    val = prev_node.meta["val"]
+    val = (
+        prev_node.meta["val"]
+        if prev_node.op not in ["get_attr"]
+        else get_tensor_constant_from_node(prev_node, model).data
+    )
     val = val if isinstance(val, tuple) else (val,)
     retval = []
     for t in val:
@@ -70,16 +76,16 @@ def module_insertion_transformation_builder(
             target_node = get_graph_node_by_name(graph, target_point.target_node_name)
 
             if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
-                _set_new_node_meta(new_node, target_node, module_to_insert)
+                _set_new_node_meta(new_node, target_node, module_to_insert, model)
                 with graph.inserting_after(target_node):
-                    for user in target_node.users:
+                    for user in list(target_node.users.keys()):
                         if user is new_node:
                             continue
                         user.replace_input_with(target_node, new_node)
 
             else:
                 prev_node = target_node.args[target_point.input_port_id]
-                # _set_new_node_meta(new_node, prev_node, module_to_insert)
+                _set_new_node_meta(new_node, prev_node, module_to_insert, model)
                 target_node.replace_input_with(prev_node, new_node)
 
     return module_insertion_transformation
