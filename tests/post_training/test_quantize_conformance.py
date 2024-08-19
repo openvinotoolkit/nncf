@@ -366,3 +366,5 @@ def test_weight_compression(
 
     if err_msg:
         pytest.fail(err_msg)
+    if run_info.status is not None and run_info.status.startswith("XFAIL:"):
+        pytest.xfail(run_info.status)
