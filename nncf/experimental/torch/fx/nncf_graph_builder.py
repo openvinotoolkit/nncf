@@ -75,6 +75,9 @@ class GraphConverter:
 
         for source_node in model.graph.nodes:
             node_type, node_metatype = GraphConverter._get_node_type_and_metatype(source_node)
+            # switch the arguments since capture_pre_autograd_graph()
+            # was returning the node embedding op with weight at 0th
+            # index and nncf expects weight to be on port 1
             if (
                 "aten.embedding.default" in str(source_node.target) and source_node.args[1].op == "placeholder"
             ):  # Using aten.embedding.default as a whole to not confuse with other similar named nodes

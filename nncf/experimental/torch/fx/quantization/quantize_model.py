@@ -143,9 +143,6 @@ def compress_weights_impl(
         gptq,
         advanced_parameters,
     )
-    # switch the arguments since capture_pre_autograd_graph()
-    # was returning the node embedding op with weight at 0th
-    # index and nncf expects weight to be on port 1
     graph = NNCFGraphFactory.create(model)
     compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
     compressed_model = GraphModule(compressed_model, compressed_model.graph)
