@@ -474,13 +474,13 @@ def compress_weights(
 
         if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
             raise AttributeError(
-                "Torch backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
+                "TorchFX backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
                 f"but given {mode.value} mode."
             )
 
-        if True in [awq, scale_estimation, gptq]:
+        if any((awq, scale_estimation, gptq)):
             raise AttributeError(
-                "Torch backend doesn`t supports scale estimation and AWQ algorithm, "
+                "TorchFX backend doesn`t supports scale estimation and AWQ algorithm, "
                 "but awq=True or scale_estimation=True or gptq=True is specified."
             )
         compression_weights_impl = fx_compression_weights_impl

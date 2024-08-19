@@ -13,7 +13,6 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 import torch
 import torch.fx
-from torch.ao.quantization.fx.utils import create_getattr_from_value
 
 import nncf
 import nncf.errors
@@ -30,6 +29,7 @@ from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import module_insertion_transformation_builder
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
@@ -180,23 +180,13 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         graph: NNCFGraph,
         weight: Tensor,
     ) -> torch.fx.Node:
-        weight_node = graph.get_previous_nodes(node_with_weight)[weight_port_id]
-        graph_node = get_graph_node_by_name(model.graph, weight_node.node_name)
-        if len(graph_node.users) != 1:
-            raise nncf.InternalError(f"Weight Node has {len(graph_node.users)} users, 1 expected.")
 
-        node_with_weight_graph = next(iter(graph_node.users))
-        with model.graph.inserting_before(node_with_weight_graph):
-            new_weight_node = create_getattr_from_value(
-                model, model.graph, node_with_weight.node_name + "_compressed_weight", weight.data
-            )
-
-        args = list(node_with_weight_graph.args)
-        args[weight_port_id] = new_weight_node
-        node_with_weight_graph.args = tuple(args)
-        model.graph.eliminate_dead_code()
-
-        return new_weight_node
+        weight_update_command = FXApplyTransformationCommand(
+            constant_update_transformation_builder(node_with_weight, weight.data)
+        )
+        layout = TransformationLayout()
+        layout.register(weight_update_command)
+        model = FXModelTransformer(model).transform(layout)
 
     def transform_model(
         self,
@@ -240,12 +230,10 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 dtype = TensorDataType.uint8
             packed_tensor = compressed_weight.tensor.astype(dtype)
 
-            new_weight = self.set_weight(
-                wc_params.node_with_weight, wc_params.weight_port_id, model, graph, packed_tensor
-            )
+            self.set_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph, packed_tensor)
 
             if len(consumer_nodes) > 1:
-                raise nncf.InternalError("Shared weights not supported in compression for Torch Fx models")
+                raise nncf.InternalError("Shared weights not supported in compression for TorchFX models")
 
             # creates weight decompressor
             if compression_config.mode == CompressWeightsMode.INT8_SYM:
@@ -261,7 +249,8 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 decompressor_type = "asymmetric"
 
             # registry weight decompression module in the model
-            compressed_weight_name = wc_params.node_with_weight.node_name
+            # TODO: Find a more efficient way to access updated constant name
+            compressed_weight_name = wc_params.node_with_weight.node_name + "_updated_constant0"
             decompressor_name = f"{decompressor_type}_weights_decompressor_{compressed_weight_name.replace('.', '_')}"
 
             # inserts the weight decompressor into the model as the post hook on the model weight
@@ -269,7 +258,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 FXApplyTransformationCommand(
                     module_insertion_transformation_builder(
                         decompressor,
-                        [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=new_weight.name)],
+                        [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=compressed_weight_name)],
                         decompressor_name,
                     )
                 )

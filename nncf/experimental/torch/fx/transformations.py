@@ -78,7 +78,7 @@ def module_insertion_transformation_builder(
             if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
                 _set_new_node_meta(new_node, target_node, module_to_insert, model)
                 with graph.inserting_after(target_node):
-                    for user in list(target_node.users.keys()):
+                    for user in list(target_node.users):
                         if user is new_node:
                             continue
                         user.replace_input_with(target_node, new_node)
