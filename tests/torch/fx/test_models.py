@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import json
 import os
 from dataclasses import dataclass
@@ -39,8 +38,8 @@ from tests.shared.paths import TEST_ROOT
 from tests.torch import test_models
 from tests.torch.test_compressed_graph import check_graph
 
-FX_DIR_NAME = "fx"
-FX_QUANTIZED_DIR_NAME = "fx/quantized"
+FX_DIR_NAME = Path("fx")
+FX_QUANTIZED_DIR_NAME = Path("fx") / "quantized"
 
 
 @dataclass
@@ -151,6 +150,9 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters):
         quantization_parameters["subset_size"] = 1
 
         quantized_model = nncf.quantize(fx_model, calibration_dataset, **quantization_parameters)
-        quantized_model = GraphConverter.create_nncf_graph(quantized_model)
+        # Uncomment to visualize torch fx graph
+        # from tests.torch.fx.helpers import visualize_fx_model
+        # visualize_fx_model(quantized_model, f"{model_case.model_id}_int8.svg")
 
-        check_graph(quantized_model, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME)
+        nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
+        check_graph(nncf_graph, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME)

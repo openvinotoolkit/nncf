@@ -14,7 +14,6 @@ from typing import Callable, List, Optional
 import torch
 import torch.fx
 from torch.ao.quantization.fx.utils import create_getattr_from_value
-from torch.ao.quantization.pt2e.utils import _get_tensor_constant_from_node
 from torch.ao.quantization.pt2e.utils import fold_bn_weights_into_conv_node
 from torch.quantization.fake_quantize import FakeQuantize
 
@@ -22,13 +21,72 @@ import nncf
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
+from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 TransformationFNType = Callable[[torch.fx.GraphModule], None]
 
 
+def _set_new_node_meta(new_node: torch.fx.Node, prev_node: torch.fx.Node, target_module: torch.nn.Module):
+    """
+    Sets correct meta \"val\" value to the new node.
+
+    :param new_node: The new node.
+    :param prev_node: Input node of the new node.
+        New node expected to have only one input node.
+    :param target_module: Module which is being called by the new node.
+    """
+    val = prev_node.meta["val"]
+    val = val if isinstance(val, tuple) else (val,)
+    retval = []
+    for t in val:
+        retval.append(torch.ones(t.shape))
+
+    with torch.no_grad():
+        new_node.meta["val"] = target_module(*val)
+
+
+def module_insertion_transformation_builder(
+    module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint], target_module_name: str
+) -> TransformationFNType:
+    """
+    Returns transformation which inserts given module to a target model
+    and calls given module after each target points replacing inputs/outputs
+    of the target node.
+
+    :param module_to_insert: Given torch.nn.Module to insert.
+    :param target_points: Target points to insert the target module.
+    :param target_module_name: Target model attribute name for the module_to_insert.
+    :returns: Transformation which which inserts given module to a target model
+        and calls given module after each target points.
+    """
+
+    def module_insertion_transformation(model: torch.fx.GraphModule):
+        module_attr_name = _set_module_to_the_graph_module(model, module_to_insert, target_module_name)
+        # Insert call_module nodes to the model
+        graph = model.graph
+        for idx, target_point in enumerate(target_points):
+            new_node = _insert_call_module(graph, target_point, module_attr_name, f"{module_attr_name}_{idx}")
+            target_node = get_graph_node_by_name(graph, target_point.target_node_name)
+
+            if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
+                _set_new_node_meta(new_node, target_node, module_to_insert)
+                with graph.inserting_after(target_node):
+                    for user in target_node.users:
+                        if user is new_node:
+                            continue
+                        user.replace_input_with(target_node, new_node)
+
+            else:
+                prev_node = target_node.args[target_point.input_port_id]
+                _set_new_node_meta(new_node, prev_node, module_to_insert)
+                target_node.replace_input_with(prev_node, new_node)
+
+    return module_insertion_transformation
+
+
 def leaf_module_insertion_transformation_builder(
-    module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint]
+    module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint], target_module_name: str
 ) -> TransformationFNType:
     """
     Returns transformation which inserts given module to a target model
@@ -36,27 +94,28 @@ def leaf_module_insertion_transformation_builder(
 
     :param module_to_insert: Given torch.nn.Module to insert.
     :param target_points: Target points to insert the target module.
+    :param target_module_name: Target model attribute name for the module_to_insert.
     :returns: Transformation which which inserts given module to a target model
         and calls given module after each target points.
     """
 
     def leaf_module_insertion_transformation(model: torch.fx.GraphModule):
-        module_attr_name = _set_module_to_the_graph_module(model, module_to_insert, target_points)
+        module_attr_name = _set_module_to_the_graph_module(model, module_to_insert, target_module_name)
         # Insert call_module nodes to the model
         graph = model.graph
-        for target_point in target_points:
-            _insert_call_module(graph, target_point, module_attr_name)
+        for idx, target_point in enumerate(target_points):
+            _insert_call_module(graph, target_point, module_attr_name, f"{module_attr_name}_{idx}")
 
     return leaf_module_insertion_transformation
 
 
 def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> TransformationFNType:
     """
-    Return transformation which updates constant of the given bias node to the given value.
+    Return transformation which updates constant of the given node with bias to the given value.
 
-    :param node: Bias node which requires bias constant update.
+    :param node: Node with bias which requires bias constant update.
     :param value: New value to use as the bias constant.
-    :return: Transformation which updates constant of the given bias node to the given value.
+    :return: Transformation which updates constant of the given node with bias to the given value.
     """
 
     def bias_update_transformation(model: torch.fx.GraphModule):
@@ -67,19 +126,52 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
             raise nncf.InternalError(f"Node with bias have {len(graph_node.users)} users, 1 expected.")
 
         bias_node = next(iter(graph_node.users))
-        with graph.inserting_before(bias_node):
-            new_constant = create_getattr_from_value(model, graph, target_node_name + "_shifted_bias", value)
-
-        args = list(bias_node.args)
-        # A bias node suppose to have constant on the second input port.
-        args[1] = new_constant
-        bias_node.args = tuple(args)
-        graph.eliminate_dead_code()
+        constant_update_fn(model, bias_node, value, input_port_id=1)
 
     return bias_update_transformation
 
 
-def qdq_insertion_tranformation_builder(
+def constant_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> TransformationFNType:
+    """
+    Return transformation which updates constant of the given node to the given value.
+
+    :param node: Node which requires bias constant update.
+    :param value: New value to use as the node constant.
+    :return: Transformation which updates constant of the given node to the given value.
+    """
+
+    def constant_update_transformation(model: torch.fx.GraphModule):
+        constant_update_fn(model, get_graph_node_by_name(model.graph, node.node_name), value, input_port_id=1)
+
+    return constant_update_transformation
+
+
+def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: torch.Tensor, input_port_id: int = 1):
+    """
+    Updates constant of given node on the given input port id with given value.
+
+    :param model: Target torch GraphModule.
+    :param node: Given graph node.
+    :param value: New value to use as the node constant.
+    :param input_port_id: Target constant input port id.
+    """
+    graph = model.graph
+    with graph.inserting_before(node):
+        new_constant = create_getattr_from_value(model, graph, node.name + "_updated_constant", value)
+
+    args = list(node.args)
+    # A bias node suppose to have constant on the second input port.
+    if args[input_port_id].op != "get_attr":
+        raise nncf.InternalError(
+            f"Constant on input port {input_port_id} for {node} is expected,"
+            f" but node {args[input_port_id]} is present."
+        )
+    args[input_port_id] = new_constant
+    node.args = tuple(args)
+    graph.eliminate_dead_code()
+
+
+def qdq_insertion_transformation_builder(
     quantizer: FakeQuantize, target_points: List[PTTargetPoint]
 ) -> TransformationFNType:
     """
@@ -92,7 +184,7 @@ def qdq_insertion_tranformation_builder(
         inherited from the given quantizer to each given target point.
     """
 
-    def qdq_insertion_tranformation(model: torch.fx.GraphModule):
+    def qdq_insertion_transformation(model: torch.fx.GraphModule):
         if any(tp.target_type != TargetType.OPERATION_WITH_WEIGHTS for tp in target_points) and len(target_points) > 1:
             raise RuntimeError(
                 "Insertion of shared qdq pair for the weights is not supported."
@@ -101,7 +193,7 @@ def qdq_insertion_tranformation_builder(
         for target_point in target_points:
             insert_one_qdq(model, target_point, quantizer)
 
-    return qdq_insertion_tranformation
+    return qdq_insertion_transformation
 
 
 def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, quantizer: FakeQuantize):
@@ -200,25 +292,23 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
         raise nncf.InternalError(f"Unexpected target type: {target_point.target_type}")
 
 
-def _insert_call_module(graph: torch.fx.Graph, target_point: PTTargetPoint, module_attr_name: str):
+def _insert_call_module(
+    graph: torch.fx.Graph, target_point: PTTargetPoint, module_attr_name: str, graph_node_name: str
+):
     """
     Inserts module call node to the graph after the target node.
 
     :param graph: Graph to insert module call node.
     :param target_node: Target node, module call node is being iserted just after the target node.
     :param module_attr_name: The name of the graph attribute which keeps the target module.
+    :param graph_node_name: Target name for module call node.
+    :return: Inserted module call node.
     """
     target_node = get_graph_node_by_name(graph, target_point.target_node_name)
     input_node = get_input_node(target_point, target_node)
     ctx_manager = get_ctx_manager(graph, target_point)
     with ctx_manager(target_node):
-        return graph.create_node(
-            "call_module",
-            module_attr_name,
-            (input_node,),
-            {},
-            name=f"{module_attr_name}_{str(target_point.target_type)}_graph_node",
-        )
+        return graph.create_node("call_module", module_attr_name, (input_node,), {}, name=graph_node_name)
 
 
 def get_input_node(target_point: PTTargetPoint, target_node: torch.fx.Node) -> torch.fx.Node:
@@ -264,26 +354,18 @@ def get_ctx_manager(graph: torch.fx.Graph, target_point: PTTargetPoint) -> Calla
 
 
 def _set_module_to_the_graph_module(
-    model: torch.fx.GraphModule, module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint]
+    model: torch.fx.GraphModule,
+    module_to_insert: torch.nn.Module,
+    module_name_in_model: str,
 ) -> str:
     """
     Sets given module to the given torch.fx.GraphModule with unique name.
 
     :param graph: Target torch.fx.Graph.
     :param module_to_insert: Module to insert to the target graph.
-    :param target_points: Target points which will be used to insert target module
-        to the graph.
+    :param module_name_in_model: Target model attribute name for the module_to_insert.
     :return: A graph module attribute name which keep given module.
     """
-    module_to_insert = module_to_insert
-    # TODO(dlyakhov) Make module name human readable.
-    module_name_in_model = (
-        "__".join(
-            "_".join((tp.target_node_name, str(tp.input_port_id), str(tp.target_type.value))) for tp in target_points
-        )
-        + "_"
-        + str(id(module_to_insert))
-    )
     assert not hasattr(model, module_name_in_model)
     setattr(model, module_name_in_model, module_to_insert)
     return module_name_in_model
@@ -310,7 +392,7 @@ def _is_bn_node(node: torch.fx.Node):
 
 def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
     """
-    BatchNorm operations have 3 output ports, to make it easier for alorithms to work with
+    BatchNorm operations have 3 output ports, to make it easier for algorithms to work with
     the target graph BatchNorm operations are being fused
 
     :param model: Model to apply transformations to.
@@ -342,7 +424,7 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     :param model: Model to apply transformations to.
     """
     # BatchNorm operations have 3 output ports,
-    # to make it easier for alorithms to work
+    # to make it easier for algorithms to work
     # with the target graph BatchNorm operations
     # are being fused
     fuse_conv_bn(model)
@@ -397,7 +479,7 @@ def separate_linear_and_bias(model: torch.fx.GraphModule):
         while linear_bias_node.op != "get_attr":
             # Assume zero argument is on a path to the constant
             linear_bias_node = linear_bias_node.args[0]
-        linear_bias_value = _get_tensor_constant_from_node(linear_bias_node, model)
+        linear_bias_value = get_tensor_constant_from_node(linear_bias_node, model)
         args = list(n.args)
         args[2] = None
         linear_node.args = tuple(args)
@@ -436,9 +518,9 @@ def separate_conv_and_bias(model: torch.fx.GraphModule):
         if len(n.args) < 3 or n.args[2] is None:
             continue
         conv_node = n
-        dims = len(_get_tensor_constant_from_node(conv_node.args[1], model).shape)
+        dims = len(get_tensor_constant_from_node(conv_node.args[1], model).shape)
         conv_bias_node = conv_node.args[2]
-        conv_bias_value = _get_tensor_constant_from_node(conv_bias_node, model)
+        conv_bias_value = get_tensor_constant_from_node(conv_bias_node, model)
         args = list(n.args)
         args[2] = None
         conv_node.args = tuple(args)
@@ -484,7 +566,7 @@ def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[
     Check which node should be merged by the given `is_target_node` predicate.
 
     :param model: Target model.
-    :param is_target_node: Predicate to specify nodes which shoudld be merged with the bias
+    :param is_target_node: Predicate to specify nodes which should be merged with the bias
     """
     add_node_targets = (torch.ops.aten.add_.Tensor,)
     for n in model.graph.nodes:
@@ -502,7 +584,7 @@ def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[
                 const_node = node
                 break
         assert const_node is not None
-        bias_value = _get_tensor_constant_from_node(const_node, model).squeeze()
+        bias_value = get_tensor_constant_from_node(const_node, model).squeeze()
         with model.graph.inserting_before(conv_node):
             new_bias_node = create_getattr_from_value(model, model.graph, const_node.name + "_", bias_value)
         args = list(conv_node.args)
