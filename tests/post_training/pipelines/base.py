@@ -36,7 +36,7 @@ from tools.memory_monitor import MemoryUnit
 from tools.memory_monitor import memory_monitor_context
 
 DEFAULT_VAL_THREADS = 4
-XFAIL_METRIC = "xfail_metric"
+METRICS_XFAIL_REASON = "metrics_xfail_reason"
 
 
 class BackendType(Enum):
@@ -320,8 +320,8 @@ class BaseTestPipeline(ABC):
                 status_msg = f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
 
         if status_msg is not None:
-            if XFAIL_METRIC in self.reference_data:
-                self.run_info.status = f"XFAIL: {self.reference_data[XFAIL_METRIC]} - {status_msg}"
+            if METRICS_XFAIL_REASON in self.reference_data:
+                self.run_info.status = f"XFAIL: {self.reference_data[METRICS_XFAIL_REASON]} - {status_msg}"
             else:
                 raise ValueError(status_msg)
 

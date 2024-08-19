@@ -130,8 +130,6 @@ The reference data section outlines the expected format for defining reference v
 ```yml
 <Name from model scopes>_backend_<BACKEND>:
   metric_value: <expected value>
-  ...
-  xfail: "Issue-<jira ticket number>"
 ```
 
 > [!IMPORTANT]
@@ -140,10 +138,10 @@ The reference data section outlines the expected format for defining reference v
 
 ### Marking tests as xfail
 
-To mark a test as expected to fail (xfail), add the following line to the reference data:
+To mark a test as expected to fail (xfail) when a validation metric does not meet expectations, add the following line to the reference data:
 
 ```yml
 <Name from model scopes>_backend_<BACKEND>:
   ...
-  xfail: "Issue-<jira ticket number>"
+  metrics_xfail_reason: "Issue-<jira ticket number>"
 ```
