@@ -13,8 +13,11 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 import torch
 import torch.fx
+from torch.ao.quantization.fx.utils import create_getattr_from_value
 
 import nncf
+import nncf.errors
+import nncf.tensor
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -23,30 +26,25 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
+from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
+from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.experimental.torch.fx.transformations import module_insertion_transformation_builder
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
-import nncf.tensor
 from nncf.tensor.definitions import TensorDataType
-from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph import operator_metatypes as om
-from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import find_const_node_in_constant_subgraph
 from nncf.torch.model_graph_manager import get_const_node
-from nncf.torch.model_graph_manager import get_module_by_name
-from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.quantization.layers import AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import SymmetricWeightsDecompressor
 from nncf.torch.tensor_statistics.collectors import get_raw_stat_collector
-from torch.ao.quantization.pt2e.utils import _get_tensor_constant_from_node
-from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
-from torch.ao.quantization.fx.utils import create_getattr_from_value
-from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
-from nncf.experimental.torch.fx.transformations import module_insertion_transformation_builder
-from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
+
 
 class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
@@ -168,15 +166,20 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_node = graph.get_previous_nodes(node_with_weight)[weight_port_id]
         # TODO(dlyakhov): make a node_name_vs_node map to speed up the process
         graph_weight_node = get_graph_node_by_name(model.graph, weight_node.node_name)
-        weight = _get_tensor_constant_from_node(graph_weight_node, model).data
+        weight = get_tensor_constant_from_node(graph_weight_node, model).data
         if weight is None:
             raise nncf.InternalError(f"Could not find a node in the model by name {weight_node}.")
 
         return Tensor(weight)
 
     def set_weight(
-        self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.fx.GraphModule, graph: NNCFGraph, weight: Tensor
-    ):
+        self,
+        node_with_weight: NNCFNode,
+        weight_port_id: int,
+        model: torch.fx.GraphModule,
+        graph: NNCFGraph,
+        weight: Tensor,
+    ) -> torch.fx.Node:
         weight_node = graph.get_previous_nodes(node_with_weight)[weight_port_id]
         graph_node = get_graph_node_by_name(model.graph, weight_node.node_name)
         if len(graph_node.users) != 1:
@@ -184,12 +187,16 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         node_with_weight_graph = next(iter(graph_node.users))
         with model.graph.inserting_before(node_with_weight_graph):
-            new_constant = create_getattr_from_value(model, model.graph, node_with_weight.node_name + "_compressed_weight", weight.data)
+            new_weight_node = create_getattr_from_value(
+                model, model.graph, node_with_weight.node_name + "_compressed_weight", weight.data
+            )
 
         args = list(node_with_weight_graph.args)
-        args[weight_port_id] = new_constant
+        args[weight_port_id] = new_weight_node
         node_with_weight_graph.args = tuple(args)
         model.graph.eliminate_dead_code()
+
+        return new_weight_node
 
     def transform_model(
         self,
@@ -211,8 +218,8 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 raise ValueError(f"{compression_config.mode.value} is not supported.")
             weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
             weight_name = weight_node.node_name
+            consumer_nodes = graph.get_next_nodes(weight_node)
             weight = self.get_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph)
-            print("Weight is: ", weight)
             if weight is None or not isinstance(weight, Tensor):
                 raise nncf.InternalError(f"Could not find a nncf.tensor in the model by name {weight_name}.")
 
@@ -233,33 +240,38 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 dtype = TensorDataType.uint8
             packed_tensor = compressed_weight.tensor.astype(dtype)
 
-            self.set_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph, packed_tensor)
+            new_weight = self.set_weight(
+                wc_params.node_with_weight, wc_params.weight_port_id, model, graph, packed_tensor
+            )
 
-            # consumer_nodes = graph.get_next_nodes(weight_node)
-            # if len(consumer_nodes) > 1:
-            #     for c_node in consumer_nodes:
-            #         c_module = model.nncf.get_module_by_scope(Scope.from_str(c_node.layer_name))
-            #         for name, param in c_module.named_parameters(recurse=False, remove_duplicate=False):
-            #             if id(param) == id(weight):
-            #                 setattr(c_module, name, compressed_parameter)
+            if len(consumer_nodes) > 1:
+                raise nncf.InternalError("Shared weights not supported in compression for Torch Fx models")
 
             # creates weight decompressor
             if compression_config.mode == CompressWeightsMode.INT8_SYM:
-                decompressor = SymmetricWeightsDecompressor(compressed_weight.scale.data, result_dtype=weight.dtype)
+                decompressor = SymmetricWeightsDecompressor(
+                    compressed_weight.scale.data, result_dtype=weight.data.dtype
+                )
+                decompressor_type = "symmetric"
             else:
                 packed_zero_point = compressed_weight.zero_point.astype(dtype)
                 decompressor = AsymmetricWeightsDecompressor(
-                    compressed_weight.scale.data, packed_zero_point.data, result_dtype=weight.dtype
+                    compressed_weight.scale.data, packed_zero_point.data, result_dtype=weight.data.dtype
                 )
+                decompressor_type = "asymmetric"
 
             # registry weight decompression module in the model
             compressed_weight_name = wc_params.node_with_weight.node_name
-            decompressor_name = f"weights_decompressor_{compressed_weight_name.replace('.', '_')}"
+            decompressor_name = f"{decompressor_type}_weights_decompressor_{compressed_weight_name.replace('.', '_')}"
 
             # inserts the weight decompressor into the model as the post hook on the model weight
             transformation_layout.register(
-                FXApplyTransformationCommand(module_insertion_transformation_builder(
-                    decompressor, [PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, target_node_name=wc_params.node_with_weight.node_name, input_port_id=wc_params.weight_port_id)], decompressor_name)
+                FXApplyTransformationCommand(
+                    module_insertion_transformation_builder(
+                        decompressor,
+                        [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=new_weight.name)],
+                        decompressor_name,
+                    )
                 )
             )
 

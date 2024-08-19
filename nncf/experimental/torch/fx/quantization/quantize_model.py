@@ -28,13 +28,13 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.experimental.torch.fx.transformations import revert_quantization_transformations
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
-from nncf.parameters import CompressWeightsMode
-from nncf.parameters import TargetDevice
 from nncf.parameters import SensitivityMetric
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.scopes import IgnoredScope
@@ -110,8 +110,9 @@ def quantize_impl(
 
     return quantized_model
 
+
 def compress_weights_impl(
-    model: torch.nn.Module,
+    model: torch.fx.GraphModule,
     dataset: Dataset,
     mode: CompressWeightsMode,
     ratio: float,
@@ -142,5 +143,12 @@ def compress_weights_impl(
         gptq,
         advanced_parameters,
     )
+    # switch the arguments since capture_pre_autograd_graph()
+    # was returning the node embedding op with weight at 0th
+    # index and nncf expects weight to be on port 1
     graph = NNCFGraphFactory.create(model)
-    return compression_algorithm.apply(model, graph, dataset=dataset)
+    compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
+    compressed_model = GraphModule(compressed_model, compressed_model.graph)
+    compressed_model = _disallow_eval_train(compressed_model)
+
+    return compressed_model

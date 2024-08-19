@@ -468,7 +468,9 @@ def compress_weights(
         compression_weights_impl = pt_compression_weights_impl
 
     if backend == BackendType.TORCH_FX:
-        from nncf.experimental.torch.fx.quantization.quantize_model import compress_weights_impl as fx_compression_weights_impl
+        from nncf.experimental.torch.fx.quantization.quantize_model import (
+            compress_weights_impl as fx_compression_weights_impl,
+        )
 
         if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
             raise AttributeError(
