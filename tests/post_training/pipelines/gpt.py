@@ -87,7 +87,7 @@ class GPT(PTQTestPipeline):
             dataset_config_name="sst2",
             preprocess_function=preprocess_function,
             num_samples=num_samples,
-            dataset_split="train",
+            dataset_split="validation",
             preprocess_batch=True,
         )
 
