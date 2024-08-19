@@ -75,7 +75,13 @@ class GraphConverter:
 
         for source_node in model.graph.nodes:
             node_type, node_metatype = GraphConverter._get_node_type_and_metatype(source_node)
-
+            if (
+                "aten.embedding.default" in str(source_node.target) and source_node.args[1].op == "placeholder"
+            ):  # Using aten.embedding.default as a whole to not confuse with other similar named nodes
+                source_node.args = (
+                    source_node.args[1],
+                    source_node.args[0],
+                )
             nncf_graph.add_nncf_node(
                 node_name=source_node.name,
                 node_type=node_type,
@@ -89,7 +95,6 @@ class GraphConverter:
                 input_port_id, output_port_id, tensor_shape = GraphConverter.get_edge_params(
                     model, source_node, source_nncf_node, dist_node, idx
                 )
-
                 nncf_graph.add_edge_between_nncf_nodes(
                     source_nncf_node.node_id,
                     dist_node_id,
@@ -115,7 +120,7 @@ class GraphConverter:
         :param source_node: Source node in format of torch.fx.Node.
         :param source_nncf_node: Source node in format of NNCFNode.
         :param dist_node: Distance node in format of torch.fx.Node.
-        :param output_idx: Output indes of the source_node.
+        :param output_idx: Output index of the source_node.
         :return: Tuple of edge parameters: edge input port id, edge output port id and
             edge tensor shape.
         """
