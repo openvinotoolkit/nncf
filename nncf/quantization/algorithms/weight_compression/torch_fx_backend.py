@@ -180,13 +180,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         graph: NNCFGraph,
         weight: Tensor,
     ) -> None:
-
-        weight_update_command = FXApplyTransformationCommand(
-            constant_update_transformation_builder(node_with_weight, weight.data)
-        )
-        layout = TransformationLayout()
-        layout.register(weight_update_command)
-        model = FXModelTransformer(model).transform(layout)
+        constant_update_transformation_builder(node_with_weight, weight.data)(model)
 
     def transform_model(
         self,
