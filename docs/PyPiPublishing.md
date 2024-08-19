@@ -14,9 +14,8 @@ NNCF is designed to work with models from [PyTorch](https://pytorch.org/),
 [OpenVINO&trade;](https://docs.openvino.ai).
 
 The framework is organized as a Python package that can be built and used
-in a standalone mode. Its architecture is unified to make it easy to
-add different compression algorithms for both PyTorch and TensorFlow deep
-learning frameworks.
+as a standalone tool. Its architecture is unified to make adding different
+compression algorithms easy for both PyTorch and TensorFlow.
 
 NNCF provides samples that demonstrate the usage of compression algorithms
 for different use cases and models. See compression results achievable
