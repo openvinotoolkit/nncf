@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import UserDict
-from typing import Any, Callable, Generator, List, Optional, Tuple
+from typing import Any, Callable, Generator, Optional, Tuple
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.tensor import NNCFTensor
@@ -41,7 +41,7 @@ class StatisticPoint:
                 tensor_collector.register_input(x)
 
 
-class StatisticPointsContainer(UserDict): # type: ignore
+class StatisticPointsContainer(UserDict):  # type: ignore
     """
     Container with iteration interface for handling a composition of StatisticPoint.
     """
@@ -52,7 +52,7 @@ class StatisticPointsContainer(UserDict): # type: ignore
 
         :param statistic_point: Statistic point to add.
         """
-        target_node_name = statistic_point.target_point.target_node_name # type: ignore
+        target_node_name = statistic_point.target_point.target_node_name  # type: ignore
         if target_node_name not in self.data:
             self.data[target_node_name] = [statistic_point]
         else:

@@ -14,6 +14,7 @@ from typing import Any, Deque, List, Tuple
 import numpy as np
 from numpy.typing import NDArray
 
+
 def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
     channel_dim_idx = 0
     channel_count = 1
@@ -60,9 +61,7 @@ def get_per_channel_history(
     return per_channel_history
 
 
-def np_percentile_reduce_like(
-    input_: NDArray[Any], ref_tensor_shape: Tuple[int], q: float
-) -> NDArray[Any]:
+def np_percentile_reduce_like(input_: NDArray[Any], ref_tensor_shape: Tuple[int], q: float) -> NDArray[Any]:
     numel = np.prod(ref_tensor_shape)
     if numel == 1:
         return np.array([np.percentile(input_, q)])
