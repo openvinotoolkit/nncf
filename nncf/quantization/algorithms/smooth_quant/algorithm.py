@@ -70,7 +70,7 @@ class SmoothQuant(Algorithm):
 
     @property
     def available_backends(self) -> List[BackendType]:
-        return [BackendType.OPENVINO, BackendType.TORCH]
+        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
@@ -87,6 +87,10 @@ class SmoothQuant(Algorithm):
             from nncf.quantization.algorithms.smooth_quant.torch_backend import PTSmoothQuantAlgoBackend
 
             self._backend_entity = PTSmoothQuantAlgoBackend()
+        elif model_backend == BackendType.TORCH_FX:
+            from nncf.quantization.algorithms.smooth_quant.torch_fx_backend import FXSmoothQuantAlgoBackend
+
+            self._backend_entity = FXSmoothQuantAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
@@ -108,8 +112,8 @@ class SmoothQuant(Algorithm):
 
         node_groups = self._group_nodes_by_source(nodes_to_smooth_data, graph)
 
-        best_scale = None
         for group_id, nodes in track(node_groups.items(), description="Applying Smooth Quant"):
+            best_scale = None
             best_ratio = 0.0
             empty_statistic = False
             for node_to_smooth in nodes:
@@ -130,7 +134,7 @@ class SmoothQuant(Algorithm):
 
                 activations_value = self._clip_statistics(activations_value)
 
-                weight_value = self._backend_entity.get_weight_value(node_to_smooth, model)
+                weight_value = self._backend_entity.get_weight_value(node_to_smooth, model, graph)
                 weight_statistics = self._process_weight_statistics(node_to_smooth, weight_value)
                 weight_statistics = self._clip_statistics([weight_statistics])
 
@@ -155,7 +159,7 @@ class SmoothQuant(Algorithm):
                 continue
 
             for node_to_smooth in nodes:
-                weight_value = self._backend_entity.get_weight_value(node_to_smooth, model)
+                weight_value = self._backend_entity.get_weight_value(node_to_smooth, model, graph)
                 weights_scale = self._calculate_weight_scale(best_scale, node_to_smooth, weight_value)
                 scaled_weight = weight_value * weights_scale
                 weight_update_command = self._backend_entity.weight_update_command(node_to_smooth, scaled_weight.data)

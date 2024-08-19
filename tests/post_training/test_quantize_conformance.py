@@ -23,12 +23,12 @@ import yaml
 from packaging import version
 
 import nncf
-from tests.openvino.native.common import get_openvino_version
 from tests.post_training.model_scope import PTQ_TEST_CASES
 from tests.post_training.model_scope import WC_TEST_CASES
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import RunInfo
+from tests.shared.openvino_version import get_openvino_version
 
 DATA_ROOT = Path(__file__).parent / "data"
 
@@ -78,6 +78,11 @@ def fixture_run_benchmark_app(pytestconfig):
 @pytest.fixture(scope="session", name="extra_columns")
 def fixture_extra_columns(pytestconfig):
     return pytestconfig.getoption("extra_columns")
+
+
+@pytest.fixture(scope="session", name="memory_monitor")
+def fixture_memory_monitor(pytestconfig):
+    return pytestconfig.getoption("memory_monitor")
 
 
 def _parse_version(s: Path):
@@ -242,6 +247,7 @@ def test_ptq_quantization(
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
+    memory_monitor: bool,
 ):
     pipeline = None
     err_msg = None
@@ -267,6 +273,7 @@ def test_ptq_quantization(
                 "no_eval": no_eval,
                 "run_benchmark_app": run_benchmark_app,
                 "batch_size": batch_size,
+                "memory_monitor": memory_monitor,
             }
         )
         pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
@@ -311,6 +318,7 @@ def test_weight_compression(
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
+    memory_monitor: bool,
 ):
     pipeline = None
     err_msg = None
@@ -330,6 +338,7 @@ def test_weight_compression(
                 "no_eval": no_eval,
                 "run_benchmark_app": run_benchmark_app,
                 "batch_size": batch_size,
+                "memory_monitor": memory_monitor,
             }
         )
         pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)

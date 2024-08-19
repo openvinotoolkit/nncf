@@ -222,7 +222,7 @@
             "squeezenet1_1_imagenet_int8_per_tensor": {
                 "config": "examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json",
                 "reference": "squeezenet1_1_imagenet",
-                "target_ov": 58.07,
+                "target_ov": 58.09,
                 "target_pt": 58.14,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int8_per_tensor.pth",

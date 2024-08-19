@@ -19,3 +19,8 @@ datasets==2.14.7
 evaluate==0.3.0
 openvino
 timm==0.9.2
+
+
+# Required for torch/fx tests
+torchvision
+fastdownload==0.0.7

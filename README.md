@@ -371,7 +371,6 @@ A list of notebooks demonstrating OpenVINO conversion and inference together wit
 | [Grammar Error Correction](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/grammar-correction)                                                                                                                                                                                                                        |            Post-Training Quantization             | OpenVINO  |                       NLP, Grammar Correction                        |
 | [LLM Instruction Following](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-question-answering)                                                                                                                                                                                                                   |                Weight Compression                 | OpenVINO  |                      NLP, Instruction Following                      |
 | [Dolly 2.0](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/dolly-2-instruction-following)                                                                                                                                                                                                                            |                Weight Compression                 | OpenVINO  |                      NLP, Instruction Following                      |
-| [Stable-Zephyr-3b](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-zephyr-3b-chatbot)                                                                                                                                                                                                                          |                Weight Compression                 | OpenVINO  |                            NLP, Chat Bot                             |
 | [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-chatbot)                                                                                                                                                                                                                                          |                Weight Compression                 | OpenVINO  |                            NLP, Chat Bot                             |
 
 ### Post-Training Quantization Examples
@@ -441,12 +440,12 @@ conda install -c conda-forge nncf
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.8 or later
 - Supported frameworks:
-  - PyTorch\* >=2.2, <2.4
+  - PyTorch\* >=2.3, <2.5
   - TensorFlow\* >=2.8.4, <=2.15.1
   - ONNX\* ==1.16.0
   - OpenVINO\* >=2022.3.0
 
-This repository is tested on Python* 3.8.10, PyTorch* 2.3.0 (NVidia CUDA\* Toolkit 12.1) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
+This repository is tested on Python* 3.8.10, PyTorch* 2.4.0 (NVidia CUDA\* Toolkit 12.1) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
 
 ## NNCF Compressed NNCF Model Zoo
 
