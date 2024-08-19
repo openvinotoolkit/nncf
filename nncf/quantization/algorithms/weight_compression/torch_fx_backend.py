@@ -179,7 +179,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: torch.fx.GraphModule,
         graph: NNCFGraph,
         weight: Tensor,
-    ) -> torch.fx.Node:
+    ) -> None:
 
         weight_update_command = FXApplyTransformationCommand(
             constant_update_transformation_builder(node_with_weight, weight.data)
