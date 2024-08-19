@@ -38,9 +38,9 @@ def get_model_size(model):
     for buffer in model.buffers():
         buffer_size += buffer.nelement() * buffer.element_size()
 
-    size_all_mb = (param_size + buffer_size) / 1024**2
+    model_size_mb = (param_size + buffer_size) / 1024**2
 
-    return size_all_mb
+    return model_size_mb
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
