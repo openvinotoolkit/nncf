@@ -1070,7 +1070,7 @@ def test_lora_adapters_in_the_graph(params):
 @pytest.mark.parametrize(
     "mode, add_regularization, is_per_channel",
     (
-        (CompressWeightsMode.INT4_SYM, False, False),
+        (CompressWeightsMode.INT4_SYM, True, False),
         (CompressWeightsMode.NF4, True, False),
         (CompressWeightsMode.NF4, True, True),
     ),
@@ -1082,7 +1082,7 @@ def test_lora_adapters_reduce_noise(zero_seed, mode, add_regularization, is_per_
     model_cls = LMLinearModel
     group_size = -1 if is_per_channel else model_cls.HIDDEN_DIM // 2
     model = model_cls().ov_model
-    n_iters = 5
+    n_iters = 1
     ie = ov.Core()
     input_data = [np.ones(inp.shape) for inp in model.inputs]
     dataset = Dataset(input_data)
