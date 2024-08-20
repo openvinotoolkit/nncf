@@ -78,7 +78,7 @@ class MedianMADTensorStatistic(TensorStatistic):
         self.median_values = median_values
         self.mad_values = mad_values
 
-    def __eq__(self, other: Any) -> Any:
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, MedianMADTensorStatistic):
             return False
         return self.tensor_eq(self.median_values, other.median_values) and self.tensor_eq(
