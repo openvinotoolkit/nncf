@@ -346,7 +346,7 @@ class PercentileStatisticCollector(OfflineTensorStatisticCollector):
         super().__init__(reduction_shape, num_samples, window_size)
         self._percentiles_to_collect = percentiles_to_collect
 
-    def _prepare_statistics(self) -> Dict[Any, Any]:
+    def _prepare_statistics(self) -> Dict[float, Any]:
         per_channel_history = get_per_channel_history(self._samples, cast(List[int], self._reduction_shape))
         percentile_vs_values_dict = {}
         for pc in self._percentiles_to_collect:
