@@ -15,6 +15,8 @@ import torch.fx
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.logging import nncf_logger
@@ -28,43 +30,49 @@ class GraphConverter:
     Builds the NNCFGraph from an torch.fx.GraphModule instance.
     """
 
-    def _get_node_subtype(
+    def _get_layer_attributes(
         node: torch.fx.Node, metatype: om.OperatorMetatype, model: torch.fx.GraphModule
-    ) -> om.OperatorMetatype:
+    ) -> BaseLayerAttributes:
         """
-        Attempts to retrieve correct subtype for the given node.
+        Collects layer attributes for the given node.
 
         :param node: Given node.
         :param metatype: Given node metatype.
         :param model: Target GraphModule instance.
-        :return: Correct subtype of the given node if it is exist or the original node metatype otherwise.
+        :return: Given node layer attributes.
         """
         if metatype in [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype]:
+            weights_node = node.args[1]
+            if weights_node.op != "get_attr":
+                # Convs with constant subgraphs or two inputs are not supported yet.
+                return None
             if len(node.args) < 7:
-                return metatype
-            constant_node = node.args[1]
-            if constant_node.op != "get_attr":
-                return metatype
-            weight = get_tensor_constant_from_node(constant_node, model)
-            out_channels = weight.shape[0]
+                # Not enough arguments to collect layer attributes
+                return None
+            stride = node.args[3]
+            padding_values = node.args[4]
+            dilations = node.args[5]
             groups = node.args[6]
-            if out_channels > 1 and out_channels == groups:
-                return {
-                    om.PTConv1dMetatype: om.PTDepthwiseConv1dSubtype,
-                    om.PTConv2dMetatype: om.PTDepthwiseConv2dSubtype,
-                    om.PTConv3dMetatype: om.PTDepthwiseConv3dSubtype,
-                }[metatype]
-        return metatype
+            weight = get_tensor_constant_from_node(weights_node, model)
+            return ConvolutionLayerAttributes(
+                weight_requires_grad=False,
+                in_channels=weight.shape[0],
+                out_channels=weight.shape[1],
+                kernel_size=list(weight.shape[2:]),
+                stride=stride,
+                dilations=dilations,
+                groups=groups,
+                padding_values=padding_values,
+                transpose=False,
+            )
+        return None
 
     @staticmethod
-    def _get_node_type_and_metatype(
-        node: torch.fx.Node, model: torch.fx.GraphModule
-    ) -> Tuple[str, om.OperatorMetatype]:
+    def _get_node_type_and_metatype(node: torch.fx.Node) -> Tuple[str, om.OperatorMetatype]:
         """
         Retrieves node's type and metatype.
 
         :param node: Given node.
-        :param model: Target model.
         :return: Node's type and metatype.
         """
         if node.op == "placeholder":
@@ -85,7 +93,6 @@ class GraphConverter:
                 # TODO(dlyakhov): get correct nodes types from this nodes as well
                 node_type = str(node.target)
             node_metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
-            node_metatype = GraphConverter._get_node_subtype(node, node_metatype, model)
         else:
             node_type = node.op
             node_metatype = UnknownMetatype
@@ -107,7 +114,12 @@ class GraphConverter:
         nncf_graph = PTNNCFGraph()
 
         for source_node in model.graph.nodes:
-            node_type, node_metatype = GraphConverter._get_node_type_and_metatype(source_node, model)
+            node_type, node_metatype = GraphConverter._get_node_type_and_metatype(source_node)
+
+            if node_metatype.get_subtypes():
+                layer_attrs = GraphConverter._get_layer_attributes(source_node, node_metatype, model)
+                node_subtype = node_metatype.determine_subtype(layer_attrs)
+                node_metatype = node_subtype or node_metatype
 
             nncf_graph.add_nncf_node(
                 node_name=source_node.name,

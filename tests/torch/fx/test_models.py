@@ -90,7 +90,7 @@ def get_ref_metatypes_from_json(
         if not os.path.exists(json_parent_dir):
             os.makedirs(json_parent_dir)
         with safe_open(complete_path, "w") as file:
-            json.dump(model_metatypes, file, indent=1)
+            json.dump(model_metatypes, file, indent=4)
 
     with safe_open(complete_path, "r") as file:
         return json.load(file)
