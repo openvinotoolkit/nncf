@@ -468,7 +468,9 @@ class QuantizerPropagationSolver:
                 nncf_logger.debug(f"Ignored adding weight quantizer for: {node_name}")
         return weight_quantizable_node_names_vs_qconfigs
 
-    def run_on_ip_graph(self, ip_graph: InsertionPointGraph) -> QuantizationProposal:
+    def run_on_ip_graph(
+        self, ip_graph: InsertionPointGraph, metatypes_for_filter: Optional[List[OperatorMetatype]] = None
+    ) -> QuantizationProposal:
         """
         The main function to be used on an InsertionPointGraph to produce
         the list of insertion commands and configs corresponding to the desired quantized
@@ -513,6 +515,8 @@ class QuantizerPropagationSolver:
             iteration_counter += 1
 
         quant_prop_graph = self._filter_integer_input_quantizers(quant_prop_graph)
+        if metatypes_for_filter:
+            quant_prop_graph = self._filter_quantizers(quant_prop_graph, metatypes_for_filter)
 
         if self._visualizer is not None:
             self._visualizer.visualize_quantizer_propagation(self, quant_prop_graph, "proposed")
@@ -598,6 +602,7 @@ class QuantizerPropagationSolver:
             final_weight_quantizable_node_names_vs_qconfig_dict
         )
         final_setup = multi_setup_with_one_config_per_point.select_first_qconfig_for_each_point()
+
         return final_setup
 
     def get_num_potential_quantized_activations(self) -> int:
@@ -1595,5 +1600,22 @@ class QuantizerPropagationSolver:
         self._finished_propagating_quantizers = filtered_finished_pqs
         for integer_input_pq in integer_input_pqs:
             quant_prop_graph.remove_propagating_quantizer(integer_input_pq)
+
+        return quant_prop_graph
+
+    def _filter_quantizers(
+        self, quant_prop_graph: QuantizerPropagationStateGraph, metatypes: List[OperatorMetatype]
+    ) -> QuantizerPropagationStateGraph:
+        quantizers = self.get_finished_propagating_quantizers()
+        for quantizer in quantizers:
+            if len(quantizer.quantized_input_sink_operator_nodes) != 1:
+                continue
+            node_key = next(iter(quantizer.quantized_input_sink_operator_nodes))
+            node_metatype = quant_prop_graph.nodes[node_key]["op_meta"]
+            if node_metatype not in metatypes:
+                continue
+            if len(quant_prop_graph.nodes[node_key]["affecting_propagating_quantizers"]) == 1:  # only one activation
+                quant_prop_graph.remove_propagating_quantizer(quantizer)
+                nncf_logger.info(f"REMOVED elementwise quantizer for {node_key}")
 
         return quant_prop_graph
