@@ -77,17 +77,21 @@ INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
 class LMLinearModel(OVReferenceModel):
     HIDDEN_DIM = 16
     OUTPUT_DIM = 32
-    WEIGHT_SHAPE = [OUTPUT_DIM, HIDDEN_DIM]
     INPUT_SHAPE = [24, HIDDEN_DIM]  # [SeqLen, HiddenDim]
 
-    def _create_ov_model(self):
+    def _create_ov_model(self, transpose_b: bool = True):
         input_1 = opset.parameter(self.INPUT_SHAPE, name="Input")
-        data = self._rng.random(self.WEIGHT_SHAPE).astype(np.float32)
-        matmul = opset.matmul(input_1, data, transpose_a=False, transpose_b=True, name="MatMul")
+        weight_shape = self.get_weight_shape(transpose_b)
+        data = self._rng.random(weight_shape).astype(np.float32)
+        matmul = opset.matmul(input_1, data, transpose_a=False, transpose_b=transpose_b, name="MatMul")
         result = opset.result(matmul, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
         return model
+
+    @classmethod
+    def get_weight_shape(cls, transpose_b: bool = True):
+        return [cls.OUTPUT_DIM, cls.HIDDEN_DIM] if transpose_b else [cls.HIDDEN_DIM, cls.OUTPUT_DIM]
 
 
 def get_next_node(node):
@@ -1021,15 +1025,12 @@ def get_shape_for_second_input(op_with_weights: ov.Node) -> List[int]:
 
 
 @pytest.mark.parametrize(
-    "params",
-    (
-        None,
-        LoraParams(rank=4, is_int8_adapters=False),
-    ),
+    "params, transpose_b",
+    ((None, True), (LoraParams(rank=4, is_int8_adapters=False), False)),
 )
-def test_lora_adapters_in_the_graph(params):
+def test_lora_adapters_in_the_graph(params, transpose_b):
     advanced_parameters = CompressionParams() if params is None else CompressionParams(lora_correction_params=params)
-    model = LMLinearModel().ov_model
+    model = LMLinearModel(transpose_b=transpose_b).ov_model
     dataset = Dataset(np.ones(inp.shape) for inp in model.inputs)
 
     compressed_model = compress_weights(
@@ -1042,7 +1043,6 @@ def test_lora_adapters_in_the_graph(params):
         lora_correction=True,
         advanced_parameters=advanced_parameters,
     )
-
     input_node = compressed_model.inputs[0].node
     target_inputs = input_node.output(0).get_target_inputs()
     assert len(target_inputs) == 2
@@ -1050,7 +1050,7 @@ def test_lora_adapters_in_the_graph(params):
         next_node = target_input.get_node()
         assert next_node.type_info.name == "MatMul"
         shape = get_shape_for_second_input(next_node)
-        if shape != LMLinearModel.WEIGHT_SHAPE:
+        if shape != LMLinearModel.get_weight_shape(transpose_b):
             assert shape == [advanced_parameters.lora_correction_params.rank, LMLinearModel.HIDDEN_DIM]
             node = get_next_node(next_node)
             assert node.type_info.name == "MatMul"
@@ -1199,16 +1199,14 @@ def test_compression_with_lora_with_subset_size(mocker):
     assert s.shape == (LMLinearModel.HIDDEN_DIM,)
 
 
-def test_lora_with_mixed_precision(tmp_path):
+def test_lora_with_mixed_precision():
     model = AWQMatmulModel().ov_model
-    ov.save_model(model, tmp_path / "fp32.xml")
     sz = 8
     dataset = Dataset([np.ones([sz, sz])])
 
     compressed_model = compress_weights(
         model, mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, group_size=-1, dataset=dataset, lora_correction=True
     )
-    ov.save_model(compressed_model, tmp_path / "model.xml")
     for op in compressed_model.get_ordered_ops():
         op_name = op.get_friendly_name()
         if op.get_type_name() == "Constant" and ("/zero_point" in op_name or "/scale" in op_name):
