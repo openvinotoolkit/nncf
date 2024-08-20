@@ -52,7 +52,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
     }
     MATMUL_METATYPES = [om.PTLinearMetatype, om.PTMatMulMetatype, om.PTAddmmMetatype]
-    EMBEDDING_METATYPES = [om.PTEmbeddingMetatype]
+    EMBEDDING_METATYPES = [om.FXEmbeddingMetatype]
     CONVOLUTION_METATYPES = [
         om.PTConv1dMetatype,
         om.PTConv2dMetatype,
@@ -113,7 +113,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         ndims = len(edge.tensor_shape)
         reduction_axes = None
-        if node_with_weight.metatype == om.PTEmbeddingMetatype:
+        if node_with_weight.metatype == om.FXEmbeddingMetatype:
             reduction_axes = [1]
         elif node_with_weight.metatype == om.PTLinearMetatype:
             reduction_axes = [ndims - 1]
@@ -163,7 +163,8 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.fx.GraphModule, graph: NNCFGraph
     ) -> Tensor:
-        weight_node = graph.get_previous_nodes(node_with_weight)[weight_port_id]
+        weight_edge = graph.get_input_edge_by_port_id(node_with_weight, weight_port_id)
+        weight_node = weight_edge.from_node
         # TODO(dlyakhov): make a node_name_vs_node map to speed up the process
         graph_weight_node = get_graph_node_by_name(model.graph, weight_node.node_name)
         weight = get_tensor_constant_from_node(graph_weight_node, model).data
@@ -180,7 +181,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         graph: NNCFGraph,
         weight: Tensor,
     ) -> None:
-        constant_update_transformation_builder(node_with_weight, weight.data)(model)
+        constant_update_transformation_builder(node_with_weight, weight.data, input_port_id=weight_port_id)(model)
 
     def transform_model(
         self,

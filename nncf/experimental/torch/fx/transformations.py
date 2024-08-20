@@ -137,17 +137,18 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
     return bias_update_transformation
 
 
-def constant_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> TransformationFNType:
+def constant_update_transformation_builder(node: NNCFNode, value: torch.Tensor, input_port_id: int = 1) -> TransformationFNType:
     """
     Return transformation which updates constant of the given node to the given value.
 
     :param node: Node which requires bias constant update.
     :param value: New value to use as the node constant.
+    :param input_port_id: Port Id of the constant.
     :return: Transformation which updates constant of the given node to the given value.
     """
 
     def constant_update_transformation(model: torch.fx.GraphModule):
-        constant_update_fn(model, get_graph_node_by_name(model.graph, node.node_name), value, input_port_id=1)
+        constant_update_fn(model, get_graph_node_by_name(model.graph, node.node_name), value, input_port_id)
 
     return constant_update_transformation
 
