@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from typing import Dict
 
 import pytest
 import torch
@@ -52,18 +52,32 @@ def test_compress_weights(mode):
         compressed_model = compress_weights(exported_model, mode=mode)
 
     dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
-
     n_compressed_weights = 0
     n_target_modules = 0
-    compressed_node_types = ["linear", "embedding"]
+    compressed_node_weight_port = {"linear": 1, "embedding": 0}
+    
     n_target_modules, n_compressed_weights = get_compressed_modules_weights(
-        compressed_model, dtype, compressed_node_types, weight_port_ids=1
+        compressed_model, dtype, compressed_node_weight_port
     )
     assert n_target_modules == n_compressed_weights
 
 
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+def test_compressed_model_inference(mode):
+    torch.manual_seed(42)
+    with disable_patching():
+        model = ShortTransformer(5, 10)
+        input_ids = torch.randint(0, 10, (5,))
+        exported_model = capture_pre_autograd_graph(model, args=(input_ids,))
+        exported_model_output = exported_model(input_ids)
+        compressed_model = compress_weights(exported_model, mode=mode)
+        compressed_model_outputs = compressed_model(input_ids)
+    assert exported_model_output.shape == compressed_model_outputs.shape, "Compressed model output shape is not equal to the model output shape"
+    assert torch.all(torch.isclose(exported_model_output, compressed_model_outputs, atol=0.1)).item()
+
+
 def get_compressed_modules_weights(
-    compressed_model: torch.fx.GraphModule, dtype: torch.dtype, compressed_node_types: List[str], weight_port_ids: int
+    compressed_model: torch.fx.GraphModule, dtype: torch.dtype, compressed_node_weight_port: Dict[str, int]
 ):
     n_target_modules = 0
     n_compressed_weights = 0
@@ -71,13 +85,15 @@ def get_compressed_modules_weights(
     for node in compressed_model.graph.nodes:
         if node.op == "call_function" and hasattr(node.target, "overloadpacket"):
             node_type = str(node.target.overloadpacket).split(".")[1]
-            if node_type in compressed_node_types:
+            if node_type in compressed_node_weight_port:
                 n_target_modules += 1
-                weight_decompressor_node = node.all_input_nodes[weight_port_ids]
-                compressed_weight_node = weight_decompressor_node.all_input_nodes[0]
-                weight = get_tensor_constant_from_node(compressed_weight_node, compressed_model).data
-                if weight.dtype == dtype:
-                    n_compressed_weights += 1
+                weight_port_id = compressed_node_weight_port[node_type]
+                weight_decompressor_node = node.all_input_nodes[weight_port_id]
+                if weight_decompressor_node.all_input_nodes:
+                    compressed_weight_node = weight_decompressor_node.all_input_nodes[0]
+                    weight = get_tensor_constant_from_node(compressed_weight_node, compressed_model).data
+                    if weight.dtype == dtype:
+                        n_compressed_weights += 1
 
     return n_target_modules, n_compressed_weights
 
@@ -96,10 +112,10 @@ def test_compress_weights_conv(mode):
 
     n_compressed_weights = 0
     n_target_modules = 0
-    compressed_node_types = ["linear", "conv2d", "conv_transpose2d"]
+    compressed_node_weight_port = {"linear":1, "conv2d":1, "conv_transpose2d":1}
 
     n_target_modules, n_compressed_weights = get_compressed_modules_weights(
-        compressed_model, dtype, compressed_node_types, weight_port_ids=1
+        compressed_model, dtype, compressed_node_weight_port
     )
 
     assert n_compressed_weights == n_target_modules
