@@ -908,13 +908,19 @@ class PTModuleEmbeddingMetatype(PTModuleOperatorSubtype):
     hw_config_names = [HWConfigOpName.EMBEDDING]
     weight_port_ids = [1]
 
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
+class FXEmbeddingMetatype(PTModuleOperatorSubtype):
+    name = "EmbeddingOp"
+    module_to_function_names = {NamespaceTarget.ATEN: ["embedding"]}
+    hw_config_names = [HWConfigOpName.EMBEDDING]
+    weight_port_ids = [0]
 
 @PT_OPERATOR_METATYPES.register()
 class PTEmbeddingMetatype(PTOperatorMetatype):
     name = "EmbeddingOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["embedding"]}
     hw_config_names = [HWConfigOpName.EMBEDDING]
-    subtypes = [PTModuleEmbeddingMetatype]
+    subtypes = [PTModuleEmbeddingMetatype, FXEmbeddingMetatype]
     weight_port_ids = [1]
 
 
@@ -1125,6 +1131,7 @@ OPERATORS_WITH_WEIGHTS_METATYPES = [
     PTModuleConvTranspose2dMetatype,
     PTModuleConvTranspose3dMetatype,
     PTModuleEmbeddingMetatype,
+    FXEmbeddingMetatype,
     PTModuleEmbeddingBagMetatype,
 ]
 
@@ -1154,4 +1161,5 @@ OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     PTEmbeddingBagMetatype,
     PTModuleEmbeddingBagMetatype,
     PTModuleEmbeddingMetatype,
+    FXEmbeddingMetatype
 ]
