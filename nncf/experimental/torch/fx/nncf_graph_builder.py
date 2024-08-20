@@ -18,6 +18,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.logging import nncf_logger
+from nncf.experimental.torch.fx import operator_metatypes as fx_om
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
@@ -39,7 +40,7 @@ class GraphConverter:
         if metatype in [om.PTEmbeddingMetatype]:
             weight_node = node.args[0]
             if weight_node.op == "get_attr":
-                return om.FXEmbeddingMetatype
+                return fx_om.FXEmbeddingMetatype
 
         return metatype
 

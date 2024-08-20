@@ -43,6 +43,28 @@ def get_model_size(model):
     return model_size_mb
 
 
+def get_compressed_modules_weights(
+    compressed_model: torch.fx.GraphModule, dtype: torch.dtype, compressed_node_weight_port: Dict[str, int]
+):
+    n_target_modules = 0
+    n_compressed_weights = 0
+
+    for node in compressed_model.graph.nodes:
+        if node.op == "call_function" and hasattr(node.target, "overloadpacket"):
+            node_type = str(node.target.overloadpacket).split(".")[1]
+            if node_type in compressed_node_weight_port:
+                n_target_modules += 1
+                weight_port_id = compressed_node_weight_port[node_type]
+                weight_decompressor_node = node.all_input_nodes[weight_port_id]
+                if weight_decompressor_node.all_input_nodes:
+                    compressed_weight_node = weight_decompressor_node.all_input_nodes[0]
+                    weight = get_tensor_constant_from_node(compressed_weight_node, compressed_model).data
+                    if weight.dtype == dtype:
+                        n_compressed_weights += 1
+
+    return n_target_modules, n_compressed_weights
+
+
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
 def test_compress_weights(mode):
     with disable_patching():
@@ -76,28 +98,6 @@ def test_compressed_model_inference(mode):
         exported_model_output.shape == compressed_model_outputs.shape
     ), "Compressed model output shape is not equal to the model output shape"
     assert torch.all(torch.isclose(exported_model_output, compressed_model_outputs, atol=0.1)).item()
-
-
-def get_compressed_modules_weights(
-    compressed_model: torch.fx.GraphModule, dtype: torch.dtype, compressed_node_weight_port: Dict[str, int]
-):
-    n_target_modules = 0
-    n_compressed_weights = 0
-
-    for node in compressed_model.graph.nodes:
-        if node.op == "call_function" and hasattr(node.target, "overloadpacket"):
-            node_type = str(node.target.overloadpacket).split(".")[1]
-            if node_type in compressed_node_weight_port:
-                n_target_modules += 1
-                weight_port_id = compressed_node_weight_port[node_type]
-                weight_decompressor_node = node.all_input_nodes[weight_port_id]
-                if weight_decompressor_node.all_input_nodes:
-                    compressed_weight_node = weight_decompressor_node.all_input_nodes[0]
-                    weight = get_tensor_constant_from_node(compressed_weight_node, compressed_model).data
-                    if weight.dtype == dtype:
-                        n_compressed_weights += 1
-
-    return n_target_modules, n_compressed_weights
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))

@@ -25,6 +25,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.torch.fx import operator_metatypes as fx_om
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
@@ -52,7 +53,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
     }
     MATMUL_METATYPES = [om.PTLinearMetatype, om.PTMatMulMetatype, om.PTAddmmMetatype]
-    EMBEDDING_METATYPES = [om.FXEmbeddingMetatype]
+    EMBEDDING_METATYPES = [fx_om.FXEmbeddingMetatype]
     CONVOLUTION_METATYPES = [
         om.PTConv1dMetatype,
         om.PTConv2dMetatype,
@@ -113,7 +114,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         ndims = len(edge.tensor_shape)
         reduction_axes = None
-        if node_with_weight.metatype == om.FXEmbeddingMetatype:
+        if node_with_weight.metatype == fx_om.FXEmbeddingMetatype:
             reduction_axes = [1]
         elif node_with_weight.metatype == om.PTLinearMetatype:
             reduction_axes = [ndims - 1]
