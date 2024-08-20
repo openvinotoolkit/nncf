@@ -369,7 +369,7 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
         window_size: int = None,
     ):
         super().__init__(reduction_shape, num_samples, window_size)
-        self._all_pct_values: Dict[Any, Any] = {}
+        self._all_pct_values: Dict[float, Any] = {}
         for pc in percentiles_to_collect:
             self._all_pct_values[pc] = deque(maxlen=window_size)
 
