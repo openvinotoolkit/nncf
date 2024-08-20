@@ -65,29 +65,6 @@ class WeightedProgress(Progress):
     A class to perform a weighted progress tracking.
     """
 
-    COMPLETED_STEPS_ATTR = "_completed_steps"
-
-    def weighted_advance(self, task: Task, advance: float):
-        """
-        Perform weighted advancement based on an integer step value.
-        """
-        if advance % 1 != 0:
-            raise Exception(f"Unexpected advance value: {advance}.")
-        advance = int(advance)
-        current_step = self.get_task_completed_steps(task)
-        weighted_advance = sum(task.fields["weights"][current_step : current_step + advance])
-        self.set_task_completed_steps(task, current_step + advance)
-        return weighted_advance
-
-    @staticmethod
-    def get_weighted_completed(task: Task, completed: float):
-        """
-        Get weighted `completed` corresponding to an integer `completed` field.
-        """
-        if completed % 1 != 0:
-            raise Exception(f"Unexpected completed value: {completed}.")
-        return sum(task.fields["weights"][: int(completed)])
-
     def update(self, task_id: TaskID, **kwargs) -> None:
         task = self._tasks[task_id]
 
@@ -117,17 +94,29 @@ class WeightedProgress(Progress):
         super().reset(task_id, **kwargs)
 
         if completed == 0:
-            self.set_task_completed_steps(task, 0)
+            task.fields["completed_steps"] = 0
 
     @staticmethod
-    def set_task_completed_steps(task: Task, value: float):
-        setattr(task, WeightedProgress.COMPLETED_STEPS_ATTR, value)
+    def weighted_advance(task: Task, advance: float):
+        """
+        Perform weighted advancement based on an integer step value.
+        """
+        if advance % 1 != 0:
+            raise Exception(f"Unexpected `advance` value: {advance}.")
+        advance = int(advance)
+        current_step = task.fields["completed_steps"]
+        weighted_advance = sum(task.fields["weights"][current_step : current_step + advance])
+        task.fields["completed_steps"] = current_step + advance
+        return weighted_advance
 
     @staticmethod
-    def get_task_completed_steps(task: Task):
-        if not hasattr(task, WeightedProgress.COMPLETED_STEPS_ATTR):
-            WeightedProgress.set_task_completed_steps(task, 0)
-        return getattr(task, WeightedProgress.COMPLETED_STEPS_ATTR)
+    def get_weighted_completed(task: Task, completed: float):
+        """
+        Get weighted `completed` corresponding to an integer `completed` field.
+        """
+        if completed % 1 != 0:
+            raise Exception(f"Unexpected `completed` value: {completed}.")
+        return sum(task.fields["weights"][: int(completed)])
 
 
 class track:
@@ -233,7 +222,11 @@ class track:
             )
 
     def __enter__(self):
-        self.task = self.progress.add_task(self.description, total=self.total, weights=self.weights)
+        kwargs = {}
+        if self.weights is not None:
+            kwargs["weights"] = self.weights
+            kwargs["completed_steps"] = 0
+        self.task = self.progress.add_task(self.description, total=self.total, **kwargs)
         return self.progress.__enter__()
 
     def __exit__(self, *args):
