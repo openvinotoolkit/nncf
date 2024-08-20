@@ -55,7 +55,7 @@ def test_compress_weights(mode):
     n_compressed_weights = 0
     n_target_modules = 0
     compressed_node_weight_port = {"linear": 1, "embedding": 0}
-    
+
     n_target_modules, n_compressed_weights = get_compressed_modules_weights(
         compressed_model, dtype, compressed_node_weight_port
     )
@@ -72,7 +72,9 @@ def test_compressed_model_inference(mode):
         exported_model_output = exported_model(input_ids)
         compressed_model = compress_weights(exported_model, mode=mode)
         compressed_model_outputs = compressed_model(input_ids)
-    assert exported_model_output.shape == compressed_model_outputs.shape, "Compressed model output shape is not equal to the model output shape"
+    assert (
+        exported_model_output.shape == compressed_model_outputs.shape
+    ), "Compressed model output shape is not equal to the model output shape"
     assert torch.all(torch.isclose(exported_model_output, compressed_model_outputs, atol=0.1)).item()
 
 
@@ -112,7 +114,7 @@ def test_compress_weights_conv(mode):
 
     n_compressed_weights = 0
     n_target_modules = 0
-    compressed_node_weight_port = {"linear":1, "conv2d":1, "conv_transpose2d":1}
+    compressed_node_weight_port = {"linear": 1, "conv2d": 1, "conv_transpose2d": 1}
 
     n_target_modules, n_compressed_weights = get_compressed_modules_weights(
         compressed_model, dtype, compressed_node_weight_port

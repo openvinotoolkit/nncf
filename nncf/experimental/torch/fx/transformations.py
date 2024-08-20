@@ -137,7 +137,9 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
     return bias_update_transformation
 
 
-def constant_update_transformation_builder(node: NNCFNode, value: torch.Tensor, input_port_id: int = 1) -> TransformationFNType:
+def constant_update_transformation_builder(
+    node: NNCFNode, value: torch.Tensor, input_port_id: int = 1
+) -> TransformationFNType:
     """
     Return transformation which updates constant of the given node to the given value.
 

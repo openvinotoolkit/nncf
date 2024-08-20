@@ -18,10 +18,8 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.logging import nncf_logger
-from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
-from nncf.torch.graph.operator_metatypes import PTOperatorMetatype
 
 
 class GraphConverter:
@@ -29,9 +27,7 @@ class GraphConverter:
     Builds the NNCFGraph from an torch.fx.GraphModule instance.
     """
 
-    def _get_node_subtype(
-        node: torch.fx.Node, metatype: om.OperatorMetatype, model: torch.fx.GraphModule
-    ) -> om.OperatorMetatype:
+    def _map_fx_unique_metatypes(node: torch.fx.Node, metatype: om.OperatorMetatype) -> om.OperatorMetatype:
         """
         Attempts to retrieve correct subtype for the given node.
 
@@ -40,22 +36,7 @@ class GraphConverter:
         :param model: Target GraphModule instance.
         :return: Correct subtype of the given node if it is exist or the original node metatype otherwise.
         """
-        if metatype in [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype]:
-            if len(node.args) < 7:
-                return metatype
-            constant_node = node.args[1]
-            if constant_node.op != "get_attr":
-                return metatype
-            weight = get_tensor_constant_from_node(constant_node, model)
-            out_channels = weight.shape[0]
-            groups = node.args[6]
-            if out_channels > 1 and out_channels == groups:
-                return {
-                    om.PTConv1dMetatype: om.PTDepthwiseConv1dSubtype,
-                    om.PTConv2dMetatype: om.PTDepthwiseConv2dSubtype,
-                    om.PTConv3dMetatype: om.PTDepthwiseConv3dSubtype,
-                }[metatype]
-        elif metatype in [om.PTEmbeddingMetatype]:
+        if metatype in [om.PTEmbeddingMetatype]:
             weight_node = node.args[0]
             if weight_node.op == "get_attr":
                 return om.FXEmbeddingMetatype
@@ -63,7 +44,9 @@ class GraphConverter:
         return metatype
 
     @staticmethod
-    def _get_node_type_and_metatype(node: torch.fx.Node, model: torch.fx.GraphModule) -> Tuple[str, om.OperatorMetatype]:
+    def _get_node_type_and_metatype(
+        node: torch.fx.Node, model: torch.fx.GraphModule
+    ) -> Tuple[str, om.OperatorMetatype]:
         """
         Retrieves node's type and metatype.
 
@@ -88,7 +71,6 @@ class GraphConverter:
                 # TODO(dlyakhov): get correct nodes types from this nodes as well
                 node_type = str(node.target)
             node_metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
-            node_metatype = GraphConverter._get_node_subtype(node, node_metatype, model)
         else:
             node_type = node.op
             node_metatype = UnknownMetatype
@@ -111,6 +93,7 @@ class GraphConverter:
 
         for source_node in model.graph.nodes:
             node_type, node_metatype = GraphConverter._get_node_type_and_metatype(source_node, model)
+            node_metatype = GraphConverter._map_fx_unique_metatypes(source_node, node_metatype)
             nncf_graph.add_nncf_node(
                 node_name=source_node.name,
                 node_type=node_type,

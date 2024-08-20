@@ -908,12 +908,14 @@ class PTModuleEmbeddingMetatype(PTModuleOperatorSubtype):
     hw_config_names = [HWConfigOpName.EMBEDDING]
     weight_port_ids = [1]
 
+
 @PT_OPERATOR_METATYPES.register(is_subtype=True)
 class FXEmbeddingMetatype(PTModuleOperatorSubtype):
     name = "EmbeddingOp"
     module_to_function_names = {NamespaceTarget.ATEN: ["embedding"]}
     hw_config_names = [HWConfigOpName.EMBEDDING]
     weight_port_ids = [0]
+
 
 @PT_OPERATOR_METATYPES.register()
 class PTEmbeddingMetatype(PTOperatorMetatype):
@@ -1161,5 +1163,5 @@ OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     PTEmbeddingBagMetatype,
     PTModuleEmbeddingBagMetatype,
     PTModuleEmbeddingMetatype,
-    FXEmbeddingMetatype
+    FXEmbeddingMetatype,
 ]
