@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import Counter
-from typing import Any, Dict, TypeVar
+from typing import Any, Dict, TypeVar, cast
 
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -26,11 +26,11 @@ class TensorStatistic(ABC):
     TENSOR_STATISTIC_OUTPUT_KEY = "tensor_statistic_output"
 
     @staticmethod
-    def tensor_eq(tensor1: Tensor, tensor2: Tensor, rtol: float = 1e-6) -> Any:
-        return fns.allclose(tensor1, tensor2)
+    def tensor_eq(tensor1: Tensor, tensor2: Tensor, rtol: float = 1e-6) -> bool:
+        return cast(bool, fns.allclose(tensor1, tensor2))
 
     @abstractmethod
-    def __eq__(self, other: Any) -> Any:
+    def __eq__(self, other: Any) -> bool:
         pass
 
 
@@ -42,7 +42,7 @@ class MinMaxTensorStatistic(TensorStatistic):
         self.min_values = min_values
         self.max_values = max_values
 
-    def __eq__(self, other: Any) -> Any:
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, MinMaxTensorStatistic):
             return False
         return self.tensor_eq(self.min_values, other.min_values) and self.tensor_eq(self.max_values, other.max_values)
@@ -64,7 +64,7 @@ class MeanTensorStatistic(TensorStatistic):
         self.mean_values = mean_values
         self.shape = shape
 
-    def __eq__(self, other: Any) -> Any:
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, MeanTensorStatistic):
             return False
         return self.tensor_eq(self.mean_values, other.mean_values) and self.tensor_eq(self.shape, other.shape)
@@ -89,10 +89,10 @@ class MedianMADTensorStatistic(TensorStatistic):
 class PercentileTensorStatistic(TensorStatistic):
     PERCENTILE_VS_VALUE_DICT = "percentile_vs_values_dict"
 
-    def __init__(self, percentile_vs_values_dict: Dict[Any, Any]):
+    def __init__(self, percentile_vs_values_dict: Dict[float, Any]):
         self.percentile_vs_values_dict = percentile_vs_values_dict
 
-    def __eq__(self, other: Any, rtol: float = 1e-9) -> Any:
+    def __eq__(self, other: Any, rtol: float = 1e-9) -> bool:
         if not isinstance(other, PercentileTensorStatistic):
             return False
         if Counter(self.percentile_vs_values_dict.keys()) != Counter(other.percentile_vs_values_dict.keys()):
@@ -116,7 +116,7 @@ class RawTensorStatistic(TensorStatistic):
         """
         self.values = values
 
-    def __eq__(self, other: Any) -> Any:
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, RawTensorStatistic):
             return False
         return self.tensor_eq(self.values, other.values)
