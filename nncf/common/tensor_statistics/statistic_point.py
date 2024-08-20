@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import UserDict
-from typing import Any, Callable, Generator, Optional, Tuple
+from typing import Any, Callable, Generator, Optional, Tuple, cast
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.tensor import NNCFTensor
@@ -29,10 +29,11 @@ class StatisticPoint:
         self.target_point = target_point
         self.algorithm_to_tensor_collectors = {algorithm: [tensor_collector]}
 
-    def __eq__(self, other: Any) -> Any:
-        return (
+    def __eq__(self, other: Any) -> bool:
+        return cast(
+            bool,
             self.target_point == other.target_point
-            and self.algorithm_to_tensor_collectors == other.self.algorithm_to_tensor_collectors
+            and self.algorithm_to_tensor_collectors == other.self.algorithm_to_tensor_collectors,
         )
 
     def register_tensor(self, x: NNCFTensor) -> None:
