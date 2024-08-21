@@ -11,51 +11,44 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, List, Optional, Type, TypeVar
+from typing import Dict, List, Optional, Type, TypeVar, Union
 
 import nncf
-from nncf.common import factory
+import nncf.tensor.functions as fns
 from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.logging.track_progress import track
+from nncf.common.graph.transformations.commands import TargetPoint
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.scopes import should_consider_scope
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
+from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
+from nncf.experimental.common.tensor_statistics.collectors import OnlineAggregatorBase
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.torch.sparsify_activations.target_scope import TargetScope
 from nncf.experimental.torch.sparsify_activations.target_scope import get_target_node_names_from_target_scope
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
+from nncf.tensor import Tensor
 from nncf.torch.model_creation import is_wrapped_model
 from nncf.torch.model_creation import wrap_model
 
 TModel = TypeVar("TModel")
+STATISTIC_BRANCH_KEY = "abs_quantile"
+ALGORITHM_KEY = "AS"
 
 
 class SparsifyActivationsAlgoBackend(ABC):
     """
     Abstract class for activation sparsification algorithm backend.
     """
-
-    CALIBRATION_TRACKING_DESC = "Conducting Activations Sparsifier Calibration"
-
-    @staticmethod
-    def do_inference(model: TModel, dataset: Dataset):
-        """
-        Conducts model inference on given dataset to calibrate the activation sparsifiers.
-
-        :param model: The model with activation sparsifiers.
-        :param dataset: The calibration dataset to update the sparsifiers.
-        """
-        engine = factory.EngineFactory.create(model)
-        for input_data in track(
-            dataset.get_inference_data(),
-            total=dataset.get_length(),
-            description=SparsifyActivationsAlgoBackend.CALIBRATION_TRACKING_DESC,
-        ):
-            engine.infer(input_data)
 
     @property
     @abstractmethod
@@ -65,11 +58,19 @@ class SparsifyActivationsAlgoBackend(ABC):
         """
 
     @abstractmethod
+    def abs_quantile_reducer(self, quantile: Optional[Union[float, List[float]]] = None) -> AbsQuantileReducer:
+        """ """
+
+    @abstractmethod
+    def target_point(self, target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
+        """ """
+
+    @abstractmethod
     def insert_sparsifiers(
         self,
         model: TModel,
         graph: NNCFGraph,
-        target_sparsity_by_node: Dict[NNCFNode, float],
+        threshold_by_node: Dict[NNCFNode, float],
     ) -> TModel:
         """
         Inserts the activation sparsifiers to the model.
@@ -80,21 +81,15 @@ class SparsifyActivationsAlgoBackend(ABC):
         :return: The model with inserted activation sparsifiers.
         """
 
+    @staticmethod
     @abstractmethod
-    def calibrate_sparsifiers(self, model: TModel, graph: NNCFGraph, dataset: Dataset) -> TModel:
+    def get_activation_port_id(node: NNCFNode, graph: NNCFGraph) -> int:
         """
-        Calibrates the thresholds in the activation sparsifiers.
+        Finds the input activation port id for the node.
 
-        :param model: The model with inserted activation sparsifiers.
-        :param graph: The model's NNCF graph.
-        :param dataset: The calibration dataset to update the thresholds in the sparsifiers.
-        :return: The model with calibrated activation sparsifiers.
-        """
-
-    @abstractmethod
-    def do_sparsification(self, model, graph, target_sparsity_by_node, dataset):
-        """
-
+        :param node: The node to find its activation port id.
+        :param graph: The NNCF graph containing the node.
+        :return: The activation port id.
         """
 
 
@@ -122,7 +117,7 @@ class SparsifyActivationsAlgorithm:
         """
         Supported backends for this algorithm.
         """
-        return [BackendType.TORCH]
+        return [BackendType.TORCH, BackendType.OPENVINO]
 
     def apply(
         self,
@@ -140,32 +135,9 @@ class SparsifyActivationsAlgorithm:
         """
         self._set_backend_entity(model)
         target_sparsity_by_node = self._get_target_sparsity_by_node(graph)
-        sparse_model = self.do_sparsification(model, graph, target_sparsity_by_node, dataset)
+        threshold_by_node = self._get_threshold_by_node(model, graph, target_sparsity_by_node, dataset)
+        sparse_model = self._backend_entity.insert_sparsifiers(model, graph, threshold_by_node)
         return sparse_model
-
-    def do_sparsification(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        target_sparsity_by_node: Dict[NNCFNode, float],
-        dataset: Dataset,
-    ):
-        """
-        Transforms the model into a sparsified one with node-specific target activation sparsity levels.
-
-        :param model: The model to be sparsified.
-        :param graph: The model's NNCF graph.
-        :param target_sparsity_by_node: A dictionary that defines the target sparsity level
-            for specified node layers.
-        :param dataset: The dataset to calibrate the activation sparsifiers.
-        :return: The sparsified model.
-        """
-        if get_backend(model) == BackendType.TORCH:
-            model = self._backend_entity.insert_sparsifiers(model, graph, target_sparsity_by_node)
-            model = self._backend_entity.calibrate_sparsifiers(model, graph, dataset)
-        else:
-            model = self._backend_entity.do_sparsification(model, graph, target_sparsity_by_node, dataset)
-        return model
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
@@ -215,6 +187,46 @@ class SparsifyActivationsAlgorithm:
         if not target_sparsity_by_node:
             raise nncf.ValidationError("No layers to conduct activation sparsification.")
         return target_sparsity_by_node
+
+    def _get_threshold_by_node(self, model, graph, target_sparsity_by_node, dataset: Dataset) -> Dict[NNCFNode, float]:
+        statistic_points_container = StatisticPointsContainer()
+        for node, sparsity in target_sparsity_by_node.items():
+            stat_collector = TensorCollector()
+            stat_collector.register_statistic_branch(
+                container_key=STATISTIC_BRANCH_KEY,
+                reducer=self._backend_entity.abs_quantile_reducer(
+                    quantile=[
+                        sparsity,
+                    ]
+                ),
+                aggregator=EMAAggregator(alpha=0.2),
+            )
+            activation_port_id = self._backend_entity.get_activation_port_id(node, graph)
+            statistic_point = StatisticPoint(
+                target_point=self._backend_entity.target_point(
+                    TargetType.PRE_LAYER_OPERATION, node.node_name, port_id=activation_port_id
+                ),
+                tensor_collector=stat_collector,
+                algorithm=ALGORITHM_KEY,
+            )
+            statistic_points_container.add_statistic_point(statistic_point)
+
+        statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
+        statistics_aggregator.register_statistic_points(statistic_points_container)
+        statistics_aggregator.collect_statistics(model, graph)
+
+        threshold_by_node = {}
+        for nncf_node in target_sparsity_by_node:
+            tensor_collector = next(
+                iter(
+                    statistic_points_container.get_algo_statistics_for_node(
+                        nncf_node.node_name, lambda args: True, ALGORITHM_KEY
+                    )
+                )
+            )
+            threshold_by_node[nncf_node] = tensor_collector.get_statistics()[STATISTIC_BRANCH_KEY].data
+
+        return threshold_by_node
 
 
 def sparsify_activations(
@@ -275,3 +287,25 @@ def sparsify_activations(
     graph = NNCFGraphFactory.create(model)
     sparse_model = algorithm.apply(model, graph, dataset)
     return sparse_model
+
+
+class EMAAggregator(OnlineAggregatorBase):
+    def __init__(
+        self,
+        alpha: float,
+        num_samples: Optional[int] = None,
+        window_size: Optional[int] = None,
+    ):
+        self._alpha = alpha
+        super().__init__(aggregation_axes=(0,), num_samples=num_samples, window_size=window_size)
+
+    def _aggregation_fn(self, stacked_value: Tensor, axis: AggregationAxes, keepdims: bool) -> Tensor:
+        if self._collected_samples == 0:
+            return stacked_value
+        else:
+            beta = 1.0 - self._alpha
+            new_value = fns.expand_dims(stacked_value[0], 0)
+            old_value = fns.expand_dims(stacked_value[1], 0)
+            return new_value * self._alpha + old_value * beta * (1 - beta**self._collected_samples) / (
+                1 - beta ** (self._collected_samples + 1)
+            )

@@ -18,4 +18,4 @@ sparse_model = sparsify_activations(
         TargetScope(patterns=[".*down_proj.*"]): 0.4,
     }
 )
-ov.save_model(sparse_model, "sparse_model.xml", compress_to_fp16=False)
+# ov.save_model(sparse_model, "sparse_model.xml", compress_to_fp16=False)
