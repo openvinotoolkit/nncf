@@ -22,6 +22,7 @@ from openvino.runtime import opset13 as opset
 
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
+from nncf.common.utils.debug import nncf_debug
 from nncf.data.dataset import Dataset
 from nncf.errors import ValidationError
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
@@ -1077,7 +1078,6 @@ def test_lora_adapters_in_the_graph(params):
 )
 def test_lora_adapters_reduce_noise(zero_seed, mode, add_regularization, is_per_channel, mocker, tmp_path):
     mocker.patch("nncf.quantization.algorithms.weight_compression.lora_correction.DEBUG_LOG_DIR", str(tmp_path))
-    mocker.patch("nncf.quantization.algorithms.weight_compression.lora_correction.is_debug", side_effect=lambda: True)
 
     model_cls = LMLinearModel
     group_size = -1 if is_per_channel else model_cls.HIDDEN_DIM // 2
@@ -1099,18 +1099,20 @@ def test_lora_adapters_reduce_noise(zero_seed, mode, add_regularization, is_per_
     noise_before = np.mean(np.abs(fp32_out - int4_out))
 
     model = model_cls().ov_model
-    int4_model = compress_weights(
-        model,
-        mode=mode,
-        ratio=1.0,
-        group_size=group_size,
-        dataset=dataset,
-        all_layers=True,
-        lora_correction=True,
-        advanced_parameters=CompressionParams(
-            lora_correction_params=LoraParams(add_regularization=add_regularization, num_iters=n_iters, rank=2)
-        ),
-    )
+
+    with nncf_debug():
+        int4_model = compress_weights(
+            model,
+            mode=mode,
+            ratio=1.0,
+            group_size=group_size,
+            dataset=dataset,
+            all_layers=True,
+            lora_correction=True,
+            advanced_parameters=CompressionParams(
+                lora_correction_params=LoraParams(add_regularization=add_regularization, num_iters=n_iters, rank=2)
+            ),
+        )
     compiled_model = ie.compile_model(int4_model, "CPU")
     infer_request = compiled_model.create_infer_request()
     int4_out = infer_request.infer(input_data, share_inputs=True)

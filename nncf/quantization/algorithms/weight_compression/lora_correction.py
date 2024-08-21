@@ -52,7 +52,7 @@ class DebugInterface:
 
         df = pd.DataFrame(self._noise_per_layer)
         losses_path = dump_dir / "noises.csv"
-        nncf_logger.debug("Quantization noise through the correction process is saved to: ", losses_path)
+        nncf_logger.debug(f"Quantization noise through the correction process is saved to: {losses_path}")
         df.to_csv(losses_path)
 
         for name in df.columns:
@@ -62,13 +62,13 @@ class DebugInterface:
             plt.clf()
 
         delta = df.iloc[0] - df.iloc[-1]
-        nncf_logger.debug("Is quantization noise reduced for all layers: ", all(delta > 0))
+        nncf_logger.debug(f"Is quantization noise reduced for all layers: {all(delta > 0)}")
 
         _, ax = plt.subplots(1)
         ax.plot(delta)
         ax.set_xticklabels([])
         delta_path = dump_dir / "qnoise_change.jpg"
-        nncf_logger.debug("Saving change in quantization noise for each layer to: ", delta_path)
+        nncf_logger.debug(f"Saving change in quantization noise for each layer to: {delta_path}")
         plt.savefig(delta_path)
         plt.clf()
 
@@ -234,10 +234,10 @@ class LoraCorrectionAlgorithm:
                     mean_noise_before_svd = fns.mean(fns.abs(init_noise)).item()
                     mean_noise_after_svd = fns.mean(fns.abs(init_noise - XU @ V)).item()
                     mean_noises.extend([mean_noise_before_svd, mean_noise_after_svd])
-                mean_noise_after_correct_U = fns.mean(fns.abs(init_noise - XU @ new_V)).item()
-                mean_noises.append(mean_noise_after_correct_U)
+                mean_noise_after_correct = fns.mean(fns.abs(init_noise - XU @ new_V)).item()
+                mean_noises.append(mean_noise_after_correct)
                 nncf_logger.debug(
-                    f"{i} Correction U: ", mean_noise_before_svd, mean_noise_after_svd, mean_noise_after_correct_U
+                    f"{i} Correction U: {mean_noise_before_svd}, {mean_noise_after_svd}, {mean_noise_after_correct}"
                 )
             V = new_V
 
@@ -261,9 +261,9 @@ class LoraCorrectionAlgorithm:
                 noiseR = fns.concatenate([residual @ VI, noiseVI], axis=0)  # [H + SS, R]
                 U = fns.linalg.lstsq(EX, noiseR, driver="gelsy")
             if is_debug:
-                mean_noise_after_correct_U = fns.mean(fns.abs(init_noise - X @ U @ V)).item()
-                mean_noises.append(mean_noise_after_correct_U)
+                mean_noise_after_correct = fns.mean(fns.abs(init_noise - X @ U @ V)).item()
+                mean_noises.append(mean_noise_after_correct)
                 nncf_logger.debug(
-                    f"{i} Correction V: ", mean_noise_before_svd, mean_noise_after_svd, mean_noise_after_correct_U
+                    f"{i} Correction V: {mean_noise_before_svd}, {mean_noise_after_svd}, {mean_noise_after_correct}"
                 )
         return fns.transpose(U), fns.transpose(V), mean_noises
