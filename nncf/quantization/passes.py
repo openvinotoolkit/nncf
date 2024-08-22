@@ -14,6 +14,7 @@ from typing import List, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 TModel = TypeVar("TModel")
@@ -24,6 +25,7 @@ def transform_to_inference_graph(
     input_nodes: List[NNCFNode],
     shapeof_metatypes: List[OperatorMetatype],
     dropout_metatypes: List[OperatorMetatype],
+    preserved_metatypes: List[OperatorMetatype],
 ) -> NNCFGraph:
     """
     This method contains inplace pipeline of the passes that uses to provide inference graph without constant flows.
@@ -35,9 +37,12 @@ def transform_to_inference_graph(
     :return: NNCFGraph in the inference style.
     """
     shapeof_subgraphs = find_shapeof_subgraphs(nncf_graph, shapeof_metatypes, input_nodes)
-    nncf_graph.remove_nodes_from(shapeof_subgraphs)
+    preserved_nodes = find_preserved_nodes(nncf_graph, shapeof_subgraphs, preserved_metatypes)
     constant_subgraphs = find_constant_subgraphs(nncf_graph, input_nodes)
-    nncf_graph.remove_nodes_from(constant_subgraphs)
+
+    nodes_to_drop = set([*shapeof_subgraphs, *constant_subgraphs]).difference(preserved_nodes)
+    nncf_graph.remove_nodes_from(nodes_to_drop)
+
     remove_nodes_and_reconnect_graph(nncf_graph, dropout_metatypes)
     return nncf_graph
 
@@ -87,6 +92,38 @@ def find_shapeof_subgraphs(
             shape_of_queue.extend(nncf_graph.get_next_nodes(node) + nncf_graph.get_previous_nodes(node))
 
     return list(shapeof_subgraphs)
+
+
+def find_preserved_nodes(
+    graph: NNCFGraph,
+    shapeof_subgraphs: List[NNCFNode],
+    preserved_metatypes: List[OperatorMetatype],
+) -> List[NNCFNode]:
+    """
+    :param graph:
+    :param shapeof_subgraphs:
+    :param preserved_metatypes:
+    :return:
+    """
+    preserved_nodes = set()
+    for node in graph.get_nodes_by_metatypes(preserved_metatypes):
+        for e in graph.get_input_edges(node):
+            if e.from_node in shapeof_subgraphs and e.dtype == Dtype.FLOAT:
+                preserved_nodes.add(e.from_node)
+
+    queue = collections.deque(preserved_nodes)
+    while queue:
+        node = queue.pop()
+
+        for e in graph.get_input_edges(node):
+            if e.from_node in preserved_nodes:
+                continue
+
+            if e.dtype == Dtype.FLOAT and e.from_node in shapeof_subgraphs:
+                queue.append(e.from_node)
+                preserved_nodes.add(e.from_node)
+
+    return list(preserved_nodes)
 
 
 def remove_nodes_and_reconnect_graph(

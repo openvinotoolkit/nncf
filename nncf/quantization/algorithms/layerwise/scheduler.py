@@ -101,7 +101,7 @@ class LayerwiseScheduler:
         """
         # Initialize input nodes and create a copy of the graph for inference
         input_nodes = graph.get_input_nodes()
-        inference_graph = transform_to_inference_graph(deepcopy(graph), input_nodes, [], [])
+        inference_graph = transform_to_inference_graph(deepcopy(graph), input_nodes, [], [], [])
 
         steps = []
         visited_map = {node: False for node in inference_graph.get_all_nodes()}
