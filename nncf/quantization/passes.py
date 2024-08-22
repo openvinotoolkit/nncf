@@ -36,7 +36,8 @@ def transform_to_inference_graph(
     """
     shapeof_subgraphs = find_shapeof_subgraphs(nncf_graph, shapeof_metatypes, input_nodes)
     nncf_graph.remove_nodes_from(shapeof_subgraphs)
-    filter_constant_nodes(nncf_graph, input_nodes)
+    constant_subgraphs = find_constant_subgraphs(nncf_graph, input_nodes)
+    nncf_graph.remove_nodes_from(constant_subgraphs)
     remove_nodes_and_reconnect_graph(nncf_graph, dropout_metatypes)
     return nncf_graph
 
@@ -138,17 +139,17 @@ def remove_nodes_and_reconnect_graph(
     return nncf_graph
 
 
-def filter_constant_nodes(
+def find_constant_subgraphs(
     nncf_graph: NNCFGraph,
     input_nodes: List[NNCFNode],
-) -> NNCFGraph:
+) -> List[NNCFNode]:
     """
-    Removes all Constant nodes from NNCFGraph inplace, making it inference graph.
-    The traversing starts from the input nodes and nodes with weights.
+    Returns a list of nodes belonging to constant subgraphs.
 
-    :param nncf_graph: NNCFGraph instance for the transformation.
-    :param input_nodes: List of input nodes for the given NNCFGraph.
-    :return: NNCFGraph without Constant nodes.
+    :param nncf_graph: The input graph to be analyzed.
+    :param input_nodes: A list of nodes designated as graph inputs. These nodes are
+        used to identify which nodes depend on input data.
+    :return: A list of nodes belonging to constant subgraphs.
     """
     if not input_nodes:
         return nncf_graph
@@ -162,5 +163,5 @@ def filter_constant_nodes(
         visited_nodes.add(node)
         nodes_queue.extend(nncf_graph.get_next_nodes(node))
     constant_nodes = [node for node in nncf_graph.get_all_nodes() if node not in visited_nodes]
-    nncf_graph.remove_nodes_from(constant_nodes)
-    return nncf_graph
+
+    return constant_nodes
