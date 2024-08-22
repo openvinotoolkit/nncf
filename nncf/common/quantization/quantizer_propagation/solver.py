@@ -1608,13 +1608,20 @@ class QuantizerPropagationSolver:
     ) -> QuantizerPropagationStateGraph:
         quantizers = self.get_finished_propagating_quantizers()
         for quantizer in quantizers:
-            if len(quantizer.quantized_input_sink_operator_nodes) != 1:
+            if len(quantizer.quantized_input_sink_operator_nodes) != 1:  # Check that only one consumer
                 continue
+
             node_key = next(iter(quantizer.quantized_input_sink_operator_nodes))
-            node_metatype = quant_prop_graph.nodes[node_key]["op_meta"]
+            node_metatype = quant_prop_graph.nodes[node_key]["op_meta"]  # check that metatype is correct
             if node_metatype not in metatypes:
                 continue
-            if len(quant_prop_graph.nodes[node_key]["affecting_propagating_quantizers"]) == 1:  # only one activation
+
+            if len(quantizer.propagation_path) > 1:
+                continue
+
+            if (
+                len(quant_prop_graph.nodes[node_key]["affecting_propagating_quantizers"]) == 1
+            ):  # only one activation (with constant)
                 quant_prop_graph.remove_propagating_quantizer(quantizer)
                 nncf_logger.info(f"REMOVED elementwise quantizer for {node_key}")
 
