@@ -21,6 +21,7 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.torch.dynamic_graph.layer_attributes_handlers import apply_args_defaults
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
@@ -42,27 +43,23 @@ class GraphConverter:
         :return: Given node layer attributes.
         """
         if metatype in [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype]:
-            weights_node = node.args[1]
-            if weights_node.op != "get_attr":
+            conv_default_args = [(arg.name, arg.default_value) for arg in node.target._schema.arguments]
+            kwargs = apply_args_defaults(node.args, node.kwargs, conv_default_args)
+
+            weight_node = kwargs["weight"]
+            if weight_node.op != "get_attr":
                 # Convs with constant subgraphs or two inputs are not supported yet.
                 return None
-            if len(node.args) < 7:
-                # Not enough arguments to collect layer attributes
-                return None
-            stride = node.args[3]
-            padding_values = node.args[4]
-            dilations = node.args[5]
-            groups = node.args[6]
-            weight = get_tensor_constant_from_node(weights_node, model)
+            weight = get_tensor_constant_from_node(weight_node, model)
             return ConvolutionLayerAttributes(
                 weight_requires_grad=False,
                 in_channels=weight.shape[0],
                 out_channels=weight.shape[1],
                 kernel_size=list(weight.shape[2:]),
-                stride=stride,
-                dilations=dilations,
-                groups=groups,
-                padding_values=padding_values,
+                stride=kwargs["stride"],
+                dilations=kwargs["dilation"],
+                groups=kwargs["groups"],
+                padding_values=kwargs["padding"],
                 transpose=False,
             )
         return None
