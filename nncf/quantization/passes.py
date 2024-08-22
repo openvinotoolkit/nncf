@@ -152,7 +152,7 @@ def find_constant_subgraphs(
     :return: A list of nodes belonging to constant subgraphs.
     """
     if not input_nodes:
-        return nncf_graph
+        return []
 
     visited_nodes = set()
     nodes_queue = collections.deque(input_nodes)
