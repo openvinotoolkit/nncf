@@ -34,27 +34,29 @@ def transform_to_inference_graph(
     :param dropout_metatypes: List of backend-specific Dropout metatypes.
     :return: NNCFGraph in the inference style.
     """
-    remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes, input_nodes)
+    shapeof_subgraphs = find_shapeof_subgraphs(nncf_graph, shapeof_metatypes, input_nodes)
+    nncf_graph.remove_nodes_from(shapeof_subgraphs)
     filter_constant_nodes(nncf_graph, input_nodes)
     remove_nodes_and_reconnect_graph(nncf_graph, dropout_metatypes)
     return nncf_graph
 
 
-def remove_shapeof_subgraphs(
+def find_shapeof_subgraphs(
     nncf_graph: NNCFGraph,
     shapeof_metatypes: List[OperatorMetatype],
     input_nodes: List[NNCFNode],
-) -> NNCFGraph:
+) -> List[NNCFNode]:
     """
-    Removes the ShapeOf subgraphs from the provided NNCFGraph instance inplace.
-    Constant subgraph should be already removed from the given NNCFGraph.
+    Returns a list of nodes belonging to ShapeOf subgraphs.
 
-    :param nncf_graph: NNCFGraph instance for the transformation.
-    :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
-    :param input_nodes: List of input nodes for the given NNCFGraph.
-    :return: NNCFGraph without ShapeOf subgraphs.
+    :param nncf_graph: The input graph to be analyzed.
+    :param shapeof_metatypes: A list of metatypes representing backend-specific
+        ShapeOf operations.
+    :param input_nodes: A list of nodes designated as graph inputs. These nodes are
+        used to identify which nodes depend on input data.
+    :return: A list of nodes belonging to ShapeOf subgraphs.
     """
-    nodes_to_drop = set()
+    shapeof_subgraphs = set()
     shape_of_nodes = []
     infer_nodes = []
 
@@ -70,21 +72,20 @@ def remove_shapeof_subgraphs(
         nodes_queue.extend(nncf_graph.get_next_nodes(node))
 
     for shape_of_node in shape_of_nodes:
-        nodes_to_drop.add(shape_of_node.node_name)
+        shapeof_subgraphs.add(shape_of_node)
 
         shape_of_queue = collections.deque()
         shape_of_queue.extend(nncf_graph.get_next_nodes(shape_of_node))
         while shape_of_queue:
             node = shape_of_queue.pop()
-            if node.node_name in nodes_to_drop or node.node_name in infer_nodes:
+            if node in shapeof_subgraphs or node.node_name in infer_nodes:
                 continue
-            nodes_to_drop.add(node.node_name)
+            shapeof_subgraphs.add(node)
             # traverse forward and backward to exclude full shape of subgraph
             # recursion excluded due to infer_nodes list around subgraph shape
             shape_of_queue.extend(nncf_graph.get_next_nodes(node) + nncf_graph.get_previous_nodes(node))
 
-    nncf_graph.remove_nodes_from([nncf_graph.get_node_by_name(name) for name in nodes_to_drop])
-    return nncf_graph
+    return list(shapeof_subgraphs)
 
 
 def remove_nodes_and_reconnect_graph(
