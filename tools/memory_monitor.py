@@ -23,6 +23,7 @@ from typing import Callable, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import psutil
+from tabulate import tabulate
 
 logger = logging.getLogger("memory_monitor")
 
@@ -366,6 +367,7 @@ if __name__ == "__main__":
         for mm in memory_monitors:
             mm._monitoring_thread_should_stop = True
 
+    summary_data = []
     for mm in memory_monitors:
         mm.stop()
         for fz in (True, False):
@@ -375,3 +377,6 @@ if __name__ == "__main__":
             mm.save_memory_logs(
                 time_values, memory_values, save_dir=Path(args.log_dir), filename_suffix="_from-zero" if fz else ""
             )
+            summary_data.append([mm.memory_type.value, fz, f"{int(max(memory_values))} {mm.memory_unit.value}"])
+    print("\nMemory summary:")
+    print(tabulate(summary_data, headers=["Memory type", "From zero", "Peak value"]))
