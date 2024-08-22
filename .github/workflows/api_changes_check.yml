@@ -41,25 +41,21 @@ jobs:
           echo ${CHANGED_FILES}
           CHANGED_FILES=$(echo $CHANGED_FILES | tr '\n' ' ')
           echo "changed_files=${CHANGED_FILES}" >> $GITHUB_OUTPUT
-      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        if: ${{ !(contains(steps.diff.outputs.changed_files, 'differ'))  && contains(github.event.pull_request.labels.*.name, 'API') }}
-        with:
-          github-token: ${{ secrets.ADD_LABELS_WITH_REST_API }}
-          script: |
-            github.rest.issues.removeLabel({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: "API"
-            })
-      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+
+      - name: Add label
         if: ${{ contains(steps.diff.outputs.changed_files, 'differ') }}
+        run: echo "add" > api_status.txt
+
+      - name: Remove label
+        if: ${{ !(contains(steps.diff.outputs.changed_files, 'differ')) && contains(github.event.pull_request.labels.*.name, 'API') }}
+        run: echo "remove" > api_status.txt
+
+      - name: No change label
+        if: ${{ !(contains(steps.diff.outputs.changed_files, 'differ')) && !contains(github.event.pull_request.labels.*.name, 'API') }}
+        run: echo "none" > api_status.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          github-token: ${{ secrets.ADD_LABELS_WITH_REST_API }}
-          script: |
-            github.rest.issues.addLabels({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: ["API"]
-            })
+          name: api_status
+          path: api_status.txt
