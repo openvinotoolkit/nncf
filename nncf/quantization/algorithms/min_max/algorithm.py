@@ -705,8 +705,13 @@ class MinMaxQuantization(Algorithm):
             node = nncf_graph.get_node_by_name(node_name)
             unique_output_port_ids = set(e.output_port_id for e in nncf_graph.get_output_edges(node))
             if len(unique_output_port_ids) > 1:
-                raise nncf.InternalError(f"Cannot determine the output_port_id for the operation: {node_name}")
-            output_port_id = next(iter(unique_output_port_ids))
+                nncf_logger.warning(
+                    f"Cannot determine the output_port_id for the operation: {node_name}, "
+                    "output_port_id = 0 will be used."
+                )
+                output_port_id = 0
+            else:
+                output_port_id = next(iter(unique_output_port_ids))
 
             activation_quantization_target_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, node_name, output_port_id
