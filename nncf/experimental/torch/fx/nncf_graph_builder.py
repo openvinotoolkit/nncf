@@ -65,11 +65,14 @@ class GraphConverter:
         return None
 
     @staticmethod
-    def _get_node_type_and_metatype(node: torch.fx.Node) -> Tuple[str, om.OperatorMetatype]:
+    def _get_node_type_and_metatype(
+        node: torch.fx.Node, model: torch.fx.GraphModule
+    ) -> Tuple[str, om.OperatorMetatype]:
         """
         Retrieves node's type and metatype.
 
         :param node: Given node.
+        :param model: Given GraphModule.
         :return: Node's type and metatype.
         """
         if node.op == "placeholder":
@@ -95,6 +98,11 @@ class GraphConverter:
             node_metatype = UnknownMetatype
         if node_metatype is UnknownMetatype:
             nncf_logger.debug(f"Unknown metatype for node: {node}")
+
+        if node_metatype.get_subtypes():
+            layer_attrs = GraphConverter._get_layer_attributes(node, node_metatype, model)
+            node_subtype = node_metatype.determine_subtype(layer_attrs)
+            node_metatype = node_subtype or node_metatype
         return node_type, node_metatype
 
     @staticmethod
@@ -111,12 +119,7 @@ class GraphConverter:
         nncf_graph = PTNNCFGraph()
 
         for source_node in model.graph.nodes:
-            node_type, node_metatype = GraphConverter._get_node_type_and_metatype(source_node)
-
-            if node_metatype.get_subtypes():
-                layer_attrs = GraphConverter._get_layer_attributes(source_node, node_metatype, model)
-                node_subtype = node_metatype.determine_subtype(layer_attrs)
-                node_metatype = node_subtype or node_metatype
+            node_type, node_metatype = GraphConverter._get_node_type_and_metatype(source_node, model)
 
             nncf_graph.add_nncf_node(
                 node_name=source_node.name,
