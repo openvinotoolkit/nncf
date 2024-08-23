@@ -44,18 +44,21 @@ jobs:
 
       - name: Add label
         if: ${{ contains(steps.diff.outputs.changed_files, 'differ') }}
-        run: echo "add" > api_status.txt
+        run: |
+          echo '{"pr_number": "${{ github.event.pull_request.number }}", "action": "add"}' > api_status.json
 
       - name: Remove label
         if: ${{ !(contains(steps.diff.outputs.changed_files, 'differ')) && contains(github.event.pull_request.labels.*.name, 'API') }}
-        run: echo "remove" > api_status.txt
+        run: |
+          echo '{"pr_number": "${{ github.event.pull_request.number }}", "action": "remove"}' > api_status.json
 
       - name: No change label
         if: ${{ !(contains(steps.diff.outputs.changed_files, 'differ')) && !contains(github.event.pull_request.labels.*.name, 'API') }}
-        run: echo "none" > api_status.txt
+        run: |
+          echo '{"pr_number": "${{ github.event.pull_request.number }}", "action": "none"}' > api_status.json
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: api_status
-          path: api_status.txt
+          path: api_status.json
