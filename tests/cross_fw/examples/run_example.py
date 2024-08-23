@@ -184,6 +184,20 @@ def llm_compression_synthetic() -> Dict[str, float]:
     return {"word_count": len(result.split())}
 
 
+def post_training_quantization_torch_fx_resnet18():
+    from examples.post_training_quantization.torch.fx.resnet18.main import main as resnet18_main
+
+    # Set manual seed and determenistic cuda mode to make the test determenistic
+    results = resnet18_main()
+
+    return {
+        "fp32_top1": float(results[0]),
+        "int8_top1": float(results[1]),
+        "fp32_latency": float(results[2]),
+        "int8_latency": float(results[3]),
+    }
+
+
 def quantization_aware_training_torch_resnet18():
     from examples.quantization_aware_training.torch.resnet18.main import main as resnet18_main
 

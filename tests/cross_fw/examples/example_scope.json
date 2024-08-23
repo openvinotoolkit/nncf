@@ -170,6 +170,20 @@
             "model_compression_rate": 3.8631822183889652
         }
     },
+    "post_training_quantization_torch_fx_resnet18": {
+        "backend": "torch",
+        "requirements": "examples/post_training_quantization/torch/fx/resnet18/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_tolerance": 0.2,
+        "accuracy_metrics": {
+            "fp32_top1": 55.52,
+            "int8_top1": 55.27
+        },
+        "performance_metrics": {
+            "fp32_latency": 1.4452,
+            "int8_latency": 0.6003
+        }
+    },
     "quantization_aware_training_torch_resnet18": {
         "backend": "torch",
         "requirements": "examples/quantization_aware_training/torch/resnet18/requirements.txt",
