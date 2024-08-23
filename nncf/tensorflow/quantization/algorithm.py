@@ -640,7 +640,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             scales_unification_map=scales_unification_map,
         )
 
-        quantization_proposal = solver.run_on_ip_graph(ip_graph)
+        quantization_proposal = solver.run_on_ip_graph(ip_graph, ELEMENTWISE_LAYER_METATYPES)
         multi_config_setup = quantization_proposal.quantizer_setup
         single_config_setup = multi_config_setup.select_first_qconfig_for_each_point()
         finalized_proposal = quantization_proposal.finalize(single_config_setup)
