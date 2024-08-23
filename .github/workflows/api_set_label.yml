@@ -23,7 +23,7 @@ jobs:
             name: api_status
 
       - name: Get api_status
-        run: cat api_status.txt
+        run: cat api_status.json
 
       - name: Set output value
         id: status
