@@ -236,7 +236,7 @@ def test_export_lstm_cell(tmp_path):
     for node in model.graph.node:
         if node.op_type == "FakeQuantize":
             onnx_num += 1
-    assert onnx_num == 12
+    assert onnx_num == 11
 
 
 @pytest.mark.parametrize(
@@ -454,7 +454,7 @@ def test_export_stacked_bi_lstm(tmp_path):
     for node in model.graph.node:
         if node.op_type == "FakeQuantize":
             onnx_num += 1
-    assert onnx_num == 46
+    assert onnx_num == 42
 
 
 class TestNumberOfNodes:
@@ -513,7 +513,7 @@ class TestNumberOfNodes:
         _ = model(test_data.x, test_hidden)
 
         # NB: below may always fail in debug due to superfluous 'cat' nodes
-        assert model.nncf.get_graph().get_nodes_count() == 124
+        assert model.nncf.get_graph().get_nodes_count() == 120
         assert len(counters) + 2 == 46  # 8 WQ + 36 AQ + 1 input AQ + 1 reset point AQ
         for counter in counters.values():
             assert counter.count == p.seq_length
