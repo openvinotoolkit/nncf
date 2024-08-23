@@ -1606,23 +1606,58 @@ class QuantizerPropagationSolver:
     def _filter_quantizers(
         self, quant_prop_graph: QuantizerPropagationStateGraph, metatypes: List[OperatorMetatype]
     ) -> QuantizerPropagationStateGraph:
-        quantizers = self.get_finished_propagating_quantizers()
+        """
+        Removes quantizers for which _is_quantizer_to_remove returns True.
+
+        :param quant_prop_graph: The quantizer propagation state graph.
+        :param metatypes: Metatypes are used for the removal criterion.
+        :return: Filtered quantizer propagation state graph.
+        """
+        quantizers = self._finished_propagating_quantizers
         for quantizer in quantizers:
-            if len(quantizer.quantized_input_sink_operator_nodes) != 1:  # Check that only one consumer
-                continue
-
-            node_key = next(iter(quantizer.quantized_input_sink_operator_nodes))
-            node_metatype = quant_prop_graph.nodes[node_key]["op_meta"]  # check that metatype is correct
-            if node_metatype not in metatypes:
-                continue
-
-            if len(quantizer.propagation_path) > 1:
-                continue
-
-            if (
-                len(quant_prop_graph.nodes[node_key]["affecting_propagating_quantizers"]) == 1
-            ):  # only one activation (with constant)
+            if self._is_quantizer_to_remove(quant_prop_graph, quantizer, metatypes):
                 quant_prop_graph.remove_propagating_quantizer(quantizer)
-                nncf_logger.info(f"REMOVED elementwise quantizer for {node_key}")
-
+                self._finished_propagating_quantizers.remove(quantizer)
+                quantized_node_key = next(iter(quantizer.quantized_input_sink_operator_nodes))
+                nncf_logger.debug(f"Removes quantizer generated for a node {quantized_node_key}")
         return quant_prop_graph
+
+    def _is_quantizer_to_remove(
+        self,
+        quant_prop_graph: QuantizerPropagationStateGraph,
+        quantizer: PropagatingQuantizer,
+        metatypes: List[OperatorMetatype],
+    ):
+        """
+        Returns True if the quantizer is considered to remove.
+        The criterion for removal are:
+        1) Quantizer is generated from a node with a metatype in provided metatypes.
+        2) Quantizer is not propagated.
+        3) Quantizer has only one child.
+        4) Quantized node generates only one activation quantizer.
+
+        :param quant_prop_graph: The quantizer propagation state graph holding the `quantizer`.
+        :param quantizer: The propagating quantizer to be currently considered.
+        :param metatypes: Metatypes are used for the criterion.
+        :return: True if quantizer satisfies the criteria, otherwise - False.
+        """
+        quantizer_children = quantizer.quantized_input_sink_operator_nodes
+        quantized_node_key = next(iter(quantizer.quantized_input_sink_operator_nodes))
+        quantized_node_metatype = quant_prop_graph.nodes[quantized_node_key][
+            QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR
+        ]
+        quantizers_generated_for_node = quant_prop_graph.nodes[quantized_node_key][
+            quant_prop_graph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR
+        ]
+
+        is_one_quantizer_generated_for_node = len(quantizers_generated_for_node) == 1
+        is_one_child = len(quantizer_children) == 1
+        is_metatype_to_filter = quantized_node_metatype in metatypes
+        is_quantizer_not_propagated = len(quantizer.propagation_path) == 1
+
+        return (
+            is_one_child
+            and is_metatype_to_filter
+            and is_one_quantizer_generated_for_node
+            and is_quantizer_not_propagated
+        )
