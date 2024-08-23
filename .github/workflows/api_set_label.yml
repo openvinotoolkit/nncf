@@ -27,19 +27,21 @@ jobs:
 
       - name: Set output value
         id: status
-        run: echo "api_status=$(cat api_status.txt)" >> $GITHUB_OUTPUT
+        run: |
+          echo "action=$(cat api_status.json | jq -r .action)" >> $GITHUB_OUTPUT
+          echo "pr_number=$(cat api_status.json | jq -r .pr_number)" >> $GITHUB_OUTPUT
 
-      - name: Print api_status
-        run: echo ${{ steps.status.outputs.api_status }}
+      - name: Print outputs
+        run: echo ${{ steps.status.outputs.action }} ${{ steps.status.outputs.pr_number }}
 
       - name: Add label
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        if: ${{ steps.status.outputs.api_status == 'add' }}
+        if: ${{ steps.status.outputs.action == 'add' }}
         with:
             github-token: "${{ secrets.GITHUB_TOKEN }}"
             script: |
               github.rest.issues.addLabels({
-                  issue_number: ${{ github.event.workflow_run.pull_requests[0].number }},
+                  issue_number: ${{ steps.status.outputs.pr_number }},
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   labels: ["API"]
@@ -47,12 +49,12 @@ jobs:
 
       - name: Remove label
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        if: ${{ steps.status.outputs.api_status == 'remove' }}
+        if: ${{ steps.status.outputs.action == 'remove' }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             github.rest.issues.addLabels({
-              issue_number: ${{ github.event.workflow_run.pull_requests[0].number }},
+              issue_number: ${{ steps.status.outputs.pr_number }},
               owner: context.repo.owner,
               repo: context.repo.repo,
               labels: ["API"]
