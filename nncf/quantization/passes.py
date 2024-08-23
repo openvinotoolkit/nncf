@@ -100,10 +100,11 @@ def find_preserved_nodes(
     preserved_metatypes: List[OperatorMetatype],
 ) -> List[NNCFNode]:
     """
-    :param graph:
-    :param shapeof_subgraphs:
-    :param preserved_metatypes:
-    :return:
+    :param graph: The input graph to be analyzed.
+    :param shapeof_subgraphs: A list of nodes belonging to ShapeOf subgraphs.
+    :param preserved_metatypes: Backend-specific metatypes that require preserving
+        float subgraphs when removing the ShapeOf subgraph.
+    :return: A list of nodes in float subgraphs of ShapeOf subgraphs.
     """
     preserved_nodes = set()
     for node in graph.get_nodes_by_metatypes(preserved_metatypes):

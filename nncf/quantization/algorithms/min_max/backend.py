@@ -36,7 +36,8 @@ class MinMaxAlgoBackend(ABC):
     @abstractmethod
     def preserved_metatypes(self) -> List[OperatorMetatype]:
         """
-        TODO
+        Property for backend-specific metatypes that require preserving float subgraphs
+        when removing the ShapeOf subgraph.
         """
 
     @property
