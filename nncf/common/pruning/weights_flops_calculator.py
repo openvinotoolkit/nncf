@@ -102,13 +102,13 @@ class WeightsFlopsCalculator:
         output_channels = output_channels or {}
         kernel_sizes = kernel_sizes or {}
         op_addresses_to_skip = op_addresses_to_skip or []
-        for node in graph.get_nodes_by_metatypes(self._conv_op_metatypes):
+        for node in graph.get_nodes_by_metatypes([type(op) for op in self._conv_op_metatypes]):
             name = node.node_name
             if name in op_addresses_to_skip:
                 continue
-            num_in_channels = input_channels.get(name, node.layer_attributes.in_channels)
-            num_out_channels = output_channels.get(name, node.layer_attributes.out_channels)
-            kernel_size = kernel_sizes.get(name, node.layer_attributes.kernel_size)
+            num_in_channels = input_channels.get(name, getattr(node.layer_attributes, "in_channels", 0))
+            num_out_channels = output_channels.get(name, getattr(node.layer_attributes, "out_channels", 0))
+            kernel_size = kernel_sizes.get(name, getattr(node.layer_attributes, "kernel_size", (0, 0)))
             if is_prunable_depthwise_conv(node):
                 # Prunable depthwise conv processed in special way
                 # because common way to calculate filters per
@@ -116,7 +116,7 @@ class WeightsFlopsCalculator:
                 # some of the output channels are pruned.
                 filters_per_channel = 1
             else:
-                filters_per_channel = num_out_channels // node.layer_attributes.groups
+                filters_per_channel = num_out_channels // getattr(node.layer_attributes, "groups", 1)
 
             flops_numpy = (
                 2 * np.prod(kernel_size) * num_in_channels * filters_per_channel * np.prod(output_shapes[name])
@@ -126,15 +126,14 @@ class WeightsFlopsCalculator:
             flops[name] = flops_numpy.astype(int).item()
             weights[name] = weights_numpy.astype(int).item()
 
-        for node in graph.get_nodes_by_metatypes(self._linear_op_metatypes):
+        for node in graph.get_nodes_by_metatypes([type(op) for op in self._linear_op_metatypes]):
             name = node.node_name
             if name in op_addresses_to_skip:
                 continue
 
-            num_in_features = input_channels.get(name, node.layer_attributes.in_features)
-            num_out_features = output_channels.get(name, node.layer_attributes.out_features)
-
-            flops_numpy = 2 * num_in_features * num_out_features * np.prod(output_shapes[name][:-1])
+            num_in_features = input_channels.get(name, getattr(node.layer_attributes, "in_features", 0))
+            num_out_features = output_channels.get(name, getattr(node.layer_attributes, "out_features", 0))
+            flops_numpy = 2 * num_in_features * num_out_features * np.prod(output_shapes[name])
             weights_numpy = num_in_features * num_out_features
             flops[name] = flops_numpy
             weights[name] = weights_numpy
@@ -151,6 +150,6 @@ class WeightsFlopsCalculator:
         """
         filters_num = 0
         output_channels = output_channels or {}
-        for node in graph.get_nodes_by_metatypes(self._conv_op_metatypes + self._linear_op_metatypes):
+        for node in graph.get_nodes_by_metatypes([type(op) for op in self._linear_op_metatypes]):
             filters_num += output_channels.get(node.node_name, get_output_channels(node))
         return filters_num
