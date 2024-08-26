@@ -14,7 +14,7 @@ import os
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, Tuple, Type
+from typing import Callable, Dict, List, Tuple, Type
 
 import openvino.torch  # noqa
 import pytest
@@ -28,6 +28,7 @@ import torchvision.models as models
 from torch._export import capture_pre_autograd_graph
 
 import nncf
+from nncf import CompressWeightsMode
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.utils.os import safe_open
@@ -40,7 +41,7 @@ from tests.torch.test_compressed_graph import check_graph
 
 FX_DIR_NAME = Path("fx")
 FX_QUANTIZED_DIR_NAME = Path("fx") / "quantized"
-
+FX_COMPRESSED_DIR_NAME = Path("fx") / "compressed"
 
 @dataclass
 class ModelCase:
@@ -156,3 +157,35 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters):
 
         nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
         check_graph(nncf_graph, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME)
+
+
+MODEL_COMRPESSION_MODES = [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8]
+
+TEST_MODELS_COMPRESSED = (
+    (ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]), MODEL_COMRPESSION_MODES),
+    (torchvision_model_case("resnet18", (1, 3, 224, 224)), MODEL_COMRPESSION_MODES),
+    (torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)), MODEL_COMRPESSION_MODES),
+    (torchvision_model_case("vit_b_16", (1, 3, 224, 224)), MODEL_COMRPESSION_MODES),
+    (torchvision_model_case("swin_v2_s", (1, 3, 224, 224)), MODEL_COMRPESSION_MODES),
+)
+
+
+@pytest.mark.parametrize(
+    ("test_case", "model_compression_modes"), TEST_MODELS_COMPRESSED, ids=[m.model_id for m in TEST_MODELS]
+)
+def test_compressed_model(test_case: ModelCase, model_compression_modes: List[CompressWeightsMode]):
+    with disable_patching():
+        device = torch.device("cpu")
+        model_name = test_case.model_id
+        model = test_case.model_builder()
+        model.to(device)
+
+        with torch.no_grad():
+            ex_input = torch.ones(test_case.input_shape)
+            model.eval()
+            exported_model = capture_pre_autograd_graph(model, args=(ex_input,))
+        for mode in model_compression_modes:
+            compressed_model = nncf.compress_weights(exported_model, mode=CompressWeightsMode.INT8_SYM)
+            nncf_graph = GraphConverter.create_nncf_graph(compressed_model)
+
+            check_graph(nncf_graph, get_dot_filename(model_name), FX_COMPRESSED_DIR_NAME)
