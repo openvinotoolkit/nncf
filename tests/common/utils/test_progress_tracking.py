@@ -33,13 +33,6 @@ class track_wrapper:
             yield value
             completed += self.track.weights[i] if isinstance(self.track.progress, WeightedProgress) else 1
 
-    def __enter__(self):
-        self.track.__enter__()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.track.__exit__(exc_type, exc_val, exc_tb)
-
 
 @pytest.mark.parametrize("n", [N])
 @pytest.mark.parametrize("is_weighted", [False, True])
