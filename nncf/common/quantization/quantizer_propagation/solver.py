@@ -1632,12 +1632,11 @@ class QuantizerPropagationSolver:
         metatypes: List[OperatorMetatype],
     ):
         """
-        Returns True if the quantizer is considered to remove.
-        The criterion for removal are:
-        1) Quantizer is generated from a node with a metatype in provided metatypes.
-        2) Quantizer is not propagated.
-        3) Quantizer has only one child.
-        4) Quantized node generates only one activation quantizer.
+        Returns True if the quantizer meets the criteria for removal. The criteria are as follows:
+        1. The quantizer is generated from a node whose metatype is in the provided metatypes.
+        2. The quantizer is not propagated.
+        3. The quantizer has only one child.
+        4. The quantized node generates only one activation quantizer.
 
         :param quant_prop_graph: The quantizer propagation state graph holding the `quantizer`.
         :param quantizer: The propagating quantizer to be currently considered.
