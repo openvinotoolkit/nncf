@@ -514,7 +514,7 @@ class TestNumberOfNodes:
 
         # NB: below may always fail in debug due to superfluous 'cat' nodes
         assert model.nncf.get_graph().get_nodes_count() == 120
-        assert len(counters) + 2 == 46  # 8 WQ + 36 AQ + 1 input AQ + 1 reset point AQ
+        assert len(counters) + 2 == 42  # 8 WQ + 32 AQ + 1 input AQ + 1 reset point AQ
         for counter in counters.values():
             assert counter.count == p.seq_length
         assert counter_for_input_quantizer.count == 1

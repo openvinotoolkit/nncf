@@ -1656,7 +1656,7 @@ class QuantizerPropagationSolver:
         is_one_quantizer_generated_for_node = len(quantizers_generated_for_node) == 1
         is_one_child = len(quantizer_children) == 1
         is_metatype_to_filter = quantized_node_metatype in metatypes
-        is_quantizer_not_propagated = len(quantizer.propagation_path) == 1
+        is_quantizer_not_propagated = len(quantizer.propagation_path) <= 1
 
         return (
             is_one_child
