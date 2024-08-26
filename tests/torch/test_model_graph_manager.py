@@ -17,7 +17,7 @@ import torch
 from torch import nn
 
 import nncf.torch.graph.operator_metatypes as om
-import tests.post_training.test_templates.helpers as helpers
+import tests.cross_fw.test_templates.helpers as helpers
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType

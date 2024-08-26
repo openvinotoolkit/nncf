@@ -20,9 +20,9 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from tests.post_training.test_templates.helpers import ConvBNTestModel
-from tests.post_training.test_templates.helpers import ConvTestModel
-from tests.post_training.test_templates.helpers import get_static_dataset
+from tests.cross_fw.test_templates.helpers import ConvBNTestModel
+from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import get_static_dataset
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")

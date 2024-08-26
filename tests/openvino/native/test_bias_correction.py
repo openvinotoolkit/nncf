@@ -22,12 +22,12 @@ from nncf.openvino.graph.model_utils import remove_fq_from_inputs
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBiasCorrectionAlgoBackend
+from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
+from tests.cross_fw.test_templates.helpers import SplittedModel
+from tests.cross_fw.test_templates.test_bias_correction import TemplateTestBCAlgorithm
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
-from tests.post_training.test_templates.helpers import ConvTestModel
-from tests.post_training.test_templates.helpers import MultipleConvTestModel
-from tests.post_training.test_templates.helpers import SplittedModel
-from tests.post_training.test_templates.test_bias_correction import TemplateTestBCAlgorithm
 
 
 class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
