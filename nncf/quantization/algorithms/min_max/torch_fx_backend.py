@@ -28,7 +28,6 @@ from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MA
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
-from nncf.experimental.torch.fx.groups import FX_OPERATORS_WEIGHTS_METATYPES
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -347,8 +346,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        retval = set()
-        for node in nncf_graph.get_all_nodes():
-            if node.metatype in FX_OPERATORS_WEIGHTS_METATYPES:
-                retval.add(node)
-        return list(retval)
+        return [
+            node
+            for node in nncf_graph.get_all_nodes()
+            if issubclass(node.metatype, om.PTOperatorMetatype) and node.metatype.weight_port_ids
+        ]
