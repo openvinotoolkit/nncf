@@ -59,6 +59,12 @@ class CompressionLoss(ABC):
         """
         return self.calculate(*args, **kwargs)
 
+    def test() -> None:
+        """
+        Test
+        """
+        pass
+
 
 @api()
 class CompressionScheduler(ABC):
