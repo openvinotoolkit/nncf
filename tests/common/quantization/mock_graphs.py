@@ -396,7 +396,7 @@ def get_randomly_connected_model_graph(op_name_keys: Set[str]) -> nx.DiGraph:
     graph_len = len(op_name_keys)
     mock_graph = nx.generators.gnc_graph(graph_len, None, 0)
 
-    shuffled_op_names = random.sample(op_name_keys, len(op_name_keys))
+    shuffled_op_names = random.sample(sorted(op_name_keys), len(op_name_keys))
     for idx, (_, node) in enumerate(mock_graph.nodes.items()):
         op_name = shuffled_op_names[idx]
         node[NNCFNode.NODE_NAME_ATTR] = get_node_name(shuffled_op_names[idx])
