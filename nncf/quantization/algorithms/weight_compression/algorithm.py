@@ -405,12 +405,13 @@ class WeightCompression(Algorithm):
 
         # Sort weight params to start compression with the bigger constants. This lowers peak memory footprint.
         all_weight_params = sorted(all_weight_params, key=lambda wp: wp.num_weights, reverse=True)
+        all_weight_sizes = [wp.num_weights for wp in all_weight_params]
 
         # Compress model using weight compression parameters
         transformed_model = self._backend_entity.transform_model(
             model,
             graph,
-            track(all_weight_params, description="Applying Weight Compression"),
+            track(all_weight_params, description="Applying Weight Compression", weights=all_weight_sizes),
             scales,
             zero_points,
         )
