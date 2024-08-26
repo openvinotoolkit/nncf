@@ -51,7 +51,7 @@ Every backend has its own return value format for the data transformation functi
 backend inference framework.
 Below are the formats of data transformation function for each supported backend.
 
-<details><summary><b>PyTorch, TensorFlow, OpenVINO</b></summary>
+<details><summary><b>PyTorch, TorchFX, TensorFlow, OpenVINO</b></summary>
 
 The return format of the data transformation function is directly the input tensors consumed by the model. \
 _If you are not sure that your implementation of data transformation function is correct you can validate it by using the

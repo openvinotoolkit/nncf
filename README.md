@@ -33,11 +33,11 @@ learning frameworks.
 
 ### Post-Training Compression Algorithms
 
-| Compression algorithm                                                                                    | OpenVINO  | PyTorch   | TensorFlow    | ONNX          |
-| :------------------------------------------------------------------------------------------------------- | :-------: | :-------: | :-----------: | :-----------: |
-| [Post-Training Quantization](./docs/usage/post_training_compression/post_training_quantization/Usage.md) | Supported | Supported | Supported     | Supported     |
-| [Weights Compression](./docs/usage/post_training_compression/weights_compression/Usage.md)               | Supported | Supported | Not supported | Not supported |
-| [Activation Sparsity](./nncf/experimental/torch/sparsify_activations/ActivationSparsity.md)              | Not supported | Experimental |Not supported| Not supported |
+| Compression algorithm                                                                                    | OpenVINO  | PyTorch   | TorchFX   | TensorFlow    | ONNX          |
+| :------------------------------------------------------------------------------------------------------- | :-------: | :-------: | :-----------: | :-----------: | :-----------: |
+| [Post-Training Quantization](./docs/usage/post_training_compression/post_training_quantization/Usage.md) | Supported | Supported | Experimental | Supported     | Supported     |
+| [Weights Compression](./docs/usage/post_training_compression/weights_compression/Usage.md)               | Supported | Supported | Not supported | Not supported | Not supported |
+| [Activation Sparsity](./nncf/experimental/torch/sparsify_activations/ActivationSparsity.md)              | Not supported | Experimental | Not supported| Not supported| Not supported |
 
 ### Training-Time Compression Algorithms
 
@@ -138,6 +138,43 @@ quantized_model = nncf.quantize(model, calibration_dataset)
 
 </details>
 
+<details><summary><b>TorchFX</b></summary>
+
+```python
+import nncf
+import torch.fx
+from torchvision import datasets, models
+from torch._export import capture_pre_autograd_graph
+from nncf.torch.dynamic_graph.patch_pytorch import unpatch_torch_operators
+
+# Unpatch torch operators first
+unpatch_torch_operators()
+
+# Instantiate your uncompressed model
+model = models.mobilenet_v2()
+
+# Provide validation part of the dataset to collect statistics needed for the compression algorithm
+val_dataset = datasets.ImageFolder("/path", transform=transforms.Compose([transforms.ToTensor()]))
+dataset_loader = torch.utils.data.DataLoader(val_dataset)
+
+# Step 1: Initialize the transformation function
+def transform_fn(data_item):
+    images, _ = data_item
+    return images
+
+# Step 2: Initialize NNCF Dataset
+calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
+
+# Step 3: Export model to TorchFX
+input_shape = (1, 3, 224, 224)
+fx_model = capture_pre_autograd_graph(model.eval(), args=torch.ones(input_shape))
+
+# Step 4: Run the quantization pipeline
+quantized_fx_model = nncf.quantize(fx_model, calibration_dataset)
+
+```
+
+</details>
 <details><summary><b>TensorFlow</b></summary>
 
 ```python

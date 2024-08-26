@@ -2,7 +2,7 @@
 
 ## Post-training Compression
 
-- [Post Training Quantization (PTQ)](./usage/post_training_compression/post_training_quantization/Usage.md) (OpenVINO, PyTorch, ONNX, TensorFlow)
+- [Post Training Quantization (PTQ)](./usage/post_training_compression/post_training_quantization/Usage.md) (OpenVINO, PyTorch, TorchFX, ONNX, TensorFlow)
   - Symmetric and asymmetric quantization modes
   - Signed and unsigned
   - Per tensor/per channel
