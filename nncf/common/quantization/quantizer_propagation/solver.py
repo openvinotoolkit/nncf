@@ -1614,12 +1614,15 @@ class QuantizerPropagationSolver:
         :return: Filtered quantizer propagation state graph.
         """
         quantizers = self._finished_propagating_quantizers
+        to_remove_quantizers = []
         for quantizer in quantizers:
             if self._is_quantizer_to_remove(quant_prop_graph, quantizer, metatypes):
-                quant_prop_graph.remove_propagating_quantizer(quantizer)
-                self._finished_propagating_quantizers.remove(quantizer)
-                quantized_node_key = next(iter(quantizer.quantized_input_sink_operator_nodes))
-                nncf_logger.debug(f"Removes quantizer generated for a node {quantized_node_key}")
+                to_remove_quantizers.append(quantizer)
+        for quantizer in to_remove_quantizers:
+            quantized_node_key = next(iter(quantizer.quantized_input_sink_operator_nodes))
+            nncf_logger.debug(f"Removes quantizer generated for a node {quantized_node_key}")
+            quant_prop_graph.remove_propagating_quantizer(quantizer)
+            self._finished_propagating_quantizers.remove(quantizer)
         return quant_prop_graph
 
     def _is_quantizer_to_remove(
