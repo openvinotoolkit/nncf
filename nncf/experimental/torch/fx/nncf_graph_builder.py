@@ -20,9 +20,9 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.logging import nncf_logger
+from nncf.experimental.torch.fx import operator_metatypes as fx_om
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.dynamic_graph.layer_attributes_handlers import apply_args_defaults
-from nncf.experimental.torch.fx import operator_metatypes as fx_om
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 

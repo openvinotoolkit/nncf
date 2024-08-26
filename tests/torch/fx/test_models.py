@@ -43,6 +43,7 @@ FX_DIR_NAME = Path("fx")
 FX_QUANTIZED_DIR_NAME = Path("fx") / "quantized"
 FX_COMPRESSED_DIR_NAME = Path("fx") / "compressed"
 
+
 @dataclass
 class ModelCase:
     model_builder: Callable[[], torch.nn.Module]
