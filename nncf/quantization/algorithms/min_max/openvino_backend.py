@@ -57,7 +57,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.OVConvolutionMetatype]
 
     @property
-    def elementwise_metatypes(self) -> List[OperatorMetatype]:  # Name based on purpose (remove metatypes?)
+    def elementwise_metatypes(self) -> List[OperatorMetatype]:
         return ELEMENTWISE_OPERATIONS
 
     @property
