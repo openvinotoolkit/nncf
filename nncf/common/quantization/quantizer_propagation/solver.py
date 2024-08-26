@@ -481,6 +481,7 @@ class QuantizerPropagationSolver:
         :param ip_graph: The InsertionPointGraph, potentially with fused operations w.r.t. the
         original model graph. The propagating quantizers will travel along the pre- and post-
         hook nodes registered in this graph.
+        :param metatypes_for_filter: Metatypes are used for the removal criterion.
         :return: The intermediate propagation state in the form of QuantizationProposal, which
         defines unambiguously the locations of the propagating quantizers, but not the final
         configurations.
