@@ -97,7 +97,7 @@ class WeightedProgress(Progress):
             task.fields["completed_steps"] = 0
 
     @staticmethod
-    def weighted_advance(task: Task, advance: float):
+    def weighted_advance(task: Task, advance: float) -> float:
         """
         Perform weighted advancement based on an integer step value.
         """
@@ -110,7 +110,7 @@ class WeightedProgress(Progress):
         return weighted_advance
 
     @staticmethod
-    def get_weighted_completed(task: Task, completed: float):
+    def get_weighted_completed(task: Task, completed: float) -> float:
         """
         Get weighted `completed` corresponding to an integer `completed` field.
         """
@@ -137,7 +137,7 @@ class track:
         update_period: float = 0.1,
         disable: bool = False,
         show_speed: bool = True,
-        weights: List[float] = None,
+        weights: Optional[List[float]] = None,
     ):
         """
         Track progress by iterating over a sequence.
