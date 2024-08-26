@@ -603,7 +603,6 @@ class QuantizerPropagationSolver:
             final_weight_quantizable_node_names_vs_qconfig_dict
         )
         final_setup = multi_setup_with_one_config_per_point.select_first_qconfig_for_each_point()
-
         return final_setup
 
     def get_num_potential_quantized_activations(self) -> int:
