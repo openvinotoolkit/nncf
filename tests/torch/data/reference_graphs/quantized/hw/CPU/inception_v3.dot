@@ -330,7 +330,6 @@ strict digraph  {
 "328 /nncf_model_output_0" [id=328, type=nncf_model_output];
 "/nncf_model_input_0|OUT" [color=purple, id=0, label="Quantizer: B:8 M:S SGN:ANY PC:N"];
 "Inception3/__add___0|OUT" [color=purple, id=4, label="Quantizer: B:8 M:S SGN:ANY PC:N"];
-"Inception3/__mul___1|OUT" [color=purple, id=7, label="Quantizer: B:8 M:S SGN:ANY PC:N"];
 "Inception3/__add___1|OUT" [color=purple, id=8, label="Quantizer: B:8 M:S SGN:ANY PC:N"];
 "Inception3/__add___2|OUT" [color=purple, id=12, label="Quantizer: B:8 M:S SGN:ANY PC:N"];
 "Inception3/BasicConv2d[Conv2d_1a_3x3]/NNCFConv2d[conv]/conv2d_0|WEIGHT" [color=purple, id=14, label="Quantizer: B:8 M:S SGN:S PC:Y"];
@@ -539,7 +538,7 @@ strict digraph  {
 "4 Inception3/__add___0" -> "Inception3/__add___0|OUT";
 "5 Inception3/__getitem___1" -> "6 Inception3/unsqueeze_1";
 "6 Inception3/unsqueeze_1" -> "7 Inception3/__mul___1";
-"7 Inception3/__mul___1" -> "Inception3/__mul___1|OUT";
+"7 Inception3/__mul___1" -> "8 Inception3/__add___1";
 "8 Inception3/__add___1" -> "Inception3/__add___1|OUT";
 "9 Inception3/__getitem___2" -> "10 Inception3/unsqueeze_2";
 "10 Inception3/unsqueeze_2" -> "11 Inception3/__mul___2";
@@ -895,7 +894,6 @@ strict digraph  {
 "/nncf_model_input_0|OUT" -> "5 Inception3/__getitem___1";
 "/nncf_model_input_0|OUT" -> "9 Inception3/__getitem___2";
 "Inception3/__add___0|OUT" -> "13 Inception3/cat_0";
-"Inception3/__mul___1|OUT" -> "8 Inception3/__add___1";
 "Inception3/__add___1|OUT" -> "13 Inception3/cat_0";
 "Inception3/__add___2|OUT" -> "13 Inception3/cat_0";
 "Inception3/BasicConv2d[Conv2d_1a_3x3]/NNCFConv2d[conv]/conv2d_0|WEIGHT" -> "14 Inception3/BasicConv2d[Conv2d_1a_3x3]/NNCFConv2d[conv]/conv2d_0";
