@@ -91,7 +91,7 @@ def get_ref_metatypes_from_json(
         if not os.path.exists(json_parent_dir):
             os.makedirs(json_parent_dir)
         with safe_open(complete_path, "w") as file:
-            json.dump(model_metatypes, file)
+            json.dump(model_metatypes, file, indent=4)
 
     with safe_open(complete_path, "r") as file:
         return json.load(file)
@@ -116,7 +116,7 @@ def test_model(test_case: ModelCase):
         check_graph(nncf_graph, dot_filename, FX_DIR_NAME)
 
         # Check metatypes
-        model_metatypes = {n.node_name: n.metatype.name for n in nncf_graph.get_all_nodes()}
+        model_metatypes = {n.node_name: n.metatype.__name__ for n in nncf_graph.get_all_nodes()}
         ref_metatypes = get_ref_metatypes_from_json(model_name, model_metatypes)
         assert model_metatypes == ref_metatypes
 

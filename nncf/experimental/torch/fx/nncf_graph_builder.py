@@ -15,9 +15,13 @@ import torch.fx
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.logging import nncf_logger
+from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.torch.dynamic_graph.layer_attributes_handlers import apply_args_defaults
 from nncf.experimental.torch.fx import operator_metatypes as fx_om
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
@@ -27,6 +31,39 @@ class GraphConverter:
     """
     Builds the NNCFGraph from an torch.fx.GraphModule instance.
     """
+
+    def _get_layer_attributes(
+        node: torch.fx.Node, metatype: om.OperatorMetatype, model: torch.fx.GraphModule
+    ) -> BaseLayerAttributes:
+        """
+        Collects layer attributes for the given node.
+
+        :param node: Given node.
+        :param metatype: Given node metatype.
+        :param model: Target GraphModule instance.
+        :return: Given node layer attributes.
+        """
+        if metatype in [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype]:
+            conv_default_args = [(arg.name, arg.default_value) for arg in node.target._schema.arguments]
+            kwargs = apply_args_defaults(node.args, node.kwargs, conv_default_args)
+
+            weight_node = kwargs["weight"]
+            if weight_node.op != "get_attr":
+                # Convs with constant subgraphs or two inputs are not supported yet.
+                return None
+            weight = get_tensor_constant_from_node(weight_node, model)
+            return ConvolutionLayerAttributes(
+                weight_requires_grad=False,
+                in_channels=weight.shape[0],
+                out_channels=weight.shape[1],
+                kernel_size=list(weight.shape[2:]),
+                stride=kwargs["stride"],
+                dilations=kwargs["dilation"],
+                groups=kwargs["groups"],
+                padding_values=kwargs["padding"],
+                transpose=False,
+            )
+        return None
 
     def _map_fx_unique_metatypes(node: torch.fx.Node, metatype: om.OperatorMetatype) -> om.OperatorMetatype:
         """
@@ -52,6 +89,7 @@ class GraphConverter:
         Retrieves node's type and metatype.
 
         :param node: Given node.
+        :param model: Given GraphModule.
         :return: Node's type and metatype.
         """
         if node.op == "placeholder":
@@ -77,6 +115,11 @@ class GraphConverter:
             node_metatype = UnknownMetatype
         if node_metatype is UnknownMetatype:
             nncf_logger.debug(f"Unknown metatype for node: {node}")
+
+        if node_metatype.get_subtypes():
+            layer_attrs = GraphConverter._get_layer_attributes(node, node_metatype, model)
+            node_subtype = node_metatype.determine_subtype(layer_attrs)
+            node_metatype = node_subtype or node_metatype
         return node_type, node_metatype
 
     @staticmethod
