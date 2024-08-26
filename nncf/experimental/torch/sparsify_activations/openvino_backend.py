@@ -9,21 +9,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Type, Optional, Union
+from typing import Dict, List, Optional, Type, Union
 
-from openvino.runtime import opset13 as opset
 import openvino.runtime
+from openvino.runtime import opset13 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
+from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.collectors import OVAbsQuantileReducer
-from nncf.tensor.functions.torch_numeric import quantile
-from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.torch.nncf_network import NNCFNetwork
 
 ACTIVATIONS_SPARSIFIER_PREFIX = "activations_sparsifier"
@@ -61,19 +60,42 @@ class OVSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
             zero_const = opset.constant(0.0, dtype=dtype)
 
             less_mask = opset.less_equal(opset.abs(dense_activation), threshold_const)
-            sparse_activation = opset.select(less_mask, zero_const, dense_activation, name=f"{matmul_node.name}/sparse_input")
+            sparse_activation = opset.select(
+                less_mask, zero_const, dense_activation, name=f"{matmul_node.name}/sparse_input"
+            )
             matmul_node.input(activation_port_id).replace_source_output(sparse_activation.output(0))
 
         return model
 
     @staticmethod
-    def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        return 0
+    def get_activation_port_id(matmul_node: NNCFNode, nncf_graph: NNCFGraph) -> int:
+        # return 0
+        n_inputs = len(nncf_graph.get_input_edges(matmul_node))
+        if n_inputs != 2:
+            raise RuntimeError(f"Expected node to have two inputs, but found {n_inputs} for node {matmul_node}.")
 
-        # Code below won't work for the case of compressed weight constant
-        constant_ports = node.layer_attributes.get_const_port_ids()
-        activation_ports = [
-            e.input_port_id for e in nncf_graph.get_input_edges(node) if e.input_port_id not in constant_ports
+        is_const_node_on_port = [
+            nncf_graph.get_input_edges(matmul_node)[i].from_node.node_type == "Constant" for i in range(2)
         ]
-        assert len(activation_ports) == 1
-        return activation_ports[0]
+        if is_const_node_on_port[0] != is_const_node_on_port[1]:
+            return 1 if is_const_node_on_port[0] else 0
+
+        # Try to match compressed constant subgraph
+        for i in range(2):
+            node = nncf_graph.get_input_edges(matmul_node)[i].from_node
+            if node.node_type == "Convert":
+                node = nncf_graph.get_input_edges(node)[0].from_node
+            if node.node_type == "Multiply":
+                node = nncf_graph.get_input_edges(node)[0].from_node
+            else:
+                continue
+            if node.node_type == "Subtract":
+                node = nncf_graph.get_input_edges(node)[0].from_node
+            else:
+                continue
+            if node.node_type == "Convert":
+                node = nncf_graph.get_input_edges(node)[0].from_node
+            if node.node_type == "Constant":
+                return int(i == 0)
+
+        raise RuntimeError(f"Could not find activation port id for node {matmul_node}.")
