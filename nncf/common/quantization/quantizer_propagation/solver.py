@@ -1630,7 +1630,7 @@ class QuantizerPropagationSolver:
         quant_prop_graph: QuantizerPropagationStateGraph,
         quantizer: PropagatingQuantizer,
         metatypes: List[OperatorMetatype],
-    ):
+    ) -> bool:
         """
         Returns True if the quantizer meets the criteria for removal. The criteria are as follows:
         1. The quantizer is generated from a node whose metatype is in the provided metatypes.

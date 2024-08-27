@@ -137,6 +137,8 @@ class TestPTQParams(TemplateTestPTQParams):
         params=[
             (IgnoredScope(), 1, 1),
             (IgnoredScope(["MatMul"]), 0, 0),
+            (IgnoredScope(["Add"]), 1, 1),
+            (IgnoredScope(["MatMul", "Add"]), 0, 0),
         ]
     )
     def ignored_scopes_data(self, request):
