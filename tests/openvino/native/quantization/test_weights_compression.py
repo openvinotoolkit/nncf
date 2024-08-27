@@ -1027,7 +1027,7 @@ def get_shape_for_second_input(op_with_weights: ov.Node) -> List[int]:
 
 @pytest.mark.parametrize(
     "params, transpose_b",
-    ((None, True), (LoraParams(rank=4, is_int8_adapters=False), False)),
+    ((None, True), (LoraParams(adapter_rank=4, use_int8_adapters=False), False)),
 )
 def test_lora_adapters_in_the_graph(params, transpose_b):
     advanced_parameters = CompressionParams() if params is None else CompressionParams(lora_correction_params=params)
@@ -1052,31 +1052,31 @@ def test_lora_adapters_in_the_graph(params, transpose_b):
         assert next_node.type_info.name == "MatMul"
         shape = get_shape_for_second_input(next_node)
         if shape != LMLinearModel.get_weight_shape(transpose_b):
-            assert shape == [advanced_parameters.lora_correction_params.rank, LMLinearModel.HIDDEN_DIM]
+            assert shape == [advanced_parameters.lora_correction_params.adapter_rank, LMLinearModel.HIDDEN_DIM]
             node = get_next_node(next_node)
             assert node.type_info.name == "MatMul"
             assert get_shape_for_second_input(node) == [
                 LMLinearModel.OUTPUT_DIM,
-                advanced_parameters.lora_correction_params.rank,
+                advanced_parameters.lora_correction_params.adapter_rank,
             ]
         else:
             node = get_next_node(next_node)
             assert node.type_info.name == "Add"
 
     num_u8 = sum(1 for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.u8)
-    ref_u8 = 4 if advanced_parameters.lora_correction_params.is_int8_adapters else 0
+    ref_u8 = 4 if advanced_parameters.lora_correction_params.use_int8_adapters else 0
     assert ref_u8 == num_u8
 
 
 @pytest.mark.parametrize(
-    "mode, add_regularization, is_per_channel",
+    "mode, apply_regularization, is_per_channel",
     (
         (CompressWeightsMode.INT4_SYM, True, False),
         (CompressWeightsMode.NF4, True, False),
         (CompressWeightsMode.NF4, True, True),
     ),
 )
-def test_lora_adapters_reduce_noise(zero_seed, mode, add_regularization, is_per_channel, mocker, tmp_path):
+def test_lora_adapters_reduce_noise(zero_seed, mode, apply_regularization, is_per_channel, mocker, tmp_path):
     mocker.patch("nncf.quantization.algorithms.weight_compression.lora_correction.DEBUG_LOG_DIR", str(tmp_path))
 
     model_cls = LMLinearModel
@@ -1110,7 +1110,9 @@ def test_lora_adapters_reduce_noise(zero_seed, mode, add_regularization, is_per_
             all_layers=True,
             lora_correction=True,
             advanced_parameters=CompressionParams(
-                lora_correction_params=LoraParams(add_regularization=add_regularization, num_iters=n_iters, rank=2)
+                lora_correction_params=LoraParams(
+                    apply_regularization=apply_regularization, num_iterations=n_iters, adapter_rank=2
+                )
             ),
         )
     compiled_model = ie.compile_model(int4_model, "CPU")
@@ -1156,7 +1158,7 @@ def test_compression_with_lora_for_different_dtypes(activation_dtype, weight_dty
         all_layers=True,
         lora_correction=True,
         advanced_parameters=CompressionParams(
-            lora_correction_params=LoraParams(num_iters=0, rank=3, is_int8_adapters=True)
+            lora_correction_params=LoraParams(num_iterations=0, adapter_rank=3, use_int8_adapters=True)
         ),
     )
 
@@ -1191,7 +1193,9 @@ def test_compression_with_lora_with_subset_size(mocker):
         all_layers=True,
         lora_correction=True,
         advanced_parameters=CompressionParams(
-            lora_correction_params=LoraParams(num_iters=0, rank=3, is_int8_adapters=False, subset_size=subset_size)
+            lora_correction_params=LoraParams(
+                num_iterations=0, adapter_rank=3, use_int8_adapters=False, subset_size=subset_size
+            )
         ),
     )
 

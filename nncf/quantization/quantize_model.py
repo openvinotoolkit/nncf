@@ -515,7 +515,9 @@ def compress_weights(
         }
         unsupported_for_int8 = [name for name, value in options.items() if value is not None]
         if unsupported_for_int8:
-            raise AttributeError(f"INT8 modes do not support {unsupported_for_int8} option(s). Set them to None.")
+            raise AttributeError(
+                f"INT8 modes do not support {', '.join(unsupported_for_int8)} option(s). Set them to None."
+            )
 
     if ratio is None:
         ratio = 1

@@ -451,7 +451,7 @@ WEIGHT_COMPRESSION_MODELS = [
             "lora_correction": True,
             "advanced_parameters": AdvancedCompressionParameters(
                 lora_correction_params=AdvancedLoraCorrectionParameters(
-                    rank=8, num_iters=3, add_regularization=False, subset_size=32, is_int8_adapters=True
+                    adapter_rank=8, num_iterations=3, apply_regularization=False, subset_size=32, use_int8_adapters=True
                 )
             ),
         },

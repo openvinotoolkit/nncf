@@ -282,7 +282,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             if lora_correction_algo is not None and lora_correction_algo.is_applicable(wc_params):
                 adapters = lora_correction_algo.calculate_adapters(weight, compressed_weight, wc_params)
-                self.insert_adapters(wc_params, *adapters, int8_lora=lora_correction_algo.is_int8_adapters)
+                self.insert_adapters(wc_params, *adapters, int8_lora=lora_correction_algo.use_int8_adapters)
 
         # reset name_to_node_mapping
         self.name_to_node_mapping = None

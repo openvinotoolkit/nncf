@@ -94,8 +94,8 @@ class LoraCorrectionAlgorithm:
             self._debug_interface.dump_data()
 
     @property
-    def is_int8_adapters(self) -> bool:
-        return self._lora_correction_params.is_int8_adapters
+    def use_int8_adapters(self) -> bool:
+        return self._lora_correction_params.use_int8_adapters
 
     def is_applicable(self, wc_params: WeightCompressionParameters):
         return wc_params.compression_config.num_bits == 4
@@ -156,10 +156,10 @@ class LoraCorrectionAlgorithm:
             Noises are collected from each step of the algorithm if debug was enabled.
             First low rank matrix has shape=[R, H], the second - [O, R], where R - rank, H/O - hidden/output dimension.
         """
-        rank, num_iters, add_regularization, subset_size = (
-            lora_correction_params.rank,
-            lora_correction_params.num_iters,
-            lora_correction_params.add_regularization,
+        rank, num_iterations, apply_regularization, subset_size = (
+            lora_correction_params.adapter_rank,
+            lora_correction_params.num_iterations,
+            lora_correction_params.apply_regularization,
             lora_correction_params.subset_size,
         )
         mode = compression_config.mode
@@ -215,10 +215,10 @@ class LoraCorrectionAlgorithm:
         # An iterative algorithm for correction (refinement) of the low-rank adapters.
         mean_noises = []
         noise = X @ residual  # [SS, H] * [H, O] = [SS, O]
-        for i in range(num_iters):
+        for i in range(num_iterations):
             # Part 1: U is fixed, find V.
             XU = X @ U  # [SS, R]
-            if not add_regularization:
+            if not apply_regularization:
                 # X @ U @ V = noise      ---> a @ x = b
                 new_V = fns.linalg.lstsq(XU, noise, driver="gelsy")
             else:
@@ -244,7 +244,7 @@ class LoraCorrectionAlgorithm:
             # Part 2: V is fixed, find U.
             VI = fns.linalg.pinv(V)  # [O, R]
             noiseVI = noise @ VI  # [R, SS]
-            if not add_regularization:
+            if not apply_regularization:
                 # VI = V^-1
                 # 1) X @ U @ V = noise
                 # 1) X @ U = noise @ VI     ---> a @ x = b
