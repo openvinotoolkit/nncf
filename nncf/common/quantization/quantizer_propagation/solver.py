@@ -1659,10 +1659,9 @@ class QuantizerPropagationSolver:
         for quantizer in quantizers:
             quantized_node_key = next(iter(quantizer.quantized_input_sink_operator_nodes))
             if _is_quantizer_to_remove(quant_prop_graph, quantizer, metatypes):
+                nncf_logger.debug(f"Quantizer generated for a node {quantized_node_key} will be removed.")
                 to_remove_quantizers.append(quantizer)
         for quantizer in to_remove_quantizers:
-            quantized_node_key = next(iter(quantizer.quantized_input_sink_operator_nodes))
-            nncf_logger.debug(f"Removes quantizer generated for a node {quantized_node_key}")
             quant_prop_graph.remove_propagating_quantizer(quantizer)
             self._finished_propagating_quantizers.remove(quantizer)
         return quant_prop_graph
