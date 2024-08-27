@@ -14,9 +14,13 @@ from pathlib import Path
 from typing import Any, Tuple
 
 import pytest
-import torch
+import torch.fx
 from torch._export import capture_pre_autograd_graph
+from torch.ao.quantization.observer import MinMaxObserver
+from torch.ao.quantization.observer import PerChannelMinMaxObserver
+from torch.quantization.fake_quantize import FakeQuantize
 
+import nncf
 from nncf.common.factory import NNCFGraph
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
@@ -25,8 +29,13 @@ from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.experimental.torch.fx.transformations import bias_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
+from nncf.experimental.torch.fx.transformations import leaf_module_insertion_transformation_builder
+from nncf.experimental.torch.fx.transformations import module_insertion_transformation_builder
+from nncf.experimental.torch.fx.transformations import node_removal_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
+from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import shared_constants_unification_transformation
 from nncf.torch import disable_patching
 from nncf.torch.graph.operator_metatypes import CONST_NOOP_METATYPES
@@ -98,6 +107,7 @@ def _capture_model(model: torch.nn.Module, inputs: torch.Tensor) -> torch.fx.Gra
 @pytest.mark.parametrize("test_case", MODEL_EXTRACTION_CASES, ids=idfn)
 def test_model_extraction(test_case: ModelExtractionTestCase):
     captured_model = _capture_model(test_case.model(), torch.ones(test_case.input_shape))
+
     layout = TransformationLayout()
     layout.register(test_case.command)
     extracted_model = FXModelTransformer(captured_model).transform(layout)
@@ -111,6 +121,201 @@ MultiBranchesConnectedModel_TARGET_POINTS = (
     PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, "conv2d_1", input_port_id=1),
     PTTargetPoint(TargetType.OPERATOR_POST_HOOK, "conv2d"),
 )
+
+
+@pytest.mark.parametrize("leaf", [False, True], ids=["no_leaf", "leaf"])
+def test_model_insertion_transformation(leaf):
+    class TestInsertModule(torch.nn.Module):
+        def forward(self, x):
+            return x + 1
+
+    target_points = list(MultiBranchesConnectedModel_TARGET_POINTS)
+    target_node_name = "TEST_MODULE"
+    test_module_instance = TestInsertModule()
+    builder = leaf_module_insertion_transformation_builder if leaf else module_insertion_transformation_builder
+    transformation = builder(test_module_instance, target_points, target_node_name)
+
+    model = MultiBranchesConnectedModel()
+    captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
+    transformation(captured_model)
+
+    nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+    assert getattr(captured_model, target_node_name) is test_module_instance
+    check_graph(
+        nncf_graph, f"model_insertion_{'leaf_' if leaf else ''}ref.dot", str(TRANSFORMED_GRAPH_DIR_NAME), extended=True
+    )
+
+
+@pytest.mark.parametrize("bias", [True, False], ids=["bias", "constant"])
+def test_constant_update_transformation(bias):
+    model = MultiBranchesConnectedModel()
+    captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
+    nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+    target_node = nncf_graph.get_node_by_name("conv2d" if bias else "add_")
+
+    builder = bias_update_transformation_builder if bias else constant_update_transformation_builder
+    new_value = torch.tensor((42.0,))
+    transformation = builder(target_node, value=new_value, input_port_id=1)
+    transformation(captured_model)
+
+    add_node = get_graph_node_by_name(captured_model.graph, "add_")
+    assert get_tensor_constant_from_node(add_node.args[1], captured_model) == new_value
+
+    transformed_nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+    check_graph(transformed_nncf_graph, "constant_update_ref.dot", str(TRANSFORMED_GRAPH_DIR_NAME), extended=True)
+
+
+@pytest.mark.parametrize("bias", [True, False], ids=["bias", "constant"])
+def test_constant_update_transformation_no_constant(bias):
+    model = MultiBranchesConnectedModel()
+    captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
+    nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+    target_node = nncf_graph.get_node_by_name("add")
+
+    builder = bias_update_transformation_builder if bias else constant_update_transformation_builder
+    new_value = torch.tensor((42.0,))
+    transformation = builder(target_node, value=new_value, input_port_id=1)
+    with pytest.raises(nncf.InternalError):
+        transformation(captured_model)
+
+
+@pytest.mark.parametrize("per_channel", [False, True], ids=["per_tensor", "per_channel"])
+@pytest.mark.parametrize("symmetric", [True, False], ids=["symmetric", "assymetric"])
+@pytest.mark.parametrize(
+    "q_min,q_max,dtype",
+    [(-128, 127, torch.qint8), (0, 255, torch.quint8)],
+    ids=["int8", "uint8"],
+)
+class TestQDQInsertion:
+    REF_SCALE = torch.tensor([1.0])
+    REF_ZERO_POINT = torch.tensor([0.0])
+
+    def _get_quantizer(
+        self, per_channel: bool, symmetric: bool, q_min: torch.Tensor, q_max: torch.Tensor, dtype: torch.dtype
+    ) -> FakeQuantize:
+        if symmetric:
+            qscheme = torch.per_channel_symmetric if per_channel else torch.per_tensor_symmetric
+        else:
+            qscheme = torch.per_channel_affine if per_channel else torch.per_tensor_affine
+        observer = PerChannelMinMaxObserver if per_channel else MinMaxObserver
+
+        quantizer = FakeQuantize(
+            observer=observer,
+            quant_min=q_min,
+            quant_max=q_max,
+            dtype=dtype,
+            qscheme=qscheme,
+            eps=1e-5,
+        )
+        quantizer.scale = self.REF_SCALE
+        quantizer.zero_point = self.REF_ZERO_POINT
+
+        return quantizer
+
+    def _check_qdq_params(
+        self, captured_model: torch.fx.GraphModule, target_point: PTTargetPoint, dtype: torch.dtype, per_channel: bool
+    ):
+        target_node = get_graph_node_by_name(captured_model.graph, target_point.target_node_name)
+        if target_point.target_type in [TargetType.OPERATION_WITH_WEIGHTS, TargetType.OPERATOR_PRE_HOOK]:
+            dq_node = target_node.args[target_point.input_port_id]
+            q_node = dq_node.args[0]
+        else:
+            q_node = list(target_node.users)[0]
+
+        ref_dtype = torch.int8 if dtype == torch.qint8 else torch.uint8
+        if per_channel:
+
+            def get_value(node: torch.fx.Node):
+                return get_tensor_constant_from_node(node, captured_model)
+
+        else:
+
+            def get_value(node: torch.fx.Node):
+                return node
+
+        assert q_node.args[-1] == ref_dtype
+        assert get_value(q_node.args[1]) == self.REF_SCALE
+        assert get_value(q_node.args[2]) == self.REF_ZERO_POINT
+        for dq_node in q_node.users:
+            assert get_value(dq_node.args[1]) == self.REF_SCALE
+            assert get_value(dq_node.args[2]) == self.REF_ZERO_POINT
+            assert dq_node.args[-1] == ref_dtype
+
+    @pytest.mark.parametrize("target_point", MultiBranchesConnectedModel_TARGET_POINTS)
+    def test_one_target_point(self, per_channel, symmetric, q_min, q_max, dtype, target_point):
+        quantizer = self._get_quantizer(per_channel, symmetric, q_min, q_max, dtype)
+        transformation = qdq_insertion_transformation_builder(quantizer, [target_point])
+
+        model = MultiBranchesConnectedModel()
+        captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
+        transformation(captured_model)
+
+        self._check_qdq_params(captured_model, target_point, dtype, per_channel)
+
+        nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+        check_graph(
+            nncf_graph,
+            f"qdq_insert_{_target_point_to_str(target_point)}"
+            f"_{'per_channel' if per_channel else 'per_tensor'}_ref.dot",
+            str(TRANSFORMED_GRAPH_DIR_NAME),
+            extended=True,
+        )
+
+    @pytest.mark.parametrize(
+        "target_points,weights",
+        [
+            (
+                [
+                    PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, "conv2d", input_port_id=0),
+                    PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, "conv2d", input_port_id=1),
+                    PTTargetPoint(TargetType.OPERATOR_POST_HOOK, "conv2d"),
+                ],
+                False,
+            ),
+            (
+                [
+                    PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, "conv2d", input_port_id=1),
+                    PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, "conv2d_1", input_port_id=1),
+                ],
+                True,
+            ),
+        ],
+    )
+    def test_shared_target_point(self, per_channel, symmetric, q_min, q_max, dtype, target_points, weights):
+        quantizer = self._get_quantizer(per_channel, symmetric, q_min, q_max, dtype)
+        transformation = qdq_insertion_transformation_builder(quantizer, target_points)
+
+        model = MultiBranchesConnectedModel()
+        captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
+        if not weights:
+            with pytest.raises(nncf.InternalError):
+                transformation(captured_model)
+            return
+
+        transformation(captured_model)
+
+        for target_point in target_points:
+            self._check_qdq_params(captured_model, target_point, dtype, per_channel)
+
+        nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+        check_graph(
+            nncf_graph,
+            f"qdq_shared_insert_{'weights' if weights else 'activations'}"
+            f"_{'per_channel' if per_channel else 'per_tensor'}_ref.dot",
+            str(TRANSFORMED_GRAPH_DIR_NAME),
+            extended=True,
+        )
+
+
+def test_node_removal_transformation():
+    model = MultiBranchesConnectedModel()
+    captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
+    nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+    node = nncf_graph.get_node_by_name("conv2d")
+    transformation = node_removal_transformation_builder(node, input_port_id=0)
+    transformation(captured_model)
+    transformed_nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+    check_graph(transformed_nncf_graph, "node_removal_ref.dot", str(TRANSFORMED_GRAPH_DIR_NAME), extended=True)
 
 
 @pytest.mark.parametrize("tuple_output", [False, True], ids=["node_out", "tuple_out"])
