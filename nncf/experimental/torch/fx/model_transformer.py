@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from collections import defaultdict
-from copy import deepcopy
 from typing import List, Set
 
 import torch
@@ -26,10 +25,12 @@ from nncf.torch.graph.transformations.layout import PTTransformationLayout
 class FXModelTransformer(ModelTransformer):
     """
     Applies transformations upon Torch FX model.
+    FXApplyTransformationCommands are made inplace,
+    PTModelExtractionCommands do not change the input model.
     """
 
     def __init__(self, model: torch.fx.GraphModule):
-        super().__init__(deepcopy(model))
+        super().__init__(model)
 
         self._command_transformation_ordered_pairs = [
             (FXApplyTransformationCommand, self._apply_transformation),
