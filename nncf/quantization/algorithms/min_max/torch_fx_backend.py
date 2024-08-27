@@ -346,8 +346,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        retval = set()
-        for node in nncf_graph.get_all_nodes():
-            if node.metatype in [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype, om.PTLinearMetatype]:
-                retval.add(node)
-        return list(retval)
+        return [
+            node
+            for node in nncf_graph.get_all_nodes()
+            if issubclass(node.metatype, om.PTOperatorMetatype) and node.metatype.weight_port_ids
+        ]
