@@ -23,7 +23,7 @@ jobs:
             name: api_status
 
       - name: Get api_status
-        run: cat api_status.txt
+        run: cat api_status.json
 
       - name: Set output value
         id: status
@@ -53,7 +53,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            github.rest.issues.addLabels({
+            github.rest.issues.removeLabel({
               issue_number: ${{ steps.status.outputs.pr_number }},
               owner: context.repo.owner,
               repo: context.repo.repo,
