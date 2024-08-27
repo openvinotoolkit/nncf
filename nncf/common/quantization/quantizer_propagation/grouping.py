@@ -70,8 +70,6 @@ class UnifiedScalePropagatingQuantizerGroupManager:
         :param prop_quant: The propagating quantizer to be removed from the group.
         """
         self._group_vs_prop_quants_dict[group].remove(prop_quant)
-        if not self._group_vs_prop_quants_dict[group]:
-            del self._group_vs_prop_quants_dict[group]
 
     def get_group_vs_prop_quants_dict(self) -> Dict[int, Set[PropagatingQuantizer]]:
         """
