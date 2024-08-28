@@ -116,7 +116,7 @@ def create_se_block() -> GraphPattern:
     reduce_mean_node = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "REDUCE_MEAN",
-            GraphPattern.METATYPE_ATTR: om.ONNXReduceMeanMetatype,
+            GraphPattern.METATYPE_ATTR: [om.ONNXReduceMeanMetatype, om.ONNXGlobalAveragePoolMetatype],
             GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
         }
     )

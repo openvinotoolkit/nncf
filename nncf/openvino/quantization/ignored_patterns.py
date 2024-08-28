@@ -169,3 +169,63 @@ def create_se_block() -> GraphPattern:
     pattern.add_edge(activation_node_2, multiply_node)
     pattern.add_edge(any_node, multiply_node)
     return pattern
+
+
+@OPENVINO_IGNORED_PATTERNS.register(IgnoredPatternNames.SE_BLOCK_WITH_RESHAPE)
+def create_se_block_with_resahpe() -> GraphPattern:
+    pattern = GraphPattern()
+    any_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+    )
+    reduce_mean_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "REDUCE_MEAN",
+            GraphPattern.METATYPE_ATTR: om.OVReduceMeanMetatype,
+            GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
+        }
+    )
+    reshape_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "RESHAPE",
+            GraphPattern.METATYPE_ATTR: om.OVReshapeMetatype,
+        }
+    )
+    linear_node_1 = pattern.add_node(
+        **{GraphPattern.METATYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"}
+    )
+    add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    activation_node_1 = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "RELU, PRELU, SWISH",
+            GraphPattern.METATYPE_ATTR: [om.OVReluMetatype, om.OVPReluMetatype, om.OVSwishMetatype],
+        }
+    )
+    linear_node_2 = pattern.add_node(
+        **{GraphPattern.METATYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"}
+    )
+    add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    activation_node_2 = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "SIGMOID",
+            GraphPattern.METATYPE_ATTR: [om.OVSigmoidMetatype, om.OVHSigmoidMetatype],
+        }
+    )
+    multiply_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "MULTIPLY",
+            GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype,
+            GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
+        }
+    )
+
+    pattern.add_edge(any_node, reduce_mean_node)
+    pattern.add_edge(reduce_mean_node, reshape_node)
+    pattern.add_edge(reshape_node, linear_node_1)
+    pattern.add_edge(linear_node_1, add_node_1)
+    pattern.add_edge(add_node_1, activation_node_1)
+    pattern.add_edge(activation_node_1, linear_node_2)
+    pattern.add_edge(linear_node_2, add_node_2)
+    pattern.add_edge(add_node_2, activation_node_2)
+    pattern.add_edge(activation_node_2, multiply_node)
+    pattern.add_edge(any_node, multiply_node)
+    return pattern
