@@ -46,7 +46,7 @@ QUANTIZATION_MODELS = [
         "backends": ALL_PTQ_BACKENDS + [BackendType.OPTIMUM],
     },
     {
-        "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
+        "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_statefull",
         "model_id": "hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
         "pipeline_cls": CausalLMHF,
         "compression_params": {
@@ -54,6 +54,19 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "subset_size": 2,
         },
+        "params": {"is_stateful": True},
+        "backends": [BackendType.OPTIMUM],
+    },
+    {
+        "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_stateless",
+        "model_id": "hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
+        "pipeline_cls": CausalLMHF,
+        "compression_params": {
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "subset_size": 2,
+        },
+        "params": {"is_stateful": False},
         "backends": [BackendType.OPTIMUM],
     },
     {
