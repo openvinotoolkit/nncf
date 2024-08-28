@@ -10,9 +10,13 @@ hf/bert-base-uncased_backend_OV:
   metric_value: null
 hf/bert-base-uncased_backend_TORCH:
   metric_value: null
-hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_backend_FP32:
+hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_statefull_backend_FP32:
   metric_value: null
-hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_backend_OPTIMUM:
+hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_stateless_backend_FP32:
+  metric_value: null
+hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_statefull_backend_OPTIMUM:
+  metric_value: null
+hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_stateless_backend_OPTIMUM:
   metric_value: null
 hf/hf-internal-testing/tiny-random-gpt2_backend_FP32:
   metric_value: null
