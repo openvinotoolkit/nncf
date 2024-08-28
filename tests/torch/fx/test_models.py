@@ -160,24 +160,24 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters):
         check_graph(nncf_graph, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME)
 
 
-MODEL_COMRPESSION_MODES = [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8]
+MODEL_COMRPESSION_MODES = [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM]
+
 
 TEST_MODELS_COMPRESSED = (
-    (ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]), MODEL_COMRPESSION_MODES),
-    (torchvision_model_case("resnet18", (1, 3, 224, 224)), MODEL_COMRPESSION_MODES),
-    (torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)), MODEL_COMRPESSION_MODES),
-    (torchvision_model_case("vit_b_16", (1, 3, 224, 224)), MODEL_COMRPESSION_MODES),
-    (torchvision_model_case("swin_v2_s", (1, 3, 224, 224)), MODEL_COMRPESSION_MODES),
+    ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
+    torchvision_model_case("resnet18", (1, 3, 224, 224)),
+    torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)),
+    torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
+    torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
 )
 
 
-@pytest.mark.parametrize(
-    ("test_case", "model_compression_modes"), TEST_MODELS_COMPRESSED, ids=[m.model_id for m in TEST_MODELS]
-)
-def test_compressed_model(test_case: ModelCase, model_compression_modes: List[CompressWeightsMode]):
+@pytest.mark.parametrize("test_case", TEST_MODELS_COMPRESSED, ids=[m.model_id for m in TEST_MODELS_COMPRESSED])
+@pytest.mark.parametrize("compression_mode", MODEL_COMRPESSION_MODES, ids=[mode.name for mode in MODEL_COMRPESSION_MODES])
+def test_compressed_model(test_case: ModelCase, compression_mode: CompressWeightsMode):
     with disable_patching():
         device = torch.device("cpu")
-        model_name = test_case.model_id
+        model_name = '_'.join([test_case.model_id, str(compression_mode)])
         model = test_case.model_builder()
         model.to(device)
 
@@ -185,8 +185,7 @@ def test_compressed_model(test_case: ModelCase, model_compression_modes: List[Co
             ex_input = torch.ones(test_case.input_shape)
             model.eval()
             exported_model = capture_pre_autograd_graph(model, args=(ex_input,))
-        for mode in model_compression_modes:
-            compressed_model = nncf.compress_weights(exported_model, mode=CompressWeightsMode.INT8_SYM)
-            nncf_graph = GraphConverter.create_nncf_graph(compressed_model)
+        compressed_model = nncf.compress_weights(exported_model, mode=compression_mode)
+        nncf_graph = GraphConverter.create_nncf_graph(compressed_model)
 
-            check_graph(nncf_graph, get_dot_filename(model_name), FX_COMPRESSED_DIR_NAME)
+        check_graph(nncf_graph, get_dot_filename(model_name), FX_COMPRESSED_DIR_NAME)
