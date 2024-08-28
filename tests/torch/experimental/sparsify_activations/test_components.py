@@ -108,72 +108,32 @@ class TestActivationsSparsifier:
         self.device = torch.device("cuda" if use_cuda else "cpu")
 
     @pytest.mark.parametrize("dtype", [torch.float32, torch.float16])
-    def test_forward_before_calibration(self, use_cuda: bool, dtype: torch.dtype):
+    def test_sparsifier_forward(self, use_cuda: bool, dtype: torch.dtype):
         device = self.device
-        input_tensor = torch.rand([3, 3], device=device, dtype=dtype)
-        sparsifier = ActivationsSparsifier(target_sparsity=0.9).to(device)
-        assert sparsifier.freeze is True
-        assert not sparsifier.num_batches_tracked.is_nonzero()
-        assert sparsifier.running_threshold.isneginf()
-        output_tensor = sparsifier(input_tensor)
-        # The output tensor is a new tensor
-        assert not output_tensor.is_set_to(input_tensor)
-        # Before calibration, the sparsifier does not change the input
-        torch.testing.assert_close(output_tensor, input_tensor, rtol=1e-4, atol=1e-4)
-
-    @pytest.mark.parametrize(
-        "desc",
-        sparsifier_forward_during_calibration_test_descs.values(),
-        ids=sparsifier_forward_during_calibration_test_descs.keys(),
-    )
-    def test_forward_during_calibration(self, use_cuda: bool, desc: SparsifierForwardTestDesc):
-        device = self.device
-        sparsifier = ActivationsSparsifier(desc.target_sparsity, desc.alpha).to(device)
-        sparsifier.freeze = False
-        running_thresholds = []
-        outputs = []
-        with torch.no_grad():
-            for batch in desc.input_batches:
-                output = sparsifier(batch.to(device))
-                running_thresholds.append(sparsifier.running_threshold)
-                outputs.append(output)
-        assert sparsifier.num_batches_tracked == len(desc.input_batches)
-        assert len(running_thresholds) == len(desc.ref_running_thresholds)
-        for threshold, ref_threshold in zip(running_thresholds, desc.ref_running_thresholds):
-            assert threshold.device.type == device.type
-            torch.testing.assert_close(threshold, ref_threshold, rtol=1e-4, atol=1e-4, check_device=False)
-        assert len(outputs) == len(desc.ref_outputs)
-        for output, ref_output in zip(outputs, desc.ref_outputs):
-            assert output.device.type == device.type
-            torch.testing.assert_close(output, ref_output, rtol=1e-4, atol=1e-4, check_device=False)
-
-    @pytest.mark.parametrize("dtype", [torch.float32, torch.float16])
-    def test_forward_after_calibration(self, use_cuda: bool, dtype: torch.dtype):
-        device = self.device
-        sparsifier = ActivationsSparsifier(target_sparsity=0.9).to(device)
-        sparsifier.running_threshold.fill_(0.1)
-        sparsifier.num_batches_tracked.fill_(100)
+        sparsifier = ActivationsSparsifier(threshold=0.1).to(device)
 
         for _ in range(2):
             # The sparsifier does not change in the following forwards
             input_tensor = torch.rand([2, 10], device=device, dtype=dtype)
             ref_output = torch.where(input_tensor.abs() <= 0.1, 0.0, input_tensor)
             output_tensor = sparsifier(ref_output)
-            assert sparsifier.num_batches_tracked == 100
             torch.testing.assert_close(
-                sparsifier.running_threshold, torch.tensor(0.1, device=device), rtol=1e-4, atol=1e-4
+                sparsifier.threshold, torch.tensor(0.1, device=device), rtol=1e-4, atol=1e-4
             )
             torch.testing.assert_close(output_tensor, ref_output, rtol=1e-4, atol=1e-4)
 
 
 class TestPTSparsifyActivationsAlgoBackend:
+    @staticmethod
+    def get_sparsifiers(model: NNCFNetwork) -> List[ActivationsSparsifier]:
+        return [m for m in model.nncf.modules() if isinstance(m, ActivationsSparsifier)]
+
     def test_get_sparsifiers(self):
         model, dataset = self.create_model_and_dataset()
         sparse_model = nncf.experimental.torch.sparsify_activations.sparsify_activations(
             model, dataset, target_sparsity_by_scope={TargetScope(patterns=[".*"]): 0.5}
         )
-        backend = PTSparsifyActivationsAlgoBackend()
-        sparsifiers = backend.get_sparsifiers(sparse_model)
+        sparsifiers = self.get_sparsifiers(sparse_model)
         assert len(sparsifiers) == 3
 
     @pytest.mark.parametrize("compress_weights", [False, True])
@@ -183,35 +143,15 @@ class TestPTSparsifyActivationsAlgoBackend:
         ref_output = model(example_input)
 
         graph = model.nncf.get_graph()
-        nodes = graph.get_nodes_by_metatypes(PTSparsifyActivationsAlgoBackend.SUPPORTED_METATYPES)
         backend = PTSparsifyActivationsAlgoBackend()
-        model_with_sparsifiers = backend.insert_sparsifiers(model, graph, {node: 0.9 for node in nodes})
-        assert len(backend.get_sparsifiers(model_with_sparsifiers)) == len(nodes)
+        nodes = graph.get_nodes_by_metatypes(backend.supported_metatypes)
+        model_with_sparsifiers = backend.insert_sparsifiers(model, graph, {node: 0.0 for node in nodes})
+        assert len(self.get_sparsifiers(model_with_sparsifiers)) == len(nodes)
 
         output = model_with_sparsifiers(example_input)
         torch.testing.assert_close(
             output, ref_output, rtol=1e-4, atol=1e-4
-        )  # At this time the sparsifers do not change the output
-
-    def test_calibrate_sparsifiers(self, mocker):
-        model, dataset = self.create_model_and_dataset()
-        graph = model.nncf.get_graph()
-        backend = PTSparsifyActivationsAlgoBackend()
-        mock_sparsifier = ActivationsSparsifier(0.5, 0.1)
-        mock_sparsifier.freeze = True
-        num_model_forward_calls = 0
-
-        def model_forward_pre_hook(model: NNCFNetwork, args):
-            nonlocal num_model_forward_calls
-            num_model_forward_calls += 1
-            assert model.training is False
-
-        model.register_forward_pre_hook(model_forward_pre_hook)
-
-        with mocker.patch.object(backend, "get_sparsifiers", return_value=[mock_sparsifier]):
-            backend.calibrate_sparsifiers(model, graph, dataset)
-            assert mock_sparsifier.freeze is True
-            assert num_model_forward_calls == dataset.get_length()
+        )  # Since threshold is 0.0 sparsifiers do not change the output
 
     def create_model_and_dataset(self, compress_weights: bool = False):
         model = ThreeLinearModel()

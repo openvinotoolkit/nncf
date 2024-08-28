@@ -14,7 +14,6 @@ from abc import abstractmethod
 from typing import Dict, List, Optional, Type, TypeVar, Union
 
 import nncf
-import nncf.tensor.functions as fns
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -29,14 +28,12 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
-from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
-from nncf.experimental.common.tensor_statistics.collectors import OnlineAggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.torch.sparsify_activations.target_scope import TargetScope
 from nncf.experimental.torch.sparsify_activations.target_scope import get_target_node_names_from_target_scope
+from nncf.experimental.torch.sparsify_activations.ema_aggregator import EMAAggregator
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
-from nncf.tensor import Tensor
 from nncf.torch.model_creation import is_wrapped_model
 from nncf.torch.model_creation import wrap_model
 
@@ -287,25 +284,3 @@ def sparsify_activations(
     graph = NNCFGraphFactory.create(model)
     sparse_model = algorithm.apply(model, graph, dataset)
     return sparse_model
-
-
-class EMAAggregator(OnlineAggregatorBase):
-    def __init__(
-        self,
-        alpha: float,
-        num_samples: Optional[int] = None,
-        window_size: Optional[int] = None,
-    ):
-        self._alpha = alpha
-        super().__init__(aggregation_axes=(0,), num_samples=num_samples, window_size=window_size)
-
-    def _aggregation_fn(self, stacked_value: Tensor, axis: AggregationAxes, keepdims: bool) -> Tensor:
-        if self._collected_samples == 0:
-            return stacked_value
-        else:
-            beta = 1.0 - self._alpha
-            new_value = fns.expand_dims(stacked_value[0], 0)
-            old_value = fns.expand_dims(stacked_value[1], 0)
-            return new_value * self._alpha + old_value * beta * (1 - beta**self._collected_samples) / (
-                1 - beta ** (self._collected_samples + 1)
-            )

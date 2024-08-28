@@ -57,16 +57,6 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
     Torch backend for the activation sparsification algorithm.
     """
 
-    @staticmethod
-    def get_sparsifiers(model: NNCFNetwork) -> List[ActivationsSparsifier]:
-        """
-        Finds all the activation sparsifiers in the model.
-
-        :param model: The model with activation sparsifiers.
-        :return: List of activation sparsifiers.
-        """
-        return [m for m in model.nncf.modules() if isinstance(m, ActivationsSparsifier)]
-
     @property
     def supported_metatypes(self) -> List[Type[OperatorMetatype]]:
         return [om.PTLinearMetatype]
