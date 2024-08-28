@@ -35,6 +35,7 @@ from nncf.experimental.torch.fx.transformations import module_insertion_transfor
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
@@ -184,6 +185,11 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     ) -> None:
         constant_update_transformation_builder(node_with_weight, weight.data, input_port_id=weight_port_id)(model)
 
+    def insert_adapters(
+        self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
+    ) -> None:
+        pass
+
     def transform_model(
         self,
         model: torch.fx.GraphModule,
@@ -191,6 +197,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_compression_parameters: Iterable[WeightCompressionParameters],
         precomputed_scales: Dict[str, Tensor] = None,
         precomputed_zero_points: Dict[str, Tensor] = None,
+        lora_correction_algo: LoraCorrectionAlgorithm = None,
     ) -> torch.fx.GraphModule:
         transformation_layout = TransformationLayout()
 
