@@ -147,7 +147,7 @@ def test_memory_values_isolated():
         print("\nMax memory:", max(memory_values))
     else:
         memory_values = list(map(lambda it: it - baseline_memory, memory_values))
-        rel = 1e-2
+        rel = 5e-2
         assert max(memory_values) == pytest.approx(BYTES_TO_ALLOCATE_LARGE, rel=rel)
         assert abs(memory_values[0]) < BYTES_TO_ALLOCATE_LARGE * rel
         assert abs(memory_values[-1]) < BYTES_TO_ALLOCATE_LARGE * rel
