@@ -10,16 +10,6 @@
 # limitations under the License.
 
 import nncf.torch.graph.operator_metatypes as om
+from nncf.torch.model_graph_manager import OPERATORS_WITH_BIAS_METATYPES
 
-FX_OPERATORS_WITH_BIAS_METATYPES = (
-    om.PTConv1dMetatype,
-    om.PTConv2dMetatype,
-    om.PTConv3dMetatype,
-    om.PTLinearMetatype,
-    om.PTDepthwiseConv1dSubtype,
-    om.PTDepthwiseConv2dSubtype,
-    om.PTDepthwiseConv3dSubtype,
-    om.PTConvTranspose1dMetatype,
-    om.PTConvTranspose2dMetatype,
-    om.PTConvTranspose3dMetatype,
-)
+FX_OPERATORS_WITH_BIAS_METATYPES = tuple(OPERATORS_WITH_BIAS_METATYPES) + (om.PTLinearMetatype,)
