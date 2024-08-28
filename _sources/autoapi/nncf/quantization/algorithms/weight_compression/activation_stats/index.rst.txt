@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.quantization.algorithms.weight_compression.activation_stats`
+==========================================================================
+
+.. py:module:: nncf.quantization.algorithms.weight_compression.activation_stats
+
+

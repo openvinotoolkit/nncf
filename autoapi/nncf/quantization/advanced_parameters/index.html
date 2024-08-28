@@ -308,10 +308,13 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedGPTQParameters" title="nncf.quantization.advanced_parameters.AdvancedGPTQParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedGPTQParameters</span></code></a></p></td>
 <td><p>Contains advanced parameters for GPTQ algorithm.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedCompressionParameters" title="nncf.quantization.advanced_parameters.AdvancedCompressionParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedCompressionParameters</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters" title="nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedLoraCorrectionParameters</span></code></a></p></td>
+<td><p>Contains advanced parameters for lora correction algorithm.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedCompressionParameters" title="nncf.quantization.advanced_parameters.AdvancedCompressionParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedCompressionParameters</span></code></a></p></td>
 <td><p>Contains advanced parameters for compression algorithms.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters" title="nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedAccuracyRestorerParameters</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters" title="nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedAccuracyRestorerParameters</span></code></a></p></td>
 <td><p>Contains advanced parameters for fine-tuning the accuracy restorer algorithm.</p></td>
 </tr>
 </tbody>
@@ -493,6 +496,25 @@ recommended value is 0.1.</p></li>
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.quantization.advanced_parameters.</span></span><span class="sig-name descname"><span class="pre">AdvancedLoraCorrectionParameters</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters" title="Permalink to this definition">#</a></dt>
+<dd><p>Contains advanced parameters for lora correction algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>adapter_rank</strong> (<em>int</em>) – rank of lora adapters. Defaults to 16.</p></li>
+<li><p><strong>num_iterations</strong> (<em>int</em>) – number of correction iterations. Defaults to 3.</p></li>
+<li><p><strong>apply_regularization</strong> (<em>bool</em>) – Whether to add a regularization during the correction process. Defaults to True.
+Helpful for big rank values to avoid overfitting.</p></li>
+<li><p><strong>subset_size</strong> (<em>int</em>) – Number of data samples for lora correction algorithm. Defaults to 128.</p></li>
+<li><p><strong>use_int8_adapters</strong> (<em>bool</em>) – Whether to 8-bit quantize lora adapters, otherwise they kept in the original weights
+precision. Defaults to True.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="nncf.quantization.advanced_parameters.AdvancedCompressionParameters">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.quantization.advanced_parameters.</span></span><span class="sig-name descname"><span class="pre">AdvancedCompressionParameters</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantization.advanced_parameters.AdvancedCompressionParameters" title="Permalink to this definition">#</a></dt>
 <dd><p>Contains advanced parameters for compression algorithms.</p>
@@ -601,6 +623,7 @@ quantized with initial parameters, should be saved.</p></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAWQParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedAWQParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedScaleEstimationParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedScaleEstimationParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedGPTQParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedGPTQParameters</span></code></a></li>
+<li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedLoraCorrectionParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedCompressionParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedCompressionParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedAccuracyRestorerParameters</span></code></a></li>
 </ul>

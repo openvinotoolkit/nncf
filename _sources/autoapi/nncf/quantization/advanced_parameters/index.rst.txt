@@ -24,6 +24,7 @@ Classes
    nncf.quantization.advanced_parameters.AdvancedAWQParameters
    nncf.quantization.advanced_parameters.AdvancedScaleEstimationParameters
    nncf.quantization.advanced_parameters.AdvancedGPTQParameters
+   nncf.quantization.advanced_parameters.AdvancedLoraCorrectionParameters
    nncf.quantization.advanced_parameters.AdvancedCompressionParameters
    nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters
 
@@ -188,6 +189,24 @@ Classes
    :type block_size: int
    :param subset_size: Number of data samples to calculate Hessian. Defaults to 128.
    :type subset_size: int
+
+
+.. py:class:: AdvancedLoraCorrectionParameters
+
+   Contains advanced parameters for lora correction algorithm.
+
+   :param adapter_rank: rank of lora adapters. Defaults to 16.
+   :type adapter_rank: int
+   :param num_iterations: number of correction iterations. Defaults to 3.
+   :type num_iterations: int
+   :param apply_regularization: Whether to add a regularization during the correction process. Defaults to True.
+       Helpful for big rank values to avoid overfitting.
+   :type apply_regularization: bool
+   :param subset_size: Number of data samples for lora correction algorithm. Defaults to 128.
+   :type subset_size: int
+   :param use_int8_adapters: Whether to 8-bit quantize lora adapters, otherwise they kept in the original weights
+       precision. Defaults to True.
+   :type use_int8_adapters: bool
 
 
 .. py:class:: AdvancedCompressionParameters
