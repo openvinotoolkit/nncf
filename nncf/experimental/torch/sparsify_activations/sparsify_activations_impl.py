@@ -29,9 +29,9 @@ from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.torch.sparsify_activations.ema_aggregator import EMAAggregator
 from nncf.experimental.torch.sparsify_activations.target_scope import TargetScope
 from nncf.experimental.torch.sparsify_activations.target_scope import get_target_node_names_from_target_scope
-from nncf.experimental.torch.sparsify_activations.ema_aggregator import EMAAggregator
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from nncf.torch.model_creation import is_wrapped_model

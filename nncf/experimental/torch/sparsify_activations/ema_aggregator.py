@@ -11,10 +11,8 @@
 from typing import Optional
 
 import nncf.tensor.functions as fns
-
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 from nncf.experimental.common.tensor_statistics.collectors import OnlineAggregatorBase
-
 from nncf.tensor import Tensor
 
 

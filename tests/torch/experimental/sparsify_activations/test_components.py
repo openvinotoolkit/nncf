@@ -117,9 +117,7 @@ class TestActivationsSparsifier:
             input_tensor = torch.rand([2, 10], device=device, dtype=dtype)
             ref_output = torch.where(input_tensor.abs() <= 0.1, 0.0, input_tensor)
             output_tensor = sparsifier(ref_output)
-            torch.testing.assert_close(
-                sparsifier.threshold, torch.tensor(0.1, device=device), rtol=1e-4, atol=1e-4
-            )
+            torch.testing.assert_close(sparsifier.threshold, torch.tensor(0.1, device=device), rtol=1e-4, atol=1e-4)
             torch.testing.assert_close(output_tensor, ref_output, rtol=1e-4, atol=1e-4)
 
 
