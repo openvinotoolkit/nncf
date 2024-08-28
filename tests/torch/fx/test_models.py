@@ -14,7 +14,7 @@ import os
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, List, Tuple, Type
+from typing import Callable, Dict, Tuple, Type
 
 import openvino.torch  # noqa
 import pytest
@@ -173,11 +173,13 @@ TEST_MODELS_COMPRESSED = (
 
 
 @pytest.mark.parametrize("test_case", TEST_MODELS_COMPRESSED, ids=[m.model_id for m in TEST_MODELS_COMPRESSED])
-@pytest.mark.parametrize("compression_mode", MODEL_COMRPESSION_MODES, ids=[mode.name for mode in MODEL_COMRPESSION_MODES])
+@pytest.mark.parametrize(
+    "compression_mode", MODEL_COMRPESSION_MODES, ids=[mode.name for mode in MODEL_COMRPESSION_MODES]
+)
 def test_compressed_model(test_case: ModelCase, compression_mode: CompressWeightsMode):
     with disable_patching():
         device = torch.device("cpu")
-        model_name = '_'.join([test_case.model_id, str(compression_mode)])
+        model_name = "_".join([test_case.model_id, str(compression_mode)])
         model = test_case.model_builder()
         model.to(device)
 
