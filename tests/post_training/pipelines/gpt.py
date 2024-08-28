@@ -30,13 +30,15 @@ class GPT(PTQTestPipeline):
     def prepare_model(self) -> None:
 
         if self.backend in PT_BACKENDS:
-            self.model_hf = transformers.AutoModelForCausalLM.from_pretrained(self.model_id)
+            self.model_hf = transformers.AutoModelForCausalLM.from_pretrained(
+                self.model_id, torch_dtype=self.torch_dtype
+            )
             self.model = self.model_hf
             self.model.config.torchscript = True  # Set to export by convert_model via torch.jit.trace
             self.dummy_tensor = self.model_hf.dummy_inputs["input_ids"]
 
         elif self.backend in OV_BACKENDS + [BackendType.FP32]:
-            self.model_hf = OVModelForCausalLM.from_pretrained(self.model_id, export=True)
+            self.model_hf = OVModelForCausalLM.from_pretrained(self.model_id, export=True, torch_dtype=self.torch_dtype)
             self.model = self.model_hf.model
             ov.serialize(self.model, self.fp32_model_dir / "model_fp32.xml")
 
@@ -46,7 +48,7 @@ class GPT(PTQTestPipeline):
             self.dummy_tensor = self.dummy_tensor.cuda()
 
     def prepare_preprocessor(self) -> None:
-        self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id)
+        self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id, torch_dtype=self.torch_dtype)
         # Fails with default pad_token
         self.preprocessor.pad_token = self.preprocessor.eos_token
 
@@ -76,7 +78,7 @@ class GPT(PTQTestPipeline):
         return transform_func
 
     def prepare_calibration_dataset(self):
-        quantizer = OVQuantizer.from_pretrained(self.model_hf)
+        quantizer = OVQuantizer.from_pretrained(self.model_hf, torch_dtype=self.torch_dtype)
 
         def preprocess_function(examples):
             return self.preprocessor(examples["sentence"], padding="max_length", truncation=True, max_length=128)

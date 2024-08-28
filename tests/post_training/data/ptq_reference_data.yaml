@@ -22,6 +22,22 @@ hf/hf-internal-testing/tiny-random-gpt2_backend_OV:
   metric_value: null
 hf/hf-internal-testing/tiny-random-gpt2_backend_TORCH:
   metric_value: null
+hf/hf-internal-testing/tiny-random-gpt2_fp16_backend_FP32:
+  metric_value: null
+hf/hf-internal-testing/tiny-random-gpt2_fp16_backend_OV:
+  metric_value: null
+hf/hf-internal-testing/tiny-random-gpt2_fp16_backend_TORCH:
+  metric_value: null
+hf/hf-internal-testing/tiny-random-gpt2_fp16_backend_OPTIMUM:
+  metric_value: null
+hf/hf-internal-testing/tiny-random-gpt2_bf16_backend_FP32:
+  metric_value: null
+hf/hf-internal-testing/tiny-random-gpt2_bf16_backend_OV:
+  metric_value: null
+hf/hf-internal-testing/tiny-random-gpt2_bf16_backend_TORCH:
+  metric_value: null
+hf/hf-internal-testing/tiny-random-gpt2_bf16_backend_OPTIMUM:
+  metric_value: null
 torchvision/resnet18_backend_FP32:
   metric_value: 0.6978
 torchvision/resnet18_backend_OV:

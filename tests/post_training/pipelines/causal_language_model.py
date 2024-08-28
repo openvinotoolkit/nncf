@@ -26,13 +26,13 @@ class CausalLMHF(PTQTestPipeline):
     def prepare_model(self) -> None:
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
             self.model_hf = OVModelForCausalLM.from_pretrained(
-                self.model_id, export=True, compile=False, stateful=False
+                self.model_id, export=True, compile=False, stateful=False, torch_dtype=self.torch_dtype
             )
             self.model = self.model_hf.model
             ov.serialize(self.model, self.fp32_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:
-        self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id)
+        self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id, torch_dtype=self.torch_dtype)
 
     def get_transform_calibration_fn(self):
         def transform_func(examples):
@@ -42,7 +42,7 @@ class CausalLMHF(PTQTestPipeline):
         return transform_func
 
     def prepare_calibration_dataset(self):
-        quantizer = OVQuantizer.from_pretrained(self.model_hf)
+        quantizer = OVQuantizer.from_pretrained(self.model_hf, torch_dtype=self.torch_dtype)
 
         num_samples = self.compression_params.get("subset_size", 300)
         calibration_dataset = quantizer.get_calibration_dataset(
