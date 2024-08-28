@@ -404,6 +404,7 @@ class IgnoredPatternNames(Enum):
         devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU],
     )
     SE_BLOCK = PatternDesc("se_block")
+    # mobilenet_v3 from torchvision
     SE_BLOCK_WITH_RESHAPE = PatternDesc("se_block_with_reshape")
     FC_BN_HSWISH_ACTIVATION = PatternDesc("fc_bn_hswish_activation")
     EQUAL_LOGICALNOT = PatternDesc("equal_logicalnot")

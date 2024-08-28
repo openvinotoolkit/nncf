@@ -53,7 +53,7 @@ IGNORING_HW_PATTERN_REASONS = {
 IGNORING_IGNORED_PATTERN_REASONS = {
     IgnoredPatternNames.FC_BN_HSWISH_ACTIVATION: "Not relevant for ONNX.",
     IgnoredPatternNames.EQUAL_LOGICALNOT: "Not relevant for ONNX.",
-    IgnoredPatternNames.SE_BLOCK_WITH_RESHAPE: "Not relevant for Torch.",
+    IgnoredPatternNames.SE_BLOCK_WITH_RESHAPE: "Not relevant for ONNX.",
 }
 
 
