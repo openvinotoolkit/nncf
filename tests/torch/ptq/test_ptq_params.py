@@ -33,7 +33,7 @@ from tests.common.quantization.metatypes import CatTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
-from tests.post_training.test_templates.test_ptq_params import TemplateTestPTQParams
+from tests.cross_fw.test_templates.test_ptq_params import TemplateTestPTQParams
 from tests.torch.helpers import create_bn
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import create_depthwise_conv

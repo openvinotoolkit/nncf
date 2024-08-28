@@ -18,8 +18,8 @@ from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.quantization.passes import filter_constant_nodes
 from nncf.quantization.passes import remove_nodes_and_reconnect_graph
-from tests.post_training.test_templates.models import NNCFGraphDropoutRemovingCase
-from tests.post_training.test_templates.models import NNCFGraphToTestConstantFiltering
+from tests.cross_fw.test_templates.models import NNCFGraphDropoutRemovingCase
+from tests.cross_fw.test_templates.models import NNCFGraphToTestConstantFiltering
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 from tests.shared.paths import TEST_ROOT
 

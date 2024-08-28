@@ -21,7 +21,7 @@ from nncf.experimental.torch.fx.transformations import apply_quantization_transf
 from nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend import FXFastBiasCorrectionAlgoBackend
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from nncf.torch.model_graph_manager import OPERATORS_WITH_BIAS_METATYPES
-from tests.post_training.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
+from tests.cross_fw.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
 
 
 class TestTorchFXFBCAlgorithm(TemplateTestFBCAlgorithm):

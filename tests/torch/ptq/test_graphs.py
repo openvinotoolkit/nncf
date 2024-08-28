@@ -22,8 +22,8 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from nncf.torch import wrap_model
 from nncf.torch.layers import NNCF_RNN
 from nncf.torch.layers import LSTMCellNNCF
-from tests.post_training.test_templates.helpers import EmbeddingModel
-from tests.post_training.test_templates.helpers import ScaledDotProductAttentionModel
+from tests.cross_fw.test_templates.helpers import EmbeddingModel
+from tests.cross_fw.test_templates.helpers import ScaledDotProductAttentionModel
 from tests.torch import test_models
 from tests.torch.quantization.test_algo_quantization import SharedLayersModel
 from tests.torch.test_compressed_graph import ModelDesc
