@@ -27,10 +27,10 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_integer_quantization_params
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_scale
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_weight
-from nncf.quantization.algorithms.weight_compression.weight_lowering import decompress_nf4_weight
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorDataType
@@ -266,13 +266,15 @@ class GPTQ:
                         scales.append(scale)
                         zero_points.append(zero_point)
                 if block_compression_config.mode == CompressWeightsMode.NF4:
-                    compressed_weights = calculate_nf4_weight(fns.unsqueeze(weight_col, 1), scales[-1])
-                    quantized_col = decompress_nf4_weight(compressed_weights, scales[-1])
+                    compressed_weights = do_nf4_quantization(
+                        fns.unsqueeze(weight_col, 1), scales[-1], is_normalized_weight=False
+                    )
+                    quantized_col = do_nf4_dequantization(compressed_weights, scales[-1], reduction_axis=-1)
                 else:
                     compressed_weights = calculate_quantized_weight(
                         fns.unsqueeze(weight_col, 1), block_compression_config, scales[-1], zero_points[-1]
                     )
-                    quantized_col = do_dequantization(compressed_weights, scales[-1], zero_points[-1])
+                    quantized_col = do_int_dequantization(compressed_weights, scales[-1], zero_points[-1])
                 quantized_col = fns.flatten(quantized_col)
                 quantized_block[:, i] = quantized_col
                 loss_block[:, i] = (weight_col - quantized_col) ** 2 / hessian_diag_val**2

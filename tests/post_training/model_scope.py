@@ -18,6 +18,7 @@ from nncf import QuantizationPreset
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedScaleEstimationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
@@ -437,6 +438,24 @@ WEIGHT_COMPRESSION_MODELS = [
             "mode": CompressWeightsMode.INT4_ASYM,
             "scale_estimation": True,
         },
+        "backends": [BackendType.OV],
+    },
+    {
+        "reported_name": "tinyllama_data_aware_lora_stateful",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": 64,
+            "ratio": 0.8,
+            "mode": CompressWeightsMode.INT4_SYM,
+            "lora_correction": True,
+            "advanced_parameters": AdvancedCompressionParameters(
+                lora_correction_params=AdvancedLoraCorrectionParameters(
+                    adapter_rank=8, num_iterations=3, apply_regularization=False, subset_size=32, use_int8_adapters=True
+                )
+            ),
+        },
+        "params": {"is_stateful": True},
         "backends": [BackendType.OV],
     },
 ]
