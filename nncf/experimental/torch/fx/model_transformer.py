@@ -106,25 +106,19 @@ class FXModelTransformer(ModelTransformer):
         stop_nodes = set(transformation.input_node_names + transformation.output_node_names)
         visited = set()
 
-        def input_node_target_inputs(node: torch.fx.Node) -> List[torch.fx.Node]:
+        for node_name in transformation.input_node_names:
+            node = get_graph_node_by_name(model.graph, node_name)
+            visited.add(node.name)
             target_inputs = node.all_input_nodes[1:]
-            if node.name in transformation.output_node_names:
-                return target_inputs
-            return target_inputs + list(node.users)
+            if node.name not in transformation.output_node_names:
+                target_inputs += list(node.users)
+            FXModelTransformer._traverse_graph(target_inputs, stop_nodes, visited)
 
-        def output_node_target_inputs(node: torch.fx.Node) -> List[torch.fx.Node]:
-            if node.name in transformation.input_node_names:
-                return []
-            return node.all_input_nodes
-
-        for nodes_names, get_inputs_fn in (
-            (transformation.input_node_names, input_node_target_inputs),
-            (transformation.output_node_names, output_node_target_inputs),
-        ):
-            for node_name in nodes_names:
-                node = get_graph_node_by_name(model.graph, node_name)
-                visited.add(node.name)
-                FXModelTransformer._traverse_graph(get_inputs_fn(node), stop_nodes, visited)
+        for node_name in transformation.output_node_names:
+            node = get_graph_node_by_name(model.graph, node_name)
+            visited.add(node.name)
+            if node.name not in transformation.input_node_names:
+                FXModelTransformer._traverse_graph(node.all_input_nodes, stop_nodes, visited)
 
         extracted_graph = torch.fx.Graph()
         value_remap = {}

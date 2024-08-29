@@ -54,7 +54,7 @@ def remove_fq_from_inputs(model: torch.fx.GraphModule, graph: NNCFGraph) -> torc
     return model_transformer.transform(transformation_layout)
 
 
-_TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
+_TARGET_TYPE_TO_FX_INS_TYPE_MAP = {
     TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
     TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
 }
@@ -71,6 +71,6 @@ def get_target_point(target_type: TargetType, target_node_name: str, port_id: in
     """
     if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
         port_id = None
-    if target_type in _TARGET_TYPE_TO_PT_INS_TYPE_MAP:
-        target_type = _TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]
+    if target_type in _TARGET_TYPE_TO_FX_INS_TYPE_MAP:
+        target_type = _TARGET_TYPE_TO_FX_INS_TYPE_MAP[target_type]
     return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
