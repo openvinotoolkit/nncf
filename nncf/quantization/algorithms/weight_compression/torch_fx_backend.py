@@ -127,7 +127,6 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     ) -> Tensor:
         weight_edge = graph.get_input_edge_by_port_id(node_with_weight, weight_port_id)
         weight_node = weight_edge.from_node
-        # TODO(dlyakhov): make a node_name_vs_node map to speed up the process
         graph_weight_node = get_graph_node_by_name(model.graph, weight_node.node_name)
         weight = get_tensor_constant_from_node(graph_weight_node, model).data
         if weight is None:
