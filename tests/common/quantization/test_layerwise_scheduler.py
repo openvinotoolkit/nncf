@@ -12,7 +12,7 @@
 import pytest
 
 from nncf.quantization.algorithms.layerwise.scheduler import LayerwiseScheduler
-from tests.post_training.test_templates.models import NNCFGraphCAWithBias
+from tests.cross_fw.test_templates.models import NNCFGraphCAWithBias
 
 
 @pytest.mark.parametrize("add_additional_outputs", [False, True])

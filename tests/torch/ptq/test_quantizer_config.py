@@ -12,10 +12,10 @@
 import pytest
 
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
-from tests.post_training.test_templates.models import NNCFGraphToTest
-from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
-from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
-from tests.post_training.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
+from tests.cross_fw.test_templates.models import NNCFGraphToTest
+from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
+from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
+from tests.cross_fw.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
 from tests.torch.ptq.helpers import get_depthwise_conv_nncf_graph
 from tests.torch.ptq.helpers import get_single_conv_nncf_graph
 from tests.torch.ptq.helpers import get_sum_aggregation_nncf_graph

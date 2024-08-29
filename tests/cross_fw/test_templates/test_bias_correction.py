@@ -21,10 +21,10 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from tests.post_training.test_templates.helpers import ConvTestModel
-from tests.post_training.test_templates.helpers import MultipleConvTestModel
-from tests.post_training.test_templates.helpers import SplittedModel
-from tests.post_training.test_templates.helpers import StaticDatasetMock
+from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
+from tests.cross_fw.test_templates.helpers import SplittedModel
+from tests.cross_fw.test_templates.helpers import StaticDatasetMock
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")

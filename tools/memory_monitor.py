@@ -23,6 +23,7 @@ from typing import Callable, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import psutil
+from tabulate import tabulate
 
 logger = logging.getLogger("memory_monitor")
 
@@ -251,6 +252,8 @@ class MemoryMonitor:
                 bytes_used = psutil.virtual_memory().total - psutil.virtual_memory().available
             else:
                 raise Exception("Unknown memory type to log")
+            if self._monitoring_thread_should_stop:
+                break
             self._memory_values_queue.put((time.perf_counter(), bytes_used))
             time.sleep(max(0.0, self.interval - (time.perf_counter() - _last_measurement_time)))
 
@@ -297,6 +300,10 @@ class memory_monitor_context:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        # Stop addition of new values as soon as possible
+        for mm in self.memory_monitors.values():
+            mm._monitoring_thread_should_stop = True
+
         for mt, mm in self.memory_monitors.items():
             mm.stop()
             for fz in [False, True]:
@@ -348,14 +355,28 @@ if __name__ == "__main__":
     parser.add_argument("executable", type=str, nargs="+", help="Target executable to monitor memory for.")
     args = parser.parse_args()
 
-    def log(mm, fz):
-        mm.save_memory_logs(
-            *mm.get_data(memory_from_zero=fz), save_dir=Path(args.log_dir), filename_suffix="_from-zero" if fz else ""
-        )
-
-    for memory_type, mem_from_zero in [(MemoryType.RSS, False), (MemoryType.SYSTEM, False), (MemoryType.SYSTEM, True)]:
-        memory_monitor = MemoryMonitor(memory_type=memory_type, include_child_processes=True)
-        memory_monitor.start(at_exit_fn=partial(log, memory_monitor, mem_from_zero))
+    memory_monitors = [
+        MemoryMonitor(memory_type=mt, include_child_processes=True).start()
+        for mt in (MemoryType.RSS, MemoryType.SYSTEM)
+    ]
 
     with subprocess.Popen(" ".join(args.executable), shell=True) as p:
         p.wait()
+
+        # Stop addition of new values as soon as possible
+        for mm in memory_monitors:
+            mm._monitoring_thread_should_stop = True
+
+    summary_data = []
+    for mm in memory_monitors:
+        mm.stop()
+        for fz in (True, False):
+            time_values, memory_values = mm.get_data(memory_from_zero=fz)
+            # Most probably the last value is recorded once the child process has already died
+            time_values, memory_values = time_values[:-1], memory_values[:-1]
+            mm.save_memory_logs(
+                time_values, memory_values, save_dir=Path(args.log_dir), filename_suffix="_from-zero" if fz else ""
+            )
+            summary_data.append([mm.memory_type.value, fz, f"{int(max(memory_values))} {mm.memory_unit.value}"])
+    print("\nMemory summary:")
+    print(tabulate(summary_data, headers=["Memory type", "From zero", "Peak value"]))

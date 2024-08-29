@@ -29,10 +29,12 @@ from nncf.common.utils.helpers import create_table
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
+from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
@@ -65,6 +67,7 @@ class WeightCompression(Algorithm):
         subset_size: int,
         scale_estimation: bool,
         gptq: bool,
+        lora_correction: bool,
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ):
         """
@@ -97,6 +100,7 @@ class WeightCompression(Algorithm):
             quantization precision.
         :param scale_estimation: determines whether to use or not scale estimation for 4 bit layers.
         :param gptq: determines whether to use or not GPTQ algorithm.
+        :param lora_correction: determines whether to use or not LoRA Correction algorithm.
         :param advanced_parameters: advanced parameters for algorithms in compression pipeline.
         """
         super().__init__()
@@ -113,6 +117,7 @@ class WeightCompression(Algorithm):
         self._subset_size = subset_size
         self._scale_estimation = scale_estimation
         self._gptq = gptq
+        self._lora_correction = lora_correction
         self._advanced_parameters = (
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
@@ -403,16 +408,25 @@ class WeightCompression(Algorithm):
                 backend_entity=self._backend_entity,
             )
 
+        lora_correction_algo = None
+        description = "Applying Weight Compression"
+        if self._lora_correction:
+            lora_correction_params = self._advanced_parameters.lora_correction_params
+            lora_correction_algo = LoraCorrectionAlgorithm(activations, lora_correction_params)
+            description += " with correction of low-rank adapters"
+
         # Sort weight params to start compression with the bigger constants. This lowers peak memory footprint.
         all_weight_params = sorted(all_weight_params, key=lambda wp: wp.num_weights, reverse=True)
+        all_weight_sizes = [wp.num_weights for wp in all_weight_params]
 
         # Compress model using weight compression parameters
         transformed_model = self._backend_entity.transform_model(
             model,
             graph,
-            track(all_weight_params, description="Applying Weight Compression"),
+            track(all_weight_params, description=description, weights=all_weight_sizes),
             scales,
             zero_points,
+            lora_correction_algo,
         )
 
         self._backend_entity.dump_parameters(
@@ -427,6 +441,8 @@ class WeightCompression(Algorithm):
                 "awq": self._awq,
                 "scale_estimation": self._scale_estimation,
                 "gptq": self._gptq,
+                "lora_correction": self._lora_correction,
+                "advanced_parameters": convert_to_dict_recursively(self._advanced_parameters),
             },
             algo_name="weight_compression",
         )

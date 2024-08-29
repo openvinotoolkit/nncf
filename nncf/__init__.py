@@ -45,8 +45,13 @@ from nncf.quantization import quantize_with_accuracy_control as quantize_with_ac
 from nncf.quantization.advanced_parameters import (
     AdvancedAccuracyRestorerParameters as AdvancedAccuracyRestorerParameters,
 )
+from nncf.quantization.advanced_parameters import AdvancedAWQParameters as AdvancedAWQParameters
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters as AdvancedBiasCorrectionParameters
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as AdvancedCompressionParameters
+from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as AdvancedGPTQParameters
+from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as AdvancedLoraCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters as AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedScaleEstimationParameters as AdvancedScaleEstimationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters as AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import OverflowFix as OverflowFix
 from nncf.scopes import IgnoredScope as IgnoredScope

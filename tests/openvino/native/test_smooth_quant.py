@@ -22,10 +22,10 @@ from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
-from tests.post_training.test_templates.helpers import ConvTestModel
-from tests.post_training.test_templates.helpers import LinearMultiShapeModel
-from tests.post_training.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
-from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
+from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import LinearMultiShapeModel
+from tests.cross_fw.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
+from tests.cross_fw.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
 
 OV_LINEAR_MODEL_MM_OP_MAP = {
     "MatMul1": "aten::matmul/MatMul",
