@@ -175,8 +175,11 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
             f"Constant on input port {input_port_id} for {node} is expected,"
             f" but node {args[input_port_id]} is present."
         )
+    weight_node = args[input_port_id]
+    consumer_nodes = list(weight_node.users.keys())
     args[input_port_id] = new_constant
-    node.args = tuple(args)
+    for node in consumer_nodes:
+        node.replace_input_with(weight_node, new_constant)
     graph.eliminate_dead_code()
 
 

@@ -71,7 +71,7 @@ class GraphConverter:
         :param node: Given node.
         :param metatype: Given node metatype.
         :param model: Target GraphModule instance.
-        :return: Correct subtype of the given node if it is exist or the original node metatype otherwise.
+        :return: Correct FX metatype of the given node if it is exist or the original node metatype otherwise.
         """
         if metatype in [om.PTEmbeddingMetatype]:
             weight_node = node.args[0]
@@ -122,6 +122,14 @@ class GraphConverter:
         return node_type, node_metatype
 
     @staticmethod
+    def _replace_shared_weights(node: torch.fx.Node, prev_targets):
+        dist_node = list(node.users.keys())
+        if node.target in prev_targets and node.op in ("get_attr",):
+            dist_node[0].replace_input_with(node, prev_targets[node.target])
+        else:
+            prev_targets[node.target] = node
+
+    @staticmethod
     def create_nncf_graph(model: torch.fx.GraphModule) -> PTNNCFGraph:
         """
         Creates NNCFGraph from GraphModule.
@@ -133,15 +141,17 @@ class GraphConverter:
         """
 
         nncf_graph = PTNNCFGraph()
-
+        prev_targets = {}
         for source_node in model.graph.nodes:
             node_type, node_metatype = GraphConverter._get_node_type_and_metatype(source_node, model)
             node_metatype = GraphConverter._map_fx_unique_metatypes(source_node, node_metatype)
+            GraphConverter._replace_shared_weights(source_node, prev_targets)
             nncf_graph.add_nncf_node(
                 node_name=source_node.name,
                 node_type=node_type,
                 node_metatype=node_metatype,
             )
+        model.graph.eliminate_dead_code()
 
         for source_node in model.graph.nodes:
             source_nncf_node = nncf_graph.get_node_by_name(source_node.name)

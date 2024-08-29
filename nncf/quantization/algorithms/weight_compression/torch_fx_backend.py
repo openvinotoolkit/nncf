@@ -171,7 +171,6 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 raise ValueError(f"{compression_config.mode.value} is not supported.")
             weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
             weight_name = weight_node.node_name
-            consumer_nodes = graph.get_next_nodes(weight_node)
             weight = self.get_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph)
             if weight is None or not isinstance(weight, Tensor):
                 raise nncf.InternalError(f"Could not find a nncf.tensor in the model by name {weight_name}.")
@@ -194,9 +193,6 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             packed_tensor = compressed_weight.tensor.astype(dtype)
 
             self.set_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph, packed_tensor)
-
-            if len(consumer_nodes) > 1:
-                raise nncf.InternalError("Shared weights not supported in compression for TorchFX models")
 
             # creates weight decompressor
             if compression_config.mode == CompressWeightsMode.INT8_SYM:
