@@ -252,6 +252,7 @@ def output_insertion_transformation_builder(target_point: PTTargetPoint) -> Tran
                 (input_node,),
                 name=input_node.name + "_cloned",
             )
+        cloned_input.meta["val"] = copy(input_node.meta.get("val"))
 
         # Update args of the output node as one output could be present in the model
         # TODO(dlaykhov) Support case when there are no outputs in the input model.
@@ -337,12 +338,12 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
 
     input_node = get_input_node(target_point, target_node)
     quantize_op_inputs[0] = input_node
-    meta_val = input_node.meta.get("val", None)
+    meta_val = input_node.meta.get("val")
 
     ctx_manager = get_ctx_manager(graph, target_point)
     with ctx_manager(target_node):
         quantized_node = graph.create_node(node_type, quantize_op, tuple(quantize_op_inputs), {})
-    quantized_node.meta["val"] = meta_val
+    quantized_node.meta["val"] = copy(meta_val)
 
     # use the same qparams from quantize op
     dq_inputs = [quantized_node] + quantize_op_inputs[1:]
@@ -353,7 +354,7 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
                 if user is quantized_node:
                     continue
                 dq_node = graph.call_function(dequantize_op, tuple(dq_inputs), {})
-                dq_node.meta["val"] = meta_val
+                dq_node.meta["val"] = copy(meta_val)
                 user_dq_nodes.append((user, dq_node))
 
         for user, dq_node in user_dq_nodes:
@@ -361,7 +362,7 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
     elif target_point.target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
         with graph.inserting_after(quantized_node):
             dq_node = graph.call_function(dequantize_op, tuple(dq_inputs), {})
-            dq_node.meta["val"] = meta_val
+            dq_node.meta["val"] = copy(meta_val)
 
         args = list(target_node.args)
         args[target_point.input_port_id] = dq_node

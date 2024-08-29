@@ -124,9 +124,7 @@ class FXModelTransformer(ModelTransformer):
         value_remap = {}
 
         def remap_fn(node: torch.fx.Node):
-            if node in value_remap:  # noqa F821
-                return value_remap[node]  # noqa F821
-            return None
+            return value_remap.get(node)  # noqa F821
 
         for node in model.graph.nodes:
             if node.name not in visited or node.op == "output":
