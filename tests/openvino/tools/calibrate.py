@@ -14,6 +14,8 @@ import functools
 import json
 import multiprocessing
 import os
+import platform
+import subprocess
 from argparse import ArgumentParser
 from collections import OrderedDict
 from collections import defaultdict
@@ -41,6 +43,7 @@ except ImportError:
 
 import nncf
 from nncf.common.deprecation import warning_deprecated
+from nncf.common.logging import nncf_logger
 from nncf.common.logging.logger import set_log_file
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
@@ -1076,6 +1079,39 @@ def update_nncf_algorithms_config(nncf_algorithms_config: Dict[str, Dict[str, An
         print(f"Updated subset_size value for {nncf_method} method to {new_subset_size} ")
 
 
+def get_cpu_model_name() -> str:
+    """
+    Returns CPU device name.
+    """
+
+    def _get_cpu_model_name_linux_os() -> str:
+        try:
+            output = subprocess.check_output("lscpu", shell=True)
+            for line in output.decode().splitlines():
+                if "Model name:" in line:
+                    return line.split(":")[1].strip()
+            return "Unknown"
+        except Exception:
+            return "Unknown"
+
+    def _get_cpu_model_name_windows() -> str:
+        try:
+            output = subprocess.check_output("wmic cpu get name", shell=True)
+            return output.decode().splitlines()[1].strip()
+        except Exception:
+            return "Unknown"
+
+    os_name = platform.system()
+
+    cpu_model = "Unknown"
+    if os_name == "Linux":
+        cpu_model = _get_cpu_model_name_linux_os()
+    elif os_name == "Windows":
+        cpu_model = _get_cpu_model_name_windows()
+
+    return cpu_model
+
+
 def main():
     args = parse_args()
     if args.impl is not None:
@@ -1094,6 +1130,9 @@ def main():
     set_log_file(f"{args.output_dir}/log.txt")
     output_dir = os.path.join(args.output_dir, "optimized")
     os.makedirs(output_dir, exist_ok=True)
+
+    cpu_model_name = get_cpu_model_name()
+    nncf_logger.info(f"CPU Model: {cpu_model_name}")
 
     algo_name_to_method_map = {
         "quantize": quantize_model,
