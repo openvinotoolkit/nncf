@@ -59,7 +59,7 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return get_mean_statistic_collector(num_samples, channel_axis, window_size)
 
     @staticmethod
-    def get_sub_input_output_names(subgraph: torch.fx.GraphModule) -> Tuple[str, str]:
+    def get_sub_input_output_names(subgraph: torch.fx.GraphModule) -> Tuple[Optional[int], int]:
         # Pytorch does not have name for extracted node
         return None, 0
 
@@ -80,7 +80,7 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return 0, 0
 
     @staticmethod
-    def process_model_output(raw_data: Dict, output_name: str) -> Tensor:
+    def process_model_output(raw_data: Dict, output_name: int) -> Tensor:
         return Tensor(raw_data[output_name])
 
     @staticmethod

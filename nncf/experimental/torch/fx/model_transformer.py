@@ -63,6 +63,31 @@ class FXModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
+    def _traverse_graph(
+        input_nodes: List[torch.fx.Node],
+        stop_nodes: Set[torch.fx.Node],
+        visited: Set[torch.fx.Node],
+    ) -> None:
+        """
+        Traverses through the graph starting with the input nodes and
+        stopping for the stop nodes and the visited nodes. As the result,
+        it modifies the visited container with all nodes visited during the traverse.
+
+        :param input_nodes: Given input nodes.
+        :param stop_nodes: Given stop nodes.
+        :param visited: Set of already visited nodes.
+        """
+
+        while input_nodes:
+            in_node = input_nodes.pop()
+            if in_node.name in visited or in_node.name in stop_nodes:
+                continue
+
+            visited.add(in_node.name)
+            input_nodes.extend(in_node.all_input_nodes)
+            input_nodes.extend(list(in_node.users))
+
+    @staticmethod
     def _apply_model_extraction(
         model: torch.fx.GraphModule,
         transformations: List[PTModelExtractionCommand],
@@ -76,20 +101,6 @@ class FXModelTransformer(ModelTransformer):
             more than one element this function raises an assert.
         :return: Returns a submodel extracted from the given model by the given transformation.
         """
-
-        def _traverse_graph(
-            input_nodes: List[torch.fx.Node],
-            stop_nodes: Set[torch.fx.Node],
-            visited: Set[torch.fx.Node],
-        ):
-            while input_nodes:
-                in_node = input_nodes.pop()
-                if in_node.name in visited or in_node.name in stop_nodes:
-                    continue
-
-                visited.add(in_node.name)
-                input_nodes.extend(in_node.all_input_nodes)
-                input_nodes.extend(list(in_node.users))
 
         transformation = transformations[-1]
         stop_nodes = set(transformation.input_node_names + transformation.output_node_names)
@@ -113,7 +124,7 @@ class FXModelTransformer(ModelTransformer):
             for node_name in nodes_names:
                 node = get_graph_node_by_name(model.graph, node_name)
                 visited.add(node.name)
-                _traverse_graph(get_inputs_fn(node), stop_nodes, visited)
+                FXModelTransformer._traverse_graph(get_inputs_fn(node), stop_nodes, visited)
 
         extracted_graph = torch.fx.Graph()
         value_remap = {}
@@ -134,8 +145,8 @@ class FXModelTransformer(ModelTransformer):
             with extracted_graph.inserting_before(node_with_input):
                 graph_input_name = input_name + "_input"
                 graph_input = extracted_graph.create_node(
-                    "placeholder",
-                    graph_input_name,
+                    op="placeholder",
+                    target=graph_input_name,
                     name=graph_input_name,
                 )
 

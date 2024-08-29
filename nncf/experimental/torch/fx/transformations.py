@@ -220,7 +220,7 @@ def node_removal_transformation_builder(node: NNCFNode, input_port_id: int) -> T
     target node previous node on the given input port id with all target node outputs.
 
     :param node: Target node to remove.
-    :param input_port_id: Inpurt port id which points to input node which should be connected
+    :param input_port_id: Input port id which points to input node which should be connected
         to the target node outputs.
     :return: Transformation which removes target node from the model and connects
         target node previous node on the given input port id with all target node outputs.
@@ -261,17 +261,16 @@ def output_insertion_transformation_builder(target_point: PTTargetPoint) -> Tran
             )
 
         # Update args of the output node as one output could be present in the model
-        # TODO(dlaykhov) Supoprt case when there are no outputs in the input model.
+        # TODO(dlaykhov) Support case when there are no outputs in the input model.
         output_nodes = [node for node in model.graph.nodes if node.op == "output"]
         assert len(output_nodes) == 1
         output_node = output_nodes[0]
 
         args = output_node.args
-        if isinstance(args, tuple):
-            assert len(args) == 1
-            args = args[0] + (cloned_input,)
-        else:
-            args += (cloned_input,)
+        assert len(args) == 1
+        if isinstance(args[0], torch.fx.Node):
+            args = (args,)
+        args = tuple(args[0]) + (cloned_input,)
         output_node.args = (args,)
 
     return output_insertion_transformation

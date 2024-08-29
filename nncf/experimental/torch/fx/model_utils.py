@@ -11,7 +11,7 @@
 
 from collections import deque
 
-import openvino.runtime as ov
+import torch.fx
 
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -24,7 +24,7 @@ from nncf.torch.graph.operator_metatypes import QUANTIZE_NODE_TYPES
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 
-def remove_fq_from_inputs(model: ov.Model, graph: NNCFGraph) -> ov.Model:
+def remove_fq_from_inputs(model: torch.fx.GraphModule, graph: NNCFGraph) -> torch.fx.GraphModule:
     """
     This method removes the activation Fake Quantize nodes from the model.
     It's needed for the further bias shift calculation that relates on quantized weights.
