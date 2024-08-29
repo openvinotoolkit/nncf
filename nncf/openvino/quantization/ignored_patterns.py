@@ -118,7 +118,8 @@ def create_equal_logicalnot() -> GraphPattern:
     return pattern
 
 
-def _se_block_helper():
+@OPENVINO_IGNORED_PATTERNS.register(IgnoredPatternNames.SE_BLOCK)
+def create_se_block() -> GraphPattern:
     pattern = GraphPattern()
     any_node = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
@@ -157,79 +158,14 @@ def _se_block_helper():
             GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
         }
     )
-    return (
-        pattern,
-        any_node,
-        reduce_mean_node,
-        linear_node_1,
-        add_node_1,
-        activation_node_1,
-        linear_node_2,
-        add_node_2,
-        activation_node_2,
-        multiply_node,
-    )
 
-
-@OPENVINO_IGNORED_PATTERNS.register(IgnoredPatternNames.SE_BLOCK)
-def create_se_block() -> GraphPattern:
-    main_pattern = GraphPattern()
-
-    def create_se_block():
-        (
-            pattern,
-            any_node,
-            reduce_mean_node,
-            linear_node_1,
-            add_node_1,
-            activation_node_1,
-            linear_node_2,
-            add_node_2,
-            activation_node_2,
-            multiply_node,
-        ) = _se_block_helper()
-        pattern.add_edge(any_node, reduce_mean_node)
-        pattern.add_edge(reduce_mean_node, linear_node_1)
-        pattern.add_edge(linear_node_1, add_node_1)
-        pattern.add_edge(add_node_1, activation_node_1)
-        pattern.add_edge(activation_node_1, linear_node_2)
-        pattern.add_edge(linear_node_2, add_node_2)
-        pattern.add_edge(add_node_2, activation_node_2)
-        pattern.add_edge(activation_node_2, multiply_node)
-        pattern.add_edge(any_node, multiply_node)
-        return pattern
-
-    def create_se_block_with_reshape() -> GraphPattern:
-        (
-            pattern,
-            any_node,
-            reduce_mean_node,
-            linear_node_1,
-            add_node_1,
-            activation_node_1,
-            linear_node_2,
-            add_node_2,
-            activation_node_2,
-            multiply_node,
-        ) = _se_block_helper()
-        reshape_node = pattern.add_node(
-            **{
-                GraphPattern.LABEL_ATTR: "RESHAPE",
-                GraphPattern.METATYPE_ATTR: om.OVReshapeMetatype,
-            }
-        )
-        pattern.add_edge(any_node, reduce_mean_node)
-        pattern.add_edge(reduce_mean_node, reshape_node)
-        pattern.add_edge(reshape_node, linear_node_1)
-        pattern.add_edge(linear_node_1, add_node_1)
-        pattern.add_edge(add_node_1, activation_node_1)
-        pattern.add_edge(activation_node_1, linear_node_2)
-        pattern.add_edge(linear_node_2, add_node_2)
-        pattern.add_edge(add_node_2, activation_node_2)
-        pattern.add_edge(activation_node_2, multiply_node)
-        pattern.add_edge(any_node, multiply_node)
-        return pattern
-
-    main_pattern.add_pattern_alternative(create_se_block())
-    main_pattern.add_pattern_alternative(create_se_block_with_reshape())
-    return main_pattern
+    pattern.add_edge(any_node, reduce_mean_node)
+    pattern.add_edge(reduce_mean_node, linear_node_1)
+    pattern.add_edge(linear_node_1, add_node_1)
+    pattern.add_edge(add_node_1, activation_node_1)
+    pattern.add_edge(activation_node_1, linear_node_2)
+    pattern.add_edge(linear_node_2, add_node_2)
+    pattern.add_edge(add_node_2, activation_node_2)
+    pattern.add_edge(activation_node_2, multiply_node)
+    pattern.add_edge(any_node, multiply_node)
+    return pattern
