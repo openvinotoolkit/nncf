@@ -131,14 +131,7 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
             raise nncf.InternalError(f"Node {graph_node.name} has {len(add_nodes)} outputs with adds, 1 expected")
 
         bias_node = add_nodes[0]
-        with graph.inserting_before(bias_node):
-            new_constant = create_getattr_from_value(model, graph, target_node_name + "_shifted_bias", value)
-
-        args = list(bias_node.args)
-        # A bias node suppose to have constant on the second input port.
-        args[1] = new_constant
-        bias_node.args = tuple(args)
-        graph.eliminate_dead_code()
+        constant_update_fn(model, bias_node, value, input_port_id=1)
 
     return bias_update_transformation
 
