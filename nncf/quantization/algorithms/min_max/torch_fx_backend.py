@@ -60,6 +60,10 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     }
 
     @property
+    def preserved_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
         return [om.PTLinearMetatype, om.PTMatMulMetatype]
 
