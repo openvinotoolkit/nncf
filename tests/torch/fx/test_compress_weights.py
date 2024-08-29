@@ -68,11 +68,15 @@ def get_compressed_modules_weights(
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
 def test_compress_weights(mode):
     with disable_patching():
-        model = ShortTransformer(5, 10)
+        model = ShortTransformer(5, 10, share_weights=True)
         input_ids = torch.randint(0, 10, (5,))
         exported_model = capture_pre_autograd_graph(model, args=(input_ids,))
         compressed_model = compress_weights(exported_model, mode=mode)
-
+    # from nncf.common.factory import NNCFGraphFactory
+    # from nncf.common.utils.dot_file_rw import write_dot_graph
+    # nncf_graph = NNCFGraphFactory.create(exported_model)
+    # structureal_graph = nncf_graph.get_graph_for_structure_analysis()
+    # write_dot_graph(structureal_graph, "graph.dot")
     dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
     n_compressed_weights = 0
     n_target_modules = 0

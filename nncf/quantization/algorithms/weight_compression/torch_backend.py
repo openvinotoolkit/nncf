@@ -50,7 +50,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
     }
     MATMUL_METATYPES = [om.PTLinearMetatype, om.PTMatMulMetatype, om.PTAddmmMetatype]
-    EMBEDDING_METATYPES = [om.PTEmbeddingMetatype]
+    EMBEDDING_METATYPES = [om.PTEmbeddingMetatype, om.FXEmbeddingMetatype]
     CONVOLUTION_METATYPES = [
         om.PTConv1dMetatype,
         om.PTConv2dMetatype,

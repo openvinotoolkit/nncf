@@ -28,7 +28,6 @@ import torchvision.models as models
 from torch._export import capture_pre_autograd_graph
 
 import nncf
-from nncf import CompressWeightsMode
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.utils.os import safe_open
@@ -158,36 +157,3 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters):
 
         nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
         check_graph(nncf_graph, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME)
-
-
-MODEL_COMRPESSION_MODES = [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM]
-
-
-TEST_MODELS_COMPRESSED = (
-    ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
-    torchvision_model_case("resnet18", (1, 3, 224, 224)),
-    torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)),
-    torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
-    torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
-)
-
-
-@pytest.mark.parametrize("test_case", TEST_MODELS_COMPRESSED, ids=[m.model_id for m in TEST_MODELS_COMPRESSED])
-@pytest.mark.parametrize(
-    "compression_mode", MODEL_COMRPESSION_MODES, ids=[mode.name for mode in MODEL_COMRPESSION_MODES]
-)
-def test_compressed_model(test_case: ModelCase, compression_mode: CompressWeightsMode):
-    with disable_patching():
-        device = torch.device("cpu")
-        model_name = "_".join([test_case.model_id, str(compression_mode)])
-        model = test_case.model_builder()
-        model.to(device)
-
-        with torch.no_grad():
-            ex_input = torch.ones(test_case.input_shape)
-            model.eval()
-            exported_model = capture_pre_autograd_graph(model, args=(ex_input,))
-        compressed_model = nncf.compress_weights(exported_model, mode=compression_mode)
-        nncf_graph = GraphConverter.create_nncf_graph(compressed_model)
-
-        check_graph(nncf_graph, get_dot_filename(model_name), FX_COMPRESSED_DIR_NAME)

@@ -17,15 +17,12 @@ import torch.fx
 import nncf
 import nncf.errors
 import nncf.tensor
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.torch.fx import operator_metatypes as fx_om
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
@@ -36,6 +33,7 @@ from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
+from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
@@ -49,23 +47,9 @@ from nncf.torch.tensor_statistics.collectors import get_raw_stat_collector
 
 
 class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
-    TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
-        TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
-        TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
-    }
-    MATMUL_METATYPES = [om.PTLinearMetatype, om.PTMatMulMetatype, om.PTAddmmMetatype]
-    EMBEDDING_METATYPES = [fx_om.FXEmbeddingMetatype]
-    CONVOLUTION_METATYPES = [
-        om.PTConv1dMetatype,
-        om.PTConv2dMetatype,
-        om.PTConv3dMetatype,
-        om.PTDepthwiseConv1dSubtype,
-        om.PTDepthwiseConv2dSubtype,
-        om.PTDepthwiseConv3dSubtype,
-        om.PTConvTranspose1dMetatype,
-        om.PTConvTranspose2dMetatype,
-        om.PTConvTranspose3dMetatype,
-    ]
+    MATMUL_METATYPES = PTWeightCompressionAlgoBackend.MATMUL_METATYPES
+    EMBEDDING_METATYPES = PTWeightCompressionAlgoBackend.EMBEDDING_METATYPES
+    CONVOLUTION_METATYPES = PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES
 
     @property
     def matmul_metatypes(self) -> List[OperatorMetatype]:
@@ -81,20 +65,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:
-        if (
-            node.metatype not in FXWeightCompressionAlgoBackend.MATMUL_METATYPES
-            and node.metatype not in FXWeightCompressionAlgoBackend.EMBEDDING_METATYPES
-            and node.metatype not in FXWeightCompressionAlgoBackend.CONVOLUTION_METATYPES
-        ):
-            return False
-        for prev_node in graph.get_previous_nodes(node):
-            edge = graph.get_edge(prev_node, node)
-            if edge.input_port_id not in node.metatype.weight_port_ids:
-                continue
-            weight_node = find_const_node_in_constant_subgraph(prev_node, graph)
-            if weight_node is not None:
-                return True
-        return False
+        return PTWeightCompressionAlgoBackend.is_node_with_weights(node, graph)
 
     @staticmethod
     def get_weight_names_and_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Tuple[str, int]]:
@@ -115,7 +86,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         ndims = len(edge.tensor_shape)
         reduction_axes = None
-        if node_with_weight.metatype == fx_om.FXEmbeddingMetatype:
+        if node_with_weight.metatype == om.FXEmbeddingMetatype:
             reduction_axes = [1]
         elif node_with_weight.metatype == om.PTLinearMetatype:
             reduction_axes = [ndims - 1]
@@ -141,11 +112,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
-        if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
-            port_id = None
-        if target_type in FXWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
-            target_type = FXWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]
-        return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
+        return PTWeightCompressionAlgoBackend.target_point(target_type, target_node_name, port_id)
 
     @staticmethod
     def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorCollector:
@@ -153,14 +120,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, graph: NNCFGraph) -> int:
-        activation_ports = []
-        for prev_node in graph.get_previous_nodes(node):
-            if prev_node.metatype in CONST_NOOP_METATYPES:
-                continue
-            edge = graph.get_edge(prev_node, node)
-            activation_ports.append(edge.input_port_id)
-        assert len(activation_ports) == 1
-        return activation_ports[0]
+        return PTWeightCompressionAlgoBackend.get_activation_port_id(node, graph)
 
     def get_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.fx.GraphModule, graph: NNCFGraph
