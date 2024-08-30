@@ -129,7 +129,7 @@ class WeightCompression(Algorithm):
 
     @property
     def available_backends(self) -> List[BackendType]:
-        return [BackendType.OPENVINO, BackendType.TORCH]
+        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
