@@ -39,6 +39,19 @@ def models(request):
     return Path(option)
 
 
+@pytest.fixture(name="zero_seed")
+def _seed():
+    """
+    Fixture to ensure deterministic randomness across tests.
+    """
+    import random
+
+    import numpy as np
+
+    np.random.seed(0)
+    random.seed(0)
+
+
 # Custom markers specifying tests to be run only if a specific option
 # is present on the pytest command line must be registered here.
 MARKS_VS_OPTIONS = {**COMMON_SCOPE_MARKS_VS_OPTIONS}

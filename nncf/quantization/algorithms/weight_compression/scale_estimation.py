@@ -19,9 +19,10 @@ from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.tensor import TensorDataType
 from nncf.tensor import functions as fns
@@ -129,27 +130,13 @@ class ScaleEstimation:
                 res[weight_name] = None
                 continue
 
-            stats = self._activations[node_name]
+            s, X = process_stats(self._activations[node_name], self._subset_size)
             reduction_axis = wp.reduction_axes[0]
 
             weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
             if len(weight_data) != 1:  # not supported by the algorithm
                 continue
             _, weight_port_id = weight_data[0]
-
-            X = fns.stack([fns.mean(stat, axis=0) for stat in stats])
-            X_full = fns.transpose(X)
-
-            # prevent high memory and time consumption
-            if X_full.shape[1] > self._subset_size:
-                lens = [stat.shape[0] for stat in stats]
-                step = X_full.shape[1] // self._subset_size
-                idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
-                X = X_full[:, idxs]
-            else:
-                X = X_full
-
-            s = fns.max(fns.abs(X_full), axis=1)
 
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
             weight = weight.astype(TensorDataType.float32)
@@ -165,10 +152,10 @@ class ScaleEstimation:
 
             original_weight = fns.zeros_like(weight) + weight
 
-            compressed_weights, scale, zp = do_integer_quantization(original_weight, reduction_axis, cur_config)
+            compressed_weights, scale, zp = do_int_quantization(original_weight, reduction_axis, cur_config)
             if zp is not None:
                 zp = zp.astype(scale.dtype)
-            q_weights = do_dequantization(compressed_weights, scale, zp, reduction_axis)
+            q_weights = do_int_dequantization(compressed_weights, scale, zp, reduction_axis)
 
             s = fns.unsqueeze(s, 0)
             s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, group_size)

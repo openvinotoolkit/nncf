@@ -16,8 +16,8 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.quantization.algorithms.layerwise.engine import LayerwiseEngine
 from nncf.tensor import functions as fns
-from tests.post_training.test_templates.helpers import ConvTestModel
-from tests.post_training.test_templates.helpers import get_static_dataset
+from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import get_static_dataset
 
 TModel = TypeVar("TModel")
 

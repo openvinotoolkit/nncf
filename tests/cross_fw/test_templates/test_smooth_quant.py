@@ -28,11 +28,11 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
-from tests.post_training.test_templates.helpers import ConvTestModel
-from tests.post_training.test_templates.helpers import LinearMultiShapeModel
-from tests.post_training.test_templates.helpers import NonZeroLinearModel
-from tests.post_training.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
-from tests.post_training.test_templates.helpers import get_static_dataset
+from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import LinearMultiShapeModel
+from tests.cross_fw.test_templates.helpers import NonZeroLinearModel
+from tests.cross_fw.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
+from tests.cross_fw.test_templates.helpers import get_static_dataset
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
