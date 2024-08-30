@@ -28,6 +28,7 @@ from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 import numpy as np
 import openvino.runtime as ov
+import pkg_resources
 from config import Config
 from openvino.runtime import Dimension
 from openvino.runtime import PartialShape
@@ -1079,37 +1080,65 @@ def update_nncf_algorithms_config(nncf_algorithms_config: Dict[str, Dict[str, An
         print(f"Updated subset_size value for {nncf_method} method to {new_subset_size} ")
 
 
-def get_cpu_model_name() -> str:
-    """
-    Returns CPU device name.
-    """
+class EnvInfo:
 
-    def _get_cpu_model_name_linux_os() -> str:
+    @staticmethod
+    def print_info() -> None:
+        """
+        Prints NNCF version, python version and CPU model name.
+        """
+        python_version = EnvInfo._get_python_version()
+        nncf_version = EnvInfo._get_nncf_version()
+        cpu_model = EnvInfo._get_cpu_model()
+
+        nncf_logger.info(f"Python version: {python_version}")
+        nncf_logger.info(f"NNCF version: {nncf_version}")
+        nncf_logger.info(f"CPU model: {cpu_model}")
+
+    @staticmethod
+    def _get_nncf_version() -> str:
         try:
-            output = subprocess.check_output("lscpu", shell=True)
-            for line in output.decode().splitlines():
-                if "Model name:" in line:
-                    return line.split(":")[1].strip()
-            return "Unknown"
-        except Exception:
-            return "Unknown"
+            version = pkg_resources.get_distribution("nncf").version
+        except pkg_resources.DistributionNotFound:
+            version = "Unknown"
+        return version
 
-    def _get_cpu_model_name_windows() -> str:
-        try:
-            output = subprocess.check_output("wmic cpu get name", shell=True)
-            return output.decode().splitlines()[1].strip()
-        except Exception:
-            return "Unknown"
+    @staticmethod
+    def _get_python_version() -> str:
+        return platform.python_version()
 
-    os_name = platform.system()
+    @staticmethod
+    def _get_cpu_model() -> str:
+        """
+        Returns CPU device name.
+        """
 
-    cpu_model = "Unknown"
-    if os_name == "Linux":
-        cpu_model = _get_cpu_model_name_linux_os()
-    elif os_name == "Windows":
-        cpu_model = _get_cpu_model_name_windows()
+        def _get_cpu_model_name_linux_os() -> str:
+            try:
+                output = subprocess.check_output("lscpu", shell=True)
+                for line in output.decode().splitlines():
+                    if "Model name:" in line:
+                        return line.split(":")[1].strip()
+                return "Unknown"
+            except Exception:
+                return "Unknown"
 
-    return cpu_model
+        def _get_cpu_model_name_windows() -> str:
+            try:
+                output = subprocess.check_output("wmic cpu get name", shell=True)
+                return output.decode().splitlines()[1].strip()
+            except Exception:
+                return "Unknown"
+
+        os_name = platform.system()
+
+        cpu_model = "Unknown"
+        if os_name == "Linux":
+            cpu_model = _get_cpu_model_name_linux_os()
+        elif os_name == "Windows":
+            cpu_model = _get_cpu_model_name_windows()
+
+        return cpu_model
 
 
 def main():
@@ -1131,8 +1160,7 @@ def main():
     output_dir = os.path.join(args.output_dir, "optimized")
     os.makedirs(output_dir, exist_ok=True)
 
-    cpu_model_name = get_cpu_model_name()
-    nncf_logger.info(f"CPU Model: {cpu_model_name}")
+    EnvInfo.print_info()
 
     algo_name_to_method_map = {
         "quantize": quantize_model,
