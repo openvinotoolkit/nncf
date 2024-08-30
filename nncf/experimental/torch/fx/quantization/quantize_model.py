@@ -28,6 +28,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.experimental.torch.fx.transformations import revert_quantization_transformations
+from nncf.experimental.torch.fx.transformations import shared_constant_create_transformation_builder
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -68,7 +69,7 @@ def quantize_impl(
     original_graph_meta = model.meta
 
     copied_model = deepcopy(model)
-
+    shared_constant_create_transformation_builder()(copied_model)
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,
         target_device=target_device,

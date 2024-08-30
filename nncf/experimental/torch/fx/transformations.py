@@ -131,6 +131,37 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
     return bias_update_transformation
 
 
+def shared_constant_create_transformation_builder() -> TransformationFNType:
+    """
+    Return transformation which checks fx graph for shared constants, disconnects
+    and eliminates redundant shared constant while connecting singular shared constant.
+
+    :return: Transformation which attaches shared constants to nodes and removes redundant constants.
+    """
+
+    def shared_constant_create_transformation(model: torch.fx.GraphModule):
+        prev_targets = {}
+
+        for source_node in model.graph.nodes:
+            _replace_shared_weights(source_node, prev_targets)
+
+        model.graph.eliminate_dead_code()
+
+    return shared_constant_create_transformation
+
+
+def _replace_shared_weights(node: torch.fx.Node, prev_targets):
+    """
+    This function is responsible for checking the consumer node of current
+    node with previous nodes traversed by the loop
+    """
+    dist_node = list(node.users.keys())
+    if node.target in prev_targets and node.op in ("get_attr",):
+        dist_node[0].replace_input_with(node, prev_targets[node.target])
+    else:
+        prev_targets[node.target] = node
+
+
 def constant_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> TransformationFNType:
     """
     Return transformation which updates constant of the given node to the given value.
@@ -166,8 +197,11 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
             f"Constant on input port {input_port_id} for {node} is expected,"
             f" but node {args[input_port_id]} is present."
         )
+    weight_node = args[input_port_id]
+    consumer_nodes = list(weight_node.users.keys())
     args[input_port_id] = new_constant
-    node.args = tuple(args)
+    for node in consumer_nodes:
+        node.replace_input_with(weight_node, new_constant)
     graph.eliminate_dead_code()
 
 
