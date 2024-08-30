@@ -40,7 +40,6 @@ Compression-aware training:
 Requirements:
 
 - Updated Tensorflow (2.15) version. This version requires Python 3.9-3.11.
-- Added NumPy 2.0 support.
 
 ## New in Release 2.11.0
 
