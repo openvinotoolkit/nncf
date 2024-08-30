@@ -90,6 +90,17 @@ QUANTIZATION_MODELS = [
         "batch_size": 128,
     },
     {
+        "reported_name": "torchvision/mobilenet_v3_small_BC",
+        "model_id": "mobilenet_v3_small",
+        "pipeline_cls": ImageClassificationTorchvision,
+        "compression_params": {
+            "fast_bias_correction": False,
+            "preset": QuantizationPreset.MIXED,
+        },
+        "backends": [BackendType.FX_TORCH, BackendType.OV, BackendType.ONNX],
+        "batch_size": 128,
+    },
+    {
         "reported_name": "torchvision/vit_b_16",
         "model_id": "vit_b_16",
         "pipeline_cls": ImageClassificationTorchvision,

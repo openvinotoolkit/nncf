@@ -9,8 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import numpy as np
 import openvino as ov
@@ -27,7 +26,6 @@ from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
 from tests.cross_fw.test_templates.helpers import SplittedModel
 from tests.cross_fw.test_templates.test_bias_correction import TemplateTestBCAlgorithm
 from tests.openvino.native.common import compare_nncf_graphs
-from tests.openvino.native.common import get_actual_reference_for_current_openvino
 
 
 class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
@@ -59,7 +57,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
         return transform_fn
 
     @staticmethod
-    def map_references(ref_biases: Dict) -> Dict[str, List]:
+    def map_references(ref_biases: Dict, model_cls: Any) -> Dict[str, List]:
         mapping = {f"{name}/WithoutBiases": val for name, val in ref_biases.items()}
         return mapping
 
@@ -67,12 +65,6 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
     def remove_fq_from_inputs(model: ov.Model) -> ov.Model:
         graph = GraphConverter.create_nncf_graph(model)
         return remove_fq_from_inputs(model, graph)
-
-    @staticmethod
-    def get_ref_path(suffix: str) -> str:
-        return get_actual_reference_for_current_openvino(
-            Path("reference_graphs") / "quantized" / "subgraphs" / f"{suffix}.dot"
-        )
 
     @staticmethod
     def compare_nncf_graphs(model: ov.Model, ref_path: str) -> None:

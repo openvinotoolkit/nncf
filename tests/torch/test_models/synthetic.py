@@ -522,3 +522,20 @@ class ConvolutionWithAllConstantInputsModel(torch.nn.Module):
     def forward(self, x):
         w = self._conv_w + 10
         return x + nn.functional.conv2d(self._conv_i, w)
+
+
+class MultiBranchesConnectedModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_a = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+        self.conv_b = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+        self.conv_c = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+        self.bias = torch.tensor([1])
+
+    def forward(self, x):
+        a = self.conv_a(x)
+        b = self.conv_b(a)
+        a += self.bias
+        b += self.bias
+        y = a + b
+        return self.conv_c(y) + self.bias
