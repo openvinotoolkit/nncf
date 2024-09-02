@@ -24,9 +24,10 @@ class CausalLMHF(PTQTestPipeline):
     """Pipeline for causal language models from Hugging Face repository"""
 
     def prepare_model(self) -> None:
+        is_stateful = self.params.get("is_stateful", False)
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
             self.model_hf = OVModelForCausalLM.from_pretrained(
-                self.model_id, export=True, compile=False, stateful=False
+                self.model_id, export=True, compile=False, stateful=is_stateful
             )
             self.model = self.model_hf.model
             ov.serialize(self.model, self.fp32_model_dir / "model_fp32.xml")

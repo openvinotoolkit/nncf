@@ -236,6 +236,7 @@ class TemplateTestPTQParams:
             min_max_algo._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
             min_max_algo._backend_entity.dropout_metatypes,
+            min_max_algo._backend_entity.preserved_metatypes,
         )
         q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         act_num_q, weight_num_q = 0, 0
@@ -261,6 +262,7 @@ class TemplateTestPTQParams:
             min_max_algo._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
             min_max_algo._backend_entity.dropout_metatypes,
+            min_max_algo._backend_entity.preserved_metatypes,
         )
         q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         act_num_q, weight_num_q = 0, 0
@@ -286,6 +288,7 @@ class TemplateTestPTQParams:
             min_max_algo._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
             min_max_algo._backend_entity.dropout_metatypes,
+            min_max_algo._backend_entity.preserved_metatypes,
         )
         q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         for quantization_point in q_setup.quantization_points.values():
@@ -382,6 +385,7 @@ class TemplateTestPTQParams:
         inference_nncf_graph = transform_to_inference_graph(
             deepcopy(nncf_graph),
             self.get_algo_backend().get_start_nodes_for_activation_path_tracing(nncf_graph),
+            [],
             [],
             [],
         )

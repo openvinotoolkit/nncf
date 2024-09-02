@@ -20,8 +20,9 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.data.dataset import DataItem
 from nncf.data.dataset import Dataset
-from nncf.tensor import Tensor
+from nncf.data.dataset import ModelInput
 
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")
@@ -36,7 +37,7 @@ class StatisticsAggregator(ABC):
     Base class for statistics collection.
     """
 
-    def __init__(self, dataset: Dataset):
+    def __init__(self, dataset: Dataset[DataItem, ModelInput]):
         self.dataset = dataset
         self.stat_subset_size = None
         self.statistic_points = StatisticPointsContainer()
@@ -65,12 +66,12 @@ class StatisticsAggregator(ABC):
         model_transformer = factory.ModelTransformerFactory.create(model)
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
         transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
-        model_with_outputs = model_transformer.transform(transformation_layout)
+        model_with_outputs: TModel = model_transformer.transform(transformation_layout)
         engine = factory.EngineFactory.create(model_with_outputs)
 
         iterations_number = self._get_iterations_number()
         empty_statistics = True
-        for input_data in track(
+        for input_data in track(  # type: ignore
             islice(self.dataset.get_inference_data(), iterations_number),
             total=iterations_number,
             description="Statistics collection",
@@ -141,7 +142,7 @@ class StatisticsAggregator(ABC):
 
     @staticmethod
     @abstractmethod
-    def _process_outputs(outputs: Any) -> Dict[str, Tensor]:
+    def _process_outputs(outputs: Any) -> Dict[str, NNCFTensor]:
         """
         Post-process model outputs for the further statistics collection.
 

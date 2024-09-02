@@ -57,6 +57,10 @@ from nncf.torch.tensor_statistics.collectors import PT_REDUCERS_MAP
 
 
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
+    @property
+    def preserved_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
     TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
         TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
         TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,

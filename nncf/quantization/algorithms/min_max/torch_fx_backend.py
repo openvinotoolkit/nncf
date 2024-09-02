@@ -15,7 +15,6 @@ import torch
 
 import nncf
 import nncf.torch.graph.operator_metatypes as om
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -28,6 +27,7 @@ from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MA
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.model_utils import get_target_point
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -55,10 +55,10 @@ from nncf.torch.tensor_statistics.collectors import PT_REDUCERS_MAP
 
 
 class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
-    TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
-        TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
-        TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
-    }
+
+    @property
+    def preserved_metatypes(self) -> List[OperatorMetatype]:
+        return []
 
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
@@ -130,11 +130,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
-        if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
-            port_id = None
-        if target_type in FXMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
-            target_type = FXMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]
-        return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
+        return get_target_point(target_type, target_node_name, port_id)
 
     @staticmethod
     def create_convert_insertion_command(
@@ -351,8 +347,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        retval = set()
-        for node in nncf_graph.get_all_nodes():
-            if node.metatype in [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype, om.PTLinearMetatype]:
-                retval.add(node)
-        return list(retval)
+        return [
+            node
+            for node in nncf_graph.get_all_nodes()
+            if issubclass(node.metatype, om.PTOperatorMetatype) and node.metatype.weight_port_ids
+        ]

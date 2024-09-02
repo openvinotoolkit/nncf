@@ -127,6 +127,34 @@ class WeightCompressionAlgoBackend(ABC):
         :return: The transformed model.
         """
 
+    @abstractmethod
+    def insert_adapters(
+        self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
+    ) -> None:
+        """
+        Expands a model's execution graph following the Low-Rank Adaptation (LoRA) concept.
+
+        It inserts two additional Linear layers with weight matrices of low rank that are executed in parallel to the
+        target Linear layer.
+
+        Before insertion:
+
+            ----INPUT
+                   \
+                   orig.MM--------------------------------OUTPUT
+
+        After insertion:
+
+            ----INPUT ----lora_A.MM----lora_B.MM----\
+                  \                                add----OUTPUT
+                   orig.MM--------------------------/
+
+        :param wc_params: Parameters for weight compression.
+        :param lora_A: weights for the first LoRA matrix.
+        :param lora_B: weights for the second LoRA matrix.
+        :param int8_lora: indicates whether the LoRA matrices should be compressed to 8-bit.
+        """
+
     @staticmethod
     @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:

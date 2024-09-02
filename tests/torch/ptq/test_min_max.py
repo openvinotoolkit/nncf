@@ -25,10 +25,10 @@ from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from tests.post_training.test_templates.models import NNCFGraphToTest
-from tests.post_training.test_templates.test_min_max import TemplateTestGetChannelAxes
-from tests.post_training.test_templates.test_min_max import TemplateTestGetTargetPointShape
-from tests.post_training.test_templates.test_min_max import TemplateTestMinMaxAlgorithm
+from tests.cross_fw.test_templates.models import NNCFGraphToTest
+from tests.cross_fw.test_templates.test_min_max import TemplateTestGetChannelAxes
+from tests.cross_fw.test_templates.test_min_max import TemplateTestGetTargetPointShape
+from tests.cross_fw.test_templates.test_min_max import TemplateTestMinMaxAlgorithm
 
 
 class TestTorchMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):

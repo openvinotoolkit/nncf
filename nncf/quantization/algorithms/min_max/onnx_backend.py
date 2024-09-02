@@ -48,6 +48,10 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
+    def preserved_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
         return MATMUL_METATYPES
 

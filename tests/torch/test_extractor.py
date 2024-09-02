@@ -13,7 +13,7 @@ import pytest
 import torch
 from torch import nn
 
-import tests.post_training.test_templates.helpers as helpers
+import tests.cross_fw.test_templates.helpers as helpers
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch import wrap_model
 from nncf.torch.extractor import extract_model

@@ -1,0 +1,27 @@
+strict digraph  {
+"0 _param_constant0" [id=0, type=get_attr];
+"1 _param_constant1" [id=1, type=get_attr];
+"2 conv2d_input" [id=2, type=input];
+"3 conv2d" [id=3, type=conv2d];
+"4 _param_constant2" [id=4, type=get_attr];
+"5 _param_constant3" [id=5, type=get_attr];
+"6 conv2d_1_input" [id=6, type=input];
+"7 conv2d_1" [id=7, type=conv2d];
+"8 _tensor_constant0" [id=8, type=get_attr];
+"9 add_" [id=9, type=add_];
+"10 _tensor_constant0_1" [id=10, type=get_attr];
+"11 add__1" [id=11, type=add_];
+"12 output" [id=12, type=output];
+"0 _param_constant0" -> "3 conv2d";
+"1 _param_constant1" -> "3 conv2d";
+"2 conv2d_input" -> "3 conv2d";
+"3 conv2d" -> "9 add_";
+"4 _param_constant2" -> "7 conv2d_1";
+"5 _param_constant3" -> "7 conv2d_1";
+"6 conv2d_1_input" -> "7 conv2d_1";
+"7 conv2d_1" -> "11 add__1";
+"8 _tensor_constant0" -> "9 add_";
+"9 add_" -> "12 output";
+"10 _tensor_constant0_1" -> "11 add__1";
+"11 add__1" -> "12 output";
+}
