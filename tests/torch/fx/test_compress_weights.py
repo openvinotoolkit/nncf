@@ -84,7 +84,7 @@ def test_compress_weights(mode):
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
-def test_compress_weights_shared_weights(mode):
+def test_compress_weights_shared_weights(mocker, mode):
     with disable_patching():
         model = ShortTransformer(5, 10, share_weights=True)
         input_ids = torch.randint(0, 10, (5,))
@@ -99,6 +99,23 @@ def test_compress_weights_shared_weights(mode):
         compressed_model, dtype, compressed_node_weight_port
     )
     assert n_target_modules == n_compressed_weights
+    from nncf.common.factory import NNCFGraphFactory
+    nncf_graph = NNCFGraphFactory.create(compressed_model)
+    nncf_graph.visualize_graph("graph.dot")
+    num_decompression_nodes = 0
+    spies = []
+    for node in compressed_model.graph.nodes:
+        if node.op == "call_module" and "decompress" in node.name:
+            num_decompression_nodes += 1
+            decompressor_module = getattr(compressed_model, node.target)
+            spy = mocker.spy(decompressor_module, "forward")
+            spies.append(spy)
+    assert num_decompression_nodes == 2
+
+    compressed_model(input_ids)
+
+    for spy in spies:
+        assert spy.call_count == 1
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
