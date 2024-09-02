@@ -2,7 +2,7 @@
 
 Ready-to-use **Compressed LLMs** can be found in [OpenVINO Hugging Face page](https://huggingface.co/OpenVINO#models). Each model card includes NNCF parameters that were used to compress the model.
 
-**INT8 Post-Training Quantization** ([PTQ](../README.md#post-training-quantization)) results for public Vision, NLP, and GenAI models can be found on [OpenVino Performance Benchmarks page](https://docs.openvino.ai/2024/about-openvino/performance-benchmarks.html). PTQ results for ONNX models can be found in [ONNX](#onnx) section below.
+**INT8 Post-Training Quantization** ([PTQ](../README.md#post-training-quantization)) results for public Vision, NLP and GenAI models can be found on [OpenVino Performance Benchmarks page](https://docs.openvino.ai/2024/about-openvino/performance-benchmarks.html). PTQ results for ONNX models can be found in [ONNX](#onnx) section below.
 
 **Quantization-Aware Training** ([QAT](../README.md#training-time-compression)) results for PyTorch and TensorFlow public models can be found below.
 
