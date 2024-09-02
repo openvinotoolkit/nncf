@@ -115,7 +115,7 @@ def create_se_block() -> GraphPattern:
     non_pattern_node = pattern.add_node(label="NON_PATTERN_NODE", type=GraphPattern.NON_PATTERN_NODE_TYPE)
     reduce_mean_node = pattern.add_node(
         **{
-            GraphPattern.LABEL_ATTR: "REDUCE_MEAN",
+            GraphPattern.LABEL_ATTR: "POOLING",
             GraphPattern.METATYPE_ATTR: [om.ONNXReduceMeanMetatype, om.ONNXGlobalAveragePoolMetatype],
             GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
         }
