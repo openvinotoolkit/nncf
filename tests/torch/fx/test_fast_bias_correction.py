@@ -14,14 +14,12 @@ from typing import List
 import pytest
 import torch
 import torch.fx
-from torch._export import capture_pre_autograd_graph
 
 from nncf.common.factory import NNCFGraphFactory
-from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend import FXFastBiasCorrectionAlgoBackend
-from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from nncf.torch.model_graph_manager import OPERATORS_WITH_BIAS_METATYPES
 from tests.cross_fw.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
+from tests.torch.fx.helpers import get_torch_fx_model
 
 
 class TestTorchFXFBCAlgorithm(TemplateTestFBCAlgorithm):
@@ -33,21 +31,9 @@ class TestTorchFXFBCAlgorithm(TemplateTestFBCAlgorithm):
     def get_backend() -> FXFastBiasCorrectionAlgoBackend:
         return FXFastBiasCorrectionAlgoBackend
 
-    def _get_fx_model(model: torch.nn.Module) -> torch.fx.GraphModule:
-        device = next(model.named_parameters())[1].device
-        input_shape = model.INPUT_SIZE
-        if input_shape is None:
-            input_shape = [1, 3, 32, 32]
-        ex_input = torch.ones(input_shape).to(device)
-        model.eval()
-        with disable_patching():
-            fx_model = capture_pre_autograd_graph(model, args=(ex_input,))
-        apply_quantization_transformations(fx_model)
-        return fx_model
-
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> torch.fx.GraphModule:
-        fx_model = TestTorchFXFBCAlgorithm._get_fx_model(model)
+        fx_model = get_torch_fx_model(model)
         return fx_model
 
     @staticmethod
@@ -86,7 +72,7 @@ class TestTorchFXCudaFBCAlgorithm(TestTorchFXFBCAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: bool, tmp_dir: str):
-        fx_cuda_model = TestTorchFXFBCAlgorithm._get_fx_model(model.cuda())
+        fx_cuda_model = get_torch_fx_model(model.cuda())
         return fx_cuda_model
 
     @staticmethod

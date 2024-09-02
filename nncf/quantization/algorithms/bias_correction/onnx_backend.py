@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Set, Tuple
 
 import onnx
 
@@ -47,7 +47,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def model_extraction_command(
-        input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
+        input_ids: Set[Tuple[str, int]], output_ids: Set[Tuple[str, int]]
     ) -> ONNXModelExtractionCommand:
         return ONNXModelExtractionCommand(input_ids, output_ids)
 
@@ -105,3 +105,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def remove_fq_from_inputs(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx.ModelProto:
         return remove_fq_from_inputs(model, nncf_graph)
+
+    @staticmethod
+    def get_port_id(target_point: ONNXTargetPoint) -> int:
+        return target_point.port_id

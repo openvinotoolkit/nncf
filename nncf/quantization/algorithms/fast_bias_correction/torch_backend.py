@@ -69,7 +69,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return get_mean_statistic_collector(num_samples, channel_axis, window_size)
 
     @staticmethod
-    def get_sub_input_output_names(subgraph: NNCFNetwork) -> Tuple[str, str]:
+    def get_sub_input_output_names(subgraph: NNCFNetwork) -> Tuple[Optional[str], Optional[str]]:
         # Pytorch does not have name for extracted node
         return None, None
 
@@ -90,7 +90,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return 0, 0
 
     @staticmethod
-    def process_model_output(raw_data: Dict, output_name: str) -> Tensor:
+    def process_model_output(raw_data: Dict, output_name: Optional[str]) -> Tensor:
         return Tensor(raw_data)
 
     @staticmethod

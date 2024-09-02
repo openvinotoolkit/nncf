@@ -9,9 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "2.14.0"
+import nncf.torch.graph.operator_metatypes as om
+from nncf.torch.model_graph_manager import OPERATORS_WITH_BIAS_METATYPES
 
-
-BKC_TORCH_SPEC = "==2.4.*"
-BKC_TF_SPEC = "==2.15.*"
-STRICT_TF_SPEC = ">=2.9.3,<2.16.0"
+FX_OPERATORS_WITH_BIAS_METATYPES = tuple(OPERATORS_WITH_BIAS_METATYPES) + (om.PTLinearMetatype,)
