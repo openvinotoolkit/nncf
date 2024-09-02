@@ -954,8 +954,6 @@ class Float64InputMulModel(ONNXReferenceModel):
     def __init__(self):
         input_shape = [1, 3, 10, 10]
         model_input_name = "X"
-        model_mul_op_name = "Mul"
-        model_output_name = "Y"
         model_reciprocal_op_name = "Reciprocal"
         model_cast_op_name = "Cast"
         model_cast_output = "Cast_Y"
@@ -983,21 +981,37 @@ class Float64InputMulModel(ONNXReferenceModel):
             name=tensor_name, tensor_array=tensor, data_type=onnx.TensorProto.FLOAT
         )
 
-        mul_node = onnx.helper.make_node(
-            name=model_mul_op_name,
-            op_type="Mul",
-            inputs=[model_cast_output, tensor_name],
-            outputs=[model_output_name],
+        conv_output_node_name = "Conv1_Y"
+        conv_in_channels, conv_out_channels, conv1_kernel_shape = 3, 32, (3, 3)
+        rng = get_random_generator()
+        conv_W = rng.uniform(0, 1, (conv_out_channels, conv_in_channels, *conv1_kernel_shape)).astype(np.float32)
+        conv_B = rng.uniform(0, 1, conv_out_channels).astype(np.float32)
+
+        conv_W_initializer_tensor_name = "Conv1_W"
+        conv_W_initializer_tensor = create_initializer_tensor(
+            name=conv_W_initializer_tensor_name, tensor_array=conv_W, data_type=onnx.TensorProto.FLOAT
+        )
+        conv_B_initializer_tensor_name = "Conv1_B"
+        conv_B_initializer_tensor = create_initializer_tensor(
+            name=conv_B_initializer_tensor_name, tensor_array=conv_B, data_type=onnx.TensorProto.FLOAT
         )
 
-        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, input_shape)
+        conv_node = onnx.helper.make_node(
+            name="Conv1",
+            op_type="Conv",
+            inputs=[model_cast_output, conv_W_initializer_tensor_name, conv_B_initializer_tensor_name],
+            outputs=[conv_output_node_name],
+            kernel_shape=conv1_kernel_shape,
+        )
+
+        Y = onnx.helper.make_tensor_value_info(conv_output_node_name, onnx.TensorProto.FLOAT, input_shape)
 
         graph_def = onnx.helper.make_graph(
-            nodes=[reciprocal_node, cast_node, mul_node],
+            nodes=[reciprocal_node, cast_node, conv_node],
             name="Float64Net",
             inputs=[X],
             outputs=[Y],
-            initializer=[initializer_tensor],
+            initializer=[initializer_tensor, conv_W_initializer_tensor, conv_B_initializer_tensor],
         )
 
         op = onnx.OperatorSetIdProto()

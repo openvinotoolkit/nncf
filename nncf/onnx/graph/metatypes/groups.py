@@ -104,6 +104,25 @@ ARITHMETIC_OPERATIONS = [
     onnx_metatypes.ONNXDivLayerMetatype,
 ]
 
+ELEMENTWISE_OPERATIONS = [
+    onnx_metatypes.ONNXAddLayerMetatype,
+    onnx_metatypes.ONNXMulLayerMetatype,
+    onnx_metatypes.ONNXSubMetatype,
+    onnx_metatypes.ONNXDivLayerMetatype,
+    onnx_metatypes.ONNXLessMetatype,
+    onnx_metatypes.ONNXLessOrEqualMetatype,
+    onnx_metatypes.ONNXGreaterMetatype,
+    onnx_metatypes.ONNXGreaterOrEqualMetatype,
+    onnx_metatypes.ONNXEqualMetatype,
+    onnx_metatypes.ONNXModMetatype,
+    onnx_metatypes.ONNXOrMetatype,
+    onnx_metatypes.ONNXNotMetatype,
+    onnx_metatypes.ONNXAndMetatype,
+    onnx_metatypes.ONNXXOrMetatype,
+    onnx_metatypes.ONNXMaximumMetatype,
+    onnx_metatypes.ONNXMinimumMetatype,
+    onnx_metatypes.ONNXMeanMetatype,
+]
 
 OPERATIONS_WITH_WEIGHTS = [
     *CONSTANT_WEIGHT_LAYER_METATYPES,
