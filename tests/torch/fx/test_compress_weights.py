@@ -100,6 +100,7 @@ def test_compress_weights_shared_weights(mocker, mode):
     )
     assert n_target_modules == n_compressed_weights
     from nncf.common.factory import NNCFGraphFactory
+
     nncf_graph = NNCFGraphFactory.create(compressed_model)
     nncf_graph.visualize_graph("graph.dot")
     num_decompression_nodes = 0
