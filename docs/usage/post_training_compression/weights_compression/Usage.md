@@ -527,6 +527,251 @@ Here is the perplexity and accuracy with data-free and data-aware mixed-precisio
     <t/r>
 </table>
 
+Below are the tables showing the accuracy/footprint trade-off for 2 models `Qwen/Qwen2-7B` and
+`microsoft/Phi-3-mini-4k-instruct` compressed with different options.
+
+Footprint overhead is measured by the percentage increase in model size relative to a baseline int4 model, compressed with `ratio=1` and `all_layers=False` options.
+Accuracy metrics are measured on 4 tasks [lambada openai](https://huggingface.co/datasets/EleutherAI/lambada_openai), [wikitext](https://arxiv.org/pdf/1609.07843.pdf),
+[winogrande](https://arxiv.org/abs/1907.10641), [WWB](https://github.com/openvinotoolkit/openvino.genai/tree/master/llm_bench/python/who_what_benchmark/whowhatbench).
+The `average relative error` in the tables below is the mean of relative errors for each of four tasks with respect to
+the metric value for fp32 model. All int4 models are compressed group-wise with `group_size=128` and `mode=CompressionMode.INT4_SYM` and
+with calibration dataset based on 128 samples from `wikitext-2-v1`. Int8 model is compressed with `mode=CompressionMode.INT8_ASYM`.
+The following advanced parameters were used for AWQ, Scale Estimation and Lora Correction algorithms:
+
+```python
+AdvancedCompressionParameters(
+  awq_params=AdvancedAWQParameters(32, 0.05, 0.0, 1.0, 100),
+  scale_estimation_params=AdvancedScaleEstimationParameters(32, 5, 10, -1.0),
+  lora_correction_params=AdvancedLoraCorrectionParameters(adapter_rank=<LORA_RANK>)
+)
+```
+
+The tables clearly shows the followings:
+
+- More layers in 8 bit does improve accuracy, but it increases the footprint a lot.
+- Scale Estimation, AWQ, GPTQ do improve accuracy of the baseline int4 model without footprint increase.
+- Lora correction algorithm improves the accuracy of int4 models further with a footprint much less compared to mixed-precision models with the same or worse accuracy.
+
+Accuracy/footprint trade-off for `Qwen/Qwen2-7B`:
+
+<div class="tg-wrap"><table><thead>
+  <tr>
+    <th>Mode </th>
+    <th>%int4</th>
+    <th>%int8</th>
+    <th>lora <br>     rank</th>
+    <th>avg<br>relative<br>     error<br></th>
+    <th>model size<br>     overhead</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td>fp32</td>
+    <td>0%</td>
+    <td>0%</td>
+    <td></td>
+    <td>0.0%</td>
+    <td>566%</td>
+  </tr>
+  <tr>
+    <td>int8</td>
+    <td>0%</td>
+    <td>100%</td>
+    <td></td>
+    <td>7.9%</td>
+    <td>69%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation + lora correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>256</td>
+    <td>16.5%</td>
+    <td>14%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation</td>
+    <td>40%</td>
+    <td>60%</td>
+    <td></td>
+    <td>17.1%</td>
+    <td>42%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation</td>
+    <td>60%</td>
+    <td>40%</td>
+    <td></td>
+    <td>17.1%</td>
+    <td>28%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation + lora correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>32</td>
+    <td>17.4%</td>
+    <td>2%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation + lora correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>8</td>
+    <td>17.5%</td>
+    <td>1%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation</td>
+    <td>80%</td>
+    <td>20%</td>
+    <td></td>
+    <td>17.5%</td>
+    <td>14%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation + lora correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>16</td>
+    <td>18.0%</td>
+    <td>1%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td></td>
+    <td>18.4%</td>
+    <td>0%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation + gptq</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td></td>
+    <td>20.2%</td>
+    <td>0%</td>
+  </tr>
+  <tr>
+    <td>int4</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td></td>
+    <td>21.4%</td>
+    <td>0%</td>
+  </tr>
+</tbody></table></div>
+
+Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
+
+<div class="tg-wrap"><table><thead>
+  <tr>
+    <th>Mode </th>
+    <th>%int4</th>
+    <th>%int8</th>
+    <th>lora <br>     rank</th>
+    <th>avg<br>relative<br>     error<br></th>
+    <th>model size<br>     overhead</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td>fp32</td>
+    <td>0%</td>
+    <td>0%</td>
+    <td></td>
+    <td>0.0%</td>
+    <td>639%</td>
+  </tr>
+  <tr>
+    <td>int8</td>
+    <td>0%</td>
+    <td>100%</td>
+    <td></td>
+    <td>7.3%</td>
+    <td>85%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation</td>
+    <td>40%</td>
+    <td>60%</td>
+    <td></td>
+    <td>16.9%</td>
+    <td>52%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation</td>
+    <td>60%</td>
+    <td>40%</td>
+    <td></td>
+    <td>18.4%</td>
+    <td>35%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation + lora correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>256</td>
+    <td>18.7%</td>
+    <td>20%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation + lora correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>16</td>
+    <td>20.5%</td>
+    <td>1%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation + lora correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>32</td>
+    <td>20.6%</td>
+    <td>3%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation</td>
+    <td>80%</td>
+    <td>20%</td>
+    <td></td>
+    <td>21.3%</td>
+    <td>17%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation + gptq</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td></td>
+    <td>21.7%</td>
+    <td>0%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation + lora correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>8</td>
+    <td>22.1%</td>
+    <td>1%</td>
+  </tr>
+  <tr>
+    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td></td>
+    <td>24.5%</td>
+    <td>0%</td>
+  </tr>
+  <tr>
+    <td>int4</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td></td>
+    <td>25.3%</td>
+    <td>0%</td>
+  </tr>
+</tbody></table></div>
+
 #### Limitations
 
 - The algorithm is supported for OpenVINO and PyTorch models.
