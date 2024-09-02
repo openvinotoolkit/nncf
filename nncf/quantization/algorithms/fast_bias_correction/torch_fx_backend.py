@@ -15,37 +15,27 @@ import numpy as np
 import torch
 import torch.fx
 
-import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
-from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
-from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.experimental.torch.fx.model_utils import get_target_point
+from nncf.experimental.torch.fx.node_utils import get_bias_value
+from nncf.experimental.torch.fx.node_utils import is_node_with_bias
 from nncf.experimental.torch.fx.transformations import bias_update_transformation_builder
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.model_graph_manager import is_quantized_weights
 from nncf.torch.tensor_statistics.collectors import get_mean_statistic_collector
 
 
 class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
-    TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
-        TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
-        TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
-    }
-
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
-        if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
-            port_id = None
-        if target_type in FXFastBiasCorrectionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
-            target_type = FXFastBiasCorrectionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]
-        return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
+        return get_target_point(target_type, target_node_name, port_id)
 
     @staticmethod
     def create_bias_correction_command(
@@ -69,9 +59,9 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return get_mean_statistic_collector(num_samples, channel_axis, window_size)
 
     @staticmethod
-    def get_sub_input_output_names(subgraph: NNCFNetwork) -> Tuple[str, str]:
+    def get_sub_input_output_names(subgraph: torch.fx.GraphModule) -> Tuple[Optional[int], int]:
         # Pytorch does not have name for extracted node
-        return None, None
+        return None, 0
 
     @staticmethod
     def create_input_data(shape: Tuple[int], data: List[Tensor], input_name: str, channel_axis: int) -> torch.Tensor:
@@ -83,32 +73,23 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: torch.fx.GraphModule) -> Tensor:
-        bias_node = nncf_graph.get_next_nodes(node)[0]
-        # TODO(dlyakhov): make a node_name_vs_node map to speed up the process
-        graph_bias_node = get_graph_node_by_name(model.graph, bias_node.node_name)
-        return Tensor(get_tensor_constant_from_node(graph_bias_node.all_input_nodes[1], model))
+        return get_bias_value(node, nncf_graph, model)
 
     @staticmethod
     def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
         return 0, 0
 
     @staticmethod
-    def process_model_output(raw_data: Dict, output_name: str) -> Tensor:
-        return Tensor(raw_data)
+    def process_model_output(raw_data: Dict, output_name: int) -> Tensor:
+        return Tensor(raw_data[output_name])
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        weight_node = nncf_graph.get_previous_nodes(node)[1]
-        return "dequantize" in weight_node.node_type
+        return is_quantized_weights(node, nncf_graph)
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        # Assumes that all biases were unfused
-        if node.metatype in (om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype, om.PTLinearMetatype):
-            next_nodes = nncf_graph.get_next_nodes(node)
-            if len(next_nodes) != 1:
-                return False
-            return next_nodes[0].metatype in (om.PTAddMetatype,)
+        return is_node_with_bias(node, nncf_graph)
 
     @staticmethod
     def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:

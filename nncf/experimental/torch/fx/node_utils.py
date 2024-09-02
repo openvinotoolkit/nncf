@@ -11,6 +11,12 @@
 
 import torch.fx
 
+import nncf.torch.graph.operator_metatypes as om
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
+from nncf.experimental.torch.fx.groups import FX_OPERATORS_WITH_BIAS_METATYPES
+from nncf.tensor import Tensor
+
 
 # TODO(dlyakhov): Use torch.fx.graph.find_nodes method instead after
 # torch version update (>= 2.4)
@@ -49,3 +55,34 @@ def get_tensor_constant_from_node(constant_node: torch.fx.Node, model: torch.fx.
             raise RuntimeError(f"Node referenced nonexistent target {'.'.join(target_atoms[:i])}")
         attr_itr = getattr(attr_itr, atom)
     return attr_itr
+
+
+def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    """
+    Returns True if the node has a bias, False otherwise.
+
+    :param node: Target node.
+    :param nncf_graph: Target nncf_graph.
+    :return: True if the node has a bias, False otherwise.
+    """
+    # Assumes that all biases were unfused
+    if node.metatype in FX_OPERATORS_WITH_BIAS_METATYPES:
+        next_nodes = nncf_graph.get_next_nodes(node)
+        if len(next_nodes) != 1:
+            return False
+        return next_nodes[0].metatype in (om.PTAddMetatype,)
+
+
+def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: torch.fx.GraphModule) -> Tensor:
+    """
+    Retrieves the bias value from the given node.
+
+    :param node: Target node.
+    :param nncf_graph: Target nncf_graph.
+    :param model: Target GraphModule.
+    :return: Bias value of the given node.
+    """
+    bias_node = nncf_graph.get_next_nodes(node)[0]
+    # TODO(dlyakhov): make a node_name_vs_node map to speed up the process
+    graph_bias_node = get_graph_node_by_name(model.graph, bias_node.node_name)
+    return Tensor(get_tensor_constant_from_node(graph_bias_node.all_input_nodes[1], model))
