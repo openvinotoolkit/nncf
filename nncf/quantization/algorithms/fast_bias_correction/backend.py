@@ -88,7 +88,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_sub_input_output_names(subgraph: TModel) -> Tuple[str, str]:
+    def get_sub_input_output_names(subgraph: TModel) -> Tuple[Union[str, int], Union[str]]:
         """
         Returns tuple of the subgraph's the input & output tensor names respectively.
 
@@ -149,7 +149,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def process_model_output(raw_data: OutputType, output_name: str) -> Tensor:
+    def process_model_output(raw_data: OutputType, output_name: Union[str, int]) -> Tensor:
         """
         Returns backend-specific processed output from the model.
 

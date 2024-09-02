@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple, TypeVar
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -105,7 +105,7 @@ class BiasCorrection(Algorithm):
 
     @property
     def available_backends(self) -> List[BackendType]:
-        return [BackendType.ONNX, BackendType.OPENVINO]
+        return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH_FX]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
@@ -122,6 +122,10 @@ class BiasCorrection(Algorithm):
             from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBiasCorrectionAlgoBackend
 
             self._backend_entity = OVBiasCorrectionAlgoBackend()
+        elif model_backend == BackendType.TORCH_FX:
+            from nncf.quantization.algorithms.bias_correction.torch_fx_backend import FXBiasCorrectionAlgoBackend
+
+            self._backend_entity = FXBiasCorrectionAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
@@ -304,7 +308,7 @@ class BiasCorrection(Algorithm):
             edges_queue.extend(nncf_graph.get_input_edges(node))
         return subgraph_input_ids
 
-    def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Dict[str, List[str]]:
+    def _get_subgraph_data_for_node(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Dict[str, Set[Tuple[str, int]]]:
         """
         This method collects necessary data for the specified node and its subgraph.
         This data contains the nodes (NNCFNode) for the subgraph building
@@ -511,8 +515,8 @@ class BiasCorrection(Algorithm):
             # For the cases when the layer has more than one (0) output port.
             return (
                 self._algorithm_key in point.algorithm_to_tensor_collectors
-                and point.target_point.type == TargetType.POST_LAYER_OPERATION
-                and point.target_point.port_id == port_id
+                and point.target_point.type in [TargetType.POST_LAYER_OPERATION, TargetType.OPERATOR_POST_HOOK]
+                and self._backend_entity.get_port_id(point.target_point) == port_id
             )
 
         input_id = (node_name, port_id)
@@ -537,10 +541,10 @@ class BiasCorrection(Algorithm):
         """
 
         def output_filter_func(point):
-            return (
-                self._algorithm_key in point.algorithm_to_tensor_collectors
-                and point.target_point.type == TargetType.POST_LAYER_OPERATION
-            )
+            return self._algorithm_key in point.algorithm_to_tensor_collectors and point.target_point.type in [
+                TargetType.POST_LAYER_OPERATION,
+                TargetType.OPERATOR_POST_HOOK,
+            ]
 
         output_fp = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
@@ -668,9 +672,7 @@ class BiasCorrection(Algorithm):
 
         return list(biased_nodes - dependant_nodes)
 
-    def extract_model(
-        self, model: TModel, input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
-    ) -> TModel:
+    def extract_model(self, model: TModel, input_ids: Set[Tuple[str, int]], output_ids: Set[Tuple[str, int]]) -> TModel:
         """
         Returns the backend-specific model that bounded by the specified input & output layers.
 

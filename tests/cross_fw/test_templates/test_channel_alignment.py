@@ -31,8 +31,8 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.quantization.algorithms.channel_alignment.algorithm import ChannelAlignment
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
-from tests.post_training.test_templates.models import NNCFGraphCA
-from tests.post_training.test_templates.models import NNCFGraphCAWithBias
+from tests.cross_fw.test_templates.models import NNCFGraphCA
+from tests.cross_fw.test_templates.models import NNCFGraphCAWithBias
 
 EPS = 1e-3
 

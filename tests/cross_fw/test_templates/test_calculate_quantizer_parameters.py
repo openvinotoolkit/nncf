@@ -12,6 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -24,9 +25,10 @@ from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorSt
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.tensor import functions as fns
-from tests.post_training.conftest import FQ_CALCULATED_PARAMETERS_PATH
 from tests.shared.helpers import dump_to_json
 from tests.shared.helpers import load_json
+
+FQ_CALCULATED_PARAMETERS_PATH = Path(__file__).parent / "fq_params" / "fq_params.json"
 
 
 def compare_fq_parameters(ref_params, params):
