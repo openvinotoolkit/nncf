@@ -358,6 +358,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         non_unified_scales_quantization_point_ids = set(range(len(quantization_points)))
 
         for unified_scales_group in quantizer_setup.get_unified_scale_groups():
+            if not unified_scales_group:
+                continue
             us_qp_id = unified_scales_group[0]
             qp = quantization_points[us_qp_id]
             quantizer_spec = qp.quantizer_spec
@@ -640,7 +642,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             scales_unification_map=scales_unification_map,
         )
 
-        quantization_proposal = solver.run_on_ip_graph(ip_graph)
+        quantization_proposal = solver.run_on_ip_graph(ip_graph, ELEMENTWISE_LAYER_METATYPES)
         multi_config_setup = quantization_proposal.quantizer_setup
         single_config_setup = multi_config_setup.select_first_qconfig_for_each_point()
         finalized_proposal = quantization_proposal.finalize(single_config_setup)

@@ -46,7 +46,7 @@ QUANTIZATION_MODELS = [
         "backends": ALL_PTQ_BACKENDS + [BackendType.OPTIMUM],
     },
     {
-        "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
+        "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_statefull",
         "model_id": "hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
         "pipeline_cls": CausalLMHF,
         "compression_params": {
@@ -54,6 +54,19 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "subset_size": 2,
         },
+        "params": {"is_stateful": True},
+        "backends": [BackendType.OPTIMUM],
+    },
+    {
+        "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_stateless",
+        "model_id": "hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
+        "pipeline_cls": CausalLMHF,
+        "compression_params": {
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "subset_size": 2,
+        },
+        "params": {"is_stateful": False},
         "backends": [BackendType.OPTIMUM],
     },
     {
@@ -74,6 +87,17 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTorchvision,
         "compression_params": {},
         "backends": [BackendType.FX_TORCH, BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.OV, BackendType.ONNX],
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "torchvision/mobilenet_v3_small_BC",
+        "model_id": "mobilenet_v3_small",
+        "pipeline_cls": ImageClassificationTorchvision,
+        "compression_params": {
+            "fast_bias_correction": False,
+            "preset": QuantizationPreset.MIXED,
+        },
+        "backends": [BackendType.FX_TORCH, BackendType.OV, BackendType.ONNX],
         "batch_size": 128,
     },
     {

@@ -15,7 +15,7 @@ import pytest
 from nncf.onnx.quantization.quantizer_parameters import get_level_low_level_high
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.tensor import Tensor
-from tests.post_training.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
+from tests.cross_fw.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
 
 EPS = np.finfo(np.float32).eps
 

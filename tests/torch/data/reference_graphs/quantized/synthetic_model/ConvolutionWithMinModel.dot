@@ -1,0 +1,11 @@
+strict digraph  {
+"0 /nncf_model_input_0" [id=0, type=nncf_model_input];
+"1 SymmetricQuantizer/symmetric_quantize_0" [id=1, type=symmetric_quantize];
+"2 ConvolutionWithMinModel/conv2d_0" [id=2, type=conv2d];
+"3 ConvolutionWithMinModel/minimum_0" [id=3, type=minimum];
+"4 /nncf_model_output_0" [id=4, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
+"1 SymmetricQuantizer/symmetric_quantize_0" -> "2 ConvolutionWithMinModel/conv2d_0";
+"2 ConvolutionWithMinModel/conv2d_0" -> "3 ConvolutionWithMinModel/minimum_0";
+"3 ConvolutionWithMinModel/minimum_0" -> "4 /nncf_model_output_0";
+}

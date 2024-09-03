@@ -801,7 +801,7 @@ class PTPadMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTCatMetatype(PTOperatorMetatype):
     name = "CatOp"
-    module_to_function_names = {NamespaceTarget.TORCH: ["cat", "stack"]}
+    module_to_function_names = {NamespaceTarget.TORCH: ["cat", "stack", "concat"]}
     hw_config_names = [HWConfigOpName.CONCAT]
 
 
@@ -1141,9 +1141,35 @@ UNIFICATION_PRODUCING_METATYPES = [
     PTModuleLinearMetatype,
 ]
 
+ELEMENTWISE_OPERATIONS = [
+    PTAddMetatype,
+    PTMulMetatype,
+    PTSubMetatype,
+    PTDivMetatype,
+    PTLessMetatype,
+    PTLessEqualMetatype,
+    PTGreaterMetatype,
+    PTGreaterEqualMetatype,
+    PTEqualsMetatype,
+    PTNotEqualMetatype,
+    PTModMetatype,
+    PTLogicalOrMetatype,
+    PTLogicalXorMetatype,
+    PTLogicalAndMetatype,
+    PTMaxMetatype,
+    PTMinMetatype,
+]
+
 OP_NAMES_WITH_WEIGHTS = [x for meta in OPERATORS_WITH_WEIGHTS_METATYPES for x in meta.get_all_aliases()]
 
-QUANTIZE_NODE_TYPES = ["symmetric_quantize", "asymmetric_quantize"]
+QUANTIZE_NODE_TYPES = [
+    "symmetric_quantize",
+    "asymmetric_quantize",
+    "quantize_per_tensor",
+    "dequantize_per_tensor",
+    "quantize_per_channel",
+    "dequantize_per_channel",
+]
 
 # These metatypes mix outputs for different samples into one axis.
 # If reducers and aggregators collect statistics at the output of the following operations,

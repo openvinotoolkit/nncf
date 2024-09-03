@@ -22,10 +22,10 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
-from tests.post_training.test_templates.models import NNCFGraphToTest
-from tests.post_training.test_templates.test_min_max import TemplateTestGetChannelAxes
-from tests.post_training.test_templates.test_min_max import TemplateTestGetTargetPointShape
-from tests.post_training.test_templates.test_min_max import TemplateTestMinMaxAlgorithm
+from tests.cross_fw.test_templates.models import NNCFGraphToTest
+from tests.cross_fw.test_templates.test_min_max import TemplateTestGetChannelAxes
+from tests.cross_fw.test_templates.test_min_max import TemplateTestGetTargetPointShape
+from tests.cross_fw.test_templates.test_min_max import TemplateTestMinMaxAlgorithm
 
 
 class TestOVMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
