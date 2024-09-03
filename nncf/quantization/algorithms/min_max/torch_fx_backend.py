@@ -56,13 +56,15 @@ from nncf.torch.tensor_statistics.collectors import PT_REDUCERS_MAP
 
 class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
+    MAT_MUL_METATYPES = [om.PTLinearMetatype, om.PTMatMulMetatype]
+
     @property
     def preserved_metatypes(self) -> List[OperatorMetatype]:
         return []
 
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
-        return [om.PTLinearMetatype, om.PTMatMulMetatype]
+        return self.MAT_MUL_METATYPES
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -348,8 +350,20 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        return [
+        weight_nodes_candidates = [
             node
             for node in nncf_graph.get_all_nodes()
             if issubclass(node.metatype, om.PTOperatorMetatype) and node.metatype.weight_port_ids
         ]
+        weight_nodes = []
+        for node in weight_nodes_candidates:
+            if node.metatype in FXMinMaxAlgoBackend.MAT_MUL_METATYPES and not FXMinMaxAlgoBackend.is_constant_matmul(
+                node, nncf_graph
+            ):
+                continue
+            weight_nodes.append(node)
+        return weight_nodes
+
+    @staticmethod
+    def is_constant_matmul(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        return len(get_weight_tensor_port_ids(node, nncf_graph)) > 0

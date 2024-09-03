@@ -312,3 +312,15 @@ class MinMaxAlgoBackend(ABC):
         :param nncf_graph: Instance of NNCFGraph.
         :return: All nodes with weights.
         """
+
+    @staticmethod
+    @abstractmethod
+    def is_constant_matmul(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        """
+        Returns true if given nncf matmul node is a matmul with a constant,
+            False otherwise.
+        :param Node: Instance of NNCFNode.
+        :param nncf_graph: Instance of NNCFGraph.
+        :return: True if given nncf matmul node is a matmul with a constant,
+            False otherwise.
+        """

@@ -265,6 +265,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         ]
 
     @staticmethod
+    def is_constant_matmul(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        return node.layer_attributes is not None
+
+    @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: OVTargetPoint) -> str:
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         return node.layer_attributes.constant_attributes[target_point.port_id]["name"]

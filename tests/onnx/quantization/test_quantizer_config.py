@@ -11,20 +11,30 @@
 
 import pytest
 
+from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTransposeMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
+from tests.cross_fw.test_templates.models import NNCFGraphTransformer
 from tests.cross_fw.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
 
 
 class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def get_algo_backend(self):
         return ONNXMinMaxAlgoBackend()
+
+    def get_backend_type(self):
+        return BackendType.ONNX
 
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
@@ -58,4 +68,17 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             input_layer_attrs=ONNXLayerAttributes(),
             output_layer_attrs=ONNXLayerAttributes(),
             const_layer_attrs=ONNXLayerAttributes(),
+        )
+
+    @pytest.fixture
+    def transformer_nncf_graph(self) -> NNCFGraphToTest:
+        return NNCFGraphTransformer(
+            matmul_metatype=ONNXMatMulMetatype,
+            softmax_metatype=ONNXSoftmaxMetatype,
+            mul_metatype=ONNXMulLayerMetatype,
+            const_metatype=ONNXConstantMetatype,
+            transpose_metatype=ONNXTransposeMetatype,
+            matmul_layer_weighted_attrs=ONNXLayerAttributes({"name": "edge_name", "shape": (1, 1, 1, 1)}),
+            matmul_layer_non_weighted_attrs=ONNXLayerAttributes(),
+            default_layer_attrs=ONNXLayerAttributes(),
         )
