@@ -206,11 +206,10 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
     # Update metadata of the new constant node.
     previous_const = args[input_port_id]
     new_constant.meta = copy(previous_const.meta)
-    consumer_nodes = list(weight_node.users.keys())
+    consumer_nodes = list(previous_const.users.keys())
     new_constant.meta["val"] = value
-    args[input_port_id] = new_constant
     for node in consumer_nodes:
-        node.replace_input_with(weight_node, new_constant)
+        node.replace_input_with(previous_const, new_constant)
     graph.eliminate_dead_code()
 
 
