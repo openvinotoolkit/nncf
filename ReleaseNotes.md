@@ -17,7 +17,8 @@ Post-training Quantization:
 - Deprecations/Removals:
   - ...
 - Tutorials:
-  - ...
+  - [Post-Training Optimization of Flux.1 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/flux.1-image-generation/flux.1-image-generation.ipynb)
+  - [Post-Training Optimization of PixArt-α Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/pixart/pixart.ipynb)
 - Known issues:
   - ...
 
