@@ -206,8 +206,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 )
                 decompressor_type = "asymmetric"
 
-            # registry weight decompression module in the model
-            # TODO: Find a more efficient way to access updated constant name
+            # register weight decompression module in the model
             compressed_weight_name = wc_params.node_with_weight.node_name + "_updated_constant0"
             decompressor_name = f"{decompressor_type}_weights_decompressor_{compressed_weight_name.replace('.', '_')}"
 
