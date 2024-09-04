@@ -559,9 +559,9 @@ Accuracy/footprint trade-off for `Qwen/Qwen2-7B`:
     <th>Mode </th>
     <th>%int4</th>
     <th>%int8</th>
-    <th>lora <br>     rank</th>
-    <th>avg<br>relative<br>     error<br></th>
-    <th>model size<br>     overhead</th>
+    <th>lora<br>rank</th>
+    <th>average<br>relative<br>error</th>
+    <th>compression<br>rate</th>
   </tr></thead>
 <tbody>
   <tr>
@@ -570,7 +570,7 @@ Accuracy/footprint trade-off for `Qwen/Qwen2-7B`:
     <td>0%</td>
     <td></td>
     <td>0.0%</td>
-    <td>566%</td>
+    <td>1.0x</td>
   </tr>
   <tr>
     <td>int8</td>
@@ -578,79 +578,79 @@ Accuracy/footprint trade-off for `Qwen/Qwen2-7B`:
     <td>100%</td>
     <td></td>
     <td>7.9%</td>
-    <td>69%</td>
+    <td>3.9x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation + lora correction</td>
+    <td>int4 + awq + scale&nbsp;estimation + lora&nbsp;correction</td>
     <td>100%</td>
     <td>0%</td>
     <td>256</td>
     <td>16.5%</td>
-    <td>14%</td>
+    <td>5.8x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation</td>
+    <td>int4 + awq + scale&nbsp;estimation</td>
     <td>40%</td>
     <td>60%</td>
     <td></td>
     <td>17.1%</td>
-    <td>42%</td>
+    <td>4.7x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation</td>
+    <td>int4 + awq + scale&nbsp;estimation</td>
     <td>60%</td>
     <td>40%</td>
     <td></td>
     <td>17.1%</td>
-    <td>28%</td>
+    <td>5.2x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation + lora correction</td>
+    <td>int4 + awq + scale&nbsp;estimation + lora&nbsp;correction</td>
     <td>100%</td>
     <td>0%</td>
     <td>32</td>
     <td>17.4%</td>
-    <td>2%</td>
+    <td>6.5x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation + lora correction</td>
+    <td>int4 + awq + scale&nbsp;estimation + lora&nbsp;correction</td>
     <td>100%</td>
     <td>0%</td>
     <td>8</td>
     <td>17.5%</td>
-    <td>1%</td>
+    <td>6.6x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation</td>
+    <td>int4 + awq + scale&nbsp;estimation</td>
     <td>80%</td>
     <td>20%</td>
     <td></td>
     <td>17.5%</td>
-    <td>14%</td>
+    <td>5.8x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation + lora correction</td>
+    <td>int4 + awq + scale&nbsp;estimation + lora&nbsp;correction</td>
     <td>100%</td>
     <td>0%</td>
     <td>16</td>
     <td>18.0%</td>
-    <td>1%</td>
+    <td>6.6x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation</td>
+    <td>int4 + awq + scale&nbsp;estimation</td>
     <td>100%</td>
     <td>0%</td>
     <td></td>
     <td>18.4%</td>
-    <td>0%</td>
+    <td>6.7x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;awq + scale estimation + gptq</td>
+    <td>int4 + awq + scale&nbsp;estimation + gptq</td>
     <td>100%</td>
     <td>0%</td>
     <td></td>
     <td>20.2%</td>
-    <td>0%</td>
+    <td>6.7x</td>
   </tr>
   <tr>
     <td>int4</td>
@@ -658,7 +658,7 @@ Accuracy/footprint trade-off for `Qwen/Qwen2-7B`:
     <td>0%</td>
     <td></td>
     <td>21.4%</td>
-    <td>0%</td>
+    <td>6.7x</td>
   </tr>
 </tbody></table></div>
 
@@ -669,9 +669,9 @@ Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
     <th>Mode </th>
     <th>%int4</th>
     <th>%int8</th>
-    <th>lora <br>     rank</th>
-    <th>avg<br>relative<br>     error<br></th>
-    <th>model size<br>     overhead</th>
+    <th>lora<br>rank</th>
+    <th>average<br>relative<br>error</th>
+    <th>compression<br>rate</th>
   </tr></thead>
 <tbody>
   <tr>
@@ -680,7 +680,7 @@ Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
     <td>0%</td>
     <td></td>
     <td>0.0%</td>
-    <td>639%</td>
+    <td>1.0x</td>
   </tr>
   <tr>
     <td>int8</td>
@@ -688,79 +688,79 @@ Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
     <td>100%</td>
     <td></td>
     <td>7.3%</td>
-    <td>85%</td>
+    <td>4.0x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation</td>
+    <td>int4 + scale&nbsp;estimation</td>
     <td>40%</td>
     <td>60%</td>
     <td></td>
     <td>16.9%</td>
-    <td>52%</td>
+    <td>4.9x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation</td>
+    <td>int4 + scale&nbsp;estimation</td>
     <td>60%</td>
     <td>40%</td>
     <td></td>
     <td>18.4%</td>
-    <td>35%</td>
+    <td>5.5x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation + lora correction</td>
+    <td>int4 + scale&nbsp;estimation + lora&nbsp;correction</td>
     <td>100%</td>
     <td>0%</td>
     <td>256</td>
     <td>18.7%</td>
-    <td>20%</td>
+    <td>6.2x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation + lora correction</td>
+    <td>int4 + scale&nbsp;estimation + lora&nbsp;correction</td>
     <td>100%</td>
     <td>0%</td>
     <td>16</td>
     <td>20.5%</td>
-    <td>1%</td>
+    <td>7.3x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation + lora correction</td>
+    <td>int4 + scale&nbsp;estimation + lora&nbsp;correction</td>
     <td>100%</td>
     <td>0%</td>
     <td>32</td>
     <td>20.6%</td>
-    <td>3%</td>
+    <td>7.2x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation</td>
+    <td>int4 + scale&nbsp;estimation</td>
     <td>80%</td>
     <td>20%</td>
     <td></td>
     <td>21.3%</td>
-    <td>17%</td>
+    <td>6.3x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation + gptq</td>
+    <td>int4 + scale&nbsp;estimation + gptq</td>
     <td>100%</td>
     <td>0%</td>
     <td></td>
     <td>21.7%</td>
-    <td>0%</td>
+    <td>7.4x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation + lora correction</td>
+    <td>int4 + scale&nbsp;estimation + lora&nbsp;correction</td>
     <td>100%</td>
     <td>0%</td>
     <td>8</td>
     <td>22.1%</td>
-    <td>1%</td>
+    <td>7.3x</td>
   </tr>
   <tr>
-    <td>int4 +&nbsp;&nbsp;&nbsp;scale estimation</td>
+    <td>int4 + scale&nbsp;estimation</td>
     <td>100%</td>
     <td>0%</td>
     <td></td>
     <td>24.5%</td>
-    <td>0%</td>
+    <td>7.4x</td>
   </tr>
   <tr>
     <td>int4</td>
@@ -768,18 +768,15 @@ Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
     <td>0%</td>
     <td></td>
     <td>25.3%</td>
-    <td>0%</td>
+    <td>7.4x</td>
   </tr>
 </tbody></table></div>
-
-#### Limitations
 
 - The algorithm is supported for OpenVINO and PyTorch models.
 - The compression applies in-place.
 - The compressed model is not trainable.
 - INT4_SYM, INT4_ASYM, NF4 and E2M1 modes, grouped quantization and mixed precision selection is available for OpenVINO backend only.
-- NF4 support is experimental - models quantized to nf4 should not be faster models quantized to 8-bit integer.
-- E2M1 support is experimental - models quantized to e2m1 should not be faster models quantized to 8-bit integer.
+- NF4, E2M1 support is experimental on GPU - models quantized to nf4/e2m1 should not be faster models quantized to 8-bit integer.
 
 #### Additional resources
 
