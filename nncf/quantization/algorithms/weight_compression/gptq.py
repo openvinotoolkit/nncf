@@ -273,7 +273,7 @@ class GPTQ:
                                 wc_params.compression_config,
                             )
                             scales.append(scale.squeeze(axis=1))
-                            zero_points.append(zero_point)
+                            zero_points.append(zero_point if zero_point is None else zero_point.squeeze(axis=1))
                         else:
                             scale, zero_point = calculate_integer_quantization_params(
                                 weight_tensor[:, (i1 + i) : (i1 + i + group_size)],
