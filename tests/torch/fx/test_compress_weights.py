@@ -99,7 +99,7 @@ def test_compress_weights_shared_weights(mocker, mode):
         compressed_model, dtype, compressed_node_weight_port
     )
     assert n_target_modules == n_compressed_weights
-    
+
     num_decompression_nodes = 0
     spies = []
     for node in compressed_model.graph.nodes:
