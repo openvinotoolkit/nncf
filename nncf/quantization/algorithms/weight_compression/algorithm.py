@@ -8,8 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import operator
 from collections import defaultdict
+from functools import reduce
 from typing import Dict, List, Optional, OrderedDict, Tuple, TypeVar
 
 import nncf
@@ -321,14 +322,16 @@ class WeightCompression(Algorithm):
                         is_last_layer_shared = True
                     continue
 
-                weight = self._backend_entity.get_weight(node, weight_port_id, model, graph)
-                if weight.dtype not in [
+                weight_dtype = self._backend_entity.get_weight_dtype(node, weight_port_id, model, graph)
+                if weight_dtype not in [
                     TensorDataType.float16,
                     TensorDataType.bfloat16,
                     TensorDataType.float32,
                     TensorDataType.float64,
                 ]:
                     continue
+                weight_shape = node.layer_attributes.constant_attributes[weight_port_id]["shape"]
+                weight_size = reduce(operator.mul, weight_shape, 1)
                 reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
                 if (
                     self._group_size != -1
@@ -343,12 +346,12 @@ class WeightCompression(Algorithm):
                     # MatMul ops can't have multiple reduction axes.
                     nncf_logger.warning(
                         f"Weight compression expects a single reduction axis, but {len(reduction_axes)} given. "
-                        f"Weight shape: {weight.shape}, reduction axes: {reduction_axes}, "
+                        f"Weight shape: {weight_shape}, reduction axes: {reduction_axes}, "
                         f"node name: {node.node_name}. The node will be asymmetrically quantized to 8 bits."
                     )
 
                 weight_params = WeightCompressionParameters(
-                    weight_name, node, weight_port_id, weight.size, reduction_axes
+                    weight_name, node, weight_port_id, weight_size, reduction_axes
                 )
                 all_weight_params.append(weight_params)
                 weight_names.add(weight_name)
