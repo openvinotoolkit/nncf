@@ -330,7 +330,7 @@ class WeightCompression(Algorithm):
                     TensorDataType.float64,
                 ]:
                     continue
-                weight_shape = node.layer_attributes.constant_attributes[weight_port_id]["shape"]
+                weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
                 weight_size = reduce(operator.mul, weight_shape, 1)
                 reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
                 if (

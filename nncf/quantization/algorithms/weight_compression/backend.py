@@ -94,7 +94,6 @@ class WeightCompressionAlgoBackend(ABC):
         :return: The weight tensor.
         """
 
-    @staticmethod
     @abstractmethod
     def get_weight_dtype(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: TModel, graph: NNCFGraph
@@ -107,6 +106,18 @@ class WeightCompressionAlgoBackend(ABC):
         :param model: The model.
         :param graph: The model graph associated with the model.
         :return: The weight data type.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Tuple:
+        """
+        Returns a weight shape associated with the given node on the given port id.
+
+        :param node_with_weight: The node with weight.
+        :param weight_port_id: The weight port id for given node with weight.
+        :param graph: The model graph associated with the model.
+        :return: The weight shape.
         """
 
     @abstractmethod

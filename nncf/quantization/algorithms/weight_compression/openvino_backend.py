@@ -124,6 +124,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         }
         return dtype_map.get(ov_dtype)
 
+    @staticmethod
+    def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Tuple:
+        return node_with_weight.layer_attributes.constant_attributes[weight_port_id]["shape"]
+
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: ov.Model, graph: NNCFGraph, weight: Tensor
     ):

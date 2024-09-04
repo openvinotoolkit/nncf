@@ -175,6 +175,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     ) -> TensorDataType:
         return self.get_weight(node_with_weight, weight_port_id, model, graph).dtype
 
+    @staticmethod
+    def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Tuple:
+        weight_node = graph.get_previous_nodes(node_with_weight)[weight_port_id]
+        return tuple(weight_node.layer_attributes.shape)
+
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph, weight: Tensor
     ):
