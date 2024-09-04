@@ -41,6 +41,7 @@ except ImportError:
 
 import nncf
 from nncf.common.deprecation import warning_deprecated
+from nncf.common.logging.logger import nncf_logger
 from nncf.common.logging.logger import set_log_file
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
@@ -1076,22 +1077,29 @@ def update_nncf_algorithms_config(nncf_algorithms_config: Dict[str, Dict[str, An
         print(f"Updated subset_size value for {nncf_method} method to {new_subset_size} ")
 
 
+def upd_preset(nncf_algorithms_config: Dict[str, Dict[str, Any]]) -> None:
+    for _, config in nncf_algorithms_config.items():
+        upd_preset = "mixed"
+        config["preset"] = QuantizationPreset(upd_preset)
+        nncf_logger.info(f"Updated preset value to {upd_preset} ")
+
+
 def main():
     args = parse_args()
     if args.impl is not None:
         print("--impl option is deprecated and will have no effect. Only native calibration allowed.")
     config = Config.read_config(args.config)
     config = filter_configuration(config)
-
+    set_log_file(f"{args.output_dir}/log.txt")
     xml_path, bin_path = get_model_paths(config.model)
     accuracy_checker_config = get_accuracy_checker_config(config.engine)
     nncf_algorithms_config = get_nncf_algorithms_config(config.compression, args.output_dir)
+    upd_preset(nncf_algorithms_config)
     assert args.batch_size >= 0
     if args.batch_size > 1:
         update_accuracy_checker_config(accuracy_checker_config, args.batch_size)
         update_nncf_algorithms_config(nncf_algorithms_config, args.batch_size)
 
-    set_log_file(f"{args.output_dir}/log.txt")
     output_dir = os.path.join(args.output_dir, "optimized")
     os.makedirs(output_dir, exist_ok=True)
 
