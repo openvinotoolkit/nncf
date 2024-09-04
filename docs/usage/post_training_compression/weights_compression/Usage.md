@@ -772,6 +772,8 @@ Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
   </tr>
 </tbody></table></div>
 
+#### Limitations
+
 - The algorithm is supported for OpenVINO and PyTorch models.
 - The compression applies in-place.
 - The compressed model is not trainable.
