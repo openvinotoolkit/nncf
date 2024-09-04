@@ -149,9 +149,7 @@ def shared_constant_create_transformation(model: torch.fx.GraphModule):
         _replace_shared_weights(source_node, prev_targets)
 
     model.graph.eliminate_dead_code()
-
-    return shared_constant_create_transformation
-
+    model.recompile()
 
 def _replace_shared_weights(node: torch.fx.Node, prev_targets):
     """

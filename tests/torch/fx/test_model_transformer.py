@@ -22,6 +22,7 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
+from nncf.experimental.torch.fx.transformations import shared_constant_create_transformation
 from nncf.torch import disable_patching
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -124,3 +125,18 @@ def test_output_insertion_transformation(tuple_output, target_point):
     check_graph(
         nncf_graph, f"output_insertion_{_target_point_to_str(target_point)}_ref.dot", TRANSFORMED_GRAPH_DIR_NAME
     )
+    
+def count_constants(model) -> int:
+    num_constant_nodes = 0
+    for node in model.graph.nodes:
+        if node.op == "get_attr":
+            num_constant_nodes += 1
+    return num_constant_nodes
+
+def test_create_shared_constant_transformation(mocker):
+    model = MultiBranchesConnectedModel()
+    ex_inputs = torch.ones((1, 3, 3, 3))
+    captured_model = _capture_model(model, ex_inputs)
+    assert count_constants(captured_model) == 9
+    shared_constant_create_transformation(captured_model)
+    assert count_constants(captured_model) == 7
