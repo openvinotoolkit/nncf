@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import OrderedDict
 from copy import deepcopy
 from dataclasses import dataclass
 from dataclasses import field
@@ -177,26 +178,31 @@ class LayerwiseScheduler:
             old_input_nodes = set()
             new_input_nodes = set()
             for p in paths:
-                target_output_nodes = set()
+                target_outputs = []
                 additional_output_nodes = set()
                 for output_node in p.output_nodes:
-                    if output_node in target_nodes:
-                        target_output_nodes.add(output_node)
-                    elif output_node in p.input_nodes:
-                        reuse_input_nodes.add(output_node)
-                    else:
-                        # filter additional output nodes
-                        for prev_node in inference_graph.get_previous_nodes(output_node):
-                            if prev_node not in p.output_nodes:
-                                additional_output_nodes.add(output_node)
-                                break
-                if not target_output_nodes:
+                    try:
+                        target_node_index = target_nodes.index(output_node)
+                        target_outputs.append((target_node_index, output_node))
+                    except ValueError:
+                        if output_node in p.input_nodes:
+                            reuse_input_nodes.add(output_node)
+                        else:
+                            # filter additional output nodes
+                            for prev_node in inference_graph.get_previous_nodes(output_node):
+                                if prev_node not in p.output_nodes:
+                                    additional_output_nodes.add(output_node)
+                                    break
+                if not target_outputs:
                     continue
 
+                target_outputs.sort(key=lambda target_output: target_output[0])
+                target_output_nodes = [output[1] for output in target_outputs]
+
                 old_input_nodes |= p.input_nodes
-                new_input_nodes |= target_output_nodes | additional_output_nodes
+                new_input_nodes |= set(target_output_nodes) | additional_output_nodes
                 subgraph_inputs = list(p.inputs)
-                step_target_nodes = {}
+                step_target_nodes = OrderedDict()
                 subgraph_outputs = []
                 for node in target_output_nodes:
                     target_edge = {}
