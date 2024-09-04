@@ -136,21 +136,19 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
     return bias_update_transformation
 
 
-def shared_constant_create_transformation_builder() -> TransformationFNType:
+def shared_constant_create_transformation(model: torch.fx.GraphModule):
     """
     Return transformation which checks fx graph for shared constants, disconnects
     and eliminates redundant shared constant while connecting singular shared constant.
 
     :return: Transformation which attaches shared constants to nodes and removes redundant constants.
     """
+    prev_targets = {}
 
-    def shared_constant_create_transformation(model: torch.fx.GraphModule):
-        prev_targets = {}
+    for source_node in model.graph.nodes:
+        _replace_shared_weights(source_node, prev_targets)
 
-        for source_node in model.graph.nodes:
-            _replace_shared_weights(source_node, prev_targets)
-
-        model.graph.eliminate_dead_code()
+    model.graph.eliminate_dead_code()
 
     return shared_constant_create_transformation
 

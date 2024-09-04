@@ -28,7 +28,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.experimental.torch.fx.transformations import revert_quantization_transformations
-from nncf.experimental.torch.fx.transformations import shared_constant_create_transformation_builder
+from nncf.experimental.torch.fx.transformations import shared_constant_create_transformation
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -67,7 +67,7 @@ def quantize_impl(
     original_graph_meta = model.meta
 
     copied_model = deepcopy(model)
-    shared_constant_create_transformation_builder()(copied_model)
+    
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,
         target_device=target_device,
@@ -77,6 +77,8 @@ def quantize_impl(
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
     )
+
+    shared_constant_create_transformation(copied_model)
 
     # To make it easier for bias correction algorithms,
     # biases are being separated by the followng calls.
