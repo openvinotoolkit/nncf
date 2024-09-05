@@ -1,12 +1,12 @@
-### Weights Compression
+## Weights Compression
 
 [OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run Weights Compression with, and PyTorch is also supported.
 
-#### The algorithm description
+### The algorithm description
 
 The Weights Compression algorithm is aimed at compressing the weights of the models and can be used to optimize the model footprint and performance of large models where the size of weights is relatively larger than the size of activations, for example, Large Language Models (LLM). The algorithm compresses weights for Linear, Convolution and Embedding layers.
 
-#### Supported modes
+### Supported modes
 
 By default, weights are compressed asymmetrically to 8-bit integer data type - "INT8_ASYM" mode.
 OpenVINO backend also supports 4 modes of mixed precision weight quantization with a 4-bit data type as a primary precision - INT4_SYM, INT4_ASYM, NF4, E2M1. The primary precision in case of INT4_SYM mode is signed 4-bit integer and weights are quantized to it [symmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization) without zero point. In case of INT4_ASYM mode - unsigned 4-bit integer and weight are quantized to it [asymmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization) with a typical non-fixed zero point. In case of NF4 mode - [nf4](https://arxiv.org/pdf/2305.14314v1.pdf) data type without zero point. In case of E2M1 mode - [e2m1](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) data type without zero point and has 8bit [E8M0](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) scale.
@@ -14,7 +14,7 @@ All 4-bit modes have a grouped quantization support, when small group of weights
 All embeddings, convolutions and last linear layers are always compressed to 8-bit integer data type. To quantize embeddings and last linear layers to 4-bit, use `all_layers=True`.
 Percent of the rest layers compressed to 4-bit can be configured by "ratio" parameter. E.g. ratio=0.9 means 90% of layers compressed to the corresponding 4-bit data type and the rest to 8-bit asymmetric integer data type.
 
-#### User guide
+### User guide
 
 - Compress weights asymmetrically to 8-bit integer data type.
 
@@ -164,7 +164,9 @@ from nncf import compress_weights, CompressWeightsMode
 compressed_model = compress_weights(model, mode=CompressWeightsMode.E2M1, group_size=32, all_layers=True)
 ```
 
-#### Evaluation results
+### Evaluation results
+
+#### Data-free Mixed-Precision on Lambada OpenAI dataset
 
 Here is the perplexity and model size before and after weight compression for different language models on the [Lambada OpenAI dataset](https://github.com/openai/gpt-2/issues/131#issuecomment-497136199).
 `g32` refers to the group size equals to 32, `r60` - to the ratio equals to 0.6.
@@ -323,6 +325,8 @@ Here is the perplexity and model size before and after weight compression for di
 </tbody>
 </table>
 
+#### Data-aware Mixed-Precision and AWQ methods on Wikitext dataset
+
 Here is the word perplexity with data-free and data-aware mixed-precision INT4-INT8 weight compression for different language models on the [wikitext dataset](https://arxiv.org/pdf/1609.07843.pdf).
 `data` suffix refers to the data-aware mixed-precision.
 `data_awq` suffix refers to the data-aware mixed-precision with modified [AWQ](https://arxiv.org/abs/2306.00978) algorithm.
@@ -424,6 +428,8 @@ This modification applies only for patterns `MatMul-Multiply-MatMul` (for exampl
         <td>10.22</td>
     </tr>
 </table>
+
+#### Scale Estimation and GPTQ methods on Lambada OpenAI dataset
 
 Here is the perplexity and accuracy with data-free and data-aware mixed-precision INT4-INT8 weight compression for different language models on the [lambada openai dataset](https://huggingface.co/datasets/EleutherAI/lambada_openai).
 `_scale` suffix refers to the data-aware mixed-precision with Scale Estimation algorithm. `_gptq` suffix refers to the data-aware mixed-precision with GPTQ algorithm.
@@ -527,16 +533,262 @@ Here is the perplexity and accuracy with data-free and data-aware mixed-precisio
     <t/r>
 </table>
 
-#### Limitations
+#### Accuracy/Footprint trade-off
+
+Below are the tables showing the accuracy/footprint trade-off for `Qwen/Qwen2-7B` and
+`microsoft/Phi-3-mini-4k-instruct` compressed with different options.
+
+Compression ratio is defined as the ratio between the size of fp32 model and size of the compressed one.
+Accuracy metrics are measured on 4 tasks [lambada openai](https://huggingface.co/datasets/EleutherAI/lambada_openai), [wikitext](https://arxiv.org/pdf/1609.07843.pdf),
+[winogrande](https://arxiv.org/abs/1907.10641), [WWB](https://github.com/openvinotoolkit/openvino.genai/tree/master/llm_bench/python/who_what_benchmark/whowhatbench).
+The `average relative error` in the tables below is the mean of relative errors for each of four tasks with respect to
+the metric value for fp32 model. All int4 models are compressed group-wise with `group_size=128` and `mode=CompressionMode.INT4_SYM` and
+with calibration dataset based on 128 samples from `wikitext-2-v1`. Int8 model is compressed with `mode=CompressionMode.INT8_ASYM`.
+The following advanced parameters were used for AWQ, Scale Estimation and Lora Correction algorithms:
+
+```python
+AdvancedCompressionParameters(
+  awq_params=AdvancedAWQParameters(32, 0.05, 0.0, 1.0, 100),
+  scale_estimation_params=AdvancedScaleEstimationParameters(32, 5, 10, -1.0),
+  lora_correction_params=AdvancedLoraCorrectionParameters(adapter_rank=<LORA_RANK>)
+)
+```
+
+The tables clearly shows the followings:
+
+- More layers in 8 bit does improve accuracy, but it increases the footprint a lot.
+- Scale Estimation, AWQ, GPTQ do improve accuracy of the baseline int4 model without footprint increase.
+- Lora correction algorithm improves the accuracy of int4 models further with a footprint much less compared to mixed-precision models with the same or worse accuracy.
+
+Accuracy/footprint trade-off for `Qwen/Qwen2-7B`:
+
+<div class="tg-wrap"><table><thead>
+  <tr>
+    <th>Mode </th>
+    <th>%int4</th>
+    <th>%int8</th>
+    <th>lora<br>rank</th>
+    <th>average<br>relative<br>error</th>
+    <th>compression<br>rate</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td>fp32</td>
+    <td>0%</td>
+    <td>0%</td>
+    <td></td>
+    <td>0.0%</td>
+    <td>1.0x</td>
+  </tr>
+  <tr>
+    <td>int8</td>
+    <td>0%</td>
+    <td>100%</td>
+    <td></td>
+    <td>7.9%</td>
+    <td>3.9x</td>
+  </tr>
+  <tr>
+    <td>int4 + awq + scale&nbsp;estimation + lora&nbsp;correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>256</td>
+    <td>16.5%</td>
+    <td>5.8x</td>
+  </tr>
+  <tr>
+    <td>int4 + awq + scale&nbsp;estimation</td>
+    <td>40%</td>
+    <td>60%</td>
+    <td></td>
+    <td>17.1%</td>
+    <td>4.7x</td>
+  </tr>
+  <tr>
+    <td>int4 + awq + scale&nbsp;estimation</td>
+    <td>60%</td>
+    <td>40%</td>
+    <td></td>
+    <td>17.1%</td>
+    <td>5.2x</td>
+  </tr>
+  <tr>
+    <td>int4 + awq + scale&nbsp;estimation + lora&nbsp;correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>32</td>
+    <td>17.4%</td>
+    <td>6.5x</td>
+  </tr>
+  <tr>
+    <td>int4 + awq + scale&nbsp;estimation + lora&nbsp;correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>8</td>
+    <td>17.5%</td>
+    <td>6.6x</td>
+  </tr>
+  <tr>
+    <td>int4 + awq + scale&nbsp;estimation</td>
+    <td>80%</td>
+    <td>20%</td>
+    <td></td>
+    <td>17.5%</td>
+    <td>5.8x</td>
+  </tr>
+  <tr>
+    <td>int4 + awq + scale&nbsp;estimation + lora&nbsp;correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>16</td>
+    <td>18.0%</td>
+    <td>6.6x</td>
+  </tr>
+  <tr>
+    <td>int4 + awq + scale&nbsp;estimation</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td></td>
+    <td>18.4%</td>
+    <td>6.7x</td>
+  </tr>
+  <tr>
+    <td>int4 + awq + scale&nbsp;estimation + gptq</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td></td>
+    <td>20.2%</td>
+    <td>6.7x</td>
+  </tr>
+  <tr>
+    <td>int4</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td></td>
+    <td>21.4%</td>
+    <td>6.7x</td>
+  </tr>
+</tbody></table></div>
+
+Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
+
+<div class="tg-wrap"><table><thead>
+  <tr>
+    <th>Mode </th>
+    <th>%int4</th>
+    <th>%int8</th>
+    <th>lora<br>rank</th>
+    <th>average<br>relative<br>error</th>
+    <th>compression<br>rate</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td>fp32</td>
+    <td>0%</td>
+    <td>0%</td>
+    <td></td>
+    <td>0.0%</td>
+    <td>1.0x</td>
+  </tr>
+  <tr>
+    <td>int8</td>
+    <td>0%</td>
+    <td>100%</td>
+    <td></td>
+    <td>7.3%</td>
+    <td>4.0x</td>
+  </tr>
+  <tr>
+    <td>int4 + scale&nbsp;estimation</td>
+    <td>40%</td>
+    <td>60%</td>
+    <td></td>
+    <td>16.9%</td>
+    <td>4.9x</td>
+  </tr>
+  <tr>
+    <td>int4 + scale&nbsp;estimation</td>
+    <td>60%</td>
+    <td>40%</td>
+    <td></td>
+    <td>18.4%</td>
+    <td>5.5x</td>
+  </tr>
+  <tr>
+    <td>int4 + scale&nbsp;estimation + lora&nbsp;correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>256</td>
+    <td>18.7%</td>
+    <td>6.2x</td>
+  </tr>
+  <tr>
+    <td>int4 + scale&nbsp;estimation + lora&nbsp;correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>16</td>
+    <td>20.5%</td>
+    <td>7.3x</td>
+  </tr>
+  <tr>
+    <td>int4 + scale&nbsp;estimation + lora&nbsp;correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>32</td>
+    <td>20.6%</td>
+    <td>7.2x</td>
+  </tr>
+  <tr>
+    <td>int4 + scale&nbsp;estimation</td>
+    <td>80%</td>
+    <td>20%</td>
+    <td></td>
+    <td>21.3%</td>
+    <td>6.3x</td>
+  </tr>
+  <tr>
+    <td>int4 + scale&nbsp;estimation + gptq</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td></td>
+    <td>21.7%</td>
+    <td>7.4x</td>
+  </tr>
+  <tr>
+    <td>int4 + scale&nbsp;estimation + lora&nbsp;correction</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td>8</td>
+    <td>22.1%</td>
+    <td>7.3x</td>
+  </tr>
+  <tr>
+    <td>int4 + scale&nbsp;estimation</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td></td>
+    <td>24.5%</td>
+    <td>7.4x</td>
+  </tr>
+  <tr>
+    <td>int4</td>
+    <td>100%</td>
+    <td>0%</td>
+    <td></td>
+    <td>25.3%</td>
+    <td>7.4x</td>
+  </tr>
+</tbody></table></div>
+
+### Limitations
 
 - The algorithm is supported for OpenVINO and PyTorch models.
 - The compression applies in-place.
 - The compressed model is not trainable.
 - INT4_SYM, INT4_ASYM, NF4 and E2M1 modes, grouped quantization and mixed precision selection is available for OpenVINO backend only.
-- NF4 support is experimental - models quantized to nf4 should not be faster models quantized to 8-bit integer.
-- E2M1 support is experimental - models quantized to e2m1 should not be faster models quantized to 8-bit integer.
+- NF4, E2M1 support is experimental on GPU and NPU - models quantized to nf4/e2m1 should not be faster models quantized to 8-bit integer.
 
-#### Additional resources
+### Additional resources
 
 - [LLM Weight Compression](https://docs.openvino.ai/2024/openvino-workflow/model-optimization-guide/weight-compression.html)
 - [Large Language Model Inference Guide](https://docs.openvino.ai/2024/learn-openvino/llm_inference_guide.html)
