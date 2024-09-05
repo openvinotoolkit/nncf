@@ -17,16 +17,15 @@ import pytest
 import torch
 
 import nncf
-from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
-from tests.post_training.test_templates.helpers import ConvTestModel
-from tests.post_training.test_templates.helpers import LinearMultiShapeModel
-from tests.post_training.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
-from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
+from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import LinearMultiShapeModel
+from tests.cross_fw.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
+from tests.cross_fw.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
 
 OV_LINEAR_MODEL_MM_OP_MAP = {
     "MatMul1": "aten::matmul/MatMul",
@@ -69,6 +68,10 @@ OV_CONV_MODEL_SQ_OP_MAP = {
 
 class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
     @staticmethod
+    def backend_supports_shared_layers() -> bool:
+        return True
+
+    @staticmethod
     def fn_to_type(tensor) -> np.ndarray:
         return np.array(tensor)
 
@@ -84,10 +87,6 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
         if model_cls is ShareWeghtsConvAndShareLinearModel:
             return {}
         raise NotImplementedError
-
-    @staticmethod
-    def get_target_node_name(command: TransformationCommand):
-        return command.target_point.target_node_name
 
     @staticmethod
     def get_transform_fn() -> Callable:

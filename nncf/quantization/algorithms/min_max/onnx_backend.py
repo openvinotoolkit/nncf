@@ -25,6 +25,7 @@ from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MA
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
+from nncf.onnx.graph.metatypes.groups import ELEMENTWISE_OPERATIONS
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.node_utils import get_quantized_tensor_shape
@@ -47,6 +48,10 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
+    def preserved_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
         return MATMUL_METATYPES
 
@@ -57,6 +62,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.ONNXConvolutionMetatype]
+
+    @property
+    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+        return ELEMENTWISE_OPERATIONS
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
@@ -243,8 +252,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return types
 
     @staticmethod
-    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> List[str]:
-        return []
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
+        return set()
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:

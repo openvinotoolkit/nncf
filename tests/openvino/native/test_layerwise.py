@@ -21,7 +21,7 @@ from nncf.quantization.algorithms.layerwise.openvino_iterator import OVLayerwise
 from nncf.quantization.algorithms.layerwise.scheduler import LayerwiseStep
 from nncf.quantization.algorithms.layerwise.scheduler import NodeOutputPort
 from nncf.tensor import Tensor
-from tests.post_training.test_templates.test_layerwise import TemplateTestLayerwiseEngine
+from tests.cross_fw.test_templates.test_layerwise import TemplateTestLayerwiseEngine
 
 
 class TestOVLayerwiseEngine(TemplateTestLayerwiseEngine):

@@ -16,18 +16,16 @@ import openvino.runtime as ov
 import pytest
 import torch
 
-from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.quantization.algorithms.smooth_quant.torch_backend import PTSmoothQuantAlgoBackend
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
-from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.model_creation import wrap_model
-from tests.post_training.test_templates.helpers import ConvTestModel
-from tests.post_training.test_templates.helpers import LinearMultiShapeModel
-from tests.post_training.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
-from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
+from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import LinearMultiShapeModel
+from tests.cross_fw.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
+from tests.cross_fw.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
 
 PT_LINEAR_MODEL_SQ_MAP = {
     ("Linear1",): "LinearMultiShapeModel/split_0_1_0/nncf_smooth_quant",
@@ -49,6 +47,10 @@ PT_CONV_MODEL_MM_MAP = {"Conv1": "ConvTestModel/Conv2d[conv]/conv2d_0"}
 
 class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
     @staticmethod
+    def backend_supports_shared_layers() -> bool:
+        return True
+
+    @staticmethod
     def fn_to_type(tensor) -> torch.Tensor:
         return torch.tensor(tensor)
 
@@ -64,12 +66,6 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
         if model_cls is ShareWeghtsConvAndShareLinearModel:
             return {}
         raise NotImplementedError
-
-    @staticmethod
-    def get_target_node_name(command: TransformationCommand):
-        if isinstance(command, PTSharedFnInsertionCommand):
-            return command.target_points[0].target_node_name
-        return command.target_point.target_node_name
 
     @staticmethod
     def get_transform_fn() -> Callable:

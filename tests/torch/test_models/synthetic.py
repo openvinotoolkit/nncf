@@ -325,6 +325,16 @@ class Baddbmm(torch.nn.Module):
         return torch.baddbmm(x, y, z)
 
 
+class ScaledDotProductModel(nn.Module):
+    EMBED_DIM = 4
+    INPUT_SIZES = [2, 1, EMBED_DIM]
+
+    def forward(self, x):
+        shape = x.shape
+        x = x.view(-1).view(shape)
+        return nn.functional.scaled_dot_product_attention(x, x, x)
+
+
 class MHA_single_input(torch.nn.Module):
     EMBED_DIM = 4
     INPUT_SIZES = [2, 1, EMBED_DIM]
@@ -491,3 +501,52 @@ class ModelForGraphBuildingTestWithSplit(ModelForGraphBuildingTest):
         unbinded_processed[0] = self.conv4(y_unbinded[0])
         y = torch.cat(unbinded_processed, axis=0)
         return y
+
+
+class ConvolutionWithNotTensorBiasModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self._conv_w = nn.Parameter(torch.ones((1, 1, 1, 1)))
+
+    def forward(self, x):
+        w = self._conv_w + 10
+        return nn.functional.conv2d(x, w)
+
+
+class ConvolutionWithAllConstantInputsModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self._conv_w = nn.Parameter(torch.ones((1, 1, 1, 1)))
+        self._conv_i = nn.Parameter(torch.ones((1, 1, 1, 1)))
+
+    def forward(self, x):
+        w = self._conv_w + 10
+        return x + nn.functional.conv2d(self._conv_i, w)
+
+
+class ConvolutionWithMinModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self._conv_w = nn.Parameter(torch.ones((1, 1, 1, 1)))
+
+    def forward(self, x):
+        w = self._conv_w + 10
+        t = nn.functional.conv2d(x, w)
+        return torch.minimum(t, torch.ones_like(t))
+
+
+class MultiBranchesConnectedModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_a = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+        self.conv_b = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+        self.conv_c = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+        self.bias = torch.tensor([1])
+
+    def forward(self, x):
+        a = self.conv_a(x)
+        b = self.conv_b(a)
+        a += self.bias
+        b += self.bias
+        y = a + b
+        return self.conv_c(y) + self.bias

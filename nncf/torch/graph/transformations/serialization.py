@@ -29,7 +29,7 @@ def serialize_transformations(transformations_layout: TransformationLayout) -> D
     """
     Serializes given transformation layout to a dict.
 
-    :param tranformation_layout: Given transformation layout.
+    :param transformation_layout: Given transformation layout.
     :return: Serialized representation of given transformation layout as a dict.
     """
     transformation_commands = []

@@ -12,8 +12,9 @@
 
 from collections import Counter
 from collections import namedtuple
+from dataclasses import dataclass
 from itertools import permutations
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 import networkx as nx
 import pytest
@@ -49,6 +50,7 @@ from tests.common.quantization.metatypes import GeluTestMetatype
 from tests.common.quantization.metatypes import MatMulTestMetatype
 from tests.common.quantization.metatypes import MaxPool2dTestMetatype
 from tests.common.quantization.metatypes import MinTestMetatype
+from tests.common.quantization.metatypes import ScaledDotProductAttentionMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
 from tests.common.quantization.mock_graphs import get_ip_graph_for_test
 from tests.common.quantization.mock_graphs import get_mock_nncf_node_attrs
@@ -139,6 +141,30 @@ def get_branching_model_graph() -> NNCFGraph:
             ("L", "N"),
             ("M", "P"),
             ("N", "Q"),
+        ]
+    )
+
+    mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
+    return get_nncf_graph_from_mock_nx_graph(mock_graph)
+
+
+def get_scaled_dot_product_graph():
+    mock_graph = nx.DiGraph()
+
+    node_keys = ["input", "branch_node", "reshape", "reshape_1", "reshape_2", "scaled_dot_product_attention"]
+    for node_key in node_keys:
+        mock_node_attrs = get_mock_nncf_node_attrs(op_name=node_key)
+        mock_graph.add_node(node_key, **mock_node_attrs)
+
+    mock_graph.add_edges_from(
+        [
+            ("input", "branch_node"),
+            ("branch_node", "reshape"),
+            ("branch_node", "reshape_1"),
+            ("branch_node", "reshape_2"),
+            ("reshape", "scaled_dot_product_attention"),
+            ("reshape_1", "scaled_dot_product_attention"),
+            ("reshape_2", "scaled_dot_product_attention"),
         ]
     )
 
@@ -247,6 +273,38 @@ class TestQuantizerPropagationSolver:
             assert not node[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
             edge = qp_graph.edges[pred_ip_key, actual_key]
             assert not edge[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
+
+    def test_setup_initial_quantizers_sdpa(self):
+        nncf_graph = get_scaled_dot_product_graph()
+        ip_graph = get_ip_graph_for_test(nncf_graph)
+
+        qp_graph = QPSG(ip_graph)
+
+        sdpa_node_key = "5 /scaled_dot_product_attention_0"
+        quant_prop_solver = QuantizerPropagationSolver(
+            run_consistency_checks=True,
+            default_trait_to_metatype_map=DEFAULT_TEST_QUANT_TRAIT_MAP,
+        )
+
+        qp_graph = quant_prop_solver.set_allowed_quantization_types_for_operator_nodes(qp_graph)
+        qp_graph = quant_prop_solver.setup_initial_quantizers(qp_graph)
+        qp_graph.run_consistency_check()
+
+        for port_id, pred_ip_key in enumerate(qp_graph.predecessors(sdpa_node_key)):
+            node = qp_graph.nodes[sdpa_node_key]
+            pred_ip_node = qp_graph.nodes[pred_ip_key]
+            prop_quant = pred_ip_node[QPSG.PROPAGATING_QUANTIZER_NODE_ATTR]
+            if port_id in ScaledDotProductAttentionMetatype.target_input_ports:
+                assert prop_quant is not None
+                assert node[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR][port_id] == prop_quant
+
+                edge = qp_graph.edges[pred_ip_key, sdpa_node_key]
+                assert edge[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR] == [prop_quant]
+            else:
+                assert prop_quant is None
+
+                edge = qp_graph.edges[pred_ip_key, sdpa_node_key]
+                assert edge[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR] == []
 
     MergeQConfigSolution = namedtuple(
         "MergeQConfigSolution", ("merge_qconfig_list", "branch_qconfig_lists_after_merge")
@@ -821,23 +879,36 @@ class TestQuantizerPropagationSolver:
 
     BRANCHING_MODEL_GRAPH = get_branching_model_graph()
 
-    BranchTransitionTestStruct = namedtuple(
-        "BranchTransitionTestStruct",
-        (  # Unspecified nodes are marked as quantization agnostic
-            "init_node_to_trait_and_configs_dict",
-            "starting_primary_quantizer_ip_node",
-            "target_branching_node_for_primary_quantizer",
-            "expected_status",
-        ),
-    )
-
     class InitNodeTestStruct:
         def __init__(self, quantization_trait, config, op_meta=UnknownMetatype):
             self.quantization_trait = quantization_trait
             self.config = config
             self.op_meta = op_meta
 
+    @dataclass
+    class BranchTransitionTestStruct:
+        # Unspecified nodes are marked as quantization agnostic
+        init_node_to_trait_and_configs_dict: Dict[str, "TestQuantizerPropagationSolver.InitNodeTestStruct"]
+        starting_primary_quantizer_ip_node: str
+        target_branching_node_for_primary_quantizer: str
+        expected_status: TransitionStatus
+        nncf_graph_builder: Callable[[], NNCFGraph] = None
+
     BRANCH_TRANSITION_TEST_CASES = [
+        # Scaled dot product attention case
+        BranchTransitionTestStruct(
+            init_node_to_trait_and_configs_dict=
+            {
+                '5 /scaled_dot_product_attention_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
+                                             QuantizerConfig(), ScaledDotProductAttentionMetatype),
+            },
+            starting_primary_quantizer_ip_node=
+                InsertionPointGraph.get_pre_hook_node_key('5 /scaled_dot_product_attention_0'),
+            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('1 /branch_node_0'),
+            expected_status=TransitionStatus.SHOULD_NOT_TRANSITION,
+            nncf_graph_builder=get_scaled_dot_product_graph
+        ),
+
         # Downward branches are quantization-agnostic
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
@@ -1117,7 +1188,10 @@ class TestQuantizerPropagationSolver:
         expected_status = branch_transition_test_struct.expected_status
 
         # Graph preparation
-        nncf_graph = get_branching_model_graph()
+        if branch_transition_test_struct.nncf_graph_builder is None:
+            nncf_graph = get_branching_model_graph()
+        else:
+            nncf_graph = branch_transition_test_struct.nncf_graph_builder()
         ip_graph = get_ip_graph_for_test(nncf_graph)
 
         # Metatypes must be assigned before QPSG creation, because
@@ -1137,10 +1211,16 @@ class TestQuantizerPropagationSolver:
             trait = init_node_struct.quantization_trait
             quant_prop_graph.nodes[node_key][QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = trait
             if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
-                ip_node_key = InsertionPointGraph.get_pre_hook_node_key(node_key)
-                prop_quant = quant_prop_graph.add_propagating_quantizer(qconfigs, ip_node_key)
-                if ip_node_key == starting_primary_quantizer_ip_node:
-                    primary_prop_quant = prop_quant
+                target_input_ports = [0]
+                metatype = quant_prop_graph.nodes[node_key]["op_meta"]
+                if metatype.target_input_ports is not None:
+                    target_input_ports = metatype.target_input_ports
+
+                for input_port_id in target_input_ports:
+                    ip_node_key = InsertionPointGraph.get_pre_hook_node_key(node_key, input_port_id=input_port_id)
+                    prop_quant = quant_prop_graph.add_propagating_quantizer(qconfigs, ip_node_key)
+                    if ip_node_key == starting_primary_quantizer_ip_node:
+                        primary_prop_quant = prop_quant
             elif trait == QuantizationTrait.CONCAT and qconfigs:
                 # Assuming two-port concat nodes are used in the test graph, adjust as necessary
                 for input_port_id in [0, 1]:

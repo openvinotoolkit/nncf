@@ -12,6 +12,7 @@ import os
 from collections import Counter
 from copy import deepcopy
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import List
 
@@ -21,6 +22,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.patterns.manager import PatternsManager
@@ -367,9 +369,33 @@ class TestInsertionCommands:
 
 
 MERGE_PATTERN_TEST_CASES = (
-    [get_mock_model_graph_with_mergeable_pattern, "basic_pattern"],
-    [get_mock_model_graph_with_no_mergeable_pattern, "no_pattern"],
-    [get_mock_model_graph_with_broken_output_edge_pattern, "broken_output_edges_pattern"],
+    [
+        partial(
+            get_mock_model_graph_with_mergeable_pattern,
+            conv2d_metatype=om.PTConv2dMetatype,
+            batchnorm_metatype=om.PTBatchNormMetatype,
+            relu_metatype=om.PTRELUMetatype,
+        ),
+        "basic_pattern",
+    ],
+    [
+        partial(
+            get_mock_model_graph_with_no_mergeable_pattern,
+            conv2d_metatype=om.PTConv2dMetatype,
+            batchnorm_metatype=om.PTBatchNormMetatype,
+            relu_metatype=om.PTRELUMetatype,
+        ),
+        "no_pattern",
+    ],
+    [
+        partial(
+            get_mock_model_graph_with_broken_output_edge_pattern,
+            conv2d_metatype=om.PTConv2dMetatype,
+            batchnorm_metatype=om.PTBatchNormMetatype,
+            relu_metatype=om.PTRELUMetatype,
+        ),
+        "broken_output_edges_pattern",
+    ],
 )
 
 

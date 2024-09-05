@@ -172,9 +172,13 @@ def _get_activation_tensor_shape(
     :return: None, if there is no shape info, otherwise - tensor shape.
     """
     if target_point.type == TargetType.PRE_LAYER_OPERATION:
-        shape = nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
+        edge = nncf_graph.get_input_edge_by_port_id(node, target_point.port_id)
+        shape = edge.tensor_shape
     elif target_point.type == TargetType.POST_LAYER_OPERATION:
-        shape = nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
+        # NOTE: Assumes that all output edges for the `node` with `output_port_id`
+        # equal to `target_point.port_id` should have the same `tensor_shape` value.
+        edges = nncf_graph.get_output_edges_by_port_id(node, target_point.port_id)
+        shape = edges[0].tensor_shape
     else:
         raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
     if not shape:  # ONNX model can not have a shape of a edge, even after shape inference.

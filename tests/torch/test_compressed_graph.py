@@ -55,6 +55,7 @@ from tests.torch.test_models.synthetic import ArangeModel
 from tests.torch.test_models.synthetic import Baddbmm
 from tests.torch.test_models.synthetic import ConvBNLeakyReLU
 from tests.torch.test_models.synthetic import ConvGeluGetItem
+from tests.torch.test_models.synthetic import ConvolutionWithMinModel
 from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
 from tests.torch.test_models.synthetic import EmbeddingCatLinearModel
 from tests.torch.test_models.synthetic import EmbeddingSumModel
@@ -70,6 +71,7 @@ from tests.torch.test_models.synthetic import MultiOutputSameTensorModel
 from tests.torch.test_models.synthetic import OrdinaryModelWithRecurrentInName
 from tests.torch.test_models.synthetic import PoolUnPool
 from tests.torch.test_models.synthetic import ReshapeModel
+from tests.torch.test_models.synthetic import ScaledDotProductModel
 from tests.torch.test_models.synthetic import ShiftScaleParametrized
 from tests.torch.test_models.synthetic import TransposeModel
 
@@ -731,7 +733,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
     SingleLayerModelDesc(model_name="relu", layer=torch.relu),
     SingleLayerModelDesc(model_name="relu_", layer=torch.relu_),
     SingleLayerModelDesc(model_name="max", layer=torch.max),
-    SingleLayerModelDesc(model_name="min", layer=torch.min),
+    GeneralModelDesc(model_builder=ConvolutionWithMinModel, input_sample_sizes=([1, 1, 5, 5])),
     GeneralModelDesc(model_builder=ArangeModel),
     SingleLayerModelDesc(model_name="transpose", layer=partial(torch.transpose, dim0=0, dim1=0)),
     GeneralModelDesc(model_builder=TransposeModel, input_sample_sizes=([1])),
@@ -798,6 +800,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
         wrap_inputs_fn=partial(n_inputs_fn, nargs=3),
     ),
     GeneralModelDesc(model_builder=MHA_single_input, input_sample_sizes=(MHA_single_input.INPUT_SIZES,)),
+    GeneralModelDesc(model_builder=ScaledDotProductModel, input_sample_sizes=(ScaledDotProductModel.INPUT_SIZES,)),
     GeneralModelDesc(
         model_name="OrdinaryModelWithRecurrentInName",
         model_builder=OrdinaryModelWithRecurrentInName,

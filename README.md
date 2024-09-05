@@ -8,7 +8,7 @@
 [Usage](#usage) •
 [Tutorials and Samples](#demos-tutorials-and-samples) •
 [Third-party integration](#third-party-repository-integration) •
-[NNCF Model Zoo](./docs/ModelZoo.md)
+[Model Zoo](./docs/ModelZoo.md)
 
 [![GitHub Release](https://img.shields.io/github/v/release/openvinotoolkit/nncf?color=green)](https://github.com/openvinotoolkit/nncf/releases)
 [![Website](https://img.shields.io/website?up_color=blue&up_message=docs&url=https%3A%2F%2Fdocs.openvino.ai%2Flatest%2Fopenvino_docs_model_optimization_guide.html)](https://docs.openvino.ai/nncf)
@@ -37,6 +37,7 @@ learning frameworks.
 | :------------------------------------------------------------------------------------------------------- | :-------: | :-------: | :-----------: | :-----------: |
 | [Post-Training Quantization](./docs/usage/post_training_compression/post_training_quantization/Usage.md) | Supported | Supported | Supported     | Supported     |
 | [Weights Compression](./docs/usage/post_training_compression/weights_compression/Usage.md)               | Supported | Supported | Not supported | Not supported |
+| [Activation Sparsity](./nncf/experimental/torch/sparsify_activations/ActivationSparsity.md)              | Not supported | Experimental |Not supported| Not supported |
 
 ### Training-Time Compression Algorithms
 
@@ -351,7 +352,6 @@ A list of notebooks demonstrating OpenVINO conversion and inference together wit
 | Demo Model                                                                                                                                                                                                                                                                                                                                        |               Compression Algorithm               |  Backend  |                                Domain                                |
 |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------:|:---------:|:--------------------------------------------------------------------:|
 | [YOLOv8](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov8-optimization)<br>[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/yolov8-optimization/yolov8-object-detection.ipynb)            |            Post-Training Quantization             | OpenVINO  |  Object Detection,<br>KeyPoint Detection,<br>Instance Segmentation   |
-| [YOLOv7](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov7-optimization)                                                                                                                                                                                                                                         |            Post-Training Quantization             | OpenVINO  |                           Object Detection                           |
 | [EfficientSAM](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/efficient-sam)                                                                                                                                                                                                                                         |            Post-Training Quantization             | OpenVINO  |                          Image Segmentation                          |
 | [Segment Anything Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/segment-anything)                                                                                                                                                                                                                            |            Post-Training Quantization             | OpenVINO  |                          Image Segmentation                          |
 | [OneFormer](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/oneformer-segmentation)                                                                                                                                                                                                                                   |            Post-Training Quantization             | OpenVINO  |                          Image Segmentation                          |
@@ -370,7 +370,6 @@ A list of notebooks demonstrating OpenVINO conversion and inference together wit
 | [Grammar Error Correction](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/grammar-correction)                                                                                                                                                                                                                        |            Post-Training Quantization             | OpenVINO  |                       NLP, Grammar Correction                        |
 | [LLM Instruction Following](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-question-answering)                                                                                                                                                                                                                   |                Weight Compression                 | OpenVINO  |                      NLP, Instruction Following                      |
 | [Dolly 2.0](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/dolly-2-instruction-following)                                                                                                                                                                                                                            |                Weight Compression                 | OpenVINO  |                      NLP, Instruction Following                      |
-| [Stable-Zephyr-3b](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-zephyr-3b-chatbot)                                                                                                                                                                                                                          |                Weight Compression                 | OpenVINO  |                            NLP, Chat Bot                             |
 | [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-chatbot)                                                                                                                                                                                                                                          |                Weight Compression                 | OpenVINO  |                            NLP, Chat Bot                             |
 
 ### Post-Training Quantization Examples
@@ -440,12 +439,12 @@ conda install -c conda-forge nncf
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.8 or later
 - Supported frameworks:
-  - PyTorch\* >=2.2, <2.4
+  - PyTorch\* >=2.3, <2.5
   - TensorFlow\* >=2.8.4, <=2.15.1
   - ONNX\* ==1.16.0
   - OpenVINO\* >=2022.3.0
 
-This repository is tested on Python* 3.8.10, PyTorch* 2.3.0 (NVidia CUDA\* Toolkit 12.1) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
+This repository is tested on Python* 3.8.10, PyTorch* 2.4.0 (NVidia CUDA\* Toolkit 12.1) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
 
 ## NNCF Compressed NNCF Model Zoo
 

@@ -34,6 +34,14 @@ TModel = TypeVar("TModel")
 class MinMaxAlgoBackend(ABC):
     @property
     @abstractmethod
+    def preserved_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for backend-specific metatypes that require preserving float subgraphs
+        when removing the ShapeOf subgraph.
+        """
+
+    @property
+    @abstractmethod
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific MatMul metatypes.
@@ -65,6 +73,13 @@ class MinMaxAlgoBackend(ABC):
     def dropout_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific Dropout metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific Elementwises metatypes.
         """
 
     @property
@@ -280,7 +295,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> List[str]:
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
         """
         Returns names of ignored nodes based on layer_attributes.
 

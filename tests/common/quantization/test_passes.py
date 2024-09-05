@@ -16,10 +16,10 @@ import pytest
 
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.quantization.passes import filter_constant_nodes
+from nncf.quantization.passes import find_constant_subgraphs
 from nncf.quantization.passes import remove_nodes_and_reconnect_graph
-from tests.post_training.test_templates.models import NNCFGraphDropoutRemovingCase
-from tests.post_training.test_templates.models import NNCFGraphToTestConstantFiltering
+from tests.cross_fw.test_templates.models import NNCFGraphDropoutRemovingCase
+from tests.cross_fw.test_templates.models import NNCFGraphToTestConstantFiltering
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 from tests.shared.paths import TEST_ROOT
 
@@ -63,7 +63,7 @@ def test_remove_nodes_and_reconnect_graph(mode: ParameterTestModes):
 
 
 @pytest.mark.parametrize("node_between_const_and_op", [False, True])
-def test_filter_constant_nodes(node_between_const_and_op):
+def test_find_constant_subgraphs(node_between_const_and_op):
     dot_reference_path_before = (
         Path("passes") / f"test_constant_filtering_model_before{int(node_between_const_and_op)}.dot"
     )
@@ -88,5 +88,6 @@ def test_filter_constant_nodes(node_between_const_and_op):
     additional_input_names = ["/Conv2_0", "/Concat_with_missed_input_0"]
     input_nodes = nncf_graph.get_input_nodes() + [nncf_graph.get_node_by_name(name) for name in additional_input_names]
     _check_graphs(dot_reference_path_before, nncf_graph)
-    filter_constant_nodes(nncf_graph, input_nodes)
+    constant_subgraphs = find_constant_subgraphs(nncf_graph, input_nodes)
+    nncf_graph.remove_nodes_from(constant_subgraphs)
     _check_graphs(dot_reference_path_after, nncf_graph)

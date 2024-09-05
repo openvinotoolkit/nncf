@@ -37,6 +37,7 @@ from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
+from nncf.torch.graph.operator_metatypes import ELEMENTWISE_OPERATIONS
 from nncf.torch.graph.transformations.command_creation import create_quantizer_insertion_command
 from nncf.torch.graph.transformations.command_creation import create_shared_quantizer_insertion_command
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
@@ -56,6 +57,10 @@ from nncf.torch.tensor_statistics.collectors import PT_REDUCERS_MAP
 
 
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
+    @property
+    def preserved_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
     TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
         TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
         TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
@@ -84,6 +89,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype]
+
+    @property
+    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+        return ELEMENTWISE_OPERATIONS
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
@@ -358,8 +367,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return types
 
     @staticmethod
-    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> List[str]:
-        return []
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
+        return set()
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:

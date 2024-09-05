@@ -279,6 +279,7 @@
         {"type": "Transpose"},
         {"type": "Tile"},
         {"type": "StridedSlice"},
+        {"type": "Slice"},
         {"type": "ShuffleChannels"},
         {"type": "Broadcast"},
         {"type": "Pad"},

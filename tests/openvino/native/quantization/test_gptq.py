@@ -23,10 +23,10 @@ from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.tensor.tensor import Tensor
 
 
-def quantize(x, scale, zero, maxq):
+def quantize(x, scale, zero, minq, maxq):
     if maxq < 0:
         return (x > scale / 2).float() * scale + (x < zero / 2).float() * zero
-    q = torch.clamp(torch.round(x / scale) + zero, 0, maxq)
+    q = torch.clamp(torch.round(x / scale) + zero, minq, maxq)
     return scale * (q - zero)
 
 
@@ -81,11 +81,6 @@ class GPTQQuantizer(torch.nn.Module):
         xmin = torch.minimum(x.min(1)[0], tmp)
         xmax = torch.maximum(x.max(1)[0], tmp)
 
-        if self.sym:
-            xmax = torch.maximum(torch.abs(xmin), xmax)
-            tmp = xmin < 0
-            if torch.any(tmp):
-                xmin[tmp] = -xmax[tmp]
         tmp = (xmin == 0) & (xmax == 0)
         xmin[tmp] = -1
         xmax[tmp] = +1
@@ -95,8 +90,9 @@ class GPTQQuantizer(torch.nn.Module):
             self.zero = xmin
         else:
             if self.sym:
-                self.scale = (xmax - xmin) / (self.maxq - 1)
-                self.zero = torch.full_like(self.scale, (self.maxq + 1) / 2)
+                self.scale = torch.where(-xmin > xmax, -xmin, -xmax)
+                self.scale = self.scale / ((self.maxq + 1) / 2)
+                self.zero = torch.zeros_like(self.scale)
             else:
                 self.scale = (xmax - xmin) / self.maxq
                 self.zero = torch.round(-xmin / self.scale)
@@ -144,7 +140,12 @@ class GPTQQuantizer(torch.nn.Module):
 
     def quantize(self, x):
         if self.ready():
-            return quantize(x, self.scale, self.zero, self.maxq)
+            minq = 0
+            maxq = self.maxq
+            if self.sym:
+                minq = -(self.maxq + 1) / 2
+                maxq = (self.maxq + 1) / 2 - 1
+            return quantize(x, self.scale, self.zero, minq, maxq)
         return x
 
     def enabled(self):
@@ -340,7 +341,8 @@ def test_calculate_scale_linear():
     gptq._set_backend_entity(ov_model)
 
     nodes = graph.get_all_nodes()
-    H = gptq._calculate_hessian(nodes[1], [Tensor(inp) for inp in inputs])
+    wrapped_inputs = [Tensor(inp) for inp in inputs]
+    H = gptq._calculate_hessian(nodes[1], wrapped_inputs)
 
     ref_H = ref_gptq.H.numpy()
     assert np.all(np.isclose(ref_H, H.data))
@@ -350,7 +352,7 @@ def test_calculate_scale_linear():
     )
     wc_params.compression_config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=16)
 
-    scale, _ = gptq._quantize_weights(ov_model, graph, wc_params, H)
+    scale, _ = gptq._quantize_weights(ov_model, graph, wc_params, H, wrapped_inputs)
     ref_scale = ref_scale.numpy()
     scale = scale.reshape(ref_scale.shape)
     assert np.all(np.isclose(ref_scale, scale.data))

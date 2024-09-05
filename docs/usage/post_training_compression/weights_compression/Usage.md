@@ -9,7 +9,7 @@ The Weights Compression algorithm is aimed at compressing the weights of the mod
 #### Supported modes
 
 By default, weights are compressed asymmetrically to 8-bit integer data type - "INT8_ASYM" mode.
-OpenVINO backend also supports 3 modes of mixed precision weight quantization with a 4-bit data type as a primary precision - INT4_SYM, INT4_ASYM, NF4, E2M1. The primary precision in case of INT4_SYM mode is signed 4-bit integer and weights are quantized to it [symmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization) without zero point. In case of INT4_ASYM mode - unsigned 4-bit integer and weight are quantized to it [asymmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization) with a typical non-fixed zero point. In case of NF4 mode - [nf4](https://arxiv.org/pdf/2305.14314v1.pdf) data type without zero point. In case of E2M1 mode - [e2m1](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) data type without zero point and has 8bit [E8M0](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) scale.
+OpenVINO backend also supports 4 modes of mixed precision weight quantization with a 4-bit data type as a primary precision - INT4_SYM, INT4_ASYM, NF4, E2M1. The primary precision in case of INT4_SYM mode is signed 4-bit integer and weights are quantized to it [symmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization) without zero point. In case of INT4_ASYM mode - unsigned 4-bit integer and weight are quantized to it [asymmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization) with a typical non-fixed zero point. In case of NF4 mode - [nf4](https://arxiv.org/pdf/2305.14314v1.pdf) data type without zero point. In case of E2M1 mode - [e2m1](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) data type without zero point and has 8bit [E8M0](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) scale.
 All 4-bit modes have a grouped quantization support, when small group of weights (e.g. 128) in the channel dimension share quantization parameters (scale).
 All embeddings, convolutions and last linear layers are always compressed to 8-bit integer data type. To quantize embeddings and last linear layers to 4-bit, use `all_layers=True`.
 Percent of the rest layers compressed to 4-bit can be configured by "ratio" parameter. E.g. ratio=0.9 means 90% of layers compressed to the corresponding 4-bit data type and the rest to 8-bit asymmetric integer data type.
@@ -61,7 +61,8 @@ nncf_dataset = nncf.Dataset(data_source, transform_fn)
 compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, dataset=nncf_dataset) # model is openvino.Model object
 ```
 
-- Accuracy of the 4-bit compressed models also can be improved by using AWQ, Scale Estimation or GPTQ algorithms over data-based mixed-precision algorithm. These algorithms work by equalizing a subset of weights to minimize the difference between the original precision and the 4-bit precision. The AWQ algorithm can be used in conjunction with either the Scale Estimation or GPTQ algorithm. However, Scale Estimation and GPTQ algorithms are mutually exclusive and cannot be used together. Below are examples demonstrating how to enable the AWQ, Scale Estimation or GPTQ algorithms:
+- Accuracy of the 4-bit compressed models also can be improved by using AWQ, Scale Estimation, GPTQ or Lora Correction algorithms over data-based mixed-precision algorithm. These algorithms work by equalizing a subset of weights to minimize the difference between the original precision and the 4-bit precision.
+Unlike all others, the Lora Correction algorithm inserts an additional Linear layers for reducing quantization noise and further accuracy improvement. Inevitably, this approach introduces a memory and a runtime overheads, but they are negligible, since the inserted weight much smaller and can be quantized to 8-bit. The AWQ, Scale Estimation (SE) and Lora Correction (LC) algo can be used in any combination together: AWQ + SE, AWQ + LC, SE + LC, AWQ + SE + LC. The GPTQ algorithm can be combined with AWQ only. Below are examples demonstrating how to enable the AWQ, Scale Estimation, GPTQ or Lora Correction algorithms:
 
   Prepare the calibration dataset for data-based algorithms:
 
@@ -133,6 +134,16 @@ model.model = compress_weights(model.model,
                                ratio=0.8,
                                dataset=nncf_dataset,
                                gptq=True)
+```
+
+- How to compress 80% of layers to 4-bit integer with a default data-based mixed precision algorithm and Lora Correction algorithm. It requires setting `lora_correction` to `True` additionally to data-based mixed-precision algorithm.
+
+```python
+model.model = compress_weights(model.model,
+                               mode=CompressWeightsMode.INT4_SYM,
+                               ratio=0.8,
+                               dataset=nncf_dataset,
+                               lora_correction=True)
 ```
 
 - `NF4` mode can be considered for improving accuracy, but currently models quantized to nf4 should not be faster models
@@ -538,5 +549,4 @@ List of notebooks demonstrating OpenVINO conversion and inference together with 
 
 - [LLM Instruction Following](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-question-answering)
 - [Dolly 2.0](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/dolly-2-instruction-following)
-- [Stable-Zephyr-3b](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-zephyr-3b-chatbot)
 - [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-chatbot)
