@@ -12,6 +12,7 @@ Post-training Quantization:
   - Added a memory monitoring tool for logging the memory a piece of python code or a scpript allocates.
 - Fixes:
   - Fixed some scenarios of NNCF PyTorch patching interfering with `torch.compile`.
+  - Fixed the quantization of Convolution and LSTMSequence operations in cases where some inputs are part of a ShapeOF subgraph.
 - Improvements:
   - Improved progress bar logic during weights compression for more accurate remaining time estimation.
 - Deprecations/Removals:
