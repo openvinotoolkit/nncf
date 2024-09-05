@@ -199,6 +199,7 @@ class GraphConverter:
                     const_attrs[const_port_id] = {
                         "name": const_node.get_friendly_name(),
                         "shape": tuple(const_node.get_output_shape(0)),
+                        "dtype": const_node.output(0).get_element_type().get_type_name(),
                     }
 
                     if metatype == OVMatMulMetatype:

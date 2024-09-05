@@ -106,6 +106,26 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_tensor = get_const_value(weight_node)
         return Tensor(weight_tensor)
 
+    def get_weight_dtype(
+        self, node_with_weight: NNCFNode, weight_port_id: int, model: ov.Model, graph: NNCFGraph
+    ) -> TensorDataType:
+        ov_type_name = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["dtype"]
+        dtype_map = {
+            "f16": TensorDataType.float16,
+            "bf16": TensorDataType.bfloat16,
+            "f32": TensorDataType.float32,
+            "f64": TensorDataType.float64,
+            "i8": TensorDataType.int8,
+            "i32": TensorDataType.int32,
+            "i64": TensorDataType.int64,
+            "u8": TensorDataType.uint8,
+        }
+        return dtype_map.get(ov_type_name)
+
+    @staticmethod
+    def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Tuple:
+        return node_with_weight.layer_attributes.constant_attributes[weight_port_id]["shape"]
+
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: ov.Model, graph: NNCFGraph, weight: Tensor
     ):
