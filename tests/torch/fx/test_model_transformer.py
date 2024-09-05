@@ -16,6 +16,7 @@ from typing import Any, Tuple
 import pytest
 import torch
 from torch._export import capture_pre_autograd_graph
+import torch.fx
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -30,13 +31,23 @@ from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
 from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
-
+from tests.torch.ptq.test_weights_compression import ShortTransformer
+from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import NNCFGraph
+from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 
 @dataclass
 class ModelExtractionTestCase:
     model: torch.nn.Module
     input_shape: Tuple[int, ...]
     command: PTModelExtractionCommand
+
+@dataclass
+class SharedConstantModelTestCase:
+    model: torch.nn.Module
+    input_shape: Tuple[int, ...]
+    num_constants: int
+    num_shared_constants: int
 
 
 EXTRACTED_GRAPHS_DIR_NAME = Path("fx") / "extracted"
@@ -125,7 +136,19 @@ def test_output_insertion_transformation(tuple_output, target_point):
     check_graph(
         nncf_graph, f"output_insertion_{_target_point_to_str(target_point)}_ref.dot", TRANSFORMED_GRAPH_DIR_NAME
     )
-    
+
+@dataclass
+class SharedConstantModelTestCase:
+    model: torch.nn.Module
+    input_shape: Tuple[int, ...]
+    num_constants: int
+    num_nodes_with_shared_constants: int
+
+SHARED_CONSTANT_MODELS_CASES = (
+    SharedConstantModelTestCase(MultiBranchesConnectedModel(), (1, 3, 3, 3), 9, 3),
+    SharedConstantModelTestCase(ShortTransformer(5, 10, share_weights=True), (5,), 5, 2)
+)
+
 def count_constants(model) -> int:
     num_constant_nodes = 0
     for node in model.graph.nodes:
@@ -133,10 +156,24 @@ def count_constants(model) -> int:
             num_constant_nodes += 1
     return num_constant_nodes
 
-def test_create_shared_constant_transformation(mocker):
-    model = MultiBranchesConnectedModel()
-    ex_inputs = torch.ones((1, 3, 3, 3))
+def count_nodes_with_shared_constants(model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> int:
+    num_nodes_with_constant_nodes = 0
+    model_graph: torch.fx.Graph = model.graph
+    for node in model_graph.nodes:
+        nncf_node = nncf_graph.get_node_by_name(node.name)
+        num_consumer_nodes = len(nncf_graph.get_next_nodes(nncf_node))
+        if node.op == "get_attr" and num_consumer_nodes > 1:
+                assert nncf_node.is_shared
+                num_nodes_with_constant_nodes += num_consumer_nodes
+    return num_nodes_with_constant_nodes
+
+@pytest.mark.parametrize("test_case", SHARED_CONSTANT_MODELS_CASES, ids=idfn)
+def test_create_shared_constant_transformation(test_case: SharedConstantModelTestCase):
+    model = test_case.model
+    ex_inputs = torch.ones(test_case.input_shape)
     captured_model = _capture_model(model, ex_inputs)
-    assert count_constants(captured_model) == 9
+    assert count_constants(captured_model) == test_case.num_constants
     shared_constant_create_transformation(captured_model)
-    assert count_constants(captured_model) == 7
+    nncf_graph = NNCFGraphFactory.create(captured_model)
+    assert count_nodes_with_shared_constants(captured_model, nncf_graph) == test_case.num_nodes_with_shared_constants
+    assert count_constants(captured_model) == (test_case.num_constants - test_case.num_nodes_with_shared_constants + 1)
