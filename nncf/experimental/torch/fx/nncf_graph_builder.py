@@ -107,12 +107,12 @@ class GraphConverter:
 
     def _check_shared_constants(prev_targets={}):
         def is_shared_constant(node: torch.fx.Node) -> bool:
-            if(node.target in prev_targets and node.op in ("get_attr",)):
+            if node.target in prev_targets and node.op in ("get_attr",):
                 return True
             prev_targets[node.target] = node
             return False
-        return is_shared_constant
 
+        return is_shared_constant
 
     @staticmethod
     def create_nncf_graph(model: torch.fx.GraphModule) -> PTNNCFGraph:
@@ -131,10 +131,7 @@ class GraphConverter:
             node_type, node_metatype = GraphConverter._get_node_type_and_metatype(source_node, model)
             is_shared_node = is_shared_const(source_node)
             nncf_graph.add_nncf_node(
-                node_name=source_node.name,
-                node_type=node_type,
-                node_metatype=node_metatype,
-                is_shared=is_shared_node
+                node_name=source_node.name, node_type=node_type, node_metatype=node_metatype, is_shared=is_shared_node
             )
 
         for source_node in model.graph.nodes:

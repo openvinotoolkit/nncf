@@ -151,6 +151,7 @@ def shared_constant_create_transformation(model: torch.fx.GraphModule):
     model.graph.eliminate_dead_code()
     model.recompile()
 
+
 def _replace_shared_weights(node: torch.fx.Node, prev_targets):
     """
     This function is responsible for checking the consumer node of current

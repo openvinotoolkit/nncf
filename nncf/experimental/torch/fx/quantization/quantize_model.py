@@ -67,7 +67,7 @@ def quantize_impl(
     original_graph_meta = model.meta
 
     copied_model = deepcopy(model)
-    
+
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,
         target_device=target_device,
