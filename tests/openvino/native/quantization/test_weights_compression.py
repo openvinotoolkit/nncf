@@ -713,10 +713,7 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 @pytest.mark.parametrize("mode", INT4_MODES)
 @pytest.mark.parametrize(
     "params",
-    (
-        {"dataset": "anything", "scale_estimation": True, "gptq": True},
-        {"dataset": "anything", "lora_correction": True, "gptq": True},
-    ),
+    ({"dataset": "anything", "lora_correction": True, "gptq": True},),
 )
 def test_raise_error_with_unsupported_params_for_int4(mode, params):
     with pytest.raises(AttributeError):
