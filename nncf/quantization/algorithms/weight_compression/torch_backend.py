@@ -177,7 +177,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Tuple:
-        weight_node = graph.get_previous_nodes(node_with_weight)[weight_port_id]
+        weight_node = get_const_node(node_with_weight, weight_port_id, graph)
         return tuple(weight_node.layer_attributes.shape)
 
     def set_weight(
