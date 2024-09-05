@@ -13,8 +13,10 @@ Post-training Quantization:
 - Fixes:
   - Fixed some scenarios of NNCF PyTorch patching interfering with `torch.compile`.
   - Fixed the quantization of Convolution and LSTMSequence operations in cases where some inputs are part of a ShapeOF subgraph.
+  - Removes logging of algorithm generated ignored scope.
 - Improvements:
   - Improved progress bar logic during weights compression for more accurate remaining time estimation.
+  - [OpenVINO] Increased hardware fused pattern coverage.
 - Deprecations/Removals:
   - ...
 - Tutorials:
