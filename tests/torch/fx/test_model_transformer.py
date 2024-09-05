@@ -24,6 +24,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
+from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import shared_constant_create_transformation
 from nncf.torch import disable_patching
@@ -34,8 +35,8 @@ from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
 from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
-
-
+from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name, get_tensor_constant_from_node
+from nncf.torch.graph.operator_metatypes import CONST_NOOP_METATYPES
 @dataclass
 class ModelExtractionTestCase:
     model: torch.nn.Module
@@ -154,6 +155,15 @@ def count_constants(model) -> int:
 
 
 def count_nodes_with_shared_constants(model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> int:
+    '''
+    Gets the number of nodes which use a shared constant.
+    eg:
+          const
+          /   \
+    node1     node2
+
+    returns 2 (node1, and node2)
+    '''
     num_nodes_with_constant_nodes = 0
     model_graph: torch.fx.Graph = model.graph
     for node in model_graph.nodes:
@@ -174,4 +184,49 @@ def test_create_shared_constant_transformation(test_case: SharedConstantModelTes
     shared_constant_create_transformation(captured_model)
     nncf_graph = NNCFGraphFactory.create(captured_model)
     assert count_nodes_with_shared_constants(captured_model, nncf_graph) == test_case.num_nodes_with_shared_constants
+    assert count_constants(captured_model) == (test_case.num_constants - test_case.num_nodes_with_shared_constants + 1)
+
+
+def get_shared_constant_nodes(nncf_graph: NNCFGraph):
+    '''
+    Gets a dict of constant nodes as key and consumer nodes as values which are shared in the model.
+    eg:
+          const
+          /   \
+    node1     node2
+
+    returns ({const:[node1, node2]}) 
+    '''
+    shared_const_node_consumer_node = {}
+    for node in nncf_graph.get_all_nodes():
+        consumer_nodes = nncf_graph.get_next_nodes(node)
+        if node.metatype in CONST_NOOP_METATYPES and len(consumer_nodes) > 1:
+            shared_const_node_consumer_node[node] = consumer_nodes
+    return shared_const_node_consumer_node
+
+
+@pytest.mark.parametrize("test_case", SHARED_CONSTANT_MODELS_CASES, ids=idfn)
+def test_update_constant(test_case: SharedConstantModelTestCase):
+    model = test_case.model
+    ex_inputs = torch.ones(test_case.input_shape)
+    captured_model = _capture_model(model, ex_inputs)
+    assert count_constants(captured_model) == test_case.num_constants
+    shared_constant_create_transformation(captured_model)
+    nncf_graph = NNCFGraphFactory.create(captured_model)
+    shared_constants_consumers_dict = get_shared_constant_nodes(nncf_graph)
+    const_node = list(shared_constants_consumers_dict.keys())[0]
+    node_to_update = shared_constants_consumers_dict[const_node][0]
+    node_to_update_graph = get_graph_node_by_name(captured_model.graph, const_node.node_name)
+    prev_value = get_tensor_constant_from_node(node_to_update_graph, captured_model)
+
+    constant_update_transformation_builder(
+        node_to_update,
+        torch.tensor(1),
+    )(captured_model)
+
+    nncf_graph_updated_constant = NNCFGraphFactory.create(captured_model)
+    # node_to_update_graph = get_graph_node_by_name(captured_model.graph, const_node.node_name)
+    new_value = get_tensor_constant_from_node(node_to_update_graph, captured_model)
+    assert new_value == torch.tensor(1)
+    assert count_nodes_with_shared_constants(captured_model, nncf_graph_updated_constant) == test_case.num_nodes_with_shared_constants
     assert count_constants(captured_model) == (test_case.num_constants - test_case.num_nodes_with_shared_constants + 1)
