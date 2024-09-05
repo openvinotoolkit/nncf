@@ -136,7 +136,7 @@ class TestPTQParams(TemplateTestPTQParams):
     @pytest.fixture(
         params=[
             (IgnoredScope(), 1, 1),
-            (IgnoredScope(["MatMul"]), 1, 0),
+            (IgnoredScope(["MatMul"]), 0, 0),
             (IgnoredScope(["Add"]), 1, 1),
             (IgnoredScope(["MatMul", "Add"]), 0, 0),
         ]

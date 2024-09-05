@@ -524,6 +524,17 @@ class ConvolutionWithAllConstantInputsModel(torch.nn.Module):
         return x + nn.functional.conv2d(self._conv_i, w)
 
 
+class ConvolutionWithMinModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self._conv_w = nn.Parameter(torch.ones((1, 1, 1, 1)))
+
+    def forward(self, x):
+        w = self._conv_w + 10
+        t = nn.functional.conv2d(x, w)
+        return torch.minimum(t, torch.ones_like(t))
+
+
 class MultiBranchesConnectedModel(torch.nn.Module):
     def __init__(self):
         super().__init__()

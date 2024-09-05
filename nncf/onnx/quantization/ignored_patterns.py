@@ -95,28 +95,27 @@ def create_multihead_attention_output() -> GraphPattern:
 
 @ONNX_IGNORED_PATTERNS.register(IgnoredPatternNames.SE_BLOCK)
 def create_se_block() -> GraphPattern:
-    #       NON_PATTERN_NODE--------
-    #    (PATTERN_NODE_TO_EXCLUDE) |
-    #              |               |
-    #         REDUCE_MEAN          |
-    #              |               |
-    #         CONVOLUTION          |
-    #              |               |
-    #          ACTIVATION          |
-    #              |               |
-    #         CONVOLUTION          |
-    #              |               |
-    #     SIGMOID||HARDSIGMOID     |
-    #              |               |
-    #              |               |
-    #             MUL---------------
+    #       NON_PATTERN_NODE--------------
+    #    (PATTERN_NODE_TO_EXCLUDE)       |
+    #              |                     |
+    #   REDUCE_MEAN||GLOBAL_AVERAGE_POOL |
+    #              |                     |
+    #         CONVOLUTION                |
+    #              |                     |
+    #          ACTIVATION                |
+    #              |                     |
+    #         CONVOLUTION                |
+    #              |                     |
+    #       SIGMOID||HARDSIGMOID         |
+    #              |                     |
+    #             MUL---------------------
     #   (PATTERN_NODE_TO_EXCLUDE)
     pattern = GraphPattern()
     non_pattern_node = pattern.add_node(label="NON_PATTERN_NODE", type=GraphPattern.NON_PATTERN_NODE_TYPE)
-    reduce_mean_node = pattern.add_node(
+    reduce_node_or_global_average_pool = pattern.add_node(
         **{
-            GraphPattern.LABEL_ATTR: "REDUCE_MEAN",
-            GraphPattern.METATYPE_ATTR: om.ONNXReduceMeanMetatype,
+            GraphPattern.LABEL_ATTR: "REDUCE_MEAN || GLOBAL_AVERAGE_POOL",
+            GraphPattern.METATYPE_ATTR: [om.ONNXReduceMeanMetatype, om.ONNXGlobalAveragePoolMetatype],
             GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
         }
     )
@@ -124,8 +123,8 @@ def create_se_block() -> GraphPattern:
         **{GraphPattern.LABEL_ATTR: "CONVOLUTION", GraphPattern.METATYPE_ATTR: om.ONNXConvolutionMetatype}
     )
 
-    pattern.add_edge(non_pattern_node, reduce_mean_node)
-    pattern.add_edge(reduce_mean_node, conv_node_1)
+    pattern.add_edge(non_pattern_node, reduce_node_or_global_average_pool)
+    pattern.add_edge(reduce_node_or_global_average_pool, conv_node_1)
     pattern.join_patterns(atomic_activations_operations())
 
     rest_pattern = GraphPattern()

@@ -344,10 +344,24 @@ class ONNXLessMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXLessOrEqualMetatype(ONNXOpMetatype):
+    name = "LessOrEqualOp"
+    op_names = ["LessOrEqual"]
+    hw_config_names = [HWConfigOpName.LESSEQUAL]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXGreaterMetatype(ONNXOpMetatype):
     name = "GreaterOp"
     op_names = ["Greater"]
     hw_config_names = [HWConfigOpName.GREATER]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXGreaterOrEqualMetatype(ONNXOpMetatype):
+    name = "GreaterOrEqualOp"
+    op_names = ["GreaterOrEqual"]
+    hw_config_names = [HWConfigOpName.GREATEREQUAL]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -379,6 +393,20 @@ class ONNXOrMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXXOrMetatype(ONNXOpMetatype):
+    name = "XorOp"
+    op_names = ["Xor"]
+    hw_config_names = [HWConfigOpName.LOGICALXOR]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXModMetatype(ONNXOpMetatype):
+    name = "ModOp"
+    op_names = ["Mod"]
+    hw_config_names = [HWConfigOpName.FLOORMOD]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXMaximumMetatype(ONNXOpMetatype):
     name = "MaxOp"
     op_names = ["Max"]
@@ -393,10 +421,15 @@ class ONNXMinimumMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXMeanMetatype(ONNXOpMetatype):
+    name = "MeanOp"
+    op_names = ["Mean"]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXFloorMetatype(ONNXOpMetatype):
     name = "FloorOp"
     op_names = ["Floor"]
-    hw_config_names = [HWConfigOpName.FLOORMOD]
 
 
 @ONNX_OPERATION_METATYPES.register()
