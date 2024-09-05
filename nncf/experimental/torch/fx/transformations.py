@@ -164,17 +164,18 @@ def _replace_shared_weights(node: torch.fx.Node, prev_targets):
         prev_targets[node.target] = node
 
 
-def constant_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> TransformationFNType:
+def constant_update_transformation_builder(node: NNCFNode, value: torch.Tensor, input_port_id: int = 1) -> TransformationFNType:
     """
     Return transformation which updates constant of the given node to the given value.
 
     :param node: Node which requires bias constant update.
     :param value: New value to use as the node constant.
+    :param input_port_id: Port Id of the constant.
     :return: Transformation which updates constant of the given node to the given value.
     """
 
     def constant_update_transformation(model: torch.fx.GraphModule):
-        constant_update_fn(model, get_graph_node_by_name(model.graph, node.node_name), value, input_port_id=1)
+        constant_update_fn(model, get_graph_node_by_name(model.graph, node.node_name), value, input_port_id)
 
     return constant_update_transformation
 
@@ -189,9 +190,6 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
     :param input_port_id: Target constant input port id.
     """
     graph = model.graph
-    with graph.inserting_before(node):
-        new_constant = create_getattr_from_value(model, graph, node.name + "_updated_constant", value)
-
     args = list(node.args)
     # A bias node suppose to have constant on the second input port.
     if args[input_port_id].op != "get_attr":
@@ -202,11 +200,14 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
 
     # Update metadata of the new constant node.
     previous_const = args[input_port_id]
-    new_constant.meta = copy(previous_const.meta)
-    consumer_nodes = list(previous_const.users.keys())
-    new_constant.meta["val"] = value
-    for node in consumer_nodes:
-        node.replace_input_with(previous_const, new_constant)
+    consumer_nodes = list(previous_const.users.keys()) #This list of consumer nodes will always be topologically sorted 
+    # To ensure the updated node has the right order, 
+    # we insert constant node before the node placed at the highest order in topological order.
+    with graph.inserting_before(consumer_nodes[0]):
+        new_constant = create_getattr_from_value(model, graph, node.name + "_updated_constant", value)
+
+    previous_const.replace_all_uses_with(new_constant, propagate_meta=True)
+    graph.erase_node(previous_const)
     graph.eliminate_dead_code()
 
 
