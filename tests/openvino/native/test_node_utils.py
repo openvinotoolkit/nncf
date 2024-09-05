@@ -77,7 +77,7 @@ def test_is_node_with_bias(model_to_create, is_with_bias, node_name):
 
 
 @pytest.mark.parametrize(
-    "weights_port_id, transpose, shape, expected_channel_axes",
+    "weights_port_id, transpose, shape, dtype, expected_channel_axes",
     [
         (0, False, (1,), "f32", []),
         (0, True, (1,), "f32", []),
