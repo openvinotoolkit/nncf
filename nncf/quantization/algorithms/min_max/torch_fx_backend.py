@@ -203,7 +203,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> str:
         weighted_node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        weight = nncf_graph.get_previous_nodes(weighted_node)[target_point.input_port_id]
+        weight_edge = nncf_graph.get_input_edge_by_port_id(weighted_node, target_point.input_port_id)
+        weight = weight_edge.from_node
         return weight.node_name
 
     @staticmethod
