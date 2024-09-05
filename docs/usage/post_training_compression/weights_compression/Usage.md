@@ -535,10 +535,10 @@ Here is the perplexity and accuracy with data-free and data-aware mixed-precisio
 
 #### Accuracy/Footprint trade-off
 
-Below are the tables showing the accuracy/footprint trade-off for 2 models `Qwen/Qwen2-7B` and
+Below are the tables showing the accuracy/footprint trade-off for `Qwen/Qwen2-7B` and
 `microsoft/Phi-3-mini-4k-instruct` compressed with different options.
 
-Footprint overhead is measured by the percentage increase in model size relative to a baseline int4 model, compressed with `ratio=1` and `all_layers=False` options.
+Compression ratio is defined as the ratio between the size of fp32 model and size of the compressed one.
 Accuracy metrics are measured on 4 tasks [lambada openai](https://huggingface.co/datasets/EleutherAI/lambada_openai), [wikitext](https://arxiv.org/pdf/1609.07843.pdf),
 [winogrande](https://arxiv.org/abs/1907.10641), [WWB](https://github.com/openvinotoolkit/openvino.genai/tree/master/llm_bench/python/who_what_benchmark/whowhatbench).
 The `average relative error` in the tables below is the mean of relative errors for each of four tasks with respect to
