@@ -102,14 +102,14 @@ QUANTIZATION_MODELS = [
         "backends": [BackendType.FX_TORCH, BackendType.ONNX],
         "batch_size": 128,
     },
-    {
+    {  # TODO(kshpv): changes from #2947 should be reverted after implement ticket 150952
         "reported_name": "torchvision/mobilenet_v3_small_BC",
         "model_id": "mobilenet_v3_small",
         "pipeline_cls": ImageClassificationTorchvision,
         "compression_params": {
             "fast_bias_correction": False,
             "preset": QuantizationPreset.MIXED,
-            "ignored_scope": IgnoredScope(  # ignored scope should be remove after implement ticket 150952
+            "ignored_scope": IgnoredScope(
                 subgraphs=[
                     Subgraph(
                         inputs=["__module.features.1.block.1.avgpool/aten::adaptive_avg_pool2d/Reshape"],
