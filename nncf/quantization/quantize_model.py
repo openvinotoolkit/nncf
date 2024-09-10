@@ -482,11 +482,6 @@ def compress_weights(
         if any((gptq, lora_correction)) and (dataset is None or mode == CompressWeightsMode.E2M1):
             raise AttributeError("GPTQ or Lora Correction algorithm is defined, but dataset is None or mode is E2M1.")
 
-        if gptq and scale_estimation:
-            raise AttributeError(
-                "Simultaneous use of Scale estimation and GPTQ algorithms is not supported. Select one of them."
-            )
-
         if gptq and lora_correction:
             raise AttributeError(
                 "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
