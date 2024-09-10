@@ -1,0 +1,4 @@
+tinyllama_NF4_scale_estimation_stateful_per_channel_backend_OV:
+  metric_value: 0.87942
+  num_int4: 11
+  num_int8: 290
