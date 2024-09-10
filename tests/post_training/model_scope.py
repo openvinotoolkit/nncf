@@ -511,7 +511,7 @@ WEIGHT_COMPRESSION_MODELS = [
         "pipeline_cls": LMWeightCompression,
         "compression_params": {
             "group_size": -1,
-            "ratio": 1,
+            "ratio": 0.1,
             "mode": CompressWeightsMode.NF4,
             "scale_estimation": True,
             "advanced_parameters": AdvancedCompressionParameters(
