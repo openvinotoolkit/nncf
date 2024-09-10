@@ -134,6 +134,17 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         return Tensor(weight)
 
+    def get_weight_dtype(
+        self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.fx.GraphModule, graph: NNCFGraph
+    ) -> TensorDataType:
+        return self.get_weight(node_with_weight, weight_port_id, model, graph).dtype
+
+    @staticmethod
+    def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Tuple:
+        weight_node = get_const_node(node_with_weight, weight_port_id, graph)
+        edge = graph.get_edge(weight_node, node_with_weight)
+        return tuple(edge.tensor_shape)
+
     def set_weight(
         self,
         node_with_weight: NNCFNode,
