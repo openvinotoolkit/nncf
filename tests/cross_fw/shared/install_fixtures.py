@@ -12,7 +12,7 @@ from typing import Set
 
 import pytest
 
-from tests.shared.helpers import create_venv_with_nncf
+from tests.cross_fw.shared.helpers import create_venv_with_nncf
 
 
 @pytest.fixture(scope="function")

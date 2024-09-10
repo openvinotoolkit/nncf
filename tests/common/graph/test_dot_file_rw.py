@@ -17,8 +17,8 @@ import pytest
 
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
-from tests.shared.nx_graph import check_nx_graph
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.nx_graph import check_nx_graph
+from tests.cross_fw.shared.paths import TEST_ROOT
 
 
 @pytest.fixture(scope="module")

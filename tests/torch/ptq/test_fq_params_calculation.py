@@ -25,9 +25,9 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.utils import get_all_modules_by_type
-from tests.shared.helpers import compare_stats
-from tests.shared.helpers import load_json
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.helpers import compare_stats
+from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_random_mock_dataloader
 

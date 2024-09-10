@@ -16,7 +16,7 @@ import tempfile
 import pytest
 from pytest import approx
 
-from tests.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import PROJECT_ROOT
 from tests.tensorflow.test_sanity_sample import get_sample_fn
 
 EXAMPLES_DIR = PROJECT_ROOT.joinpath("examples", "tensorflow")

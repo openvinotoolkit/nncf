@@ -17,14 +17,14 @@ from typing import Any, Dict, List
 
 import pytest
 
-from tests.shared.case_collection import skip_if_backend_not_selected
-from tests.shared.command import Command
-from tests.shared.helpers import create_venv_with_nncf
-from tests.shared.helpers import get_pip_executable_with_venv
-from tests.shared.helpers import get_python_executable_with_venv
-from tests.shared.helpers import load_json
-from tests.shared.paths import PROJECT_ROOT
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.case_collection import skip_if_backend_not_selected
+from tests.cross_fw.shared.command import Command
+from tests.cross_fw.shared.helpers import create_venv_with_nncf
+from tests.cross_fw.shared.helpers import get_pip_executable_with_venv
+from tests.cross_fw.shared.helpers import get_python_executable_with_venv
+from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import TEST_ROOT
 
 EXAMPLE_TEST_ROOT = TEST_ROOT / "cross_fw" / "examples"
 EXAMPLE_SCOPE_PATH = EXAMPLE_TEST_ROOT / "example_scope.json"

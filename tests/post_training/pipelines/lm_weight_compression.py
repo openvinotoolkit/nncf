@@ -28,10 +28,10 @@ from transformers import AutoTokenizer
 from whowhatbench import Evaluator
 
 import nncf
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import StatsFromOutput
-from tests.shared.paths import TEST_ROOT
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
 from tools.memory_monitor import memory_monitor_context
