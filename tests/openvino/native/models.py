@@ -950,7 +950,7 @@ class AWQMatmulModel(OVReferenceModel):
             return (qw - zp) * scale
 
     def _create_ov_model(self, is_int8=False):
-        input_node = opset.parameter([8, 8], name="Input_1")
+        input_node = opset.parameter([-1, 8], name="Input_1")
 
         weights_data1 = np.arange(0, 64).reshape(8, 8)
         weights_data1[:] = 2.0

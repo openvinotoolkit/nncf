@@ -8,8 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import operator
 from collections import defaultdict
+from functools import reduce
 from typing import Dict, List, Optional, OrderedDict, Tuple, TypeVar
 
 import nncf
@@ -330,14 +331,16 @@ class WeightCompression(Algorithm):
                         is_last_layer_shared = True
                     continue
 
-                weight = self._backend_entity.get_weight(node, weight_port_id, model, graph)
-                if weight.dtype not in [
+                weight_dtype = self._backend_entity.get_weight_dtype(node, weight_port_id, model, graph)
+                if weight_dtype not in [
                     TensorDataType.float16,
                     TensorDataType.bfloat16,
                     TensorDataType.float32,
                     TensorDataType.float64,
                 ]:
                     continue
+                weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
+                weight_size = reduce(operator.mul, weight_shape, 1)
                 reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
                 if (
                     self._group_size != -1
@@ -352,12 +355,12 @@ class WeightCompression(Algorithm):
                     # MatMul ops can't have multiple reduction axes.
                     nncf_logger.warning(
                         f"Weight compression expects a single reduction axis, but {len(reduction_axes)} given. "
-                        f"Weight shape: {weight.shape}, reduction axes: {reduction_axes}, "
+                        f"Weight shape: {weight_shape}, reduction axes: {reduction_axes}, "
                         f"node name: {node.node_name}. The node will be asymmetrically quantized to 8 bits."
                     )
 
                 weight_params = WeightCompressionParameters(
-                    weight_name, node, weight_port_id, weight.size, reduction_axes
+                    weight_name, node, weight_port_id, weight_size, reduction_axes
                 )
                 all_weight_params.append(weight_params)
                 weight_names.add(weight_name)
@@ -507,6 +510,31 @@ class WeightCompression(Algorithm):
         self._fp_inputs[input_id] = input_fp
         return self._fp_inputs[input_id]
 
+    @staticmethod
+    def _get_dynamic_shape(x: List[Tensor]):
+        """
+        Compute common shape for set of tensors.
+        For example: return [-1, 10] for tensors with shapes [[1, 10], [5, 10], [100, 10]]
+            or [-1, 10] for tensors with shapes [[1, 1, 10], [1, 1, 10], [1, 100, 10]]
+        :param x: (List[Tensor]): Set of tensors.
+
+        :return: resulting shape with -1 for dimension with dynamic axis,
+                 common size for dimension with static axis if size > 1 else None.
+        """
+        if len(x) == 0:
+            return []
+        res = list(x[0].shape)
+        sz = len(res)
+
+        for i in x:
+            i_shape = i.shape
+            for j in range(sz):
+                if i_shape[j] != res[j]:
+                    res[j] = -1
+        res = [i for i in res if i != 1]
+
+        return res
+
     def _get_activations(
         self, dataset: Dataset, subset_size: int, nodes_to_compress: List[NNCFNode], graph: NNCFGraph, model: TModel
     ) -> Dict[str, List[Tensor]]:
@@ -562,7 +590,9 @@ class WeightCompression(Algorithm):
         for node_name, output_id in _collected_stat_inputs_map.items():
             act_node_name, output_port_id = output_id
             x_fp = self._get_fp_inputs(statistic_container, node_name=act_node_name, port_id=output_port_id)
-            x_fp = [i.squeeze() for i in x_fp]  # List[tensor(seq_length, hidden_dim)]
+
+            d_shape = self._get_dynamic_shape(x_fp)
+            x_fp = [i.reshape(d_shape) for i in x_fp]  # List[tensor(seq_length, hidden_dim)]
             activations[node_name] = x_fp
 
             for shared_node_name in act_vs_shared_node_names_mapping[act_node_name]:
