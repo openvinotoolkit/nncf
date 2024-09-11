@@ -188,23 +188,6 @@ def native_quantize_impl(
     return quantized_model
 
 
-def wrap_validation_fn(validation_fn):
-    """
-    Wraps validation function to support case when it only returns metric value.
-
-    :param validation_fn: Validation function to wrap.
-    :return: Wrapped validation function.
-    """
-
-    def wrapper(*args, **kwargs):
-        retval = validation_fn(*args, **kwargs)
-        if isinstance(retval, tuple):
-            return retval
-        return retval, None
-
-    return wrapper
-
-
 @tracked_function(
     NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset", "max_drop", "drop_type"]
 )
@@ -228,9 +211,6 @@ def quantize_with_accuracy_control_impl(
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend via the
     OpenVINO Runtime API.
     """
-
-    validation_fn = wrap_validation_fn(validation_fn)
-
     if advanced_accuracy_restorer_parameters is None:
         advanced_accuracy_restorer_parameters = AdvancedAccuracyRestorerParameters()
 
