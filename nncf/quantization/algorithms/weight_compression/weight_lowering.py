@@ -45,26 +45,8 @@ NF4_QUANTILES = np.array(
     ],
     dtype=np.float32,
 )
-CENTER_OF_NF4_QUANTILES = np.array(
-    [
-        -0.8480964004993439,
-        -0.6106329262256622,
-        -0.4599952697753906,
-        -0.33967943489551544,
-        -0.23460740596055984,
-        -0.13791173323988914,
-        -0.045525018125772476,
-        0.03979014977812767,
-        0.1202552504837513,
-        0.2035212516784668,
-        0.2920137718319893,
-        0.3893125355243683,
-        0.5016634166240692,
-        0.6427869200706482,
-        0.8614784181118011,
-    ],
-    dtype=np.float32,
-)
+
+CENTER_OF_NF4_QUANTILES = (NF4_QUANTILES[1:] + NF4_QUANTILES[:-1]) / 2
 
 
 @dataclass
@@ -87,9 +69,9 @@ def reshape_weight_for_grouped_quantization(
     weight: Tensor, reduction_axes: ReductionAxes, group_size: int
 ) -> Tuple[Tensor, int]:
     """
-    Reshapes weight for group-wise quantization and return a new reduction axis for collecting statistics per group
-    dimension. Having weight with shapes [c_out, c_in] and group size = 128, shape of reshaped weight is
-    [c_out, c_in // 128, 128].
+    Reshapes weight for group-wise quantization and return a reduction axis for collecting statistics per group
+    dimension. Having a transposed weight with shapes [c_out, c_in] and group size = 128, shape of reshaped weight is
+    [c_out, c_in // 128, 128], reduction axis = 1 and the returned reduction axis = 2.
 
     :param weight: Weight array to compress.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
@@ -194,34 +176,42 @@ def calculate_normalized_weight(weight: Tensor, scale: Tensor) -> Tensor:
     return weight / scale
 
 
-def calculate_nf4_weight(weight: Tensor, scale: Tensor) -> Tensor:
+def do_nf4_quantization(weight: Tensor, scale: Tensor, is_normalized_weight: bool = False) -> Tensor:
     """
-    Quantizes the weight tensor to NF4 format.
+    Performs NF4 quantization - the floating point value is represented by floating point scale, look-up table of
+        16 NF4 values Quantizes the weight tensor to NF4 format.
 
     :param weight: Weight tensor to quantize.
     :param scale: Scale tensor used for normalization.
-    :return: Quantized weight tensor in NF4 format.
+    :param is_normalized_weight: Whether weight was scaled to [-1, 1] interval. Defaults to False.
+    :return: Tensor of indexes from 0 to 15 that represents the position in look-up table with the corresponding
+        NF4 values from -1 to 1.
     """
-    norm_weight = calculate_normalized_weight(weight, scale)
-
+    norm_weight = weight if is_normalized_weight else calculate_normalized_weight(weight, scale)
     center_nf4_quantiles = fns.from_numpy(CENTER_OF_NF4_QUANTILES, backend=norm_weight.backend)
-    nf4_quantiles = fns.from_numpy(NF4_QUANTILES, backend=norm_weight.backend)
-
-    index_of_quantile = fns.searchsorted(center_nf4_quantiles, norm_weight)
-    nf4_weight = nf4_quantiles[index_of_quantile]
-
-    return nf4_weight
+    indexes = fns.searchsorted(center_nf4_quantiles, norm_weight)
+    return indexes
 
 
-def decompress_nf4_weight(weight: Tensor, scale: Tensor) -> Tensor:
+def do_nf4_dequantization(indexes: Tensor, scale: Tensor, reduction_axis: int = -1) -> Tensor:
     """
     Decompresses the NF4 quantized weight tensor.
 
-    :param weight: Quantized weight tensor in NF4 format.
+    :param indexes: Tensor of indexes from 0 to 15 that represents the position in look-up table with the corresponding
+        NF4 values from -1 to 1.
     :param scale: Scale tensor used for decompression.
+    :param reduction_axis: axis along which weights were reshaped for group quantization and will be reshaped back to
+        original shapes. If equals to -1, weights are not reshaped, assumed not a group quantization. Defaults to -1.
     :return: Decompressed weight tensor.
     """
-    return weight * scale
+    nf4_quantiles = fns.from_numpy(NF4_QUANTILES, backend=indexes.backend)
+    nf4_weight = nf4_quantiles[indexes]
+
+    decompressed_weight = nf4_weight * scale
+    if reduction_axis != -1:
+        decompressed_weight = ungroup_weights(decompressed_weight, reduction_axis)
+
+    return decompressed_weight
 
 
 def calculate_normalized_weight_and_fp4_scale(
@@ -262,7 +252,8 @@ def calculate_integer_quantization_params(
     weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig
 ) -> Tuple[Tensor, Tensor]:
     """
-    Calculates the scale and zero point for integer quantization.
+    Calculates the scale and zero point for uniform quantization (INT4, INT8), when the range of values is divided into
+    equal intervals, and each interval is assigned a quant.
 
     :param weight: Weight array to compress.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
@@ -331,7 +322,7 @@ def calculate_quantized_weight(
     return compressed_weights
 
 
-def do_integer_quantization(
+def do_int_quantization(
     weight: Tensor,
     reduction_axes: ReductionAxes,
     config: WeightCompressionConfig,
@@ -340,7 +331,7 @@ def do_integer_quantization(
     invert_scale=False,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
-    The method quantizes the given weights to integer data type in accordance with the compression config.
+    The method quantizes the given weights to integer data type uniformly in accordance with the compression config.
     The config defines a quantization mode:
         INT8_SYM mode refers to signed int8 symmetric weight compression without zero point -
             quantization to [-128, 127] range.
@@ -403,8 +394,8 @@ def get_integer_quantization_error(
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
-    compressed_weights, scale, zero_point = do_integer_quantization(weight, reduction_axes, config)
-    decompressed_weight = do_dequantization(compressed_weights, scale, zero_point)
+    compressed_weights, scale, zero_point = do_int_quantization(weight, reduction_axes, config)
+    decompressed_weight = do_int_dequantization(compressed_weights, scale, zero_point)
 
     decompressed_weight = decompressed_weight.reshape(orig_shape)
     diff = (decompressed_weight - weight) ** 2
@@ -435,14 +426,32 @@ def compress_weight(
             weight, reduction_axes, config.group_size, precomputed_scale, config.mode
         )
         return CompressedWeight(compressed_weight, scale)
-    compressed_weight, scale, zero_point = do_integer_quantization(
+    compressed_weight, scale, zero_point = do_int_quantization(
         weight, reduction_axes, config, precomputed_scale, precomputed_zero_point
     )
 
     return CompressedWeight(compressed_weight, scale, zero_point)
 
 
-def do_dequantization(
+def ungroup_weights(weights: Tensor, reduction_axis: int) -> Tensor:
+    """
+    Reshapes weights used for group quantization back to original shape.
+
+    :param weights: The weight to reshape.
+    :param reduction_axis: The axis, along which weights were reshaped for group quantization and will be reshaped back
+        to original shapes. If equals to -1, weights are not reshaped, assumed not a group quantization. Default to -1.
+    :return: Reshaped weight.
+    """
+    shape = list(weights.shape)  # [a1, r, a2] - "r" refers to number of channels along reduction axis
+    shape[reduction_axis] = shape[reduction_axis] * shape[reduction_axis + 1]
+    shape[reduction_axis + 1] = 1
+    reshaped_weight = weights.reshape(shape)
+    reshaped_weight = fns.squeeze(reshaped_weight)
+    weights = reshaped_weight
+    return weights
+
+
+def do_int_dequantization(
     compressed_weights: Tensor, scale: Tensor, zero_point: Optional[Tensor] = None, reduction_axis: int = -1
 ) -> Tensor:
     """
@@ -452,18 +461,14 @@ def do_dequantization(
     :param compressed_weights: compressed weights.
     :param scale: scale in compression/quantization.
     :param zero_point: zero point in compression/quantization.
-    :param reduction_axis: axis for return back for group compression.
+    :param reduction_axis: axis along which weights were reshaped for group quantization and will be reshaped back to
+        original shapes. If equals to -1: weights are not reshaped, assumed not a group quantization. Default to -1.
     :return: dequantized/decompressed weights.
     """
     decompressed_weight = compressed_weights - zero_point if zero_point is not None else compressed_weights
     decompressed_weight = decompressed_weight.astype(scale.dtype) * scale
 
     if reduction_axis > -1:
-        shape = list(decompressed_weight.shape)  # [a1, r, a2] - "r" refers to number of channels along reduction axis
-        shape[reduction_axis] = shape[reduction_axis] * shape[reduction_axis + 1]
-        shape[reduction_axis + 1] = 1
-        reshaped_weight = decompressed_weight.reshape(shape)
-        reshaped_weight = fns.squeeze(reshaped_weight)
-        decompressed_weight = reshaped_weight
+        decompressed_weight = ungroup_weights(decompressed_weight, reduction_axis)
 
     return decompressed_weight

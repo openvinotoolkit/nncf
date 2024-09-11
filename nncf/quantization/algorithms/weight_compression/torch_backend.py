@@ -25,6 +25,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
@@ -169,9 +170,24 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         return Tensor(weight)
 
+    def get_weight_dtype(
+        self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph
+    ) -> TensorDataType:
+        return self.get_weight(node_with_weight, weight_port_id, model, graph).dtype
+
+    @staticmethod
+    def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Tuple:
+        weight_node = get_const_node(node_with_weight, weight_port_id, graph)
+        return tuple(weight_node.layer_attributes.shape)
+
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph, weight: Tensor
     ):
+        pass
+
+    def insert_adapters(
+        self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
+    ) -> None:
         pass
 
     def transform_model(
@@ -181,6 +197,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_compression_parameters: Iterable[WeightCompressionParameters],
         precomputed_scales: Dict[str, Tensor] = None,
         precomputed_zero_points: Dict[str, Tensor] = None,
+        lora_correction_algo: LoraCorrectionAlgorithm = None,
     ) -> NNCFNetwork:
         transformation_layout = TransformationLayout()
 

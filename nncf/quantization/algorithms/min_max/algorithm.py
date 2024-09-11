@@ -623,7 +623,7 @@ class MinMaxQuantization(Algorithm):
             scope_overrides=scope_overrides,
         )
 
-        quantization_proposal = solver.run_on_ip_graph(ip_graph)
+        quantization_proposal = solver.run_on_ip_graph(ip_graph, self._backend_entity.elementwise_metatypes)
         multi_config_setup = quantization_proposal.quantizer_setup
         single_config_setup = multi_config_setup.select_first_qconfig_for_each_point()
         finalized_proposal = quantization_proposal.finalize(single_config_setup)
@@ -742,6 +742,7 @@ class MinMaxQuantization(Algorithm):
             self._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             self._backend_entity.shapeof_metatypes,
             self._backend_entity.dropout_metatypes,
+            self._backend_entity.preserved_metatypes,
         )
 
         quantizer_setup = self._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)

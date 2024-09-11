@@ -16,10 +16,10 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetaty
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSumMetatype
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
-from tests.post_training.test_templates.models import NNCFGraphToTest
-from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
-from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
-from tests.post_training.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
+from tests.cross_fw.test_templates.models import NNCFGraphToTest
+from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
+from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
+from tests.cross_fw.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
 
 
 class TestQuantizerConfig(TemplateTestQuantizerConfig):
@@ -28,7 +28,7 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
 
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
-        conv_layer_attrs = OVLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4)}})
+        conv_layer_attrs = OVLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4), "dtype": "f32"}})
         return NNCFGraphToTest(OVConvolutionMetatype, conv_layer_attrs)
 
     @pytest.fixture
@@ -37,5 +37,5 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
 
     @pytest.fixture
     def conv_sum_aggregation_nncf_graph(self) -> NNCFGraphToTestSumAggregation:
-        conv_layer_attrs = OVLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4)}})
+        conv_layer_attrs = OVLayerAttributes({0: {"name": "dummy", "shape": (4, 4, 4, 4), "dtype": "f32"}})
         return NNCFGraphToTestSumAggregation(OVConvolutionMetatype, OVSumMetatype, conv_layer_attrs)

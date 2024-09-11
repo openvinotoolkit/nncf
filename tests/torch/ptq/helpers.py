@@ -22,9 +22,9 @@ from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSumMetatype
-from tests.post_training.test_templates.models import NNCFGraphToTest
-from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
-from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
+from tests.cross_fw.test_templates.models import NNCFGraphToTest
+from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
+from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
 
 
 def get_single_conv_nncf_graph() -> NNCFGraphToTest:

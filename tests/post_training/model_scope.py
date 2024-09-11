@@ -18,9 +18,12 @@ from nncf import QuantizationPreset
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedScaleEstimationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
+from nncf.scopes import IgnoredScope
+from nncf.scopes import Subgraph
 from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
 from tests.post_training.pipelines.base import NNCF_PTQ_BACKENDS
 from tests.post_training.pipelines.base import BackendType
@@ -45,7 +48,7 @@ QUANTIZATION_MODELS = [
         "backends": ALL_PTQ_BACKENDS + [BackendType.OPTIMUM],
     },
     {
-        "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
+        "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_statefull",
         "model_id": "hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
         "pipeline_cls": CausalLMHF,
         "compression_params": {
@@ -53,6 +56,19 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "subset_size": 2,
         },
+        "params": {"is_stateful": True},
+        "backends": [BackendType.OPTIMUM],
+    },
+    {
+        "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_stateless",
+        "model_id": "hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
+        "pipeline_cls": CausalLMHF,
+        "compression_params": {
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "subset_size": 2,
+        },
+        "params": {"is_stateful": False},
         "backends": [BackendType.OPTIMUM],
     },
     {
@@ -73,6 +89,68 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTorchvision,
         "compression_params": {},
         "backends": [BackendType.FX_TORCH, BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.OV, BackendType.ONNX],
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "torchvision/mobilenet_v3_small_BC",
+        "model_id": "mobilenet_v3_small",
+        "pipeline_cls": ImageClassificationTorchvision,
+        "compression_params": {
+            "fast_bias_correction": False,
+            "preset": QuantizationPreset.MIXED,
+        },
+        "backends": [BackendType.FX_TORCH, BackendType.ONNX],
+        "batch_size": 128,
+    },
+    {  # TODO(kshpv): changes from #2947 should be reverted after implement ticket 150952
+        "reported_name": "torchvision/mobilenet_v3_small_BC",
+        "model_id": "mobilenet_v3_small",
+        "pipeline_cls": ImageClassificationTorchvision,
+        "compression_params": {
+            "fast_bias_correction": False,
+            "preset": QuantizationPreset.MIXED,
+            "ignored_scope": IgnoredScope(
+                subgraphs=[
+                    Subgraph(
+                        inputs=["__module.features.1.block.1.avgpool/aten::adaptive_avg_pool2d/Reshape"],
+                        outputs=["__module.features.1.block.1.scale_activation/aten::hardsigmoid/HSigmoid"],
+                    ),
+                    Subgraph(
+                        inputs=["__module.features.4.block.2.avgpool/aten::adaptive_avg_pool2d/Reshape"],
+                        outputs=["__module.features.4.block.2.scale_activation/aten::hardsigmoid/HSigmoid"],
+                    ),
+                    Subgraph(
+                        inputs=["__module.features.5.block.2.avgpool/aten::adaptive_avg_pool2d/Reshape"],
+                        outputs=["__module.features.5.block.2.scale_activation/aten::hardsigmoid/HSigmoid"],
+                    ),
+                    Subgraph(
+                        inputs=["__module.features.6.block.2.avgpool/aten::adaptive_avg_pool2d/Reshape"],
+                        outputs=["__module.features.6.block.2.scale_activation/aten::hardsigmoid/HSigmoid"],
+                    ),
+                    Subgraph(
+                        inputs=["__module.features.7.block.2.avgpool/aten::adaptive_avg_pool2d/Reshape"],
+                        outputs=["__module.features.7.block.2.scale_activation/aten::hardsigmoid/HSigmoid"],
+                    ),
+                    Subgraph(
+                        inputs=["__module.features.8.block.2.avgpool/aten::adaptive_avg_pool2d/Reshape"],
+                        outputs=["__module.features.8.block.2.scale_activation/aten::hardsigmoid/HSigmoid"],
+                    ),
+                    Subgraph(
+                        inputs=["__module.features.9.block.2.avgpool/aten::adaptive_avg_pool2d/Reshape"],
+                        outputs=["__module.features.9.block.2.scale_activation/aten::hardsigmoid/HSigmoid"],
+                    ),
+                    Subgraph(
+                        inputs=["__module.features.10.block.2.avgpool/aten::adaptive_avg_pool2d/Reshape"],
+                        outputs=["__module.features.10.block.2.scale_activation/aten::hardsigmoid/HSigmoid"],
+                    ),
+                    Subgraph(
+                        inputs=["__module.features.11.block.2.avgpool/aten::adaptive_avg_pool2d/Reshape"],
+                        outputs=["__module.features.11.block.2.scale_activation/aten::hardsigmoid/HSigmoid"],
+                    ),
+                ]
+            ),
+        },
+        "backends": [BackendType.OV],
         "batch_size": 128,
     },
     {
@@ -437,6 +515,24 @@ WEIGHT_COMPRESSION_MODELS = [
             "mode": CompressWeightsMode.INT4_ASYM,
             "scale_estimation": True,
         },
+        "backends": [BackendType.OV],
+    },
+    {
+        "reported_name": "tinyllama_data_aware_lora_stateful",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": 64,
+            "ratio": 0.8,
+            "mode": CompressWeightsMode.INT4_SYM,
+            "lora_correction": True,
+            "advanced_parameters": AdvancedCompressionParameters(
+                lora_correction_params=AdvancedLoraCorrectionParameters(
+                    adapter_rank=8, num_iterations=3, apply_regularization=False, subset_size=32, use_int8_adapters=True
+                )
+            ),
+        },
+        "params": {"is_stateful": True},
         "backends": [BackendType.OV],
     },
 ]

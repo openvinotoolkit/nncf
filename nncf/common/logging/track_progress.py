@@ -227,7 +227,8 @@ class track:
             kwargs["weights"] = self.weights
             kwargs["completed_steps"] = 0
         self.task = self.progress.add_task(self.description, total=self.total, **kwargs)
-        return self.progress.__enter__()
+        self.progress.__enter__()
+        return self
 
     def __exit__(self, *args):
         self.progress.__exit__(*args)

@@ -73,8 +73,8 @@ def get_unet_like_test_model(input_shapes):
 
 
 CAT_UNIFIED_SCALE_TEST_STRUCTS = [
-    (get_single_concat_test_model, 3, 4),
-    (get_double_concat_test_model, 3, 4),
+    (get_single_concat_test_model, 1, 2),
+    (get_double_concat_test_model, 1, 2),
     (get_unet_like_test_model, 4, 6),
 ]
 
@@ -100,7 +100,6 @@ def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_
 
     model = model_creator([x_shape, y_shape])
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config, force_no_init=True)
-
     non_weight_quantizers = len(collect_fake_quantize_layers(compressed_model))
     assert non_weight_quantizers == ref_aq_module_count
 
