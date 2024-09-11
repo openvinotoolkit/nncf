@@ -1,13 +1,14 @@
 # Openvino
-openvino==2024.3.0
+openvino==2024.4.0rc2
+https://storage.openvinotoolkit.org/wheels/pre-release/openvino/openvino-2024.4.0rc2-16579-cp310-cp310-manylinux2014_x86_64.whl
 
 # Pytorch
 torch==2.4.0
 torchvision==0.19.0
 
 # ONNX
-onnx==1.16.1
-onnxruntime==1.19.0
+onnx==1.16.2
+onnxruntime==1.19.2
 
 # TensorFlow
 tensorflow==2.12.1; python_version < '3.9'
