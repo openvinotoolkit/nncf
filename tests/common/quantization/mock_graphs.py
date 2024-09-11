@@ -381,7 +381,6 @@ def get_ip_graph_for_test(nncf_graph: NNCFGraph, weighted_node_names: List[NNCFN
             weighted_target_points.append(name)
     ip_graph = InsertionPointGraph(
         nncf_graph,
-        weight_modifiable_node_names=weighted_target_points,
         allowed_pre_hook_insertion_points=pre_hooks,
         allowed_post_hook_insertion_points=post_hooks,
     )

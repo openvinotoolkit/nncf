@@ -1932,7 +1932,7 @@ def test_metatypes_to_ignore(mocker):
         nncf_graph.add_edge_between_nncf_nodes(
             nodes[idx - 1].node_id, nodes[idx].node_id, [1, 1, 1, 1], 0, 0, Dtype.FLOAT
         )
-    ip_graph = InsertionPointGraph(nncf_graph=nncf_graph, weight_modifiable_node_names=["A", "B", "C"])
+    ip_graph = InsertionPointGraph(nncf_graph=nncf_graph)
 
     solver = QuantizerPropagationSolver(
         metatypes_to_ignore=[IGNORED_METATYPE],

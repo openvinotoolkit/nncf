@@ -684,7 +684,6 @@ class NNCFNetworkInterface(torch.nn.Module):
 
         ip_graph = InsertionPointGraph(
             self._original_graphs_pair.nncf_graph,
-            weight_modifiable_node_names=weighted_node_names,
             allowed_pre_hook_insertion_points=pre_hooks,
             allowed_post_hook_insertion_points=post_hooks,
         )
