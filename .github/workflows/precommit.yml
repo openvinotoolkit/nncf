@@ -27,6 +27,8 @@ jobs:
           cache: pip
       - name: Install NNCF and test requirements
         run: make install-common-test
+      - name: Print installed modules
+        run: pip list
       - name: Run common precommit test scope
         run: make test-common
         env:
@@ -43,6 +45,8 @@ jobs:
           python-version: 3.10.14
       - name: Install NNCF and test requirements
         run: make install-onnx-test
+      - name: Print installed modules
+        run: pip list
       - name: Run ONNX precommit test scope
         run: make test-onnx
         env:
@@ -60,6 +64,8 @@ jobs:
           cache: pip
       - name: Install NNCF and test requirements
         run: make install-openvino-test
+      - name: Print installed modules
+        run: pip list
       - name: Run OV precommit test scope
         run: make test-openvino
         env:
@@ -92,6 +98,8 @@ jobs:
           cat /proc/cpuinfo
       - name: Install NNCF and test requirements
         run: make install-torch-test
+      - name: Print installed modules
+        run: pip list
       - name: Run PyTorch precommit test scope
         run: |
           make test-torch-cpu
@@ -132,6 +140,8 @@ jobs:
           cache: pip
       - name: Install NNCF and test requirements
         run: make install-torch-test
+      - name: Print installed modules
+        run: pip list
       - name: Check CUDA
         run: |
           python -c "import torch; print(torch.cuda.is_available())"
@@ -159,9 +169,10 @@ jobs:
           cache: pip
       - name: Install NNCF and test requirements
         run: make install-tensorflow-test
+      - name: Print installed modules
+        run: pip list
       - name: Run TensorFlow precommit test scope
-        run: |
-          make test-tensorflow
+        run: make test-tensorflow
         env:
           NUM_WORKERS: 6
 
@@ -176,7 +187,8 @@ jobs:
           python-version: 3.10.14
           cache: pip
       - name: Install NNCF and test requirements
-        run: |
-          pip install -r tests/tools/requirements.txt
+        run: pip install -r tests/tools/requirements.txt
+      - name: Print installed modules
+        run: pip list
       - name: Run tools precommit test scope
         run: PYTHONPATH=./ pytest -ra tests/tools
