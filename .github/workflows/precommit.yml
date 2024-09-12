@@ -10,6 +10,9 @@ on:
     paths-ignore:
       - '**/*.md'
       - 'docs/**/*'
+      - 'tests/post_training/*'  # post_training tests are only run in Jenkins
+      - 'tests/torch/sota_checkpoints_eval.json'  # reference for PT e2e
+      - 'tests/tensorflow/sota_checkpoints_eval.json'  # reference for TF e2e
 
 jobs:
   common:
