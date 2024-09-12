@@ -246,12 +246,29 @@ def quantize(
     raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
 
 
+def wrap_validation_fn(validation_fn):
+    """
+    Wraps validation function to support case when it only returns metric value.
+
+    :param validation_fn: Validation function to wrap.
+    :return: Wrapped validation function.
+    """
+
+    def wrapper(*args, **kwargs):
+        retval = validation_fn(*args, **kwargs)
+        if isinstance(retval, tuple):
+            return retval
+        return retval, None
+
+    return wrapper
+
+
 @api(canonical_alias="nncf.quantize_with_accuracy_control")
 def quantize_with_accuracy_control(
     model: TModel,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], float],
+    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: Optional[QuantizationPreset] = None,
@@ -316,6 +333,9 @@ def quantize_with_accuracy_control(
     )
 
     backend = get_backend(model)
+
+    validation_fn = wrap_validation_fn(validation_fn)
+
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import quantize_with_accuracy_control_impl
 
