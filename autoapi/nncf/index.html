@@ -846,7 +846,7 @@ fine-tuning the quantization algorithm.</p></li>
 <li><p><strong>model</strong> (<em>TModel</em>) – A model to be quantized.</p></li>
 <li><p><strong>calibration_dataset</strong> (<a class="reference internal" href="#nncf.Dataset" title="nncf.Dataset"><em>nncf.Dataset</em></a>) – A representative dataset for the calibration process.</p></li>
 <li><p><strong>validation_dataset</strong> (<a class="reference internal" href="#nncf.Dataset" title="nncf.Dataset"><em>nncf.Dataset</em></a>) – A dataset for the validation process.</p></li>
-<li><p><strong>validation_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>Any</em><em>, </em><em>Iterable</em><em>[</em><em>Any</em><em>]</em><em>]</em><em>, </em><em>float</em><em>]</em>) – <p>A validation function to validate the model. It should take two arguments:
+<li><p><strong>validation_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>Any</em><em>, </em><em>Iterable</em><em>[</em><em>Any</em><em>]</em><em>]</em><em>, </em><em>Tuple</em><em>[</em><em>float</em><em>, </em><em>Union</em><em>[</em><em>None</em><em>, </em><em>List</em><em>[</em><em>float</em><em>]</em><em>, </em><em>List</em><em>[</em><em>List</em><em>[</em><em>TTensor</em><em>]</em><em>]</em><em>]</em><em>]</em><em>]</em>) – <p>A validation function to validate the model. It should take two arguments:
 - <cite>model</cite>: model to be validate.
 - <cite>validation_dataset</cite>: dataset that provides data items to</p>
 <blockquote>
