@@ -12,8 +12,10 @@
 import json
 import os
 import sys
+import tarfile
 from argparse import ArgumentParser
-from typing import Dict, Tuple
+from pathlib import Path
+from typing import Dict, Tuple, Union
 
 from tests.shared.paths import PROJECT_ROOT
 
@@ -216,8 +218,17 @@ def set_torch_cuda_seed(seed: int = 42):
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
-def quantization_aware_training_torch_anomalib():
+def quantization_aware_training_torch_anomalib(data: Union[str, None]):
+    from anomalib.data.image import mvtec
+
+    from examples.quantization_aware_training.torch.anomalib.main import DATASET_PATH as dataset_path
     from examples.quantization_aware_training.torch.anomalib.main import main as anomalib_main
+
+    if data is not None:
+        dataset_path.mkdir(parents=True, exist_ok=True)
+        tar_file_path = Path(data) / mvtec.DOWNLOAD_INFO.url.split("/")[-1]
+        with tarfile.open(tar_file_path) as tar_file:
+            tar_file.extractall(dataset_path)
 
     # Set manual seed and determenistic cuda mode to make the test determenistic
     set_torch_cuda_seed()
@@ -240,10 +251,14 @@ def quantization_aware_training_torch_anomalib():
 def main(argv):
     parser = ArgumentParser()
     parser.add_argument("--name", help="Example name", required=True)
+    parser.add_argument("--data", help="Path to datasets", default=None, required=False)
     parser.add_argument("-o", "--output", help="Path to the json file to save example metrics", required=True)
     args = parser.parse_args(args=argv)
 
-    metrics = globals()[args.name]()
+    if args.name == "quantization_aware_training_torch_anomalib":
+        metrics = globals()[args.name](args.data)
+    else:
+        metrics = globals()[args.name]()
 
     with open(args.output, "w", encoding="utf8") as json_file:
         return json.dump(metrics, json_file)
