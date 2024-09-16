@@ -9,15 +9,18 @@ Post-training Quantization:
 - General:
   - ...
 - Features:
+  - (OpenVINO) Added the ability to use the Scale Estimation algorithm to calculate quantization parameters in GPTQ for more accurate weight compression. The `gptq=True` and `scale_estimation=True` options can now be used together to enable calculation of quantization parameters using the Scale Estimation algorithm within GPTQ in `nncf.compress_weight`.
   - (OpenVINO) Added LoRA Correction Algorithm to further improve accuracy of int4 compressed models on top of other
   algorithms - AWQ and Scale Estimation. Can be enabled via optional `lora_correction` parameter of
   `nncf.compress_weights()` API. The algorithm increases compression time and incurs a negligible model size overhead.
   Refer to [accuracy/footprint trade-off](docs/usage/post_training_compression/weights_compression/Usage.md#accuracyfootprint-trade-off) for different int4 compression methods.
+  - (OpenVINO) Added support for combining GPTQ with the AWQ algorithms for more accurate weight compression. The `awq = True` and `gptq = True` options can now be used together to sequentially apply AWQ followed by GPTQ in `nncf.compress_weight`. 
   - Added a memory monitoring tool for logging the memory a piece of python code or a script allocates.
 - Fixes:
   - Fixed some scenarios of NNCF PyTorch patching interfering with `torch.compile`.
   - Fixed the quantization of Convolution and LSTMSequence operations in cases where some inputs are part of a ShapeOF subgraph.
   - Removes logging of algorithm generated ignored scope.
+  - Fixed non-deterministic layer-wise scheduling.
 - Improvements:
   - Improved progress bar logic during weights compression for more accurate remaining time estimation.
   - [OpenVINO] Increased hardware fused pattern coverage.
