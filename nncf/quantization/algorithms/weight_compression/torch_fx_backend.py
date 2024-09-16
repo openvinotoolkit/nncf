@@ -203,7 +203,6 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             packed_tensor = compressed_weight.tensor.astype(dtype)
 
             self.set_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph, packed_tensor)
-
             # creates weight decompressor
             if compression_config.mode == CompressWeightsMode.INT8_SYM:
                 decompressor = SymmetricWeightsDecompressor(
@@ -218,8 +217,9 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 decompressor_type = "asymmetric"
 
             # register weight decompression module in the model
-            compressed_constant_edge = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
-            compressed_weight_name = compressed_constant_edge.node_name
+            graph_weight_node = get_graph_node_by_name(model.graph, wc_params.node_with_weight.node_name)
+            compressed_weight_name = graph_weight_node.all_input_nodes[wc_params.weight_port_id].name
+
             decompressor_name = f"{decompressor_type}_weights_decompressor_{compressed_weight_name.replace('.', '_')}"
 
             # inserts the weight decompressor into the model as the post hook on the model weight
