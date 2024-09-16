@@ -218,7 +218,8 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 decompressor_type = "asymmetric"
 
             # register weight decompression module in the model
-            compressed_weight_name = wc_params.node_with_weight.node_name + "_updated_constant0"
+            compressed_constant_edge = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
+            compressed_weight_name = compressed_constant_edge.node_name
             decompressor_name = f"{decompressor_type}_weights_decompressor_{compressed_weight_name.replace('.', '_')}"
 
             # inserts the weight decompressor into the model as the post hook on the model weight
