@@ -62,7 +62,7 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM, ra
 ```
 
 - Accuracy of the 4-bit compressed models also can be improved by using AWQ, Scale Estimation, GPTQ or Lora Correction algorithms over data-based mixed-precision algorithm. These algorithms work by equalizing a subset of weights to minimize the difference between the original precision and the 4-bit precision.
-Unlike all others, the Lora Correction algorithm inserts an additional Linear layers for reducing quantization noise and further accuracy improvement. Inevitably, this approach introduces a memory and a runtime overheads, but they are negligible, since the inserted weight much smaller and can be quantized to 8-bit. The AWQ, Scale Estimation (SE) and Lora Correction (LC) algo can be used in any combination together: AWQ + SE, AWQ + LC, SE + LC, AWQ + SE + LC. The GPTQ algorithm can be combined with AWQ only. Below are examples demonstrating how to enable the AWQ, Scale Estimation, GPTQ or Lora Correction algorithms:
+Unlike all others, the Lora Correction algorithm inserts an additional Linear layers for reducing quantization noise and further accuracy improvement. Inevitably, this approach introduces a memory and a runtime overheads, but they are negligible, since the inserted weight much smaller and can be quantized to 8-bit. The AWQ, Scale Estimation (SE) and Lora Correction (LC) algo can be used in any combination together: AWQ + SE, AWQ + LC, SE + LC, AWQ + SE + LC. The GPTQ algorithm can be combined with AWQ and Scale Estimation in any combination: AWQ + GPTQ, GPTQ + SE, AWQ + GPTQ + SE. Below are examples demonstrating how to enable the AWQ, Scale Estimation, GPTQ or Lora Correction algorithms:
 
   Prepare the calibration dataset for data-based algorithms:
 
@@ -432,7 +432,7 @@ This modification applies only for patterns `MatMul-Multiply-MatMul` (for exampl
 #### Scale Estimation and GPTQ methods on Lambada OpenAI dataset
 
 Here is the perplexity and accuracy with data-free and data-aware mixed-precision INT4-INT8 weight compression for different language models on the [lambada openai dataset](https://huggingface.co/datasets/EleutherAI/lambada_openai).
-`_scale` suffix refers to the data-aware mixed-precision with Scale Estimation algorithm. `_gptq` suffix refers to the data-aware mixed-precision with GPTQ algorithm.
+`_scale` suffix refers to the data-aware mixed-precision with Scale Estimation algorithm. `_gptq` suffix refers to the data-aware mixed-precision with GPTQ algorithm. `_gptq_scale` suffix refers to the use of GPTQ algorithm with the Scale estimation algorithm to calculate the quantization parameters.
 `r100` means that embeddings and lm_head have INT8 precision and all other linear layers have INT4 precision.
 <table>
     <tr bgcolor='#B4B5BB'>
@@ -446,6 +446,12 @@ Here is the perplexity and accuracy with data-free and data-aware mixed-precisio
         <td>fp32</td>
         <td>0.5925</td>
         <td>6.3024</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_r100_gs64_gptq_scale</td>
+        <td>0.5795</td>
+        <td>7.1507</td>
     </tr>
     <tr>
         <td></td>
@@ -477,7 +483,13 @@ Here is the perplexity and accuracy with data-free and data-aware mixed-precisio
         <td>0.595</td>
         <td>7.037</td>
     </tr>
-        <tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_r100_gs64_gptq_scale</td>
+        <td>0.5909</td>
+        <td>7.391</td>
+    </tr>
+    <tr>
         <td></td>
         <td>int4_sym_r100_gs64_gptq</td>
         <td>0.567</td>
@@ -494,6 +506,12 @@ Here is the perplexity and accuracy with data-free and data-aware mixed-precisio
         <td>fp32</td>
         <td>0.6839</td>
         <td>4.1681</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_r100_gs128_gptq_scale</td>
+        <td>0.6757</td>
+        <td>4.5107</td>
     </tr>
     <tr>
         <td></td>
