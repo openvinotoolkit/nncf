@@ -1,4 +1,4 @@
 fastdownload==0.0.7
-openvino==2024.3
+openvino==2024.4
 torch==2.4.0
 torchvision==0.19.0
