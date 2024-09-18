@@ -211,7 +211,7 @@ class AdvancedQuantizationParameters:
         It regulates the calculation of the smooth scale. The default value stored in AdvancedSmoothQuantParameters.
         A negative value for each field switches off type smoothing. In case of inaccurate results,
         fields may be adjusted in the range from 0 to 1 or set -1 to disable smoothing for type.
-    :type smooth_quant_alpha: nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters
+    :type smooth_quant_alphas: nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters
     :param smooth_quant_alpha: Deprecated SmoothQuant-related parameter.
     :type smooth_quant_alpha: float
     :param backend_params: Backend-specific parameters.

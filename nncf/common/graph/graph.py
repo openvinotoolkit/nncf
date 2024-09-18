@@ -278,7 +278,7 @@ class NNCFGraph:
 
     def get_all_simple_paths(
         self, start_node_name: NNCFNodeName, end_node_name: NNCFNodeName
-    ) -> Generator[List[NNCFNodeName], None, None]:
+    ) -> Generator[List[str], None, None]:
         """
         Generates all simple paths in the NNCFGraph from start node to end node.
         A simple path is a path with no repeated nodes.
@@ -292,9 +292,7 @@ class NNCFGraph:
         end_node = self.get_node_by_name(end_node_name)
         start_node_key = self.get_node_key_by_id(start_node.node_id)
         end_node_key = self.get_node_key_by_id(end_node.node_id)
-        return cast(
-            Generator[List[NNCFNodeName], None, None], nx.all_simple_paths(self._nx_graph, start_node_key, end_node_key)
-        )
+        return cast(Generator[List[str], None, None], nx.all_simple_paths(self._nx_graph, start_node_key, end_node_key))
 
     @staticmethod
     def _get_edge_boundaries(
