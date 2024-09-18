@@ -15,7 +15,6 @@ import torch
 
 import nncf
 import nncf.torch.graph.operator_metatypes as om
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -28,6 +27,7 @@ from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MA
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.model_utils import get_target_point
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -39,6 +39,7 @@ from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
+from nncf.torch.graph.operator_metatypes import ELEMENTWISE_OPERATIONS
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
@@ -54,10 +55,6 @@ from nncf.torch.tensor_statistics.collectors import PT_REDUCERS_MAP
 
 
 class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
-    TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
-        TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
-        TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
-    }
 
     @property
     def preserved_metatypes(self) -> List[OperatorMetatype]:
@@ -86,6 +83,10 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype]
+
+    @property
+    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+        return ELEMENTWISE_OPERATIONS
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
@@ -129,11 +130,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
-        if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
-            port_id = None
-        if target_type in FXMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
-            target_type = FXMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]
-        return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
+        return get_target_point(target_type, target_node_name, port_id)
 
     @staticmethod
     def create_convert_insertion_command(
@@ -206,7 +203,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> str:
         weighted_node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        weight = nncf_graph.get_previous_nodes(weighted_node)[target_point.input_port_id]
+        weight_edge = nncf_graph.get_input_edge_by_port_id(weighted_node, target_point.input_port_id)
+        weight = weight_edge.from_node
         return weight.node_name
 
     @staticmethod

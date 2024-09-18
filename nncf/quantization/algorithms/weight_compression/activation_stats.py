@@ -9,14 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Tuple, TypeVar
+from typing import List, Tuple
 
+from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
-TTensor = TypeVar("TTensor")
 
-
-def process_stats(stats: List[TTensor], subset_size: int) -> Tuple[TTensor, TTensor]:
+def process_stats(stats: List[Tensor], subset_size: int) -> Tuple[Tensor, Tensor]:
     """
     It's a processing of activations shared between AWQ, Scale Estimation and LoRA Correction algorithms.
 
