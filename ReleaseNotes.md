@@ -4,10 +4,9 @@
 
 Post-training Quantization:
 
-- Features:
-  - (OpenVINO) Implemented the use of the Scale Estimation algorithm to calculate quantization parameters within GPTQ for more accurate weight compression. The `gptq` and `scale_estimation` options can now be used together to calculate quantization parameters using the Scale Estimation algorithm within GPTQ in `nncf.compress_weights()`.
+- Features:`
+  - (OpenVINO) Added support for combining GPTQ with AWQ and Scale Estimation (SE) algorithms in `nncf.compress_weights()` for more accurate weight compression of LLMs. Thus, the following combinations with GPTQ are now supported: AWQ+GPTQ+SE, AWQ+GPTQ, GPTQ+SE, GPTQ.
   - (OpenVINO) Added LoRA Correction Algorithm to further improve the accuracy of int4 compressed models on top of other algorithms - AWQ and Scale Estimation. It can be enabled via the optional `lora_correction` parameter of the `nncf.compress_weights()` API. The algorithm increases compression time and incurs a negligible model size overhead. Refer to [accuracy/footprint trade-off](docs/usage/post_training_compression/weights_compression/Usage.md#accuracyfootprint-trade-off) for different int4 compression methods.
-  - (OpenVINO) Added support for combining GPTQ with the AWQ algorithms for more accurate weight compression. The `awq` and `gptq` options can now be used together to sequentially apply AWQ followed by GPTQ in `nncf.compress_weights()`.
   - (PyTorch) Added implementation of the experimental Post-training Activation Pruning algorithm. Refer to [Activation Sparsity](nncf/experimental/torch/sparsify_activations/ActivationSparsity.md) for details.
   - Added a memory monitoring tool for logging the memory a piece of python code or a script allocates. Refer to [NNCF tools](tools/README.md) for details.
 - Fixes:
@@ -23,6 +22,10 @@ Post-training Quantization:
 - Tutorials:
   - [Post-Training Optimization of Flux.1 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/flux.1-image-generation/flux.1-image-generation.ipynb)
   - [Post-Training Optimization of PixArt-α Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/pixart/pixart.ipynb)
+  - [Post-Training Optimization of InternVL2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/internvl2/internvl2.ipynb)
+  - [Post-Training Optimization of Qwen2Audio Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen2-audio/qwen2-audio.ipynb)
+  - [Post-Training Optimization of NuExtract Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/nuextract-structure-extraction/nuextract-structure-extraction.ipynb)
+  - [Post-Training Optimization of MiniCPM-V2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/minicpm-v-multimodal-chatbot/minicpm-v-multimodal-chatbot.ipynb)
 
 Compression-aware training:
 
