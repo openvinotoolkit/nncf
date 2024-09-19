@@ -1689,9 +1689,7 @@ class TestOutputQuantAsWeightsSetup:
 
     @pytest.fixture
     def model_graph_qpsg(self):
-        ip_graph = get_ip_graph_for_test(
-            MODEL_GRAPH, weighted_node_names=[node.node_name for node in MODEL_GRAPH.get_all_nodes()]
-        )
+        ip_graph = get_ip_graph_for_test(MODEL_GRAPH)
         quant_prop_graph = QPSG(ip_graph)
         return quant_prop_graph
 
