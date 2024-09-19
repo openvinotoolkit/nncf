@@ -1,6 +1,5 @@
 # Openvino
-openvino==2024.4.0rc2
-https://storage.openvinotoolkit.org/wheels/pre-release/openvino/openvino-2024.4.0rc2-16579-cp310-cp310-manylinux2014_x86_64.whl
+openvino==2024.4.0
 
 # Pytorch
 torch==2.4.0
