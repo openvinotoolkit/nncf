@@ -604,7 +604,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         custom_layer_node_names: List[NNCFNodeName],
         model: tf.keras.Model,
     ) -> SingleConfigQuantizerSetup:
-        ip_graph = InsertionPointGraph(nncf_graph, [qn.node.node_name for qn in quantizable_weighted_layer_nodes])
+        ip_graph = InsertionPointGraph(nncf_graph)
 
         pattern = TF_HW_FUSED_PATTERNS.get_full_pattern_graph()
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)

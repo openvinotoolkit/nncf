@@ -53,6 +53,7 @@ def test_examples(
     backends_list: List[str],
     is_check_performance: bool,
     ov_version_override: str,
+    data: str,
 ):
     python_version = sys.version_info
     example_python_version = tuple(example_params.get("python_version", python_version))
@@ -80,6 +81,8 @@ def test_examples(
     python_executable_with_venv = get_python_executable_with_venv(venv_path)
     run_example_py = EXAMPLE_TEST_ROOT / "run_example.py"
     run_cmd_line = f"{python_executable_with_venv} {run_example_py} --name {example_name} --output {metrics_file_path}"
+    if data is not None:
+        run_cmd_line += f" --data {data}"
     cmd = Command(run_cmd_line, cwd=PROJECT_ROOT, env=env)
     cmd.run()
 

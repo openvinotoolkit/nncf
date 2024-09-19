@@ -713,10 +713,7 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 @pytest.mark.parametrize("mode", INT4_MODES)
 @pytest.mark.parametrize(
     "params",
-    (
-        {"dataset": "anything", "scale_estimation": True, "gptq": True},
-        {"dataset": "anything", "lora_correction": True, "gptq": True},
-    ),
+    ({"dataset": "anything", "lora_correction": True, "gptq": True},),
 )
 def test_raise_error_with_unsupported_params_for_int4(mode, params):
     with pytest.raises(AttributeError):
@@ -1014,6 +1011,21 @@ def test_call_max_var_criterion_with_dataset_gptq_neg_group_size(mode):
     dataset = Dataset([np.ones([sz, sz])])
 
     compressed_model = compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, gptq=True)
+
+    for op in compressed_model.get_ordered_ops():
+        op_name = op.get_friendly_name()
+        if op.get_type_name() == "Constant" and ("/zero_point" in op_name or "/scale" in op_name):
+            assert op.get_shape() == [sz, 1]
+
+
+@pytest.mark.parametrize("mode", INT4_MODES)
+def test_one_dimentional_samples(mode):
+    model = AWQMatmulModel().ov_model
+    sz = 8
+    n_samples = 10
+    dataset = Dataset([np.ones([i + 1, sz]) for i in range(n_samples)])
+
+    compressed_model = compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, awq=True)
 
     for op in compressed_model.get_ordered_ops():
         op_name = op.get_friendly_name()

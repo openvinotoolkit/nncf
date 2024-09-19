@@ -10,6 +10,9 @@ on:
     paths-ignore:
       - '**/*.md'
       - 'docs/**/*'
+      - 'tests/post_training/*'  # post_training tests are only run in Jenkins
+      - 'tests/torch/sota_checkpoints_eval.json'  # reference for PT e2e
+      - 'tests/tensorflow/sota_checkpoints_eval.json'  # reference for TF e2e
 
 jobs:
   common:
@@ -20,10 +23,12 @@ jobs:
           lfs: true
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
-          python-version: 3.8.18
+          python-version: 3.10.14
           cache: pip
       - name: Install NNCF and test requirements
         run: make install-common-test
+      - name: Print installed modules
+        run: pip list
       - name: Run common precommit test scope
         run: make test-common
         env:
@@ -37,9 +42,11 @@ jobs:
           lfs: true
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
-          python-version: 3.8.18
+          python-version: 3.10.14
       - name: Install NNCF and test requirements
         run: make install-onnx-test
+      - name: Print installed modules
+        run: pip list
       - name: Run ONNX precommit test scope
         run: make test-onnx
         env:
@@ -53,10 +60,12 @@ jobs:
           lfs: true
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
-          python-version: 3.8.18
+          python-version: 3.10.14
           cache: pip
       - name: Install NNCF and test requirements
         run: make install-openvino-test
+      - name: Print installed modules
+        run: pip list
       - name: Run OV precommit test scope
         run: make test-openvino
         env:
@@ -80,7 +89,7 @@ jobs:
           lfs: true
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
-          python-version: 3.8.18
+          python-version: 3.10.14
           cache: pip
       - name: Runner info
         continue-on-error: true
@@ -89,6 +98,8 @@ jobs:
           cat /proc/cpuinfo
       - name: Install NNCF and test requirements
         run: make install-torch-test
+      - name: Print installed modules
+        run: pip list
       - name: Run PyTorch precommit test scope
         run: |
           make test-torch-cpu
@@ -125,10 +136,12 @@ jobs:
           lfs: true
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
-          python-version: 3.8.18
+          python-version: 3.10.14
           cache: pip
       - name: Install NNCF and test requirements
         run: make install-torch-test
+      - name: Print installed modules
+        run: pip list
       - name: Check CUDA
         run: |
           python -c "import torch; print(torch.cuda.is_available())"
@@ -152,13 +165,14 @@ jobs:
           lfs: true
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
-          python-version: 3.9.19
+          python-version: 3.10.14
           cache: pip
       - name: Install NNCF and test requirements
         run: make install-tensorflow-test
+      - name: Print installed modules
+        run: pip list
       - name: Run TensorFlow precommit test scope
-        run: |
-          make test-tensorflow
+        run: make test-tensorflow
         env:
           NUM_WORKERS: 6
 
@@ -170,10 +184,11 @@ jobs:
           lfs: true
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
-          python-version: 3.8.18
+          python-version: 3.10.14
           cache: pip
       - name: Install NNCF and test requirements
-        run: |
-          pip install -r tests/tools/requirements.txt
+        run: pip install -r tests/tools/requirements.txt
+      - name: Print installed modules
+        run: pip list
       - name: Run tools precommit test scope
         run: PYTHONPATH=./ pytest -ra tests/tools

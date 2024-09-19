@@ -18,3 +18,4 @@ tensorflow-io==0.32.0
 timm==0.9.2
 transformers==4.38.2
 whowhatbench @ git+https://github.com/andreyanufr/who_what_benchmark@456d3584ce628f6c8605f37cd9a3ab2db1ebf933
+datasets==2.21.0
