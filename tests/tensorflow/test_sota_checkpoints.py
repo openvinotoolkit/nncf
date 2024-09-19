@@ -25,13 +25,13 @@ import tensorflow as tf
 import yaml
 from pytest import FixtureRequest
 
-from tests.shared.command import Command
-from tests.shared.metric_thresholds import DIFF_FP32_MAX_GLOBAL
-from tests.shared.metric_thresholds import DIFF_FP32_MIN_GLOBAL
-from tests.shared.openvino_version import get_openvino_version
-from tests.shared.paths import DATASET_DEFINITIONS_PATH
-from tests.shared.paths import PROJECT_ROOT
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.command import Command
+from tests.cross_fw.shared.metric_thresholds import DIFF_FP32_MAX_GLOBAL
+from tests.cross_fw.shared.metric_thresholds import DIFF_FP32_MIN_GLOBAL
+from tests.cross_fw.shared.openvino_version import get_openvino_version
+from tests.cross_fw.shared.paths import DATASET_DEFINITIONS_PATH
+from tests.cross_fw.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import TEST_ROOT
 
 DIFF_TARGET_TF_MIN = -0.1
 DIFF_TARGET_TF_MAX = 0.1

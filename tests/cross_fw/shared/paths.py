@@ -12,13 +12,13 @@
 import os
 from pathlib import Path
 
-TEST_ROOT = Path(__file__).absolute().parents[1]
+TEST_ROOT = Path(__file__).parent.absolute().parents[1]
 PROJECT_ROOT = TEST_ROOT.parent.absolute()
 EXAMPLES_DIR = PROJECT_ROOT / "examples"
 GITHUB_REPO_URL = "https://github.com/openvinotoolkit/nncf/"
 
 
-DATASET_DEFINITIONS_PATH = TEST_ROOT / "shared" / "data" / "dataset_definitions.yml"
+DATASET_DEFINITIONS_PATH = TEST_ROOT / "cross_fw" / "shared" / "data" / "dataset_definitions.yml"
 
 ROOT_PYTHONPATH_ENV = os.environ.copy().update({"PYTHONPATH": str(PROJECT_ROOT)})
 

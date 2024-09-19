@@ -40,6 +40,9 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import get_
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
+from tests.cross_fw.shared.helpers import compare_stats
+from tests.cross_fw.shared.helpers import dump_to_json
+from tests.cross_fw.shared.helpers import load_json
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
@@ -52,9 +55,6 @@ from tests.openvino.native.models import OVReferenceModel
 from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.quantization.test_fq_params_calculation import REFERENCE_SCALES_DIR
-from tests.shared.helpers import compare_stats
-from tests.shared.helpers import dump_to_json
-from tests.shared.helpers import load_json
 
 TEST_MODELS = {
     IntegerModel: ["matmul_2_data", "gather_2_data", "matmul_1_data"],

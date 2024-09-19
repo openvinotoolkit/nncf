@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from nncf import NNCFConfig
-from tests.shared.helpers import telemetry_send_event_test_driver
+from tests.cross_fw.shared.helpers import telemetry_send_event_test_driver
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 

@@ -77,7 +77,7 @@ from tests.common.quantization.mock_graphs import get_mock_model_graph_with_merg
 from tests.common.quantization.mock_graphs import get_mock_model_graph_with_no_mergeable_pattern
 from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
 from tests.common.quantization.mock_graphs import get_two_branch_mock_model_graph
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.helpers import HookChecker
 
 
