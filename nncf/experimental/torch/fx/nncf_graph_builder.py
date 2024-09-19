@@ -64,6 +64,21 @@ class GraphConverter:
             )
         return None
 
+    def _map_fx_unique_metatypes(node: torch.fx.Node, metatype: om.OperatorMetatype) -> om.OperatorMetatype:
+        """
+        Attempts to retrieve correct subtype for the given node.
+        :param node: Given node.
+        :param metatype: Given node metatype.
+        :param model: Target GraphModule instance.
+        :return: Correct FX metatype of the given node if it is exist or the original node metatype otherwise.
+        """
+        if metatype in [om.PTEmbeddingMetatype]:
+            weight_node = node.args[0]
+            if weight_node.op == "get_attr":
+                return om.FXEmbeddingMetatype
+
+        return metatype
+
     @staticmethod
     def _get_node_type_and_metatype(
         node: torch.fx.Node, model: torch.fx.GraphModule
@@ -120,7 +135,7 @@ class GraphConverter:
 
         for source_node in model.graph.nodes:
             node_type, node_metatype = GraphConverter._get_node_type_and_metatype(source_node, model)
-
+            node_metatype = GraphConverter._map_fx_unique_metatypes(source_node, node_metatype)
             nncf_graph.add_nncf_node(
                 node_name=source_node.name,
                 node_type=node_type,
@@ -128,7 +143,7 @@ class GraphConverter:
             )
 
         for source_node in model.graph.nodes:
-            source_nncf_node = nncf_graph.get_node_by_name(source_node.name)
+            source_nncf_node = nncf_graph.get_node_by_name(source_node.name)  
             for idx, dist_node in enumerate(source_node.users):
                 dist_node_id = nncf_graph.get_node_by_name(dist_node.name).node_id
                 input_port_id, output_port_id, tensor_shape = GraphConverter.get_edge_params(
