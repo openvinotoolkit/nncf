@@ -28,6 +28,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.experimental.torch.fx.transformations import revert_quantization_transformations
+from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -87,7 +88,7 @@ def quantize_impl(
     # Revert applied transformation to keep original model
     # bias configuration.
     revert_quantization_transformations(quantized_model)
-
+    compress_post_quantize_transformation(quantized_model)
     # Magic. Without this call compiled model
     # is not preformant
     quantized_model = GraphModule(quantized_model, quantized_model.graph)
@@ -101,5 +102,7 @@ def quantize_impl(
 
     quantized_model.meta.update(original_graph_meta)
     quantized_model = _disallow_eval_train(quantized_model)
+
+    quantized_model = GraphModule(quantized_model, quantized_model.graph)
 
     return quantized_model
