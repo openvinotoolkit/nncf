@@ -178,6 +178,12 @@ class DequantizeTestMetatype(TestMetatype):
     name = "dequantize"
 
 
+@METATYPES_FOR_TEST.register()
+class ScaledDotProductAttentionMetatype(TestMetatype):
+    name = "scaled_dot_product_attention"
+    target_input_ports = [0, 1]
+
+
 WEIGHT_LAYER_METATYPES = [LinearTestMetatype, Conv2dTestMetatype, MatMulTestMetatype]
 
 
@@ -189,6 +195,7 @@ DEFAULT_TEST_QUANT_TRAIT_MAP = {
         GeluTestMetatype,
         LinearTestMetatype,
         AddTestMetatype,
+        ScaledDotProductAttentionMetatype,
     ],
     QuantizationTrait.CONCAT: [CatTestMetatype],
 }

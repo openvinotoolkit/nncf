@@ -330,6 +330,8 @@ class HWFusedPatternNames(Enum):
     ACTIVATIONS_SCALE_SHIFT = PatternDesc("activations_scale_shift")
     ARITHMETIC_ACTIVATIONS = PatternDesc("arithmetic_activations")
     ARITHMETIC_ACTIVATIONS_BATCH_NORM = PatternDesc("arithmetic_activations_batch_norm")
+    # StyleGan2
+    ARITHMETIC_ACTIVATIONS_ARITHMETIC = PatternDesc("arithmetic_activations_arithmetic")
     ARITHMETIC_ACTIVATIONS_SCALE_SHIFT = PatternDesc("arithmetic_activations_scale_shift")
     ARITHMETIC_BATCH_NORM = PatternDesc("arithmetic_batch_norm")
     ARITHMETIC_BATCH_NORM_ACTIVATIONS = PatternDesc("arithmetic_batch_norm_activations")
@@ -348,6 +350,9 @@ class HWFusedPatternNames(Enum):
     LINEAR_ARITHMETIC_ACTIVATIONS_ARITHMETIC = PatternDesc("linear_arithmetic_activations_arithmetic")
     LINEAR_BATCH_NORM = PatternDesc("linear_batch_norm")
     LINEAR_BATCH_NORM_ACTIVATIONS = PatternDesc("linear_batch_norm_activations")
+    # MaskRCNN_Resnet_Atrous
+    LINEAR_BATCH_TO_SPACE_SCALE_SHIFT_ACTIVATIONS = PatternDesc("linear_batch_to_space_scale_shift_activations")
+    LINEAR_BATCH_TO_SPACE_ARITHMETIC_ACTIVATIONS = PatternDesc("linear_batch_to_space_arithmetic_activations")
     LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc("linear_batch_norm_scale_shift_activations")
     LINEAR_SCALE_SHIFT_ACTIVATIONS = PatternDesc("linear_scale_shift_activations")
     LINEAR_CONST_MULTIPLY = PatternDesc("linear_const_multiply")

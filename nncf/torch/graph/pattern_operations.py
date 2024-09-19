@@ -10,54 +10,79 @@
 # limitations under the License.
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import merge_two_types_of_operations
+from nncf.torch.graph import operator_metatypes as om
 
 LINEAR_OPERATIONS = {
     GraphPattern.METATYPE_ATTR: [
-        "linear",
-        "conv1d",
-        "conv2d",
-        "conv3d",
-        "conv_transpose1d",
-        "conv_transpose2d",
-        "conv_transpose3d",
-        "deform_conv2d",
-        "addmm",
-        "bmm",
-        "matmul",
-        "mm",
-        "baddbmm",
+        # Linear
+        om.PTLinearMetatype,
+        om.PTModuleLinearMetatype,
+        # Conv1D
+        om.PTConv1dMetatype,
+        om.PTDepthwiseConv1dSubtype,
+        om.PTModuleConv1dMetatype,
+        om.PTModuleDepthwiseConv1dSubtype,
+        # Conv2D
+        om.PTConv2dMetatype,
+        om.PTDepthwiseConv2dSubtype,
+        om.PTModuleConv2dMetatype,
+        om.PTModuleDepthwiseConv2dSubtype,
+        # Conv3D
+        om.PTConv3dMetatype,
+        om.PTDepthwiseConv3dSubtype,
+        om.PTModuleConv3dMetatype,
+        om.PTModuleDepthwiseConv3dSubtype,
+        # Transposed conv
+        om.PTConvTranspose1dMetatype,
+        om.PTModuleConvTranspose1dMetatype,
+        om.PTConvTranspose2dMetatype,
+        om.PTModuleConvTranspose2dMetatype,
+        om.PTConvTranspose3dMetatype,
+        om.PTModuleConvTranspose3dMetatype,
+        # Deform conv
+        om.PTDeformConv2dMetatype,
+        om.PTModuleDeformConv2dMetatype,
+        # MatMul
+        om.PTMatMulMetatype,
+        # Addmm
+        om.PTAddmmMetatype,
     ],
     GraphPattern.LABEL_ATTR: "LINEAR",
 }
 
 BATCH_NORMALIZATION_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: ["batch_norm", "batch_norm1d", "batch_norm2d", "batch_norm3d"],
+    GraphPattern.METATYPE_ATTR: [om.PTBatchNormMetatype, om.PTModuleBatchNormMetatype],
     GraphPattern.LABEL_ATTR: "BATCH_NORMALIZATION",
 }
 
 GROUP_NORMALIZATION_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: ["group_norm"],
+    GraphPattern.METATYPE_ATTR: [om.PTGroupNormMetatype, om.PTModuleGroupNormMetatype],
     GraphPattern.LABEL_ATTR: "GROUP_NORMALIZATION",
 }
 
 LAYER_NORMALIZATION_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: ["layer_norm"],
+    GraphPattern.METATYPE_ATTR: [om.PTLayerNormMetatype, om.PTModuleLayerNormMetatype],
     GraphPattern.LABEL_ATTR: "LAYER_NORMALIZATION",
 }
 
-RELU_OPERATIONS = {GraphPattern.METATYPE_ATTR: ["relu", "relu_", "hardtanh"], GraphPattern.LABEL_ATTR: "RELU"}
+RELU_OPERATIONS = {
+    GraphPattern.METATYPE_ATTR: [
+        om.PTRELUMetatype,
+        om.PTHardTanhMetatype,
+    ],
+    GraphPattern.LABEL_ATTR: "RELU",
+}
 
 NON_RELU_ACTIVATIONS_OPERATIONS = {
     GraphPattern.METATYPE_ATTR: [
-        "elu",
-        "elu_",
-        "prelu",
-        "leaky_relu",
-        "sigmoid",
-        "gelu",
-        "silu",
-        "hardsigmoid",
-        "hardswish",
+        om.PTELUMetatype,
+        om.PTPRELUMetatype,
+        om.PTLeakyRELUMetatype,
+        om.PTSigmoidMetatype,
+        om.PTGELUMetatype,
+        om.PTSILUMetatype,
+        om.PTHardSigmoidMetatype,
+        om.PTHardSwishMetatype,
     ],
     GraphPattern.LABEL_ATTR: "NON_RELU_ACTIVATIONS",
 }
@@ -67,13 +92,6 @@ ATOMIC_ACTIVATIONS_OPERATIONS = merge_two_types_of_operations(
 )
 
 ARITHMETIC_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: ["__iadd__", "__add__", "__mul__", "__rmul__", "__truediv__"],
+    GraphPattern.METATYPE_ATTR: [om.PTAddMetatype, om.PTSubMetatype, om.PTMulMetatype, om.PTDivMetatype],
     GraphPattern.LABEL_ATTR: "ARITHMETIC",
-}
-
-# This type may be useful in the future
-
-POOLING_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: ["adaptive_avg_pool2d", "adaptive_avg_pool3d", "avg_pool2d", "avg_pool3d"],
-    GraphPattern.LABEL_ATTR: "POOLING",
 }

@@ -134,24 +134,23 @@ def test_mode_against_default_map(algo_params, is_error):
     qconf_attr_vs_constraint_dict_to_compare = {"mode": QuantizationScheme.SYMMETRIC}
 
     if is_error:
-        try:
+        with pytest.raises(nncf.ParameterNotSupportedError):
             minmax = MinMaxQuantization(**algo_params)
-        except nncf.ParameterNotSupportedError:
-            pytest.xfail("Caught expected error")
-    minmax = MinMaxQuantization(**algo_params)
-    for ref_parameter_name, ref_parameter_value in default_values_to_compare[mode_param].items():
-        parameter_value = getattr(minmax, ref_parameter_name)
-        assert parameter_value == ref_parameter_value
+    else:
+        minmax = MinMaxQuantization(**algo_params)
+        for ref_parameter_name, ref_parameter_value in default_values_to_compare[mode_param].items():
+            parameter_value = getattr(minmax, ref_parameter_name)
+            assert parameter_value == ref_parameter_value
 
-        global_quantizer_constraints = getattr(minmax, "_global_quantizer_constraints")
-        assert (
-            global_quantizer_constraints[QuantizerGroup.ACTIVATIONS].qconf_attr_vs_constraint_dict
-            == qconf_attr_vs_constraint_dict_to_compare
-        )
-        assert (
-            global_quantizer_constraints[QuantizerGroup.WEIGHTS].qconf_attr_vs_constraint_dict
-            == qconf_attr_vs_constraint_dict_to_compare
-        )
+            global_quantizer_constraints = getattr(minmax, "_global_quantizer_constraints")
+            assert (
+                global_quantizer_constraints[QuantizerGroup.ACTIVATIONS].qconf_attr_vs_constraint_dict
+                == qconf_attr_vs_constraint_dict_to_compare
+            )
+            assert (
+                global_quantizer_constraints[QuantizerGroup.WEIGHTS].qconf_attr_vs_constraint_dict
+                == qconf_attr_vs_constraint_dict_to_compare
+            )
 
 
 @pytest.mark.parametrize(

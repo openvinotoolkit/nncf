@@ -34,10 +34,10 @@ from tests.common.quantization.metatypes import CatTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
+from tests.cross_fw.test_templates.models import NNCFGraphToTestMatMul
+from tests.cross_fw.test_templates.test_ptq_params import TemplateTestPTQParams
 from tests.openvino.native.models import DepthwiseConv4DModel
 from tests.openvino.native.models import LinearModel
-from tests.post_training.test_templates.models import NNCFGraphToTestMatMul
-from tests.post_training.test_templates.test_ptq_params import TemplateTestPTQParams
 
 
 def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:

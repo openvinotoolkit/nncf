@@ -213,6 +213,7 @@ class EmptyModel(torch.nn.Module):
         {"gptq": True},
         {"awq": True},
         {"scale_estimation": True},
+        {"lora_correction": True},
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):

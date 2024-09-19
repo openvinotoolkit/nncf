@@ -348,19 +348,51 @@ class NNCFGraph:
             edges.extend(self._get_edges(from_node, node))
         return sorted(edges, key=lambda x: x.input_port_id)
 
+    def get_input_edge_by_port_id(self, node: NNCFNode, port_id: int) -> NNCFGraphEdge:
+        """
+        Returns the input edge for a given node, where edge.input_port_id == port_id is True.
+
+        :param node: The node for which to retrieve the input edge.
+        :param port_id: The ID of the input port to filter the edges.
+        :return: An input edge connected to the specified input port ID of the
+            given node.
+        """
+        edges = [e for e in self.get_input_edges(node) if e.input_port_id == port_id]
+        if len(edges) == 0:
+            raise nncf.ValidationError(
+                f"Node {node.node_name} does not contain input edge connected to {port_id} port ID."
+            )
+
+        if len(edges) > 1:
+            raise nncf.InternalError(
+                "Unsupported graph. More than one edge was found for a given node by the specified input port ID."
+            )
+        return edges[0]
+
     def get_output_edges(self, node: NNCFNode) -> List[NNCFGraphEdge]:
         """
         Returns edges of output tensors sorted by output port ID.
 
         :param node: Producer node.
-        :return:  List of output edges for the node sorted by output port ID.
+        :return: List of output edges for the node sorted by output port ID.
         """
-
         output_nodes = self.get_next_nodes(node)
         edges = []
         for to_node in output_nodes:
             edges.extend(self._get_edges(node, to_node))
         return sorted(edges, key=lambda x: x.output_port_id)
+
+    def get_output_edges_by_port_id(self, node: NNCFNode, port_id: int) -> List[NNCFGraphEdge]:
+        """
+        Returns a list of output edges for a given node, filtered by the specified
+        output port ID (edge.output_port_id == port_id).
+
+        :param node: The node for which to retrieve the output edges.
+        :param port_id: The ID of the output port to filter the edges.
+        :return: A list of the output edges connected to the specified output port ID
+            of the given node.
+        """
+        return [e for e in self.get_output_edges(node) if e.output_port_id == port_id]
 
     def _get_edges(self, from_node: NNCFNode, to_node: NNCFNode) -> List[NNCFGraphEdge]:
         edges = []

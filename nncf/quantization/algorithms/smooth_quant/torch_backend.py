@@ -119,21 +119,12 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return collector
 
     @staticmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: NNCFNetwork) -> Tensor:
-        weight_node = get_const_node(
-            node_with_weight, node_with_weight.metatype.weight_port_ids[0], model.nncf.get_graph()
-        )
+    def get_weight_value(node_with_weight: NNCFNode, model: NNCFNetwork, nncf_graph: NNCFGraph) -> Tensor:
+        weight_node = get_const_node(node_with_weight, node_with_weight.metatype.weight_port_ids[0], nncf_graph)
         if weight_node is None:
             raise RuntimeError(f"{node_with_weight} node has no weight node.")
         weight_data = get_const_data(weight_node, model)
         return Tensor(weight_data)
-
-    @staticmethod
-    def get_weight_tensor_port_id(node: NNCFNode) -> int:
-        const_ids = node.layer_attributes.get_const_port_ids()
-        if len(const_ids) != 1:
-            raise RuntimeError(f"Found more than 1 port for {node.node_name} node")
-        return const_ids[0]
 
     @staticmethod
     def weight_update_command(node_with_weight: NNCFNode, weight_value: np.ndarray) -> OVWeightUpdateCommand:

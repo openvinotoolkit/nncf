@@ -1,49 +1,81 @@
 # See help here: https://github.com/marketplace/actions/labeler
 
 dependencies:
-  - 'requirements.txt'
-  - '**/setup.py'
+- any:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'requirements.txt'
+      - '**/setup.py'
 
 NNCF PT:
-  - 'examples/torch/**/*!(.md)'
-  - 'examples/post_training_quantization/torch/**/*!(.md)'
-  - 'nncf/torch/**/*!(.md)'
-  - 'tests/torch/**/*!(.md)'
-  - 'nncf/quantization/**/torch_backend.py'
+- any:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'examples/torch/**/*!(.md)'
+      - 'examples/post_training_quantization/torch/**/*!(.md)'
+      - 'nncf/torch/**/*!(.md)'
+      - 'tests/torch/**/*!(.md)'
+      - 'nncf/quantization/**/torch_backend.py'
 
 NNCF TF:
-  - 'examples/tensorflow/**/*!(.md)'
-  - 'examples/post_training_quantization/tensorflow/**/*!(.md)'
-  - 'nncf/tensorflow/**/*!(.md)'
-  - 'tests/tensorflow/**/*!(.md)'
-  - 'nncf/quantization/**/tf_backend.py'
+- any:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'examples/tensorflow/**/*!(.md)'
+      - 'examples/post_training_quantization/tensorflow/**/*!(.md)'
+      - 'nncf/tensorflow/**/*!(.md)'
+      - 'tests/tensorflow/**/*!(.md)'
+      - 'nncf/quantization/**/tf_backend.py'
 
 NNCF ONNX:
-  - 'examples/onnx/**/*!(.md)'
-  - 'examples/post_training_quantization/onnx/**/*!(.md)'
-  - 'nncf/onnx/**/*!(.md)'
-  - 'tests/onnx/**/*!(.md)'
-  - 'nncf/quantization/**/onnx_backend.py'
+- any:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'examples/onnx/**/*!(.md)'
+      - 'examples/post_training_quantization/onnx/**/*!(.md)'
+      - 'nncf/onnx/**/*!(.md)'
+      - 'tests/onnx/**/*!(.md)'
+      - 'nncf/quantization/**/onnx_backend.py'
 
 NNCF OpenVINO:
-  - 'examples/openvino/**/*!(.md)'
-  - 'examples/post_training_quantization/openvino/**/*!(.md)'
-  - 'nncf/openvino/**/*!(.md)'
-  - 'tests/openvino/**/*!(.md)'
-  - 'nncf/quantization/**/openvino_backend.py'
+- any:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'examples/openvino/**/*!(.md)'
+      - 'examples/post_training_quantization/openvino/**/*!(.md)'
+      - 'nncf/openvino/**/*!(.md)'
+      - 'tests/openvino/**/*!(.md)'
+      - 'nncf/quantization/**/openvino_backend.py'
 
 NNCF PTQ:
-  - 'nncf/quantization/**/*!(.md)'
-  - 'tests/post_training/**/*!(.md)'
+- any:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'nncf/quantization/**/*!(.md)'
+      - 'tests/post_training/**/*!(.md)'
 
 documentation:
-  - '**/*.md'
-  - 'docs/**/*'
+- any:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.md'
+      - 'docs/**/*'
 
 experimental:
-  - 'nncf/experimental/**/*!(.md)'
+- any:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'nncf/experimental/**/*!(.md)'
 
 NNCF Common:
-  - 'examples/common/**/*!(.md)'
-  - 'nncf/common/**/*!(.md)'
-  - 'tests/common/**/*!(.md)'
+- any:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'examples/common/**/*!(.md)'
+      - 'nncf/common/**/*!(.md)'
+      - 'tests/common/**/*!(.md)'
+
+release target:
+- any:
+  - base-branch:
+    - '^release_v*'

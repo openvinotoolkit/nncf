@@ -15,6 +15,8 @@ import torch
 from torch import nn
 
 from nncf.common.engine import Engine
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
 
 
 class PTEngine(Engine):
@@ -30,7 +32,8 @@ class PTEngine(Engine):
         """
 
         self._model = model
-        self._model.eval()
+        if get_backend(model) == BackendType.TORCH:
+            self._model.eval()
 
     def infer(
         self, input_data: Union[torch.Tensor, Tuple[torch.Tensor], Dict[str, torch.Tensor]]

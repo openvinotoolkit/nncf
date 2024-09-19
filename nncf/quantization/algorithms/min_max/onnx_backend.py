@@ -47,6 +47,10 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
+    def preserved_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
         return MATMUL_METATYPES
 
@@ -243,8 +247,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return types
 
     @staticmethod
-    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> List[str]:
-        return []
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
+        return set()
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
