@@ -39,8 +39,8 @@ from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.model_graph_manager import find_const_node_in_constant_subgraph
 from nncf.torch.model_graph_manager import get_const_node
+from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.quantization.layers import AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import SymmetricWeightsDecompressor
 from nncf.torch.tensor_statistics.collectors import get_raw_stat_collector
@@ -69,15 +69,9 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_weight_names_and_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Tuple[str, int]]:
-        weight_port_ids = []
-        for prev_node in graph.get_previous_nodes(node):
-            weight_node = find_const_node_in_constant_subgraph(prev_node, graph)
-            if weight_node is None:
-                continue
-            edge = graph.get_edge(prev_node, node)
-            if edge.input_port_id in node.metatype.weight_port_ids:
-                weight_port_ids.append((weight_node.node_name, edge.input_port_id))
-        return weight_port_ids
+        port_ids = get_weight_tensor_port_ids(node, graph)
+        weight_name_port_ids = [(get_const_node(node, pid, graph).node_name, pid) for pid in port_ids]
+        return weight_name_port_ids
 
     @staticmethod
     def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[Tuple[int]]:
