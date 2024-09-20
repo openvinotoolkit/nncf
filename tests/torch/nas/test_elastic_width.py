@@ -16,7 +16,7 @@ from torch import nn
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.visualization import SubnetGraph
 from nncf.torch.utils import get_model_device
-from tests.shared.nx_graph import compare_nx_graph_with_reference
+from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.torch.helpers import create_conv
 from tests.torch.helpers import get_empty_config
 from tests.torch.nas.creators import create_bootstrap_nas_training_algo

@@ -25,8 +25,8 @@ from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorSt
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.tensor import functions as fns
-from tests.shared.helpers import dump_to_json
-from tests.shared.helpers import load_json
+from tests.cross_fw.shared.helpers import dump_to_json
+from tests.cross_fw.shared.helpers import load_json
 
 FQ_CALCULATED_PARAMETERS_PATH = Path(__file__).parent / "fq_params" / "fq_params.json"
 

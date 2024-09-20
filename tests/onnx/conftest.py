@@ -11,7 +11,7 @@
 
 import os
 
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.paths import TEST_ROOT
 
 
 def pytest_addoption(parser):

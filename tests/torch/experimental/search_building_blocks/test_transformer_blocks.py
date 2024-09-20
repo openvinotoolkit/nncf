@@ -33,7 +33,7 @@ from nncf.experimental.torch.search_building_blocks.search_blocks import Extende
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_building_blocks
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_indexes_of_overlapping_blocks_min
 from nncf.experimental.torch.search_building_blocks.search_blocks import get_indexes_of_overlapping_blocks_seq
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_empty_config
 from tests.torch.nas.helpers import move_model_to_cuda_if_available
