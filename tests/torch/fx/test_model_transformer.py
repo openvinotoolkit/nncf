@@ -17,14 +17,22 @@ import pytest
 import torch
 from torch._export import capture_pre_autograd_graph
 
+from nncf.common.factory import NNCFGraph
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
+from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
+from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
+from nncf.experimental.torch.fx.transformations import shared_constants_unification_transformation
 from nncf.torch import disable_patching
+from nncf.torch.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from tests.torch.ptq.test_weights_compression import ShortTransformer
 from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
 from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
@@ -124,3 +132,83 @@ def test_output_insertion_transformation(tuple_output, target_point):
     check_graph(
         nncf_graph, f"output_insertion_{_target_point_to_str(target_point)}_ref.dot", TRANSFORMED_GRAPH_DIR_NAME
     )
+
+
+def count_constants(model) -> int:
+    num_constant_nodes = 0
+    for node in model.graph.nodes:
+        if node.op == "get_attr":
+            num_constant_nodes += 1
+    return num_constant_nodes
+
+
+def count_nodes_with_shared_constants(model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> int:
+    """
+    Gets the number of nodes which use a shared constant.
+    eg:
+          const
+          /   \
+    node1     node2
+
+    returns 2 (node1, and node2)
+    """
+    num_nodes_with_constant_nodes = 0
+    model_graph: torch.fx.Graph = model.graph
+    for node in model_graph.nodes:
+        nncf_node = nncf_graph.get_node_by_name(node.name)
+        num_consumer_nodes = len(nncf_graph.get_next_nodes(nncf_node))
+        if node.op == "get_attr" and num_consumer_nodes > 1:
+            assert nncf_node.is_shared()
+            num_nodes_with_constant_nodes += num_consumer_nodes
+    return num_nodes_with_constant_nodes
+
+
+def test_create_shared_constant_transformation():
+    model = MultiBranchesConnectedModel()
+    ex_inputs = torch.ones((1, 3, 3, 3))
+    captured_model = _capture_model(model, ex_inputs)
+    assert count_constants(captured_model) == 9
+    shared_constants_unification_transformation(captured_model)
+    nncf_graph = NNCFGraphFactory.create(captured_model)
+    assert count_nodes_with_shared_constants(captured_model, nncf_graph) == 3
+    assert count_constants(captured_model) == 7
+
+
+def get_shared_constant_nodes(nncf_graph: NNCFGraph):
+    """
+    Gets a dict of constant nodes as key and consumer nodes as values which are shared in the model.
+    eg:
+          const
+          /   \
+    node1     node2
+
+    returns ({const:[node1, node2]}) 
+    """
+    shared_const_node_consumer_node = {}
+    for node in nncf_graph.get_all_nodes():
+        consumer_nodes = nncf_graph.get_next_nodes(node)
+        if node.metatype in CONST_NOOP_METATYPES and len(consumer_nodes) > 1:
+            shared_const_node_consumer_node[node] = consumer_nodes
+    return shared_const_node_consumer_node
+
+
+def test_update_constant():
+    model = MultiBranchesConnectedModel()
+    ex_inputs = torch.ones((1, 3, 3, 3))
+    captured_model = _capture_model(model, ex_inputs)
+
+    shared_constants_unification_transformation(captured_model)
+    nncf_graph = NNCFGraphFactory.create(captured_model)
+    shared_constants_consumers_dict = get_shared_constant_nodes(nncf_graph)
+
+    # This returns all the constant nodes as keys and list of consumer as values
+    consumer_nodes = list(shared_constants_consumers_dict.values())[0]
+
+    constant_update_transformation_builder(consumer_nodes[0], torch.tensor([100]))(captured_model)
+
+    nncf_graph_updated_constant = NNCFGraphFactory.create(captured_model)
+    updated_const_node = nncf_graph_updated_constant.get_previous_nodes(consumer_nodes[1])[1]
+    fx_node_to_check_const = get_graph_node_by_name(captured_model.graph, updated_const_node.node_name)
+    fx_node_to_check_const_value = get_tensor_constant_from_node(fx_node_to_check_const, captured_model)
+
+    assert fx_node_to_check_const_value == torch.tensor([100])
