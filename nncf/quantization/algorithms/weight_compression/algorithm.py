@@ -11,7 +11,7 @@
 import operator
 from collections import defaultdict
 from functools import reduce
-from typing import Dict, List, Optional, Tuple, TypeVar
+from typing import Dict, List, Optional, OrderedDict, Tuple, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -21,7 +21,6 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
-from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -180,13 +179,9 @@ class WeightCompression(Algorithm):
         )
 
         ordered_nodes_to_compress = []
-        ignored_names = get_ignored_node_names_from_ignored_scope(
-            self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
-        )
         for node in nncf_graph.topological_sort():
             is_node_with_weights = self._backend_entity.is_node_with_weights(node, nncf_graph)
-            is_within_scope = should_consider_scope(node.node_name, ignored_names)
-            if node.metatype in weighted_metatypes and is_node_with_weights and is_within_scope:
+            if node.metatype in weighted_metatypes and is_node_with_weights:
                 ordered_nodes_to_compress.append(node)
         return ordered_nodes_to_compress
 
@@ -280,24 +275,25 @@ class WeightCompression(Algorithm):
             backup precisions.
         :return: A string containing the table.
         """
-        num_bits_vs_num_weights_map = {}
+        dtype_vs_num_weights_map = {}
         ratio_defining_weight_names = set(wp.weight_name for wp in ratio_defining_params)
         for data in all_params:
-            num_bits = data.compression_config.num_bits if data.compression_config is not None else "fp16/fp32"
-            n_total, n_ratio_defining = num_bits_vs_num_weights_map.get(num_bits, ([], []))
+            dtype = data.compression_config.mode if data.compression_config is not None else "fp16/fp32"
+            n_total, n_ratio_defining = dtype_vs_num_weights_map.get(dtype, ([], []))
             if data.weight_name in ratio_defining_weight_names:
                 n_ratio_defining.append(data.num_weights)
             n_total.append(data.num_weights)
-            num_bits_vs_num_weights_map[num_bits] = (n_total, n_ratio_defining)
+            dtype_vs_num_weights_map[dtype] = (n_total, n_ratio_defining)
 
         num_ratio_defining_weights = sum(ws.num_weights for ws in ratio_defining_params)
         num_ratio_defining_params = len(ratio_defining_params)
         num_total_weights = sum(ws.num_weights for ws in all_params)
         num_params = len(all_params)
+        dtype_vs_num_weights_map = OrderedDict(sorted(dtype_vs_num_weights_map.items(), reverse=True))
         # Table creation
-        header = ["Num bits (N)", "% all parameters (layers)", "% ratio-defining parameters (layers)"]
+        header = ["Data type", "% all parameters (layers)", "% ratio-defining parameters (layers)"]
         rows = []
-        for bitwidth, (n_total, n_ratio_defining) in num_bits_vs_num_weights_map.items():
+        for bitwidth, (n_total, n_ratio_defining) in dtype_vs_num_weights_map.items():
             rows.append(
                 [
                     bitwidth,
@@ -326,6 +322,11 @@ class WeightCompression(Algorithm):
         all_weight_params: List[WeightCompressionParameters] = []
         weight_names = set()
 
+        ignored_names = get_ignored_node_names_from_ignored_scope(
+            self._ignored_scope, graph, strict=self._ignored_scope.validate
+        )
+        ignored_scope_weight_params: List[WeightCompressionParameters] = []
+
         is_last_layer_shared = False
         n = len(nodes_to_compress)
         for i, node in enumerate(nodes_to_compress):
@@ -352,6 +353,7 @@ class WeightCompression(Algorithm):
                     and node.metatype in self._backend_entity.embedding_metatypes
                     and isinstance(reduction_axes, tuple)
                     and len(reduction_axes) != 1
+                    and node.node_name not in ignored_names
                 ):
                     # NNCF supports multiple reduction axes only for ops with group_size != -1.
                     # Convolution ops are always kept in backup precision.
@@ -363,7 +365,7 @@ class WeightCompression(Algorithm):
                         f"node name: {node.node_name}. The presicion of node will be {self._backup_precision}."
                     )
 
-                if self._backup_precision == BackupPrecision.FP:
+                if node.node_name in ignored_names or self._backup_precision == BackupPrecision.FP:
                     wc_config = None
                 else:
                     mode = (
@@ -375,12 +377,17 @@ class WeightCompression(Algorithm):
                 weight_params = WeightCompressionParameters(
                     weight_name, node, weight_port_id, weight_size, reduction_axes, wc_config
                 )
+                if node.node_name in ignored_names:
+                    ignored_scope_weight_params.append(weight_params)
+                    continue
                 all_weight_params.append(weight_params)
                 weight_names.add(weight_name)
 
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_shared)
         self._set_weight_compression_config(ratio_defining_params, model, graph, activations)
-        nncf_logger.info(self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
+        nncf_logger.info(
+            self._get_bitwidth_distribution_str(all_weight_params + ignored_scope_weight_params, ratio_defining_params)
+        )
         # Filter the weight parameters that should remain in their original floating-point precision
         all_weight_params = [w_params for w_params in all_weight_params if w_params.compression_config is not None]
 
