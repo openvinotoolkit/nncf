@@ -16,6 +16,7 @@ import torch
 from torch._export import capture_pre_autograd_graph
 
 from nncf import CompressWeightsMode
+from nncf.common.factory import NNCFGraphFactory
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.quantization import compress_weights
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
@@ -81,6 +82,21 @@ def test_compress_weights(mode):
         compressed_model, dtype, compressed_node_weight_port
     )
     assert n_target_modules == n_compressed_weights
+
+
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+def test_compress_weights_graph_edge(mode):
+    with disable_patching():
+        model = ShortTransformer(5, 10)
+        input_ids = torch.randint(0, 10, (5,))
+        exported_model = capture_pre_autograd_graph(model, args=(input_ids,))
+        compressed_model = compress_weights(exported_model, mode=mode)
+    nncf_graph = NNCFGraphFactory.create(compressed_model)
+    for node in nncf_graph.get_all_nodes():
+        if "weights_decompressor" in node.node_name and node.node_type == "call_module":
+            decompressor_node_edge = nncf_graph.get_input_edges(node)[0]
+            decompressor_constant_edge = nncf_graph.get_edge(node, nncf_graph.get_next_nodes(node)[0])
+            assert decompressor_node_edge.tensor_shape == decompressor_constant_edge.tensor_shape
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
