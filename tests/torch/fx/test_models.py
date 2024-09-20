@@ -150,9 +150,12 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters):
         quantization_parameters["subset_size"] = 1
 
         quantized_model = nncf.quantize(fx_model, calibration_dataset, **quantization_parameters)
+        
         # Uncomment to visualize torch fx graph
         # from tests.torch.fx.helpers import visualize_fx_model
         # visualize_fx_model(quantized_model, f"{model_case.model_id}_int8.svg")
-
+        constant_count = sum(1 for node in quantized_model.graph.nodes if node.op == 'get_attr')
+        buffer_count = sum(1 for node in quantized_model.buffers())
+        assert buffer_count == constant_count
         nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
         check_graph(nncf_graph, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME)
