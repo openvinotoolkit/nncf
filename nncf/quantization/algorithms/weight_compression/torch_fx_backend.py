@@ -214,7 +214,8 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             graph_weight_node = get_graph_node_by_name(model.graph, wc_params.node_with_weight.node_name)
             compressed_weight_name = graph_weight_node.all_input_nodes[wc_params.weight_port_id].name
 
-            decompressor_name = f"{decompressor_type}_weights_decompressor_{compressed_weight_name.replace('.', '_')}"
+            decompressor_suffix = "_".join(compressed_weight_name.replace(".", "_").split("_")[:-2])
+            decompressor_name = f"{decompressor_type}_weights_decompressor_{decompressor_suffix}"
 
             # inserts the weight decompressor into the model as the post hook on the model weight
             transformation_layout.register(
