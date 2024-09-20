@@ -151,7 +151,13 @@ def constant_update_transformation_builder(node: NNCFNode, value: torch.Tensor) 
     return constant_update_transformation
 
 
-def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: torch.Tensor, input_port_id: int = 1, updated_node_name: Optional[str] = None):
+def constant_update_fn(
+    model: torch.fx.GraphModule,
+    node: torch.fx.Node,
+    value: torch.Tensor,
+    input_port_id: int = 1,
+    updated_node_name: Optional[str] = None,
+):
     """
     Updates constant of given node on the given input port id with given value.
 
@@ -180,7 +186,7 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
     consumer_nodes = list(previous_const.users.keys())
     for node in consumer_nodes:
         node.replace_input_with(previous_const, new_constant)
-        
+
     graph.erase_node(previous_const)
     graph.eliminate_dead_code()
 
@@ -499,6 +505,7 @@ def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
     model.graph.eliminate_dead_code()
     model.recompile()
 
+
 def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
     def pattern_per_channel(weight, scale, zero_point, axis, low, high, dtype):
         quantized = torch.ops.quantized_decomposed.quantize_per_channel.default(
@@ -520,23 +527,29 @@ def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
 
     def replacement_per_channel(x, scale, zero_point, axis, low, high, dtype):
         return torch.mul(x, scale)
-    
+
     def replacement_per_tensor(x, scale, zero_point, low, high, dtype):
         return torch.mul(x, scale)
-    
+
     def match_filters(match, original_graph, graph):
-        for node in match.nodes_map.keys():
-            if node.name=='weight' and match.nodes_map[node].op == 'get_attr':
+        for node in match.nodes_map:
+            if node.name == "weight" and match.nodes_map[node].op == "get_attr":
                 return True
         return False
-    torch.fx.subgraph_rewriter.replace_pattern_with_filters(model, pattern_per_channel, replacement_per_channel, [match_filters])
-    torch.fx.subgraph_rewriter.replace_pattern_with_filters(model, pattern_per_tensor, replacement_per_tensor, [match_filters])
+
+    torch.fx.subgraph_rewriter.replace_pattern_with_filters(
+        model, pattern_per_channel, replacement_per_channel, [match_filters]
+    )
+    torch.fx.subgraph_rewriter.replace_pattern_with_filters(
+        model, pattern_per_tensor, replacement_per_tensor, [match_filters]
+    )
+
 
 def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule):
     input_tup = []
     for params in node.args:
         if isinstance(params, torch.fx.Node):
-            if params.op == 'get_attr':
+            if params.op == "get_attr":
                 value = get_tensor_constant_from_node(params, model)
                 input_tup.append(value)
             else:
@@ -545,16 +558,21 @@ def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule):
             input_tup.append(params)
     return input_tup
 
+
 def _compress_qdq_constant_transformation(model: torch.fx.GraphModule) -> None:
     for node in model.graph.nodes:
-        if node.target in [torch.ops.quantized_decomposed.quantize_per_tensor.default, torch.ops.quantized_decomposed.quantize_per_channel.default]:
+        if node.target in [
+            torch.ops.quantized_decomposed.quantize_per_tensor.default,
+            torch.ops.quantized_decomposed.quantize_per_channel.default,
+        ]:
             port_id = 0
             input_tup = _get_node_inputs(node, model)
-            if(input_tup):
-                if(node.target == torch.ops.quantized_decomposed.quantize_per_channel.default):
+            if input_tup:
+                if node.target == torch.ops.quantized_decomposed.quantize_per_channel.default:
                     _reshape_scale(model, node)
                 result = node.target(*tuple(input_tup))
-                constant_update_fn(model, node, result, port_id, updated_node_name='compressed_weight_updated_constant')
+                constant_update_fn(model, node, result, port_id, updated_node_name="compressed_weight_updated_constant")
+
 
 def _reshape_scale(model, node: torch.fx.Node):
     weight_node = node.all_input_nodes[0]
@@ -565,11 +583,13 @@ def _reshape_scale(model, node: torch.fx.Node):
     new_shape = [1] * weight_value.dim()
     new_shape[axis] = scale_value.shape[0]
     scale_value = scale_value.view(new_shape)
-    constant_update_fn(model, node, scale_value, 1, updated_node_name=scale_node.name+'_updated_constant')
+    constant_update_fn(model, node, scale_value, 1, updated_node_name=scale_node.name + "_updated_constant")
+
 
 def compress_post_quantize_transformation(model: torch.fx.GraphModule):
     _compress_qdq_constant_transformation(model)
     _remove_constant_qdq_transformation(model)
+
 
 def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     """
