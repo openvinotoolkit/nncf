@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
@@ -115,7 +115,8 @@ def get_const_value(const_node: ov.Node) -> np.ndarray:
     :param const_node: OpenVINO node.
     :return: The constant value.
     """
-    if const_node.get_element_type() == ov.Type.bf16:
+    INPUT_DTYPE = os.environ.get("INPUT_DTYPE", "fp32")
+    if const_node.get_element_type() == ov.Type.bf16 and INPUT_DTYPE != "bf16":
         # Fixed FP32 data type as the result for BF16 constant
         return const_node.get_data(dtype=np.float32)
     return const_node.data

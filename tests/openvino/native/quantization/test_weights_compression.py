@@ -27,13 +27,13 @@ from nncf.data.dataset import Dataset
 from nncf.errors import ValidationError
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.graph.node_utils import get_const_value
+from nncf.openvino.quantization.compression_primitives import OV_COMPRESSION_PRIMITIVE_CACHE
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
-from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
@@ -970,8 +970,8 @@ def test_np_ov_compression_decompression(mode):
     decompressed_weighs = decompressed_weighs.data
     zp_shape = zp.shape if zp is not None else None
 
-    compress = OVWeightCompressionAlgoBackend.get_compress_pipeline(config, w.shape, scale.shape, zp_shape)
-    compress_decompress = OVWeightCompressionAlgoBackend.get_compress_decompress_pipeline(
+    compress = OV_COMPRESSION_PRIMITIVE_CACHE.get_compress_weight_primitive(config, w.shape, scale.shape, zp_shape)
+    compress_decompress = OV_COMPRESSION_PRIMITIVE_CACHE.get_compress_decompress_weight_primitive(
         config, w.shape, scale.shape, zp_shape
     )
 

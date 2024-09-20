@@ -54,6 +54,7 @@ class TensorBackend(Enum):
 
     numpy = auto()
     torch = auto()
+    ov = auto()
 
 
 @dataclass
