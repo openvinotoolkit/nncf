@@ -143,7 +143,7 @@ class GraphConverter:
             )
 
         for source_node in model.graph.nodes:
-            source_nncf_node = nncf_graph.get_node_by_name(source_node.name)  
+            source_nncf_node = nncf_graph.get_node_by_name(source_node.name)
             for idx, dist_node in enumerate(source_node.users):
                 dist_node_id = nncf_graph.get_node_by_name(dist_node.name).node_id
                 input_port_id, output_port_id, tensor_shape = GraphConverter.get_edge_params(

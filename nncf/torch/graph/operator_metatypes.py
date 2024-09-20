@@ -30,6 +30,7 @@ ModuleAttributes = TypeVar("ModuleAttributes", bound=BaseLayerAttributes)
 PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 FX_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 
+
 class PTOperatorMetatype(OperatorMetatype):
     """
     Base class for grouping PyTorch operators based on their semantic meaning.
@@ -917,12 +918,14 @@ class PTEmbeddingMetatype(PTOperatorMetatype):
     subtypes = [PTModuleEmbeddingMetatype]
     weight_port_ids = [1]
 
+
 @FX_OPERATOR_METATYPES.register()
 class FXEmbeddingMetatype(OperatorMetatype):
     name = "EmbeddingOp"
     module_to_function_names = {NamespaceTarget.ATEN: ["embedding"]}
     hw_config_names = [HWConfigOpName.EMBEDDING]
     weight_port_ids = [0]
+
 
 @PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleEmbeddingBagMetatype(PTModuleOperatorSubtype):
