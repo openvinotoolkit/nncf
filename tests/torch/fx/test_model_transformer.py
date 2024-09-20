@@ -11,12 +11,14 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Tuple
+from typing import Any, Callable, Tuple
 
 import pytest
+import torchvision.models as models
 import torch
 from torch._export import capture_pre_autograd_graph
 
+import nncf
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
@@ -29,7 +31,7 @@ from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
 from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
-
+from tests.torch.ptq.test_weights_compression import ShortTransformer
 
 @dataclass
 class ModelExtractionTestCase:
@@ -124,3 +126,47 @@ def test_output_insertion_transformation(tuple_output, target_point):
     check_graph(
         nncf_graph, f"output_insertion_{_target_point_to_str(target_point)}_ref.dot", TRANSFORMED_GRAPH_DIR_NAME
     )
+
+
+@dataclass
+class ModelCase:
+    model_id: str
+    input_shape: Tuple[int]
+
+TEST_MODELS_QUANIZED = (
+    ModelCase("resnet18", [1, 3, 224, 224]),
+    ModelCase("mobilenet_v3_small", [1, 3, 224, 224]),
+    ModelCase("vit_b_16", [1, 3, 224, 224]),
+)
+
+@pytest.mark.parametrize(
+    ("model_case"), TEST_MODELS_QUANIZED, ids=[m.model_id for m in TEST_MODELS_QUANIZED]
+)
+def test_post_quantization_compression(model_case: ModelCase):
+    with disable_patching():
+        torch.manual_seed(42) 
+        # model = ShortTransformer(5, 10).to('cpu')
+        model = getattr(models, model_case.model_id)().eval()
+        input_ids = torch.ones(model_case.input_shape)
+        exported_model = capture_pre_autograd_graph(model, args=(input_ids,))
+        quantized_model = nncf.quantize(exported_model, 
+                                        calibration_dataset=nncf.Dataset([input_ids]),
+                                        subset_size=1,
+                                        advanced_parameters=nncf.AdvancedQuantizationParameters(disable_bias_correction=True))
+    # for node in quantized_model.graph.nodes:
+    #     if(node.target == torch.mul):
+    #         # node_pre_value = getattr(quantized_model, node.name)
+    #         input_tup = []
+    #         for i in node.args:
+    #             if isinstance(i, torch.fx.Node) and i.target == 'get_attr':
+    #                 weight_value = getattr(quantized_model, i.target)
+    #                 input_tup.append(weight_value)
+    #                 assert weight_value.dtype == torch.int8
+    #             else:
+    #                 input_tup.append(i)
+    #         if input_tup:
+    #             result = node.target(*tuple(input_tup))
+    #             assert result.dtype == torch.fp32
+    # constant_count = sum(1 for node in quantized_model.graph.nodes if node.op == 'get_attr')
+    # buffer_count = sum(1 for node in quantized_model.buffers())
+    # assert buffer_count == constant_count

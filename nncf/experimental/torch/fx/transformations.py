@@ -518,7 +518,10 @@ def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
         )
         return dequantized
 
-    def replacement(x, scale, zero_point, axis, low, high, dtype):
+    def replacement_per_channel(x, scale, zero_point, axis, low, high, dtype):
+        return torch.mul(x, scale)
+    
+    def replacement_per_tensor(x, scale, zero_point, low, high, dtype):
         return torch.mul(x, scale)
     
     def match_filters(match, original_graph, graph):
@@ -526,8 +529,8 @@ def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
             if node.name=='weight' and match.nodes_map[node].op == 'get_attr':
                 return True
         return False
-    torch.fx.subgraph_rewriter.replace_pattern_with_filters(model, pattern_per_channel, replacement, [match_filters])
-    torch.fx.subgraph_rewriter.replace_pattern_with_filters(model, pattern_per_tensor, replacement, [match_filters])
+    torch.fx.subgraph_rewriter.replace_pattern_with_filters(model, pattern_per_channel, replacement_per_channel, [match_filters])
+    torch.fx.subgraph_rewriter.replace_pattern_with_filters(model, pattern_per_tensor, replacement_per_tensor, [match_filters])
 
 def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule):
     input_tup = []
@@ -540,7 +543,6 @@ def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule):
                 return None
         else:
             input_tup.append(params)
-    _reshape_scale(model, node)
     return input_tup
 
 def _compress_qdq_constant_transformation(model: torch.fx.GraphModule) -> None:
@@ -549,6 +551,8 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule) -> None:
             port_id = 0
             input_tup = _get_node_inputs(node, model)
             if(input_tup):
+                if(node.target == torch.ops.quantized_decomposed.quantize_per_channel.default):
+                    _reshape_scale(model, node)
                 result = node.target(*tuple(input_tup))
                 constant_update_fn(model, node, result, port_id, updated_node_name='compressed_weight_updated_constant')
 
