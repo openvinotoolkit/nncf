@@ -46,7 +46,7 @@ from examples.torch.object_detection.main import get_argument_parser
 from examples.torch.object_detection.main import train_epoch
 from nncf import NNCFConfig
 from nncf.common.compression import BaseCompressionAlgorithmController
-from tests.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import PROJECT_ROOT
 
 CONFIGS = list((PROJECT_ROOT / Path("examples/torch/object_detection/configs")).glob("*"))
 

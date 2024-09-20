@@ -18,10 +18,10 @@ from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.quantization.passes import find_constant_subgraphs
 from nncf.quantization.passes import remove_nodes_and_reconnect_graph
+from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.cross_fw.test_templates.models import NNCFGraphDropoutRemovingCase
 from tests.cross_fw.test_templates.models import NNCFGraphToTestConstantFiltering
-from tests.shared.nx_graph import compare_nx_graph_with_reference
-from tests.shared.paths import TEST_ROOT
 
 DATA_ROOT = TEST_ROOT / "common" / "data" / "reference_graphs"
 

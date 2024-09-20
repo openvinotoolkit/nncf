@@ -20,9 +20,9 @@ from packaging import version
 
 from nncf import Dataset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
+from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
+from tests.cross_fw.shared.openvino_version import get_openvino_version
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
-from tests.shared.nx_graph import compare_nx_graph_with_reference
-from tests.shared.openvino_version import get_openvino_version
 
 
 def convert_torch_model(model: torch.nn.Module, input_shape: Tuple[int], tmp_path: Path) -> ov.Model:

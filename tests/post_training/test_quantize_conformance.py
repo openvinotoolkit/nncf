@@ -23,12 +23,12 @@ import yaml
 from packaging import version
 
 import nncf
+from tests.cross_fw.shared.openvino_version import get_openvino_version
 from tests.post_training.model_scope import PTQ_TEST_CASES
 from tests.post_training.model_scope import WC_TEST_CASES
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import RunInfo
-from tests.shared.openvino_version import get_openvino_version
 
 DATA_ROOT = Path(__file__).parent / "data"
 

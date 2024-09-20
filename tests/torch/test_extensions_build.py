@@ -18,10 +18,10 @@ import pytest
 import torch
 
 from nncf.common.utils.os import is_windows
-from tests.shared.command import Command
-from tests.shared.helpers import create_venv_with_nncf
-from tests.shared.helpers import get_python_executable_with_venv
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.command import Command
+from tests.cross_fw.shared.helpers import create_venv_with_nncf
+from tests.cross_fw.shared.helpers import get_python_executable_with_venv
+from tests.cross_fw.shared.paths import TEST_ROOT
 
 EXTENSIONS_BUILD_FILENAME = "extensions_build_checks.py"
 
