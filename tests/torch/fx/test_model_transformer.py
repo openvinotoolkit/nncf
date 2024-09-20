@@ -191,7 +191,7 @@ def get_shared_constant_nodes(nncf_graph: NNCFGraph):
     return shared_const_node_consumer_node
 
 
-def test_update_constant():
+def test_update_shared_constant():
     model = MultiBranchesConnectedModel()
     ex_inputs = torch.ones((1, 3, 3, 3))
     captured_model = _capture_model(model, ex_inputs)
