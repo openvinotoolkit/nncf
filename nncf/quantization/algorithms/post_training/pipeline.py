@@ -12,6 +12,7 @@
 from typing import Optional, TypeVar
 
 from nncf.common.deprecation import warning_deprecated
+from nncf.common.quantization.quantizer_propagation.solver import PropagationStrategy
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
@@ -102,7 +103,9 @@ def create_ptq_pipeline(
     # Add the `ChannelAlignment` algorithm as the second step of the pipeline.
     if not advanced_parameters.disable_channel_alignment:
         pipeline_steps.append([ChannelAlignment(subset_size, advanced_parameters.inplace_statistics)])
-
+    propagation_strategy = None
+    if advanced_parameters.conservative_quantizers_merging:
+        propagation_strategy = PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME
     # Add the `MinMaxQuantization` algorithm as the third step of the pipeline.
     pipeline_steps.append(
         [
@@ -121,6 +124,7 @@ def create_ptq_pipeline(
                 weights_quantization_params=advanced_parameters.weights_quantization_params,
                 activations_range_estimator_params=advanced_parameters.activations_range_estimator_params,
                 weights_range_estimator_params=advanced_parameters.weights_range_estimator_params,
+                propagation_strategy=propagation_strategy,
                 backend_params=advanced_parameters.backend_params,
             )
         ]
