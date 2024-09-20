@@ -144,7 +144,7 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
 
 def shared_constants_unification_transformation(model: torch.fx.GraphModule):
     """
-    checks fx graph for shared constants, disconnects and eliminates redundant 
+    checks fx graph for shared constants, disconnects and eliminates redundant
     shared constant while connecting singular shared constant.
 
     :param model: Target Torch FX GraphModule
@@ -201,9 +201,7 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
 
     # Update metadata of the new constant node.
     previous_const = args[input_port_id]
-    consumer_nodes = list(
-        previous_const.users
-    )  
+    consumer_nodes = list(previous_const.users)
     # This list of consumer nodes will always be topologically sorted
     # To ensure the updated node has the right order,
     # we insert constant node before the node placed at the highest order in topological order.
