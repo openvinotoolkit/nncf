@@ -22,6 +22,7 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
+from nncf.parameters import BackupPrecision
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -394,6 +395,7 @@ def compress_weights(
     scale_estimation: Optional[bool] = None,
     gptq: Optional[bool] = None,
     lora_correction: Optional[bool] = None,
+    backup_precision: Optional[BackupPrecision] = BackupPrecision.INT8_ASYM,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> TModel:
     """
@@ -444,6 +446,9 @@ def compress_weights(
     :type gptq: bool
     :param lora_correction: Indicates whether to use Lora Correction algorithm.
     :type lora_correction: bool
+    :param backup_precision: Defines a backup precision that should be used
+        for all the layers that are kept in higher precision than primary precision.
+    :type backup_precision: nncf.BackupPrecision
     :param advanced_parameters: Advanced parameters for compression algorithms.
     :type advanced_parameters: nncf.AdvancedCompressionParameters
     :return: The non-trainable model with compressed weights.
@@ -604,6 +609,7 @@ def compress_weights(
         scale_estimation,
         gptq,
         lora_correction,
+        backup_precision,
         advanced_parameters,
     )
 

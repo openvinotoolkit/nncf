@@ -27,6 +27,7 @@ from nncf.data.dataset import Dataset
 from nncf.errors import ValidationError
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.graph.node_utils import get_const_value
+from nncf.parameters import BackupPrecision
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
@@ -1049,6 +1050,30 @@ def test_one_dimentional_samples(mode):
             assert op.get_shape() == [sz, 1]
 
 
+def test_awq_with_ignored_scope():
+    model = AWQMatmulModel().ov_model
+    sz = 8
+    n_samples = 10
+    dataset = Dataset([np.ones([i + 1, sz]) for i in range(n_samples)])
+
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_ASYM,
+        ratio=1.0,
+        group_size=-1,
+        dataset=dataset,
+        awq=True,
+        ignored_scope=IgnoredScope(names=["MatMul_6"]),
+    )
+
+    act_num = 0
+    num_compressed = 8
+    for op in compressed_model.get_ops():
+        if op.get_type_name() == "Constant" and op.get_element_type() == ov.Type.u4:
+            act_num += 1
+    assert act_num == num_compressed
+
+
 def get_shape_for_second_input(op_with_weights: ov.Node) -> List[int]:
     return list(op_with_weights.inputs()[1].get_shape())
 
@@ -1245,3 +1270,83 @@ def test_lora_with_mixed_precision():
         op_name = op.get_friendly_name()
         if op.get_type_name() == "Constant" and ("/zero_point" in op_name or "/scale" in op_name):
             assert op.get_shape() == [sz, 1]
+
+
+@pytest.mark.parametrize("backup_precision", [BackupPrecision.FP, BackupPrecision.INT8_ASYM, BackupPrecision.INT8_SYM])
+def test_data_free_compression_with_backup_precision(backup_precision):
+    model = AWQMatmulModel().ov_model
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.NF4,
+        ratio=0.7,
+        group_size=-1,
+        backup_precision=backup_precision,
+    )
+    act_num = 0
+    num_compressed = 3
+    if backup_precision == BackupPrecision.INT8_ASYM:
+        backup_ov_precision = ov.Type.u8
+    elif backup_precision == BackupPrecision.INT8_SYM:
+        backup_ov_precision = ov.Type.i8
+    else:
+        backup_ov_precision = ov.Type.f32
+    for op in compressed_model.get_ops():
+        if op.get_type_name() == "Constant":
+            if op.get_element_type() == ov.Type.nf4:
+                act_num += 1
+            elif "/scale" in op.get_friendly_name():
+                assert op.get_element_type() == ov.Type.f16
+            else:
+                assert op.get_element_type() == backup_ov_precision
+    assert act_num == num_compressed
+
+
+@pytest.mark.parametrize("backup_precision", [BackupPrecision.FP, BackupPrecision.INT8_ASYM, BackupPrecision.INT8_SYM])
+@pytest.mark.parametrize(
+    ("params", "num_compressed"),
+    (
+        ({"all_layers": True}, 8),
+        ({"all_layers": False}, 6),
+        ({"sensitivity_metric": SensitivityMetric.HESSIAN_INPUT_ACTIVATION}, 6),
+        ({"sensitivity_metric": SensitivityMetric.MEAN_ACTIVATION_VARIANCE}, 6),
+        ({"sensitivity_metric": SensitivityMetric.MAX_ACTIVATION_VARIANCE}, 6),
+        ({"sensitivity_metric": SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE}, 6),
+        ({"scale_estimation": True}, 6),
+        ({"lora_correction": True}, 6),
+        ({"gptq": True}, 6),
+        ({"awq": True}, 6),
+    ),
+)
+def test_data_based_compression_with_backup_precision(backup_precision, params, num_compressed):
+    model = AWQMatmulModel().ov_model
+    sz = 8
+    n_samples = 10
+    dataset = Dataset([np.ones([i + 1, sz]) for i in range(n_samples)])
+
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_ASYM,
+        ratio=0.8,
+        group_size=-1,
+        dataset=dataset,
+        backup_precision=backup_precision,
+        **params,
+    )
+    act_num = 0
+    if backup_precision == BackupPrecision.INT8_ASYM:
+        backup_ov_precision = ov.Type.u8
+    elif backup_precision == BackupPrecision.INT8_SYM:
+        backup_ov_precision = ov.Type.i8
+    else:
+        backup_ov_precision = ov.Type.f32
+    for op in compressed_model.get_ops():
+        if op.get_type_name() == "Constant":
+            if op.get_element_type() == ov.Type.u4:
+                act_num += 1
+            elif "/scale" in op.get_friendly_name():
+                assert op.get_element_type() == ov.Type.f16
+            elif "_lora_" in op.get_friendly_name():
+                assert op.get_element_type() == ov.Type.u8
+            else:
+                assert op.get_element_type() == backup_ov_precision
+    assert act_num == num_compressed

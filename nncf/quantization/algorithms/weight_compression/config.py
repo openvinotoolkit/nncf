@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from dataclasses import dataclass
+from dataclasses import field
 from typing import Optional, Tuple, TypeVar
 
 import numpy as np
@@ -64,7 +65,7 @@ class WeightCompressionParameters:
     weight_port_id: int
     num_weights: np.uint64
     reduction_axes: Tuple[int, ...]
-    compression_config = WeightCompressionConfig()
+    compression_config: Optional[WeightCompressionConfig] = field(default_factory=WeightCompressionConfig)
 
     def __post_init__(self):
         # Explicitly cast num_weights to avoid overflow on finding total number of weights.

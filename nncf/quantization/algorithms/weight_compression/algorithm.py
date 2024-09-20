@@ -11,7 +11,7 @@
 import operator
 from collections import defaultdict
 from functools import reduce
-from typing import Dict, List, Optional, OrderedDict, Tuple, TypeVar
+from typing import Dict, List, Optional, Tuple, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -27,6 +27,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
+from nncf.parameters import BackupPrecision
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
@@ -69,6 +70,7 @@ class WeightCompression(Algorithm):
         scale_estimation: bool,
         gptq: bool,
         lora_correction: bool,
+        backup_precision: BackupPrecision = BackupPrecision.INT8_ASYM,
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ):
         """
@@ -79,21 +81,21 @@ class WeightCompression(Algorithm):
                 with a typical non-fixed zero point.
             INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
                 Weights are quantized to a primary precision symmetrically without zero point.
-                All embeddings and the last layer are always compressed to a backup precision, which is INT8_ASYM,
-                by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
+                All embeddings and the last layer are always compressed to a backup_precision, which is INT8_ASYM,
+                by default. All others are quantized whether to 4-bit integer or to a backup_precision depending on
                 criteria and the given ratio.
             INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
                 with a typical non-fixed zero point.
             NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
             E2M1 is the same as INT4_SYM mode, but primary precision is E2M1 data type without zero point.
         :param ratio: the ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
-            and the rest to INT8_ASYM).
+            and the rest to backup_precision).
         :param group_size: number of weights (e.g. 128) in the channel dimension
             that share quantization parameters (scale). The value -1 means no grouping.
         :param ignored_scope: An ignored scope that defined the list of model control
             flow graph nodes to be ignored during quantization.
         :param all_layers: Indicates whether embeddings and last MatMul layers should be compressed to a primary
-            precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.
+            precision. By default, the backup_precision is assigned for the embeddings and last MatMul layers.
         :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
             preserve the accuracy of the model, the more sensitive layers receives a higher precision.
         :param awq: determines whether to use or not modified AWQ algorithm.
@@ -102,6 +104,8 @@ class WeightCompression(Algorithm):
         :param scale_estimation: determines whether to use or not scale estimation for 4 bit layers.
         :param gptq: determines whether to use or not GPTQ algorithm.
         :param lora_correction: determines whether to use or not LoRA Correction algorithm.
+        :param backup_precision: determines the precision used for layers that are not quantized to a primary precision,
+            which is INT8_ASYM, by default.
         :param advanced_parameters: advanced parameters for algorithms in compression pipeline.
         """
         super().__init__()
@@ -119,6 +123,7 @@ class WeightCompression(Algorithm):
         self._scale_estimation = scale_estimation
         self._gptq = gptq
         self._lora_correction = lora_correction
+        self._backup_precision = backup_precision
         self._advanced_parameters = (
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
@@ -278,7 +283,7 @@ class WeightCompression(Algorithm):
         num_bits_vs_num_weights_map = {}
         ratio_defining_weight_names = set(wp.weight_name for wp in ratio_defining_params)
         for data in all_params:
-            num_bits = data.compression_config.num_bits
+            num_bits = data.compression_config.num_bits if data.compression_config is not None else "fp16/fp32"
             n_total, n_ratio_defining = num_bits_vs_num_weights_map.get(num_bits, ([], []))
             if data.weight_name in ratio_defining_weight_names:
                 n_ratio_defining.append(data.num_weights)
@@ -289,7 +294,6 @@ class WeightCompression(Algorithm):
         num_ratio_defining_params = len(ratio_defining_params)
         num_total_weights = sum(ws.num_weights for ws in all_params)
         num_params = len(all_params)
-        num_bits_vs_num_weights_map = OrderedDict(sorted(num_bits_vs_num_weights_map.items(), reverse=True))
         # Table creation
         header = ["Num bits (N)", "% all parameters (layers)", "% ratio-defining parameters (layers)"]
         rows = []
@@ -350,17 +354,26 @@ class WeightCompression(Algorithm):
                     and len(reduction_axes) != 1
                 ):
                     # NNCF supports multiple reduction axes only for ops with group_size != -1.
-                    # Convolution ops are always quantized to 8-bits (without groups).
+                    # Convolution ops are always kept in backup precision.
                     # Embedding layers are quantized to 4-bits only if all_layers=True.
                     # MatMul ops can't have multiple reduction axes.
                     nncf_logger.warning(
                         f"Weight compression expects a single reduction axis, but {len(reduction_axes)} given. "
                         f"Weight shape: {weight_shape}, reduction axes: {reduction_axes}, "
-                        f"node name: {node.node_name}. The node will be asymmetrically quantized to 8 bits."
+                        f"node name: {node.node_name}. The presicion of node will be {self._backup_precision}."
                     )
 
+                if self._backup_precision == BackupPrecision.FP:
+                    wc_config = None
+                else:
+                    mode = (
+                        CompressWeightsMode.INT8_ASYM
+                        if self._backup_precision == BackupPrecision.INT8_ASYM
+                        else CompressWeightsMode.INT8_SYM
+                    )
+                    wc_config = WeightCompressionConfig(mode=mode)
                 weight_params = WeightCompressionParameters(
-                    weight_name, node, weight_port_id, weight_size, reduction_axes
+                    weight_name, node, weight_port_id, weight_size, reduction_axes, wc_config
                 )
                 all_weight_params.append(weight_params)
                 weight_names.add(weight_name)
@@ -368,6 +381,8 @@ class WeightCompression(Algorithm):
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_shared)
         self._set_weight_compression_config(ratio_defining_params, model, graph, activations)
         nncf_logger.info(self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
+        # Filter the weight parameters that should remain in their original floating-point precision
+        all_weight_params = [w_params for w_params in all_weight_params if w_params.compression_config is not None]
 
         if self._awq and activations is not None and self._mode != CompressWeightsMode.E2M1:
             awq_params = self._advanced_parameters.awq_params
@@ -446,6 +461,7 @@ class WeightCompression(Algorithm):
                 "scale_estimation": self._scale_estimation,
                 "gptq": self._gptq,
                 "lora_correction": self._lora_correction,
+                "backup_precision": self._backup_precision.value,
                 "advanced_parameters": convert_to_dict_recursively(self._advanced_parameters),
             },
             algo_name="weight_compression",
