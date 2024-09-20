@@ -24,6 +24,7 @@ from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.dynamic_graph.layer_attributes_handlers import apply_args_defaults
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
+from collections import Counter
 
 
 class GraphConverter:
@@ -132,17 +133,17 @@ class GraphConverter:
         :return: NNCFGraph.
         """
         nncf_graph = PTNNCFGraph()
-        # get the targets for all the constants in the model
-        target_list = [node.target for node in model.graph.nodes if node.op == "get_attr"]
-        # get a unique list of all the targets which appear more than once in the list
-        target_list = list(set([ele for ele in target_list if target_list.count(ele) > 1]))
+        
+        const_targets_counter = Counter([node.target for node in model.graph.nodes if node.op == "get_attr"])
         for source_node in model.graph.nodes:
             node_type, node_metatype = GraphConverter._get_node_type_and_metatype(source_node, model)
             node_metatype = GraphConverter._map_fx_unique_metatypes(source_node, node_metatype)
-            if target_list:
-                is_shared_node = source_node.target in target_list
-            else:
-                is_shared_node = len(source_node.users) > 1 if source_node.op in ("get_attr",) else False
+            is_shared_node = False
+            if source_node.op in ("get_attr",) and (
+                const_targets_counter[source_node.target] > 1 or len(source_node.users) > 1
+            ):
+                is_shared_node = True
+
             nncf_graph.add_nncf_node(
                 node_name=source_node.name, node_type=node_type, node_metatype=node_metatype, is_shared=is_shared_node
             )
