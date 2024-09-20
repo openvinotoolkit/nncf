@@ -1,6 +1,6 @@
 ## Weights Compression
 
-[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run Weights Compression with. PyTorch and X are also supported.
+[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run Weights Compression with. PyTorch and Torch FX are also supported.
 
 ### The algorithm description
 
