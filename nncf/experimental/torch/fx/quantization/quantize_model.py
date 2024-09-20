@@ -28,6 +28,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.experimental.torch.fx.transformations import revert_quantization_transformations
+from nncf.experimental.torch.fx.transformations import shared_constant_create_transformation
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
@@ -53,7 +54,7 @@ def quantize_impl(
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
-) -> torch.nn.Module:
+) -> torch.fx.GraphModule:
     """
     Implementation of the `quantize()` method for the Torch FX backend.
     """
@@ -81,6 +82,7 @@ def quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
+    shared_constant_create_transformation(copied_model)
     # To make it easier for bias correction algorithms,
     # biases are being separated by the followng calls.
     apply_quantization_transformations(copied_model)
@@ -143,6 +145,7 @@ def compress_weights_impl(
         lora_correction,
         advanced_parameters,
     )
+    shared_constant_create_transformation(model)
     graph = NNCFGraphFactory.create(model)
     compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
     compressed_model = GraphModule(compressed_model, compressed_model.graph)
