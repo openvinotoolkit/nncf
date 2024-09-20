@@ -164,7 +164,9 @@ def _replace_shared_weights(node: torch.fx.Node, prev_targets):
         prev_targets[node.target] = node
 
 
-def constant_update_transformation_builder(node: NNCFNode, value: torch.Tensor, input_port_id: int = 1) -> TransformationFNType:
+def constant_update_transformation_builder(
+    node: NNCFNode, value: torch.Tensor, input_port_id: int = 1
+) -> TransformationFNType:
     """
     Return transformation which updates constant of the given node to the given value.
 
@@ -200,8 +202,10 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
 
     # Update metadata of the new constant node.
     previous_const = args[input_port_id]
-    consumer_nodes = list(previous_const.users.keys()) #This list of consumer nodes will always be topologically sorted 
-    # To ensure the updated node has the right order, 
+    consumer_nodes = list(
+        previous_const.users.keys()
+    )  # This list of consumer nodes will always be topologically sorted
+    # To ensure the updated node has the right order,
     # we insert constant node before the node placed at the highest order in topological order.
     with graph.inserting_before(consumer_nodes[0]):
         new_constant = create_getattr_from_value(model, graph, node.name + "_updated_constant", value)

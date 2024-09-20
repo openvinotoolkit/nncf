@@ -24,7 +24,6 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
-from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import shared_constant_create_transformation
 from nncf.torch import disable_patching
@@ -35,8 +34,8 @@ from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
 from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
-from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name, get_tensor_constant_from_node
-from nncf.torch.graph.operator_metatypes import CONST_NOOP_METATYPES
+
+
 @dataclass
 class ModelExtractionTestCase:
     model: torch.nn.Module
@@ -155,7 +154,7 @@ def count_constants(model) -> int:
 
 
 def count_nodes_with_shared_constants(model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> int:
-    '''
+    """
     Gets the number of nodes which use a shared constant.
     eg:
           const
@@ -163,7 +162,7 @@ def count_nodes_with_shared_constants(model: torch.fx.GraphModule, nncf_graph: N
     node1     node2
 
     returns 2 (node1, and node2)
-    '''
+    """
     num_nodes_with_constant_nodes = 0
     model_graph: torch.fx.Graph = model.graph
     for node in model_graph.nodes:
