@@ -250,9 +250,10 @@ def test_model_devices_and_precisions(use_cuda, dtype):
         exported_model = capture_pre_autograd_graph(model, args=(dummy_input,))
         compressed_model = compress_weights(exported_model)
     result = compressed_model(dummy_input)
+
     # Scale should always be in float16
     assert (
-        compressed_model.state_dict()["asymmetric_weights_decompressor_matmul_updated_constant0._scale"].dtype
+        compressed_model.state_dict()["asymmetric_weights_decompressor_matmul._scale"].dtype
         == torch.float16
     )
     # Result should be in the precision of the model
