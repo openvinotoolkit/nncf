@@ -27,8 +27,8 @@ from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
-from nncf.experimental.torch.fx.transformations import revert_quantization_transformations
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
+from nncf.experimental.torch.fx.transformations import revert_quantization_transformations
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
