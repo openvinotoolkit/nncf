@@ -148,10 +148,7 @@ class GraphConverter:
             node_metatype = GraphConverter._map_fx_unique_metatypes(source_node, node_metatype)
             is_shared_node = is_shared_const(source_node)
             nncf_graph.add_nncf_node(
-                node_name=source_node.name,
-                node_type=node_type,
-                node_metatype=node_metatype,
-                is_shared=is_shared_node
+                node_name=source_node.name, node_type=node_type, node_metatype=node_metatype, is_shared=is_shared_node
             )
         model.graph.eliminate_dead_code()
 

@@ -141,6 +141,7 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
 
     return bias_update_transformation
 
+
 def shared_constant_create_transformation(model: torch.fx.GraphModule):
     """
     Return transformation which checks fx graph for shared constants, disconnects
@@ -166,6 +167,7 @@ def _replace_shared_weights(node: torch.fx.Node, prev_targets):
         dist_node[0].replace_input_with(node, prev_targets[node.target])
     else:
         prev_targets[node.target] = node
+
 
 def constant_update_transformation_builder(
     node: NNCFNode, value: torch.Tensor, input_port_id: int = 1
@@ -205,8 +207,10 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
 
     # Update metadata of the new constant node.
     previous_const = args[input_port_id]
-    consumer_nodes = list(previous_const.users.keys()) #This list of consumer nodes will always be topologically sorted 
-    # To ensure the updated node has the right order, 
+    consumer_nodes = list(
+        previous_const.users.keys()
+    )  # This list of consumer nodes will always be topologically sorted
+    # To ensure the updated node has the right order,
     # we insert constant node before the node placed at the highest order in topological order.
     with graph.inserting_before(consumer_nodes[0]):
         new_constant = create_getattr_from_value(model, graph, node.name + "_updated_constant", value)
