@@ -142,31 +142,25 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
     return bias_update_transformation
 
 
-def shared_constant_create_transformation(model: torch.fx.GraphModule):
+def shared_constants_unification_transformation(model: torch.fx.GraphModule):
     """
-    Return transformation which checks fx graph for shared constants, disconnects
-    and eliminates redundant shared constant while connecting singular shared constant.
+    checks fx graph for shared constants, disconnects and eliminates redundant 
+    shared constant while connecting singular shared constant.
+
+    :param model: Target Torch FX GraphModule
     :return: Transformation which attaches shared constants to nodes and removes redundant constants.
     """
     prev_targets = {}
 
     for source_node in model.graph.nodes:
-        _replace_shared_weights(source_node, prev_targets)
+        dist_node = list(source_node.users)
+        if source_node.target in prev_targets and source_node.op in ("get_attr",):
+            dist_node[0].replace_input_with(source_node, prev_targets[source_node.target])
+        else:
+            prev_targets[source_node.target] = source_node
 
     model.graph.eliminate_dead_code()
     model.recompile()
-
-
-def _replace_shared_weights(node: torch.fx.Node, prev_targets):
-    """
-    This function is responsible for checking the consumer node of current
-    node with previous nodes traversed by the loop
-    """
-    dist_node = list(node.users.keys())
-    if node.target in prev_targets and node.op in ("get_attr",):
-        dist_node[0].replace_input_with(node, prev_targets[node.target])
-    else:
-        prev_targets[node.target] = node
 
 
 def constant_update_transformation_builder(
@@ -208,15 +202,15 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
     # Update metadata of the new constant node.
     previous_const = args[input_port_id]
     consumer_nodes = list(
-        previous_const.users.keys()
-    )  # This list of consumer nodes will always be topologically sorted
+        previous_const.users
+    )  
+    # This list of consumer nodes will always be topologically sorted
     # To ensure the updated node has the right order,
     # we insert constant node before the node placed at the highest order in topological order.
     with graph.inserting_before(consumer_nodes[0]):
         new_constant = create_getattr_from_value(model, graph, node.name + "_updated_constant", value)
 
     previous_const.replace_all_uses_with(new_constant, propagate_meta=True)
-    graph.erase_node(previous_const)
     graph.eliminate_dead_code()
 
 

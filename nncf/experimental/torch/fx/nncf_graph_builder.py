@@ -132,10 +132,17 @@ class GraphConverter:
         :return: NNCFGraph.
         """
         nncf_graph = PTNNCFGraph()
+        # get the targets for all the constants in the model
+        target_list = [node.target for node in model.graph.nodes if node.op=='get_attr'] 
+        # get a unique list of all the targets which appear more than once in the list
+        target_list = list(set([ele for ele in target_list if target_list.count(ele) > 1])) 
         for source_node in model.graph.nodes:
             node_type, node_metatype = GraphConverter._get_node_type_and_metatype(source_node, model)
             node_metatype = GraphConverter._map_fx_unique_metatypes(source_node, node_metatype)
-            is_shared_node = len(source_node.users) > 1 if source_node.op in ("get_attr",) else False
+            if(target_list):
+                is_shared_node = source_node.target in target_list
+            else:
+                is_shared_node = len(source_node.users) > 1 if source_node.op in ("get_attr",) else False
             nncf_graph.add_nncf_node(
                 node_name=source_node.name, node_type=node_type, node_metatype=node_metatype, is_shared=is_shared_node
             )
