@@ -38,7 +38,7 @@ from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.tensorflow.quantization.layers import FakeQuantize
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
-from tests.shared.nx_graph import compare_nx_graph_with_reference
+from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.tensorflow.helpers import remove_node_by_name
 from tests.tensorflow.test_compressed_graph import get_nx_graph_from_tf_graph
 from tests.tensorflow.test_compressed_graph import keras_model_to_tf_graph

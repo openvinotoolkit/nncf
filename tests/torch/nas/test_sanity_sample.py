@@ -26,8 +26,8 @@ from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_con
     ProgressiveShrinkingController,
 )
 from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import BootstrapNASScheduler
-from tests.shared.command import arg_list_from_arg_dict
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.command import arg_list_from_arg_dict
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.sample_test_validator import SampleType
 from tests.torch.sample_test_validator import SanitySampleValidator
 from tests.torch.sample_test_validator import SanityTestCaseDescriptor

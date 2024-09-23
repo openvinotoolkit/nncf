@@ -1,15 +1,3 @@
-tinyllama_data_aware_awq_stateful_backend_OV:
-  metric_value: 0.85571
-  num_int4: 94
-  num_int8: 124
-tinyllama_data_aware_awq_scale_estimation_backend_OV:
-  metric_value: 0.86355
-  num_int4: 94
-  num_int8: 124
-tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
-  metric_value: 0.86355
-  num_int4: 94
-  num_int8: 124
 tinyllama_data_aware_gptq_backend_OV:
   metric_value: 0.81664
   num_int4: 94

@@ -10,8 +10,8 @@
 # limitations under the License.
 from nncf.common.graph.patterns import HWFusedPatternNames
 from nncf.common.utils.backend import BackendType
-from tests.shared.patterns import check_hw_patterns
-from tests.shared.patterns import check_ignored_patterns
+from tests.cross_fw.shared.patterns import check_hw_patterns
+from tests.cross_fw.shared.patterns import check_ignored_patterns
 
 IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.L2_NORM: "Not relevant for OpenVINO.",

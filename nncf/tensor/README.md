@@ -166,7 +166,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
             return torch.foo(a, arg1)
         ```
 
-4. Add test of method to [test template](/tests/shared/test_templates/template_test_nncf_tensor.py) for Tensor class
+4. Add test of method to [test template](/tests/cross_fw/test_templates/template_test_nncf_tensor.py) for Tensor class
 
 ### Add new backend
 

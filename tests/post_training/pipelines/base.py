@@ -30,7 +30,7 @@ from optimum.intel import OVQuantizer
 
 import nncf
 from nncf import TargetDevice
-from tests.shared.command import Command
+from tests.cross_fw.shared.command import Command
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
 from tools.memory_monitor import memory_monitor_context

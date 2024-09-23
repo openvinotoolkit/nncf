@@ -17,14 +17,14 @@ from typing import Any, Dict, List
 
 import pytest
 
-from tests.shared.case_collection import skip_if_backend_not_selected
-from tests.shared.command import Command
-from tests.shared.helpers import create_venv_with_nncf
-from tests.shared.helpers import get_pip_executable_with_venv
-from tests.shared.helpers import get_python_executable_with_venv
-from tests.shared.helpers import load_json
-from tests.shared.paths import PROJECT_ROOT
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.case_collection import skip_if_backend_not_selected
+from tests.cross_fw.shared.command import Command
+from tests.cross_fw.shared.helpers import create_venv_with_nncf
+from tests.cross_fw.shared.helpers import get_pip_executable_with_venv
+from tests.cross_fw.shared.helpers import get_python_executable_with_venv
+from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import TEST_ROOT
 
 EXAMPLE_TEST_ROOT = TEST_ROOT / "cross_fw" / "examples"
 EXAMPLE_SCOPE_PATH = EXAMPLE_TEST_ROOT / "example_scope.json"
@@ -53,6 +53,7 @@ def test_examples(
     backends_list: List[str],
     is_check_performance: bool,
     ov_version_override: str,
+    data: str,
 ):
     python_version = sys.version_info
     example_python_version = tuple(example_params.get("python_version", python_version))
@@ -80,6 +81,8 @@ def test_examples(
     python_executable_with_venv = get_python_executable_with_venv(venv_path)
     run_example_py = EXAMPLE_TEST_ROOT / "run_example.py"
     run_cmd_line = f"{python_executable_with_venv} {run_example_py} --name {example_name} --output {metrics_file_path}"
+    if data is not None:
+        run_cmd_line += f" --data {data}"
     cmd = Command(run_cmd_line, cwd=PROJECT_ROOT, env=env)
     cmd.run()
 
