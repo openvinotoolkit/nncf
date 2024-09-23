@@ -381,13 +381,14 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         ]
         weight_nodes = []
         for node in weight_nodes_candidates:
-            if node.metatype in PTMinMaxAlgoBackend.MAT_MUL_METATYPES and not PTMinMaxAlgoBackend.is_constant_matmul(
-                node, nncf_graph
+            if (
+                node.metatype in PTMinMaxAlgoBackend.MAT_MUL_METATYPES
+                and not PTMinMaxAlgoBackend.is_matmul_with_constant(node, nncf_graph)
             ):
                 continue
             weight_nodes.append(node)
         return weight_nodes
 
     @staticmethod
-    def is_constant_matmul(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return len(get_weight_tensor_port_ids(node, nncf_graph)) > 0

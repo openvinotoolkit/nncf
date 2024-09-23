@@ -270,5 +270,5 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return weight_name not in quantized_weight_names
 
     @staticmethod
-    def is_constant_matmul(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return node.layer_attributes.has_weight()

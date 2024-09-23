@@ -315,12 +315,11 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_constant_matmul(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
-        Returns true if given nncf matmul node is a matmul with a constant,
-            False otherwise.
+        Returns true if given nncf matmul node is a matmul with a constant, False otherwise.
+
         :param Node: Instance of NNCFNode.
         :param nncf_graph: Instance of NNCFGraph.
-        :return: True if given nncf matmul node is a matmul with a constant,
-            False otherwise.
+        :return: True if given nncf matmul node is a matmul with a constant, False otherwise.
         """

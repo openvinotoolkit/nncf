@@ -1026,7 +1026,7 @@ class MinMaxQuantization(Algorithm):
                             continue
                         if (
                             quantization_point.qconfig.mode != QuantizationScheme.SYMMETRIC
-                            and not self._backend_entity.is_constant_matmul(node, nncf_graph)
+                            and not self._backend_entity.is_matmul_with_constant(node, nncf_graph)
                         ):
                             quantization_point.qconfig.mode = QuantizationScheme.SYMMETRIC
                             nncf_logger.debug(
