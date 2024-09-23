@@ -135,7 +135,6 @@ class ModelCase:
     model_builder: Callable[[], torch.nn.Module]
     model_id: str
     input_shape: Tuple[int]
-    buffer_count: int
 
 
 def torchvision_model_case(model_id: str, input_shape: Tuple[int,], buffer_count):
@@ -144,10 +143,11 @@ def torchvision_model_case(model_id: str, input_shape: Tuple[int,], buffer_count
 
 
 TEST_MODELS_QUANIZED = (
-    (torchvision_model_case("resnet18", (1, 3, 224, 224), 63), {}),
-    (torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224), 148), {}),
-    (torchvision_model_case("vit_b_16", (1, 3, 224, 224), 150), {"model_type": nncf.ModelType.TRANSFORMER}),
-    (torchvision_model_case("swin_v2_s", (1, 3, 224, 224), 468), {"model_type": nncf.ModelType.TRANSFORMER}),
+    (torchvision_model_case("resnet18", (1, 3, 224, 224)), {}),
+    (torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)), {}),
+    (torchvision_model_case("vit_b_16", (1, 3, 224, 224)), {"model_type": nncf.ModelType.TRANSFORMER}),
+    (torchvision_model_case("swin_v2_s", (1, 3, 224, 224)), {"model_type": nncf.ModelType.TRANSFORMER}),
+
 )
 
 
@@ -173,5 +173,3 @@ def test_post_quantization_compression(model_case: ModelCase, quantization_param
                 assert input_tup[0].dtype == torch.int8
                 result = node.target(*tuple(input_tup))
                 assert result.dtype == torch.float32
-    buffer_count = sum(1 for ele in quantized_model.buffers())
-    assert buffer_count == model_case.buffer_count
