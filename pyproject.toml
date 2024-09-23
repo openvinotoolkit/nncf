@@ -69,6 +69,7 @@ version = { attr = "_version_helper.version" }
 [tool.setuptools.packages.find]
 where = ["."]
 exclude = ["tests", "tests.*", "examples", "examples.*", "tools", "tools.*"]
+namespaces = false
 
 [tool.black]
 line-length = 120
@@ -122,7 +123,6 @@ select = [
     "F", # pyflakes rules
     "CPY001", # copyright check
     "NPY", # numpy rules
-
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
