@@ -178,7 +178,7 @@ def test_is_shared_attribute_before_transformation(unification):
     model = MultiBranchesConnectedModel()
     ex_inputs = torch.ones((1, 3, 3, 3))
     captured_model = _capture_model(model, ex_inputs)
-    if(unification):
+    if unification:
         shared_constants_unification_transformation(captured_model)
     nncf_graph = NNCFGraphFactory.create(captured_model)
     check_is_shared_attribute(captured_model, nncf_graph, unification)
