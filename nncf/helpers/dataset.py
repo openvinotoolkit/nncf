@@ -9,38 +9,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-from transformers import PreTrainedModel
-from transformers import PreTrainedTokenizer
-from transformers.utils import logging
+from typing import List, TypeVar
 
-from nncf.common.logging.track_progress import track
-from nncf.data.dataset import Dataset
-
-logging.set_verbosity_error()
+import nncf
 
 BASE_VOCAB_SIZE = 12000
 
+TModel = TypeVar("TModel")
+TTokenizer = TypeVar("TTokenizer")
 
-def get_auto_dataset(
-    model: PreTrainedModel,
-    tokenizer: PreTrainedTokenizer,
-    transform_func: callable,
+
+def generate_text_data(
+    model: TModel,
+    tokenizer: TTokenizer,
     seq_len: int = 32,
     dataset_size: int = 128,
-) -> Dataset:
+) -> List[str]:
     """
-    Generates dataset based on the model output.
+    Generates text dataset based on the model output.
 
-    :param model: PreTrainedModel instance.
-    :param tokenizer: PreTrainedTokenizer instance.
-    :param transform_func: Callable transformation function.
+    :param model: Model instance.
+    :param tokenizer: Tokenizer instance.
     :param seq_len: Sequence length for generation.
-    :param dataset_size: Size of the nncf.Dataset.
-    :return: nncf.Dataset instance ready to use.
+    :param dataset_size: Size of the data.
+    :return: List of the text data ready to use.
     """
 
-    collected_data = []
+    try:
+        import torch
+        from transformers import PreTrainedModel
+        from transformers import PreTrainedTokenizerBase
+        from transformers.utils import logging
+
+        from nncf.common.logging.track_progress import track
+
+        logging.set_verbosity_error()
+    except ImportError:
+        raise nncf.ModuleNotFoundError("Install `nncf/helpers/requirements.txt` before using `nncf.helpers` module.")
+
+    if not isinstance(model, PreTrainedModel) or not isinstance(tokenizer, PreTrainedTokenizerBase):
+        raise nncf.ValidationError(
+            "Model and tokenizer should be instance of the "
+            "`transformers.PreTrainedModel` and `transformers.PreTrainedTokenizerBase` respectively."
+        )
+
+    generated_data = []
 
     vocab_size_names = ["padded_vocab_size", "vocab_size"]
     vocab_size = BASE_VOCAB_SIZE
@@ -61,7 +74,6 @@ def get_auto_dataset(
         outputs_post = model.generate(outputs_prep, do_sample=True, max_length=seq_len + seq_len // 2)
         gen_text = tokenizer.batch_decode(outputs_post[:, outputs_prep.shape[1] :], skip_special_tokens=True)
 
-        collected_data.extend(gen_text)
+        generated_data.extend(gen_text)
 
-    calibration_dataset = Dataset(collected_data, transform_func)
-    return calibration_dataset
+    return generated_data

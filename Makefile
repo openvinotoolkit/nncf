@@ -184,6 +184,7 @@ install-common-test:
 	pip install -r tests/common/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
+	pip install -r nncf/helpers/requirements.txt
 
 test-common:
 	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
