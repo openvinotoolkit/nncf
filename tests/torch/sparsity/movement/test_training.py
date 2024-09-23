@@ -20,7 +20,7 @@ import torch.cuda
 from packaging import version
 from pytest import approx
 
-from tests.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import PROJECT_ROOT
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import BaseSampleTestCaseDescriptor
 from tests.torch.sample_test_validator import BaseSampleValidator

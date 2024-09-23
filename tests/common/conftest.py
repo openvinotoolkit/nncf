@@ -10,4 +10,4 @@
 # limitations under the License.
 
 
-from tests.shared.logging import nncf_caplog  # noqa: F401
+from tests.cross_fw.shared.logging import nncf_caplog  # noqa: F401

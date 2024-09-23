@@ -23,6 +23,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
+from nncf.openvino.graph.metatypes.groups import ELEMENTWISE_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.model_utils import get_start_nodes_for_activation_path_tracing
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
@@ -58,6 +59,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVConvolutionMetatype]
+
+    @property
+    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+        return ELEMENTWISE_OPERATIONS
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:

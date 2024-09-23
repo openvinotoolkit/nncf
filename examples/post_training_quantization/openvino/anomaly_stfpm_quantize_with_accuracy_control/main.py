@@ -125,7 +125,7 @@ def run_example():
         image_size=(256, 256),
         train_batch_size=1,
         eval_batch_size=1,
-        num_workers=1,
+        num_workers=0,
     )
     datamodule.setup()
     test_loader = datamodule.test_dataloader()

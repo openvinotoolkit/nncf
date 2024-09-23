@@ -623,7 +623,7 @@ class MinMaxQuantization(Algorithm):
             scope_overrides=scope_overrides,
         )
 
-        quantization_proposal = solver.run_on_ip_graph(ip_graph)
+        quantization_proposal = solver.run_on_ip_graph(ip_graph, self._backend_entity.elementwise_metatypes)
         multi_config_setup = quantization_proposal.quantizer_setup
         single_config_setup = multi_config_setup.select_first_qconfig_for_each_point()
         finalized_proposal = quantization_proposal.finalize(single_config_setup)

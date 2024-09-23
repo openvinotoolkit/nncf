@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import filecmp
+
 from copy import deepcopy
 from pathlib import Path
 
@@ -17,8 +17,8 @@ import pytest
 
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
-from tests.shared.nx_graph import check_nx_graph
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.nx_graph import check_nx_graph
+from tests.cross_fw.shared.paths import TEST_ROOT
 
 
 @pytest.fixture(scope="module")
@@ -47,7 +47,9 @@ def test_writing_does_not_modify_original_graph(tmp_path: Path, ref_graph: nx.Di
 def test_colons_are_replaced_in_written_dot_file(tmp_path: Path, ref_graph: nx.DiGraph):
     tmp_path_to_graph = tmp_path / "graph.dot"
     write_dot_graph(ref_graph, tmp_path_to_graph)
-    assert filecmp.cmp(tmp_path_to_graph, REF_DOT_REPRESENTATION_GRAPH_PATH)
+    ref = REF_DOT_REPRESENTATION_GRAPH_PATH.read_text()
+    act = tmp_path_to_graph.read_text()
+    assert ref == act
 
 
 def test_read_dot_file_gives_graph_with_colons(tmp_path: Path, ref_graph: nx.DiGraph):

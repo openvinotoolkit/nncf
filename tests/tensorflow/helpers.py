@@ -20,7 +20,7 @@ from examples.tensorflow.common.object_detection.datasets.builder import COCODat
 from nncf import NNCFConfig
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
-from tests.shared.helpers import BaseTensorListComparator
+from tests.cross_fw.shared.helpers import BaseTensorListComparator
 
 TensorType = Union[tf.Tensor, tf.Variable, np.ndarray, numbers.Number]
 

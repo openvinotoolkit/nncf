@@ -73,7 +73,6 @@ class InsertionPointGraph(nx.DiGraph):
     def __init__(
         self,
         nncf_graph: NNCFGraph,
-        weight_modifiable_node_names: List[NNCFNodeName] = None,
         allowed_pre_hook_insertion_points: List[PreHookInsertionPoint] = None,
         allowed_post_hook_insertion_points: List[PostHookInsertionPoint] = None,
     ):
@@ -81,8 +80,6 @@ class InsertionPointGraph(nx.DiGraph):
         Initializes the insertion point graph.
 
         :param nncf_graph: The base NNCFGraph representing the model structure.
-        :param weight_modifiable_node_names: Names of the nodes in `nncf_graph` that correspond to operations with
-          modifiable weights.
         :param allowed_pre_hook_insertion_points: A list of pre-hook insertion points for this graph to allow.
           If left unspecified, every node in `nncf_graph` will be allowed to have a separate pre-hook for each of its
           tensor inputs.
@@ -93,10 +90,6 @@ class InsertionPointGraph(nx.DiGraph):
 
         super().__init__()
         self._base_nx_graph = deepcopy(nncf_graph.get_nx_graph_copy())
-        if weight_modifiable_node_names is None:
-            self._weight_modifiable_node_names = []
-        else:
-            self._weight_modifiable_node_names = weight_modifiable_node_names
 
         if allowed_pre_hook_insertion_points is None:
             allowed_pre_hook_insertion_points = self._get_default_pre_hook_ip_list(nncf_graph)
@@ -235,10 +228,6 @@ class InsertionPointGraph(nx.DiGraph):
                 if post_hook_has_integer_outputs:
                     for follower_node_key in self.successors(from_node_key):
                         self.edges[from_node_key, follower_node_key][self.IS_INTEGER_PATH_EDGE_ATTR] = True
-
-    @property
-    def weight_modifiable_node_names(self) -> List[NNCFNodeName]:
-        return self._weight_modifiable_node_names
 
     @staticmethod
     def _get_default_pre_hook_ip_list(nncf_graph: NNCFGraph) -> List[PreHookInsertionPoint]:

@@ -50,7 +50,7 @@ from examples.torch.semantic_segmentation.utils.loss_funcs import do_model_speci
 from nncf import NNCFConfig
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.torch.utils import is_main_process
-from tests.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import PROJECT_ROOT
 
 CONFIGS = list((PROJECT_ROOT / Path("examples/torch/semantic_segmentation/configs")).glob("*"))
 

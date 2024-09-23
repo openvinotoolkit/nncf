@@ -39,6 +39,7 @@ from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
+from nncf.torch.graph.operator_metatypes import ELEMENTWISE_OPERATIONS
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
@@ -82,6 +83,10 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype]
+
+    @property
+    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+        return ELEMENTWISE_OPERATIONS
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
@@ -198,7 +203,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> str:
         weighted_node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        weight = nncf_graph.get_previous_nodes(weighted_node)[target_point.input_port_id]
+        weight_edge = nncf_graph.get_input_edge_by_port_id(weighted_node, target_point.input_port_id)
+        weight = weight_edge.from_node
         return weight.node_name
 
     @staticmethod
