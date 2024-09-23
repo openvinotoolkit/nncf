@@ -11,7 +11,7 @@
 
 import atheris
 
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.paths import TEST_ROOT
 
 with atheris.instrument_imports():
     import nncf

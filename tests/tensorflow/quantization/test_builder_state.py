@@ -33,7 +33,7 @@ from nncf.tensorflow.quantization.algorithm import TFQuantizationPoint
 from nncf.tensorflow.quantization.algorithm import TFQuantizationSetup
 from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from nncf.tensorflow.utils.state import TFCompressionState
-from tests.shared.serialization import check_serialization
+from tests.cross_fw.shared.serialization import check_serialization
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
 from tests.tensorflow.quantization.test_algorithm_quantization import check_default_qspecs

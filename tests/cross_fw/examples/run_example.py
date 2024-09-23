@@ -17,7 +17,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Dict, Tuple, Union
 
-from tests.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import PROJECT_ROOT
 
 
 def post_training_quantization_mobilenet_v2(example_root_dir: str) -> Dict[str, float]:

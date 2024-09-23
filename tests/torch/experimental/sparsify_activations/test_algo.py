@@ -28,8 +28,8 @@ from nncf.experimental.torch.sparsify_activations.torch_backend import Activatio
 from nncf.scopes import IgnoredScope
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.nncf_network import NNCFNetwork
-from tests.shared.nx_graph import compare_nx_graph_with_reference
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.experimental.sparsify_activations.helpers import ThreeLinearModel
 from tests.torch.experimental.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 from tests.torch.experimental.sparsify_activations.helpers import dummy_llama_model
