@@ -34,7 +34,7 @@ from nncf.common.utils.os import safe_open
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch import test_models
 from tests.torch.test_compressed_graph import check_graph
 

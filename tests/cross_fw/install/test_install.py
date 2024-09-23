@@ -21,12 +21,12 @@ import nncf
 from nncf.common.utils.os import is_linux
 from nncf.common.utils.os import is_windows
 from tests.cross_fw.install.conftest import TESTED_BACKENDS
-from tests.shared.case_collection import skip_if_backend_not_selected
-from tests.shared.helpers import create_venv_with_nncf
-from tests.shared.helpers import get_pip_executable_with_venv
-from tests.shared.helpers import get_python_executable_with_venv
-from tests.shared.paths import PROJECT_ROOT
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.case_collection import skip_if_backend_not_selected
+from tests.cross_fw.shared.helpers import create_venv_with_nncf
+from tests.cross_fw.shared.helpers import get_pip_executable_with_venv
+from tests.cross_fw.shared.helpers import get_python_executable_with_venv
+from tests.cross_fw.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import TEST_ROOT
 
 
 def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backend: str, install_type: str):

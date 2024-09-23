@@ -24,10 +24,10 @@ import torch
 from examples.torch.common.utils import get_run_name
 from nncf import NNCFConfig
 from nncf.common.utils.registry import Registry
-from tests.shared.command import arg_list_from_arg_dict
-from tests.shared.config_factory import ConfigFactory
-from tests.shared.paths import EXAMPLES_DIR
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.command import arg_list_from_arg_dict
+from tests.cross_fw.shared.config_factory import ConfigFactory
+from tests.cross_fw.shared.paths import EXAMPLES_DIR
+from tests.cross_fw.shared.paths import TEST_ROOT
 
 
 def create_command_line(args: Dict[str, Any], sample_type: str, main_filename: str = "main.py") -> str:

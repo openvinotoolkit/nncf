@@ -22,7 +22,7 @@ import pytest
 import torch
 
 import nncf
-from tests.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
+from tests.cross_fw.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
 
 
 @pytest.mark.skipif(ISOLATION_RUN_ENV_VAR not in os.environ, reason="Should be run via isolation proxy")
