@@ -66,13 +66,18 @@ def get_compressed_modules_weights(
     return n_target_modules, n_compressed_weights
 
 
+def _capture_model(model, inputs):
+    with torch.no_grad():
+        with disable_patching():
+            return capture_pre_autograd_graph(model, (inputs,))
+
+
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
 def test_compress_weights(mode):
-    with disable_patching():
-        model = ShortTransformer(5, 10)
-        input_ids = torch.randint(0, 10, (5,))
-        exported_model = capture_pre_autograd_graph(model, args=(input_ids,))
-        compressed_model = compress_weights(exported_model, mode=mode)
+    model = ShortTransformer(5, 10)
+    input_ids = torch.randint(0, 10, (5,))
+    exported_model = _capture_model(model, input_ids)
+    compressed_model = compress_weights(exported_model, mode=mode)
     dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
     n_compressed_weights = 0
     n_target_modules = 0
@@ -86,11 +91,10 @@ def test_compress_weights(mode):
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
 def test_compress_weights_graph_edge(mode):
-    with disable_patching():
-        model = ShortTransformer(5, 10)
-        input_ids = torch.randint(0, 10, (5,))
-        exported_model = capture_pre_autograd_graph(model, args=(input_ids,))
-        compressed_model = compress_weights(exported_model, mode=mode)
+    model = ShortTransformer(5, 10)
+    input_ids = torch.randint(0, 10, (5,))
+    exported_model = _capture_model(model, input_ids)
+    compressed_model = compress_weights(exported_model, mode=mode)
     nncf_graph = NNCFGraphFactory.create(compressed_model)
     for node in nncf_graph.get_all_nodes():
         if "weights_decompressor" in node.node_name and node.node_type == "call_module":
@@ -104,7 +108,7 @@ def test_compress_weights_shared_weights(mocker, mode):
     with disable_patching():
         model = ShortTransformer(5, 10, share_weights=True)
         input_ids = torch.randint(0, 10, (5,))
-        exported_model = capture_pre_autograd_graph(model, args=(input_ids,))
+        exported_model = _capture_model(model, input_ids)
         compressed_model = compress_weights(exported_model, mode=mode)
     dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
     n_compressed_weights = 0
@@ -135,14 +139,13 @@ def test_compress_weights_shared_weights(mocker, mode):
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
 def test_compressed_model_inference(mode):
     torch.manual_seed(42)
-    with disable_patching():
-        model = ShortTransformer(5, 10, share_weights=True)
-        input_ids = torch.randint(0, 10, (5,))
-        exported_model = capture_pre_autograd_graph(model, args=(input_ids,))
-        exported_model_output = exported_model(input_ids)
-        compressed_model = compress_weights(exported_model, mode=mode)
-        compressed_model_outputs = compressed_model(input_ids)
-    print(compressed_model_outputs, exported_model_output)
+    model = ShortTransformer(5, 10, share_weights=True)
+    input_ids = torch.randint(0, 10, (5,))
+    exported_model = _capture_model(model, input_ids)
+    exported_model_output = exported_model(input_ids)
+    compressed_model = compress_weights(exported_model, mode=mode)
+    compressed_model_outputs = compressed_model(input_ids)
+
     assert (
         exported_model_output.shape == compressed_model_outputs.shape
     ), "Compressed model output shape is not equal to the model output shape"
@@ -154,12 +157,12 @@ def test_compress_weights_model_size_conv(mode):
 
     dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
     model = ConvolutionModel()
-    with disable_patching():
-        input_ids = torch.randint(0, 10, [1, 3, 300, 300])
-        exported_model = capture_pre_autograd_graph(model, args=(input_ids,))
-        model_size = get_model_size(exported_model)
-        compressed_model = compress_weights(exported_model, mode=mode)
-        compressed_model_size = get_model_size(compressed_model)
+
+    input_ids = torch.randint(0, 10, [1, 3, 300, 300])
+    exported_model = _capture_model(model, input_ids)
+    model_size = get_model_size(exported_model)
+    compressed_model = compress_weights(exported_model, mode=mode)
+    compressed_model_size = get_model_size(compressed_model)
 
     n_compressed_weights = 0
     n_target_modules = 0
@@ -177,10 +180,10 @@ def test_compress_weights_model_size_conv(mode):
 def test_compress_weights_functional_model(mode):
     model = FunctionalModel()
     decompressor_type = "symmetric" if mode == CompressWeightsMode.INT8_SYM else "asymmetric"
-    with disable_patching():
-        input_ids = torch.randint(0, 10, [1, 3, 300, 300])
-        exported_model = capture_pre_autograd_graph(model, args=(input_ids,))
-        compressed_model = compress_weights(exported_model, mode=mode)
+
+    input_ids = torch.randint(0, 10, [1, 3, 300, 300])
+    exported_model = _capture_model(model, input_ids)
+    compressed_model = compress_weights(exported_model, mode=mode)
 
     n_compressed_weights = 0
 
@@ -218,18 +221,16 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 def test_raise_error_with_not_int8(mode):
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
-    with disable_patching():
-        exported_model = capture_pre_autograd_graph(dummy_torch_model, args=(dummy_input,))
+    exported_model = _capture_model(dummy_torch_model, dummy_input)
     with pytest.raises(AttributeError):
         compress_weights(exported_model, mode=mode)
 
 
 def test_get_dtype_attribute_of_parameter():
     model = DTypeModel()
-    with disable_patching():
-        dummy_input = torch.randint(0, 10, [3, 3])
-        exported_model = capture_pre_autograd_graph(model, args=(dummy_input,))
-        compressed_model = compress_weights(exported_model)
+    dummy_input = torch.randint(0, 10, [3, 3])
+    exported_model = _capture_model(model, dummy_input)
+    compressed_model = compress_weights(exported_model)
     assert compressed_model.matmul_updated_constant0.dtype == torch.uint8
     compressed_model(dummy_input)
     assert compressed_model.matmul_updated_constant0.dtype == torch.uint8
@@ -245,16 +246,12 @@ def test_model_devices_and_precisions(use_cuda, dtype):
     model = MatMulModel().to(device)
     if dtype == torch.float16:
         model.half()
-    with disable_patching():
-        dummy_input = torch.rand((1, 300), dtype=dtype, device=device)
-        exported_model = capture_pre_autograd_graph(model, args=(dummy_input,))
-        compressed_model = compress_weights(exported_model)
+    dummy_input = torch.rand((1, 300), dtype=dtype, device=device)
+    exported_model = _capture_model(model, dummy_input)
+    compressed_model = compress_weights(exported_model)
     result = compressed_model(dummy_input)
 
     # Scale should always be in float16
-    assert (
-        compressed_model.state_dict()["asymmetric_weights_decompressor_matmul._scale"].dtype
-        == torch.float16
-    )
+    assert compressed_model.state_dict()["asymmetric_weights_decompressor_matmul._scale"].dtype == torch.float16
     # Result should be in the precision of the model
     assert result.dtype == dtype
