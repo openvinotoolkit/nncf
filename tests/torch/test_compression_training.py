@@ -20,9 +20,9 @@ import pytest
 from pytest import approx
 
 from nncf import NNCFConfig
-from tests.shared.helpers import get_cli_dict_args
-from tests.shared.paths import PROJECT_ROOT
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.helpers import get_cli_dict_args
+from tests.cross_fw.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import BaseSampleTestCaseDescriptor
 from tests.torch.sample_test_validator import BaseSampleValidator

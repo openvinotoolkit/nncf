@@ -41,7 +41,7 @@ torchvision/resnet18_backend_FX_TORCH:
 torchvision/mobilenet_v3_small_BC_backend_FP32:
   metric_value: 0.6766
 torchvision/mobilenet_v3_small_BC_backend_OV:
-  metric_value: 0.6677
+  metric_value: 0.6669
 torchvision/mobilenet_v3_small_BC_backend_ONNX:
   metric_value: 0.6679
 torchvision/mobilenet_v3_small_BC_backend_FX_TORCH:
