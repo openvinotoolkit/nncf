@@ -162,6 +162,26 @@ def count_nodes_with_shared_constants(model: torch.fx.GraphModule, nncf_graph: N
     return num_nodes_with_constant_nodes
 
 
+def check_is_shared_attribute(model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> int:
+    model_graph: torch.fx.Graph = model.graph
+    from collections import Counter
+
+    targets = Counter([node.target for node in model.graph.nodes if node.op == "get_attr"])
+    print(targets)
+    for node in model_graph.nodes:
+        nncf_node = nncf_graph.get_node_by_name(node.name)
+        if node.op == "get_attr" and targets[node.target] > 1:
+            assert nncf_node.is_shared()
+
+
+def test_is_shared_attribute_before_transformation():
+    model = MultiBranchesConnectedModel()
+    ex_inputs = torch.ones((1, 3, 3, 3))
+    captured_model = _capture_model(model, ex_inputs)
+    nncf_graph = NNCFGraphFactory.create(captured_model)
+    check_is_shared_attribute(captured_model, nncf_graph)
+
+
 def test_create_shared_constant_transformation():
     model = MultiBranchesConnectedModel()
     ex_inputs = torch.ones((1, 3, 3, 3))
