@@ -330,8 +330,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         model = ov.Model([result], parameters)
 
-        ov_config = {"INFERENCE_PRECISION_HINT": "f32"}
-        compiled_model = ov.compile_model(model, device_name="CPU", config=ov_config)
+        compiled_model = ov.compile_model(model, device_name="CPU")
 
         return lambda parameters: compiled_model(parameters)[0]
 
@@ -364,8 +363,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         model = ov.Model([result], parameters)
 
-        ov_config = {"INFERENCE_PRECISION_HINT": "f32"}
-        compiled_model = ov.compile_model(model, device_name="CPU", config=ov_config)
+        compiled_model = ov.compile_model(model, device_name="CPU")
 
         return lambda parameters: compiled_model(parameters)[0]
 
