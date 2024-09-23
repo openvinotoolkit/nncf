@@ -22,7 +22,7 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
-from nncf.parameters import BackupPrecision
+from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -395,7 +395,7 @@ def compress_weights(
     scale_estimation: Optional[bool] = None,
     gptq: Optional[bool] = None,
     lora_correction: Optional[bool] = None,
-    backup_precision: Optional[BackupPrecision] = BackupPrecision.INT8_ASYM,
+    backup_mode: Optional[BackupMode] = BackupMode.INT8_ASYM,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> TModel:
     """
@@ -446,9 +446,12 @@ def compress_weights(
     :type gptq: bool
     :param lora_correction: Indicates whether to use Lora Correction algorithm.
     :type lora_correction: bool
-    :param backup_precision: Defines a backup precision that should be used
-        for all the layers that are kept in higher precision than primary precision.
-    :type backup_precision: nncf.BackupPrecision
+    :param backup_mode: Defines a backup mode for weight compression.
+        NONE stands for original floating-point precision of the model weights (either FP16 or FP32).
+            In this mode, weights are retained in their original precision without any quantization.
+        INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
+        INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
+    :type backup_mode: nncf.BackupMode
     :param advanced_parameters: Advanced parameters for compression algorithms.
     :type advanced_parameters: nncf.AdvancedCompressionParameters
     :return: The non-trainable model with compressed weights.
@@ -609,7 +612,7 @@ def compress_weights(
         scale_estimation,
         gptq,
         lora_correction,
-        backup_precision,
+        backup_mode,
         advanced_parameters,
     )
 

@@ -29,7 +29,7 @@ from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
 from nncf.openvino.rt_info import dump_parameters
-from nncf.parameters import BackupPrecision
+from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -380,7 +380,7 @@ def compress_weights_impl(
     scale_estimation: bool,
     gptq: bool,
     lora_correction: bool,
-    backup_precision: Optional[BackupPrecision] = BackupPrecision.INT8_ASYM,
+    backup_mode: Optional[BackupMode] = BackupMode.INT8_ASYM,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> ov.Model:
     """
@@ -400,7 +400,7 @@ def compress_weights_impl(
         scale_estimation,
         gptq,
         lora_correction,
-        backup_precision,
+        backup_mode,
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)

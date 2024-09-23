@@ -96,11 +96,11 @@ class CompressWeightsMode(StrEnum):
     E2M1 = "e2m1"
 
 
-@api(canonical_alias="nncf.BackupPrecision")
-class BackupPrecision(StrEnum):
+@api(canonical_alias="nncf.BackupMode")
+class BackupMode(StrEnum):
     """
-    Defines a backup precision for weight compression.
-    :param FP: Stands for original floating-point precision of the model weights (either FP16 or FP32).
+    Defines a backup mode for weight compression.
+    :param NONE: Stands for original floating-point precision of the model weights (either FP16 or FP32).
         In this mode, weights are retained in their original precision without any quantization.
     :param INT8_SYM: Stands for 8-bit integer symmetric quantization without zero point.
         https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization
@@ -108,7 +108,7 @@ class BackupPrecision(StrEnum):
         https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization
     """
 
-    FP = "fp16/fp32"
+    NONE = "none"
     INT8_SYM = "int8_sym"
     INT8_ASYM = "int8_asym"
 

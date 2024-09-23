@@ -27,7 +27,7 @@ from nncf.data.dataset import Dataset
 from nncf.errors import ValidationError
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.graph.node_utils import get_const_value
-from nncf.parameters import BackupPrecision
+from nncf.parameters import BackupMode
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
@@ -1272,24 +1272,24 @@ def test_lora_with_mixed_precision():
             assert op.get_shape() == [sz, 1]
 
 
-@pytest.mark.parametrize("backup_precision", [BackupPrecision.FP, BackupPrecision.INT8_ASYM, BackupPrecision.INT8_SYM])
-def test_data_free_compression_with_backup_precision(backup_precision):
+@pytest.mark.parametrize("backup_mode", [BackupMode.NONE, BackupMode.INT8_ASYM, BackupMode.INT8_SYM])
+def test_data_free_compression_with_backup_mode(backup_mode):
     model = AWQMatmulModel().ov_model
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.NF4,
         ratio=0.7,
         group_size=-1,
-        backup_precision=backup_precision,
+        backup_mode=backup_mode,
     )
     act_num = 0
     num_compressed = 3
-    if backup_precision == BackupPrecision.INT8_ASYM:
-        backup_ov_precision = ov.Type.u8
-    elif backup_precision == BackupPrecision.INT8_SYM:
-        backup_ov_precision = ov.Type.i8
+    if backup_mode == BackupMode.INT8_ASYM:
+        backup_ov_mode = ov.Type.u8
+    elif backup_mode == BackupMode.INT8_SYM:
+        backup_ov_mode = ov.Type.i8
     else:
-        backup_ov_precision = ov.Type.f32
+        backup_ov_mode = ov.Type.f32
     for op in compressed_model.get_ops():
         if op.get_type_name() == "Constant":
             if op.get_element_type() == ov.Type.nf4:
@@ -1297,11 +1297,11 @@ def test_data_free_compression_with_backup_precision(backup_precision):
             elif "/scale" in op.get_friendly_name():
                 assert op.get_element_type() == ov.Type.f16
             else:
-                assert op.get_element_type() == backup_ov_precision
+                assert op.get_element_type() == backup_ov_mode
     assert act_num == num_compressed
 
 
-@pytest.mark.parametrize("backup_precision", [BackupPrecision.FP, BackupPrecision.INT8_ASYM, BackupPrecision.INT8_SYM])
+@pytest.mark.parametrize("backup_mode", [BackupMode.NONE, BackupMode.INT8_ASYM, BackupMode.INT8_SYM])
 @pytest.mark.parametrize(
     ("params", "num_compressed"),
     (
@@ -1317,7 +1317,7 @@ def test_data_free_compression_with_backup_precision(backup_precision):
         ({"awq": True}, 6),
     ),
 )
-def test_data_based_compression_with_backup_precision(backup_precision, params, num_compressed):
+def test_data_based_compression_with_backup_mode(backup_mode, params, num_compressed):
     model = AWQMatmulModel().ov_model
     sz = 8
     n_samples = 10
@@ -1329,16 +1329,16 @@ def test_data_based_compression_with_backup_precision(backup_precision, params, 
         ratio=0.8,
         group_size=-1,
         dataset=dataset,
-        backup_precision=backup_precision,
+        backup_mode=backup_mode,
         **params,
     )
     act_num = 0
-    if backup_precision == BackupPrecision.INT8_ASYM:
-        backup_ov_precision = ov.Type.u8
-    elif backup_precision == BackupPrecision.INT8_SYM:
-        backup_ov_precision = ov.Type.i8
+    if backup_mode == BackupMode.INT8_ASYM:
+        backup_ov_mode = ov.Type.u8
+    elif backup_mode == BackupMode.INT8_SYM:
+        backup_ov_mode = ov.Type.i8
     else:
-        backup_ov_precision = ov.Type.f32
+        backup_ov_mode = ov.Type.f32
     for op in compressed_model.get_ops():
         if op.get_type_name() == "Constant":
             if op.get_element_type() == ov.Type.u4:
@@ -1348,5 +1348,5 @@ def test_data_based_compression_with_backup_precision(backup_precision, params, 
             elif "_lora_" in op.get_friendly_name():
                 assert op.get_element_type() == ov.Type.u8
             else:
-                assert op.get_element_type() == backup_ov_precision
+                assert op.get_element_type() == backup_ov_mode
     assert act_num == num_compressed

@@ -26,7 +26,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
-from nncf.parameters import BackupPrecision
+from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
@@ -69,7 +69,7 @@ class WeightCompression(Algorithm):
         scale_estimation: bool,
         gptq: bool,
         lora_correction: bool,
-        backup_precision: BackupPrecision = BackupPrecision.INT8_ASYM,
+        backup_mode: BackupMode = BackupMode.INT8_ASYM,
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ):
         """
@@ -80,21 +80,21 @@ class WeightCompression(Algorithm):
                 with a typical non-fixed zero point.
             INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
                 Weights are quantized to a primary precision symmetrically without zero point.
-                All embeddings and the last layer are always compressed to a backup_precision, which is INT8_ASYM,
-                by default. All others are quantized whether to 4-bit integer or to a backup_precision depending on
+                All embeddings and the last layer are always compressed to a backup_mode, which is INT8_ASYM,
+                by default. All others are quantized whether to 4-bit integer or to a backup_mode depending on
                 criteria and the given ratio.
             INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
                 with a typical non-fixed zero point.
             NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
             E2M1 is the same as INT4_SYM mode, but primary precision is E2M1 data type without zero point.
         :param ratio: the ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
-            and the rest to backup_precision).
+            and the rest to backup_mode).
         :param group_size: number of weights (e.g. 128) in the channel dimension
             that share quantization parameters (scale). The value -1 means no grouping.
         :param ignored_scope: An ignored scope that defined the list of model control
             flow graph nodes to be ignored during quantization.
         :param all_layers: Indicates whether embeddings and last MatMul layers should be compressed to a primary
-            precision. By default, the backup_precision is assigned for the embeddings and last MatMul layers.
+            precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.
         :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
             preserve the accuracy of the model, the more sensitive layers receives a higher precision.
         :param awq: determines whether to use or not modified AWQ algorithm.
@@ -103,8 +103,11 @@ class WeightCompression(Algorithm):
         :param scale_estimation: determines whether to use or not scale estimation for 4 bit layers.
         :param gptq: determines whether to use or not GPTQ algorithm.
         :param lora_correction: determines whether to use or not LoRA Correction algorithm.
-        :param backup_precision: determines the precision used for layers that are not quantized to a primary precision,
-            which is INT8_ASYM, by default.
+        :param backup_mode: Defines a backup mode for weight compression.
+            NONE stands for original floating-point precision of the model weights (either FP16 or FP32).
+                In this mode, weights are retained in their original precision without any quantization.
+            INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
+            INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
         :param advanced_parameters: advanced parameters for algorithms in compression pipeline.
         """
         super().__init__()
@@ -122,7 +125,7 @@ class WeightCompression(Algorithm):
         self._scale_estimation = scale_estimation
         self._gptq = gptq
         self._lora_correction = lora_correction
-        self._backup_precision = backup_precision
+        self._backup_mode = backup_mode
         self._advanced_parameters = (
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
@@ -291,7 +294,7 @@ class WeightCompression(Algorithm):
         num_params = len(all_params)
         dtype_vs_num_weights_map = OrderedDict(sorted(dtype_vs_num_weights_map.items(), reverse=True))
         # Table creation
-        header = ["Data type", "% all parameters (layers)", "% ratio-defining parameters (layers)"]
+        header = ["Weight compression mode", "% all parameters (layers)", "% ratio-defining parameters (layers)"]
         rows = []
         for bitwidth, (n_total, n_ratio_defining) in dtype_vs_num_weights_map.items():
             rows.append(
@@ -356,21 +359,21 @@ class WeightCompression(Algorithm):
                     and node.node_name not in ignored_names
                 ):
                     # NNCF supports multiple reduction axes only for ops with group_size != -1.
-                    # Convolution ops are always kept in backup precision.
+                    # Convolution ops are always kept in backup mode.
                     # Embedding layers are quantized to 4-bits only if all_layers=True.
                     # MatMul ops can't have multiple reduction axes.
                     nncf_logger.warning(
                         f"Weight compression expects a single reduction axis, but {len(reduction_axes)} given. "
                         f"Weight shape: {weight_shape}, reduction axes: {reduction_axes}, "
-                        f"node name: {node.node_name}. The presicion of node will be {self._backup_precision}."
+                        f"node name: {node.node_name}. The node will be in {self._backup_mode} mode."
                     )
 
-                if node.node_name in ignored_names or self._backup_precision == BackupPrecision.FP:
+                if node.node_name in ignored_names or self._backup_mode == BackupMode.NONE:
                     wc_config = None
                 else:
                     mode = (
                         CompressWeightsMode.INT8_ASYM
-                        if self._backup_precision == BackupPrecision.INT8_ASYM
+                        if self._backup_mode == BackupMode.INT8_ASYM
                         else CompressWeightsMode.INT8_SYM
                     )
                     wc_config = WeightCompressionConfig(mode=mode)
@@ -468,7 +471,7 @@ class WeightCompression(Algorithm):
                 "scale_estimation": self._scale_estimation,
                 "gptq": self._gptq,
                 "lora_correction": self._lora_correction,
-                "backup_precision": self._backup_precision.value,
+                "backup_mode": self._backup_mode.value,
                 "advanced_parameters": convert_to_dict_recursively(self._advanced_parameters),
             },
             algo_name="weight_compression",
