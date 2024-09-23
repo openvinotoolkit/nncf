@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Tuple
@@ -157,29 +158,30 @@ def count_nodes_with_shared_constants(model: torch.fx.GraphModule, nncf_graph: N
         nncf_node = nncf_graph.get_node_by_name(node.name)
         num_consumer_nodes = len(nncf_graph.get_next_nodes(nncf_node))
         if node.op == "get_attr" and num_consumer_nodes > 1:
-            assert nncf_node.is_shared()
             num_nodes_with_constant_nodes += num_consumer_nodes
     return num_nodes_with_constant_nodes
 
 
-def check_is_shared_attribute(model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> int:
+def check_is_shared_attribute(model: torch.fx.GraphModule, nncf_graph: NNCFGraph, unification: bool) -> None:
     model_graph: torch.fx.Graph = model.graph
-    from collections import Counter
-
     targets = Counter([node.target for node in model.graph.nodes if node.op == "get_attr"])
-    print(targets)
     for node in model_graph.nodes:
         nncf_node = nncf_graph.get_node_by_name(node.name)
-        if node.op == "get_attr" and targets[node.target] > 1:
+        num_consumer_nodes = len(nncf_graph.get_next_nodes(nncf_node))
+        cond = num_consumer_nodes > 1 if unification else targets[node.target] > 1
+        if node.op == "get_attr" and cond:
             assert nncf_node.is_shared()
 
 
-def test_is_shared_attribute_before_transformation():
+@pytest.mark.parametrize("unification", [False, True])
+def test_is_shared_attribute_before_transformation(unification):
     model = MultiBranchesConnectedModel()
     ex_inputs = torch.ones((1, 3, 3, 3))
     captured_model = _capture_model(model, ex_inputs)
+    if(unification):
+        shared_constants_unification_transformation(captured_model)
     nncf_graph = NNCFGraphFactory.create(captured_model)
-    check_is_shared_attribute(captured_model, nncf_graph)
+    check_is_shared_attribute(captured_model, nncf_graph, unification)
 
 
 def test_create_shared_constant_transformation():

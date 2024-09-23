@@ -40,7 +40,6 @@ from tests.torch.test_compressed_graph import check_graph
 
 FX_DIR_NAME = Path("fx")
 FX_QUANTIZED_DIR_NAME = Path("fx") / "quantized"
-FX_COMPRESSED_DIR_NAME = Path("fx") / "compressed"
 
 
 @dataclass
