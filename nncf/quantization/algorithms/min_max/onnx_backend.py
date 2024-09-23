@@ -271,4 +271,5 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        assert node.metatype in ONNXMinMaxAlgoBackend().mat_mul_metatypes
         return node.layer_attributes.has_weight()

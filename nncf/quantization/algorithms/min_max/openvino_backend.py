@@ -266,6 +266,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        assert node.metatype in OVMinMaxAlgoBackend().mat_mul_metatypes
         return node.layer_attributes is not None
 
     @staticmethod

@@ -66,11 +66,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
     }
 
-    MAT_MUL_METATYPES = [om.PTLinearMetatype, om.PTMatMulMetatype, om.PTAddmmMetatype]
-
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
-        return self.MAT_MUL_METATYPES
+        return [om.PTLinearMetatype, om.PTMatMulMetatype, om.PTAddmmMetatype]
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -382,7 +380,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         weight_nodes = []
         for node in weight_nodes_candidates:
             if (
-                node.metatype in PTMinMaxAlgoBackend.MAT_MUL_METATYPES
+                node.metatype in PTMinMaxAlgoBackend().mat_mul_metatypes
                 and not PTMinMaxAlgoBackend.is_matmul_with_constant(node, nncf_graph)
             ):
                 continue
@@ -391,4 +389,5 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        assert node.metatype in PTMinMaxAlgoBackend().mat_mul_metatypes
         return len(get_weight_tensor_port_ids(node, nncf_graph)) > 0
