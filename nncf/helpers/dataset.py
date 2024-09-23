@@ -47,7 +47,7 @@ def generate_text_data(
     except ImportError:
         raise nncf.ModuleNotFoundError("Install `nncf/helpers/requirements.txt` before using `nncf.helpers` module.")
 
-    if not isinstance(model, PreTrainedModel) or not isinstance(tokenizer, PreTrainedTokenizerBase):
+    if not isinstance(model, PreTrainedModel.__bases__) or not isinstance(tokenizer, PreTrainedTokenizerBase.__bases__):
         raise nncf.ValidationError(
             "Model and tokenizer should be instance of the "
             "`transformers.PreTrainedModel` and `transformers.PreTrainedTokenizerBase` respectively."
