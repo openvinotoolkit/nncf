@@ -539,6 +539,7 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     fuse_conv_bn(model)
     separate_conv_and_bias(model)
     separate_linear_and_bias(model)
+    shared_constants_unification_transformation(model)
 
 
 def revert_quantization_transformations(model: torch.fx.GraphModule) -> None:
