@@ -77,7 +77,7 @@ class GraphConverter:
         if metatype in [om.PTEmbeddingMetatype]:
             weight_node = node.args[0]
             if weight_node.op == "get_attr":
-                return om.FXEmbeddingMetatype
+                return om.PTAtenEmbeddingMetatype
 
         return metatype
 

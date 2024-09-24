@@ -1,7 +1,7 @@
 {
     "arg0_1": "PTInputNoopMetatype",
     "_param_constant0": "PTConstNoopMetatype",
-    "embedding": "FXEmbeddingMetatype",
+    "embedding": "PTAtenEmbeddingMetatype",
     "_param_constant1": "PTConstNoopMetatype",
     "_param_constant2": "PTConstNoopMetatype",
     "linear": "PTLinearMetatype",

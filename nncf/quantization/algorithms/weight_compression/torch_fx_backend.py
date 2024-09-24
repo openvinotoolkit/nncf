@@ -80,7 +80,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         ndims = len(edge.tensor_shape)
         reduction_axes = None
-        if node_with_weight.metatype == om.FXEmbeddingMetatype:
+        if node_with_weight.metatype == om.PTAtenEmbeddingMetatype:
             reduction_axes = [1]
         elif node_with_weight.metatype == om.PTLinearMetatype:
             reduction_axes = [ndims - 1]

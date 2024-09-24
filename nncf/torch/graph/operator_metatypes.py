@@ -920,7 +920,7 @@ class PTEmbeddingMetatype(PTOperatorMetatype):
 
 
 @FX_OPERATOR_METATYPES.register()
-class FXEmbeddingMetatype(OperatorMetatype):
+class PTAtenEmbeddingMetatype(OperatorMetatype):
     name = "EmbeddingOp"
     module_to_function_names = {NamespaceTarget.ATEN: ["embedding"]}
     hw_config_names = [HWConfigOpName.EMBEDDING]

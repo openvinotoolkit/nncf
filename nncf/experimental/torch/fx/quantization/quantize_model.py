@@ -82,7 +82,6 @@ def quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
-    shared_constants_unification_transformation(copied_model)
     # To make it easier for bias correction algorithms,
     # biases are being separated by the followng calls.
     apply_quantization_transformations(copied_model)
