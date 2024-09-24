@@ -40,19 +40,11 @@ from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch import test_models
 from tests.torch.ptq.test_weights_compression import ShortTransformer
+from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 
-
-def check_fx_graphs(graph: NNCFGraph, path_to_dot: str, graph_dir: str):
-    data_dir = TEST_ROOT / "torch" / "data" / "fx" / "reference_graphs"
-    dot_dir = data_dir / graph_dir
-    path_to_dot = dot_dir / path_to_dot
-    nx_graph = graph.get_graph_for_structure_analysis(extended=True)
-    compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
-
-
-FX_DIR_NAME = "original_graphs"
-FX_QUANTIZED_DIR_NAME = "quantized_graphs"
+FX_DIR_NAME = Path("fx")
+FX_QUANTIZED_DIR_NAME = Path("fx") / "quantized"
 
 
 @dataclass
@@ -133,7 +125,7 @@ def test_model(test_case: ModelCase):
 
     # Check NNCFGrpah
     dot_filename = get_dot_filename(model_name)
-    check_fx_graphs(nncf_graph, dot_filename, FX_DIR_NAME)
+    check_graph(nncf_graph, dot_filename, FX_DIR_NAME)
 
     # Check metatypes
     model_metatypes = {n.node_name: n.metatype.__name__ for n in nncf_graph.get_all_nodes()}
@@ -180,7 +172,7 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters):
     # visualize_fx_model(quantized_model, f"{model_case.model_id}_int8.svg")
 
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
-    check_fx_graphs(nncf_graph, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME)
+    check_graph(nncf_graph, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME)
 
 
 @pytest.mark.parametrize("unification", [False, True])
@@ -194,4 +186,5 @@ def test_is_shared_attribute(unification):
         shared_constants_unification_transformation(captured_model)
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
     shared_attributes = {n.node_name: n.is_shared() for n in nncf_graph.get_all_nodes()}
-    get_ref_from_json(f"{file_prefix}_shared_attribute_test_model", shared_attributes, attributes=True)
+    ref_attributes = get_ref_from_json(f"{file_prefix}_shared_attribute_test_model", shared_attributes, attributes=True)
+    assert shared_attributes == ref_attributes
