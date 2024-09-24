@@ -20,10 +20,7 @@ TTokenizer = TypeVar("TTokenizer")
 
 
 def generate_text_data(
-    model: TModel,
-    tokenizer: TTokenizer,
-    seq_len: int = 32,
-    dataset_size: int = 128,
+    model: TModel, tokenizer: TTokenizer, seq_len: int = 32, dataset_size: int = 128, unique_tokens_lower_limit: int = 5
 ) -> List[str]:
     """
     Generates text dataset based on the model output.
@@ -40,8 +37,6 @@ def generate_text_data(
         from transformers import PreTrainedModel
         from transformers import PreTrainedTokenizerBase
         from transformers.utils import logging
-
-        from nncf.common.logging.track_progress import track
 
         logging.set_verbosity_error()
     except ImportError:
@@ -64,15 +59,20 @@ def generate_text_data(
     step_num = max(1, vocab_size // dataset_size)
     ids_counter = 0
 
-    for _ in track(range(dataset_size), description="Collecting auto dataset"):
+    while len(generated_data) < dataset_size:
         # Creating the input for pre-generate step
         input_ids = torch.tensor([[ids_counter % vocab_size]])
-        ids_counter += step_num
 
         # Collecting data from the pre & post generate steps
         outputs_prep = model.generate(input_ids, do_sample=False, max_length=seq_len // 2)
         outputs_post = model.generate(outputs_prep, do_sample=True, max_length=seq_len + seq_len // 2)
         gen_text = tokenizer.batch_decode(outputs_post[:, outputs_prep.shape[1] :], skip_special_tokens=True)
+
+        if len(set(gen_text[0])) < unique_tokens_lower_limit:
+            ids_counter += 1
+            continue
+
+        ids_counter += step_num
 
         generated_data.extend(gen_text)
 
