@@ -19,7 +19,7 @@ from packaging import version
 
 from nncf import NNCFConfig
 from nncf.common.hardware.config import HWConfigType
-from tests.shared.nx_graph import compare_nx_graph_with_reference
+from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.tensorflow import test_models
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_empty_config

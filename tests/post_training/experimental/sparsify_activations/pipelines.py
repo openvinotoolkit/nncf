@@ -133,7 +133,7 @@ class SAPipelineMixin:
             for i in range(node.get_output_size()):
                 if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
                     num_int8 += 1
-                if node.get_output_element_type(i).get_type_name() in ["i4", "u4"]:
+                if node.get_output_element_type(i).get_type_name() in ["i4", "u4", "nf4"]:
                     num_int4 += 1
 
         num_sparse_activations = count_sparsifier_patterns_in_ov(model)

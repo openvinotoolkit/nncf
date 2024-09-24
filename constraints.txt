@@ -1,5 +1,5 @@
 # Openvino
-openvino==2024.3.0
+openvino==2024.4.0
 
 # Pytorch
 torch==2.4.0
