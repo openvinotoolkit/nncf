@@ -453,6 +453,22 @@ WEIGHT_COMPRESSION_MODELS = [
         "backends": [BackendType.OV],
     },
     {
+        "reported_name": "tinyllama_NF4_scale_estimation_stateful_per_channel",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": -1,
+            "ratio": 0.1,
+            "mode": CompressWeightsMode.NF4,
+            "scale_estimation": True,
+            "advanced_parameters": AdvancedCompressionParameters(
+                scale_estimation_params=AdvancedScaleEstimationParameters(32, 5, 10, 1.0)
+            ),
+        },
+        "params": {"is_stateful": True},
+        "backends": [BackendType.OV],
+    },
+    {
         "reported_name": "tinyllama_scale_estimation_per_channel",
         "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
         "pipeline_cls": LMWeightCompression,
