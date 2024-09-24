@@ -14,18 +14,18 @@ from typing import Callable, List, Optional
 
 import torch
 import torch.fx
+from torch._export import capture_pre_autograd_graph
 from torch.ao.quantization.fx.utils import create_getattr_from_value
 from torch.ao.quantization.pt2e.utils import fold_bn_weights_into_conv_node
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
+import nncf.torch
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
-import nncf.torch
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from torch._export import capture_pre_autograd_graph
 
 TransformationFNType = Callable[[torch.fx.GraphModule], None]
 
@@ -507,14 +507,15 @@ def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
     model.graph.eliminate_dead_code()
     model.recompile()
 
+
 def _get_pattern_replacement_per_channel():
     class ReplacementModule(torch.nn.Module):
-        def __init__(self, *args) -> None:
+        def __init__(self) -> None:
             super().__init__()
-            self.args = args
+
         def forward(self, x, scale, zero_point, axis, low, high, dtype):
             return torch.mul(x, scale)
-        
+
     def pattern_per_channel(weight, scale, zero_point, axis, low, high, dtype):
         quantized = torch.ops.quantized_decomposed.quantize_per_channel.default(
             weight, scale, zero_point, axis, low, high, dtype
@@ -524,18 +525,20 @@ def _get_pattern_replacement_per_channel():
         )
         return dequantized
 
-    class ReplacementModule(torch.nn.Module):
-        def __init__(self, *args) -> None:
-            super().__init__()
-            self.args = args
-        def forward(self, x, scale, zero_point, axis, low, high, dtype):
-            return torch.mul(x, scale)
-    
-    ex_input = (torch.tensor([10,20]), torch.tensor([5]),None,None,None,None,None,)
+    ex_input = (
+        torch.tensor([10, 20]),
+        torch.tensor([5]),
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
     with nncf.torch.disable_patching():
         replacement_graph_per_channel = capture_pre_autograd_graph(ReplacementModule(), ex_input).graph
-    
+
     return pattern_per_channel, replacement_graph_per_channel
+
 
 def _get_pattern_replacement_per_tensor():
     def pattern_per_tensor(weight, scale, zero_point, low, high, dtype):
@@ -546,17 +549,26 @@ def _get_pattern_replacement_per_tensor():
             quantized, scale, zero_point, low, high, dtype
         )
         return dequantized
-    
+
     class ReplacementModule(torch.nn.Module):
         def __init__(self) -> None:
             super().__init__()
 
         def forward(self, x, scale, zero_point, low, high, dtype):
             return torch.mul(x, scale)
-    ex_input = (torch.tensor([10,20]), torch.tensor([5]),None,None,None,None,)
+
+    ex_input = (
+        torch.tensor([10, 20]),
+        torch.tensor([5]),
+        None,
+        None,
+        None,
+        None,
+    )
     with nncf.torch.disable_patching():
         replacement_graph_per_tensor = capture_pre_autograd_graph(ReplacementModule(), ex_input).graph
     return pattern_per_tensor, replacement_graph_per_tensor
+
 
 def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
     def match_filters(match, original_graph, graph):
@@ -564,14 +576,11 @@ def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
             if node.name == "weight" and match.nodes_map[node].op == "get_attr":
                 return True
         return False
+
     pattern, replacement = _get_pattern_replacement_per_channel()
-    torch.fx.subgraph_rewriter.replace_pattern_with_filters(
-        model, pattern, replacement, [match_filters]
-    )
+    torch.fx.subgraph_rewriter.replace_pattern_with_filters(model, pattern, replacement, [match_filters])
     pattern, replacement = _get_pattern_replacement_per_tensor()
-    torch.fx.subgraph_rewriter.replace_pattern_with_filters(
-        model, pattern, replacement, [match_filters]
-    )
+    torch.fx.subgraph_rewriter.replace_pattern_with_filters(model, pattern, replacement, [match_filters])
 
 
 def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule):
