@@ -23,7 +23,9 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+import nncf.torch
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from torch._export import capture_pre_autograd_graph
 
 TransformationFNType = Callable[[torch.fx.GraphModule], None]
 
@@ -505,8 +507,14 @@ def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
     model.graph.eliminate_dead_code()
     model.recompile()
 
-
-def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
+def _get_pattern_replacement_per_channel():
+    class ReplacementModule(torch.nn.Module):
+        def __init__(self, *args) -> None:
+            super().__init__()
+            self.args = args
+        def forward(self, x, scale, zero_point, axis, low, high, dtype):
+            return torch.mul(x, scale)
+        
     def pattern_per_channel(weight, scale, zero_point, axis, low, high, dtype):
         quantized = torch.ops.quantized_decomposed.quantize_per_channel.default(
             weight, scale, zero_point, axis, low, high, dtype
@@ -516,6 +524,20 @@ def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
         )
         return dequantized
 
+    class ReplacementModule(torch.nn.Module):
+        def __init__(self, *args) -> None:
+            super().__init__()
+            self.args = args
+        def forward(self, x, scale, zero_point, axis, low, high, dtype):
+            return torch.mul(x, scale)
+    
+    ex_input = (torch.tensor([10,20]), torch.tensor([5]),None,None,None,None,None,)
+    with nncf.torch.disable_patching():
+        replacement_graph_per_channel = capture_pre_autograd_graph(ReplacementModule(), ex_input).graph
+    
+    return pattern_per_channel, replacement_graph_per_channel
+
+def _get_pattern_replacement_per_tensor():
     def pattern_per_tensor(weight, scale, zero_point, low, high, dtype):
         quantized = torch.ops.quantized_decomposed.quantize_per_tensor.default(
             weight, scale, zero_point, low, high, dtype
@@ -524,24 +546,31 @@ def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
             quantized, scale, zero_point, low, high, dtype
         )
         return dequantized
+    
+    class ReplacementModule(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
 
-    def replacement_per_channel(x, scale, zero_point, axis, low, high, dtype):
-        return x.mul(scale) 
+        def forward(self, x, scale, zero_point, low, high, dtype):
+            return torch.mul(x, scale)
+    ex_input = (torch.tensor([10,20]), torch.tensor([5]),None,None,None,None,)
+    with nncf.torch.disable_patching():
+        replacement_graph_per_tensor = capture_pre_autograd_graph(ReplacementModule(), ex_input).graph
+    return pattern_per_tensor, replacement_graph_per_tensor
 
-    def replacement_per_tensor(x, scale, zero_point, low, high, dtype):
-        return x.mul(scale)
-
+def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
     def match_filters(match, original_graph, graph):
         for node in match.nodes_map:
             if node.name == "weight" and match.nodes_map[node].op == "get_attr":
                 return True
         return False
-
+    pattern, replacement = _get_pattern_replacement_per_channel()
     torch.fx.subgraph_rewriter.replace_pattern_with_filters(
-        model, pattern_per_channel, replacement_per_channel, [match_filters]
+        model, pattern, replacement, [match_filters]
     )
+    pattern, replacement = _get_pattern_replacement_per_tensor()
     torch.fx.subgraph_rewriter.replace_pattern_with_filters(
-        model, pattern_per_tensor, replacement_per_tensor, [match_filters]
+        model, pattern, replacement, [match_filters]
     )
 
 
