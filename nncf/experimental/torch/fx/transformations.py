@@ -526,10 +526,10 @@ def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
         return dequantized
 
     def replacement_per_channel(x, scale, zero_point, axis, low, high, dtype):
-        return torch.mul(x, scale)
+        return x.mul(scale) 
 
     def replacement_per_tensor(x, scale, zero_point, low, high, dtype):
-        return torch.mul(x, scale)
+        return x.mul(scale)
 
     def match_filters(match, original_graph, graph):
         for node in match.nodes_map:
