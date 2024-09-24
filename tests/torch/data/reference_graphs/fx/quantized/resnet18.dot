@@ -5,7 +5,7 @@ strict digraph  {
 "3 conv2d_scale_0_updated_constant0" [id=3, type=get_attr];
 "4 compressed_weight_updated_constant0" [id=4, type=get_attr];
 "5 conv1_weight_bias_0_0" [id=5, type=get_attr];
-"6 mul" [id=6, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"6 mul" [id=6, type=call_method];
 "7 conv2d" [id=7, type=conv2d];
 "8 relu_" [id=8, type=relu_];
 "9 quantize_per_tensor_default_1" [id=9, type=quantize_per_tensor];
@@ -14,7 +14,7 @@ strict digraph  {
 "12 conv2d_1_scale_0_updated_constant0" [id=12, type=get_attr];
 "13 compressed_weight_updated_constant1" [id=13, type=get_attr];
 "14 layer1_0_conv1_weight_bias_0_0" [id=14, type=get_attr];
-"15 mul_1" [id=15, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"15 mul_1" [id=15, type=call_method];
 "16 conv2d_1" [id=16, type=conv2d];
 "17 relu__1" [id=17, type=relu_];
 "18 quantize_per_tensor_default_2" [id=18, type=quantize_per_tensor];
@@ -22,7 +22,7 @@ strict digraph  {
 "20 conv2d_2_scale_0_updated_constant0" [id=20, type=get_attr];
 "21 compressed_weight_updated_constant2" [id=21, type=get_attr];
 "22 layer1_0_conv2_weight_bias_0_0" [id=22, type=get_attr];
-"23 mul_2" [id=23, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"23 mul_2" [id=23, type=call_method];
 "24 conv2d_2" [id=24, type=conv2d];
 "25 quantize_per_tensor_default_3" [id=25, type=quantize_per_tensor];
 "26 dequantize_per_tensor_default_3" [id=26, type=dequantize_per_tensor];
@@ -34,7 +34,7 @@ strict digraph  {
 "32 conv2d_3_scale_0_updated_constant0" [id=32, type=get_attr];
 "33 compressed_weight_updated_constant3" [id=33, type=get_attr];
 "34 layer1_1_conv1_weight_bias_0_0" [id=34, type=get_attr];
-"35 mul_3" [id=35, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"35 mul_3" [id=35, type=call_method];
 "36 conv2d_3" [id=36, type=conv2d];
 "37 relu__3" [id=37, type=relu_];
 "38 quantize_per_tensor_default_5" [id=38, type=quantize_per_tensor];
@@ -42,7 +42,7 @@ strict digraph  {
 "40 conv2d_4_scale_0_updated_constant0" [id=40, type=get_attr];
 "41 compressed_weight_updated_constant4" [id=41, type=get_attr];
 "42 layer1_1_conv2_weight_bias_0_0" [id=42, type=get_attr];
-"43 mul_4" [id=43, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"43 mul_4" [id=43, type=call_method];
 "44 conv2d_4" [id=44, type=conv2d];
 "45 quantize_per_tensor_default_6" [id=45, type=quantize_per_tensor];
 "46 dequantize_per_tensor_default_7" [id=46, type=dequantize_per_tensor];
@@ -54,7 +54,7 @@ strict digraph  {
 "52 conv2d_5_scale_0_updated_constant0" [id=52, type=get_attr];
 "53 compressed_weight_updated_constant5" [id=53, type=get_attr];
 "54 layer2_0_conv1_weight_bias_0_0" [id=54, type=get_attr];
-"55 mul_5" [id=55, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"55 mul_5" [id=55, type=call_method];
 "56 conv2d_5" [id=56, type=conv2d];
 "57 relu__5" [id=57, type=relu_];
 "58 quantize_per_tensor_default_8" [id=58, type=quantize_per_tensor];
@@ -62,14 +62,14 @@ strict digraph  {
 "60 conv2d_6_scale_0_updated_constant0" [id=60, type=get_attr];
 "61 compressed_weight_updated_constant6" [id=61, type=get_attr];
 "62 layer2_0_conv2_weight_bias_0_0" [id=62, type=get_attr];
-"63 mul_6" [id=63, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"63 mul_6" [id=63, type=call_method];
 "64 conv2d_6" [id=64, type=conv2d];
 "65 quantize_per_tensor_default_9" [id=65, type=quantize_per_tensor];
 "66 dequantize_per_tensor_default_11" [id=66, type=dequantize_per_tensor];
 "67 conv2d_7_scale_0_updated_constant0" [id=67, type=get_attr];
 "68 compressed_weight_updated_constant7" [id=68, type=get_attr];
 "69 layer2_0_downsample_0_weight_bias_0_0" [id=69, type=get_attr];
-"70 mul_7" [id=70, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"70 mul_7" [id=70, type=call_method];
 "71 conv2d_7" [id=71, type=conv2d];
 "72 quantize_per_tensor_default_10" [id=72, type=quantize_per_tensor];
 "73 dequantize_per_tensor_default_12" [id=73, type=dequantize_per_tensor];
@@ -81,7 +81,7 @@ strict digraph  {
 "79 conv2d_8_scale_0_updated_constant0" [id=79, type=get_attr];
 "80 compressed_weight_updated_constant8" [id=80, type=get_attr];
 "81 layer2_1_conv1_weight_bias_0_0" [id=81, type=get_attr];
-"82 mul_8" [id=82, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"82 mul_8" [id=82, type=call_method];
 "83 conv2d_8" [id=83, type=conv2d];
 "84 relu__7" [id=84, type=relu_];
 "85 quantize_per_tensor_default_12" [id=85, type=quantize_per_tensor];
@@ -89,7 +89,7 @@ strict digraph  {
 "87 conv2d_9_scale_0_updated_constant0" [id=87, type=get_attr];
 "88 compressed_weight_updated_constant9" [id=88, type=get_attr];
 "89 layer2_1_conv2_weight_bias_0_0" [id=89, type=get_attr];
-"90 mul_9" [id=90, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"90 mul_9" [id=90, type=call_method];
 "91 conv2d_9" [id=91, type=conv2d];
 "92 quantize_per_tensor_default_13" [id=92, type=quantize_per_tensor];
 "93 dequantize_per_tensor_default_16" [id=93, type=dequantize_per_tensor];
@@ -101,7 +101,7 @@ strict digraph  {
 "99 conv2d_10_scale_0_updated_constant0" [id=99, type=get_attr];
 "100 compressed_weight_updated_constant10" [id=100, type=get_attr];
 "101 layer3_0_conv1_weight_bias_0_0" [id=101, type=get_attr];
-"102 mul_10" [id=102, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"102 mul_10" [id=102, type=call_method];
 "103 conv2d_10" [id=103, type=conv2d];
 "104 relu__9" [id=104, type=relu_];
 "105 quantize_per_tensor_default_15" [id=105, type=quantize_per_tensor];
@@ -109,14 +109,14 @@ strict digraph  {
 "107 conv2d_11_scale_0_updated_constant0" [id=107, type=get_attr];
 "108 compressed_weight_updated_constant11" [id=108, type=get_attr];
 "109 layer3_0_conv2_weight_bias_0_0" [id=109, type=get_attr];
-"110 mul_11" [id=110, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"110 mul_11" [id=110, type=call_method];
 "111 conv2d_11" [id=111, type=conv2d];
 "112 quantize_per_tensor_default_16" [id=112, type=quantize_per_tensor];
 "113 dequantize_per_tensor_default_20" [id=113, type=dequantize_per_tensor];
 "114 conv2d_12_scale_0_updated_constant0" [id=114, type=get_attr];
 "115 compressed_weight_updated_constant12" [id=115, type=get_attr];
 "116 layer3_0_downsample_0_weight_bias_0_0" [id=116, type=get_attr];
-"117 mul_12" [id=117, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"117 mul_12" [id=117, type=call_method];
 "118 conv2d_12" [id=118, type=conv2d];
 "119 quantize_per_tensor_default_17" [id=119, type=quantize_per_tensor];
 "120 dequantize_per_tensor_default_21" [id=120, type=dequantize_per_tensor];
@@ -128,7 +128,7 @@ strict digraph  {
 "126 conv2d_13_scale_0_updated_constant0" [id=126, type=get_attr];
 "127 compressed_weight_updated_constant13" [id=127, type=get_attr];
 "128 layer3_1_conv1_weight_bias_0_0" [id=128, type=get_attr];
-"129 mul_13" [id=129, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"129 mul_13" [id=129, type=call_method];
 "130 conv2d_13" [id=130, type=conv2d];
 "131 relu__11" [id=131, type=relu_];
 "132 quantize_per_tensor_default_19" [id=132, type=quantize_per_tensor];
@@ -136,7 +136,7 @@ strict digraph  {
 "134 conv2d_14_scale_0_updated_constant0" [id=134, type=get_attr];
 "135 compressed_weight_updated_constant14" [id=135, type=get_attr];
 "136 layer3_1_conv2_weight_bias_0_0" [id=136, type=get_attr];
-"137 mul_14" [id=137, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"137 mul_14" [id=137, type=call_method];
 "138 conv2d_14" [id=138, type=conv2d];
 "139 quantize_per_tensor_default_20" [id=139, type=quantize_per_tensor];
 "140 dequantize_per_tensor_default_25" [id=140, type=dequantize_per_tensor];
@@ -148,7 +148,7 @@ strict digraph  {
 "146 conv2d_15_scale_0_updated_constant0" [id=146, type=get_attr];
 "147 compressed_weight_updated_constant15" [id=147, type=get_attr];
 "148 layer4_0_conv1_weight_bias_0_0" [id=148, type=get_attr];
-"149 mul_15" [id=149, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"149 mul_15" [id=149, type=call_method];
 "150 conv2d_15" [id=150, type=conv2d];
 "151 relu__13" [id=151, type=relu_];
 "152 quantize_per_tensor_default_22" [id=152, type=quantize_per_tensor];
@@ -156,14 +156,14 @@ strict digraph  {
 "154 conv2d_16_scale_0_updated_constant0" [id=154, type=get_attr];
 "155 compressed_weight_updated_constant16" [id=155, type=get_attr];
 "156 layer4_0_conv2_weight_bias_0_0" [id=156, type=get_attr];
-"157 mul_16" [id=157, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"157 mul_16" [id=157, type=call_method];
 "158 conv2d_16" [id=158, type=conv2d];
 "159 quantize_per_tensor_default_23" [id=159, type=quantize_per_tensor];
 "160 dequantize_per_tensor_default_29" [id=160, type=dequantize_per_tensor];
 "161 conv2d_17_scale_0_updated_constant0" [id=161, type=get_attr];
 "162 compressed_weight_updated_constant17" [id=162, type=get_attr];
 "163 layer4_0_downsample_0_weight_bias_0_0" [id=163, type=get_attr];
-"164 mul_17" [id=164, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"164 mul_17" [id=164, type=call_method];
 "165 conv2d_17" [id=165, type=conv2d];
 "166 quantize_per_tensor_default_24" [id=166, type=quantize_per_tensor];
 "167 dequantize_per_tensor_default_30" [id=167, type=dequantize_per_tensor];
@@ -175,7 +175,7 @@ strict digraph  {
 "173 conv2d_18_scale_0_updated_constant0" [id=173, type=get_attr];
 "174 compressed_weight_updated_constant18" [id=174, type=get_attr];
 "175 layer4_1_conv1_weight_bias_0_0" [id=175, type=get_attr];
-"176 mul_18" [id=176, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"176 mul_18" [id=176, type=call_method];
 "177 conv2d_18" [id=177, type=conv2d];
 "178 relu__15" [id=178, type=relu_];
 "179 quantize_per_tensor_default_26" [id=179, type=quantize_per_tensor];
@@ -183,7 +183,7 @@ strict digraph  {
 "181 conv2d_19_scale_0_updated_constant0" [id=181, type=get_attr];
 "182 compressed_weight_updated_constant19" [id=182, type=get_attr];
 "183 layer4_1_conv2_weight_bias_0_0" [id=183, type=get_attr];
-"184 mul_19" [id=184, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"184 mul_19" [id=184, type=call_method];
 "185 conv2d_19" [id=185, type=conv2d];
 "186 quantize_per_tensor_default_27" [id=186, type=quantize_per_tensor];
 "187 dequantize_per_tensor_default_34" [id=187, type=dequantize_per_tensor];
@@ -198,7 +198,7 @@ strict digraph  {
 "196 linear_scale_0_updated_constant0" [id=196, type=get_attr];
 "197 compressed_weight_updated_constant20" [id=197, type=get_attr];
 "198 _param_constant61_0_0" [id=198, type=get_attr];
-"199 mul_20" [id=199, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"199 mul_20" [id=199, type=call_method];
 "200 linear" [id=200, type=linear];
 "201 output" [id=201, type=output];
 "0 arg0_1" -> "1 quantize_per_tensor_default";

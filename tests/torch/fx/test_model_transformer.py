@@ -137,9 +137,9 @@ class ModelCase:
     input_shape: Tuple[int]
 
 
-def torchvision_model_case(model_id: str, input_shape: Tuple[int,], buffer_count):
+def torchvision_model_case(model_id: str, input_shape: Tuple[int,]):
     model = getattr(models, model_id)
-    return ModelCase(partial(model, weights=None), model_id, input_shape, buffer_count)
+    return ModelCase(partial(model, weights=None), model_id, input_shape)
 
 
 TEST_MODELS_QUANIZED = (
@@ -147,7 +147,6 @@ TEST_MODELS_QUANIZED = (
     (torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)), {}),
     (torchvision_model_case("vit_b_16", (1, 3, 224, 224)), {"model_type": nncf.ModelType.TRANSFORMER}),
     (torchvision_model_case("swin_v2_s", (1, 3, 224, 224)), {"model_type": nncf.ModelType.TRANSFORMER}),
-
 )
 
 

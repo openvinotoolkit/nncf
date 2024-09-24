@@ -5,7 +5,7 @@ strict digraph  {
 "3 conv2d_scale_0_updated_constant0" [id=3, type=get_attr];
 "4 compressed_weight_updated_constant0" [id=4, type=get_attr];
 "5 _param_constant1_0_0" [id=5, type=get_attr];
-"6 mul" [id=6, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"6 mul" [id=6, type=call_method];
 "7 conv2d" [id=7, type=conv2d];
 "8 reshape" [id=8, type=reshape];
 "9 permute" [id=9, type=permute];
@@ -25,7 +25,7 @@ strict digraph  {
 "23 linear_scale_0_updated_constant0" [id=23, type=get_attr];
 "24 compressed_weight_updated_constant1" [id=24, type=get_attr];
 "25 _param_constant7_0_0" [id=25, type=get_attr];
-"26 mul_1" [id=26, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"26 mul_1" [id=26, type=call_method];
 "27 linear" [id=27, type=linear];
 "28 unflatten" [id=28, type=unflatten];
 "29 unsqueeze" [id=29, type=unsqueeze];
@@ -57,7 +57,7 @@ strict digraph  {
 "55 linear_1_scale_0_updated_constant0" [id=55, type=get_attr];
 "56 compressed_weight_updated_constant2" [id=56, type=get_attr];
 "57 _param_constant9_0_0" [id=57, type=get_attr];
-"58 mul_2" [id=58, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"58 mul_2" [id=58, type=call_method];
 "59 linear_1" [id=59, type=linear];
 "60 view_7" [id=60, type=view];
 "61 transpose_5" [id=61, type=transpose];
@@ -72,7 +72,7 @@ strict digraph  {
 "70 linear_2_scale_0_updated_constant0" [id=70, type=get_attr];
 "71 compressed_weight_updated_constant3" [id=71, type=get_attr];
 "72 _param_constant13_0_0" [id=72, type=get_attr];
-"73 mul_3" [id=73, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"73 mul_3" [id=73, type=call_method];
 "74 linear_2" [id=74, type=linear];
 "75 gelu" [id=75, type=gelu];
 "76 dropout_2" [id=76, type=dropout];
@@ -82,7 +82,7 @@ strict digraph  {
 "80 linear_3_scale_0_updated_constant0" [id=80, type=get_attr];
 "81 compressed_weight_updated_constant4" [id=81, type=get_attr];
 "82 _param_constant15_0_0" [id=82, type=get_attr];
-"83 mul_4" [id=83, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"83 mul_4" [id=83, type=call_method];
 "84 linear_3" [id=84, type=linear];
 "85 dropout_3" [id=85, type=dropout];
 "86 add_2" [id=86, type=add];
@@ -96,7 +96,7 @@ strict digraph  {
 "94 linear_4_scale_0_updated_constant0" [id=94, type=get_attr];
 "95 compressed_weight_updated_constant5" [id=95, type=get_attr];
 "96 _param_constant19_0_0" [id=96, type=get_attr];
-"97 mul_5" [id=97, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"97 mul_5" [id=97, type=call_method];
 "98 linear_4" [id=98, type=linear];
 "99 unflatten_1" [id=99, type=unflatten];
 "100 unsqueeze_1" [id=100, type=unsqueeze];
@@ -128,7 +128,7 @@ strict digraph  {
 "126 linear_5_scale_0_updated_constant0" [id=126, type=get_attr];
 "127 compressed_weight_updated_constant6" [id=127, type=get_attr];
 "128 _param_constant21_0_0" [id=128, type=get_attr];
-"129 mul_6" [id=129, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"129 mul_6" [id=129, type=call_method];
 "130 linear_5" [id=130, type=linear];
 "131 view_15" [id=131, type=view];
 "132 transpose_11" [id=132, type=transpose];
@@ -143,7 +143,7 @@ strict digraph  {
 "141 linear_6_scale_0_updated_constant0" [id=141, type=get_attr];
 "142 compressed_weight_updated_constant7" [id=142, type=get_attr];
 "143 _param_constant25_0_0" [id=143, type=get_attr];
-"144 mul_7" [id=144, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"144 mul_7" [id=144, type=call_method];
 "145 linear_6" [id=145, type=linear];
 "146 gelu_1" [id=146, type=gelu];
 "147 dropout_5" [id=147, type=dropout];
@@ -153,7 +153,7 @@ strict digraph  {
 "151 linear_7_scale_0_updated_constant0" [id=151, type=get_attr];
 "152 compressed_weight_updated_constant8" [id=152, type=get_attr];
 "153 _param_constant27_0_0" [id=153, type=get_attr];
-"154 mul_8" [id=154, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"154 mul_8" [id=154, type=call_method];
 "155 linear_7" [id=155, type=linear];
 "156 dropout_6" [id=156, type=dropout];
 "157 add_4" [id=157, type=add];
@@ -167,7 +167,7 @@ strict digraph  {
 "165 linear_8_scale_0_updated_constant0" [id=165, type=get_attr];
 "166 compressed_weight_updated_constant9" [id=166, type=get_attr];
 "167 _param_constant31_0_0" [id=167, type=get_attr];
-"168 mul_9" [id=168, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"168 mul_9" [id=168, type=call_method];
 "169 linear_8" [id=169, type=linear];
 "170 unflatten_2" [id=170, type=unflatten];
 "171 unsqueeze_2" [id=171, type=unsqueeze];
@@ -199,7 +199,7 @@ strict digraph  {
 "197 linear_9_scale_0_updated_constant0" [id=197, type=get_attr];
 "198 compressed_weight_updated_constant10" [id=198, type=get_attr];
 "199 _param_constant33_0_0" [id=199, type=get_attr];
-"200 mul_10" [id=200, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"200 mul_10" [id=200, type=call_method];
 "201 linear_9" [id=201, type=linear];
 "202 view_23" [id=202, type=view];
 "203 transpose_17" [id=203, type=transpose];
@@ -214,7 +214,7 @@ strict digraph  {
 "212 linear_10_scale_0_updated_constant0" [id=212, type=get_attr];
 "213 compressed_weight_updated_constant11" [id=213, type=get_attr];
 "214 _param_constant37_0_0" [id=214, type=get_attr];
-"215 mul_11" [id=215, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"215 mul_11" [id=215, type=call_method];
 "216 linear_10" [id=216, type=linear];
 "217 gelu_2" [id=217, type=gelu];
 "218 dropout_8" [id=218, type=dropout];
@@ -224,7 +224,7 @@ strict digraph  {
 "222 linear_11_scale_0_updated_constant0" [id=222, type=get_attr];
 "223 compressed_weight_updated_constant12" [id=223, type=get_attr];
 "224 _param_constant39_0_0" [id=224, type=get_attr];
-"225 mul_12" [id=225, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"225 mul_12" [id=225, type=call_method];
 "226 linear_11" [id=226, type=linear];
 "227 dropout_9" [id=227, type=dropout];
 "228 add_6" [id=228, type=add];
@@ -238,7 +238,7 @@ strict digraph  {
 "236 linear_12_scale_0_updated_constant0" [id=236, type=get_attr];
 "237 compressed_weight_updated_constant13" [id=237, type=get_attr];
 "238 _param_constant43_0_0" [id=238, type=get_attr];
-"239 mul_13" [id=239, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"239 mul_13" [id=239, type=call_method];
 "240 linear_12" [id=240, type=linear];
 "241 unflatten_3" [id=241, type=unflatten];
 "242 unsqueeze_3" [id=242, type=unsqueeze];
@@ -270,7 +270,7 @@ strict digraph  {
 "268 linear_13_scale_0_updated_constant0" [id=268, type=get_attr];
 "269 compressed_weight_updated_constant14" [id=269, type=get_attr];
 "270 _param_constant45_0_0" [id=270, type=get_attr];
-"271 mul_14" [id=271, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"271 mul_14" [id=271, type=call_method];
 "272 linear_13" [id=272, type=linear];
 "273 view_31" [id=273, type=view];
 "274 transpose_23" [id=274, type=transpose];
@@ -285,7 +285,7 @@ strict digraph  {
 "283 linear_14_scale_0_updated_constant0" [id=283, type=get_attr];
 "284 compressed_weight_updated_constant15" [id=284, type=get_attr];
 "285 _param_constant49_0_0" [id=285, type=get_attr];
-"286 mul_15" [id=286, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"286 mul_15" [id=286, type=call_method];
 "287 linear_14" [id=287, type=linear];
 "288 gelu_3" [id=288, type=gelu];
 "289 dropout_11" [id=289, type=dropout];
@@ -295,7 +295,7 @@ strict digraph  {
 "293 linear_15_scale_0_updated_constant0" [id=293, type=get_attr];
 "294 compressed_weight_updated_constant16" [id=294, type=get_attr];
 "295 _param_constant51_0_0" [id=295, type=get_attr];
-"296 mul_16" [id=296, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"296 mul_16" [id=296, type=call_method];
 "297 linear_15" [id=297, type=linear];
 "298 dropout_12" [id=298, type=dropout];
 "299 add_8" [id=299, type=add];
@@ -309,7 +309,7 @@ strict digraph  {
 "307 linear_16_scale_0_updated_constant0" [id=307, type=get_attr];
 "308 compressed_weight_updated_constant17" [id=308, type=get_attr];
 "309 _param_constant55_0_0" [id=309, type=get_attr];
-"310 mul_17" [id=310, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"310 mul_17" [id=310, type=call_method];
 "311 linear_16" [id=311, type=linear];
 "312 unflatten_4" [id=312, type=unflatten];
 "313 unsqueeze_4" [id=313, type=unsqueeze];
@@ -341,7 +341,7 @@ strict digraph  {
 "339 linear_17_scale_0_updated_constant0" [id=339, type=get_attr];
 "340 compressed_weight_updated_constant18" [id=340, type=get_attr];
 "341 _param_constant57_0_0" [id=341, type=get_attr];
-"342 mul_18" [id=342, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"342 mul_18" [id=342, type=call_method];
 "343 linear_17" [id=343, type=linear];
 "344 view_39" [id=344, type=view];
 "345 transpose_29" [id=345, type=transpose];
@@ -356,7 +356,7 @@ strict digraph  {
 "354 linear_18_scale_0_updated_constant0" [id=354, type=get_attr];
 "355 compressed_weight_updated_constant19" [id=355, type=get_attr];
 "356 _param_constant61_0_0" [id=356, type=get_attr];
-"357 mul_19" [id=357, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"357 mul_19" [id=357, type=call_method];
 "358 linear_18" [id=358, type=linear];
 "359 gelu_4" [id=359, type=gelu];
 "360 dropout_14" [id=360, type=dropout];
@@ -366,7 +366,7 @@ strict digraph  {
 "364 linear_19_scale_0_updated_constant0" [id=364, type=get_attr];
 "365 compressed_weight_updated_constant20" [id=365, type=get_attr];
 "366 _param_constant63_0_0" [id=366, type=get_attr];
-"367 mul_20" [id=367, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"367 mul_20" [id=367, type=call_method];
 "368 linear_19" [id=368, type=linear];
 "369 dropout_15" [id=369, type=dropout];
 "370 add_10" [id=370, type=add];
@@ -380,7 +380,7 @@ strict digraph  {
 "378 linear_20_scale_0_updated_constant0" [id=378, type=get_attr];
 "379 compressed_weight_updated_constant21" [id=379, type=get_attr];
 "380 _param_constant67_0_0" [id=380, type=get_attr];
-"381 mul_21" [id=381, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"381 mul_21" [id=381, type=call_method];
 "382 linear_20" [id=382, type=linear];
 "383 unflatten_5" [id=383, type=unflatten];
 "384 unsqueeze_5" [id=384, type=unsqueeze];
@@ -412,7 +412,7 @@ strict digraph  {
 "410 linear_21_scale_0_updated_constant0" [id=410, type=get_attr];
 "411 compressed_weight_updated_constant22" [id=411, type=get_attr];
 "412 _param_constant69_0_0" [id=412, type=get_attr];
-"413 mul_22" [id=413, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"413 mul_22" [id=413, type=call_method];
 "414 linear_21" [id=414, type=linear];
 "415 view_47" [id=415, type=view];
 "416 transpose_35" [id=416, type=transpose];
@@ -427,7 +427,7 @@ strict digraph  {
 "425 linear_22_scale_0_updated_constant0" [id=425, type=get_attr];
 "426 compressed_weight_updated_constant23" [id=426, type=get_attr];
 "427 _param_constant73_0_0" [id=427, type=get_attr];
-"428 mul_23" [id=428, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"428 mul_23" [id=428, type=call_method];
 "429 linear_22" [id=429, type=linear];
 "430 gelu_5" [id=430, type=gelu];
 "431 dropout_17" [id=431, type=dropout];
@@ -437,7 +437,7 @@ strict digraph  {
 "435 linear_23_scale_0_updated_constant0" [id=435, type=get_attr];
 "436 compressed_weight_updated_constant24" [id=436, type=get_attr];
 "437 _param_constant75_0_0" [id=437, type=get_attr];
-"438 mul_24" [id=438, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"438 mul_24" [id=438, type=call_method];
 "439 linear_23" [id=439, type=linear];
 "440 dropout_18" [id=440, type=dropout];
 "441 add_12" [id=441, type=add];
@@ -451,7 +451,7 @@ strict digraph  {
 "449 linear_24_scale_0_updated_constant0" [id=449, type=get_attr];
 "450 compressed_weight_updated_constant25" [id=450, type=get_attr];
 "451 _param_constant79_0_0" [id=451, type=get_attr];
-"452 mul_25" [id=452, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"452 mul_25" [id=452, type=call_method];
 "453 linear_24" [id=453, type=linear];
 "454 unflatten_6" [id=454, type=unflatten];
 "455 unsqueeze_6" [id=455, type=unsqueeze];
@@ -483,7 +483,7 @@ strict digraph  {
 "481 linear_25_scale_0_updated_constant0" [id=481, type=get_attr];
 "482 compressed_weight_updated_constant26" [id=482, type=get_attr];
 "483 _param_constant81_0_0" [id=483, type=get_attr];
-"484 mul_26" [id=484, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"484 mul_26" [id=484, type=call_method];
 "485 linear_25" [id=485, type=linear];
 "486 view_55" [id=486, type=view];
 "487 transpose_41" [id=487, type=transpose];
@@ -498,7 +498,7 @@ strict digraph  {
 "496 linear_26_scale_0_updated_constant0" [id=496, type=get_attr];
 "497 compressed_weight_updated_constant27" [id=497, type=get_attr];
 "498 _param_constant85_0_0" [id=498, type=get_attr];
-"499 mul_27" [id=499, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"499 mul_27" [id=499, type=call_method];
 "500 linear_26" [id=500, type=linear];
 "501 gelu_6" [id=501, type=gelu];
 "502 dropout_20" [id=502, type=dropout];
@@ -508,7 +508,7 @@ strict digraph  {
 "506 linear_27_scale_0_updated_constant0" [id=506, type=get_attr];
 "507 compressed_weight_updated_constant28" [id=507, type=get_attr];
 "508 _param_constant87_0_0" [id=508, type=get_attr];
-"509 mul_28" [id=509, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"509 mul_28" [id=509, type=call_method];
 "510 linear_27" [id=510, type=linear];
 "511 dropout_21" [id=511, type=dropout];
 "512 add_14" [id=512, type=add];
@@ -522,7 +522,7 @@ strict digraph  {
 "520 linear_28_scale_0_updated_constant0" [id=520, type=get_attr];
 "521 compressed_weight_updated_constant29" [id=521, type=get_attr];
 "522 _param_constant91_0_0" [id=522, type=get_attr];
-"523 mul_29" [id=523, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"523 mul_29" [id=523, type=call_method];
 "524 linear_28" [id=524, type=linear];
 "525 unflatten_7" [id=525, type=unflatten];
 "526 unsqueeze_7" [id=526, type=unsqueeze];
@@ -554,7 +554,7 @@ strict digraph  {
 "552 linear_29_scale_0_updated_constant0" [id=552, type=get_attr];
 "553 compressed_weight_updated_constant30" [id=553, type=get_attr];
 "554 _param_constant93_0_0" [id=554, type=get_attr];
-"555 mul_30" [id=555, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"555 mul_30" [id=555, type=call_method];
 "556 linear_29" [id=556, type=linear];
 "557 view_63" [id=557, type=view];
 "558 transpose_47" [id=558, type=transpose];
@@ -569,7 +569,7 @@ strict digraph  {
 "567 linear_30_scale_0_updated_constant0" [id=567, type=get_attr];
 "568 compressed_weight_updated_constant31" [id=568, type=get_attr];
 "569 _param_constant97_0_0" [id=569, type=get_attr];
-"570 mul_31" [id=570, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"570 mul_31" [id=570, type=call_method];
 "571 linear_30" [id=571, type=linear];
 "572 gelu_7" [id=572, type=gelu];
 "573 dropout_23" [id=573, type=dropout];
@@ -579,7 +579,7 @@ strict digraph  {
 "577 linear_31_scale_0_updated_constant0" [id=577, type=get_attr];
 "578 compressed_weight_updated_constant32" [id=578, type=get_attr];
 "579 _param_constant99_0_0" [id=579, type=get_attr];
-"580 mul_32" [id=580, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"580 mul_32" [id=580, type=call_method];
 "581 linear_31" [id=581, type=linear];
 "582 dropout_24" [id=582, type=dropout];
 "583 add_16" [id=583, type=add];
@@ -593,7 +593,7 @@ strict digraph  {
 "591 linear_32_scale_0_updated_constant0" [id=591, type=get_attr];
 "592 compressed_weight_updated_constant33" [id=592, type=get_attr];
 "593 _param_constant103_0_0" [id=593, type=get_attr];
-"594 mul_33" [id=594, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"594 mul_33" [id=594, type=call_method];
 "595 linear_32" [id=595, type=linear];
 "596 unflatten_8" [id=596, type=unflatten];
 "597 unsqueeze_8" [id=597, type=unsqueeze];
@@ -625,7 +625,7 @@ strict digraph  {
 "623 linear_33_scale_0_updated_constant0" [id=623, type=get_attr];
 "624 compressed_weight_updated_constant34" [id=624, type=get_attr];
 "625 _param_constant105_0_0" [id=625, type=get_attr];
-"626 mul_34" [id=626, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"626 mul_34" [id=626, type=call_method];
 "627 linear_33" [id=627, type=linear];
 "628 view_71" [id=628, type=view];
 "629 transpose_53" [id=629, type=transpose];
@@ -640,7 +640,7 @@ strict digraph  {
 "638 linear_34_scale_0_updated_constant0" [id=638, type=get_attr];
 "639 compressed_weight_updated_constant35" [id=639, type=get_attr];
 "640 _param_constant109_0_0" [id=640, type=get_attr];
-"641 mul_35" [id=641, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"641 mul_35" [id=641, type=call_method];
 "642 linear_34" [id=642, type=linear];
 "643 gelu_8" [id=643, type=gelu];
 "644 dropout_26" [id=644, type=dropout];
@@ -650,7 +650,7 @@ strict digraph  {
 "648 linear_35_scale_0_updated_constant0" [id=648, type=get_attr];
 "649 compressed_weight_updated_constant36" [id=649, type=get_attr];
 "650 _param_constant111_0_0" [id=650, type=get_attr];
-"651 mul_36" [id=651, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"651 mul_36" [id=651, type=call_method];
 "652 linear_35" [id=652, type=linear];
 "653 dropout_27" [id=653, type=dropout];
 "654 add_18" [id=654, type=add];
@@ -664,7 +664,7 @@ strict digraph  {
 "662 linear_36_scale_0_updated_constant0" [id=662, type=get_attr];
 "663 compressed_weight_updated_constant37" [id=663, type=get_attr];
 "664 _param_constant115_0_0" [id=664, type=get_attr];
-"665 mul_37" [id=665, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"665 mul_37" [id=665, type=call_method];
 "666 linear_36" [id=666, type=linear];
 "667 unflatten_9" [id=667, type=unflatten];
 "668 unsqueeze_9" [id=668, type=unsqueeze];
@@ -696,7 +696,7 @@ strict digraph  {
 "694 linear_37_scale_0_updated_constant0" [id=694, type=get_attr];
 "695 compressed_weight_updated_constant38" [id=695, type=get_attr];
 "696 _param_constant117_0_0" [id=696, type=get_attr];
-"697 mul_38" [id=697, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"697 mul_38" [id=697, type=call_method];
 "698 linear_37" [id=698, type=linear];
 "699 view_79" [id=699, type=view];
 "700 transpose_59" [id=700, type=transpose];
@@ -711,7 +711,7 @@ strict digraph  {
 "709 linear_38_scale_0_updated_constant0" [id=709, type=get_attr];
 "710 compressed_weight_updated_constant39" [id=710, type=get_attr];
 "711 _param_constant121_0_0" [id=711, type=get_attr];
-"712 mul_39" [id=712, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"712 mul_39" [id=712, type=call_method];
 "713 linear_38" [id=713, type=linear];
 "714 gelu_9" [id=714, type=gelu];
 "715 dropout_29" [id=715, type=dropout];
@@ -721,7 +721,7 @@ strict digraph  {
 "719 linear_39_scale_0_updated_constant0" [id=719, type=get_attr];
 "720 compressed_weight_updated_constant40" [id=720, type=get_attr];
 "721 _param_constant123_0_0" [id=721, type=get_attr];
-"722 mul_40" [id=722, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"722 mul_40" [id=722, type=call_method];
 "723 linear_39" [id=723, type=linear];
 "724 dropout_30" [id=724, type=dropout];
 "725 add_20" [id=725, type=add];
@@ -735,7 +735,7 @@ strict digraph  {
 "733 linear_40_scale_0_updated_constant0" [id=733, type=get_attr];
 "734 compressed_weight_updated_constant41" [id=734, type=get_attr];
 "735 _param_constant127_0_0" [id=735, type=get_attr];
-"736 mul_41" [id=736, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"736 mul_41" [id=736, type=call_method];
 "737 linear_40" [id=737, type=linear];
 "738 unflatten_10" [id=738, type=unflatten];
 "739 unsqueeze_10" [id=739, type=unsqueeze];
@@ -767,7 +767,7 @@ strict digraph  {
 "765 linear_41_scale_0_updated_constant0" [id=765, type=get_attr];
 "766 compressed_weight_updated_constant42" [id=766, type=get_attr];
 "767 _param_constant129_0_0" [id=767, type=get_attr];
-"768 mul_42" [id=768, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"768 mul_42" [id=768, type=call_method];
 "769 linear_41" [id=769, type=linear];
 "770 view_87" [id=770, type=view];
 "771 transpose_65" [id=771, type=transpose];
@@ -782,7 +782,7 @@ strict digraph  {
 "780 linear_42_scale_0_updated_constant0" [id=780, type=get_attr];
 "781 compressed_weight_updated_constant43" [id=781, type=get_attr];
 "782 _param_constant133_0_0" [id=782, type=get_attr];
-"783 mul_43" [id=783, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"783 mul_43" [id=783, type=call_method];
 "784 linear_42" [id=784, type=linear];
 "785 gelu_10" [id=785, type=gelu];
 "786 dropout_32" [id=786, type=dropout];
@@ -792,7 +792,7 @@ strict digraph  {
 "790 linear_43_scale_0_updated_constant0" [id=790, type=get_attr];
 "791 compressed_weight_updated_constant44" [id=791, type=get_attr];
 "792 _param_constant135_0_0" [id=792, type=get_attr];
-"793 mul_44" [id=793, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"793 mul_44" [id=793, type=call_method];
 "794 linear_43" [id=794, type=linear];
 "795 dropout_33" [id=795, type=dropout];
 "796 add_22" [id=796, type=add];
@@ -806,7 +806,7 @@ strict digraph  {
 "804 linear_44_scale_0_updated_constant0" [id=804, type=get_attr];
 "805 compressed_weight_updated_constant45" [id=805, type=get_attr];
 "806 _param_constant139_0_0" [id=806, type=get_attr];
-"807 mul_45" [id=807, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"807 mul_45" [id=807, type=call_method];
 "808 linear_44" [id=808, type=linear];
 "809 unflatten_11" [id=809, type=unflatten];
 "810 unsqueeze_11" [id=810, type=unsqueeze];
@@ -838,7 +838,7 @@ strict digraph  {
 "836 linear_45_scale_0_updated_constant0" [id=836, type=get_attr];
 "837 compressed_weight_updated_constant46" [id=837, type=get_attr];
 "838 _param_constant141_0_0" [id=838, type=get_attr];
-"839 mul_46" [id=839, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"839 mul_46" [id=839, type=call_method];
 "840 linear_45" [id=840, type=linear];
 "841 view_95" [id=841, type=view];
 "842 transpose_71" [id=842, type=transpose];
@@ -853,7 +853,7 @@ strict digraph  {
 "851 linear_46_scale_0_updated_constant0" [id=851, type=get_attr];
 "852 compressed_weight_updated_constant47" [id=852, type=get_attr];
 "853 _param_constant145_0_0" [id=853, type=get_attr];
-"854 mul_47" [id=854, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"854 mul_47" [id=854, type=call_method];
 "855 linear_46" [id=855, type=linear];
 "856 gelu_11" [id=856, type=gelu];
 "857 dropout_35" [id=857, type=dropout];
@@ -863,7 +863,7 @@ strict digraph  {
 "861 linear_47_scale_0_updated_constant0" [id=861, type=get_attr];
 "862 compressed_weight_updated_constant48" [id=862, type=get_attr];
 "863 _param_constant147_0_0" [id=863, type=get_attr];
-"864 mul_48" [id=864, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"864 mul_48" [id=864, type=call_method];
 "865 linear_47" [id=865, type=linear];
 "866 dropout_36" [id=866, type=dropout];
 "867 add_24" [id=867, type=add];
@@ -878,7 +878,7 @@ strict digraph  {
 "876 linear_48_scale_0_updated_constant0" [id=876, type=get_attr];
 "877 compressed_weight_updated_constant49" [id=877, type=get_attr];
 "878 _param_constant151_0_0" [id=878, type=get_attr];
-"879 mul_49" [id=879, type=<built-in method mul of type object at 0x00007FFC45FE4E90>];
+"879 mul_49" [id=879, type=call_method];
 "880 linear_48" [id=880, type=linear];
 "881 output" [id=881, type=output];
 "0 arg0_1" -> "1 quantize_per_tensor_default";
