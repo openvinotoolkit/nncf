@@ -19,6 +19,7 @@ from torch.nn import Module
 import nncf
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import set_debug_log_dir
@@ -100,6 +101,11 @@ def create_compressed_model(
         is an instance of CompositeCompressionController) and the model ready for compression parameter training wrapped
         as an object of NNCFNetwork.
     """
+
+    warning_deprecated(
+        "The 'nncf.torch.create_compressed_model' function is deprecated and will be removed in a future release."
+    )
+
     if isinstance(model, NNCFNetwork):
         raise nncf.InternalError(
             "The model object has already been compressed.\n"
