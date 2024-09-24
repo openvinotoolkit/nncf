@@ -164,6 +164,7 @@ def test_post_quantization_compression(model_case: ModelCase, quantization_param
         quantized_model = nncf.quantize(
             exported_model, calibration_dataset=nncf.Dataset([input_ids]), **quantization_parameters
         )
+
     for node in quantized_model.graph.nodes:
         if node.name[:3] == "mul":
             input_tup = []
