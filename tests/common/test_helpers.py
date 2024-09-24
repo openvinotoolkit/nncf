@@ -16,8 +16,8 @@ from transformers import AutoTokenizer
 
 import nncf
 from nncf.data import generate_text_data
-from tests.shared.helpers import load_json
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.paths import TEST_ROOT
 
 manual_seed(0)
 
