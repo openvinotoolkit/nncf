@@ -28,7 +28,6 @@ import torchvision.models as models
 from torch._export import capture_pre_autograd_graph
 
 import nncf
-from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.utils.os import safe_open
@@ -36,7 +35,6 @@ from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.transformations import shared_constants_unification_transformation
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
-from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch import test_models
 from tests.torch.ptq.test_weights_compression import ShortTransformer
