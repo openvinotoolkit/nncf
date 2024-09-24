@@ -19,8 +19,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tests.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
-from tests.shared.isolation_runner import run_pytest_case_function_in_separate_process
+from tests.cross_fw.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
+from tests.cross_fw.shared.isolation_runner import run_pytest_case_function_in_separate_process
 from tools.memory_monitor import MemoryMonitor
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit

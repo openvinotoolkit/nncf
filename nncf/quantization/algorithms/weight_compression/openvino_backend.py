@@ -337,7 +337,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     @staticmethod
     def get_compress_pipeline(config: WeightCompressionConfig, w_shape, s_shape, z_p_shape=None, return_nodes=False):
         mode = config.mode
-        assert mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]
+        assert mode in [
+            CompressWeightsMode.INT4_SYM,
+            CompressWeightsMode.INT4_ASYM,
+        ], f"Only int4 supported, but given={mode}"
         num_bits = config.num_bits
 
         asym_quant = mode in [CompressWeightsMode.INT4_ASYM]

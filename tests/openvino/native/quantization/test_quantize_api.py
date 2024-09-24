@@ -17,7 +17,7 @@ from openvino.runtime import opset13 as opset
 
 import nncf
 from nncf import Dataset
-from tests.shared.datasets import MockDataset
+from tests.cross_fw.shared.datasets import MockDataset
 
 INPUT_SHAPE = [2, 1, 1, 1]
 

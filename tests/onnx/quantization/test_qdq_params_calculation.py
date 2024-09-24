@@ -18,6 +18,8 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
+from tests.cross_fw.shared.helpers import compare_stats
+from tests.cross_fw.shared.helpers import load_json
 from tests.onnx.conftest import ONNX_TEST_ROOT
 from tests.onnx.models import EmbeddingModel
 from tests.onnx.models import GEMMTransposeWeightModel
@@ -28,8 +30,6 @@ from tests.onnx.models import OneDepthwiseConvolutionalModel
 from tests.onnx.models import ReshapeWeightModel
 from tests.onnx.models import WeightSharingModel
 from tests.onnx.quantization.common import min_max_quantize_model
-from tests.shared.helpers import compare_stats
-from tests.shared.helpers import load_json
 
 REFERENCE_SCALES_DIR = ONNX_TEST_ROOT / "data" / "reference_scales"
 

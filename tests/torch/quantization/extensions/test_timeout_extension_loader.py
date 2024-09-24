@@ -19,8 +19,8 @@ from nncf.torch.extensions import EXTENSION_LOAD_TIMEOUT_ENV_VAR
 from nncf.torch.extensions import ExtensionLoaderTimeoutException
 from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
 from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
-from tests.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
-from tests.shared.isolation_runner import run_pytest_case_function_in_separate_process
+from tests.cross_fw.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
+from tests.cross_fw.shared.isolation_runner import run_pytest_case_function_in_separate_process
 
 
 @pytest.mark.skipif(ISOLATION_RUN_ENV_VAR not in os.environ, reason="Should be run via isolation proxy")

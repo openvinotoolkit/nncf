@@ -17,7 +17,7 @@ import re
 import pytest
 import torch
 
-from tests.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
+from tests.cross_fw.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
 
 
 def clean_source_code(code_source):
