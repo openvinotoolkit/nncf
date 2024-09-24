@@ -178,39 +178,37 @@ def calculate_normalized_weight(weight: Tensor, scale: Tensor) -> Tensor:
 
 def do_nf4_quantization(weight: Tensor, scale: Tensor, is_normalized_weight: bool = False) -> Tensor:
     """
-    Performs NF4 quantization - the floating point value is represented by floating point scale, look-up table of
-        16 NF4 values Quantizes the weight tensor to NF4 format.
+    Performs NF4 quantization. The floating point values are represented by floating point scale and look-up with
+    16 floating-point values on [-1, 1]. Scale normalizes original values to [-1, 1] interval and look-up table
+    "rounds" or "quantize" to the closest quant.
 
     :param weight: Weight tensor to quantize.
     :param scale: Scale tensor used for normalization.
     :param is_normalized_weight: Whether weight was scaled to [-1, 1] interval. Defaults to False.
-    :return: Tensor of indexes from 0 to 15 that represents the position in look-up table with the corresponding
-        NF4 values from -1 to 1.
+    :return: Tensor with floating-point values, where each of them corresponds to 1 out of 16 quants on [-1, 1].
     """
     norm_weight = weight if is_normalized_weight else calculate_normalized_weight(weight, scale)
     center_nf4_quantiles = fns.from_numpy(CENTER_OF_NF4_QUANTILES, backend=norm_weight.backend)
     indexes = fns.searchsorted(center_nf4_quantiles, norm_weight)
-    return indexes
+    nf4_quantiles = fns.from_numpy(NF4_QUANTILES, backend=indexes.backend)
+    nf4_weight = nf4_quantiles[indexes]
+    return nf4_weight
 
 
-def do_nf4_dequantization(indexes: Tensor, scale: Tensor, reduction_axis: int = -1) -> Tensor:
+def do_nf4_dequantization(nf4_weight: Tensor, scale: Tensor, reduction_axis: int = -1) -> Tensor:
     """
     Decompresses the NF4 quantized weight tensor.
 
-    :param indexes: Tensor of indexes from 0 to 15 that represents the position in look-up table with the corresponding
-        NF4 values from -1 to 1.
+    :param nf4_weight: Tensor with floating-point values,
+        where each of them corresponds to 1 out of 16 quants on [-1, 1].
     :param scale: Scale tensor used for decompression.
     :param reduction_axis: axis along which weights were reshaped for group quantization and will be reshaped back to
         original shapes. If equals to -1, weights are not reshaped, assumed not a group quantization. Defaults to -1.
     :return: Decompressed weight tensor.
     """
-    nf4_quantiles = fns.from_numpy(NF4_QUANTILES, backend=indexes.backend)
-    nf4_weight = nf4_quantiles[indexes]
-
     decompressed_weight = nf4_weight * scale
     if reduction_axis != -1:
         decompressed_weight = ungroup_weights(decompressed_weight, reduction_axis)
-
     return decompressed_weight
 
 
