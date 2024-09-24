@@ -281,7 +281,7 @@ class WeightCompression(Algorithm):
         dtype_vs_num_weights_map = {}
         ratio_defining_weight_names = set(wp.weight_name for wp in ratio_defining_params)
         for data in all_params:
-            dtype = data.compression_config.mode if data.compression_config is not None else "fp16/fp32"
+            dtype = data.compression_config.mode if data.compression_config is not None else "float"
             n_total, n_ratio_defining = dtype_vs_num_weights_map.get(dtype, ([], []))
             if data.weight_name in ratio_defining_weight_names:
                 n_ratio_defining.append(data.num_weights)
@@ -317,12 +317,8 @@ class WeightCompression(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-        # nodes_to_compress includes nodes from the ignored scope to be added to bitwidth_distribution_str
-        nodes_to_compress = self._get_nodes_to_compress(graph)
-
-        activations = {}
-        if dataset is not None and self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
-            activations = self._get_activations(dataset, self._subset_size, nodes_to_compress, graph, model)
+        # candidates_to_compress includes nodes from the ignored scope to be added to bitwidth_distribution_str
+        candidates_to_compress = self._get_nodes_to_compress(graph)
         all_weight_params: List[WeightCompressionParameters] = []
         weight_names = set()
 
@@ -332,8 +328,8 @@ class WeightCompression(Algorithm):
         ignored_scope_weight_params: List[WeightCompressionParameters] = []
 
         is_last_layer_shared = False
-        n = len(nodes_to_compress)
-        for i, node in enumerate(nodes_to_compress):
+        n = len(candidates_to_compress)
+        for i, node in enumerate(candidates_to_compress):
             for weight_name, weight_port_id in self._backend_entity.get_weight_names_and_port_ids(node, graph):
                 if weight_name in weight_names:
                     if i == n - 1:
@@ -387,15 +383,23 @@ class WeightCompression(Algorithm):
                 all_weight_params.append(weight_params)
                 weight_names.add(weight_name)
 
+        activations = {}
+        nodes_to_compress = [node for node in candidates_to_compress if node.node_name not in ignored_names]
+        if dataset is not None and self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
+            activations = self._get_activations(dataset, self._subset_size, nodes_to_compress, graph, model)
+
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_shared)
         self._set_weight_compression_config(ratio_defining_params, model, graph, activations)
         nncf_logger.info(
             self._get_bitwidth_distribution_str(all_weight_params + ignored_scope_weight_params, ratio_defining_params)
         )
+        nodes_names_to_exclude = {
+            w_params.node_with_weight.node_name for w_params in all_weight_params if w_params.compression_config is None
+        }
         # Filter the weight parameters that should remain in their original floating-point precision
         all_weight_params = [w_params for w_params in all_weight_params if w_params.compression_config is not None]
-        # Remove nodes in the ignored scope from nodes_to_compress
-        nodes_to_compress = [node for node in nodes_to_compress if node.node_name not in ignored_names]
+        # Filter nodes_to_compress by excluding nodes that should remain in their original floating-point precision
+        nodes_to_compress = [node for node in nodes_to_compress if node.node_name not in nodes_names_to_exclude]
 
         if self._awq and activations is not None and self._mode != CompressWeightsMode.E2M1:
             awq_params = self._advanced_parameters.awq_params
