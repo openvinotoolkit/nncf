@@ -104,7 +104,7 @@ class WeightCompression(Algorithm):
         :param gptq: determines whether to use or not GPTQ algorithm.
         :param lora_correction: determines whether to use or not LoRA Correction algorithm.
         :param backup_mode: Defines a backup mode for weight compression.
-            NONE stands for original floating-point precision of the model weights (either FP16 or FP32).
+            NONE stands for original floating-point precision of the model weights.
                 In this mode, weights are retained in their original precision without any quantization.
             INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
             INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
@@ -317,6 +317,7 @@ class WeightCompression(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
+        # nodes_to_compress includes nodes from the ignored scope to be added to bitwidth_distribution_str
         nodes_to_compress = self._get_nodes_to_compress(graph)
 
         activations = {}
@@ -393,6 +394,8 @@ class WeightCompression(Algorithm):
         )
         # Filter the weight parameters that should remain in their original floating-point precision
         all_weight_params = [w_params for w_params in all_weight_params if w_params.compression_config is not None]
+        # Remove nodes in the ignored scope from nodes_to_compress
+        nodes_to_compress = [node for node in nodes_to_compress if node.node_name not in ignored_names]
 
         if self._awq and activations is not None and self._mode != CompressWeightsMode.E2M1:
             awq_params = self._advanced_parameters.awq_params

@@ -100,7 +100,7 @@ class CompressWeightsMode(StrEnum):
 class BackupMode(StrEnum):
     """
     Defines a backup mode for weight compression.
-    :param NONE: Stands for original floating-point precision of the model weights (either FP16 or FP32).
+    :param NONE: Stands for original floating-point precision of the model weights.
         In this mode, weights are retained in their original precision without any quantization.
     :param INT8_SYM: Stands for 8-bit integer symmetric quantization without zero point.
         https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization
