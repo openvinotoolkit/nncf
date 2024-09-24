@@ -36,3 +36,7 @@ tinyllama_data_aware_lora_stateful_backend_OV:
   metric_value: 0.83446
   num_int4: 94
   num_int8: 500
+tinyllama_NF4_scale_estimation_stateful_per_channel_backend_OV:
+  metric_value: 0.88663
+  num_int4: 11
+  num_int8: 290
