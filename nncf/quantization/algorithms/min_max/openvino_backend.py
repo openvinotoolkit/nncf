@@ -264,8 +264,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         ]
 
     def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        assert node.metatype in self.mat_mul_metatypes
-        return node.layer_attributes is not None
+        return node.metatype in self.mat_mul_metatypes and node.layer_attributes is not None
 
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: OVTargetPoint) -> str:

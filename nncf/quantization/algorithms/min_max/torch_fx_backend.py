@@ -360,5 +360,4 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return weight_nodes
 
     def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        assert node.metatype in self.mat_mul_metatypes
-        return len(get_weight_tensor_port_ids(node, nncf_graph)) > 0
+        return node.metatype in self.mat_mul_metatypes and len(get_weight_tensor_port_ids(node, nncf_graph)) > 0
