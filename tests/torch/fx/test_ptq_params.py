@@ -9,15 +9,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict
 import pytest
 import torch
+from torch import nn
+
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.utils.backend import BackendType
+from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.parameters import TargetDevice
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
+from nncf.scopes import IgnoredScope
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
@@ -30,7 +36,11 @@ from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
 from tests.cross_fw.test_templates.test_ptq_params import TemplateTestPTQParams
 from tests.torch.fx.helpers import get_single_conv_nncf_graph
+from tests.torch.fx.helpers import get_torch_fx_model
+from tests.torch.helpers import create_bn
+from tests.torch.helpers import create_conv
 from tests.torch.ptq.helpers import get_single_no_weight_matmul_nncf_graph
+
 
 def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
     return PatternsManager.get_full_hw_pattern_graph(backend=BackendType.TORCH_FX, device=device)
@@ -38,6 +48,35 @@ def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
 
 def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
     return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.TORCH_FX, device=device)
+
+
+class LinearTestModel(nn.Module):
+    INPUT_SIZE = None
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(3, 3, 1)
+        self.bn1 = create_bn(3)
+        self.relu = nn.ReLU()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.conv2 = create_conv(3, 1, 1)
+        self.bn2 = create_bn(1)
+
+    def forward(self, x):
+        x = self.relu(self.conv1(x))
+        x = self.bn1(x)
+        x = self.avg_pool(x)
+        x = self.relu(self.conv2(x))
+        x = self.bn2(x)
+        return x
+
+
+@pytest.mark.parametrize("target_device", TargetDevice)
+def test_target_device(target_device):
+    min_max_algo = MinMaxQuantization(target_device=target_device)
+    min_max_algo._backend_entity = FXMinMaxAlgoBackend()
+    assert min_max_algo._target_device == target_device
+
 
 class TestPTQParams(TemplateTestPTQParams):
     def get_algo_backend(self):
@@ -52,7 +91,15 @@ class TestPTQParams(TemplateTestPTQParams):
 
     def check_unified_scale_layout(self, layout, unified_scale_group):
         assert len(layout.transformations) == len(unified_scale_group)
-       
+        for t, ref_tp in zip(layout.transformations, unified_scale_group):
+            assert isinstance(t, FXApplyTransformationCommand)
+            assert t.transformation_fn.__closure__[1].cell_contents[0] == ref_tp
+            assert t.type == TransformationType.INSERT
+            assert t.transformation_fn.__closure__[0].cell_contents.zero_point == 0
+            assert torch.allclose(
+                t.transformation_fn.__closure__[0].cell_contents.scale, torch.tensor(0.031496062874794006)
+            )
+
     def target_point(self, target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
         return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
 
@@ -74,8 +121,20 @@ class TestPTQParams(TemplateTestPTQParams):
 
     @pytest.fixture(scope="session")
     def test_params(self):
+        linear_model = get_torch_fx_model(LinearTestModel())
+
         return {
+            "test_range_estimator_per_tensor": {
+                "model": linear_model,
+                "nncf_graph": GraphConverter.create_nncf_graph(linear_model),
+                "stat_points_num": 5,
+            },
             "test_quantize_outputs": {
+                "nncf_graph": get_single_conv_nncf_graph().nncf_graph,
+                "hw_patterns": get_hw_patterns(),
+                "ignored_patterns": get_ignored_patterns(),
+            },
+            "test_ignored_scopes": {
                 "nncf_graph": get_single_conv_nncf_graph().nncf_graph,
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
@@ -85,4 +144,12 @@ class TestPTQParams(TemplateTestPTQParams):
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
             },
+            "test_validate_scope": {
+                "nncf_graph": get_single_conv_nncf_graph().nncf_graph,
+                "ignored_patterns": get_ignored_patterns(),
+            },
         }
+
+    @pytest.fixture(params=[(IgnoredScope([]), 1, 1), (IgnoredScope(["/Conv_1_0"]), 0, 0)])
+    def ignored_scopes_data(self, request):
+        return request.param
