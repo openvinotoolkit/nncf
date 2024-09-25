@@ -10,4 +10,4 @@
 # limitations under the License.
 
 from nncf.data.dataset import Dataset as Dataset
-from nncf.helpers.dataset import generate_text_data as generate_text_data
+from nncf.data.generators import generate_text_data as generate_text_data

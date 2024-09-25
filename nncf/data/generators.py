@@ -34,19 +34,25 @@ def generate_text_data(
 
     try:
         import torch
+    except ImportError:
+        raise nncf.ModuleNotFoundError("torch is required in order to generate text data: `pip install torch`.")
+
+    try:
         from transformers import PreTrainedModel
         from transformers import PreTrainedTokenizerBase
         from transformers.utils import logging
 
         logging.set_verbosity_error()
     except ImportError:
-        raise nncf.ModuleNotFoundError("Install `nncf/helpers/requirements.txt` before using `nncf.helpers` module.")
-
-    if not isinstance(model, PreTrainedModel.__bases__) or not isinstance(tokenizer, PreTrainedTokenizerBase.__bases__):
-        raise nncf.ValidationError(
-            "Model and tokenizer should be instance of the "
-            "`transformers.PreTrainedModel` and `transformers.PreTrainedTokenizerBase` respectively."
+        raise nncf.ModuleNotFoundError(
+            "transformers is required in order to generate text data: `pip install transformers`."
         )
+
+    if not isinstance(model, PreTrainedModel.__bases__):
+        raise nncf.ValidationError("Model should be instance of the `transformers.PreTrainedModel`.")
+
+    if not isinstance(tokenizer, PreTrainedTokenizerBase.__bases__):
+        raise nncf.ValidationError("tokenizer should be instance of the `transformers.PreTrainedTokenizerBase`.")
 
     generated_data = []
 
