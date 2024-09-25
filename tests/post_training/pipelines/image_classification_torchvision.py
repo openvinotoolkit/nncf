@@ -13,7 +13,6 @@ import numpy as np
 import onnx
 import openvino as ov
 import torch
-from torch._export import capture_pre_autograd_graph
 from torchvision import models
 
 from nncf.torch import disable_patching
@@ -54,7 +53,7 @@ class ImageClassificationTorchvision(ImageClassificationBase):
         if self.backend == BackendType.FX_TORCH:
             with torch.no_grad():
                 with disable_patching():
-                    self.model = capture_pre_autograd_graph(model, (self.dummy_tensor,))
+                    self.model = torch.export.export(model, (self.dummy_tensor,)).module()
 
         elif self.backend in PT_BACKENDS:
             self.model = model

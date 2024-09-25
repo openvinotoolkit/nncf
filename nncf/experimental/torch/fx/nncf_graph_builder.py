@@ -167,7 +167,7 @@ class GraphConverter:
         output_port_id = 0
         tensor_shape = None
         if source_node.op in ("get_attr",):
-            tensor_shape = tuple(getattr(model, source_node.target).shape)
+            tensor_shape = tuple(get_tensor_constant_from_node(source_node, model).shape)
         elif "val" in source_node.meta:
             if source_nncf_node.metatype is om.PTBatchNormMetatype:
                 tensor = source_node.meta["val"][0]
