@@ -21,6 +21,7 @@ from torchvision.transforms.functional import normalize
 from nncf.torch import nncf_model_input
 from nncf.torch import register_module
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
+from tests.torch.helpers import create_bn
 from tests.torch.helpers import create_conv
 
 
@@ -550,3 +551,24 @@ class MultiBranchesConnectedModel(torch.nn.Module):
         b += self.bias
         y = a + b
         return self.conv_c(y) + self.bias
+
+
+class LinearPTQParamsTestModel(nn.Module):
+    INPUT_SIZE = None
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(3, 3, 1)
+        self.bn1 = create_bn(3)
+        self.relu = nn.ReLU()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.conv2 = create_conv(3, 1, 1)
+        self.bn2 = create_bn(1)
+
+    def forward(self, x):
+        x = self.relu(self.conv1(x))
+        x = self.bn1(x)
+        x = self.avg_pool(x)
+        x = self.relu(self.conv2(x))
+        x = self.bn2(x)
+        return x

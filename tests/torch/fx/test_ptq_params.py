@@ -11,7 +11,6 @@
 
 import pytest
 import torch
-from torch import nn
 
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
@@ -37,9 +36,8 @@ from tests.common.quantization.metatypes import SoftmaxTestMetatype
 from tests.cross_fw.test_templates.test_ptq_params import TemplateTestPTQParams
 from tests.torch.fx.helpers import get_single_conv_nncf_graph
 from tests.torch.fx.helpers import get_torch_fx_model
-from tests.torch.helpers import create_bn
-from tests.torch.helpers import create_conv
 from tests.torch.ptq.helpers import get_single_no_weight_matmul_nncf_graph
+from tests.torch.test_models.synthetic import LinearPTQParamsTestModel
 
 
 def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
@@ -48,27 +46,6 @@ def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
 
 def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
     return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.TORCH_FX, device=device)
-
-
-class LinearTestModel(nn.Module):
-    INPUT_SIZE = None
-
-    def __init__(self):
-        super().__init__()
-        self.conv1 = create_conv(3, 3, 1)
-        self.bn1 = create_bn(3)
-        self.relu = nn.ReLU()
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.conv2 = create_conv(3, 1, 1)
-        self.bn2 = create_bn(1)
-
-    def forward(self, x):
-        x = self.relu(self.conv1(x))
-        x = self.bn1(x)
-        x = self.avg_pool(x)
-        x = self.relu(self.conv2(x))
-        x = self.bn2(x)
-        return x
 
 
 @pytest.mark.parametrize("target_device", TargetDevice)
@@ -121,7 +98,7 @@ class TestPTQParams(TemplateTestPTQParams):
 
     @pytest.fixture(scope="session")
     def test_params(self):
-        linear_model = get_torch_fx_model(LinearTestModel())
+        linear_model = get_torch_fx_model(LinearPTQParamsTestModel())
 
         return {
             "test_range_estimator_per_tensor": {
