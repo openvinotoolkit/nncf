@@ -21,6 +21,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
+from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -182,9 +183,13 @@ class WeightCompression(Algorithm):
         )
 
         ordered_nodes_to_compress = []
+        ignored_names = get_ignored_node_names_from_ignored_scope(
+            self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
+        )
         for node in nncf_graph.topological_sort():
             is_node_with_weights = self._backend_entity.is_node_with_weights(node, nncf_graph)
-            if node.metatype in weighted_metatypes and is_node_with_weights:
+            is_within_scope = should_consider_scope(node.node_name, ignored_names)
+            if node.metatype in weighted_metatypes and is_node_with_weights and is_within_scope:
                 ordered_nodes_to_compress.append(node)
         return ordered_nodes_to_compress
 
@@ -268,7 +273,10 @@ class WeightCompression(Algorithm):
         return f"{percentage:.0f}% ({len(num_weights_list)} / {total_num_params})"
 
     def _get_bitwidth_distribution_str(
-        self, all_params: List[WeightCompressionParameters], ratio_defining_params: List[WeightCompressionParameters]
+        self,
+        all_params: List[WeightCompressionParameters],
+        ratio_defining_params: List[WeightCompressionParameters],
+        ignored_scope_weight_statistics: List[int],
     ) -> str:
         """
         Generates a table that shows the ratio of weights quantized to different number of bits.
@@ -276,6 +284,7 @@ class WeightCompression(Algorithm):
         :param all_params: Information about each weight node.
         :param ratio_defining_params: Information about weights that are used for calculating ratio between primary and
             backup precisions.
+        :param ignored_scope_weight_statistics: Information about weight nodes from IgnoredScope.
         :return: A string containing the table.
         """
         dtype_vs_num_weights_map = {}
@@ -288,10 +297,14 @@ class WeightCompression(Algorithm):
             n_total.append(data.num_weights)
             dtype_vs_num_weights_map[dtype] = (n_total, n_ratio_defining)
 
+        if ignored_scope_weight_statistics:
+            n_total, n_ratio_defining = dtype_vs_num_weights_map.get("float", ([], []))
+            dtype_vs_num_weights_map["float"] = (n_total + ignored_scope_weight_statistics, n_ratio_defining)
+
         num_ratio_defining_weights = sum(ws.num_weights for ws in ratio_defining_params)
         num_ratio_defining_params = len(ratio_defining_params)
-        num_total_weights = sum(ws.num_weights for ws in all_params)
-        num_params = len(all_params)
+        num_total_weights = sum(ws.num_weights for ws in all_params) + sum(ignored_scope_weight_statistics)
+        num_params = len(all_params) + len(ignored_scope_weight_statistics)
         dtype_vs_num_weights_map = OrderedDict(sorted(dtype_vs_num_weights_map.items(), reverse=True))
         # Table creation
         header = ["Weight compression mode", "% all parameters (layers)", "% ratio-defining parameters (layers)"]
@@ -309,6 +322,50 @@ class WeightCompression(Algorithm):
         pretty_string = f"Statistics of the bitwidth distribution:\n{table}"
         return pretty_string
 
+    @staticmethod
+    def _is_float(dtype):
+        """
+        Check if the given data type is a floating-point type.
+
+        :param dtype: The data type to check.
+        :return: True if the data type is one of the floating-point types, False otherwise.
+        """
+        return dtype in [
+            TensorDataType.float16,
+            TensorDataType.bfloat16,
+            TensorDataType.float32,
+            TensorDataType.float64,
+        ]
+
+    def _get_ignored_scope_weight_statistics(self, model: TModel, graph: NNCFGraph) -> List[int]:
+        """
+        Collect the weight statistics for nodes in the ignored scope.
+
+        :param model: Model for statistics collection.
+        :param graph: Model graph.
+        :return: A list of weight sizes for the ignored nodes.
+        """
+        ignored_names = get_ignored_node_names_from_ignored_scope(self._ignored_scope, graph, strict=False)
+        weighted_metatypes = (
+            self._backend_entity.matmul_metatypes
+            + self._backend_entity.embedding_metatypes
+            + self._backend_entity.convolution_metatypes
+        )
+        ignored_scope_weight_statistics = []
+        for node_name in ignored_names:
+            node = graph.get_node_by_name(node_name)
+            is_node_with_weights = self._backend_entity.is_node_with_weights(node, graph)
+            if not is_node_with_weights or node.metatype not in weighted_metatypes:
+                continue
+            for _, weight_port_id in self._backend_entity.get_weight_names_and_port_ids(node, graph):
+                weight_dtype = self._backend_entity.get_weight_dtype(node, weight_port_id, model, graph)
+                if not WeightCompression._is_float(weight_dtype):
+                    continue
+                weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
+                weight_size = reduce(operator.mul, weight_shape, 1)
+                ignored_scope_weight_statistics.append(weight_size)
+        return ignored_scope_weight_statistics
+
     def apply(
         self,
         model: TModel,
@@ -317,19 +374,16 @@ class WeightCompression(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-        # candidates_to_compress includes nodes from the ignored scope to be added to bitwidth_distribution_str
-        candidates_to_compress = self._get_nodes_to_compress(graph)
+        nodes_to_compress = self._get_nodes_to_compress(graph)
+        activations = {}
+        if dataset is not None and self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
+            activations = self._get_activations(dataset, self._subset_size, nodes_to_compress, graph, model)
         all_weight_params: List[WeightCompressionParameters] = []
         weight_names = set()
 
-        ignored_names = get_ignored_node_names_from_ignored_scope(
-            self._ignored_scope, graph, strict=self._ignored_scope.validate
-        )
-        ignored_scope_weight_params: List[WeightCompressionParameters] = []
-
         is_last_layer_shared = False
-        n = len(candidates_to_compress)
-        for i, node in enumerate(candidates_to_compress):
+        n = len(nodes_to_compress)
+        for i, node in enumerate(nodes_to_compress):
             for weight_name, weight_port_id in self._backend_entity.get_weight_names_and_port_ids(node, graph):
                 if weight_name in weight_names:
                     if i == n - 1:
@@ -337,12 +391,7 @@ class WeightCompression(Algorithm):
                     continue
 
                 weight_dtype = self._backend_entity.get_weight_dtype(node, weight_port_id, model, graph)
-                if weight_dtype not in [
-                    TensorDataType.float16,
-                    TensorDataType.bfloat16,
-                    TensorDataType.float32,
-                    TensorDataType.float64,
-                ]:
+                if not WeightCompression._is_float(weight_dtype):
                     continue
                 weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
                 weight_size = reduce(operator.mul, weight_shape, 1)
@@ -353,7 +402,6 @@ class WeightCompression(Algorithm):
                     and node.metatype in self._backend_entity.embedding_metatypes
                     and isinstance(reduction_axes, tuple)
                     and len(reduction_axes) != 1
-                    and node.node_name not in ignored_names
                 ):
                     # NNCF supports multiple reduction axes only for ops with group_size != -1.
                     # Convolution ops are always kept in backup mode.
@@ -365,7 +413,7 @@ class WeightCompression(Algorithm):
                         f"node name: {node.node_name}. The node will be in {self._backup_mode} mode."
                     )
 
-                if node.node_name in ignored_names or self._backup_mode == BackupMode.NONE:
+                if self._backup_mode == BackupMode.NONE:
                     wc_config = None
                 else:
                     mode = (
@@ -377,29 +425,36 @@ class WeightCompression(Algorithm):
                 weight_params = WeightCompressionParameters(
                     weight_name, node, weight_port_id, weight_size, reduction_axes, wc_config
                 )
-                if node.node_name in ignored_names:
-                    ignored_scope_weight_params.append(weight_params)
-                    continue
                 all_weight_params.append(weight_params)
                 weight_names.add(weight_name)
 
-        activations = {}
-        nodes_to_compress = [node for node in candidates_to_compress if node.node_name not in ignored_names]
-        if dataset is not None and self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
-            activations = self._get_activations(dataset, self._subset_size, nodes_to_compress, graph, model)
-
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_shared)
         self._set_weight_compression_config(ratio_defining_params, model, graph, activations)
+
+        ignored_scope_weight_statistics = self._get_ignored_scope_weight_statistics(model, graph)
         nncf_logger.info(
-            self._get_bitwidth_distribution_str(all_weight_params + ignored_scope_weight_params, ratio_defining_params)
+            self._get_bitwidth_distribution_str(
+                all_weight_params, ratio_defining_params, ignored_scope_weight_statistics
+            )
         )
-        nodes_names_to_exclude = {
-            w_params.node_with_weight.node_name for w_params in all_weight_params if w_params.compression_config is None
-        }
-        # Filter the weight parameters that should remain in their original floating-point precision
-        all_weight_params = [w_params for w_params in all_weight_params if w_params.compression_config is not None]
-        # Filter nodes_to_compress by excluding nodes that should remain in their original floating-point precision
-        nodes_to_compress = [node for node in nodes_to_compress if node.node_name not in nodes_names_to_exclude]
+
+        if self._backup_mode == BackupMode.NONE:
+            # Filter all_weight_params and nodes_to_compress by excluding nodes
+            # that should remain in their original floating-point precision
+            nodes_names_to_exclude = {
+                w_params.node_with_weight.node_name
+                for w_params in all_weight_params
+                if w_params.compression_config is None
+            }
+            all_weight_params = list(
+                filter(
+                    lambda w_params: w_params.node_with_weight.node_name not in nodes_names_to_exclude,
+                    all_weight_params,
+                )
+            )
+            nodes_to_compress = list(
+                filter(lambda node: node.node_name not in nodes_names_to_exclude, nodes_to_compress)
+            )
 
         if self._awq and activations is not None and self._mode != CompressWeightsMode.E2M1:
             awq_params = self._advanced_parameters.awq_params
