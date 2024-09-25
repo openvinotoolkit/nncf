@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import pytest
-from torch.random import manual_seed
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
@@ -18,11 +17,10 @@ import nncf
 from nncf.data import generate_text_data
 from tests.cross_fw.shared.helpers import load_json
 from tests.cross_fw.shared.paths import TEST_ROOT
-
-manual_seed(0)
+from tests.torch.helpers import set_torch_seed
 
 BASE_TEST_MODEL_ID = "hf-internal-testing/tiny-random-gpt2"
-GENERATED_TEXT_REF = TEST_ROOT / "common" / "data" / "ref_generated_data.json"
+GENERATED_TEXT_REF = TEST_ROOT / "torch" / "data" / "ref_generated_data.json"
 
 
 @pytest.mark.parametrize(
@@ -40,7 +38,8 @@ GENERATED_TEXT_REF = TEST_ROOT / "common" / "data" / "ref_generated_data.json"
 )
 def test_generate_text_data_usage(model, tokenizer, usage_error):
     try:
-        generate_text_data(model, tokenizer, seq_len=2, dataset_size=1)
+        with set_torch_seed(0):
+            generate_text_data(model, tokenizer, seq_len=2, dataset_size=1)
     except Exception as e:
         if usage_error:
             assert isinstance(e, nncf.ValidationError), "Expected exception."
@@ -54,12 +53,13 @@ def test_generate_text_data_functional():
     model = AutoModelForCausalLM.from_pretrained(BASE_TEST_MODEL_ID)
     tokenizer = AutoTokenizer.from_pretrained(BASE_TEST_MODEL_ID)
 
-    generated_data = generate_text_data(
-        model,
-        tokenizer,
-        seq_len=seq_len,
-        dataset_size=dataset_size,
-    )
+    with set_torch_seed(0):
+        generated_data = generate_text_data(
+            model,
+            tokenizer,
+            seq_len=seq_len,
+            dataset_size=dataset_size,
+        )
 
     assert len(generated_data) == dataset_size
     generated_data = [tokenizer.encode(d) for d in generated_data]

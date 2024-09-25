@@ -25,6 +25,10 @@ def generate_text_data(
     """
     Generates text dataset based on the model output.
 
+    Since the model is required to be the instance of the PreTrainedModel
+    and the tokenizer is required to be the instance of the PreTrainedTokenizerBase,
+    environment must have `transformers` & `torch` modules installed to run this method.
+
     :param model: Model instance.
     :param tokenizer: Tokenizer instance.
     :param seq_len: Sequence length for generation.

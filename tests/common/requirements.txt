@@ -1,6 +1,4 @@
 -c ../../constraints.txt
-torch
-transformers
 pytest
 pytest-cov
 pytest-dependency
