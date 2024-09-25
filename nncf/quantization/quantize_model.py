@@ -446,7 +446,7 @@ def compress_weights(
     :type gptq: bool
     :param lora_correction: Indicates whether to use Lora Correction algorithm.
     :type lora_correction: bool
-    :param backup_mode: Defines a backup mode for weight compression.
+    :param backup_mode: Defines a backup mode for mixed-precision weight compression.
         NONE stands for original floating-point precision of the model weights (either FP16 or FP32).
             In this mode, weights are retained in their original precision without any quantization.
         INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
@@ -545,9 +545,16 @@ def compress_weights(
             group_size = -1
         if ratio != 1 or group_size != -1:
             raise AttributeError(
-                "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
+                "INT8 modes assume per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
+
+        if backup_mode != mode:
+            nncf_logger.warning(
+                "INT8 modes do not support the `backup_mode` option. This will be aligned with the `mode`."
+            )
+            backup_mode = mode
+
         options = {
             "all_layers": all_layers,
             "sensitivity_metric": sensitivity_metric,
