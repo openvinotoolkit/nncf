@@ -303,9 +303,8 @@ class MinMaxAlgoBackend(ABC):
         :return: List of ignored names.
         """
 
-    @staticmethod
     @abstractmethod
-    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_weight_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
         """
         Returns nodes that have weights.
 
@@ -313,9 +312,8 @@ class MinMaxAlgoBackend(ABC):
         :return: All nodes with weights.
         """
 
-    @staticmethod
     @abstractmethod
-    def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
         Returns true if given nncf matmul node is a matmul with a constant, False otherwise.
 

@@ -370,8 +370,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
         return set()
 
-    @staticmethod
-    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_weight_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
         weight_nodes_candidates = [
             node
             for node in nncf_graph.get_all_nodes()
@@ -379,15 +378,11 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         ]
         weight_nodes = []
         for node in weight_nodes_candidates:
-            if (
-                node.metatype in PTMinMaxAlgoBackend().mat_mul_metatypes
-                and not PTMinMaxAlgoBackend.is_matmul_with_constant(node, nncf_graph)
-            ):
+            if node.metatype in self.mat_mul_metatypes and not self.is_matmul_with_constant(node, nncf_graph):
                 continue
             weight_nodes.append(node)
         return weight_nodes
 
-    @staticmethod
-    def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        assert node.metatype in PTMinMaxAlgoBackend().mat_mul_metatypes
+    def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        assert node.metatype in self.mat_mul_metatypes
         return len(get_weight_tensor_port_ids(node, nncf_graph)) > 0

@@ -256,17 +256,15 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 ignored_names.add(node.node_name)
         return ignored_names
 
-    @staticmethod
-    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_weight_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
         return [
             node
             for node in nncf_graph.get_all_nodes()
             if isinstance(node.layer_attributes, OVLayerAttributes) and node.metatype in OPERATIONS_WITH_WEIGHTS
         ]
 
-    @staticmethod
-    def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        assert node.metatype in OVMinMaxAlgoBackend().mat_mul_metatypes
+    def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        assert node.metatype in self.mat_mul_metatypes
         return node.layer_attributes is not None
 
     @staticmethod
