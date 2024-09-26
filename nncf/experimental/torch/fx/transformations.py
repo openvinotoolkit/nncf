@@ -144,8 +144,10 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
 
 def shared_constants_unification_transformation(model: torch.fx.GraphModule):
     """
-    checks fx graph for shared constants, disconnects and eliminates redundant
-    shared constant while connecting singular shared constant.
+    checks fx graph for shared constants and eliminates redundant
+    shared constant while keeping only the first instance of the constant node.
+    This unification transformation is cruicial since the current algorithms(min_max, solver, BC, etc.)
+    for torch fx do not utilize the is_shared attribute of nodes for shared constants.
 
     :param model: Target Torch FX GraphModule
     :return: Transformation which attaches shared constants to nodes and removes redundant constants.

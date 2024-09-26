@@ -501,9 +501,10 @@ def compress_weights(
                 f"but given {mode.value} mode."
             )
 
-        if any((awq, scale_estimation, gptq, lora_correction)):
+        if any((awq, scale_estimation, gptq, lora_correction, dataset)):
             raise AttributeError(
-                "TorchFX backend does not support 'awq', 'scale_estimation', 'gptq' and 'lora_correction' options. "
+                "TorchFX backend does not support 'awq', 'scale_estimation', 'gptq',"
+                "'dataset' and 'lora_correction' options. "
                 "Set them to None."
             )
         compression_weights_impl = fx_compression_weights_impl

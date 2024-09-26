@@ -17,6 +17,7 @@ from torch._export import capture_pre_autograd_graph
 
 from nncf import CompressWeightsMode
 from nncf.common.factory import NNCFGraphFactory
+from nncf.data.dataset import Dataset
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.quantization import compress_weights
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
@@ -72,7 +73,7 @@ def _capture_model(model, inputs):
             return capture_pre_autograd_graph(model, (inputs,))
 
 
-@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+@pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_weights(mode):
     model = ShortTransformer(5, 10)
     input_ids = torch.randint(0, 10, (5,))
@@ -89,7 +90,7 @@ def test_compress_weights(mode):
     assert n_target_modules == n_compressed_weights
 
 
-@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+@pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_weights_graph_edge(mode):
     model = ShortTransformer(5, 10)
     input_ids = torch.randint(0, 10, (5,))
@@ -103,7 +104,7 @@ def test_compress_weights_graph_edge(mode):
             assert decompressor_node_edge.tensor_shape == decompressor_constant_edge.tensor_shape
 
 
-@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+@pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_weights_shared_weights(mocker, mode):
     with disable_patching():
         model = ShortTransformer(5, 10, share_weights=True)
@@ -136,7 +137,7 @@ def test_compress_weights_shared_weights(mocker, mode):
         assert spy.call_count == 1
 
 
-@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+@pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compressed_model_inference(mode):
     torch.manual_seed(42)
     model = ShortTransformer(5, 10, share_weights=True)
@@ -152,7 +153,7 @@ def test_compressed_model_inference(mode):
     assert torch.all(torch.isclose(exported_model_output, compressed_model_outputs, atol=1)).item()
 
 
-@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+@pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_weights_model_size_conv(mode):
 
     dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
@@ -176,7 +177,7 @@ def test_compress_weights_model_size_conv(mode):
     assert compressed_model_size < model_size
 
 
-@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+@pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_weights_functional_model(mode):
     model = FunctionalModel()
     decompressor_type = "symmetric" if mode == CompressWeightsMode.INT8_SYM else "asymmetric"
@@ -206,13 +207,13 @@ def test_compress_weights_functional_model(mode):
         {"awq": True},
         {"scale_estimation": True},
         {"lora_correction": True},
+        {"dataset": Dataset([1])},
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
-    with disable_patching():
-        exported_model = capture_pre_autograd_graph(dummy_torch_model, args=(dummy_input,))
+    exported_model = _capture_model(dummy_torch_model, dummy_input)
     with pytest.raises(AttributeError):
         compress_weights(exported_model, mode=mode, **params)
 

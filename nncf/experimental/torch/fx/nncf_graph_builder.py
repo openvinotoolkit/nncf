@@ -138,7 +138,6 @@ class GraphConverter:
         for source_node in model.graph.nodes:
             node_type, node_metatype = GraphConverter._get_node_type_and_metatype(source_node, model)
             node_metatype = GraphConverter._map_fx_unique_metatypes(source_node, node_metatype)
-            is_shared_node = False
             is_shared_node = source_node.op in ("get_attr",) and (
                 const_targets_counter[source_node.target] > 1 or len(source_node.users) > 1
             )
