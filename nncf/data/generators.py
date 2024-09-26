@@ -12,6 +12,7 @@
 from typing import List, TypeVar
 
 import nncf
+from nncf.common.logging.track_progress import track
 
 BASE_VOCAB_SIZE = 12000
 
@@ -69,21 +70,23 @@ def generate_text_data(
     step_num = max(1, vocab_size // dataset_size)
     ids_counter = 0
 
-    while len(generated_data) < dataset_size:
-        # Creating the input for pre-generate step
-        input_ids = torch.tensor([[ids_counter % vocab_size]])
+    with track(total=dataset_size, description="Generating text data") as pbar:
+        while len(generated_data) < dataset_size:
+            # Creating the input for pre-generate step
+            input_ids = torch.tensor([[ids_counter % vocab_size]]).to(model.device)
 
-        # Collecting data from the pre & post generate steps
-        outputs_prep = model.generate(input_ids, do_sample=False, max_length=seq_len // 2)
-        outputs_post = model.generate(outputs_prep, do_sample=True, max_length=seq_len + seq_len // 2)
-        gen_text = tokenizer.batch_decode(outputs_post[:, outputs_prep.shape[1] :], skip_special_tokens=True)
+            # Collecting data from the pre & post generate steps
+            outputs_prep = model.generate(input_ids, do_sample=False, max_length=seq_len // 2)
+            outputs_post = model.generate(outputs_prep, do_sample=True, max_length=seq_len + seq_len // 2)
+            gen_text = tokenizer.batch_decode(outputs_post[:, outputs_prep.shape[1] :], skip_special_tokens=True)
 
-        if len(set(gen_text[0])) < unique_tokens_lower_limit:
-            ids_counter += 1
-            continue
+            if len(set(gen_text[0])) < unique_tokens_lower_limit:
+                ids_counter += 1
+                continue
 
-        ids_counter += step_num
+            ids_counter += step_num
 
-        generated_data.extend(gen_text)
+            pbar.progress.update(pbar.task, advance=1)
+            generated_data.extend(gen_text)
 
     return generated_data
