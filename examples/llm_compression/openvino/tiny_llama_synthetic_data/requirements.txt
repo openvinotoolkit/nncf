@@ -1,3 +1,5 @@
+-c ../../constraints.txt
+torch
 datasets
 whowhatbench @ git+https://github.com/andreyanufr/who_what_benchmark.git
 numpy>=1.23.5

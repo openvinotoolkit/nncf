@@ -14,11 +14,14 @@ from functools import partial
 import datasets
 import numpy as np
 import openvino as ov
+import torch
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 from whowhatbench import Evaluator
 
 import nncf
+
+SEED = 0
 
 
 def transform_func(text, tokenizer, ov_model):
@@ -61,12 +64,12 @@ def compress_model(model, tokenizer, dataset):
     return optimized_model
 
 
-def validate_model(evaluator, model, optimized_model, original_ov_model):
-    model.model = optimized_model
-    model.request = None
-    _, all_metrics = evaluator.score(model)
-    model.model = original_ov_model
-    model.request = None
+def validate_model(evaluator, hf_model, optimized_model, original_ov_model):
+    hf_model.model = optimized_model
+    hf_model.request = None
+    _, all_metrics = evaluator.score(hf_model)
+    hf_model.model = original_ov_model
+    hf_model.request = None
     return all_metrics["similarity"][0]
 
 
@@ -74,26 +77,32 @@ def main():
     MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False, stateful=False)
+    hf_model = OVModelForCausalLM.from_pretrained(
+        MODEL_ID, export=True, load_in_8bit=False, compile=False, stateful=False
+    )
 
-    original_ov_model = model.model.clone()
-    evaluator = Evaluator(model, tokenizer=tokenizer, metrics=("similarity",))
+    original_ov_model = hf_model.model.clone()
+    evaluator = Evaluator(hf_model, tokenizer=tokenizer, metrics=("similarity",))
 
     # Wikitext-based compression
     wikitext_dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
     wikitext_dataset = [d["text"] for d in wikitext_dataset]
-    wikitext_optimized_model = compress_model(model, tokenizer, wikitext_dataset)
+    wikitext_optimized_model = compress_model(hf_model, tokenizer, wikitext_dataset)
 
     # Synthetic-based compression
-    synthetic_dataset = nncf.data.generate_text_data(model, tokenizer)
-    synthetic_optimized_model = compress_model(model, tokenizer, synthetic_dataset)
+    saved_seed = torch.seed()
+    torch.manual_seed(SEED)
+    synthetic_dataset = nncf.data.generate_text_data(hf_model, tokenizer)
+    torch.manual_seed(saved_seed)
+    synthetic_optimized_model = compress_model(hf_model, tokenizer, synthetic_dataset)
 
     # Similarity comparison between Wikitext-based & Synthetic-based compressed models
-    similarity = validate_model(evaluator, model, wikitext_optimized_model, original_ov_model)
-    print(f"Wikitext-quantized model similarity: {similarity}")
+    wikitext_based_similarity = validate_model(evaluator, hf_model, wikitext_optimized_model, original_ov_model)
+    print(f"Wikitext-quantized model similarity: {wikitext_based_similarity}")
 
-    similarity = validate_model(evaluator, model, synthetic_optimized_model, original_ov_model)
-    print(f"Synthetic-quantized model similarity: {similarity}")
+    synthetic_based_similarity = validate_model(evaluator, hf_model, synthetic_optimized_model, original_ov_model)
+    print(f"Synthetic-quantized model similarity: {synthetic_based_similarity}")
+    return wikitext_based_similarity, synthetic_based_similarity
 
 
 if __name__ == "__main__":
