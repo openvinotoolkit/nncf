@@ -25,7 +25,6 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
-from torch._export import capture_pre_autograd_graph
 
 import nncf
 from nncf.common.graph.graph import NNCFNodeName
@@ -107,7 +106,7 @@ def test_model(test_case: ModelCase):
         with torch.no_grad():
             ex_input = torch.ones(test_case.input_shape)
             model.eval()
-            exported_model = capture_pre_autograd_graph(model, args=(ex_input,))
+            exported_model = torch.export.export(model, args=(ex_input,)).module()
         nncf_graph = GraphConverter.create_nncf_graph(exported_model)
 
         # Check NNCFGrpah
@@ -139,7 +138,7 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters):
 
         with torch.no_grad():
             model.eval()
-            fx_model = capture_pre_autograd_graph(model, args=(example_input,))
+            fx_model = torch.export.export(model, args=(example_input,)).module()
 
         def transform_fn(data_item):
             return data_item.to("cpu")

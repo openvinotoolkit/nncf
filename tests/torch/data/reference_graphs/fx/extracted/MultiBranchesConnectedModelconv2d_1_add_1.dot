@@ -8,14 +8,14 @@ strict digraph  {
 "6 bias" [id=6, type=get_attr];
 "7 x" [id=7, type=input];
 "8 conv2d" [id=8, type=conv2d];
-"9 conv2d_cloned" [id=9, type=clone];
+"9 conv2d_1_input" [id=9, type=input];
 "10 conv2d_1" [id=10, type=conv2d];
 "11 add" [id=11, type=add];
 "12 add_1" [id=12, type=add];
 "13 add_2" [id=13, type=add];
 "14 conv2d_2" [id=14, type=conv2d];
 "15 add_3" [id=15, type=add];
-"16 output_1" [id=16, type=output];
+"16 output" [id=16, type=output];
 "0 conv_a_weight" -> "8 conv2d";
 "1 conv_a_bias" -> "8 conv2d";
 "2 conv_b_weight" -> "10 conv2d_1";
@@ -26,14 +26,12 @@ strict digraph  {
 "6 bias" -> "12 add_1";
 "6 bias" -> "15 add_3";
 "7 x" -> "8 conv2d";
-"8 conv2d" -> "9 conv2d_cloned";
-"8 conv2d" -> "10 conv2d_1";
 "8 conv2d" -> "11 add";
-"9 conv2d_cloned" -> "16 output_1";
+"9 conv2d_1_input" -> "10 conv2d_1";
 "10 conv2d_1" -> "12 add_1";
 "11 add" -> "13 add_2";
 "12 add_1" -> "13 add_2";
+"12 add_1" -> "16 output";
 "13 add_2" -> "14 conv2d_2";
 "14 conv2d_2" -> "15 add_3";
-"15 add_3" -> "16 output_1";
 }

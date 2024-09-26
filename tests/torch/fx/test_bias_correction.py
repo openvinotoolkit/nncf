@@ -177,11 +177,11 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
                 "matmul",
                 {
                     "collected_inputs": {
-                        ("matmul", 0): ("reshape", 0),
+                        ("matmul", 0): ("view", 0),
                     },
                     "subgraph_data": {
                         "subgraph_input_ids": {("matmul", 0)},
-                        "subgraph_output_ids": {("reshape_1", 0), ("add_4", 0)},
+                        "subgraph_output_ids": {("view_1", 0), ("add_4", 0)},
                     },
                 },
             ),
@@ -197,17 +197,17 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
                 SplittedModel,
                 {
                     ("conv2d", 0): ("concat", 0),
-                    ("concat", 1): ("arg0_1", 0),
+                    ("concat", 1): ("x", 0),
                 },
             ),
             (
                 MultipleConvTestModel,
                 {
-                    ("conv2d", 0): ("arg0_1", 0),
-                    ("conv2d_2", 0): ("arg0_1", 0),
+                    ("conv2d", 0): ("x", 0),
+                    ("conv2d_2", 0): ("x", 0),
                 },
             ),
-            (ConvTestModel, {("conv2d", 0): ("arg0_1", 0)}),
+            (ConvTestModel, {("conv2d", 0): ("x", 0)}),
         ),
     )
     def test_verify_collected_stat_inputs_map(self, model_cls, ref_stat_inputs_map, tmpdir):

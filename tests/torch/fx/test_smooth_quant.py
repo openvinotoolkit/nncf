@@ -15,7 +15,6 @@ import numpy as np
 import openvino.runtime as ov
 import pytest
 import torch
-from torch._export import capture_pre_autograd_graph
 
 from nncf import IgnoredScope
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
@@ -98,7 +97,7 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> ov.Model:
         with disable_patching():
-            captured_model = capture_pre_autograd_graph(model.eval(), (torch.rand(model.INPUT_SIZE),))
+            captured_model = torch.export.export(model.eval(), (torch.rand(model.INPUT_SIZE),)).module()
             apply_quantization_transformations(captured_model)
             return captured_model
 

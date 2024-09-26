@@ -30,7 +30,7 @@ strict digraph  {
 "9 conv2d_1" -> "11 add_1";
 "10 add" -> "12 add_2";
 "11 add_1" -> "12 add_2";
+"11 add_1" -> "15 output";
 "12 add_2" -> "13 conv2d_2";
 "13 conv2d_2" -> "14 add_3";
-"13 conv2d_2" -> "15 output";
 }

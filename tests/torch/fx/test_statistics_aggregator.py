@@ -15,7 +15,6 @@ import numpy as np
 import pytest
 import torch
 from torch import nn
-from torch._export import capture_pre_autograd_graph
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
@@ -61,7 +60,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
         conv_w = self.dataset_samples_to_conv_w(np.array(sample))
         with disable_patching():
-            model = capture_pre_autograd_graph(IdentityConv(conv_w), args=(torch.ones(INPUT_SHAPE),))
+            model = torch.export.export(IdentityConv(conv_w), args=(torch.ones(INPUT_SHAPE),)).module()
             return model
 
     def get_statistics_aggregator(self, dataset):

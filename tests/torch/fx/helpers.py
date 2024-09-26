@@ -19,7 +19,6 @@ import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
-from torch._export import capture_pre_autograd_graph
 from torch.fx.passes.graph_drawer import FxGraphDrawer
 
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
@@ -131,7 +130,7 @@ def get_torch_fx_model(model: torch.nn.Module) -> torch.fx.GraphModule:
     ex_input = torch.ones(input_shape).to(device)
     model.eval()
     with disable_patching():
-        fx_model = capture_pre_autograd_graph(model, args=(ex_input,))
+        fx_model = torch.export.export(model, args=(ex_input,)).module()
     apply_quantization_transformations(fx_model)
     return fx_model
 

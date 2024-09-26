@@ -15,7 +15,6 @@ from typing import Any, Tuple
 
 import pytest
 import torch
-from torch._export import capture_pre_autograd_graph
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -49,20 +48,18 @@ MODEL_EXTRACTION_CASES = (
         ConvolutionWithAllConstantInputsModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["conv2d"])
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d_1"], ["add__1"])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d_1"], ["add_1"])
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d"], ["add_", "add"])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d"], ["add", "add_2"])
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d", "conv2d_1"], ["add_", "add__1"])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d", "conv2d_1"], ["add", "add_1"])
     ),
     ModelExtractionTestCase(
         MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d"], ["conv2d_2"])
     ),
-    ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d"], ["add__1"])
-    ),
+    ModelExtractionTestCase(MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand(["conv2d"], ["add_1"])),
 )
 
 
@@ -85,7 +82,7 @@ def _target_point_to_str(target_point: PTTargetPoint) -> str:
 def _capture_model(model: torch.nn.Module, inputs: torch.Tensor) -> torch.fx.GraphModule:
     with torch.no_grad():
         with disable_patching():
-            return capture_pre_autograd_graph(model, (inputs,))
+            return torch.export.export(model, (inputs,)).module()
 
 
 @pytest.mark.parametrize("test_case", MODEL_EXTRACTION_CASES, ids=idfn)
