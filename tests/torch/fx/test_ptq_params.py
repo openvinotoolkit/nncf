@@ -11,16 +11,17 @@
 
 import pytest
 import torch
-from torch import nn
 
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.utils.backend import BackendType
+from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
+from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
 from nncf.scopes import IgnoredScope
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
@@ -28,56 +29,35 @@ from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSoftmaxMetatype
-from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from tests.common.quantization.metatypes import CatTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
 from tests.cross_fw.test_templates.test_ptq_params import TemplateTestPTQParams
-from tests.torch.helpers import create_depthwise_conv
-from tests.torch.ptq.helpers import get_nncf_network
-from tests.torch.ptq.helpers import get_single_conv_nncf_graph
+from tests.torch.fx.helpers import get_single_conv_nncf_graph
+from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.ptq.helpers import get_single_no_weight_matmul_nncf_graph
 from tests.torch.test_models.synthetic import LinearPTQParamsTestModel
 
 
 def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
-    return PatternsManager.get_full_hw_pattern_graph(backend=BackendType.TORCH, device=device)
+    return PatternsManager.get_full_hw_pattern_graph(backend=BackendType.TORCH_FX, device=device)
 
 
 def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
-    return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.TORCH, device=device)
-
-
-class ToNNCFNetworkInterface:
-    def get_nncf_network(self):
-        return get_nncf_network(self)
-
-
-class PTLinearTestModel(LinearPTQParamsTestModel, ToNNCFNetworkInterface):
-    pass
-
-
-class OneDepthwiseConvModel(nn.Module, ToNNCFNetworkInterface):
-    def __init__(self) -> None:
-        super().__init__()
-        self.depthwise_conv = create_depthwise_conv(3, 1, 1, 1)
-
-    def forward(self, x):
-        # input_shape = [1, 3, 32, 32]
-        return self.depthwise_conv(x)
+    return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.TORCH_FX, device=device)
 
 
 @pytest.mark.parametrize("target_device", TargetDevice)
 def test_target_device(target_device):
     min_max_algo = MinMaxQuantization(target_device=target_device)
-    min_max_algo._backend_entity = PTMinMaxAlgoBackend()
+    min_max_algo._backend_entity = FXMinMaxAlgoBackend()
     assert min_max_algo._target_device == target_device
 
 
 class TestPTQParams(TemplateTestPTQParams):
     def get_algo_backend(self):
-        return PTMinMaxAlgoBackend()
+        return FXMinMaxAlgoBackend()
 
     def check_quantize_outputs_fq_num(self, quantize_outputs, act_num_q, weight_num_q):
         if quantize_outputs:
@@ -87,13 +67,15 @@ class TestPTQParams(TemplateTestPTQParams):
         assert weight_num_q == 1
 
     def check_unified_scale_layout(self, layout, unified_scale_group):
-        assert len(layout.transformations) == 1
-        command = layout.transformations[0]
-        assert isinstance(command, PTSharedFnInsertionCommand)
-        assert command.op_name == "/Conv_1_0|INPUT0;/Conv_2_0|INPUT0;/Conv_3_0|INPUT0"
-        assert command.target_points == unified_scale_group
-        assert torch.allclose(command.fn.scale, torch.tensor(4.0))
-        assert command.type == TransformationType.INSERT
+        assert len(layout.transformations) == len(unified_scale_group)
+        for t, ref_tp in zip(layout.transformations, unified_scale_group):
+            assert isinstance(t, FXApplyTransformationCommand)
+            assert t.transformation_fn.__closure__[1].cell_contents[0] == ref_tp
+            assert t.type == TransformationType.INSERT
+            assert t.transformation_fn.__closure__[0].cell_contents.zero_point == 0
+            assert torch.allclose(
+                t.transformation_fn.__closure__[0].cell_contents.scale, torch.tensor(0.031496062874794006)
+            )
 
     def target_point(self, target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
         return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
@@ -116,19 +98,13 @@ class TestPTQParams(TemplateTestPTQParams):
 
     @pytest.fixture(scope="session")
     def test_params(self):
-        linear_model = PTLinearTestModel().get_nncf_network()
-        depthwise_model = OneDepthwiseConvModel().get_nncf_network()
+        linear_model = get_torch_fx_model(LinearPTQParamsTestModel())
 
         return {
             "test_range_estimator_per_tensor": {
                 "model": linear_model,
-                "nncf_graph": linear_model.nncf.get_graph(),
+                "nncf_graph": GraphConverter.create_nncf_graph(linear_model),
                 "stat_points_num": 5,
-            },
-            "test_range_estimator_per_channel": {
-                "model": depthwise_model,
-                "nncf_graph": depthwise_model.nncf.get_graph(),
-                "stat_points_num": 2,
             },
             "test_quantize_outputs": {
                 "nncf_graph": get_single_conv_nncf_graph().nncf_graph,

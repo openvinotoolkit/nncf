@@ -13,6 +13,7 @@ from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
 
 QUANTIZE_AGNOSTIC_OPERATIONS = [
     ov_metatypes.OVMaxPoolMetatype,
+    ov_metatypes.OVAdaptiveMaxPoolMetatype,
     ov_metatypes.OVReduceMaxMetatype,
     ov_metatypes.OVReshapeMetatype,
     ov_metatypes.OVSqueezeMetatype,
@@ -62,6 +63,7 @@ INPUTS_QUANTIZABLE_OPERATIONS = [
     ov_metatypes.OVMaximumMetatype,
     ov_metatypes.OVMinimumMetatype,
     ov_metatypes.OVAvgPoolMetatype,
+    ov_metatypes.OVAdaptiveAvgPoolMetatype,
     ov_metatypes.OVReduceMeanMetatype,
     ov_metatypes.OVMVNMetatype,
     ov_metatypes.OVNormalizeL2Metatype,
