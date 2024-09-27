@@ -549,11 +549,8 @@ def compress_weights(
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
 
-        if backup_mode != mode:
-            nncf_logger.warning(
-                "INT8 modes do not support the `backup_mode` option. This will be aligned with the `mode`."
-            )
-            backup_mode = mode
+        if backup_mode != BackupMode.INT8_ASYM:
+            raise AttributeError("INT8 modes do not support the `backup_mode` option")
 
         options = {
             "all_layers": all_layers,

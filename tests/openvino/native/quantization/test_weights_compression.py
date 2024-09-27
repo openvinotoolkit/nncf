@@ -705,6 +705,8 @@ def test_raise_error_channel_size_is_not_divisible_by_group_size():
         {"lora_correction": True},
         {"gptq": True},
         {"awq": True},
+        {"backup_mode": BackupMode.NONE},
+        {"backup_mode": BackupMode.INT8_SYM},
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):
