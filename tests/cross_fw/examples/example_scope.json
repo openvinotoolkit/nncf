@@ -217,7 +217,7 @@
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
             "wikitext_based_similarity": 0.7783765000187688,
-            "synthetic_based_similarity": 0.8076383703284793
+            "synthetic_based_similarity": 0.7200698687315539
         }
     },
     "quantization_aware_training_torch_anomalib": {
