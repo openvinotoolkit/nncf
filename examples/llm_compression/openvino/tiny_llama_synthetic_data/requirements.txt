@@ -1,4 +1,4 @@
--c ../../constraints.txt
+-c ../../../../constraints.txt
 torch
 datasets
 whowhatbench @ git+https://github.com/andreyanufr/who_what_benchmark.git
