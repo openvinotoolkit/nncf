@@ -75,6 +75,7 @@ def _get_minmax_quantization_param_grid() -> ParamGrid:
             RangeEstimatorParameters(min=min_v, max=max_v)
             for min_v, max_v in itertools.product(min_param_values, max_param_values)
         ],
+        "advanced_parameters:conservative_quantizers_merging": [True, False],
     }
     return param_grid
 
