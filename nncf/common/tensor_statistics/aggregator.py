@@ -31,6 +31,8 @@ EMPTY_DATASET_ERROR = (
     "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
 )
 
+DATASET_SIZE_ERROR = "The dataset size ({}) is smaller than the subset size ({})."
+
 
 class StatisticsAggregator(ABC):
     """
@@ -82,6 +84,11 @@ class StatisticsAggregator(ABC):
             empty_statistics = False
         if empty_statistics:
             raise nncf.ValidationError(EMPTY_DATASET_ERROR)
+        
+        if len(self.dataset) < subset_size:
+            raise nncf.UnsupportedDatasetError(  
+                DATASET_SIZE_ERROR.format(len(self.dataset), subset_size)
+            )    
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
