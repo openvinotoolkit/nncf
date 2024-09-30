@@ -1,6 +1,6 @@
 ## Weights Compression
 
-[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run Weights Compression with, and PyTorch is also supported.
+[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run Weights Compression with. PyTorch and Torch FX are also supported.
 
 ### The algorithm description
 
@@ -800,7 +800,7 @@ Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
 
 ### Limitations
 
-- The algorithm is supported for OpenVINO and PyTorch models.
+- The algorithm is supported for OpenVINO, PyTorch and Torch FX models.
 - The compression applies in-place.
 - The compressed model is not trainable.
 - INT4_SYM, INT4_ASYM, NF4 and E2M1 modes, grouped quantization and mixed precision selection is available for OpenVINO backend only.

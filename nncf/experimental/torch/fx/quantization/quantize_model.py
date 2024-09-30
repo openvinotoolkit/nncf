@@ -28,11 +28,16 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.experimental.torch.fx.transformations import revert_quantization_transformations
+from nncf.experimental.torch.fx.transformations import shared_constants_unification_transformation
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
+from nncf.parameters import SensitivityMetric
 from nncf.parameters import TargetDevice
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.scopes import IgnoredScope
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
@@ -49,7 +54,7 @@ def quantize_impl(
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
-) -> torch.nn.Module:
+) -> torch.fx.GraphModule:
     """
     Implementation of the `quantize()` method for the Torch FX backend.
     """
@@ -103,3 +108,46 @@ def quantize_impl(
     quantized_model = _disallow_eval_train(quantized_model)
 
     return quantized_model
+
+
+def compress_weights_impl(
+    model: torch.fx.GraphModule,
+    dataset: Dataset,
+    mode: CompressWeightsMode,
+    ratio: float,
+    group_size: int,
+    ignored_scope: IgnoredScope,
+    all_layers: bool,
+    sensitivity_metric: SensitivityMetric,
+    awq: bool,
+    subset_size: int,
+    scale_estimation: bool,
+    gptq: bool,
+    lora_correction: bool,
+    advanced_parameters: Optional[AdvancedCompressionParameters] = None,
+) -> torch.fx.GraphModule:
+    """
+    Implementation of the `compress_weights()` method for the Torch Fx backend.
+    """
+
+    compression_algorithm = WeightCompression(
+        mode,
+        ratio,
+        group_size,
+        ignored_scope,
+        all_layers,
+        sensitivity_metric,
+        awq,
+        subset_size,
+        scale_estimation,
+        gptq,
+        lora_correction,
+        advanced_parameters,
+    )
+    shared_constants_unification_transformation(model)
+    graph = NNCFGraphFactory.create(model)
+    compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
+    compressed_model = GraphModule(compressed_model, compressed_model.graph)
+    compressed_model = _disallow_eval_train(compressed_model)
+
+    return compressed_model

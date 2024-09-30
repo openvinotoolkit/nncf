@@ -255,8 +255,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
         return set()
 
-    @staticmethod
-    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_weight_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
         return [node for node in nncf_graph.get_all_nodes() if node.layer_attributes.has_weight()]
 
     @staticmethod
@@ -268,3 +267,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def should_quantize_weight(weight_name: str, quantized_weight_names: Set[str]) -> bool:
         # If the nodes share one weight tensor, we should have only one quantizer on that
         return weight_name not in quantized_weight_names
+
+    def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        return node.metatype in self.mat_mul_metatypes and node.layer_attributes.has_weight()
