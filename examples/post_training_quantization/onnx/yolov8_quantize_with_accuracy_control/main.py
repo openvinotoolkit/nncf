@@ -219,6 +219,7 @@ def run_example():
     args = get_cfg(cfg=DEFAULT_CFG)
     args.data = "coco128-seg.yaml"
 
+    args.workers = 0
     validator, data_loader = prepare_validation(model, args)
 
     fp32_model, fp32_model_path = prepare_onnx_model(model, MODEL_NAME)
