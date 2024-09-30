@@ -1,0 +1,12 @@
+{
+    "arg0_1": "PTInputNoopMetatype",
+    "_param_constant0": "PTConstNoopMetatype",
+    "embedding": "PTAtenEmbeddingMetatype",
+    "_param_constant1": "PTConstNoopMetatype",
+    "_param_constant2": "PTConstNoopMetatype",
+    "linear": "PTLinearMetatype",
+    "_param_constant3": "PTConstNoopMetatype",
+    "_param_constant4": "PTConstNoopMetatype",
+    "linear_1": "PTLinearMetatype",
+    "output": "PTOutputNoopMetatype"
+}
