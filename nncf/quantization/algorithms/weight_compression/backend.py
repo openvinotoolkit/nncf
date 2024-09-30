@@ -27,6 +27,9 @@ TModel = TypeVar("TModel")
 
 
 class WeightCompressionAlgoBackend(ABC):
+    MEAN_STAT = "mean_values"
+    SHAPE_STAT = "shape_values"
+
     @property
     @abstractmethod
     def matmul_metatypes(self) -> List[OperatorMetatype]:
@@ -203,6 +206,12 @@ class WeightCompressionAlgoBackend(ABC):
 
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
+        """
+
+    @abstractmethod
+    def statistic_collector(self, reduction_axes: Tuple[int], subset_size: Optional[int] = None) -> TensorStatisticCollectorBase:
+        """
+
         """
 
     @staticmethod

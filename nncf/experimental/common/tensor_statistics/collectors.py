@@ -476,6 +476,17 @@ class RawReducer(NoopReducer):
         return self._reduce_out_of_place(x)
 
 
+class ShapeReducer(TensorReducerBase):
+    def __init__(self):
+        super().__init__(inplace=False)
+
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        return [Tensor(x[0].shape)]
+
+    def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
+        return None
+
+
 class MinReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[Tensor]) -> List[Tensor]:
         x = x[0]

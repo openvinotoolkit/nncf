@@ -15,7 +15,7 @@ from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
 
-def process_stats(stats: List[Tensor], subset_size: int) -> Tuple[Tensor, Tensor]:
+def process_stats(stats: Tuple[List[Tensor], List[Tuple]], subset_size: int) -> Tuple[Tensor, Tensor]:
     """
     It's a processing of activations shared between AWQ, Scale Estimation and LoRA Correction algorithms.
 
@@ -28,12 +28,12 @@ def process_stats(stats: List[Tensor], subset_size: int) -> Tuple[Tensor, Tensor
         X - average channel magnitude across tokens in the sequence [HiddenDim, SampleSize]
     :rtype: Tuple[TTensor, TTensor]
     """
-    X = fns.stack([fns.mean(stat, axis=0) for stat in stats])  # [Batch, HiddenDim]
+    X = fns.stack(stats[0])  # [Batch, HiddenDim]
     X_full = fns.transpose(X)  # [HiddenDim, Batch]
 
     # prevent high memory and time consumption
     if X_full.shape[1] > subset_size:
-        lens = [stat.shape[0] for stat in stats]
+        lens = [shape[0] * shape[1] for shape in stats[1]]
         step = X_full.shape[1] // subset_size
         idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
         X = X_full[:, idxs]  # [HiddenDim, SampleSize]

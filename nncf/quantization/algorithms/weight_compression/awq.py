@@ -28,6 +28,8 @@ from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.token_averaged_statistics_algorithm import \
+    TokenAveragedStatisticsAlgorithm
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_scale
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
@@ -52,18 +54,13 @@ class AWQCompressionInfo:
     merge_node: NNCFNode = None
 
 
-class AWQ(Algorithm):
+class AWQ(TokenAveragedStatisticsAlgorithm):
     """
     Modified AWQ algorithm implementation.
     """
 
     def __init__(
         self,
-        model: TModel,
-        name_to_node_mapping: Dict[str, Any],
-        all_weight_params: List[WeightCompressionParameters],
-        nodes_to_compress: List[NNCFNode],
-        activations: Optional[Dict[str, TTensor]] = None,
         subset_size: int = 32,
         percent_to_apply=0.002,
         alpha_min=0.0,
@@ -71,11 +68,6 @@ class AWQ(Algorithm):
         steps=100,
     ):
         """
-        :param model: Model for applying algorithm.
-        :param name_to_node_mapping: Name to node mapping for updating node weights.
-        :param all_weight_params: List of all weight parameters.
-        :param nodes_to_compress: List of nodes for processing.
-        :param activations: The input activations of the layers considered for compression.
         :param subset_size: The number of samples for AWQ.
         :param percent_to_apply: The percent of outliers for correction.
         :param alpha_min: Minimum value of smoothness parameter for grid search.
@@ -83,10 +75,6 @@ class AWQ(Algorithm):
         :param steps: The number of the steps in grid search.
         """
         super().__init__()
-        self.name_to_node_mapping = name_to_node_mapping
-        self._all_weight_params = all_weight_params
-        self._nodes_to_compress = nodes_to_compress
-        self._activations = activations
         self._subset_size = subset_size
         self._percent_to_apply = percent_to_apply
         self._alpha_min = alpha_min
@@ -94,14 +82,13 @@ class AWQ(Algorithm):
         self._steps = steps
         self._backend_entity = None
         self._patterns = None
-
-        self._set_backend_entity(model)
+        self._algorithm_key = f"AWQ_{hash(self)}"
 
     @property
     def available_backends(self) -> List[BackendType]:
         return [BackendType.OPENVINO]
 
-    def _set_backend_entity(self, model: TModel) -> None:
+    def set_backend_entity(self, model: TModel) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm.
 
@@ -112,7 +99,7 @@ class AWQ(Algorithm):
         if model_backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVAWQAlgoAlgoBackend
 
-            self._backend_entity = OVAWQAlgoAlgoBackend(model, self.name_to_node_mapping)
+            self._backend_entity = OVAWQAlgoAlgoBackend(model)
             self._patterns = self._backend_entity.get_awq_patterns()
         else:
             raise RuntimeError(
@@ -125,6 +112,9 @@ class AWQ(Algorithm):
         graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
+        name_to_node_mapping: Dict[str, Any] = None,
+        all_weight_params: List[WeightCompressionParameters] = None,
+        nodes_to_compress: List[NNCFNode] = None,
     ) -> TModel:
         """
         Applies the algorithm to the model.
@@ -133,6 +123,9 @@ class AWQ(Algorithm):
         :param graph: Model graph.
         :param statistic_points: Statistic points with collected statistics values.
         :param dataset: A representative dataset for the calibration process.
+        :param name_to_node_mapping: Name to node mapping for updating node weights.
+        :param all_weight_params: List of all weight parameters.
+        :param nodes_to_compress: List of nodes for processing.
         :return: A resulting model.
         """
         matches = []
@@ -150,8 +143,9 @@ class AWQ(Algorithm):
         model_transformer = ModelTransformerFactory.create(model, inplace=True)
 
         awq_data = {}
-        name_mapping = {wp.weight_name: idx for idx, wp in enumerate(self._all_weight_params)}
+        name_mapping = {wp.weight_name: idx for idx, wp in enumerate(all_weight_params)}
 
+        statistics = {}
         for match in matches:
             nncf_node = graph.get_node_by_key(match[-1])
             if not self._backend_entity.is_node_with_weights(nncf_node, graph):
@@ -161,11 +155,11 @@ class AWQ(Algorithm):
             for weight_op_friendly_name, _ in self._backend_entity.get_weight_names_and_port_ids(nncf_node, graph):
                 target_node_names.append(weight_op_friendly_name)
 
-            weight_params = self._all_weight_params[name_mapping[target_node_names[-1]]]
+            weight_params = all_weight_params[name_mapping[target_node_names[-1]]]
 
             if weight_params.compression_config.num_bits != 4:
                 continue
-            target_node = self._nodes_to_compress[name_mapping[target_node_names[-1]]]
+            target_node = nodes_to_compress[name_mapping[target_node_names[-1]]]
 
             # avoid matching different patterns for the same node
             if target_node.node_name in awq_data:
@@ -177,11 +171,16 @@ class AWQ(Algorithm):
                 merge_node_names = []
                 for weight_op_friendly_name, _ in self._backend_entity.get_weight_names_and_port_ids(nncf_node, graph):
                     merge_node_names.append(weight_op_friendly_name)
-                merge_node = self._nodes_to_compress[name_mapping[merge_node_names[-1]]]
+                merge_node = nodes_to_compress[name_mapping[merge_node_names[-1]]]
             else:  # pattern Act->MatMul or Act->Multiply->MatMul
                 merge_node = nncf_node
 
             awq_data[target_node.node_name] = AWQCompressionInfo(weight_params, target_node, merge_node)
+
+            if target_node.node_name not in statistics:
+                act_node, output_port_id = self._get_activation_node_and_port(target_node, graph)
+                mean_values, shapes = self._get_statistics(statistic_points, act_node.node_name, output_port_id)
+                statistics[target_node.node_name] = {"means": mean_values, "shapes": shapes}
 
         alpha_step = (self._alpha_max - self._alpha_min) / self._steps
 
@@ -199,7 +198,7 @@ class AWQ(Algorithm):
 
             config = wp.compression_config
 
-            s, X = process_stats(self._activations[k], self._subset_size)
+            s, X = self._process_stats(statistics[k]["means"], statistics[k]["shapes"], self._subset_size)
 
             top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
             topk_idxs = fns.argsort(-s)[:top_k]
@@ -300,20 +299,11 @@ class AWQ(Algorithm):
                 transformation_layout.register(scale_insertion_command)
 
             # update activations for next usage
-            for i, stat in enumerate(self._activations[k]):
-                stat = stat * a_scale
-                self._activations[k][i] = stat
+            for i, stat in enumerate(statistics[k]["means"]):
+                assert a_scale.shape[0] == 1
+                stat = stat * a_scale[0]
+                statistics[k]["means"][i] = stat
 
         transformed_model = model_transformer.transform(transformation_layout)
 
         return transformed_model
-
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-        """
-        Returns statistic points, for which StatisticsCollector should collect statistics.
-
-        :param model: Model for statistics collection.
-        :param graph: Model graph.
-        :return: Statistic points, for which StatisticsCollector should collect statistics.
-        """
-        return StatisticPointsContainer()
