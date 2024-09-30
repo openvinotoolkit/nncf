@@ -245,7 +245,6 @@ def main():
         "PERFORMANCE_HINT": "LATENCY",
         "NUM_STREAMS": "1",
         "CACHE_DIR": "",
-        "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0",
     }
     model = OVModelForCausalLM.from_pretrained(
         model_id,
