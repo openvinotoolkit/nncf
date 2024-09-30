@@ -30,9 +30,9 @@ class TemplateTestMinMaxAlgorithm:
     @abstractmethod
     def backend(self) -> MinMaxAlgoBackend:
         """
-        Get backend specific BiasCorrectionAlgoBackend
+        Get backend specific MinMaxAlgoBackend
 
-        :return BiasCorrectionAlgoBackend: Backend specific BiasCorrectionAlgoBackend
+        :return MinMaxAlgoBackend: Backend specific MinMaxAlgoBackend
         """
 
     @property
