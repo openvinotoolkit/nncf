@@ -123,7 +123,7 @@ def test_model(test_case: ModelCase):
 
     # Check NNCFGrpah
     dot_filename = get_dot_filename(model_name)
-    check_graph(nncf_graph, dot_filename, FX_DIR_NAME)
+    check_graph(nncf_graph, dot_filename, FX_DIR_NAME, extended=True)
 
     # Check metatypes
     model_metatypes = {n.node_name: n.metatype.__name__ for n in nncf_graph.get_all_nodes()}
@@ -170,7 +170,7 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters):
     # visualize_fx_model(quantized_model, f"{model_case.model_id}_int8.svg")
 
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
-    check_graph(nncf_graph, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME)
+    check_graph(nncf_graph, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME, extended=True)
 
 
 @pytest.mark.parametrize("unification", [False, True])
