@@ -412,3 +412,52 @@ class NNCFGraphToTestConstantFiltering:
 
         original_mock_graph = create_mock_graph(nodes, edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
+
+
+class NNCFGraphTransformer:
+    def __init__(
+        self,
+        matmul_metatype,
+        softmax_metatype,
+        transpose_metatype,
+        const_metatype,
+        mul_metatype,
+        matmul_layer_weighted_attrs=None,
+        matmul_layer_non_weighted_attrs=None,
+        default_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
+    ):
+        # softmax((K x Q) * scale) x V.T
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=default_layer_attrs),
+            NodeWithType("W_K", const_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("W_Q", const_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("W_V", const_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("K", matmul_metatype, layer_attributes=matmul_layer_weighted_attrs),
+            NodeWithType("Q", matmul_metatype, layer_attributes=matmul_layer_weighted_attrs),
+            NodeWithType("V", matmul_metatype, layer_attributes=matmul_layer_weighted_attrs),
+            NodeWithType("K_Q", matmul_metatype, layer_attributes=matmul_layer_non_weighted_attrs),
+            NodeWithType("div", mul_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("softmax", softmax_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("transpose", transpose_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("SA_V", matmul_metatype, layer_attributes=matmul_layer_non_weighted_attrs),
+            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=default_layer_attrs),
+        ]
+        node_edges = [
+            ("Input_1", "K"),
+            ("W_K", "K"),
+            ("Input_1", "Q"),
+            ("W_Q", "Q"),
+            ("Input_1", "V"),
+            ("W_V", "V"),
+            ("K", "K_Q"),
+            ("Q", "K_Q"),
+            ("K_Q", "div"),
+            ("div", "softmax"),
+            ("softmax", "SA_V"),
+            ("V", "transpose"),
+            ("transpose", "SA_V"),
+            ("SA_V", "Output_1"),
+        ]
+        original_mock_graph = create_mock_graph(nodes, node_edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
