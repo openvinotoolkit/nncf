@@ -176,14 +176,6 @@ def llm_tune_params() -> Dict[str, float]:
     return {"awq": bool(awq), "ratio": ratio, "group_size": group_size}
 
 
-def llm_compression_synthetic() -> Dict[str, float]:
-    from examples.llm_compression.openvino.tiny_llama_synthetic_data.main import main as llm_compression_synthetic_main
-
-    result = llm_compression_synthetic_main()
-
-    return {"wikitext_based_similarity": result[0], "synthetic_based_similarity": result[1]}
-
-
 def quantization_aware_training_torch_resnet18():
     from examples.quantization_aware_training.torch.resnet18.main import main as resnet18_main
 
