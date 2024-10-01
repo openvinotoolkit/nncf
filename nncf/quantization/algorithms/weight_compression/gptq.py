@@ -85,6 +85,7 @@ class GPTQ:
         dataset: Dataset,
         weight_compression_parameters: List[WeightCompressionParameters],
         statistic_points: Optional[StatisticPointsContainer] = None,
+        backend_entity: Optional[WeightCompressionAlgoBackend] = None,
     ) -> Tuple[TModel, Dict[str, Tensor], Dict[str, Tensor]]:
         """
         Applies the GPTQ algorithm to quantize the weights of the given model.
@@ -94,8 +95,13 @@ class GPTQ:
         :param dataset: The dataset to use for quantization.
         :param weight_compression_parameters: Parameters for weight compression.
         :param statistic_points: Optional container for statistic points.
+        :param backend_entity: Weight compression algorithm backend.
         :return: The quantized model and its scales and zero points.
         """
+        self._backend_entity = backend_entity
+        if self._backend_entity is None:
+            self._set_backend_entity(model)
+
         scales = {}
         zero_points = {}
 
@@ -130,15 +136,27 @@ class GPTQ:
         model: TModel,
         graph: NNCFGraph,
         target_nodes: List[NNCFNode],
+        backend_entity: Optional[WeightCompressionAlgoBackend] = None,
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
 
         :param model: The model for statistics collection.
         :param graph: The model graph.
+        :param backend_entity: Weight compression algorithm backend.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
-        return self._layerwise_engine.get_statistic_points(model, graph, target_nodes)
+        self._backend_entity = backend_entity
+        if self._backend_entity is None:
+            self._set_backend_entity(model)
+
+        matmul_metatypes = self._backend_entity.matmul_metatypes
+        filtered_nodes = []
+        for node in target_nodes:
+            if node.metatype in matmul_metatypes:
+                filtered_nodes.append(node)
+
+        return self._layerwise_engine.get_statistic_points(model, graph, filtered_nodes)
 
     def _calculate_hessian(self, node: NNCFNode, inputs: List[Tensor]) -> Tensor:
         """

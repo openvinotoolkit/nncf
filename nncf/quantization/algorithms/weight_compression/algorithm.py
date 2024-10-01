@@ -8,10 +8,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import copy
 import operator
 from collections import defaultdict
-from functools import reduce
-from typing import Dict, List, Optional, OrderedDict, Tuple, TypeVar
+from functools import reduce, partial
+from typing import Dict, List, Optional, OrderedDict, Tuple, TypeVar, Iterable
 
 import nncf
 from nncf import Dataset
@@ -32,8 +33,8 @@ from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -42,6 +43,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import Weig
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorDataType
 
 TModel = TypeVar("TModel")
@@ -111,7 +113,7 @@ class WeightCompression(Algorithm):
         self._ignored_scope = ignored_scope
         self._backend_entity = None
         self._algorithm_key = f"CW_{hash(self)}"
-        self._statistics = defaultdict(tuple)
+        self._mean_statistics = {}
         self._all_layers = all_layers
         self._sensitivity_metric = sensitivity_metric
         self._awq = awq
@@ -119,11 +121,11 @@ class WeightCompression(Algorithm):
         self._scale_estimation = scale_estimation
         self._gptq = gptq
         self._lora_correction = lora_correction
+        # self._lora_correction = True
         self._advanced_parameters = (
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
 
-        self._gptq_algo = None
         if self._gptq:
             gptq_params = self._advanced_parameters.gptq_params
             self._gptq_algo = GPTQ(
@@ -133,23 +135,6 @@ class WeightCompression(Algorithm):
                 scale_estimation=self._scale_estimation,
             )
             self._gptq_statistics = None
-
-        self._awq_algo = None
-        if self._awq:
-            awq_params = self._advanced_parameters.awq_params
-            self._awq_algo = AWQ(
-                # model,
-                # self._backend_entity.name_to_node_mapping,
-                # all_weight_params,
-                # nodes_to_compress,
-                # activations,
-                awq_params.subset_size,
-                awq_params.percent_to_apply,
-                awq_params.alpha_min,
-                awq_params.alpha_max,
-                awq_params.steps,
-            )
-            self._awq_statistics = None
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -332,20 +317,11 @@ class WeightCompression(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-        if self._awq:
-            self._awq_algo.set_backend_entity(model)
-        if self._gptq:
-            self._gptq_algo._set_backend_entity(model)
         nodes_to_compress = self._get_nodes_to_compress(graph)
 
-        activations = {}
-        if (dataset is not None and (
-            self._awq or self._scale_estimation or self._lora_correction or self._gptq or
-            (self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0))
-        ):
-            matmul_metatypes = self._backend_entity.matmul_metatypes
-            nodes_to_collect_statistics = list(filter(lambda node: node.metatype in matmul_metatypes, nodes_to_compress))
-            self._collect_statistics(dataset, nodes_to_collect_statistics, graph, model)
+        if self._awq or self._scale_estimation or self._lora_correction or self._gptq or \
+            (self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0):
+            self._collect_statistics(dataset, nodes_to_compress, graph, model)
         all_weight_params: List[WeightCompressionParameters] = []
         weight_names = set()
 
@@ -393,18 +369,24 @@ class WeightCompression(Algorithm):
                 weight_names.add(weight_name)
 
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_shared)
-        self._set_weight_compression_config(ratio_defining_params, model, graph, activations)
+        self._set_weight_compression_config(ratio_defining_params, model, graph, {})
         nncf_logger.info(self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
 
-        if self._awq and activations is not None and self._mode != CompressWeightsMode.E2M1:
-            self._awq_algo.apply(
+        if self._awq:
+            awq_params = self._advanced_parameters.awq_params
+            awq_algo = AWQ(
                 model,
-                graph,
-                self._awq_statistics,
-                name_to_node_mapping=self._backend_entity.name_to_node_mapping,
-                all_weight_params=all_weight_params,
-                nodes_to_compress=nodes_to_compress,
+                self._backend_entity.name_to_node_mapping,
+                all_weight_params,
+                nodes_to_compress,
+                self._mean_statistics,
+                awq_params.subset_size,
+                awq_params.percent_to_apply,
+                awq_params.alpha_min,
+                awq_params.alpha_max,
+                awq_params.steps,
             )
+            awq_algo.apply(model, graph)
 
         scales = {}
         zero_points = {}
@@ -419,14 +401,14 @@ class WeightCompression(Algorithm):
                 statistic_points=self._gptq_statistics,
             )
         else:
-            if self._scale_estimation and activations is not None and self._mode != CompressWeightsMode.E2M1:
+            if self._scale_estimation:
                 scale_estimation_params = self._advanced_parameters.scale_estimation_params
                 scale_algo = ScaleEstimation(
                     model,
                     self._backend_entity.name_to_node_mapping,
                     all_weight_params,
                     nodes_to_compress,
-                    activations,
+                    self._mean_statistics,
                     scale_estimation_params.subset_size,
                     scale_estimation_params.initial_steps,
                     scale_estimation_params.scale_steps,
@@ -436,7 +418,7 @@ class WeightCompression(Algorithm):
 
             if self._lora_correction:
                 lora_correction_params = self._advanced_parameters.lora_correction_params
-                lora_correction_algo = LoraCorrectionAlgorithm(activations, lora_correction_params)
+                lora_correction_algo = LoraCorrectionAlgorithm(self._mean_statistics, lora_correction_params)
                 description += " with correction of low-rank adapters"
 
         # Sort weight params to start compression with the bigger constants. This lowers peak memory footprint.
@@ -472,9 +454,6 @@ class WeightCompression(Algorithm):
         )
         return transformed_model
 
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-        pass
-
     def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[NNCFNode, int]:
         """
         This method returns the activation layer and corresponding port id for the node.
@@ -489,12 +468,12 @@ class WeightCompression(Algorithm):
         port_id = activation_edge.output_port_id
         return activation_node, port_id
 
-    def _collect_statistics(self, dataset: Dataset, nodes_to_collect_statistics: List[NNCFNode], graph: NNCFGraph, model: TModel):
+    def _collect_statistics(self, dataset: Dataset, nodes: List[NNCFNode], graph: NNCFGraph, model: TModel):
         """
         Collects input activations for the given nodes on the dataset.
 
         :param dataset: Dataset to collect values.
-        :param nodes_to_collect_statistics: List of nodes, whose inputs are collected.
+        :param nodes: List of nodes, whose inputs are collected.
         :param model: Model for statistics collection.
         :param graph: Model graph.
         :return: statistics values itself per node name.
@@ -502,11 +481,83 @@ class WeightCompression(Algorithm):
 
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
 
-        if self._awq:
-            self._awq_statistics = self._awq_algo.get_statistic_points(model, graph, nodes_to_collect_statistics, self._subset_size)
-            statistics_aggregator.register_statistic_points(self._awq_statistics)
+        mean_statistic_points = None
+        if self._awq or self._scale_estimation or self._lora_correction:
+            mean_statistic_points = self.get_statistic_points(model, graph, nodes, self._subset_size)
+            statistics_aggregator.register_statistic_points(mean_statistic_points)
         if self._gptq:
-            self._gptq_statistics = self._gptq_algo.get_statistic_points(model, graph, nodes_to_collect_statistics)
+            self._gptq_statistics = self._gptq_algo.get_statistic_points(model, graph, nodes)
             statistics_aggregator.register_statistic_points(self._gptq_statistics)
 
         statistics_aggregator.collect_statistics(model, graph)
+
+        if mean_statistic_points is not None:
+            self._mean_statistics = self._get_mean_statistics(graph, nodes, mean_statistic_points)
+
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph, nodes: Iterable[NNCFNode], subset_size: Optional[int] = None) -> StatisticPointsContainer:
+        """
+        Returns statistic points, for which StatisticsCollector should collect statistics.
+
+        :param model: Model for statistics collection.
+        :param graph: Model graph.
+        :return: Statistic points, for which StatisticsCollector should collect statistics.
+        """
+
+        matmul_metatypes = self._backend_entity.matmul_metatypes
+        nodes_to_collect_statistics = filter(lambda node: node.metatype in matmul_metatypes, nodes)
+
+        processed_act_nodes = set()
+        statistic_container = StatisticPointsContainer()
+        for node in nodes_to_collect_statistics:
+            act_node, output_port_id = self._get_activation_node_and_port(node, graph)
+            if act_node.node_name in processed_act_nodes:
+                continue
+            processed_act_nodes.add(act_node.node_name)
+            statistic_point = self._backend_entity.target_point(
+                TargetType.POST_LAYER_OPERATION, act_node.node_name, port_id=output_port_id
+            )
+            stat_collector = self._backend_entity.statistic_collector(reduction_axes=(0, 1), subset_size=subset_size)
+            statistic_container.add_statistic_point(
+                StatisticPoint(
+                    target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
+                )
+            )
+
+        return statistic_container
+
+    def _get_mean_statistics(self, graph, nodes, statistic_points):
+        def input_filter_func(point, port_id):
+            # For the floating-point statistics collected in POST_LAYER style,
+            # we also need to determine the output port id.
+            # For the cases when the layer has more than one (0) output port.
+            return (
+                    self._algorithm_key in point.algorithm_to_tensor_collectors
+                    and point.target_point.type == TargetType.POST_LAYER_OPERATION
+                    and point.target_point.port_id == port_id
+            )
+
+        matmul_metatypes = self._backend_entity.matmul_metatypes
+        nodes_to_collect_statistics = filter(lambda node: node.metatype in matmul_metatypes, nodes)
+
+        mean_statistics = {}
+        act_node_to_matmul_node = {}
+        for node in nodes_to_collect_statistics:
+            act_node, output_port_id = self._get_activation_node_and_port(node, graph)
+
+            processed_node = act_node_to_matmul_node.get(act_node.node_name)
+            if processed_node is not None:
+                mean_statistics[node.node_name] = copy.deepcopy(mean_statistics[processed_node])
+                continue
+            act_node_to_matmul_node[act_node.node_name] = node.node_name
+
+            mean_values = []
+            shapes = []
+            for tensor_collector in statistic_points.get_algo_statistics_for_node(
+                act_node.node_name, partial(input_filter_func, port_id=output_port_id), self._algorithm_key
+            ):
+                for value in tensor_collector.get_statistics()[self._backend_entity.MEAN_STAT]:
+                    mean_values.append(value[0, 0])
+                for value in tensor_collector.get_statistics()[self._backend_entity.SHAPE_STAT]:
+                    shapes.append(value.data)
+            mean_statistics[node.node_name] = {"mean_values": mean_values, "shapes": shapes}
+        return mean_statistics
