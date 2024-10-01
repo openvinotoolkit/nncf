@@ -164,7 +164,6 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
         Checks MatMul quantization axes in MinMax for Torch.
         """
         matmul_node = NNCFNode({"metatype": self.matmul_metatype})
-        matmul_node.layer_attributes = self.get_matmul_node_attrs(None, None, weight_shape)
 
         class DummyTargetPoint:
             input_port_id = 0
