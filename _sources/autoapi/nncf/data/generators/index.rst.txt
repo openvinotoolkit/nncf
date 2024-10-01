@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.data.generators`
+==============================
+
+.. py:module:: nncf.data.generators
+
+
