@@ -82,12 +82,14 @@ def reshape_weight_for_grouped_quantization(
     if isinstance(reduction_axes, tuple) and len(reduction_axes) == 1:
         reduction_axes = reduction_axes[0]
     if not isinstance(reduction_axes, int):
-        raise NotImplementedError(
+        raise nncf.UnsupportedModelError(
             f"Group-wise quantization expects a single reduction axis, but given: {reduction_axes}."
         )
     channel_size = weight.shape[reduction_axes]
     if channel_size % group_size != 0:
-        raise nncf.ValidationError(f"Channel size {channel_size} should be divisible by size of group {group_size}")
+        raise nncf.UnsupportedModelError(
+            f"Channel size {channel_size} should be divisible by size of group {group_size}"
+        )
 
     num_groups_per_channel = channel_size // group_size
     shape = list(weight.shape)  # [a1, r, a2] - "r" refers to number of channels along reduction axis

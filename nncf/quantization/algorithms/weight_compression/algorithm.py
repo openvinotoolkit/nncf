@@ -369,7 +369,7 @@ class WeightCompression(Algorithm):
         self._set_weight_compression_config(ratio_defining_params, model, graph, activations)
         nncf_logger.info(self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
 
-        if self._awq and activations is not None and self._mode != CompressWeightsMode.E2M1:
+        if self._awq and activations is not None:
             awq_params = self._advanced_parameters.awq_params
             awq_algo = AWQ(
                 model,
@@ -399,7 +399,7 @@ class WeightCompression(Algorithm):
                 backend_entity=self._backend_entity,
             )
         else:
-            if self._scale_estimation and activations is not None and self._mode != CompressWeightsMode.E2M1:
+            if self._scale_estimation and activations is not None:
                 scale_estimation_params = self._advanced_parameters.scale_estimation_params
                 scale_algo = ScaleEstimation(
                     model,
@@ -549,6 +549,8 @@ class WeightCompression(Algorithm):
         matmul_metatypes = self._backend_entity.matmul_metatypes
         filtered_nodes = filter(lambda node: node.metatype in matmul_metatypes, nodes_to_compress)
         for node in filtered_nodes:
+            if node.layer_attributes.input_attributes["transpose"]:
+                raise nncf.UnsupportedModelError("Transposed input is not supported")
             act_node, output_port_id = self._get_activation_node_and_port(node, graph)
             act_node_name = act_node.node_name
             if act_node_name in all_act_nodes:
