@@ -13,9 +13,6 @@ from typing import Tuple
 import pytest
 
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.layer_attributes import ConstantLayerAttributes
-from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
@@ -49,9 +46,7 @@ class TestTorchMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
 class TestTorchGetTargetPointShape(TemplateTestGetTargetPointShape, TestTorchMinMaxAlgorithm):
     def get_nncf_graph(self, weight_port_id: int, weight_shape: Tuple[int]) -> NNCFGraph:
         return NNCFGraphToTest(
-            conv_metatype=PTConv2dMetatype,
-            nncf_graph_cls=PTNNCFGraph,
-            const_metatype=PTConstNoopMetatype
+            conv_metatype=PTConv2dMetatype, nncf_graph_cls=PTNNCFGraph, const_metatype=PTConstNoopMetatype
         ).nncf_graph
 
 
@@ -65,15 +60,18 @@ class TestTorchGetChannelAxes(TemplateTestGetChannelAxes, TestTorchMinMaxAlgorit
         return PTLinearMetatype
 
     @staticmethod
-    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> ConvolutionLayerAttributes:
+    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]):
+        # This method isn't needed for Torch backend
         pass
 
     @staticmethod
-    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> ConvolutionLayerAttributes:
+    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]):
+        # This method isn't needed for Torch backend
         pass
 
     @staticmethod
     def get_matmul_node_attrs(weight_port_id: int, transpose_weight: Tuple[int], weight_shape: Tuple[int]):
+        # This method isn't needed for Torch backend
         pass
 
     def test_get_channel_axes_matmul_node_ov_onnx(self):
