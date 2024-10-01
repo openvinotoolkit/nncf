@@ -33,6 +33,7 @@ from nncf.openvino.graph.node_utils import get_inplace_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
 from nncf.openvino.graph.node_utils import get_inplace_min_op
+from nncf.openvino.graph.node_utils import get_inplace_mean_var_op
 from nncf.quantization.advanced_parameters import StatisticsType
 
 
@@ -58,6 +59,12 @@ class OVMeanReducer(MeanReducer):
 
     def get_inplace_fn(self):
         return get_inplace_mean_op(self._reduction_axes)
+
+
+class OVMeanVarianceReducer(MeanReducer):
+
+    def get_inplace_fn(self):
+        return get_inplace_mean_var_op(self._reduction_axes)
 
 
 class OVBatchMeanReducer(BatchMeanReducer):

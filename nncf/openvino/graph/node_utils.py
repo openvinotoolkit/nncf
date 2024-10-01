@@ -280,6 +280,48 @@ def get_inplace_mean_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInser
     return get_inplace_reduce_op(opset.reduce_mean, reduction_axes, False)
 
 
+def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInsertionFnType:
+    """
+    Returns inplace mean function that adds reduce mean node to a passed node.
+
+    :param reduction_axes: Target reduction axes for the reduction node.
+        Reduce along all axes in case reduction_axes are None.
+    :returns: Inplace insertion function to use in ModelTransformer.
+    """
+
+    def get_mean_var_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
+        reduction_axes_ = reduction_axes
+        partial_shape = get_partial_shape_safe(node, output_port_id)
+        if reduction_axes_ is None:
+            reduction_axes_ = np.arange(partial_shape.rank.get_length()).astype(np.int64)
+        reduction_axes_ = np.array(reduction_axes_, dtype=np.int64)
+
+        op_input = node.output(output_port_id)
+        mean = opset.reduce_mean(
+            op_input,
+            reduction_axes=reduction_axes_,
+            keep_dims=True,
+            name=f"{output_node_name}/mean",
+        )
+        diff = opset.squared_difference(mean, op_input, name=f"{output_node_name}/squared_diff")
+        variance = opset.reduce_mean(
+            diff,
+            reduction_axes=reduction_axes_,
+            keep_dims=True,
+            name=f"{output_node_name}/variance",
+        )
+        result = opset.reduce_mean(
+            variance,
+            reduction_axes=np.arange(partial_shape.rank.get_length()).astype(np.int64),
+            keep_dims=False,
+            name=output_node_name,
+        )
+
+        return result
+
+    return get_mean_var_reduce_op
+
+
 def get_inplace_batch_mean_op() -> InplaceInsertionFnType:
     """
     Returns inplace batch mean function that adds reduce batch mean node to a passed node.

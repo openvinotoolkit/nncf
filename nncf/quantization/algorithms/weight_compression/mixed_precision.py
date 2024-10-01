@@ -10,12 +10,18 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import Dict, List, Optional, TypeVar
+from typing import Dict, List, Optional, TypeVar, Tuple, Iterable
 
-from nncf.common.graph import NNCFGraph
+import nncf
+from nncf import Dataset
+from nncf.common.graph import NNCFGraph, NNCFNode
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.logging.track_progress import track
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer, StatisticPoint
+from nncf.common.utils.backend import BackendType, get_backend
 from nncf.common.utils.registry import Registry
 from nncf.parameters import SensitivityMetric
+from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
@@ -31,7 +37,7 @@ MIXED_PRECISION_CRITERIA = Registry("mixed_precision_criteria")
 THE_LOWEST_SENSITIVITY = 0
 
 
-class MixedPrecisionCriterion:
+class MixedPrecisionCriterion(Algorithm):
     """
     Assigns mixed quantization scheme (e.g. uniform int8 or uniform int4/non-uniform fp4)
     for weights based on some criteria.
@@ -39,58 +45,102 @@ class MixedPrecisionCriterion:
 
     def __init__(
         self,
-        model: TModel,
-        graph: NNCFGraph,
-        backend_entity: WeightCompressionAlgoBackend,
-        weight_params: List[WeightCompressionParameters],
         primary_config: WeightCompressionConfig,
         ratio: float,
-        activations: Optional[Dict[str, List[Tensor]]] = None,
     ):
         """
-        :param model: The model.
-        :param graph: The model graph associated with the model.
-        :param backend_entity: The instance of the WeightCompressionAlgoBackend.
         :param weight_params: Weight compression parameters which determines how and what weight should be compressed.
         :param primary_config: Configuration on how to compress (quantize) weights to primary precision.
         :param ratio: The ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to INT8_ASYM).
-        :param activations: The input activations of the nodes to be quantized.
+        :param statistics: The input activations of the nodes to be quantized.
         """
-        self._model = model
-        self._graph = graph
-        self._backend_entity = backend_entity
-        self._weight_params = weight_params
-        self._activations = activations
         self._primary_config = primary_config
         self._ratio = ratio
+        self._algorithm_key = f"MPC_{hash(self)}"
+        self._backend_entity = None
 
     @abstractmethod
-    def _calc_sensitivity(self) -> List[float]:
+    def _calc_sensitivity(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        weight_params: List[WeightCompressionParameters],
+        statistic_points: Optional[StatisticPointsContainer] = None,
+    ) -> List[float]:
         """
         Calculates sensitivity of each layer according to a criterion.
 
         :return: List of values per node to be quantized.
         """
 
-    def assign_mixed_precision(self) -> None:
+    def apply(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        statistic_points: Optional[StatisticPointsContainer] = None,
+        dataset: Optional[Dataset] = None,
+        weight_params: List[WeightCompressionParameters] = None,
+    ) -> None:
         """
         Assigns quantization precision based on computed layers' sensitivities, ratio of parameters.
         """
-        scores = self._calc_sensitivity()
-        num_all_weights = sum(wp.num_weights for wp in self._weight_params)
+        self._set_backend_entity(model)
+
+        scores = self._calc_sensitivity(model, graph, weight_params, statistic_points)
+        num_all_weights = sum(wp.num_weights for wp in weight_params)
 
         indexes_of_layers_in_ascending_order_of_scores = [
             i[0] for i in sorted(enumerate(scores), reverse=False, key=lambda x: x[1])
         ]
         num_weights_in_4bit = 0
         for index in indexes_of_layers_in_ascending_order_of_scores:
-            weight_param = self._weight_params[index]
+            weight_param = weight_params[index]
             current_ratio = (num_weights_in_4bit + weight_param.num_weights) / num_all_weights
             if current_ratio >= self._ratio:
                 break
             weight_param.compression_config = self._primary_config
             num_weights_in_4bit += weight_param.num_weights
+
+    @property
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.OPENVINO, BackendType.TORCH]
+
+    def _set_backend_entity(self, model: TModel) -> None:
+        """
+        Creates a helper class with a backed-specific logic of the algorithm.
+
+        :param model: Backend-specific input model.
+        """
+        model_backend = get_backend(model)
+        if model_backend == BackendType.OPENVINO:
+            from nncf.quantization.algorithms.weight_compression.openvino_backend import OVMixedPrecisionAlgoBackend
+
+            self._backend_entity = OVMixedPrecisionAlgoBackend(model)
+        elif model_backend == BackendType.TORCH:
+            from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
+
+            self._backend_entity = PTWeightCompressionAlgoBackend()
+        else:
+            raise nncf.UnsupportedBackendError(
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
+            )
+
+    @abstractmethod
+    def get_statistic_points(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        matmul_input_nodes: Iterable[Tuple[NNCFNode, int]],
+        subset_size: Optional[int] = None
+    ) -> StatisticPointsContainer:
+        """
+        Returns statistic points, for which StatisticsCollector should collect statistics.
+
+        :param model: Model for statistics collection.
+        :param graph: Model graph.
+        :return: Statistic points, for which StatisticsCollector should collect statistics.
+        """
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.WEIGHT_QUANTIZATION_ERROR)
@@ -99,9 +149,14 @@ class DataFreeCriterion(MixedPrecisionCriterion):
     A baseline mixed precision criterion that is based on quantization noise of weights only.
     """
 
-    def _calc_weight_sensitivity(self, weight_param: WeightCompressionParameters) -> float:
+    def _calc_weight_sensitivity(
+        self,
+        weight_param: WeightCompressionParameters,
+        model: TModel,
+        graph: NNCFGraph,
+    ) -> float:
         weight = self._backend_entity.get_weight(
-            weight_param.node_with_weight, weight_param.weight_port_id, self._model, self._graph
+            weight_param.node_with_weight, weight_param.weight_port_id, model, graph
         )
         backup_config = weight_param.compression_config
         reduction_axes = weight_param.reduction_axes
@@ -109,29 +164,61 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         eps = fns.finfo(weight).eps
         return 1 / (int_error + eps)
 
-    def _calc_score_per_node(self, weight_param: WeightCompressionParameters) -> float:
-        weight_score = self._calc_weight_sensitivity(weight_param)
+    def _calc_score_per_node(
+        self,
+        weight_param: WeightCompressionParameters,
+        model: TModel,
+        graph: NNCFGraph,
+        statistic_points: Optional[StatisticPointsContainer] = None,
+    ) -> float:
+        weight_score = self._calc_weight_sensitivity(weight_param, model, graph)
         return weight_score
 
-    def _calc_sensitivity(self) -> List[float]:
+    def _calc_sensitivity(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        weight_params: List[WeightCompressionParameters],
+        statistic_points: Optional[StatisticPointsContainer] = None,
+    ) -> List[float]:
         scores = []
-        for weight_param in track(self._weight_params, description="Mixed-Precision assignment"):
-            scores.append(self._calc_score_per_node(weight_param))
+        for weight_param in track(weight_params, description="Mixed-Precision assignment"):
+            scores.append(self._calc_score_per_node(weight_param, model, graph, statistic_points))
         return scores
+
+    def get_statistic_points(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        matmul_input_nodes: Iterable[Tuple[NNCFNode, int]],
+        subset_size: Optional[int] = None
+    ) -> StatisticPointsContainer:
+        raise RuntimeError("No statistics collection intended for data-free mixed precision criterion")
 
 
 class DataBasedCriterion(DataFreeCriterion):
     """
-    Data-based mixed precision criterion that takes into account outliers in the input activations.
-    Expecting activations of the following shape: [seq_length, hidden_dim]
+    Data-based mixed precision criterion that takes into account outliers in the input statistics.
+    Expecting statistics of the following shape: [hidden_dim]
     """
 
-    @staticmethod
     @abstractmethod
-    def _calc_activation_sensitivity(activations: List[Tensor]) -> float:
+    def _calc_activation_sensitivity(
+        self,
+        weight_param: WeightCompressionParameters,
+        model: TModel,
+        graph: NNCFGraph,
+        statistic_points: StatisticPointsContainer,
+    ) -> float:
         pass
 
-    def _calc_score_per_node(self, weight_param: WeightCompressionParameters):
+    def _calc_score_per_node(
+        self,
+        weight_param: WeightCompressionParameters,
+        model: TModel,
+        graph: NNCFGraph,
+        statistic_points: Optional[StatisticPointsContainer] = None,
+    ):
         """
         NOTE: Data-based criteria for assigning 4-bit/8-bit precisions are valid for Matmul operations only.
         However, in some cases it can be beneficial to quantize Gather layers to 4-bit.
@@ -140,9 +227,81 @@ class DataBasedCriterion(DataFreeCriterion):
         """
         if weight_param.node_with_weight.metatype in self._backend_entity.embedding_metatypes:
             return THE_LOWEST_SENSITIVITY
-        weight_score = self._calc_weight_sensitivity(weight_param)
-        activation_score = self._calc_activation_sensitivity(self._activations[weight_param.node_with_weight.node_name])
+        weight_score = self._calc_weight_sensitivity(weight_param, model, graph)
+        activation_score = self._calc_activation_sensitivity(weight_param, model, graph, statistic_points)
         return weight_score * activation_score
+
+    def get_statistic_points(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        matmul_input_nodes: Iterable[Tuple[NNCFNode, int]],
+        subset_size: Optional[int] = None
+    ) -> StatisticPointsContainer:
+        """
+        Returns statistic points, for which StatisticsCollector should collect statistics.
+
+        :param model: Model for statistics collection.
+        :param graph: Model graph.
+        :return: Statistic points, for which StatisticsCollector should collect statistics.
+        """
+        self._set_backend_entity(model)
+
+        statistic_container = StatisticPointsContainer()
+        for act_node, output_port_id in matmul_input_nodes:
+            statistic_point = self._backend_entity.target_point(
+                TargetType.POST_LAYER_OPERATION, act_node.node_name, port_id=output_port_id
+            )
+            stat_collector = self._get_statistic_collector(subset_size=subset_size)
+            statistic_container.add_statistic_point(
+                StatisticPoint(
+                    target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
+                )
+            )
+
+        return statistic_container
+
+    @abstractmethod
+    def _get_statistic_collector(self, subset_size=None):
+        pass
+
+    def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[NNCFNode, int]:
+        """
+        This method returns the activation layer and corresponding port id for the node.
+
+        :param node: NNCFGraph node for which the activation is sought.
+        :param nncf_graph: NNCFGraph instance with the node.
+        :return: Tuple with the activation node and port id.
+        """
+        activation_port = self._backend_entity.get_activation_port_id(node, nncf_graph)
+        activation_edge = nncf_graph.get_input_edge_by_port_id(node, activation_port)
+        activation_node = activation_edge.from_node
+        port_id = activation_edge.output_port_id
+        return activation_node, port_id
+
+    def _get_statistics_for_node(self, statistic_points: StatisticPointsContainer, node: NNCFNode, nncf_graph: NNCFGraph, stat_key: str) -> List[Tensor]:
+        act_node, output_port_id = self._get_activation_node_and_port(node, nncf_graph)
+
+        def input_filter_func(point):
+            # For the floating-point statistics collected in POST_LAYER style,
+            # we also need to determine the output port id.
+            # For the cases when the layer has more than one (0) output port.
+            return (
+                self._algorithm_key in point.algorithm_to_tensor_collectors
+                and point.target_point.type == TargetType.POST_LAYER_OPERATION
+                and point.target_point.port_id == output_port_id
+            )
+
+        stats = []
+        for tensor_collector in statistic_points.get_algo_statistics_for_node(
+            act_node.node_name, input_filter_func, self._algorithm_key
+        ):
+            statistics = tensor_collector.get_statistics()[stat_key]
+            if isinstance(statistics, Tensor):
+                stats.append(statistics)
+            else:
+                stats.extend(statistics)
+        return stats
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.HESSIAN_INPUT_ACTIVATION)
@@ -152,22 +311,32 @@ class HAWQCriterion(DataBasedCriterion):
     multiplied by L2 norm of 8-bit quantization noise.
     """
 
-    @staticmethod
-    def _calc_activation_sensitivity(activations: List[Tensor]) -> float:
+    def _calc_activation_sensitivity(
+        self,
+        weight_param: WeightCompressionParameters,
+        model: TModel,
+        graph: NNCFGraph,
+        statistic_points: Optional[StatisticPointsContainer] = None,
+    ) -> float:
         htrace = 0
-        nsamples = len(activations)
-        for inp in activations:
+        nsamples = len(statistics)
+        for inp in statistics:
             # NOTE: average trace?? divide by number of diagonal elements
             htrace += fns.sum(fns.multiply(inp, inp)).item()
-            # normalize by sequence_length - the same for all activations
+            # normalize by sequence_length - the same for all statistics
             # normalize by hidden dimension
             htrace /= inp.size
         htrace *= 2 / nsamples
         return htrace
 
-    def _calc_weight_sensitivity(self, weight_param: WeightCompressionParameters) -> float:
+    def _calc_weight_sensitivity(
+        self,
+        weight_param: WeightCompressionParameters,
+        model: TModel,
+        graph: NNCFGraph,
+    ) -> float:
         weight = self._backend_entity.get_weight(
-            weight_param.node_with_weight, weight_param.weight_port_id, self._model, self._graph
+            weight_param.node_with_weight, weight_param.weight_port_id, model, graph
         )
         backup_config = weight_param.compression_config
         reduction_axes = weight_param.reduction_axes
@@ -189,9 +358,19 @@ class MeanVarianceCriterion(DataBasedCriterion):
     The mean variance of the layers' inputs multiplied by inverted 8-bit quantization noise.
     """
 
-    @staticmethod
-    def _calc_activation_sensitivity(activations: List[Tensor]) -> float:
-        return fns.mean(fns.stack([fns.mean(fns.var(inp, axis=0)) for inp in activations])).item()
+    def _calc_activation_sensitivity(
+        self,
+        weight_param: WeightCompressionParameters,
+        model: TModel,
+        graph: NNCFGraph,
+        statistic_points: StatisticPointsContainer,
+    ) -> float:
+        node = weight_param.node_with_weight
+        stats = self._get_statistics_for_node(statistic_points, node, graph, SensitivityMetric.MEAN_ACTIVATION_VARIANCE.value)
+        return stats[0].item()
+
+    def _get_statistic_collector(self, subset_size=None):
+        return self._backend_entity.mean_variance_statistic_collector(reduction_axes=(0, 1), subset_size=subset_size)
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
@@ -200,9 +379,14 @@ class MaxVarianceCriterion(DataBasedCriterion):
     The maximum variance of the layers' inputs multiplied by inverted 8-bit quantization noise.
     """
 
-    @staticmethod
-    def _calc_activation_sensitivity(activations: List[Tensor]) -> float:
-        return fns.mean(fns.stack([fns.max(fns.var(inp, axis=0)) for inp in activations])).item()
+    def _calc_activation_sensitivity(
+        self,
+        weight_param: WeightCompressionParameters,
+        model: TModel,
+        graph: NNCFGraph,
+        statistic_points: Optional[StatisticPointsContainer] = None,
+    ) -> float:
+        return fns.mean(fns.stack([fns.max(fns.var(inp, axis=0)) for inp in statistics])).item()
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE)
@@ -211,6 +395,11 @@ class MeanMaxCriterion(DataBasedCriterion):
     The mean magnitude of the layers' inputs multiplied by inverted 8-bit quantization noise.
     """
 
-    @staticmethod
-    def _calc_activation_sensitivity(activations: List[Tensor]) -> float:
-        return fns.mean(fns.stack([fns.mean(fns.max(fns.abs(inp), axis=0)) for inp in activations])).item()
+    def _calc_activation_sensitivity(
+        self,
+        weight_param: WeightCompressionParameters,
+        model: TModel,
+        graph: NNCFGraph,
+        statistic_points: Optional[StatisticPointsContainer] = None,
+    ) -> float:
+        return fns.mean(fns.stack([fns.mean(fns.max(fns.abs(inp), axis=0)) for inp in statistics])).item()
