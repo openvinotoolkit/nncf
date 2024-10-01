@@ -395,7 +395,7 @@ def compress_weights(
     scale_estimation: Optional[bool] = None,
     gptq: Optional[bool] = None,
     lora_correction: Optional[bool] = None,
-    backup_mode: Optional[BackupMode] = BackupMode.INT8_ASYM,
+    backup_mode: BackupMode = BackupMode.INT8_ASYM,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> TModel:
     """
@@ -446,8 +446,8 @@ def compress_weights(
     :type gptq: bool
     :param lora_correction: Indicates whether to use Lora Correction algorithm.
     :type lora_correction: bool
-    :param backup_mode: Defines a backup mode for mixed-precision weight compression.
-        NONE stands for original floating-point precision of the model weights. Defaults to nncf.BackupMode.INT8_ASYM.
+    :param backup_mode: Defines a backup mode for mixed-precision weight compression. Defaults to INT8_ASYM.
+        NONE stands for original floating-point precision of the model weights.
             In this mode, weights are retained in their original precision without any quantization.
         INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
         INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
@@ -464,9 +464,6 @@ def compress_weights(
 
     backend = get_backend(model)
     compression_weights_impl = None
-
-    if backup_mode is None:
-        raise ValueError("Invalid backup_mode specified. Please choose from the available BackupMode options.")
 
     if backend == BackendType.TORCH:
         from nncf.torch.model_creation import is_wrapped_model

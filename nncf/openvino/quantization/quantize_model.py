@@ -380,7 +380,7 @@ def compress_weights_impl(
     scale_estimation: bool,
     gptq: bool,
     lora_correction: bool,
-    backup_mode: Optional[BackupMode] = BackupMode.INT8_ASYM,
+    backup_mode: BackupMode,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> ov.Model:
     """
