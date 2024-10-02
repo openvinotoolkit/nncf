@@ -22,6 +22,8 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
+from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
@@ -43,7 +45,7 @@ from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.quantization.layers import AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import SymmetricWeightsDecompressor
-from nncf.torch.tensor_statistics.collectors import get_raw_stat_collector
+from nncf.torch.tensor_statistics.collectors import PTMeanReducer
 
 
 class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
@@ -108,9 +110,15 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
         return PTWeightCompressionAlgoBackend.target_point(target_type, target_node_name, port_id)
 
-    @staticmethod
-    def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorCollector:
-        return get_raw_stat_collector(num_samples)
+    def mean_statistic_collector(
+        self, reduction_axes: Tuple[int], subset_size: Optional[int] = None
+    ) -> TensorCollector:
+        mean_reducer = PTMeanReducer(reduction_axes)
+        shape_reducer = ShapeReducer()
+        collector = TensorCollector()
+        collector.register_statistic_branch(self.MEAN_STAT, mean_reducer, NoopAggregator(subset_size))
+        collector.register_statistic_branch(self.SHAPE_STAT, shape_reducer, NoopAggregator(subset_size))
+        return collector
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, graph: NNCFGraph) -> int:

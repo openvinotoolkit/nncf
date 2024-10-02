@@ -106,7 +106,7 @@ class MixedPrecisionCriterion(Algorithm):
 
     @property
     def available_backends(self) -> List[BackendType]:
-        return [BackendType.OPENVINO, BackendType.TORCH]
+        return [BackendType.OPENVINO]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
@@ -119,10 +119,6 @@ class MixedPrecisionCriterion(Algorithm):
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVMixedPrecisionAlgoBackend
 
             self._backend_entity = OVMixedPrecisionAlgoBackend(model)
-        elif model_backend == BackendType.TORCH:
-            from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
-
-            self._backend_entity = PTWeightCompressionAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
