@@ -28,14 +28,15 @@ from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregato
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
-from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op, get_inplace_mean_max_op, \
-    get_inplace_mean_square_op
+from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_max_op
+from nncf.openvino.graph.node_utils import get_inplace_max_var_op
+from nncf.openvino.graph.node_utils import get_inplace_mean_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
-from nncf.openvino.graph.node_utils import get_inplace_min_op
+from nncf.openvino.graph.node_utils import get_inplace_mean_square_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_var_op
-from nncf.openvino.graph.node_utils import get_inplace_max_var_op
+from nncf.openvino.graph.node_utils import get_inplace_min_op
 from nncf.quantization.advanced_parameters import StatisticsType
 
 

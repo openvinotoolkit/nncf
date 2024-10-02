@@ -10,19 +10,21 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import Dict, List, Optional, TypeVar, Tuple, Iterable
+from typing import Iterable, List, Optional, Tuple, TypeVar
 
 import nncf
 from nncf import Dataset
-from nncf.common.graph import NNCFGraph, NNCFNode
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.logging.track_progress import track
-from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer, StatisticPoint
-from nncf.common.utils.backend import BackendType, get_backend
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
 from nncf.common.utils.registry import Registry
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
@@ -132,7 +134,7 @@ class MixedPrecisionCriterion(Algorithm):
         model: TModel,
         graph: NNCFGraph,
         matmul_input_nodes: Iterable[Tuple[NNCFNode, int]],
-        subset_size: Optional[int] = None
+        subset_size: Optional[int] = None,
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
@@ -191,7 +193,7 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         model: TModel,
         graph: NNCFGraph,
         matmul_input_nodes: Iterable[Tuple[NNCFNode, int]],
-        subset_size: Optional[int] = None
+        subset_size: Optional[int] = None,
     ) -> StatisticPointsContainer:
         raise RuntimeError("No statistics collection intended for data-free mixed precision criterion")
 
@@ -236,7 +238,7 @@ class DataBasedCriterion(DataFreeCriterion):
         model: TModel,
         graph: NNCFGraph,
         matmul_input_nodes: Iterable[Tuple[NNCFNode, int]],
-        subset_size: Optional[int] = None
+        subset_size: Optional[int] = None,
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
@@ -279,7 +281,9 @@ class DataBasedCriterion(DataFreeCriterion):
         port_id = activation_edge.output_port_id
         return activation_node, port_id
 
-    def _get_statistics_for_node(self, statistic_points: StatisticPointsContainer, node: NNCFNode, nncf_graph: NNCFGraph, stat_key: str) -> List[Tensor]:
+    def _get_statistics_for_node(
+        self, statistic_points: StatisticPointsContainer, node: NNCFNode, nncf_graph: NNCFGraph, stat_key: str
+    ) -> List[Tensor]:
         act_node, output_port_id = self._get_activation_node_and_port(node, nncf_graph)
 
         def input_filter_func(point):
@@ -318,7 +322,9 @@ class HAWQCriterion(DataBasedCriterion):
         graph: NNCFGraph,
         statistic_points: StatisticPointsContainer,
     ) -> float:
-        stats = self._get_statistics_for_node(statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.HESSIAN_INPUT_ACTIVATION.value)
+        stats = self._get_statistics_for_node(
+            statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.HESSIAN_INPUT_ACTIVATION.value
+        )
         h_trace = 2 * stats[0].item()
         return h_trace
 
@@ -361,7 +367,9 @@ class MeanVarianceCriterion(DataBasedCriterion):
         graph: NNCFGraph,
         statistic_points: StatisticPointsContainer,
     ) -> float:
-        stats = self._get_statistics_for_node(statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.MEAN_ACTIVATION_VARIANCE.value)
+        stats = self._get_statistics_for_node(
+            statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.MEAN_ACTIVATION_VARIANCE.value
+        )
         return stats[0].item()
 
     def _get_statistic_collector(self, subset_size=None):
@@ -381,7 +389,9 @@ class MaxVarianceCriterion(DataBasedCriterion):
         graph: NNCFGraph,
         statistic_points: StatisticPointsContainer,
     ) -> float:
-        stats = self._get_statistics_for_node(statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.MAX_ACTIVATION_VARIANCE.value)
+        stats = self._get_statistics_for_node(
+            statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.MAX_ACTIVATION_VARIANCE.value
+        )
         return stats[0].item()
 
     def _get_statistic_collector(self, subset_size=None):
@@ -401,7 +411,9 @@ class MeanMaxCriterion(DataBasedCriterion):
         graph: NNCFGraph,
         statistic_points: StatisticPointsContainer,
     ) -> float:
-        stats = self._get_statistics_for_node(statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE.value)
+        stats = self._get_statistics_for_node(
+            statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE.value
+        )
         return stats[0].item()
 
     def _get_statistic_collector(self, subset_size=None):

@@ -198,10 +198,10 @@ class WeightCompressionAlgoBackend(ABC):
         """
 
     @abstractmethod
-    def statistic_collector(self, reduction_axes: Tuple[int], subset_size: Optional[int] = None) -> TensorStatisticCollectorBase:
-        """
-
-        """
+    def mean_statistic_collector(
+        self, reduction_axes: Tuple[int], subset_size: Optional[int] = None
+    ) -> TensorStatisticCollectorBase:
+        """ """
 
     @staticmethod
     @abstractmethod

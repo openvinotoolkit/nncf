@@ -280,7 +280,9 @@ def get_inplace_mean_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInser
     return get_inplace_reduce_op(opset.reduce_mean, reduction_axes, False)
 
 
-def var_op(node: ov.Node, output_port_id: int, output_node_name: str, reduction_axes: Optional[np.ndarray] = None) -> ov.Node:
+def var_op(
+    node: ov.Node, output_port_id: int, output_node_name: str, reduction_axes: Optional[np.ndarray] = None
+) -> ov.Node:
     op_input = node.output(output_port_id)
     mean = opset.reduce_mean(
         op_input,
@@ -336,7 +338,9 @@ def get_inplace_max_var_op(reduction_axes: Optional[ReductionAxes] = None) -> In
     return get_max_var_reduce_op
 
 
-def get_inplace_mean_max_op(use_abs_max: bool, reduction_axes: Optional[ReductionAxes] = None) -> InplaceInsertionFnType:
+def get_inplace_mean_max_op(
+    use_abs_max: bool, reduction_axes: Optional[ReductionAxes] = None
+) -> InplaceInsertionFnType:
     def get_mean_max_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
         partial_shape = get_partial_shape_safe(node, output_port_id)
         all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)

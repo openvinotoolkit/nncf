@@ -63,7 +63,7 @@ class AWQ(Algorithm):
         name_to_node_mapping: Dict[str, Any],
         all_weight_params: List[WeightCompressionParameters],
         nodes_to_compress: List[NNCFNode],
-        statistics = None,
+        statistics=None,
         subset_size: int = 32,
         percent_to_apply=0.002,
         alpha_min=0.0,

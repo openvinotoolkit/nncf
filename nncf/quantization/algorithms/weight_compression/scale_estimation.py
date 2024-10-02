@@ -50,7 +50,7 @@ class ScaleEstimation:
         name_to_node_mapping: Dict[str, Any],
         all_weight_params: List[WeightCompressionParameters],
         nodes_to_compress: List[NNCFNode],
-        statistics = None,
+        statistics=None,
         subset_size: int = 32,
         initial_steps: int = 5,
         scale_steps: int = 10,
