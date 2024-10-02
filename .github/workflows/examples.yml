@@ -9,7 +9,7 @@ on:
 
 jobs:
   examples:
-    runs-on: aks-linux-16-cores-64gb
+    runs-on: aks-linux-16-cores-32gb
     defaults:
       run:
         shell: bash
@@ -34,7 +34,18 @@ jobs:
           pip install -r tests/cross_fw/examples/requirements.txt
       - name: Print installed modules
         run: pip list
-      - name: Run examples test scope
-        run: python -m pytest -ra tests/cross_fw/examples -s -k post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control
-        env:
-          TQDM_DISABLE: 1
+      # - name: Run examples test scope
+      #   run: python -m pytest -ra tests/cross_fw/examples -s -o log_cli=1 -k post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control
+      #   env:
+      #     TQDM_DISABLE: 1
+      # - name: test1
+      #   run: pip install -r examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/requirements.txt
+      # - name: test1
+      #   run: python -v examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/main.py
+      - name: test1
+        run: |
+          pip install -r examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/requirements.txt
+          python -v -c "import torch; print(torch.ones(1,1,2))"
+      - name: test2
+        run: |
+          python -v -c "import torch.distributed._composable_state; print(1)"
