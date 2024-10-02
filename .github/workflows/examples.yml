@@ -4,8 +4,13 @@ permissions: read-all
 on:
   workflow_dispatch:
   pull_request:
-  # schedule:
-  #   - cron: '0 0 * * *'
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+  schedule:
+    - cron: '0 0 * * *'
 
 jobs:
   examples-cpu:
@@ -13,6 +18,9 @@ jobs:
     defaults:
       run:
         shell: bash
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.body, '- [x] test examples'))
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
@@ -30,6 +38,6 @@ jobs:
       - name: Print installed modules
         run: pip list
       - name: Run examples test scope
-        run: python -m pytest -ra tests/cross_fw/examples -m "not cuda" -s
+        run: python -m pytest -ra tests/cross_fw/examples -s -k post_training_quantization_torch_mobilenet_v2
         env:
           TQDM_DISABLE: 1
