@@ -346,7 +346,7 @@ def get_inplace_mean_max_op(
         all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)
 
         max_op = get_inplace_max_op(reduction_axes, use_abs_max)(node, output_port_id, f"{output_node_name}/max")
-        result = opset.reduce_max(
+        result = opset.reduce_mean(
             max_op,
             reduction_axes=all_axes,
             keep_dims=False,

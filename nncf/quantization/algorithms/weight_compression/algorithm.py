@@ -238,7 +238,6 @@ class WeightCompression(Algorithm):
         ratio_defining_params: List[WeightCompressionParameters],
         model: TModel,
         graph: NNCFGraph,
-        activations: Optional[Dict[str, List[Tensor]]] = None,
     ) -> None:
         """
         Sets the appropriate compression configuration for weights based on some criteria.
@@ -247,18 +246,13 @@ class WeightCompression(Algorithm):
             backup precisions.
         :param model: The model.
         :param graph: The model graph associated with the model.
-        :param activations: The input activations of the layers considered for compression.
         """
         primary_config = WeightCompressionConfig(mode=self._mode, group_size=self._group_size)
         if self._ratio == 1:
             for weight_param in ratio_defining_params:
                 weight_param.compression_config = primary_config
         else:
-            criterion_cls = MIXED_PRECISION_CRITERIA.get(self._sensitivity_metric)
-            criterion = criterion_cls(
-                model, graph, self._backend_entity, ratio_defining_params, primary_config, self._ratio, activations
-            )
-            criterion.assign_mixed_precision()
+            self._mixed_precision_algo.apply(model, graph, self._mixed_precision_statistics, weight_params=ratio_defining_params)
 
     @staticmethod
     def _proportion_str(num_weights_list: List[int], total_num_weights: int, total_num_params: int) -> str:
@@ -378,9 +372,7 @@ class WeightCompression(Algorithm):
                 weight_names.add(weight_name)
 
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_shared)
-        self._mixed_precision_algo.apply(
-            model, graph, self._mixed_precision_statistics, weight_params=ratio_defining_params
-        )
+        self._set_weight_compression_config(ratio_defining_params, model, graph)
         nncf_logger.info(self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
 
         if self._awq:
@@ -507,8 +499,6 @@ class WeightCompression(Algorithm):
             matmul_input_to_output_nodes_map = defaultdict(list)
             for node in matmul_nodes:
                 act_node, output_port_id = self._get_activation_node_and_port(node, graph)
-                if (act_node, output_port_id) in matmul_input_to_output_nodes_map:
-                    continue
                 matmul_input_to_output_nodes_map[(act_node, output_port_id)].append(node)
 
             if data_aware_precision_assignment:
