@@ -42,7 +42,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 
-InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
+InplaceInsertionFnType = Callable[[ov.Node, int, str], ov.Node]
 
 
 def get_add_bias_node(node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
@@ -280,39 +280,34 @@ def get_inplace_mean_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInser
     return get_inplace_reduce_op(opset.reduce_mean, reduction_axes, False)
 
 
-def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInsertionFnType:
-    """
-    Returns inplace mean function that adds reduce mean node to a passed node.
+def var_op(node: ov.Node, output_port_id: int, output_node_name: str, reduction_axes: Optional[np.ndarray] = None) -> ov.Node:
+    op_input = node.output(output_port_id)
+    mean = opset.reduce_mean(
+        op_input,
+        reduction_axes=reduction_axes,
+        keep_dims=True,
+        name=f"{output_node_name}/mean",
+    )
+    diff = opset.squared_difference(mean, op_input, name=f"{output_node_name}/squared_diff")
+    variance = opset.reduce_mean(
+        diff,
+        reduction_axes=reduction_axes,
+        keep_dims=True,
+        name=f"{output_node_name}/variance",
+    )
+    return variance
 
-    :param reduction_axes: Target reduction axes for the reduction node.
-        Reduce along all axes in case reduction_axes are None.
-    :returns: Inplace insertion function to use in ModelTransformer.
-    """
 
+def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes] = None) -> InplaceInsertionFnType:
     def get_mean_var_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
-        reduction_axes_ = reduction_axes
         partial_shape = get_partial_shape_safe(node, output_port_id)
-        if reduction_axes_ is None:
-            reduction_axes_ = np.arange(partial_shape.rank.get_length()).astype(np.int64)
-        reduction_axes_ = np.array(reduction_axes_, dtype=np.int64)
+        all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)
+        reduction_axes_ = np.array(all_axes if reduction_axes is None else reduction_axes, dtype=np.int64)
 
-        op_input = node.output(output_port_id)
-        mean = opset.reduce_mean(
-            op_input,
-            reduction_axes=reduction_axes_,
-            keep_dims=True,
-            name=f"{output_node_name}/mean",
-        )
-        diff = opset.squared_difference(mean, op_input, name=f"{output_node_name}/squared_diff")
-        variance = opset.reduce_mean(
-            diff,
-            reduction_axes=reduction_axes_,
-            keep_dims=True,
-            name=f"{output_node_name}/variance",
-        )
+        variance = var_op(node, output_port_id, output_node_name, reduction_axes_)
         result = opset.reduce_mean(
             variance,
-            reduction_axes=np.arange(partial_shape.rank.get_length()).astype(np.int64),
+            reduction_axes=all_axes,
             keep_dims=False,
             name=output_node_name,
         )
@@ -320,6 +315,62 @@ def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes]) -> InplaceI
         return result
 
     return get_mean_var_reduce_op
+
+
+def get_inplace_max_var_op(reduction_axes: Optional[ReductionAxes] = None) -> InplaceInsertionFnType:
+    def get_max_var_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
+        partial_shape = get_partial_shape_safe(node, output_port_id)
+        all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)
+        reduction_axes_ = np.array(all_axes if reduction_axes is None else reduction_axes, dtype=np.int64)
+
+        variance = var_op(node, output_port_id, output_node_name, reduction_axes_)
+        result = opset.reduce_max(
+            variance,
+            reduction_axes=all_axes,
+            keep_dims=False,
+            name=output_node_name,
+        )
+
+        return result
+
+    return get_max_var_reduce_op
+
+
+def get_inplace_mean_max_op(use_abs_max: bool, reduction_axes: Optional[ReductionAxes] = None) -> InplaceInsertionFnType:
+    def get_mean_max_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
+        partial_shape = get_partial_shape_safe(node, output_port_id)
+        all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)
+
+        max_op = get_inplace_max_op(reduction_axes, use_abs_max)(node, output_port_id, f"{output_node_name}/max")
+        result = opset.reduce_max(
+            max_op,
+            reduction_axes=all_axes,
+            keep_dims=False,
+            name=output_node_name,
+        )
+
+        return result
+
+    return get_mean_max_reduce_op
+
+
+def get_inplace_mean_square_op(reduction_axes: Optional[ReductionAxes] = None) -> InplaceInsertionFnType:
+    def get_mean_square_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
+        partial_shape = get_partial_shape_safe(node, output_port_id)
+        all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)
+        reduction_axes_ = np.array(all_axes if reduction_axes is None else reduction_axes, dtype=np.int64)
+
+        square = node * node
+        result = opset.reduce_mean(
+            square,
+            reduction_axes=reduction_axes_,
+            keep_dims=False,
+            name=output_node_name,
+        )
+
+        return result
+
+    return get_mean_square_reduce_op
 
 
 def get_inplace_batch_mean_op() -> InplaceInsertionFnType:

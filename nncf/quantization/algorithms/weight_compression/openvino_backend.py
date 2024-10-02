@@ -29,7 +29,8 @@ from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.rt_info import dump_parameters
-from nncf.openvino.statistics.collectors import get_raw_stat_collector, OVMeanReducer, OVMeanVarianceReducer
+from nncf.openvino.statistics.collectors import get_raw_stat_collector, OVMeanReducer, OVMeanVarianceReducer, \
+    OVMaxVarianceReducer, OVMeanAbsMaxReducer, OVMeanSquareReducer
 from nncf.openvino.statistics.collectors import get_mean_statistic_collector
 from nncf.parameters import CompressWeightsMode, SensitivityMetric
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
@@ -394,4 +395,28 @@ class OVMixedPrecisionAlgoBackend(OVWeightCompressionAlgoBackend):
         aggregator = MeanAggregator(num_samples=subset_size)
         collector = TensorCollector()
         collector.register_statistic_branch(SensitivityMetric.MEAN_ACTIVATION_VARIANCE.value, reducer, aggregator)
+        return collector
+
+    @staticmethod
+    def max_variance_statistic_collector(reduction_axes: Tuple[int], subset_size: Optional[int] = None) -> TensorCollector:
+        reducer = OVMaxVarianceReducer(reduction_axes, inplace=True)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector()
+        collector.register_statistic_branch(SensitivityMetric.MAX_ACTIVATION_VARIANCE.value, reducer, aggregator)
+        return collector
+
+    @staticmethod
+    def mean_abs_max_statistic_collector(reduction_axes: Tuple[int], subset_size: Optional[int] = None) -> TensorCollector:
+        reducer = OVMeanAbsMaxReducer(reduction_axes, inplace=True)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector()
+        collector.register_statistic_branch(SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE.value, reducer, aggregator)
+        return collector
+
+    @staticmethod
+    def mean_square_statistic_collector(subset_size: Optional[int] = None) -> TensorCollector:
+        reducer = OVMeanSquareReducer(inplace=True)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector()
+        collector.register_statistic_branch(SensitivityMetric.HESSIAN_INPUT_ACTIVATION.value, reducer, aggregator)
         return collector

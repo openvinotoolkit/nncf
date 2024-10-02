@@ -316,18 +316,11 @@ class HAWQCriterion(DataBasedCriterion):
         weight_param: WeightCompressionParameters,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
+        statistic_points: StatisticPointsContainer,
     ) -> float:
-        htrace = 0
-        nsamples = len(statistics)
-        for inp in statistics:
-            # NOTE: average trace?? divide by number of diagonal elements
-            htrace += fns.sum(fns.multiply(inp, inp)).item()
-            # normalize by sequence_length - the same for all statistics
-            # normalize by hidden dimension
-            htrace /= inp.size
-        htrace *= 2 / nsamples
-        return htrace
+        stats = self._get_statistics_for_node(statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.HESSIAN_INPUT_ACTIVATION.value)
+        h_trace = 2 * stats[0].item()
+        return h_trace
 
     def _calc_weight_sensitivity(
         self,
@@ -351,6 +344,9 @@ class HAWQCriterion(DataBasedCriterion):
         decompressed_weight = decompressed_weight.reshape(orig_shape)
         return fns.linalg.norm(decompressed_weight - weight, ord="fro").item()
 
+    def _get_statistic_collector(self, subset_size=None):
+        return self._backend_entity.mean_square_statistic_collector(subset_size)
+
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_VARIANCE)
 class MeanVarianceCriterion(DataBasedCriterion):
@@ -365,12 +361,11 @@ class MeanVarianceCriterion(DataBasedCriterion):
         graph: NNCFGraph,
         statistic_points: StatisticPointsContainer,
     ) -> float:
-        node = weight_param.node_with_weight
-        stats = self._get_statistics_for_node(statistic_points, node, graph, SensitivityMetric.MEAN_ACTIVATION_VARIANCE.value)
+        stats = self._get_statistics_for_node(statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.MEAN_ACTIVATION_VARIANCE.value)
         return stats[0].item()
 
     def _get_statistic_collector(self, subset_size=None):
-        return self._backend_entity.mean_variance_statistic_collector(reduction_axes=(0, 1), subset_size=subset_size)
+        return self._backend_entity.mean_variance_statistic_collector(reduction_axes=(1,), subset_size=subset_size)
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
@@ -384,9 +379,13 @@ class MaxVarianceCriterion(DataBasedCriterion):
         weight_param: WeightCompressionParameters,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
+        statistic_points: StatisticPointsContainer,
     ) -> float:
-        return fns.mean(fns.stack([fns.max(fns.var(inp, axis=0)) for inp in statistics])).item()
+        stats = self._get_statistics_for_node(statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.MAX_ACTIVATION_VARIANCE.value)
+        return stats[0].item()
+
+    def _get_statistic_collector(self, subset_size=None):
+        return self._backend_entity.max_variance_statistic_collector(reduction_axes=(1,), subset_size=subset_size)
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE)
@@ -400,6 +399,10 @@ class MeanMaxCriterion(DataBasedCriterion):
         weight_param: WeightCompressionParameters,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
+        statistic_points: StatisticPointsContainer,
     ) -> float:
-        return fns.mean(fns.stack([fns.mean(fns.max(fns.abs(inp), axis=0)) for inp in statistics])).item()
+        stats = self._get_statistics_for_node(statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE.value)
+        return stats[0].item()
+
+    def _get_statistic_collector(self, subset_size=None):
+        return self._backend_entity.mean_abs_max_statistic_collector(reduction_axes=(1,), subset_size=subset_size)
