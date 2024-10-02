@@ -44,7 +44,6 @@ from nncf.quantization.algorithms.weight_compression.scale_estimation import Sca
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
-from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
 
 TModel = TypeVar("TModel")
@@ -252,7 +251,9 @@ class WeightCompression(Algorithm):
             for weight_param in ratio_defining_params:
                 weight_param.compression_config = primary_config
         else:
-            self._mixed_precision_algo.apply(model, graph, self._mixed_precision_statistics, weight_params=ratio_defining_params)
+            self._mixed_precision_algo.apply(
+                model, graph, self._mixed_precision_statistics, weight_params=ratio_defining_params
+            )
 
     @staticmethod
     def _proportion_str(num_weights_list: List[int], total_num_weights: int, total_num_params: int) -> str:
