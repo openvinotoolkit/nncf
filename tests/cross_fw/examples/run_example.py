@@ -181,7 +181,7 @@ def llm_compression_synthetic() -> Dict[str, float]:
 
     result = llm_compression_synthetic_main()
 
-    return {"wikitext_based_similarity": result[0], "synthetic_based_similarity": result[1]}
+    return {"word_count": len(result.split())}
 
 
 def quantization_aware_training_torch_resnet18():
