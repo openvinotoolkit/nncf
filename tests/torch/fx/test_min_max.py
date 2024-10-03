@@ -14,6 +14,7 @@ from typing import Tuple
 import pytest
 
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
@@ -61,19 +62,21 @@ class TestTorchFXGetChannelAxes(TemplateTestGetChannelAxes, TestTorchFXMinMaxAlg
         return PTLinearMetatype
 
     @staticmethod
-    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]):
+    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> BaseLayerAttributes:
         # This method isn't needed for Torch FX backend
-        pass
+        return None
 
     @staticmethod
-    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]):
+    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> BaseLayerAttributes:
         # This method isn't needed for Torch FX backend
-        pass
+        return None
 
     @staticmethod
-    def get_matmul_node_attrs(weight_port_id: int, transpose_weight: Tuple[int], weight_shape: Tuple[int]):
+    def get_matmul_node_attrs(
+        weight_port_id: int, transpose_weight: Tuple[int], weight_shape: Tuple[int]
+    ) -> BaseLayerAttributes:
         # This method isn't needed for Torch FX backend
-        pass
+        return None
 
     def test_get_channel_axes_matmul_node_ov_onnx(self):
         pytest.skip("Test is not applied for Torch FX backend.")
