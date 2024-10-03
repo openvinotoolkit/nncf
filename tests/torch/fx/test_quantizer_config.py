@@ -11,10 +11,13 @@
 
 import pytest
 
+import nncf.torch.graph.operator_metatypes as om
+from nncf.common.utils.backend import BackendType
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
+from tests.cross_fw.test_templates.models import NNCFGraphTransformer
 from tests.cross_fw.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
 from tests.torch.fx.helpers import get_depthwise_conv_nncf_graph
 from tests.torch.fx.helpers import get_single_conv_nncf_graph
@@ -24,6 +27,9 @@ from tests.torch.fx.helpers import get_sum_aggregation_nncf_graph
 class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def get_algo_backend(self):
         return FXMinMaxAlgoBackend()
+
+    def get_backend_type(self):
+        return BackendType.TORCH_FX
 
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
@@ -36,3 +42,13 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
     @pytest.fixture
     def conv_sum_aggregation_nncf_graph(self) -> NNCFGraphToTestSumAggregation:
         return get_sum_aggregation_nncf_graph()
+
+    @pytest.fixture
+    def transformer_nncf_graph(self) -> NNCFGraphToTest:
+        return NNCFGraphTransformer(
+            matmul_metatype=om.PTMatMulMetatype,
+            softmax_metatype=om.PTSoftmaxMetatype,
+            mul_metatype=om.PTMulMetatype,
+            const_metatype=om.PTConstNoopMetatype,
+            transpose_metatype=om.PTTransposeMetatype,
+        )
