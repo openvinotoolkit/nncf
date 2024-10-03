@@ -23,6 +23,8 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.data.dataset import DataItem
 from nncf.data.dataset import Dataset
 from nncf.data.dataset import ModelInput
+import warnings
+
 
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")
@@ -31,7 +33,7 @@ EMPTY_DATASET_ERROR = (
     "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
 )
 
-DATASET_SIZE_ERROR = "The dataset size ({}) is smaller than the subset size ({})."
+
 
 
 class StatisticsAggregator(ABC):
@@ -72,7 +74,9 @@ class StatisticsAggregator(ABC):
         engine = factory.EngineFactory.create(model_with_outputs)
 
         iterations_number = self._get_iterations_number()
-        empty_statistics = True
+        
+        processed_samples = 0
+
         for input_data in track(  # type: ignore
             islice(self.dataset.get_inference_data(), iterations_number),
             total=iterations_number,
@@ -81,14 +85,13 @@ class StatisticsAggregator(ABC):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
             self._register_statistics(processed_outputs, merged_statistics)
-            empty_statistics = False
-        if empty_statistics:
+            processed_samples += 1
+        
+        if processed_samples == 0:
             raise nncf.ValidationError(EMPTY_DATASET_ERROR)
         
-        if len(self.dataset) < subset_size:
-            raise nncf.UnsupportedDatasetError(  
-                DATASET_SIZE_ERROR.format(len(self.dataset), subset_size)
-            )    
+        if subset_size > processed_samples:
+            warnings.warn(f"Dataset contains only {processed_samples} samples, smaller than the requested subset size {subset_size}.")  
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
