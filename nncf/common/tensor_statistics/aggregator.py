@@ -23,7 +23,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.data.dataset import DataItem
 from nncf.data.dataset import Dataset
 from nncf.data.dataset import ModelInput
-import warnings
+from nncf.common.logging import nncf_logger
 
 
 TensorType = TypeVar("TensorType")
