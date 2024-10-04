@@ -21,6 +21,7 @@ from enum import Enum
 from typing import Any, Dict, Optional, Union
 
 import nncf
+from nncf.common.quantization.quantizer_propagation.structs import PropagationStrategy
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.api_marker import api
 from nncf.parameters import StrEnum
@@ -198,9 +199,16 @@ class AdvancedQuantizationParameters:
         the calibration dataset, then in case batch_size of the data source > 1 batchwise_statistics sets to True,
         otherwise sets to False.
     :type batchwise_statistics: Optional[bool]
-    :param conservative_quantizers_merging: If true quantizers with different granularity (per-tensor and per-channel)
-    will be merged in per-tensor manner. Otherwise, quantizers with different granularity will not be merged.
-    :type conservative_quantizers_merging: bool
+    :param propagation_strategy: An instance of the `PropagationStrategy` enum that
+        specifies how quantizers should be propagated and merged across branching nodes in the
+        model's computational graph. The strategies are as follows:
+        - DO_NOT_MERGE_BRANCH_FQS: No merging of quantization parameters across branches.
+        - MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: Merge only if all branch quantization configurations are identical.
+        - MERGE_WITH_POTENTIAL_REQUANTIZATION: Merge common configurations and allow for requantization
+        on branches with additional options.
+        - MERGE_WITH_SINGLE_FQ_RESULT: Attempt to merge into a single global quantization configuration
+        if possible given hardware constraints.
+    :type propagation_strategy: Optional[PropagationStrategy]
     :param activations_quantization_params: Quantization parameters for activations.
     :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
     :param weights_quantization_params: Quantization parameters for weights.
@@ -233,7 +241,7 @@ class AdvancedQuantizationParameters:
     # Advanced Quantization parameters
     activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None
     weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None
-    conservative_quantizers_merging: bool = False
+    propagation_strategy: Optional[PropagationStrategy] = None
 
     # Range estimator parameters
     activations_range_estimator_params: RangeEstimatorParameters = field(default_factory=RangeEstimatorParameters)
