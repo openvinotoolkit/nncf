@@ -12,6 +12,7 @@
 import itertools
 from typing import Any, Dict, List
 
+from nncf.common.quantization.quantizer_propagation.structs import PropagationStrategy
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
@@ -75,7 +76,10 @@ def _get_minmax_quantization_param_grid() -> ParamGrid:
             RangeEstimatorParameters(min=min_v, max=max_v)
             for min_v, max_v in itertools.product(min_param_values, max_param_values)
         ],
-        "advanced_parameters:conservative_quantizers_merging": [True, False],
+        "advanced_parameters:propagation_strategy": [
+            PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME,
+            PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT,
+        ],
     }
     return param_grid
 
