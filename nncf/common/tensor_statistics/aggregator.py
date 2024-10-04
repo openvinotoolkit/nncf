@@ -25,7 +25,6 @@ from nncf.data.dataset import Dataset
 from nncf.data.dataset import ModelInput
 from nncf.common.logging import nncf_logger
 
-
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")
 
