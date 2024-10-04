@@ -418,6 +418,9 @@ class PTQTestPipeline(BaseTestPipeline):
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in OV_BACKENDS:
             self.path_compressed_ir = self.output_model_dir / "model.xml"
+            from openvino._offline_transformations import apply_moc_transformations
+
+            apply_moc_transformations(self.compressed_model, cf=True)
             ov.serialize(self.compressed_model, str(self.path_compressed_ir))
 
     def get_num_compressed(self) -> None:
