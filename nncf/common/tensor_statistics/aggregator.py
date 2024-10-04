@@ -34,8 +34,6 @@ EMPTY_DATASET_ERROR = (
 )
 
 
-
-
 class StatisticsAggregator(ABC):
     """
     Base class for statistics collection.
