@@ -14,6 +14,7 @@ from typing import List, Optional, Set, Tuple
 
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
+from nncf.common.utils.api_marker import api
 
 
 class QuantizationTrait(Enum):
@@ -108,3 +109,23 @@ class IgnoreReason(Enum):
 
 
 PropagationPath = List[Tuple[str, str]]
+
+
+@api()
+class PropagationStrategy(Enum):
+    # While propagating up through a downward-branching node:
+    # ... do not merge at all
+    DO_NOT_MERGE_BRANCH_FQS = 0
+
+    # ... only merge for exact configuration space matches
+    MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME = 1
+
+    # ... merge common parts, and if a branch quantizer has options for
+    # narrowing (bitwidth/mode/per-channel/etc.) in addition to
+    # the common part, keep the quantizer on branch
+    MERGE_WITH_POTENTIAL_REQUANTIZATION = 2
+
+    # ... merge common config options into a single config space for the global FQ,
+    # do not merge if this is impossible for the current branching situation and given
+    # HW config file
+    MERGE_WITH_SINGLE_FQ_RESULT = 3
