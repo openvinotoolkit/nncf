@@ -71,6 +71,48 @@ def benchmark_performance(model_path, input_shape) -> float:
     return float(match.group(1))
 
 
+def process_model_ov(model_name: str):
+    result = {"name": model_name}
+    model_config = MODEL_SCOPE[model_name]
+    pt_model = model_config.model_builder.build()
+    example_inputs = model_config.model_builder.get_example_inputs()
+    export_inputs = example_inputs[0] if isinstance(example_inputs[0], tuple) else example_inputs
+    input_sizes = model_config.model_builder.get_input_sizes()
+    save_dir = Path(__file__).parent.resolve() / model_name / "OV"
+    save_dir.mkdir(exist_ok=True, parents=True)
+
+    try:
+        with disable_patching():
+            with torch.no_grad():
+                ex_model = torch.export.export(pt_model, export_inputs)
+                ov_model = ov.convert_model(ex_model, example_input=example_inputs[0], input=input_sizes)
+                ov_model_path = save_dir / "openvino_model.xml"
+                ov.serialize(ov_model, ov_model_path)
+    except Exception as e:
+        print("FAILS TO EXPORT FP32 MODEL TO OPENVINO:")
+        err_msg = str(e)
+        print(err_msg)
+        traceback.print_exc()
+        return result
+
+    quant_ov_model = nncf.quantize(
+        ov_model,
+        nncf.Dataset(example_inputs),
+        **model_config.quantization_params,
+    )
+    ov_int8_model_path = save_dir / "openvino_int8_model.xml"
+    ov.serialize(quant_ov_model, ov_int8_model_path)
+    latency_int8_ov = measure_time_ov(quant_ov_model, example_inputs, model_config.num_iters)
+    fps_int8_ov = benchmark_performance(ov_int8_model_path, input_sizes)
+
+    result["ov_int8_ov_latency"] = latency_int8_ov
+    result["ov_int8_ov_benchmark_fps"] = fps_int8_ov
+    print(f"ov int8 ov model latency: {latency_int8_ov}")
+    print(f"ov int8 ov model benchmark fps: {fps_int8_ov}")
+    pd.DataFrame([result]).to_csv(save_dir / "result_ov.csv")
+    return result
+
+
 def process_model(model_name: str):
     result = {"name": model_name}
     model_config = MODEL_SCOPE[model_name]
@@ -160,10 +202,10 @@ def process_model(model_name: str):
         latency_int8_ov = -1
         fps_int8_ov = -1
 
-    result["int8_ov_latency"] = latency_int8_ov
-    result["int8_ov_benchmark_fps"] = fps_int8_ov
-    print(f"int8 ov model latency: {latency_int8_ov}")
-    print(f"int8 ov model benchmark fps: {fps_int8_ov}")
+    result["fx_int8_ov_latency"] = latency_int8_ov
+    result["fx_int8_ov_benchmark_fps"] = fps_int8_ov
+    print(f"fx int8 ov model latency: {latency_int8_ov}")
+    print(f"fx int8 ov model benchmark fps: {fps_int8_ov}")
     print("*" * 100)
     print(f"Torch compile latency speed up: {latency_fp32 / latency_int8}")
     print(f"Torch export + openvino latenyc speed up: {latency_fp32_ov / latency_int8_ov}")
@@ -173,7 +215,10 @@ def process_model(model_name: str):
     result["compile_latency_diff_speedup"] = latency_fp32 / latency_int8
     result["ov_latency_diff_speedup"] = latency_fp32_ov / latency_int8_ov
     result["ov_benchmark_fps_speedup"] = fps_int8_ov / fps_fp32_ov
-    pd.DataFrame([result]).to_csv(save_dir / "result.csv")
+    pd.DataFrame([result]).to_csv(save_dir / "result_fx.csv")
+    del result["compile_latency_diff_speedup"]
+    del result["ov_latency_diff_speedup"]
+    del result["ov_benchmark_fps_speedup"]
     return result
 
 
@@ -196,7 +241,7 @@ def main():
         print("---------------------------------------------------")
         print(f"name: {model_name}")
         try:
-            results_list.append(process_model(model_name))
+            results_list.append({**process_model(model_name), **process_model_ov(model_name)})
         except Exception as e:
             print(f"FAILS TO CHECK PERFORMANCE FOR {model_name} MODEL:")
             err_msg = str(e)
