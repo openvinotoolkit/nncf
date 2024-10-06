@@ -13,10 +13,12 @@ from copy import deepcopy
 from pathlib import Path
 
 import onnxruntime as ort
+import pytest
 import torch
 
 from nncf.torch2.hook_executor.hook_storage import HookType
 from nncf.torch2.hook_executor.wrapper import insert_hook
+from nncf.torch2.hook_executor.wrapper import is_wrapped
 from nncf.torch2.hook_executor.wrapper import wrap_model
 from tests.torch2.hook_executor import helpers
 
@@ -128,3 +130,50 @@ def test_torch_save_load(tmp_path: Path):
     loaded = torch.load(path, weights_only=False)
     act = loaded(example_input)
     torch.testing.assert_close(act, ref)
+
+
+@pytest.mark.parametrize(
+    "hook_type, target_name",
+    (
+        (HookType.POST_HOOK, "x"),
+        (HookType.PRE_HOOK, "/relu/0"),
+        (HookType.POST_HOOK, "/relu/0"),
+        (HookType.PRE_HOOK, "output"),
+        (HookType.POST_HOOK, "conv:weight"),
+    ),
+)
+def test_insert_hook(hook_type, target_name):
+    example_input = helpers.ConvModel.get_example_inputs()
+    model = helpers.ConvModel()
+    wrapped = wrap_model(model)
+    assert is_wrapped(wrapped)
+
+    hook = helpers.CallCount()
+    insert_hook(wrapped, "hook_group", hook_type, target_name, 0, hook)
+    wrapped(example_input)
+    assert hook.call_count == 1
+
+
+@pytest.mark.parametrize("hook_type", HookType)
+def test_insert_hook_twice_raise(hook_type):
+    model = helpers.ConvModel()
+    wrapped = wrap_model(model)
+
+    hook = helpers.CallCount()
+    insert_hook(wrapped, "hook_group", hook_type, "/relu/0", 0, hook)
+    with pytest.raises(RuntimeError, match="Hook already set for.*"):
+        insert_hook(wrapped, "hook_group", hook_type, "/relu/0", 0, hook)
+
+
+@pytest.mark.parametrize("hook_type", HookType)
+def test_insert_nested_hook(hook_type: HookType):
+    example_input = helpers.ConvModel.get_example_inputs()
+    model = helpers.ConvModel()
+    wrapped = wrap_model(model)
+
+    hook = helpers.CallCount()
+    insert_hook(wrapped, "hook_group", hook_type, "/relu/0", 0, helpers.AddModule(2.0))
+    insert_hook(wrapped, "hook_group", hook_type, f"[hook_group:{hook_type.value}__-relu-0__0]/add/0", 0, hook)
+    wrapped(example_input)
+
+    assert hook.call_count == 1
