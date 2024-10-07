@@ -14,7 +14,6 @@ from typing import Callable, List, Optional
 
 import torch
 import torch.fx
-from torch._export import capture_pre_autograd_graph
 from torch.ao.quantization.fx.utils import create_getattr_from_value
 from torch.ao.quantization.pt2e.utils import fold_bn_weights_into_conv_node
 from torch.quantization.fake_quantize import FakeQuantize
@@ -212,11 +211,13 @@ def constant_update_fn(
     # Update metadata of the new constant node.
     previous_const = args[input_port_id]
     consumer_nodes = list(previous_const.users)
-    # This list of consumer nodes will always be topologically sorted
+    # This list of consumer nodes is topologically sorted
     # To ensure the updated node has the right order,
     # we insert constant node before the node placed at the highest order in topological order.
-    with graph.inserting_before(consumer_nodes[0]):
-        new_constant = create_getattr_from_value(model, graph, node.name + "_updated_constant", value)
+    sorted_consumer_nodes = [node for node in graph.nodes if node in consumer_nodes]
+
+    with graph.inserting_before(sorted_consumer_nodes[0]):
+        new_constant = create_getattr_from_value(model, graph, node_name, value)
 
     previous_const.replace_all_uses_with(new_constant, propagate_meta=True)
     graph.eliminate_dead_code()
@@ -538,12 +539,9 @@ def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
 
 
 def _get_pattern_replacement_per_channel():
-    class ReplacementModule(torch.nn.Module):
-        def __init__(self) -> None:
-            super().__init__()
 
-        def forward(self, x, scale, zero_point, axis, low, high, dtype):
-            return torch.mul(x, scale)
+    def replacement_graph_per_channel(weight, scale, zero_point, axis, low, high, dtype):
+        return torch.ops.aten.mul(weight, scale)
 
     def pattern_per_channel(weight, scale, zero_point, axis, low, high, dtype):
         quantized = torch.ops.quantized_decomposed.quantize_per_channel.default(
@@ -553,18 +551,6 @@ def _get_pattern_replacement_per_channel():
             quantized, scale, zero_point, axis, low, high, dtype
         )
         return dequantized
-
-    ex_input = (
-        torch.tensor([10, 20]),
-        torch.tensor([5]),
-        None,
-        None,
-        None,
-        None,
-        None,
-    )
-    with nncf.torch.disable_patching():
-        replacement_graph_per_channel = capture_pre_autograd_graph(ReplacementModule(), ex_input).graph
 
     return pattern_per_channel, replacement_graph_per_channel
 
@@ -579,23 +565,9 @@ def _get_pattern_replacement_per_tensor():
         )
         return dequantized
 
-    class ReplacementModule(torch.nn.Module):
-        def __init__(self) -> None:
-            super().__init__()
+    def replacement_graph_per_tensor(weight, scale, zero_point, low, high, dtype):
+        return torch.ops.aten.mul(weight, scale)
 
-        def forward(self, x, scale, zero_point, low, high, dtype):
-            return torch.mul(x, scale)
-
-    ex_input = (
-        torch.tensor([10, 20]),
-        torch.tensor([5]),
-        None,
-        None,
-        None,
-        None,
-    )
-    with nncf.torch.disable_patching():
-        replacement_graph_per_tensor = capture_pre_autograd_graph(ReplacementModule(), ex_input).graph
     return pattern_per_tensor, replacement_graph_per_tensor
 
 
@@ -649,8 +621,28 @@ def _reshape_scale(model, node: torch.fx.Node):
     axis = node.args[3]
     new_shape = [1] * weight_value.dim()
     new_shape[axis] = scale_value.shape[0]
-    scale_value = scale_value.view(new_shape)
+    scale_value = scale_value.reshape(new_shape)
     constant_update_fn(model, node, scale_value, 1, updated_node_name=scale_node.name + "_updated_constant")
+
+
+def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
+    for node in model.graph.nodes:
+        if node.target in [
+            torch.ops.quantized_decomposed.dequantize_per_tensor.default,
+            torch.ops.quantized_decomposed.dequantize_per_channel.default,
+        ]:
+            port_id = 0
+            input_tup = _get_node_inputs(node.all_input_nodes[0], model)
+            if input_tup:
+                input_tup[0] = node.all_input_nodes[0].target(*tuple(input_tup))
+                result = node.target(*tuple(input_tup))
+                constant_update_fn(
+                    model,
+                    node.all_input_nodes[0],
+                    result,
+                    port_id,
+                    updated_node_name="compressed_weight_updated_constant",
+                )
 
 
 def compress_post_quantize_transformation(model: torch.fx.GraphModule):

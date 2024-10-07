@@ -26,9 +26,9 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
-from nncf.experimental.torch.fx.transformations import _get_node_inputs
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.experimental.torch.fx.transformations import _get_node_inputs
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import shared_constants_unification_transformation
@@ -181,6 +181,7 @@ def test_post_quantization_compression(model_case: ModelCase, quantization_param
                 result = node.target(*tuple(input_tup))
                 assert result.dtype == torch.float32
 
+
 def count_constants(model) -> int:
     num_constant_nodes = 0
     for node in model.graph.nodes:
@@ -231,7 +232,7 @@ def test_update_shared_constant():
     constant_update_transformation_builder(consumer_nodes[0], torch.tensor([100]))(captured_model)
 
     nncf_graph_updated_constant = NNCFGraphFactory.create(captured_model)
-    updated_const_node = nncf_graph_updated_constant.get_previous_nodes(consumer_nodes[1])[1]
+    updated_const_node = nncf_graph_updated_constant.get_previous_nodes(consumer_nodes[0])[1]
     fx_node_to_check_const = get_graph_node_by_name(captured_model.graph, updated_const_node.node_name)
     fx_node_to_check_const_value = get_tensor_constant_from_node(fx_node_to_check_const, captured_model)
 
