@@ -103,7 +103,7 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         weight = self._backend_entity.get_weight(
             weight_param.node_with_weight, weight_param.weight_port_id, self._model, self._graph
         )
-        backup_config = weight_param.compression_config
+        backup_config = WeightCompressionConfig()
         reduction_axes = weight_param.reduction_axes
         int_error = get_integer_quantization_error(weight, reduction_axes, backup_config)
         eps = fns.finfo(weight).eps
@@ -169,7 +169,7 @@ class HAWQCriterion(DataBasedCriterion):
         weight = self._backend_entity.get_weight(
             weight_param.node_with_weight, weight_param.weight_port_id, self._model, self._graph
         )
-        backup_config = weight_param.compression_config
+        backup_config = WeightCompressionConfig()
         reduction_axes = weight_param.reduction_axes
 
         orig_shape = weight.shape

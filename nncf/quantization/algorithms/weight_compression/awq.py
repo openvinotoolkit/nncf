@@ -161,6 +161,10 @@ class AWQ(Algorithm):
             for weight_op_friendly_name, _ in self._backend_entity.get_weight_names_and_port_ids(nncf_node, graph):
                 target_node_names.append(weight_op_friendly_name)
 
+            # skip node if it is in IgnoredScope or should not be compressed
+            if target_node_names[-1] not in name_mapping:
+                continue
+
             weight_params = self._all_weight_params[name_mapping[target_node_names[-1]]]
 
             if weight_params.compression_config.num_bits != 4:

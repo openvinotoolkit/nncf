@@ -40,3 +40,7 @@ tinyllama_NF4_scale_estimation_stateful_per_channel_backend_OV:
   num_int4: 11
   num_int8: 290
   metrics_xfail_reason: "Issue-148819"
+tinyllama_awq_backup_mode_none_backend_OV:
+  metric_value: 0.84793
+  num_int4: 208
+  num_int8: 0
