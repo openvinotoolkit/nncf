@@ -86,7 +86,6 @@ def get_custom_version() -> str:
 
     # Detect modified files
     with contextlib.suppress(subprocess.CalledProcessError):
-        repo_root = os.path.dirname(os.path.realpath(__file__))
         run = subprocess.run(["git", "diff-index", "--quiet", "HEAD"], cwd=repo_root)  # nosec
         if run.returncode == 1:
             dev_version_id += "dirty"

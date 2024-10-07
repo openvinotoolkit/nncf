@@ -64,7 +64,7 @@ plots = [
 Homepage = "https://github.com/openvinotoolkit/nncf"
 
 [tool.setuptools.dynamic]
-version = { attr = "_version_helper.version" }
+version = { attr = "custom_version.version" }
 
 [tool.setuptools.packages.find]
 where = ["."]
