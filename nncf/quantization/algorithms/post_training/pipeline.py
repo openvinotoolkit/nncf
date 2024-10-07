@@ -102,6 +102,7 @@ def create_ptq_pipeline(
     # Add the `ChannelAlignment` algorithm as the second step of the pipeline.
     if not advanced_parameters.disable_channel_alignment:
         pipeline_steps.append([ChannelAlignment(subset_size, advanced_parameters.inplace_statistics)])
+
     # Add the `MinMaxQuantization` algorithm as the third step of the pipeline.
     pipeline_steps.append(
         [
