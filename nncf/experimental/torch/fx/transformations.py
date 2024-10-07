@@ -541,7 +541,7 @@ def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
 def _get_pattern_replacement_per_channel():
 
     def replacement_graph_per_channel(weight, scale, zero_point, axis, low, high, dtype):
-        return torch.ops.aten.mul(weight, scale)
+        return torch.ops.aten.mul.Tensor(weight, scale)
 
     def pattern_per_channel(weight, scale, zero_point, axis, low, high, dtype):
         quantized = torch.ops.quantized_decomposed.quantize_per_channel.default(
