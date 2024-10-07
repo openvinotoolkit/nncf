@@ -173,7 +173,7 @@ def test_insert_nested_hook(hook_type: HookType):
 
     hook = helpers.CallCount()
     insert_hook(wrapped, "hook_group", hook_type, "/relu/0", 0, helpers.AddModule(2.0))
-    insert_hook(wrapped, "hook_group", hook_type, f"[hook_group:{hook_type.value}__-relu-0__0]/add/0", 0, hook)
+    insert_hook(wrapped, "hook_group", hook_type, f"hook__hook_group__{hook_type.value}__-relu-0__0/add/0", 0, hook)
     wrapped(example_input)
 
     assert hook.call_count == 1

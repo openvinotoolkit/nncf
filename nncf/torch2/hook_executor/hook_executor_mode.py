@@ -77,15 +77,12 @@ def _get_full_fn_name(fn: Callable[..., Any]) -> str:
 def generate_normalized_op_name(module_name: str, fn_name: str, call_id: Optional[int] = None) -> str:
     """
     Returns a normalized name of operation.
-    Dots will be replaced to two dots, because ModuleDict restricts names with dots.
 
     Returns: The string representation in the format "module_name/fn_name" or "module_name/fn_name/call_id".
     """
-    m_name = module_name.replace(".", ":")  # ModuleDict restricts names with dots
-    m_name = "-".join(m_name.split("/"))
     if call_id is None:
-        return f"{m_name}/{fn_name}"
-    return f"{m_name}/{fn_name}/{call_id}"
+        return f"{module_name}/{fn_name}"
+    return f"{module_name}/{fn_name}/{call_id}"
 
 
 class HookExecutorMode(TorchFunctionMode):
@@ -127,7 +124,9 @@ class HookExecutorMode(TorchFunctionMode):
         self.hooks_module_to_group_name: Dict[ReferenceType[nn.Module], str] = {}
         for group_name in self.hook_storage.storage:
             for hook_name, hook_module in self.hook_storage.storage[group_name].named_children():
-                self.hooks_module_to_group_name[ref(hook_module)] = f"[{group_name}.{hook_name}]"
+                # Replace / to avoid collision with module separator
+                hook_name = hook_name.replace("/", "-")
+                self.hooks_module_to_group_name[ref(hook_module)] = f"hook__{group_name}__{hook_name}"
 
     def _get_wrapped_call(self, fn_call: MethodType) -> Callable[..., Any]:
         """
@@ -239,7 +238,6 @@ class HookExecutorMode(TorchFunctionMode):
 
         :returns: The name of the current module.
         """
-        # TODO: rework?
         relative_module_names = []
         prev_module = self.module_call_stack[0]
 
@@ -247,13 +245,13 @@ class HookExecutorMode(TorchFunctionMode):
             hook_name = self.hooks_module_to_group_name.get(ref(module))
             if hook_name is not None:
                 relative_module_names.append(hook_name)
-                continue
+            else:
+                for n, m in prev_module.named_children():
+                    if m is module:
+                        relative_module_names.append(n)
+            prev_module = module
 
-            for n, m in prev_module.named_children():
-                if m is module:
-                    relative_module_names.append(n)
-
-        return ".".join(relative_module_names)
+        return "/".join(relative_module_names)
 
     def get_current_executed_op_name(self, fn_name: str) -> str:
         """
