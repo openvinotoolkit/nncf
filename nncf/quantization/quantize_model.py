@@ -395,7 +395,7 @@ def compress_weights(
     scale_estimation: Optional[bool] = None,
     gptq: Optional[bool] = None,
     lora_correction: Optional[bool] = None,
-    backup_mode: BackupMode = BackupMode.INT8_ASYM,
+    backup_mode: Optional[BackupMode] = None,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> TModel:
     """
@@ -446,7 +446,7 @@ def compress_weights(
     :type gptq: bool
     :param lora_correction: Indicates whether to use Lora Correction algorithm.
     :type lora_correction: bool
-    :param backup_mode: Defines a backup mode for mixed-precision weight compression. Defaults to INT8_ASYM.
+    :param backup_mode: Defines a backup mode for mixed-precision weight compression.
         NONE stands for original floating-point precision of the model weights.
             In this mode, weights are retained in their original precision without any quantization.
         INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
@@ -482,6 +482,9 @@ def compress_weights(
                 "Set them to None."
             )
 
+        if backup_mode is not None:
+            raise AttributeError("Torch backend does not support backup_mode option.")
+
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
                 raise ValueError(
@@ -508,6 +511,9 @@ def compress_weights(
                 "TorchFX backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
                 f"but given {mode.value} mode."
             )
+
+        if backup_mode is not None:
+            raise AttributeError("TorchFX backend does not support backup_mode option.")
 
         if any((awq, scale_estimation, gptq, lora_correction)):
             raise AttributeError(
@@ -549,7 +555,7 @@ def compress_weights(
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
 
-        if backup_mode != BackupMode.INT8_ASYM:
+        if backup_mode is not None:
             raise AttributeError("INT8 modes do not support the `backup_mode` option")
 
         options = {
@@ -589,6 +595,8 @@ def compress_weights(
             if dataset is None
             else SensitivityMetric.MAX_ACTIVATION_VARIANCE
         )
+    if backup_mode is None:
+        backup_mode = BackupMode.INT8_ASYM
     if ratio != 1 and dataset is None and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
         raise AttributeError(
             f"Mixed precision selection based on the given sensitivity metric={sensitivity_metric.value} requires "
