@@ -30,6 +30,7 @@ Classes
 
    nncf.NNCFConfig
    nncf.Dataset
+   nncf.BackupMode
    nncf.CompressWeightsMode
    nncf.DropType
    nncf.ModelType
@@ -182,6 +183,19 @@ Functions
 
 
 
+.. py:class:: BackupMode
+
+   Bases: :py:obj:`StrEnum`
+
+   Defines a backup mode for weight compression.
+   :param NONE: Stands for original floating-point precision of the model weights.
+       In this mode, weights are retained in their original precision without any quantization.
+   :param INT8_SYM: Stands for 8-bit integer symmetric quantization without zero point.
+       https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization
+   :param INT8_ASYM: Stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
+       https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization
+
+
 .. py:class:: CompressWeightsMode
 
    Bases: :py:obj:`StrEnum`
@@ -279,7 +293,7 @@ Functions
    An enum with values corresponding to the available quantization presets.
 
 
-.. py:function:: compress_weights(model, mode=CompressWeightsMode.INT8_ASYM, ratio = None, group_size = None, ignored_scope = None, all_layers = None, dataset = None, sensitivity_metric = None, *, subset_size = 128, awq = None, scale_estimation = None, gptq = None, lora_correction = None, advanced_parameters = None)
+.. py:function:: compress_weights(model, mode=CompressWeightsMode.INT8_ASYM, ratio = None, group_size = None, ignored_scope = None, all_layers = None, dataset = None, sensitivity_metric = None, *, subset_size = 128, awq = None, scale_estimation = None, gptq = None, lora_correction = None, backup_mode = None, advanced_parameters = None)
 
    Compress model weights.
 
@@ -328,6 +342,12 @@ Functions
    :type gptq: bool
    :param lora_correction: Indicates whether to use Lora Correction algorithm.
    :type lora_correction: bool
+   :param backup_mode: Defines a backup mode for mixed-precision weight compression.
+       NONE stands for original floating-point precision of the model weights.
+           In this mode, weights are retained in their original precision without any quantization.
+       INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
+       INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
+   :type backup_mode: nncf.BackupMode
    :param advanced_parameters: Advanced parameters for compression algorithms.
    :type advanced_parameters: nncf.AdvancedCompressionParameters
    :return: The non-trainable model with compressed weights.
