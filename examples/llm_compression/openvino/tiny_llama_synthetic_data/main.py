@@ -81,11 +81,6 @@ def main():
     input_ids = tokenizer("What is Python? ", return_tensors="pt").to(device=hf_model.device)
     max_new_tokens = 100
 
-    fp_output = hf_model.generate(**input_ids, max_new_tokens=max_new_tokens)
-    fp_output_text = tokenizer.decode(fp_output[0])
-
-    print(f"FP model output: {fp_output_text} \n")
-
     hf_model.model = optimized_model
     hf_model.request = None
     opt_output = hf_model.generate(**input_ids, max_new_tokens=max_new_tokens)
