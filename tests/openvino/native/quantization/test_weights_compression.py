@@ -1057,7 +1057,7 @@ def test_awq_with_ignored_scope():
     model = AWQMatmulModel().ov_model
     sz = 8
     n_samples = 10
-    dataset = Dataset([np.ones([i + 1, sz]) for i in range(n_samples)])
+    dataset = Dataset([np.ones([1, i + 1, sz]) for i in range(n_samples)])
 
     compressed_model = compress_weights(
         model,
@@ -1324,7 +1324,7 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
     model = AWQMatmulModel().ov_model
     sz = 8
     n_samples = 10
-    dataset = Dataset([np.ones([i + 1, sz]) for i in range(n_samples)])
+    dataset = Dataset([np.ones([1, i + 1, sz]) for i in range(n_samples)])
 
     compressed_model = compress_weights(
         model,

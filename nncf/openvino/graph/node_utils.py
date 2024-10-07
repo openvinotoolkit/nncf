@@ -362,7 +362,8 @@ def get_inplace_mean_square_op(reduction_axes: Optional[ReductionAxes] = None) -
         all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)
         reduction_axes_ = np.array(all_axes if reduction_axes is None else reduction_axes, dtype=np.int64)
 
-        square = node * node
+        op_input = node.output(output_port_id)
+        square = opset.multiply(op_input, op_input)
         result = opset.reduce_mean(
             square,
             reduction_axes=reduction_axes_,
