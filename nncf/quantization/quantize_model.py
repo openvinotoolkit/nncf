@@ -22,6 +22,7 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
+from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -394,6 +395,7 @@ def compress_weights(
     scale_estimation: Optional[bool] = None,
     gptq: Optional[bool] = None,
     lora_correction: Optional[bool] = None,
+    backup_mode: Optional[BackupMode] = None,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> TModel:
     """
@@ -444,6 +446,12 @@ def compress_weights(
     :type gptq: bool
     :param lora_correction: Indicates whether to use Lora Correction algorithm.
     :type lora_correction: bool
+    :param backup_mode: Defines a backup mode for mixed-precision weight compression.
+        NONE stands for original floating-point precision of the model weights.
+            In this mode, weights are retained in their original precision without any quantization.
+        INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
+        INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
+    :type backup_mode: nncf.BackupMode
     :param advanced_parameters: Advanced parameters for compression algorithms.
     :type advanced_parameters: nncf.AdvancedCompressionParameters
     :return: The non-trainable model with compressed weights.
@@ -474,6 +482,9 @@ def compress_weights(
                 "Set them to None."
             )
 
+        if backup_mode is not None:
+            raise AttributeError("Torch backend does not support backup_mode option.")
+
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
                 raise ValueError(
@@ -500,6 +511,9 @@ def compress_weights(
                 "TorchFX backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
                 f"but given {mode.value} mode."
             )
+
+        if backup_mode is not None:
+            raise AttributeError("TorchFX backend does not support backup_mode option.")
 
         if any((awq, scale_estimation, gptq, lora_correction)):
             raise AttributeError(
@@ -537,9 +551,13 @@ def compress_weights(
             group_size = -1
         if ratio != 1 or group_size != -1:
             raise AttributeError(
-                "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
+                "INT8 modes assume per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
+
+        if backup_mode is not None:
+            raise AttributeError("INT8 modes do not support the `backup_mode` option")
+
         options = {
             "all_layers": all_layers,
             "sensitivity_metric": sensitivity_metric,
@@ -577,6 +595,8 @@ def compress_weights(
             if dataset is None
             else SensitivityMetric.MAX_ACTIVATION_VARIANCE
         )
+    if backup_mode is None:
+        backup_mode = BackupMode.INT8_ASYM
     if ratio != 1 and dataset is None and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
         raise AttributeError(
             f"Mixed precision selection based on the given sensitivity metric={sensitivity_metric.value} requires "
@@ -604,6 +624,7 @@ def compress_weights(
         scale_estimation,
         gptq,
         lora_correction,
+        backup_mode,
         advanced_parameters,
     )
 

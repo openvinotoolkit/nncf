@@ -29,6 +29,7 @@ from nncf.data import Dataset
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.experimental.torch.fx.transformations import revert_quantization_transformations
 from nncf.experimental.torch.fx.transformations import shared_constants_unification_transformation
+from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
@@ -124,6 +125,7 @@ def compress_weights_impl(
     scale_estimation: bool,
     gptq: bool,
     lora_correction: bool,
+    backup_mode: BackupMode,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> torch.fx.GraphModule:
     """
@@ -142,6 +144,7 @@ def compress_weights_impl(
         scale_estimation,
         gptq,
         lora_correction,
+        backup_mode,
         advanced_parameters,
     )
     shared_constants_unification_transformation(model)
