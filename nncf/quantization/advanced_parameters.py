@@ -241,7 +241,7 @@ class AdvancedQuantizationParameters:
     # Advanced Quantization parameters
     activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None
     weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None
-    propagation_strategy: Optional[PropagationStrategy] = None
+    propagation_strategy: PropagationStrategy = PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT
 
     # Range estimator parameters
     activations_range_estimator_params: RangeEstimatorParameters = field(default_factory=RangeEstimatorParameters)
