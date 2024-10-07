@@ -25,8 +25,12 @@ from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_max_op
+from nncf.openvino.graph.node_utils import get_inplace_max_var_op
+from nncf.openvino.graph.node_utils import get_inplace_mean_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
+from nncf.openvino.graph.node_utils import get_inplace_mean_square_op
+from nncf.openvino.graph.node_utils import get_inplace_mean_var_op
 from nncf.openvino.graph.node_utils import get_inplace_min_op
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
@@ -146,18 +150,81 @@ LINEAR_MODEL_SHAPES = {
     },
     "SHORT": {"input_shape": [1, 3, 2, 8], "reshape_shape": [48], "matmul_w_shape": [48, 48], "add_shape": [48]},
 }
+# get_inplace_mean_var_op, get_inplace_max_var_op, get_inplace_mean_max_op, get_inplace_mean_square_op
 INPLACE_OPS_TEST_CASES = [
     # Forwarded reduce shape
     InplaceOpTestCase("min", (1, 2), get_inplace_min_op, ["ReduceMin"], [(1, 2)]),
     InplaceOpTestCase("mean", (1, 2), get_inplace_mean_op, ["ReduceMean"], [(1, 2)]),
     InplaceOpTestCase("max", (1, 2), lambda r: get_inplace_max_op(r, False), ["ReduceMax"], [(1, 2)]),
     InplaceOpTestCase("abs_max", (1, 2), lambda r: get_inplace_max_op(r, True), ["Abs", "ReduceMax"], [None, (1, 2)]),
+    InplaceOpTestCase(
+        "mean_var",
+        (1, 2),
+        lambda r: get_inplace_mean_var_op(r),
+        ["ReduceMean", "SquaredDifference", "ReduceMean", "ReduceMean"],
+        [(1, 2), None, (1, 2), (0, 1, 2, 3)],
+    ),
+    InplaceOpTestCase(
+        "max_var",
+        (1, 2),
+        lambda r: get_inplace_max_var_op(r),
+        ["ReduceMean", "SquaredDifference", "ReduceMean", "ReduceMax"],
+        [(1, 2), None, (1, 2), (0, 1, 2, 3)],
+    ),
+    InplaceOpTestCase(
+        "mean_max",
+        (1, 2),
+        lambda r: get_inplace_mean_max_op(r, False),
+        ["ReduceMax", "ReduceMean"],
+        [(1, 2), (0, 1, 2, 3)],
+    ),
+    InplaceOpTestCase(
+        "mean_max",
+        (1, 2),
+        lambda r: get_inplace_mean_max_op(r, True),
+        ["Abs", "ReduceMax", "ReduceMean"],
+        [None, (1, 2), (0, 1, 2, 3)],
+    ),
+    InplaceOpTestCase(
+        "mean_square", (1, 2), lambda r: get_inplace_mean_square_op(r), ["Multiply", "ReduceMean"], [None, (1, 2)]
+    ),
     # Calculated reduce shape
     InplaceOpTestCase("min", None, get_inplace_min_op, ["ReduceMin"], [(0, 1, 2, 3)]),
     InplaceOpTestCase("mean", None, get_inplace_mean_op, ["ReduceMean"], [(0, 1, 2, 3)]),
     InplaceOpTestCase("max", None, lambda r: get_inplace_max_op(r, False), ["ReduceMax"], [(0, 1, 2, 3)]),
     InplaceOpTestCase(
         "abs_max", None, lambda r: get_inplace_max_op(r, True), ["Abs", "ReduceMax"], [None, (0, 1, 2, 3)]
+    ),
+    InplaceOpTestCase(
+        "mean_var",
+        None,
+        lambda r: get_inplace_mean_var_op(r),
+        ["ReduceMean", "SquaredDifference", "ReduceMean", "ReduceMean"],
+        [(0, 1, 2, 3), None, (0, 1, 2, 3), (0, 1, 2, 3)],
+    ),
+    InplaceOpTestCase(
+        "max_var",
+        None,
+        lambda r: get_inplace_max_var_op(r),
+        ["ReduceMean", "SquaredDifference", "ReduceMean", "ReduceMax"],
+        [(0, 1, 2, 3), None, (0, 1, 2, 3), (0, 1, 2, 3)],
+    ),
+    InplaceOpTestCase(
+        "mean_max",
+        None,
+        lambda r: get_inplace_mean_max_op(r, False),
+        ["ReduceMax", "ReduceMean"],
+        [(0, 1, 2, 3), (0, 1, 2, 3)],
+    ),
+    InplaceOpTestCase(
+        "mean_max",
+        None,
+        lambda r: get_inplace_mean_max_op(r, True),
+        ["Abs", "ReduceMax", "ReduceMean"],
+        [None, (0, 1, 2, 3), (0, 1, 2, 3)],
+    ),
+    InplaceOpTestCase(
+        "mean_square", None, lambda r: get_inplace_mean_square_op(r), ["Multiply", "ReduceMean"], [None, (0, 1, 2, 3)]
     ),
     # Batch mean and mean per ch operations
     InplaceOpTestCase("batch_mean", None, lambda r: get_inplace_batch_mean_op(), ["ReduceMean"], [0]),
@@ -184,6 +251,33 @@ INPLACE_OPS_TEST_CASES = [
     InplaceOpTestCase("mean", (), get_inplace_mean_op, ["ReduceMean"], [()]),
     InplaceOpTestCase("max", (), lambda r: get_inplace_max_op(r, False), ["ReduceMax"], [()]),
     InplaceOpTestCase("abs_max", (), lambda r: get_inplace_max_op(r, True), ["Abs", "ReduceMax"], [None, ()]),
+    InplaceOpTestCase(
+        "mean_var",
+        (),
+        lambda r: get_inplace_mean_var_op(r),
+        ["ReduceMean", "SquaredDifference", "ReduceMean", "ReduceMean"],
+        [(), None, (), (0, 1, 2, 3)],
+    ),
+    InplaceOpTestCase(
+        "max_var",
+        (),
+        lambda r: get_inplace_max_var_op(r),
+        ["ReduceMean", "SquaredDifference", "ReduceMean", "ReduceMax"],
+        [(), None, (), (0, 1, 2, 3)],
+    ),
+    InplaceOpTestCase(
+        "mean_max", (), lambda r: get_inplace_mean_max_op(r, False), ["ReduceMax", "ReduceMean"], [(), (0, 1, 2, 3)]
+    ),
+    InplaceOpTestCase(
+        "mean_max",
+        (),
+        lambda r: get_inplace_mean_max_op(r, True),
+        ["Abs", "ReduceMax", "ReduceMean"],
+        [None, (), (0, 1, 2, 3)],
+    ),
+    InplaceOpTestCase(
+        "mean_square", (), lambda r: get_inplace_mean_square_op(r), ["Multiply", "ReduceMean"], [None, ()]
+    ),
 ]
 
 
@@ -204,7 +298,7 @@ def get_node_by_name(model: ov.Model, name: str):
 def check_inplace_op(target_node, ref_types, ref_vals, inplace_branches_num, output_port_id):
     next_nodes = get_next_nodes(target_node, output_port_id)
     first_inplace_op = [node for node in next_nodes if node.type_info.name == ref_types[0]]
-    assert len(first_inplace_op) == inplace_branches_num
+    assert len(set(first_inplace_op)) == inplace_branches_num
     node = first_inplace_op[0]
     for t, ref_val in zip(ref_types, ref_vals):
         assert node.type_info.name == t

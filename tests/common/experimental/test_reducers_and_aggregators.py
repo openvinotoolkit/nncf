@@ -34,6 +34,7 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
+from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.tensor import functions as fns
 
 DEFAULT_3D_MEAN_VALUE = [[2503.125, -2493.75, 5009.375], [-4987.5, 7515.625, -7481.25], [10021.875, -9975.0, 12528.125]]
@@ -183,13 +184,21 @@ class TemplateTestReducersAggregators:
             assert len(reduced_input) == 1
             assert fns.allclose(reduced_input[0], tensor_data)
 
-    @pytest.mark.parametrize("reducer_cls", [NoopReducer, RawReducer])
+    @pytest.mark.parametrize("reducer_cls", [NoopReducer, RawReducer, ShapeReducer])
     def test_other_reducers_name_hash_equal(self, reducer_cls):
         reducers_instances = [reducer_cls() for _ in range(2)]
         assert hash(reducers_instances[0]) == hash(reducers_instances[1])
         assert reducers_instances[0] == reducers_instances[1]
         assert reducers_instances[0].name == reducers_instances[1].name
         assert len(set(reducers_instances)) == 1
+
+    @pytest.mark.parametrize("input_data", [np.arange(24).reshape((1, 2, 3, 4)), np.array([1])])
+    def test_shape_reducer(self, input_data):
+        reducer = ShapeReducer()
+        tensor_data = self.get_nncf_tensor(input_data)
+        reduced_input = reducer([tensor_data])
+        assert len(reduced_input) == 1
+        assert all(it[0] == it[1] for it in zip(reduced_input[0], tensor_data.shape))
 
     @pytest.mark.parametrize(
         "reducer_name,ref",

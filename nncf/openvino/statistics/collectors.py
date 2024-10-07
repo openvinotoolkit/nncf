@@ -9,8 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import List, Optional
 
+from nncf.common.tensor import TensorType
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
@@ -26,6 +27,7 @@ from nncf.experimental.common.tensor_statistics.collectors import QuantileReduce
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
@@ -64,25 +66,33 @@ class OVMeanReducer(MeanReducer):
         return get_inplace_mean_op(self._reduction_axes)
 
 
-class OVMeanVarianceReducer(MeanReducer):
+class OVMeanVarianceReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
 
     def get_inplace_fn(self):
         return get_inplace_mean_var_op(self._reduction_axes)
 
 
-class OVMaxVarianceReducer(MeanReducer):
+class OVMaxVarianceReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
 
     def get_inplace_fn(self):
         return get_inplace_max_var_op(self._reduction_axes)
 
 
-class OVMeanAbsMaxReducer(MeanReducer):
+class OVMeanAbsMaxReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
 
     def get_inplace_fn(self):
-        return get_inplace_mean_max_op(True, self._reduction_axes)
+        return get_inplace_mean_max_op(self._reduction_axes, True)
 
 
-class OVMeanSquareReducer(MeanReducer):
+class OVMeanSquareReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
 
     def get_inplace_fn(self):
         return get_inplace_mean_square_op(self._reduction_axes)

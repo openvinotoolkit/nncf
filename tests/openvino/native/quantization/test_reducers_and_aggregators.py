@@ -12,6 +12,8 @@
 from typing import Any, List, Optional, Tuple
 
 import numpy as np
+import openvino as ov
+import openvino.runtime.opset13 as opset
 import pytest
 
 from nncf.common.graph.layer_attributes import Dtype
@@ -19,8 +21,12 @@ from nncf.openvino.statistics.collectors import OVAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVAbsQuantileReducer
 from nncf.openvino.statistics.collectors import OVBatchMeanReducer
 from nncf.openvino.statistics.collectors import OVMaxReducer
+from nncf.openvino.statistics.collectors import OVMaxVarianceReducer
+from nncf.openvino.statistics.collectors import OVMeanAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer
 from nncf.openvino.statistics.collectors import OVMeanReducer
+from nncf.openvino.statistics.collectors import OVMeanSquareReducer
+from nncf.openvino.statistics.collectors import OVMeanVarianceReducer
 from nncf.openvino.statistics.collectors import OVMinReducer
 from nncf.openvino.statistics.collectors import OVQuantileReducer
 from nncf.tensor import Tensor
@@ -28,6 +34,16 @@ from tests.common.experimental.test_reducers_and_aggregators import TemplateTest
 
 
 class TestReducersAggregators(TemplateTestReducersAggregators):
+    MIXED_PRECISION_REDUCERS_REF_VALUES = [
+        (OVMeanVarianceReducer, (0, 1), np.array([695.375])),
+        (OVMeanVarianceReducer, None, np.array([707.1875])),
+        (OVMaxVarianceReducer, (0, 1), np.array([710.25])),
+        (OVMaxVarianceReducer, None, np.array([707.1875])),
+        (OVMeanAbsMaxReducer, (0, 1), np.array([87.0])),
+        (OVMeanAbsMaxReducer, None, np.array([94.0])),
+        (OVMeanSquareReducer, (0, 1), np.array([2128.0, 2246.5, 2370.0, 2498.5, 2632.0, 2770.5, 2914.0, 3062.5])),
+        (OVMeanSquareReducer, None, np.array([2577.75])),
+    ]
 
     def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
         if dtype is Dtype.INTEGER:
@@ -59,3 +75,19 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
 
     def cast_tensor(self, tensor, dtype: Dtype):
         return tensor
+
+    @pytest.mark.parametrize("reducer_cls,reduction_axes,ref_value", MIXED_PRECISION_REDUCERS_REF_VALUES)
+    def test_mixed_precision_reducers(self, reducer_cls, reduction_axes, ref_value):
+        input_ = np.arange(2 * 4 * 8).reshape(2, 4, 8)
+        input_[:, :2] *= 2
+
+        reducer = reducer_cls(reduction_axes=reduction_axes, inplace=True)
+        inplace_fn = reducer.get_inplace_fn()
+
+        ov_model_input = opset.parameter(input_.shape)
+        ov_model_output = inplace_fn(ov_model_input, 0, "reducer_output")
+        ov_model = ov.Model([ov_model_output], [ov_model_input])
+        compiled_ov_model = ov.compile_model(ov_model)
+
+        reducer_output = compiled_ov_model(input_)[0]
+        assert np.allclose(reducer_output, ref_value)
