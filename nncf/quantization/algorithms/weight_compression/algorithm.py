@@ -391,6 +391,7 @@ class WeightCompression(Algorithm):
                 awq_params.steps,
             )
             awq_algo.apply(model, graph)
+            awq_algo.update_statistics(self._mean_statistics)
 
         scales = {}
         zero_points = {}

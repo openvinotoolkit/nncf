@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import copy
+
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, TypeVar
@@ -86,7 +86,7 @@ class AWQ(Algorithm):
         self.name_to_node_mapping = name_to_node_mapping
         self._all_weight_params = all_weight_params
         self._nodes_to_compress = nodes_to_compress
-        self._statistics = copy.deepcopy(statistics)
+        self._statistics = statistics
         self._subset_size = subset_size
         self._percent_to_apply = percent_to_apply
         self._alpha_min = alpha_min
@@ -94,6 +94,7 @@ class AWQ(Algorithm):
         self._steps = steps
         self._backend_entity = None
         self._patterns = None
+        self._scale_per_target_node = {}
 
         self._set_backend_entity(model)
 
@@ -299,14 +300,16 @@ class AWQ(Algorithm):
                 )
                 transformation_layout.register(scale_insertion_command)
 
-            # update activations for next usage
-            for i, stat in enumerate(self._statistics[k]["mean_values"]):
-                stat = stat * a_scale
-                self._statistics[k]["mean_values"][i] = stat
+            self._scale_per_target_node[k] = a_scale
 
         transformed_model = model_transformer.transform(transformation_layout)
 
         return transformed_model
+
+    def update_statistics(self, statistics):
+        for node_name, scale in self._scale_per_target_node.items():
+            for mean_stat in statistics[node_name]["mean_values"]:
+                mean_stat *= fns.squeeze(scale)
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         """
