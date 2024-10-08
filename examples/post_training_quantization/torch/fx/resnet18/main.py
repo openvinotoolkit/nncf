@@ -170,18 +170,6 @@ def prepare_tiny_imagenet_200(dataset_dir: Path):
     val_images_dir.rmdir()
 
 
-def get_model_size(ir_path: str, m_type: str = "Mb") -> float:
-    xml_size = os.path.getsize(ir_path)
-    bin_size = os.path.getsize(os.path.splitext(ir_path)[0] + ".bin")
-    for t in ["bytes", "Kb", "Mb"]:
-        if m_type == t:
-            break
-        xml_size /= 1024
-        bin_size /= 1024
-    model_size = xml_size + bin_size
-    return model_size
-
-
 def main():
     device = torch.device("cpu")
     print(f"Using {device} device")
