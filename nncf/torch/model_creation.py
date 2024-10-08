@@ -103,7 +103,14 @@ def create_compressed_model(
     """
 
     warning_deprecated(
-        "The 'nncf.torch.create_compressed_model' function is deprecated and will be removed in a future release."
+        "The 'nncf.torch.create_compressed_model' function is deprecated and will be removed in a future release.\n"
+        "To perform post training quantization (PTQ) or quantization aware training (QAT),"
+        " use the new nncf.quantize() API:\n"
+        " - https://github.com/openvinotoolkit/nncf?tab=readme-ov-file#post-training-quantization\n"
+        " - https://github.com/openvinotoolkit/nncf?tab=readme-ov-file#training-time-quantization\n"
+        "Examples:\n"
+        " - https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/torch\n"
+        " - https://github.com/openvinotoolkit/nncf/tree/develop/examples/quantization_aware_training/torch"
     )
 
     if isinstance(model, NNCFNetwork):
