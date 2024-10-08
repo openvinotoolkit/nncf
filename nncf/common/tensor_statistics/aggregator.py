@@ -89,7 +89,8 @@ class StatisticsAggregator(ABC):
         
         if self.stat_subset_size > processed_samples:
             nncf_logger.warning(
-                f"Dataset contains only {processed_samples} samples, smaller than the requested subset size {self.stat_subset_size}."
+                f"Dataset contains only {processed_samples} samples, "
+                f"smaller than the requested subset size {self.stat_subset_size}."
             )
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
