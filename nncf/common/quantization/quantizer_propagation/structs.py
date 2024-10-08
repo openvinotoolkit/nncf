@@ -112,20 +112,20 @@ PropagationPath = List[Tuple[str, str]]
 
 
 @api()
-class PropagationStrategy(Enum):
+class QuantizerPropagationRule(Enum):
     # While propagating up through a downward-branching node:
     # ... do not merge at all
-    DO_NOT_MERGE_BRANCH_FQS = 0
+    DO_NOT_MERGE_BRANCHES = 0
 
     # ... only merge for exact configuration space matches
-    MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME = 1
+    MERGE_IF_ALL_BRANCHES_SAME = 1
 
     # ... merge common parts, and if a branch quantizer has options for
     # narrowing (bitwidth/mode/per-channel/etc.) in addition to
     # the common part, keep the quantizer on branch
     MERGE_WITH_POTENTIAL_REQUANTIZATION = 2
 
-    # ... merge common config options into a single config space for the global FQ,
+    # ... merge common config options into a single config space for the global quantizer,
     # do not merge if this is impossible for the current branching situation and given
     # HW config file
-    MERGE_WITH_SINGLE_FQ_RESULT = 3
+    MERGE_ALL_IN_ONE = 3

@@ -121,7 +121,7 @@ def create_ptq_pipeline(
                 weights_quantization_params=advanced_parameters.weights_quantization_params,
                 activations_range_estimator_params=advanced_parameters.activations_range_estimator_params,
                 weights_range_estimator_params=advanced_parameters.weights_range_estimator_params,
-                propagation_strategy=advanced_parameters.propagation_strategy,
+                quantizer_propagation_rule=advanced_parameters.quantizer_propagation_rule,
                 backend_params=advanced_parameters.backend_params,
             )
         ]
