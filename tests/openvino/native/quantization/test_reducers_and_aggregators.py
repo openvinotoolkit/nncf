@@ -25,7 +25,6 @@ from nncf.openvino.statistics.collectors import OVMaxVarianceReducer
 from nncf.openvino.statistics.collectors import OVMeanAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer
 from nncf.openvino.statistics.collectors import OVMeanReducer
-from nncf.openvino.statistics.collectors import OVMeanSquareReducer
 from nncf.openvino.statistics.collectors import OVMeanVarianceReducer
 from nncf.openvino.statistics.collectors import OVMinReducer
 from nncf.openvino.statistics.collectors import OVQuantileReducer
@@ -41,8 +40,6 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
         (OVMaxVarianceReducer, None, np.array([707.1875])),
         (OVMeanAbsMaxReducer, (0, 1), np.array([87.0])),
         (OVMeanAbsMaxReducer, None, np.array([94.0])),
-        (OVMeanSquareReducer, (0, 1), np.array([2128.0, 2246.5, 2370.0, 2498.5, 2632.0, 2770.5, 2914.0, 3062.5])),
-        (OVMeanSquareReducer, None, np.array([2577.75])),
     ]
 
     def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):

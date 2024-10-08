@@ -22,6 +22,7 @@ import nncf
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.tensor import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
+from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanNoOutliersAggregator
@@ -554,3 +555,18 @@ class TemplateTestReducersAggregators:
         for reducer, init_hash in zip(reducers_instances, hashes):
             reducer(test_input)
             assert hash(reducer) == init_hash
+
+    HAWQ_AGGREGATOR_REFERENCE_VALUES = [
+        ([np.arange(10)], 57.0),
+        ([np.arange(12).reshape((2, 6)), np.arange(24).reshape((4, 6))], 181.92361111111111),
+        ([np.arange(8 * i).reshape((1, 8, i)) for i in range(1, 5)], 165.61627197265625),
+    ]
+
+    @pytest.mark.parametrize("inputs,reference_output", HAWQ_AGGREGATOR_REFERENCE_VALUES)
+    def test_hawq_aggregator(self, inputs, reference_output):
+        aggregator = HAWQAggregator()
+        for x in inputs:
+            aggregator.register_reduced_input(self.get_nncf_tensor(x, Dtype.FLOAT))
+
+        ret_val = aggregator.aggregate()[0]
+        assert fns.allclose(ret_val, reference_output)

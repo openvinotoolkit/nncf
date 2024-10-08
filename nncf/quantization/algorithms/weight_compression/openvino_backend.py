@@ -18,6 +18,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_reduction_axes
+from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
@@ -30,10 +31,10 @@ from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.rt_info import dump_parameters
+from nncf.openvino.statistics.collectors import NoopReducer
 from nncf.openvino.statistics.collectors import OVMaxVarianceReducer
 from nncf.openvino.statistics.collectors import OVMeanAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVMeanReducer
-from nncf.openvino.statistics.collectors import OVMeanSquareReducer
 from nncf.openvino.statistics.collectors import OVMeanVarianceReducer
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
@@ -426,9 +427,9 @@ class OVMixedPrecisionAlgoBackend(OVWeightCompressionAlgoBackend):
         return collector
 
     @staticmethod
-    def mean_square_statistic_collector(subset_size: Optional[int] = None) -> TensorCollector:
-        reducer = OVMeanSquareReducer(inplace=True)
-        aggregator = MeanAggregator(num_samples=subset_size)
+    def hawq_statistic_collector(subset_size: Optional[int] = None) -> TensorCollector:
+        reducer = NoopReducer()
+        aggregator = HAWQAggregator(num_samples=subset_size)
         collector = TensorCollector()
         collector.register_statistic_branch(SensitivityMetric.HESSIAN_INPUT_ACTIVATION.value, reducer, aggregator)
         return collector

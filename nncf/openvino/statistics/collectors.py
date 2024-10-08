@@ -36,7 +36,6 @@ from nncf.openvino.graph.node_utils import get_inplace_max_var_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
-from nncf.openvino.graph.node_utils import get_inplace_mean_square_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_var_op
 from nncf.openvino.graph.node_utils import get_inplace_min_op
 from nncf.quantization.advanced_parameters import StatisticsType
@@ -88,14 +87,6 @@ class OVMeanAbsMaxReducer(TensorReducerBase):
 
     def get_inplace_fn(self):
         return get_inplace_mean_max_op(self._reduction_axes, True)
-
-
-class OVMeanSquareReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
-        raise NotImplementedError()
-
-    def get_inplace_fn(self):
-        return get_inplace_mean_square_op(self._reduction_axes)
 
 
 class OVBatchMeanReducer(BatchMeanReducer):

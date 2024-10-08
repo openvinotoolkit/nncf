@@ -318,11 +318,10 @@ class HAWQCriterion(DataBasedCriterion):
         graph: NNCFGraph,
         statistic_points: StatisticPointsContainer,
     ) -> float:
-        stats = self._get_statistics_for_node(
+        stat = self._get_statistics_for_node(
             statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.HESSIAN_INPUT_ACTIVATION.value
         )
-        h_trace = 2 * stats[0].item()
-        return h_trace
+        return stat[0].item()
 
     def _calc_weight_sensitivity(
         self,
@@ -347,7 +346,7 @@ class HAWQCriterion(DataBasedCriterion):
         return fns.linalg.norm(decompressed_weight - weight, ord="fro").item()
 
     def _get_statistic_collector(self, subset_size=None):
-        return self._backend_entity.mean_square_statistic_collector(subset_size)
+        return self._backend_entity.hawq_statistic_collector(subset_size)
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_VARIANCE)

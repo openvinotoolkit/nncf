@@ -29,7 +29,6 @@ from nncf.openvino.graph.node_utils import get_inplace_max_var_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
-from nncf.openvino.graph.node_utils import get_inplace_mean_square_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_var_op
 from nncf.openvino.graph.node_utils import get_inplace_min_op
 from nncf.openvino.graph.node_utils import get_result_node_name
@@ -185,9 +184,6 @@ INPLACE_OPS_TEST_CASES = [
         ["Abs", "ReduceMax", "ReduceMean"],
         [None, (1, 2), (0, 1, 2, 3)],
     ),
-    InplaceOpTestCase(
-        "mean_square", (1, 2), lambda r: get_inplace_mean_square_op(r), ["Multiply", "ReduceMean"], [None, (1, 2)]
-    ),
     # Calculated reduce shape
     InplaceOpTestCase("min", None, get_inplace_min_op, ["ReduceMin"], [(0, 1, 2, 3)]),
     InplaceOpTestCase("mean", None, get_inplace_mean_op, ["ReduceMean"], [(0, 1, 2, 3)]),
@@ -222,9 +218,6 @@ INPLACE_OPS_TEST_CASES = [
         lambda r: get_inplace_mean_max_op(r, True),
         ["Abs", "ReduceMax", "ReduceMean"],
         [None, (0, 1, 2, 3), (0, 1, 2, 3)],
-    ),
-    InplaceOpTestCase(
-        "mean_square", None, lambda r: get_inplace_mean_square_op(r), ["Multiply", "ReduceMean"], [None, (0, 1, 2, 3)]
     ),
     # Batch mean and mean per ch operations
     InplaceOpTestCase("batch_mean", None, lambda r: get_inplace_batch_mean_op(), ["ReduceMean"], [0]),
@@ -274,9 +267,6 @@ INPLACE_OPS_TEST_CASES = [
         lambda r: get_inplace_mean_max_op(r, True),
         ["Abs", "ReduceMax", "ReduceMean"],
         [None, (), (0, 1, 2, 3)],
-    ),
-    InplaceOpTestCase(
-        "mean_square", (), lambda r: get_inplace_mean_square_op(r), ["Multiply", "ReduceMean"], [None, ()]
     ),
 ]
 

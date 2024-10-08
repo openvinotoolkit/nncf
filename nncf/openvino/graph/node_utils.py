@@ -356,26 +356,6 @@ def get_inplace_mean_max_op(reduction_axes: Optional[ReductionAxes], use_abs_max
     return get_mean_max_reduce_op
 
 
-def get_inplace_mean_square_op(reduction_axes: Optional[ReductionAxes] = None) -> InplaceInsertionFnType:
-    def get_mean_square_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
-        partial_shape = get_partial_shape_safe(node, output_port_id)
-        all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)
-        reduction_axes_ = np.array(all_axes if reduction_axes is None else reduction_axes, dtype=np.int64)
-
-        op_input = node.output(output_port_id)
-        square = opset.multiply(op_input, op_input)
-        result = opset.reduce_mean(
-            square,
-            reduction_axes=reduction_axes_,
-            keep_dims=False,
-            name=output_node_name,
-        )
-
-        return result
-
-    return get_mean_square_reduce_op
-
-
 def get_inplace_batch_mean_op() -> InplaceInsertionFnType:
     """
     Returns inplace batch mean function that adds reduce batch mean node to a passed node.
