@@ -36,6 +36,7 @@ from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.weight_compression.activation_stats import WCStatistics
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
@@ -570,10 +571,10 @@ class WeightCompression(Algorithm):
             matmul_metatypes = self._backend_entity.matmul_metatypes
             matmul_nodes = filter(lambda node: node.metatype in matmul_metatypes, nodes)
 
-            # Each weighted MatMul node has two input nodes: an activation and a weight
-            # A single activation may be an input to multiple MatMul nodes
+            # Each weighted MatMul node has two input nodes: an activation and a weight.
+            # A single activation may be an input to multiple MatMul nodes.
             # Below is a mapping from activation node and a port id to corresponding matmul nodes which accept this
-            # activation as an input
+            # activation as an input.
             matmul_input_to_output_nodes_map = defaultdict(list)
             for node in matmul_nodes:
                 act_node, output_port_id = self._get_activation_node_and_port(node, graph)
@@ -620,8 +621,8 @@ class WeightCompression(Algorithm):
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
             )
-            # Each activation tensor is assumed to have shape [B, L, C], where B=1 and L is a sequence length dimension
-            # We reduce activations across B and L dimensions, mean is used as a reduction function
+            # Each activation tensor is assumed to have shape [B, L, C], where B=1 and L is a sequence length dimension.
+            # We reduce activations across B and L dimensions, mean is used as a reduction function.
             stat_collector = self._backend_entity.mean_statistic_collector(
                 reduction_axes=(0, 1), subset_size=subset_size
             )
@@ -635,14 +636,14 @@ class WeightCompression(Algorithm):
 
     def _get_statistics(
         self, matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]], statistic_points
-    ) -> Dict[str, Dict[str, List]]:
+    ) -> Dict[str, WCStatistics]:
         """
         Retrieve collected statistics.
 
         :param matmul_input_to_output_nodes_map: A mapping from activation node and a port id to corresponding matmul
-            nodes which accept this activation as an input
-        :param statistic_points: Statistic points object
-        :return: Collected statistics
+            nodes which accept this activation as an input.
+        :param statistic_points: Statistic points object.
+        :return: Collected statistics.
         """
 
         def input_filter_func(point, port_id):
@@ -655,10 +656,9 @@ class WeightCompression(Algorithm):
                 and point.target_point.port_id == port_id
             )
 
-        # Collected statistics dictionary contains the following items:
-        # node_name:
-        #   "mean_values": [mean_value_1, ..., mean_value_n]
-        #   "shapes": [shape_1, ..., shape_n]
+        # For each node we store statistics in a WCStatistics data-class. It contains the followin fields:
+        #   mean_values=[mean_value_1, ..., mean_value_n]
+        #   shapes=[shape_1, ..., shape_n]
         # Where mean_value is a 1D tensor representing an activation reduced over batch and sequence length dimensions,
         # shape is an original shape of an activation before reduction, n is the size of the dataset (or subset_size).
         statistics = {}
@@ -672,7 +672,7 @@ class WeightCompression(Algorithm):
                     value[0, 0] for value in tensor_collector.get_statistics()[self._backend_entity.MEAN_STAT]
                 )
                 shapes.extend(tensor_collector.get_statistics()[self._backend_entity.SHAPE_STAT])
-            stats = {"mean_values": mean_values, "shapes": shapes}
+            stats = WCStatistics(mean_values, shapes)
             # Each activation node may have multiple MatMul nodes which it is an input to
             for node in matmul_nodes:
                 statistics[node.node_name] = copy.deepcopy(stats)

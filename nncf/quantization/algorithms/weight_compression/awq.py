@@ -26,6 +26,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.weight_compression.activation_stats import WCStatistics
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_scale
@@ -63,7 +64,7 @@ class AWQ(Algorithm):
         name_to_node_mapping: Dict[str, Any],
         all_weight_params: List[WeightCompressionParameters],
         nodes_to_compress: List[NNCFNode],
-        statistics: Dict[str, Dict[str, List]],
+        statistics: Dict[str, WCStatistics],
         subset_size: int = 32,
         percent_to_apply=0.002,
         alpha_min=0.0,
@@ -75,8 +76,7 @@ class AWQ(Algorithm):
         :param name_to_node_mapping: Name to node mapping for updating node weights.
         :param all_weight_params: List of all weight parameters.
         :param nodes_to_compress: List of nodes for processing.
-        :param statistics: The input activations of the layers reduced over batch and sequence length dimensions,
-            together with original activation tensor shapes.
+        :param statistics: Input activation statistics for each node.
         :param subset_size: The number of samples for AWQ.
         :param percent_to_apply: The percent of outliers for correction.
         :param alpha_min: Minimum value of smoothness parameter for grid search.
@@ -314,7 +314,7 @@ class AWQ(Algorithm):
     def update_statistics(self, statistics):
         # Multiply activations by the computed scales
         for node_name, scale in self._scale_per_target_node.items():
-            for mean_stat in statistics[node_name]["mean_values"]:
+            for mean_stat in statistics[node_name].mean_values:
                 mean_stat *= fns.squeeze(scale)
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:

@@ -286,7 +286,7 @@ def var_op(op_input: ov.Output, base_node_name: str, reduction_axes: Optional[np
 
     :param op_input: An output to compute variance for
     :param base_node_name: Variance subgraph domain name
-    :param reduction_axes: Axes to compute variance across
+    :param reduction_axes: Axes along which to compute variance
     """
     mean = opset.reduce_mean(
         op_input,
@@ -309,7 +309,7 @@ def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes] = None) -> I
     Return an operation getter function that computes variance across given axes and then mean-reduces the result across
     the remaining axes
 
-    :param reduction_axes: Axes to compute variance across
+    :param reduction_axes: Axes along which to compute variance
     """
 
     def get_mean_var_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
@@ -335,7 +335,7 @@ def get_inplace_max_var_op(reduction_axes: Optional[ReductionAxes] = None) -> In
     Return an operation getter function that computes variance across given axes and then max-reduces the result across
     the remaining axes
 
-    :param reduction_axes: Axes to compute variance across
+    :param reduction_axes: Axes along which to compute variance
     """
 
     def get_max_var_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:

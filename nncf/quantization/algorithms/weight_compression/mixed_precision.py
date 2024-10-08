@@ -111,7 +111,7 @@ class MixedPrecisionCriterion(Algorithm):
         if model_backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVMixedPrecisionAlgoBackend
 
-            self._backend_entity = OVMixedPrecisionAlgoBackend()
+            self._backend_entity = OVMixedPrecisionAlgoBackend(model)
         else:
             raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
@@ -197,7 +197,6 @@ class DataBasedCriterion(DataFreeCriterion):
 
     STAT_KEY = None
 
-    @abstractmethod
     def _calc_activation_sensitivity(
         self,
         weight_param: WeightCompressionParameters,

@@ -20,6 +20,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import CompressWeightsMode
+from nncf.quantization.algorithms.weight_compression.activation_stats import WCStatistics
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -50,7 +51,7 @@ class ScaleEstimation:
         name_to_node_mapping: Dict[str, Any],
         all_weight_params: List[WeightCompressionParameters],
         nodes_to_compress: List[NNCFNode],
-        statistics: Dict[str, Dict[str, List]],
+        statistics: Dict[str, WCStatistics],
         subset_size: int = 32,
         initial_steps: int = 5,
         scale_steps: int = 10,
@@ -61,8 +62,7 @@ class ScaleEstimation:
         :param name_to_node_mapping: Name to node mapping for updating node weights.
         :param all_weight_params: List of all weight parameters.
         :param nodes_to_compress: List of nodes for processing.
-        :param statistics: The input activations of the layers reduced over batch and sequence length dimensions,
-            together with original activation tensor shapes.
+        :param statistics: Input activation statistics for each node.
         :param subset_size: The number of samples for scale estimation.
         :param initial_steps: The number of the steps for absmax scale rectification.
         :param scale_steps: The number of the steps for grid search scale rectification
@@ -163,7 +163,7 @@ class ScaleEstimation:
     @staticmethod
     def calculate_quantization_params(
         backend_entity: WeightCompressionAlgoBackend,
-        statistics: List[Tensor],
+        statistics: WCStatistics,
         weight: Tensor,
         reduction_axes: Tuple[int, ...],
         config: WeightCompressionConfig,
@@ -183,7 +183,8 @@ class ScaleEstimation:
         2. A grid search to further refine the scale parameters.
 
         :param backend_entity: The backend-specific implementation of the weight compression algorithm.
-        :param activations: List of activation tensors corresponding to the layers being quantized.
+        :param statistics: The input activations of the layer reduced over batch and sequence length dimensions,
+            together with original activation tensor shapes.
         :param weight: The weight tensor that is being quantized.
         :param reduction_axes: Tuple specifying the axes along which the reduction is performed for quantization.
         :param config: Configuration parameters for the weight compression, including quantization settings.

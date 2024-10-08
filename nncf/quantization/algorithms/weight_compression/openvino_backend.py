@@ -395,7 +395,8 @@ class OVAWQAlgoAlgoBackend(AWQAlgoBackend, OVWeightCompressionAlgoBackend):
         )
 
 
-class OVMixedPrecisionAlgoBackend:
+class OVMixedPrecisionAlgoBackend(OVWeightCompressionAlgoBackend):
+
     @staticmethod
     def mean_variance_statistic_collector(
         reduction_axes: Tuple[int], subset_size: Optional[int] = None
