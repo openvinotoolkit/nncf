@@ -13,7 +13,7 @@ import gc
 
 import torch
 
-from nncf.torch2.hook_executor.weak_map import WeakUnhashableKeyMap
+from nncf.experimental.torch2.hook_executor.weak_map import WeakUnhashableKeyMap
 
 
 def test_set_get():

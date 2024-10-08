@@ -29,9 +29,9 @@ from torch import nn
 from torch.overrides import TorchFunctionMode
 
 from nncf.common.logging import nncf_logger as logger
-from nncf.torch2.hook_executor.hook_storage import HookStorage
-from nncf.torch2.hook_executor.hook_storage import HookType
-from nncf.torch2.hook_executor.weak_map import WeakUnhashableKeyMap
+from nncf.experimental.torch2.hook_executor.hook_storage import HookStorage
+from nncf.experimental.torch2.hook_executor.hook_storage import HookType
+from nncf.experimental.torch2.hook_executor.weak_map import WeakUnhashableKeyMap
 
 IGNORED_FN_NAMES = [
     "__repr__",

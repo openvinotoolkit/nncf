@@ -15,8 +15,8 @@ import pytest
 import torch
 from torch import nn
 
-from nncf.torch2.hook_executor.hook_storage import HookStorage
-from nncf.torch2.hook_executor.hook_storage import HookType
+from nncf.experimental.torch2.hook_executor.hook_storage import HookStorage
+from nncf.experimental.torch2.hook_executor.hook_storage import HookType
 from tests.torch2.hook_executor.helpers import CallCount
 
 

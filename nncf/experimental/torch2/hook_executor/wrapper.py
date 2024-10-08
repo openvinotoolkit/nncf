@@ -19,9 +19,9 @@ from typing import Any, Callable, Dict, Tuple, cast
 from torch import nn
 
 import nncf
-from nncf.torch2.hook_executor.hook_executor_mode import HookExecutorMode
-from nncf.torch2.hook_executor.hook_storage import HookStorage
-from nncf.torch2.hook_executor.hook_storage import HookType
+from nncf.experimental.torch2.hook_executor.hook_executor_mode import HookExecutorMode
+from nncf.experimental.torch2.hook_executor.hook_storage import HookStorage
+from nncf.experimental.torch2.hook_executor.hook_storage import HookType
 
 ATR_HOOK_STORAGE = "__hooks"
 
