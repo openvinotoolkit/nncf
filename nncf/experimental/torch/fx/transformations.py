@@ -569,6 +569,7 @@ def _is_conv(n: torch.fx.Node):
     return n.op == "call_function" and n.target in (
         torch.ops.aten.conv1d.default,
         torch.ops.aten.conv2d.default,
+        torch.ops.aten.conv_transpose2d.input,
     )
 
 

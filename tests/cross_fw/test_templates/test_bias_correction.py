@@ -22,9 +22,11 @@ from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrectio
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
 from tests.cross_fw.test_templates.helpers import SplittedModel
 from tests.cross_fw.test_templates.helpers import StaticDatasetMock
+from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -139,6 +141,8 @@ class TemplateTestBCAlgorithm:
                 },
             ),
             (ConvTestModel, {"/conv/Conv": [0.11085186, 1.0017344]}),
+            (DepthwiseConvTestModel, {"/conv/Conv": [-1.1229, -0.1863]}),
+            (TransposeConvTestModel, {"/conv/ConvTranspose": [0.6688, -0.7077]}),
         ),
     )
     def test_update_bias(self, model_cls, ref_biases, tmpdir):
