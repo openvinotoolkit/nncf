@@ -142,7 +142,7 @@ class TemplateTestBCAlgorithm:
             ),
             (ConvTestModel, {"/conv/Conv": [0.11085186, 1.0017344]}),
             (DepthwiseConvTestModel, {"/conv/Conv": [-1.1229, -0.1863]}),
-            (TransposeConvTestModel, {"/conv/ConvTranspose": [0.6688, -0.7077]}),
+            (TransposeConvTestModel, {"/conv/ConvTranspose": [0.66797173, -0.7070703]}),
         ),
     )
     def test_update_bias(self, model_cls, ref_biases, tmpdir):

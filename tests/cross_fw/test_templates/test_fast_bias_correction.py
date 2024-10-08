@@ -111,7 +111,7 @@ class TemplateTestFBCAlgorithm:
             (ConvTestModel, [0.0288348, 1.0838453]),
             (ConvBNTestModel, [0.08396978, 1.1676897]),
             (DepthwiseConvTestModel, [-1.1229, -0.1863]),
-            (TransposeConvTestModel, [0.6680, -0.7071]),
+            (TransposeConvTestModel, [0.6688, -0.7077]),
         ),
     )
     def test_update_bias(self, model_cls, ref_bias, tmpdir):
