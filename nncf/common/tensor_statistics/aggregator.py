@@ -87,7 +87,7 @@ class StatisticsAggregator(ABC):
         if processed_samples == 0:
             raise nncf.ValidationError(EMPTY_DATASET_ERROR)
         
-        if self.stat_subset_size > processed_samples:
+        if self.stat_subset_size is not None and self.stat_subset_size > processed_samples:
             nncf_logger.warning(
                 f"Dataset contains only {processed_samples} samples, "
                 f"smaller than the requested subset size {self.stat_subset_size}."
