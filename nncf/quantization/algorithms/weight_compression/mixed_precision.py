@@ -51,11 +51,9 @@ class MixedPrecisionCriterion(Algorithm):
         ratio: float,
     ):
         """
-        :param weight_params: Weight compression parameters which determines how and what weight should be compressed.
         :param primary_config: Configuration on how to compress (quantize) weights to primary precision.
         :param ratio: The ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to INT8_ASYM).
-        :param statistics: The input activations of the nodes to be quantized.
         """
         self._primary_config = primary_config
         self._ratio = ratio
@@ -109,16 +107,11 @@ class MixedPrecisionCriterion(Algorithm):
         return [BackendType.OPENVINO]
 
     def _set_backend_entity(self, model: TModel) -> None:
-        """
-        Creates a helper class with a backed-specific logic of the algorithm.
-
-        :param model: Backend-specific input model.
-        """
         model_backend = get_backend(model)
         if model_backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVMixedPrecisionAlgoBackend
 
-            self._backend_entity = OVMixedPrecisionAlgoBackend(model)
+            self._backend_entity = OVMixedPrecisionAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
@@ -129,7 +122,7 @@ class MixedPrecisionCriterion(Algorithm):
         self,
         model: TModel,
         graph: NNCFGraph,
-        matmul_input_nodes: Iterable[Tuple[NNCFNode, int]],
+        nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
         subset_size: Optional[int] = None,
     ) -> StatisticPointsContainer:
         """
@@ -137,6 +130,8 @@ class MixedPrecisionCriterion(Algorithm):
 
         :param model: Model for statistics collection.
         :param graph: Model graph.
+        :param nodes_and_port_ids: Nodes and port ids for which statistics should be collected.
+        :param subset_size: Number of samples to collect.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
 
@@ -188,7 +183,7 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         self,
         model: TModel,
         graph: NNCFGraph,
-        matmul_input_nodes: Iterable[Tuple[NNCFNode, int]],
+        nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
         subset_size: Optional[int] = None,
     ) -> StatisticPointsContainer:
         raise RuntimeError("No statistics collection intended for data-free mixed precision criterion")
@@ -200,15 +195,17 @@ class DataBasedCriterion(DataFreeCriterion):
     Expecting statistics of the following shape: [hidden_dim]
     """
 
+    STAT_KEY = None
+
     @abstractmethod
     def _calc_activation_sensitivity(
         self,
         weight_param: WeightCompressionParameters,
-        model: TModel,
         graph: NNCFGraph,
         statistic_points: StatisticPointsContainer,
     ) -> float:
-        pass
+        stats = self._get_statistics_for_node(statistic_points, weight_param.node_with_weight, graph, self.STAT_KEY)
+        return stats[0].item()
 
     def _calc_score_per_node(
         self,
@@ -226,27 +223,20 @@ class DataBasedCriterion(DataFreeCriterion):
         if weight_param.node_with_weight.metatype in self._backend_entity.embedding_metatypes:
             return THE_LOWEST_SENSITIVITY
         weight_score = self._calc_weight_sensitivity(weight_param, model, graph)
-        activation_score = self._calc_activation_sensitivity(weight_param, model, graph, statistic_points)
+        activation_score = self._calc_activation_sensitivity(weight_param, graph, statistic_points)
         return weight_score * activation_score
 
     def get_statistic_points(
         self,
         model: TModel,
         graph: NNCFGraph,
-        matmul_input_nodes: Iterable[Tuple[NNCFNode, int]],
+        nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
         subset_size: Optional[int] = None,
     ) -> StatisticPointsContainer:
-        """
-        Returns statistic points, for which StatisticsCollector should collect statistics.
-
-        :param model: Model for statistics collection.
-        :param graph: Model graph.
-        :return: Statistic points, for which StatisticsCollector should collect statistics.
-        """
         self._set_backend_entity(model)
 
         statistic_container = StatisticPointsContainer()
-        for act_node, output_port_id in matmul_input_nodes:
+        for act_node, output_port_id in nodes_and_port_ids:
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, act_node.node_name, port_id=output_port_id
             )
@@ -261,7 +251,11 @@ class DataBasedCriterion(DataFreeCriterion):
 
     @abstractmethod
     def _get_statistic_collector(self, subset_size=None):
-        pass
+        """
+        Get statistic collector
+
+        :param subset_size: Number of samples to collect
+        """
 
     def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[NNCFNode, int]:
         """
@@ -311,17 +305,7 @@ class HAWQCriterion(DataBasedCriterion):
     multiplied by L2 norm of 8-bit quantization noise.
     """
 
-    def _calc_activation_sensitivity(
-        self,
-        weight_param: WeightCompressionParameters,
-        model: TModel,
-        graph: NNCFGraph,
-        statistic_points: StatisticPointsContainer,
-    ) -> float:
-        stat = self._get_statistics_for_node(
-            statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.HESSIAN_INPUT_ACTIVATION.value
-        )
-        return stat[0].item()
+    STAT_KEY = SensitivityMetric.HESSIAN_INPUT_ACTIVATION.value
 
     def _calc_weight_sensitivity(
         self,
@@ -355,19 +339,10 @@ class MeanVarianceCriterion(DataBasedCriterion):
     The mean variance of the layers' inputs multiplied by inverted 8-bit quantization noise.
     """
 
-    def _calc_activation_sensitivity(
-        self,
-        weight_param: WeightCompressionParameters,
-        model: TModel,
-        graph: NNCFGraph,
-        statistic_points: StatisticPointsContainer,
-    ) -> float:
-        stats = self._get_statistics_for_node(
-            statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.MEAN_ACTIVATION_VARIANCE.value
-        )
-        return stats[0].item()
+    STAT_KEY = SensitivityMetric.MEAN_ACTIVATION_VARIANCE.value
 
     def _get_statistic_collector(self, subset_size=None):
+        # Reduce across sequence length dimension
         return self._backend_entity.mean_variance_statistic_collector(reduction_axes=(1,), subset_size=subset_size)
 
 
@@ -377,19 +352,10 @@ class MaxVarianceCriterion(DataBasedCriterion):
     The maximum variance of the layers' inputs multiplied by inverted 8-bit quantization noise.
     """
 
-    def _calc_activation_sensitivity(
-        self,
-        weight_param: WeightCompressionParameters,
-        model: TModel,
-        graph: NNCFGraph,
-        statistic_points: StatisticPointsContainer,
-    ) -> float:
-        stats = self._get_statistics_for_node(
-            statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.MAX_ACTIVATION_VARIANCE.value
-        )
-        return stats[0].item()
+    STAT_KEY = SensitivityMetric.MAX_ACTIVATION_VARIANCE.value
 
     def _get_statistic_collector(self, subset_size=None):
+        # Reduce across sequence length dimension
         return self._backend_entity.max_variance_statistic_collector(reduction_axes=(1,), subset_size=subset_size)
 
 
@@ -399,17 +365,8 @@ class MeanMaxCriterion(DataBasedCriterion):
     The mean magnitude of the layers' inputs multiplied by inverted 8-bit quantization noise.
     """
 
-    def _calc_activation_sensitivity(
-        self,
-        weight_param: WeightCompressionParameters,
-        model: TModel,
-        graph: NNCFGraph,
-        statistic_points: StatisticPointsContainer,
-    ) -> float:
-        stats = self._get_statistics_for_node(
-            statistic_points, weight_param.node_with_weight, graph, SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE.value
-        )
-        return stats[0].item()
+    STAT_KEY = SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE.value
 
     def _get_statistic_collector(self, subset_size=None):
+        # Reduce across sequence length dimension
         return self._backend_entity.mean_abs_max_statistic_collector(reduction_axes=(1,), subset_size=subset_size)

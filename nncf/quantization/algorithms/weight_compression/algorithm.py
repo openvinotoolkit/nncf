@@ -119,7 +119,7 @@ class WeightCompression(Algorithm):
         self._ignored_scope = ignored_scope
         self._backend_entity = None
         self._algorithm_key = f"CW_{hash(self)}"
-        self._mean_statistics = {}
+        self._statistics = {}
         self._all_layers = all_layers
         self._sensitivity_metric = sensitivity_metric
         self._awq = awq
@@ -127,7 +127,6 @@ class WeightCompression(Algorithm):
         self._scale_estimation = scale_estimation
         self._gptq = gptq
         self._lora_correction = lora_correction
-        # self._lora_correction = True
         self._backup_mode = backup_mode
         self._advanced_parameters = (
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
@@ -453,7 +452,7 @@ class WeightCompression(Algorithm):
                 self._backend_entity.name_to_node_mapping,
                 all_weight_params,
                 nodes_to_compress,
-                self._mean_statistics,
+                self._statistics,
                 awq_params.subset_size,
                 awq_params.percent_to_apply,
                 awq_params.alpha_min,
@@ -461,7 +460,9 @@ class WeightCompression(Algorithm):
                 awq_params.steps,
             )
             awq_algo.apply(model, graph)
-            awq_algo.update_statistics(self._mean_statistics)
+            # After applying AWQ we need to update statistics since AWQ alters the activations
+            awq_algo.update_statistics(self._statistics)
+            del awq_algo
 
         scales = {}
         zero_points = {}
@@ -484,7 +485,7 @@ class WeightCompression(Algorithm):
                     self._backend_entity.name_to_node_mapping,
                     all_weight_params,
                     nodes_to_compress,
-                    self._mean_statistics,
+                    self._statistics,
                     scale_estimation_params.subset_size,
                     scale_estimation_params.initial_steps,
                     scale_estimation_params.scale_steps,
@@ -494,7 +495,7 @@ class WeightCompression(Algorithm):
 
             if self._lora_correction:
                 lora_correction_params = self._advanced_parameters.lora_correction_params
-                lora_correction_algo = LoraCorrectionAlgorithm(self._mean_statistics, lora_correction_params)
+                lora_correction_algo = LoraCorrectionAlgorithm(self._statistics, lora_correction_params)
                 description += " with correction of low-rank adapters"
 
         # Sort weight params to start compression with the bigger constants. This lowers peak memory footprint.
@@ -547,18 +548,17 @@ class WeightCompression(Algorithm):
 
     def _collect_statistics(self, dataset: Dataset, nodes: List[NNCFNode], graph: NNCFGraph, model: TModel):
         """
-        Collects input activations for the given nodes on the dataset.
+        Collects statistics required for data-aware algorithms and/or mixed precision assignment
 
         :param dataset: Dataset to collect values.
         :param nodes: List of nodes, whose inputs are collected.
-        :param model: Model for statistics collection.
         :param graph: Model graph.
-        :return: statistics values itself per node name.
+        :param model: Model for statistics collection.
         """
 
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
 
-        mean_statistic_points = None
+        statistic_points = None
         matmul_input_to_output_nodes_map = None
 
         data_aware_precision_assignment = (
@@ -566,9 +566,14 @@ class WeightCompression(Algorithm):
         )
         data_aware_compression = self._awq or self._scale_estimation or self._lora_correction
         if data_aware_compression or data_aware_precision_assignment:
+            # Collect statistics only for weighted MatMul nodes
             matmul_metatypes = self._backend_entity.matmul_metatypes
             matmul_nodes = filter(lambda node: node.metatype in matmul_metatypes, nodes)
 
+            # Each weighted MatMul node has two input nodes: an activation and a weight
+            # A single activation may be an input to multiple MatMul nodes
+            # Below is a mapping from activation node and a port id to corresponding matmul nodes which accept this
+            # activation as an input
             matmul_input_to_output_nodes_map = defaultdict(list)
             for node in matmul_nodes:
                 act_node, output_port_id = self._get_activation_node_and_port(node, graph)
@@ -580,24 +585,24 @@ class WeightCompression(Algorithm):
                 )
                 statistics_aggregator.register_statistic_points(self._mixed_precision_statistics)
             if data_aware_compression:
-                mean_statistic_points = self.get_statistic_points(
+                statistic_points = self.get_statistic_points(
                     model, graph, matmul_input_to_output_nodes_map.keys(), self._subset_size
                 )
-                statistics_aggregator.register_statistic_points(mean_statistic_points)
+                statistics_aggregator.register_statistic_points(statistic_points)
         if self._gptq:
             self._gptq_statistics = self._gptq_algo.get_statistic_points(model, graph, nodes)
             statistics_aggregator.register_statistic_points(self._gptq_statistics)
 
         statistics_aggregator.collect_statistics(model, graph)
 
-        if mean_statistic_points is not None:
-            self._mean_statistics = self._get_mean_statistics(matmul_input_to_output_nodes_map, mean_statistic_points)
+        if statistic_points is not None:
+            self._statistics = self._get_statistics(matmul_input_to_output_nodes_map, statistic_points)
 
     def get_statistic_points(
         self,
         model: TModel,
         graph: NNCFGraph,
-        matmul_input_nodes: Iterable[Tuple[NNCFNode, int]],
+        nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
         subset_size: Optional[int] = None,
     ) -> StatisticPointsContainer:
         """
@@ -605,14 +610,18 @@ class WeightCompression(Algorithm):
 
         :param model: Model for statistics collection.
         :param graph: Model graph.
+        :param nodes_and_port_ids: Nodes and port ids for which statistics should be collected.
+        :param subset_size: Number of samples to collect.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
 
         statistic_container = StatisticPointsContainer()
-        for act_node, output_port_id in matmul_input_nodes:
+        for node, output_port_id in nodes_and_port_ids:
             statistic_point = self._backend_entity.target_point(
-                TargetType.POST_LAYER_OPERATION, act_node.node_name, port_id=output_port_id
+                TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
             )
+            # Each activation tensor is assumed to have shape [B, L, C], where B=1 and L is a sequence length dimension
+            # We reduce activations across B and L dimensions, mean is used as a reduction function
             stat_collector = self._backend_entity.mean_statistic_collector(
                 reduction_axes=(0, 1), subset_size=subset_size
             )
@@ -624,9 +633,18 @@ class WeightCompression(Algorithm):
 
         return statistic_container
 
-    def _get_mean_statistics(
+    def _get_statistics(
         self, matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]], statistic_points
-    ):
+    ) -> Dict[str, Dict[str, List]]:
+        """
+        Retrieve collected statistics.
+
+        :param matmul_input_to_output_nodes_map: A mapping from activation node and a port id to corresponding matmul
+            nodes which accept this activation as an input
+        :param statistic_points: Statistic points object
+        :return: Collected statistics
+        """
+
         def input_filter_func(point, port_id):
             # For the floating-point statistics collected in POST_LAYER style,
             # we also need to determine the output port id.
@@ -637,7 +655,13 @@ class WeightCompression(Algorithm):
                 and point.target_point.port_id == port_id
             )
 
-        mean_statistics = {}
+        # Collected statistics dictionary contains the following items:
+        # node_name:
+        #   "mean_values": [mean_value_1, ..., mean_value_n]
+        #   "shapes": [shape_1, ..., shape_n]
+        # Where mean_value is a 1D tensor representing an activation reduced over batch and sequence length dimensions,
+        # shape is an original shape of an activation before reduction, n is the size of the dataset (or subset_size).
+        statistics = {}
         for (act_node, output_port_id), matmul_nodes in matmul_input_to_output_nodes_map.items():
             mean_values = []
             shapes = []
@@ -649,6 +673,8 @@ class WeightCompression(Algorithm):
                 )
                 shapes.extend(tensor_collector.get_statistics()[self._backend_entity.SHAPE_STAT])
             stats = {"mean_values": mean_values, "shapes": shapes}
+            # Each activation node may have multiple MatMul nodes which it is an input to
             for node in matmul_nodes:
-                mean_statistics[node.node_name] = copy.deepcopy(stats)
-        return mean_statistics
+                statistics[node.node_name] = copy.deepcopy(stats)
+
+        return statistics

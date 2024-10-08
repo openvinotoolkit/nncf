@@ -63,7 +63,7 @@ class AWQ(Algorithm):
         name_to_node_mapping: Dict[str, Any],
         all_weight_params: List[WeightCompressionParameters],
         nodes_to_compress: List[NNCFNode],
-        statistics=None,
+        statistics: Dict[str, Dict[str, List]],
         subset_size: int = 32,
         percent_to_apply=0.002,
         alpha_min=0.0,
@@ -75,7 +75,8 @@ class AWQ(Algorithm):
         :param name_to_node_mapping: Name to node mapping for updating node weights.
         :param all_weight_params: List of all weight parameters.
         :param nodes_to_compress: List of nodes for processing.
-        :param activations: The input activations of the layers considered for compression.
+        :param statistics: The input activations of the layers reduced over batch and sequence length dimensions,
+            together with original activation tensor shapes.
         :param subset_size: The number of samples for AWQ.
         :param percent_to_apply: The percent of outliers for correction.
         :param alpha_min: Minimum value of smoothness parameter for grid search.
@@ -311,6 +312,7 @@ class AWQ(Algorithm):
         return transformed_model
 
     def update_statistics(self, statistics):
+        # Multiply activations by the computed scales
         for node_name, scale in self._scale_per_target_node.items():
             for mean_stat in statistics[node_name]["mean_values"]:
                 mean_stat *= fns.squeeze(scale)

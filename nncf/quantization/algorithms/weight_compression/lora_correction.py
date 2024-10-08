@@ -80,9 +80,12 @@ class LoraCorrectionAlgorithm:
     The method reduces quantization noise after weight compression using low rank adapters.
     """
 
-    def __init__(self, statistics: Dict[str, List[Tensor]], lora_correction_params: AdvancedLoraCorrectionParameters):
+    def __init__(
+        self, statistics: Dict[str, Dict[str, List]], lora_correction_params: AdvancedLoraCorrectionParameters
+    ):
         """
-        :param activations: The input activations of the layers considered for compression.
+        :param statistics: The input activations of the layers reduced over batch and sequence length dimensions,
+            together with original activation tensor shapes.
         :param lora_correction_params: parameters to configure the algorithm.
         """
         self._statistics = statistics
@@ -134,7 +137,7 @@ class LoraCorrectionAlgorithm:
         compression_config: WeightCompressionConfig,
         reduction_axes: Tuple[int, ...],
         lora_correction_params: AdvancedLoraCorrectionParameters,
-        layer_statistics: List[Tensor],
+        layer_statistics: Dict[str, List],
         is_debug: Optional[bool] = False,
     ):
         """
@@ -149,8 +152,9 @@ class LoraCorrectionAlgorithm:
         :param compression_config: configuration of weight compression for the weight node.
         :param reduction_axes: axes along which different statistics reduced.
         :param lora_correction_params: parameters to configure the algorithm.
-        :param layer_activations: list of activation statistics for a layer that contains
-            N tensors with shape [SeqLen, HiddenDim].
+        :param layer_statistics: a dictionary containing (1) list of activations of the layers reduced over batch and
+            sequence length dimensions with shape [HiddenDim] and (2) list of original activation tensor shapes
+            before reduction
         :param is_debug: whether to collect debug information, defaults to False.
         :return: two low rank matrices in the order of execution of corresponding linear layers and list of mean noises.
             Noises are collected from each step of the algorithm if debug was enabled.

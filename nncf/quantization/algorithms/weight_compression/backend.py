@@ -201,7 +201,12 @@ class WeightCompressionAlgoBackend(ABC):
     def mean_statistic_collector(
         self, reduction_axes: Tuple[int], subset_size: Optional[int] = None
     ) -> TensorStatisticCollectorBase:
-        """ """
+        """
+        Return mean statistic collector
+
+        :param reduction_axes: Axes along which to apply mean reduction
+        :param subset_size: Number of samples to collect
+        """
 
     @staticmethod
     @abstractmethod

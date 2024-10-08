@@ -280,33 +280,44 @@ def get_inplace_mean_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInser
     return get_inplace_reduce_op(opset.reduce_mean, reduction_axes, False)
 
 
-def var_op(
-    node: ov.Node, output_port_id: int, output_node_name: str, reduction_axes: Optional[np.ndarray] = None
-) -> ov.Node:
-    op_input = node.output(output_port_id)
+def var_op(op_input: ov.Output, base_node_name: str, reduction_axes: Optional[np.ndarray] = None) -> ov.Node:
+    """
+    Return a subgraph computing variance on a given output
+
+    :param op_input: An output to compute variance for
+    :param base_node_name: Variance subgraph domain name
+    :param reduction_axes: Axes to compute variance across
+    """
     mean = opset.reduce_mean(
         op_input,
         reduction_axes=reduction_axes,
         keep_dims=True,
-        name=f"{output_node_name}/mean",
+        name=f"{base_node_name}/mean",
     )
-    diff = opset.squared_difference(mean, op_input, name=f"{output_node_name}/squared_diff")
+    diff = opset.squared_difference(mean, op_input, name=f"{base_node_name}/squared_diff")
     variance = opset.reduce_mean(
         diff,
         reduction_axes=reduction_axes,
         keep_dims=True,
-        name=f"{output_node_name}/variance",
+        name=f"{base_node_name}/variance",
     )
     return variance
 
 
 def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes] = None) -> InplaceInsertionFnType:
+    """
+    Return an operation getter function that computes variance across given axes and then mean-reduces the result across
+    the remaining axes
+
+    :param reduction_axes: Axes to compute variance across
+    """
+
     def get_mean_var_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
         partial_shape = get_partial_shape_safe(node, output_port_id)
         all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)
         reduction_axes_ = np.array(all_axes if reduction_axes is None else reduction_axes, dtype=np.int64)
 
-        variance = var_op(node, output_port_id, output_node_name, reduction_axes_)
+        variance = var_op(node.output(output_port_id), f"{output_node_name}/var", reduction_axes_)
         result = opset.reduce_mean(
             variance,
             reduction_axes=all_axes,
@@ -320,12 +331,19 @@ def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes] = None) -> I
 
 
 def get_inplace_max_var_op(reduction_axes: Optional[ReductionAxes] = None) -> InplaceInsertionFnType:
+    """
+    Return an operation getter function that computes variance across given axes and then max-reduces the result across
+    the remaining axes
+
+    :param reduction_axes: Axes to compute variance across
+    """
+
     def get_max_var_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
         partial_shape = get_partial_shape_safe(node, output_port_id)
         all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)
         reduction_axes_ = np.array(all_axes if reduction_axes is None else reduction_axes, dtype=np.int64)
 
-        variance = var_op(node, output_port_id, output_node_name, reduction_axes_)
+        variance = var_op(node.output(output_port_id), f"{output_node_name}/var", reduction_axes_)
         result = opset.reduce_max(
             variance,
             reduction_axes=all_axes,
@@ -339,6 +357,14 @@ def get_inplace_max_var_op(reduction_axes: Optional[ReductionAxes] = None) -> In
 
 
 def get_inplace_mean_max_op(reduction_axes: Optional[ReductionAxes], use_abs_max: bool) -> InplaceInsertionFnType:
+    """
+    Return an operation getter function that computes maximum across given axes and then mean-reduces the result across
+    the remaining axes
+
+    :param reduction_axes: Axes to compute maximum across
+    :param use_abs_max: Whether to apply abs() operation before the max operation
+    """
+
     def get_mean_max_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
         partial_shape = get_partial_shape_safe(node, output_port_id)
         all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)

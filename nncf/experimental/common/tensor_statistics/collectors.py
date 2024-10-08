@@ -828,7 +828,7 @@ class PercentileAggregator(AggregatorBase):
 class HAWQAggregator(AggregatorBase):
     def __init__(self, num_samples: Optional[int] = None):
         super().__init__(num_samples=num_samples)
-        self._container = 0.0
+        self._container = Tensor(0.0)
 
     def _register_reduced_input_impl(self, x: TensorType) -> None:
         trace = fns.sum(fns.multiply(x, x))
@@ -836,7 +836,7 @@ class HAWQAggregator(AggregatorBase):
         # TODO: revise this formula as possibly it is with an error; adopted from previous HAWQ implementation
         self._container = (self._container + trace) / x.size
 
-    def _aggregate_impl(self) -> Any:
+    def _aggregate_impl(self) -> List[TensorType]:
         return [self._container * 2 / self._collected_samples]
 
 

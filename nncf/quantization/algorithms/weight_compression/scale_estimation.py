@@ -50,7 +50,7 @@ class ScaleEstimation:
         name_to_node_mapping: Dict[str, Any],
         all_weight_params: List[WeightCompressionParameters],
         nodes_to_compress: List[NNCFNode],
-        statistics=None,
+        statistics: Dict[str, Dict[str, List]],
         subset_size: int = 32,
         initial_steps: int = 5,
         scale_steps: int = 10,
@@ -61,7 +61,8 @@ class ScaleEstimation:
         :param name_to_node_mapping: Name to node mapping for updating node weights.
         :param all_weight_params: List of all weight parameters.
         :param nodes_to_compress: List of nodes for processing.
-        :param activations: The input activations of the layers considered for compression.
+        :param statistics: The input activations of the layers reduced over batch and sequence length dimensions,
+            together with original activation tensor shapes.
         :param subset_size: The number of samples for scale estimation.
         :param initial_steps: The number of the steps for absmax scale rectification.
         :param scale_steps: The number of the steps for grid search scale rectification
