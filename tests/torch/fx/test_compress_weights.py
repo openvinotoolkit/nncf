@@ -15,6 +15,7 @@ import pytest
 import torch
 from torch._export import capture_pre_autograd_graph
 
+from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf.common.factory import NNCFGraphFactory
 from nncf.data.dataset import Dataset
@@ -208,6 +209,9 @@ def test_compress_weights_functional_model(mode):
         {"scale_estimation": True},
         {"lora_correction": True},
         {"dataset": Dataset([1])},
+        {"backup_mode": BackupMode.NONE},
+        {"backup_mode": BackupMode.INT8_ASYM},
+        {"backup_mode": BackupMode.INT8_SYM},
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):
