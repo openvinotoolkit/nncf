@@ -76,8 +76,10 @@ def _get_minmax_quantization_param_grid() -> ParamGrid:
             RangeEstimatorParameters(min=min_v, max=max_v)
             for min_v, max_v in itertools.product(min_param_values, max_param_values)
         ],
-        "advanced_parameters:propagation_strategy": [
+        "advanced_parameters:quantizer_propagation_rule": [
+            QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES,
             QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME,
+            QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION,
             QuantizerPropagationRule.MERGE_ALL_IN_ONE,
         ],
     }
