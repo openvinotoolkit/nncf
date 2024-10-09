@@ -477,8 +477,8 @@ class RawReducer(NoopReducer):
 
 
 class ShapeReducer(TensorReducerBase):
-    def __init__(self):
-        super().__init__(inplace=False)
+    def __init__(self, inplace: bool = False):
+        super().__init__(inplace=inplace)
 
     def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
         return [Tensor(x[0].shape)]

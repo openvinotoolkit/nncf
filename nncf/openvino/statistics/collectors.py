@@ -26,6 +26,7 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
+from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
@@ -38,6 +39,7 @@ from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
 from nncf.openvino.graph.node_utils import get_inplace_mean_var_op
 from nncf.openvino.graph.node_utils import get_inplace_min_op
+from nncf.openvino.graph.node_utils import get_inplace_shape_op
 from nncf.quantization.advanced_parameters import StatisticsType
 
 
@@ -87,6 +89,11 @@ class OVMeanAbsMaxReducer(TensorReducerBase):
 
     def get_inplace_fn(self):
         return get_inplace_mean_max_op(self._reduction_axes, True)
+
+
+class OVShapeReducer(ShapeReducer):
+    def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
+        return get_inplace_shape_op()
 
 
 class OVBatchMeanReducer(BatchMeanReducer):

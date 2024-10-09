@@ -28,6 +28,7 @@ from nncf.openvino.statistics.collectors import OVMeanReducer
 from nncf.openvino.statistics.collectors import OVMeanVarianceReducer
 from nncf.openvino.statistics.collectors import OVMinReducer
 from nncf.openvino.statistics.collectors import OVQuantileReducer
+from nncf.openvino.statistics.collectors import OVShapeReducer
 from nncf.tensor import Tensor
 from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggregators
 
@@ -88,3 +89,18 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
 
         reducer_output = compiled_ov_model(input_)[0]
         assert np.allclose(reducer_output, ref_value)
+
+    @pytest.mark.parametrize(
+        "input_", [np.arange(2), np.arange(2 * 4 * 8).reshape(8, 8), np.arange(2 * 4 * 8).reshape(2, 4, 8)]
+    )
+    def test_inplace_shape_reducer(self, input_):
+        reducer = OVShapeReducer()
+        inplace_fn = reducer.get_inplace_fn()
+
+        ov_model_input = opset.parameter(input_.shape)
+        ov_model_output = inplace_fn(ov_model_input, 0, "reducer_output")
+        ov_model = ov.Model([ov_model_output], [ov_model_input])
+        compiled_ov_model = ov.compile_model(ov_model)
+
+        reducer_output = compiled_ov_model(input_)[0]
+        assert all([it[0] == it[1] for it in zip(input_.shape, reducer_output)])

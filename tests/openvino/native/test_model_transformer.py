@@ -31,6 +31,7 @@ from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
 from nncf.openvino.graph.node_utils import get_inplace_mean_var_op
 from nncf.openvino.graph.node_utils import get_inplace_min_op
+from nncf.openvino.graph.node_utils import get_inplace_shape_op
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
@@ -149,7 +150,6 @@ LINEAR_MODEL_SHAPES = {
     },
     "SHORT": {"input_shape": [1, 3, 2, 8], "reshape_shape": [48], "matmul_w_shape": [48, 48], "add_shape": [48]},
 }
-# get_inplace_mean_var_op, get_inplace_max_var_op, get_inplace_mean_max_op, get_inplace_mean_square_op
 INPLACE_OPS_TEST_CASES = [
     # Forwarded reduce shape
     InplaceOpTestCase("min", (1, 2), get_inplace_min_op, ["ReduceMin"], [(1, 2)]),
@@ -218,6 +218,13 @@ INPLACE_OPS_TEST_CASES = [
         lambda r: get_inplace_mean_max_op(r, True),
         ["Abs", "ReduceMax", "ReduceMean"],
         [None, (0, 1, 2, 3), (0, 1, 2, 3)],
+    ),
+    InplaceOpTestCase(
+        "shape",
+        None,
+        lambda r: get_inplace_shape_op(),
+        ["ShapeOf"],
+        [None],
     ),
     # Batch mean and mean per ch operations
     InplaceOpTestCase("batch_mean", None, lambda r: get_inplace_batch_mean_op(), ["ReduceMean"], [0]),

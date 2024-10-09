@@ -282,11 +282,11 @@ def get_inplace_mean_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInser
 
 def var_op(op_input: ov.Output, base_node_name: str, reduction_axes: Optional[np.ndarray] = None) -> ov.Node:
     """
-    Return a subgraph computing variance on a given output
+    Return a subgraph computing variance on a given output.
 
-    :param op_input: An output to compute variance for
-    :param base_node_name: Variance subgraph domain name
-    :param reduction_axes: Axes along which to compute variance
+    :param op_input: An output to compute variance for.
+    :param base_node_name: Variance subgraph domain name.
+    :param reduction_axes: Axes along which to compute variance.
     """
     mean = opset.reduce_mean(
         op_input,
@@ -307,9 +307,9 @@ def var_op(op_input: ov.Output, base_node_name: str, reduction_axes: Optional[np
 def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes] = None) -> InplaceInsertionFnType:
     """
     Return an operation getter function that computes variance across given axes and then mean-reduces the result across
-    the remaining axes
+    the remaining axes.
 
-    :param reduction_axes: Axes along which to compute variance
+    :param reduction_axes: Axes along which to compute variance.
     """
 
     def get_mean_var_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
@@ -333,9 +333,9 @@ def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes] = None) -> I
 def get_inplace_max_var_op(reduction_axes: Optional[ReductionAxes] = None) -> InplaceInsertionFnType:
     """
     Return an operation getter function that computes variance across given axes and then max-reduces the result across
-    the remaining axes
+    the remaining axes.
 
-    :param reduction_axes: Axes along which to compute variance
+    :param reduction_axes: Axes along which to compute variance.
     """
 
     def get_max_var_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
@@ -359,10 +359,10 @@ def get_inplace_max_var_op(reduction_axes: Optional[ReductionAxes] = None) -> In
 def get_inplace_mean_max_op(reduction_axes: Optional[ReductionAxes], use_abs_max: bool) -> InplaceInsertionFnType:
     """
     Return an operation getter function that computes maximum across given axes and then mean-reduces the result across
-    the remaining axes
+    the remaining axes.
 
-    :param reduction_axes: Axes to compute maximum across
-    :param use_abs_max: Whether to apply abs() operation before the max operation
+    :param reduction_axes: Axes to compute maximum across.
+    :param use_abs_max: Whether to apply abs() operation before the max operation.
     """
 
     def get_mean_max_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
@@ -380,6 +380,18 @@ def get_inplace_mean_max_op(reduction_axes: Optional[ReductionAxes], use_abs_max
         return result
 
     return get_mean_max_reduce_op
+
+
+def get_inplace_shape_op() -> InplaceInsertionFnType:
+    """
+    Return an operation returning a shape on the given output.
+    """
+
+    def get_shape_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
+        result = opset.shape_of(node.output(output_port_id), name=output_node_name)
+        return result
+
+    return get_shape_op
 
 
 def get_inplace_batch_mean_op() -> InplaceInsertionFnType:

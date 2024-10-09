@@ -547,7 +547,7 @@ class WeightCompression(Algorithm):
 
     def _collect_statistics(self, dataset: Dataset, nodes: List[NNCFNode], graph: NNCFGraph, model: TModel):
         """
-        Collects statistics required for data-aware algorithms and/or mixed precision assignment
+        Collects statistics required for data-aware algorithms and/or mixed precision assignment.
 
         :param dataset: Dataset to collect values.
         :param nodes: List of nodes, whose inputs are collected.
@@ -663,10 +663,9 @@ class WeightCompression(Algorithm):
             for tensor_collector in statistic_points.get_algo_statistics_for_node(
                 act_node.node_name, partial(input_filter_func, port_id=output_port_id), self._algorithm_key
             ):
-                mean_values.extend(
-                    value[0, 0] for value in tensor_collector.get_statistics()[self._backend_entity.MEAN_STAT]
-                )
-                shapes.extend(tensor_collector.get_statistics()[self._backend_entity.SHAPE_STAT])
+                raw_statistics = tensor_collector.get_statistics()
+                mean_values.extend(value[0, 0] for value in raw_statistics[self._backend_entity.MEAN_STAT])
+                shapes.extend([tuple(value.data) for value in raw_statistics[self._backend_entity.SHAPE_STAT]])
             stats = WCStatistics(mean_values, shapes)
             # Each activation node may have multiple MatMul nodes which it is an input to
             for node in matmul_nodes:

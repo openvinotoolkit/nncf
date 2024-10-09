@@ -21,7 +21,6 @@ from nncf.common.graph.utils import get_reduction_axes
 from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
@@ -36,6 +35,7 @@ from nncf.openvino.statistics.collectors import OVMaxVarianceReducer
 from nncf.openvino.statistics.collectors import OVMeanAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVMeanReducer
 from nncf.openvino.statistics.collectors import OVMeanVarianceReducer
+from nncf.openvino.statistics.collectors import OVShapeReducer
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
@@ -92,7 +92,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         self, reduction_axes: Tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
         mean_reducer = OVMeanReducer(reduction_axes, inplace=True)
-        shape_reducer = ShapeReducer()
+        shape_reducer = OVShapeReducer(inplace=True)
         collector = TensorCollector()
         collector.register_statistic_branch(self.MEAN_STAT, mean_reducer, NoopAggregator(subset_size))
         collector.register_statistic_branch(self.SHAPE_STAT, shape_reducer, NoopAggregator(subset_size))
