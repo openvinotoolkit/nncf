@@ -73,13 +73,13 @@ class TensorReducerBase(ABC):
         :param x: Tensor to register.
         """
 
-    @abstractmethod
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
         """
         Returns correspondent inplace operation builder if inplace operations are available in backend.
 
         :return: Inplace operation builder if possible else None.
         """
+        return None
 
     def __call__(self, x: List[Tensor]):
         if any(t.isempty() for t in x):
@@ -260,19 +260,6 @@ class TensorCollector:
             self._aggregators[key] = aggregator
         self._stat_container_kwargs_map[container_key] = key
 
-    def get_output_info(self, target_node_name: str, port_id: int) -> List[Tuple[int, List[str]]]:
-        """
-        Returns list of pairs of reducers names and correspondent output names.
-
-        :param target_node_name: Target node name to assemble output name.
-        :param port_id: Target node specific port id to assemble output name.
-        :returns: List of pairs of reducers hashes and correspondent output names.
-        """
-        retval = []
-        for reducer in self._reducers:
-            retval.append((hash(reducer), reducer.get_output_names(target_node_name, port_id)))
-        return retval
-
     def register_inputs(self, inputs: Dict[int, List[Tensor]]) -> None:
         """
         Registers given input in TensorCollector.
@@ -332,27 +319,6 @@ class TensorCollector:
         if not self._stat_container:
             return kwargs
         return self._build_statistic_container(self._stat_container, kwargs)
-
-    def get_inplace_fn_info(self) -> List[Tuple[Any, int]]:
-        """
-        Returns necessary information to insert inplace operation into graph.
-
-        :returns: necessary information to insert inplace operation into graph
-            in format of pair of reducer builder and correspondent reducer output port id.
-        """
-        retval = []
-        for reducer in self._reducers:
-            if reducer.inplace:
-                retval.append((reducer.get_inplace_fn(), reducer.output_port_id))
-        return retval
-
-    def any_stat_out_of_place(self) -> bool:
-        """
-        Returns True if any reducer is calculated out of place.
-
-        :returns: True if any reducer is calculated out of place.
-        """
-        return any(not reducer.inplace for reducer in self._reducers)
 
     def replace_aggregator(self, key: Tuple[int, int, int], aggregator: AggregatorBase) -> None:
         """
