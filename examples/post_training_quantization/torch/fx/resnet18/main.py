@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import os
-import warnings
 from pathlib import Path
 from time import time
 from typing import Tuple
@@ -25,19 +24,12 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
-from torch.jit import TracerWarning
 
 import nncf
 import nncf.torch
 from nncf.common.logging.track_progress import track
 from nncf.common.utils.helpers import create_table
-from nncf.torch.dynamic_graph.patch_pytorch import unpatch_torch_operators
-
-unpatch_torch_operators()
-
-warnings.filterwarnings("ignore", category=TracerWarning)
-warnings.filterwarnings("ignore", category=UserWarning)
-
+from nncf.torch import disable_patching
 
 IMAGE_SIZE = 64
 
@@ -195,7 +187,7 @@ def main():
     print(os.linesep + "[Step 2] Quantize model")
 
     input_shape = (1, 3, IMAGE_SIZE, IMAGE_SIZE)
-    example_input = torch.ones(*input_shape).cpu()
+    example_input = torch.ones(*input_shape).to(device)
 
     fx_model = torch.export.export(model.eval(), args=(example_input,)).module()
     quantized_fx_model = nncf.quantize(fx_model, quantization_dataset)
@@ -208,11 +200,11 @@ def main():
     ###############################################################################
     # Step 3: Run benchmarks
     print(os.linesep + "[Step 3] Run benchmarks")
-    print("Run benchmark for FP32 model ...")
-    compiled_model = torch.compile(model, backend="openvino")
+    print("Run benchmark for FP32 model compiled with default backend ...")
+    compiled_model = torch.compile(model)
     fp32_latency = measure_latency(compiled_model, example_inputs=example_input)
 
-    print("Run benchmark for INT8 model ...")
+    print("Run benchmark for INT8 model compiled with OpenVino backend ...")
     int8_latency = measure_latency(quantized_fx_model, example_inputs=example_input)
 
     ###############################################################################
@@ -228,4 +220,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    with disable_patching():
+        main()

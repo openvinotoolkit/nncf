@@ -180,7 +180,7 @@
             "int8_top1": 55.27
         },
         "performance_metrics": {
-            "fp32_latency": 1.4452,
+            "fp32_latency": 3.3447,
             "int8_latency": 0.6003
         }
     },
