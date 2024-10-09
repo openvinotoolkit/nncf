@@ -146,7 +146,6 @@ class WeightCompression(Algorithm):
                 subset_size=gptq_params.subset_size,
                 scale_estimation=self._scale_estimation,
             )
-            self._gptq_statistics = None
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -475,7 +474,6 @@ class WeightCompression(Algorithm):
                 graph=graph,
                 dataset=dataset,
                 weight_compression_parameters=all_weight_params,
-                statistic_points=self._gptq_statistics,
                 backend_entity=self._backend_entity,
             )
         else:
@@ -590,9 +588,6 @@ class WeightCompression(Algorithm):
                     model, graph, matmul_input_to_output_nodes_map.keys(), self._subset_size
                 )
                 statistics_aggregator.register_statistic_points(statistic_points)
-        if self._gptq:
-            self._gptq_statistics = self._gptq_algo.get_statistic_points(model, graph, nodes)
-            statistics_aggregator.register_statistic_points(self._gptq_statistics)
 
         statistics_aggregator.collect_statistics(model, graph)
 
@@ -656,7 +651,7 @@ class WeightCompression(Algorithm):
                 and point.target_point.port_id == port_id
             )
 
-        # For each node we store statistics in a WCStatistics data-class. It contains the followin fields:
+        # For each node we store statistics in a WCStatistics data-class. It contains the following fields:
         #   mean_values=[mean_value_1, ..., mean_value_n]
         #   shapes=[shape_1, ..., shape_n]
         # Where mean_value is a 1D tensor representing an activation reduced over batch and sequence length dimensions,
