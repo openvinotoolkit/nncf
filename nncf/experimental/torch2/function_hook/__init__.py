@@ -9,8 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.experimental.torch2.hook_executor.wrapper import get_hook_storage as get_hook_storage
-from nncf.experimental.torch2.hook_executor.wrapper import is_wrapped as is_wrapped
-from nncf.experimental.torch2.hook_executor.wrapper import register_post_function_hook as register_post_function_hook
-from nncf.experimental.torch2.hook_executor.wrapper import register_pre_function_hook as register_pre_function_hook
-from nncf.experimental.torch2.hook_executor.wrapper import wrap_model as wrap_model
+from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage as get_hook_storage
+from nncf.experimental.torch2.function_hook.wrapper import is_wrapped as is_wrapped
+from nncf.experimental.torch2.function_hook.wrapper import register_post_function_hook as register_post_function_hook
+from nncf.experimental.torch2.function_hook.wrapper import register_pre_function_hook as register_pre_function_hook
+from nncf.experimental.torch2.function_hook.wrapper import wrap_model as wrap_model

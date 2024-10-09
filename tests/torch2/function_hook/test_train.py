@@ -18,7 +18,7 @@ import torch.utils
 from torch import nn
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from tests.torch2.hook_executor.helpers import get_wrapped_simple_model_with_hook
+from tests.torch2.function_hook.helpers import get_wrapped_simple_model_with_hook
 
 
 def run_one_epoch(model: nn.Module, optimizer: torch.optim.Optimizer, use_cuda: bool):

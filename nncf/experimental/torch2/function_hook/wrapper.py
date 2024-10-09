@@ -19,9 +19,9 @@ from typing import Any, Callable, Dict, Tuple, cast
 from torch import nn
 
 import nncf
-from nncf.experimental.torch2.hook_executor.hook_executor_mode import FunctionHookMode
-from nncf.experimental.torch2.hook_executor.hook_storage import HookStorage
-from nncf.experimental.torch2.hook_executor.hook_storage import RemovableHookHandle
+from nncf.experimental.torch2.function_hook.hook_executor_mode import FunctionHookMode
+from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
+from nncf.experimental.torch2.function_hook.hook_storage import RemovableHookHandle
 
 ATR_HOOK_STORAGE = "__nncf_hooks"
 
@@ -208,7 +208,7 @@ def register_pre_function_hook(model: nn.Module, op_name: str, port_id: int, hoo
     :param model: The model to register the hook to.
     :param op_name: The name of the operation associated with the hook.
     :param port_id: The port ID associated with the hook.
-    :param hook: The pre-function hook to be executed.
+    :param hook: The pre-function hook module to be executed.
 
     :returns: A handle that can be used to remove the hook later.
     """
@@ -216,14 +216,14 @@ def register_pre_function_hook(model: nn.Module, op_name: str, port_id: int, hoo
     return hook_storage.register_pre_function_hook(op_name, port_id, hook)
 
 
-def register_post_function_hook(model: nn.Module, op_name: str, port_id: int, hook: nn.Module):
+def register_post_function_hook(model: nn.Module, op_name: str, port_id: int, hook: nn.Module) -> RemovableHookHandle:
     """
     Registers a post-function hook for a specific operation in the model.
 
     :param model: The model to register the hook to.
     :param op_name: The name of the operation associated with the hook.
     :param port_id: The port ID associated with the hook.
-    :param hook: The pre-function hook to be executed.
+    :param hook: The pre-function hook module to be executed.
     :returns: A handle that can be used to remove the hook later.
     """
     hook_storage = get_hook_storage(model)

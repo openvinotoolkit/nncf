@@ -12,8 +12,8 @@
 import torch
 from torch import nn
 
-from nncf.experimental.torch2.hook_executor.wrapper import register_post_function_hook
-from nncf.experimental.torch2.hook_executor.wrapper import wrap_model
+from nncf.experimental.torch2.function_hook.wrapper import register_post_function_hook
+from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 
 
 class CallCount(torch.nn.Module):

@@ -15,11 +15,11 @@ from typing import Any, Optional
 
 import pytest
 
-from nncf.experimental.torch2.hook_executor.hook_executor_mode import FunctionHookMode
-from nncf.experimental.torch2.hook_executor.hook_executor_mode import generate_normalized_op_name
-from nncf.experimental.torch2.hook_executor.hook_storage import HookType
-from nncf.experimental.torch2.hook_executor.wrapper import get_hook_storage
-from tests.torch2.hook_executor import helpers
+from nncf.experimental.torch2.function_hook.hook_executor_mode import FunctionHookMode
+from nncf.experimental.torch2.function_hook.hook_executor_mode import generate_normalized_op_name
+from nncf.experimental.torch2.function_hook.hook_storage import HookType
+from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
+from tests.torch2.function_hook import helpers
 
 
 @dataclass
