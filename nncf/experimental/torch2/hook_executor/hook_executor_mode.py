@@ -30,7 +30,6 @@ from torch.overrides import TorchFunctionMode
 
 from nncf.common.logging import nncf_logger as logger
 from nncf.experimental.torch2.hook_executor.hook_storage import HookStorage
-from nncf.experimental.torch2.hook_executor.hook_storage import HookType
 from nncf.experimental.torch2.hook_executor.weak_map import WeakUnhashableKeyMap
 
 IGNORED_FN_NAMES = [
@@ -85,7 +84,7 @@ def generate_normalized_op_name(module_name: str, fn_name: str, call_id: Optiona
     return f"{module_name}/{fn_name}/{call_id}"
 
 
-class HookExecutorMode(TorchFunctionMode):
+class FunctionHookMode(TorchFunctionMode):
     """
     Executes pre- and post-hooks for PyTorch functions within a model's execution.
 
@@ -102,7 +101,7 @@ class HookExecutorMode(TorchFunctionMode):
 
     def __init__(self, model: nn.Module, hook_storage: HookStorage) -> None:
         """
-        Initialize the HookExecutorMode.
+        Initialize the FunctionHookMode.
 
         :param model: The PyTorch model to which the hooks will be applied.
         :param hook_storage: Storage for hooks to be executed.
@@ -122,11 +121,11 @@ class HookExecutorMode(TorchFunctionMode):
 
         # Hook names
         self.hooks_module_to_group_name: Dict[ReferenceType[nn.Module], str] = {}
-        for group_name in self.hook_storage.storage:
-            for hook_name, hook_module in self.hook_storage.storage[group_name].named_children():
+        for hook_key, hook_module_dict in self.hook_storage.storage.named_children():
+            for hook_id, hook_module in hook_module_dict.named_children():
                 # Replace / to avoid collision with module separator
-                hook_name = hook_name.replace("/", "-")
-                self.hooks_module_to_group_name[ref(hook_module)] = f"hook__{group_name}__{hook_name}"
+                hook_name = hook_key.replace("/", "-")
+                self.hooks_module_to_group_name[ref(hook_module)] = f"{hook_name}[{hook_id}]"
 
     def _get_wrapped_call(self, fn_call: MethodType) -> Callable[..., Any]:
         """
@@ -144,18 +143,18 @@ class HookExecutorMode(TorchFunctionMode):
 
         return wrapped_call
 
-    def __enter__(self) -> HookExecutorMode:
+    def __enter__(self) -> FunctionHookMode:
         """
         Enter the context manager.
         Wrapping the _call_impl function of each module on first nested enter.
 
-        :returns: The instance of HookExecutorMode.
+        :returns: The instance of FunctionHookMode.
         """
         super().__enter__()  # type: ignore
         if self.nested_enter_count == 0:
             # Wrap _call_impl function of instance each module.
             # Note: __call__ can`t not be overrided for instance, the function can be override only in class namespace.
-            logger.debug("HookExecutorMode.__enter__: wrap _call_impl function")
+            logger.debug("FunctionHookMode.__enter__: wrap _call_impl function")
             for _, module in self.model.named_modules():
                 module._call_impl = types.MethodType(self._get_wrapped_call(module._call_impl), module)
             self.push_module_call_stack(self.model)
@@ -175,7 +174,7 @@ class HookExecutorMode(TorchFunctionMode):
         self.nested_enter_count -= 1
         if self.nested_enter_count == 0:
             # Unwrap _call_impl functions
-            logger.debug("HookExecutorMode.__exit__: unwrap _call_impl function")
+            logger.debug("FunctionHookMode.__exit__: unwrap _call_impl function")
             for _, module in self.model.named_modules():
                 module.__dict__.pop("_call_impl")
             self.pop_module_call_stack()
@@ -205,7 +204,7 @@ class HookExecutorMode(TorchFunctionMode):
 
         op_name = self.get_current_executed_op_name(fn_name)
         full_fn_name = _get_full_fn_name(func)
-        logger.debug(f"HookExecutorMode.__torch_function__: {full_fn_name=} {op_name=}")
+        logger.debug(f"FunctionHookMode.__torch_function__: {full_fn_name=} {op_name=}")
         self.register_op(fn_name)
         op_meta = OpMeta(op_name=op_name, func=func)
         args, kwargs = self.execute_pre_hooks(args, kwargs, op_meta)
@@ -222,7 +221,7 @@ class HookExecutorMode(TorchFunctionMode):
         assert isinstance(module, nn.Module)
         self.module_call_stack.append(module)
         module_name = self.get_current_relative_name()
-        logger.debug(f"HookExecutorMode.push_module_call_stack: {module_name=}")
+        logger.debug(f"FunctionHookMode.push_module_call_stack: {module_name=}")
 
     def pop_module_call_stack(self) -> None:
         """
@@ -230,7 +229,7 @@ class HookExecutorMode(TorchFunctionMode):
         """
         module_name = self.get_current_relative_name()
         self.module_call_stack.pop()
-        logger.debug(f"HookExecutorMode.pop_module_call_stack: {module_name=}")
+        logger.debug(f"FunctionHookMode.pop_module_call_stack: {module_name=}")
 
     def get_current_relative_name(self) -> str:
         """
@@ -249,6 +248,7 @@ class HookExecutorMode(TorchFunctionMode):
                 for n, m in prev_module.named_children():
                     if m is module:
                         relative_module_names.append(n)
+                        break
             prev_module = module
 
         return "/".join(relative_module_names)
@@ -289,7 +289,7 @@ class HookExecutorMode(TorchFunctionMode):
         name_in_model = self.const_name_map.get(value, None)
         if name_in_model is not None and not self.in_process_const:
             self.in_process_const = True
-            value = self.hook_storage.execute_hook(HookType.POST_HOOK, name_in_model.replace(".", ":"), 0, value)
+            value = self.hook_storage.execute_post_function_hooks(name_in_model.replace(".", ":"), 0, value)
             self.in_process_const = False
         return value
 
@@ -323,11 +323,11 @@ class HookExecutorMode(TorchFunctionMode):
             _args, kwargs = self.process_parameters(_args, kwargs)
 
             for idx, value in enumerate(_args):
-                _args[idx] = self.hook_storage.execute_hook(HookType.PRE_HOOK, op_meta.op_name, idx, value)
+                _args[idx] = self.hook_storage.execute_pre_function_hooks(op_meta.op_name, idx, value)
 
             for port_id, kw_name in enumerate(kwargs, start=len(_args)):
-                kwargs[kw_name] = self.hook_storage.execute_hook(
-                    HookType.PRE_HOOK, op_meta.op_name, port_id, kwargs[kw_name]
+                kwargs[kw_name] = self.hook_storage.execute_pre_function_hooks(
+                    op_meta.op_name, port_id, kwargs[kw_name]
                 )
         return tuple(_args), kwargs
 
@@ -348,11 +348,11 @@ class HookExecutorMode(TorchFunctionMode):
 
             if isinstance(output, list):
                 for idx, value in enumerate(output):
-                    output[idx] = self.hook_storage.execute_hook(HookType.POST_HOOK, op_meta.op_name, idx, value)
+                    output[idx] = self.hook_storage.execute_post_function_hooks(op_meta.op_name, idx, value)
                 if cls_tuple is not None:
                     output = cls_tuple(output)
             else:
-                output = self.hook_storage.execute_hook(HookType.POST_HOOK, op_meta.op_name, 0, output)
+                output = self.hook_storage.execute_post_function_hooks(op_meta.op_name, 0, output)
         return output
 
     def process_model_inputs(self, args: Tuple[Any], kwargs: Dict[str, Any]) -> Tuple[Tuple[Any], Dict[str, Any]]:
@@ -381,7 +381,7 @@ class HookExecutorMode(TorchFunctionMode):
         :param value: The value of the input argument.
         :returns: The processed value after the hook is executed.
         """
-        return self.hook_storage.execute_hook(HookType.POST_HOOK, name, 0, value)
+        return self.hook_storage.execute_post_function_hooks(name, 0, value)
 
     def process_model_outputs(self, outputs: Any) -> Any:
         """
@@ -391,7 +391,7 @@ class HookExecutorMode(TorchFunctionMode):
         :returns: The processed outputs with hooks applied.
         """
         if isinstance(outputs, Tensor):
-            return self.hook_storage.execute_hook(HookType.PRE_HOOK, "output", 0, outputs)
+            return self.hook_storage.execute_pre_function_hooks("output", 0, outputs)
 
         cls_tuple = None
         if isinstance(outputs, tuple):
@@ -401,17 +401,7 @@ class HookExecutorMode(TorchFunctionMode):
             outputs = list(outputs)
             for idx, val in enumerate(outputs):
                 if isinstance(val, Tensor):
-                    outputs[idx] = self.hook_storage.execute_hook(HookType.PRE_HOOK, f"output_{idx}", 0, val)
+                    outputs[idx] = self.hook_storage.execute_pre_function_hooks(f"output_{idx}", 0, val)
         if cls_tuple is not None:
             outputs = cls_tuple(outputs)
         return outputs
-
-    def execute_hooks_for_output(self, name: str, value: Any) -> Any:
-        """
-        Executes the post-hook for an output tensor.
-
-        :param name: The name of the output.
-        :param value: The value of the output (usually a tensor).
-        :returns: The processed value after the hook is executed.
-        """
-        return self.hook_storage.execute_hook(HookType.POST_HOOK, name, 0, value)

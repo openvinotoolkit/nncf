@@ -36,49 +36,63 @@ def hook_type(request: pytest.FixtureRequest):
     return request.param
 
 
-def test_insert(hook_type: HookType):
-    hooks = HookStorage()
-    module = nn.Identity()
-    hooks.insert_hook("group", hook_type, "foo", 0, module)
-    assert hooks.storage["group"][f"{hook_type.value}__foo__0"] is module
+def test_insert():
+    hook_storage = HookStorage()
+    hook = nn.Identity()
+    hook_storage.register_pre_function_hook("foo", 0, hook)
+    assert hook_storage.storage["pre_hook__foo__0"]["0"] is hook
+
+    hook_storage.register_post_function_hook("foo", 0, hook)
+    assert hook_storage.storage["post_hook__foo__0"]["0"] is hook
 
 
-def test_execute(hook_type: HookType):
-    hooks = HookStorage()
-    module = CallCount()
-    hooks.insert_hook("group", hook_type, "foo", 0, module)
-    assert hooks.storage["group"][f"{hook_type.value}__foo__0"] is module
-    hooks.execute_hook(hook_type, "foo", 0, torch.tensor(1))
-    assert module.call_count == 1
+def test_execute():
+    hook_storage = HookStorage()
+
+    pre_hook = CallCount()
+    hook_storage.register_pre_function_hook("foo", 0, pre_hook)
+    hook_storage.execute_pre_function_hooks("foo", 0, None)
+    assert pre_hook.call_count == 1
+
+    post_hook = CallCount()
+    hook_storage.register_post_function_hook("foo", 0, post_hook)
+    hook_storage.execute_post_function_hooks("foo", 0, None)
+    assert post_hook.call_count == 1
 
 
-@pytest.mark.parametrize(
-    "group_names",
-    (
-        ("5", "1", "01"),
-        ("1", "2", "3"),
-        ("2", "1", "9"),
-    ),
-)
-def test_execute_priority(hook_type: HookType, group_names: List[str]):
-    hooks = HookStorage()
+def test_remove_handle():
+    hook_storage = HookStorage()
+
+    handle1 = hook_storage.register_pre_function_hook("foo", 0, nn.Identity())
+    handle2 = hook_storage.register_pre_function_hook("foo", 0, nn.Identity())
+    assert len(hook_storage.storage["pre_hook__foo__0"]) == 2
+
+    handle1.remove()
+    assert len(hook_storage.storage["pre_hook__foo__0"]) == 1
+
+    handle2.remove()
+    assert "pre_hook__foo__0" not in hook_storage.storage
+
+
+def test_excitation_priority():
+    hook_storage = HookStorage()
     call_stack = []
-    for group_name in group_names:
-        module = CheckPriority(call_stack, group_name)
-        hooks.insert_hook(group_name, hook_type, "foo", 0, module)
-    hooks.execute_hook(hook_type, "foo", 0, torch.tensor(1))
-    assert call_stack == sorted(group_names)
+    handles = []
 
+    for group_name in ["1", "2", "3"]:
+        hook = CheckPriority(call_stack, group_name)
+        h = hook_storage.register_pre_function_hook("foo", 0, hook)
+        handles.append(h)
 
-def test_remove_group(hook_type: HookType):
-    hooks = HookStorage()
-    module = CallCount()
-    hooks.insert_hook("group", hook_type, "foo", 0, module)
-    assert hooks.storage["group"][f"{hook_type.value}__foo__0"] is module
-    hooks.execute_hook(hook_type, "foo", 0, torch.tensor(1))
-    assert module.call_count == 1
-    hooks.remove_group("group")
-    with pytest.raises(KeyError):
-        hooks.storage["group"][f"{hook_type.value}__foo__0"]
-    hooks.execute_hook(hook_type, "foo", 0, torch.tensor(1))
-    assert module.call_count == 1
+    hook_storage.execute_pre_function_hooks("foo", 0, None)
+    assert call_stack == ["1", "2", "3"]
+    call_stack.clear()
+
+    handles[1].remove()
+    hook_storage.execute_pre_function_hooks("foo", 0, None)
+    assert call_stack == ["1", "3"]
+    call_stack.clear()
+
+    hook_storage.register_pre_function_hook("foo", 0, CheckPriority(call_stack, "4"))
+    hook_storage.execute_pre_function_hooks("foo", 0, None)
+    assert call_stack == ["1", "3", "4"]

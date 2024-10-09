@@ -17,8 +17,9 @@ import pytest
 import torch
 
 from nncf.experimental.torch2.hook_executor.hook_storage import HookType
-from nncf.experimental.torch2.hook_executor.wrapper import insert_hook
 from nncf.experimental.torch2.hook_executor.wrapper import is_wrapped
+from nncf.experimental.torch2.hook_executor.wrapper import register_post_function_hook
+from nncf.experimental.torch2.hook_executor.wrapper import register_pre_function_hook
 from nncf.experimental.torch2.hook_executor.wrapper import wrap_model
 from tests.torch2.hook_executor import helpers
 
@@ -42,7 +43,7 @@ def test_export_strict_false():
     return_origin = model(example_input)
 
     wrapped = wrap_model(model)
-    insert_hook(wrapped, "hook_group", HookType.POST_HOOK, "/relu/0", 0, helpers.AddModule(ADD_VALUE))
+    register_post_function_hook(wrapped, "/relu/0", 0, helpers.AddModule(ADD_VALUE))
     reference = wrapped(example_input)
 
     m_traced = torch.export.export(wrapped, args=(example_input,), strict=False)
@@ -59,7 +60,7 @@ def test_jit_trace():
     return_origin = model(example_input)
 
     wrapped = wrap_model(model)
-    insert_hook(wrapped, "hook_group", HookType.POST_HOOK, "/relu/0", 0, helpers.AddModule(ADD_VALUE))
+    register_post_function_hook(wrapped, "/relu/0", 0, helpers.AddModule(ADD_VALUE))
     reference = wrapped(example_input)
 
     m_traced = torch.jit.trace(wrapped, example_inputs=(example_input,), strict=False)
@@ -75,7 +76,7 @@ def test_compile_via_trace():
     model = helpers.ConvModel()
     return_origin = model(example_input)
     wrapped = wrap_model(model)
-    insert_hook(wrapped, "hook_group", HookType.POST_HOOK, "/relu/0", 0, helpers.AddModule(ADD_VALUE))
+    register_post_function_hook(wrapped, "/relu/0", 0, helpers.AddModule(ADD_VALUE))
     reference = wrapped(example_input)
     m_traced = torch.jit.trace(wrapped, example_inputs=(example_input,), strict=False)
     m_compiled = torch.compile(m_traced)
@@ -92,7 +93,7 @@ def test_export_onnx(tmp_path: Path):
     return_origin = model(example_input)
 
     wrapped = wrap_model(model)
-    insert_hook(wrapped, "hook_group", HookType.POST_HOOK, "/relu/0", 0, helpers.AddModule(ADD_VALUE))
+    register_post_function_hook(wrapped, "/relu/0", 0, helpers.AddModule(ADD_VALUE))
     reference = wrapped(example_input)
 
     onnx_file = tmp_path / "model.onnx"
@@ -149,20 +150,13 @@ def test_insert_hook(hook_type, target_name):
     assert is_wrapped(wrapped)
 
     hook = helpers.CallCount()
-    insert_hook(wrapped, "hook_group", hook_type, target_name, 0, hook)
+    if hook_type == HookType.PRE_HOOK:
+        register_pre_function_hook(wrapped, target_name, 0, hook)
+    else:
+        register_post_function_hook(wrapped, target_name, 0, hook)
+
     wrapped(example_input)
     assert hook.call_count == 1
-
-
-@pytest.mark.parametrize("hook_type", HookType)
-def test_insert_hook_twice_raise(hook_type):
-    model = helpers.ConvModel()
-    wrapped = wrap_model(model)
-
-    hook = helpers.CallCount()
-    insert_hook(wrapped, "hook_group", hook_type, "/relu/0", 0, hook)
-    with pytest.raises(RuntimeError, match="Hook already set for.*"):
-        insert_hook(wrapped, "hook_group", hook_type, "/relu/0", 0, hook)
 
 
 @pytest.mark.parametrize("hook_type", HookType)
@@ -172,8 +166,12 @@ def test_insert_nested_hook(hook_type: HookType):
     wrapped = wrap_model(model)
 
     hook = helpers.CallCount()
-    insert_hook(wrapped, "hook_group", hook_type, "/relu/0", 0, helpers.AddModule(2.0))
-    insert_hook(wrapped, "hook_group", hook_type, f"hook__hook_group__{hook_type.value}__-relu-0__0/add/0", 0, hook)
+    if hook_type == HookType.PRE_HOOK:
+        register_pre_function_hook(wrapped, "/relu/0", 0, helpers.AddModule(2.0))
+        register_pre_function_hook(wrapped, f"{hook_type.value}__-relu-0__0[0]/add/0", 0, hook)
+    else:
+        register_post_function_hook(wrapped, "/relu/0", 0, helpers.AddModule(2.0))
+        register_post_function_hook(wrapped, f"{hook_type.value}__-relu-0__0[0]/add/0", 0, hook)
     wrapped(example_input)
 
     assert hook.call_count == 1

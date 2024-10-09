@@ -12,8 +12,7 @@
 import torch
 from torch import nn
 
-from nncf.experimental.torch2.hook_executor.hook_storage import HookType
-from nncf.experimental.torch2.hook_executor.wrapper import insert_hook
+from nncf.experimental.torch2.hook_executor.wrapper import register_post_function_hook
 from nncf.experimental.torch2.hook_executor.wrapper import wrap_model
 
 
@@ -92,6 +91,6 @@ class SimpleModel(nn.Module):
 def get_wrapped_simple_model_with_hook() -> nn.Module:
     model = ConvModel()
     wrapped = wrap_model(model)
-    insert_hook(wrapped, "hook_group", HookType.POST_HOOK, "conv/conv2d/0", 0, AddModule([2.0]))
+    register_post_function_hook(wrapped, "conv/conv2d/0", 0, AddModule([2.0]))
     wrapped.eval()
     return wrapped

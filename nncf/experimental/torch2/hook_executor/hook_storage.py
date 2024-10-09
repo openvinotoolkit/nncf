@@ -9,9 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
+from __future__ import annotations
 
-import torch
+import weakref
+from enum import Enum
+from typing import Any, Optional
+
 from torch import nn
 
 
@@ -30,16 +33,46 @@ class HookType(Enum):
         return self.value
 
 
+class RemovableHookHandle:
+    """
+    A handle to manage removable hooks that are stored in a dictionary within a PyTorch ModuleDict.
+    The handle allows safe removal of specific hooks based on their unique identifiers.
+
+    :param storage_ref: A weak reference to the storage (an nn.ModuleDict) containing the hooks.
+    :param key: The key in the storage dict corresponding to a set of hooks.
+    :param id: A unique identifier for the specific hook within the set.
+    """
+
+    def __init__(self, storage: nn.ModuleDict, key: str, id: str) -> None:
+        self.storage_ref = weakref.ref(storage)
+        self.key = key
+        self.id = id
+
+    def remove(self) -> None:
+        """
+        Removes the hook with the specified id from the storage, if it exists.
+        If the set of hooks under a particular key becomes empty after removal, the key is also deleted.
+        Steps:
+        - Checks if the storage still exists (i.e., if it's not garbage collected).
+        - Verifies if the key and id are present in the storage.
+        - If hook exists, hook will removed.
+        - If no hooks left under the key, the key is also removed from the storage.
+        """
+        storage: Optional[nn.ModuleDict] = self.storage_ref()
+        if storage is not None and self.key in storage and self.id in storage[self.key]:
+            del storage[self.key][self.id]
+            if not storage[self.key]:
+                del storage[self.key]
+
+
 class HookStorage(nn.Module):
     """
     A module for storing and executing hooks.
 
     The storage structure is defined as:
-        storage[GROUP_NAME][HOOK_TYPE__OP_NAME__PORT_ID]
+        storage[hook_key][hook_id]
 
-    Order of module execution depends from group_name: sorted()
-
-    :param storage: A nested dictionary structure for storing hooks.
+    :param storage: A instance of nn.ModuleDict for storing hooks.
     """
 
     def __init__(self) -> None:
@@ -59,46 +92,99 @@ class HookStorage(nn.Module):
         :param port_id: The port ID the hook is associated with.
         :returns: Generate key for module dict.
         """
-
         return f"{hook_type.value}__{op_name}__{port_id}"
 
-    def insert_hook(self, group_name: str, hook_type: HookType, op_name: str, port_id: int, module: nn.Module) -> None:
+    @staticmethod
+    def _get_next_hook_id(hooks_dict: nn.ModuleDict) -> str:
         """
-        Insert a hook module into the storage.
+        Determines the next available hook ID by finding the highest existing hook ID and incrementing it.
 
-        :param group_name: The group name under which the hook is categorized.
+        :param hooks_dict: A dictionary containing existing hooks.
+        :returns: The next available hook ID as a string. Starts from '0' if no hooks exist.
+        """
+
+        if not hooks_dict:
+            return "0"
+        return str(max([int(k) for k in hooks_dict]) + 1)
+
+    def _insert_hook(self, hook_type: HookType, op_name: str, port_id: int, hook: nn.Module) -> RemovableHookHandle:
+        """
+        Inserts a hook into the storage under the appropriate key.
+
         :param hook_type: The type of the hook (pre-hook or post-hook).
         :param op_name: The operation name the hook is associated with.
         :param port_id: The port ID the hook is associated with.
-        :param module: The hook module to be stored.
+        :param hook: The hook module to be stored.
+        :returns: A handle that can be used to remove the hook later.
         """
+
         hook_key = self._generate_key(hook_type, op_name, port_id)
-        if group_name not in self.storage:
-            self.storage[group_name] = nn.ModuleDict()
-        if hook_key in self.storage[group_name]:
-            raise RuntimeError(f"Hook already set for {hook_type=} {group_name=} {op_name=} {port_id=}")
-        self.storage[group_name][hook_key] = module
+        if hook_key not in self.storage:
+            self.storage[hook_key] = nn.ModuleDict()
 
-    def execute_hook(self, hook_type: HookType, op_name: str, port_id: int, value: torch.Tensor) -> torch.Tensor:
+        hook_id = self._get_next_hook_id(self.storage[hook_key])
+        self.storage[hook_key][hook_id] = hook
+
+        return RemovableHookHandle(self.storage, hook_key, hook_id)
+
+    def register_pre_function_hook(self, op_name: str, port_id: int, hook: nn.Module) -> RemovableHookHandle:
         """
-        Execute hooks stored by group_name for a specific operation and port.
+        Registers a pre-function hook to be executed before a specific operation.
 
-        :param hook_type: The type of the hook to execute (pre-hook or post-hook).
         :param op_name: The operation name the hook is associated with.
         :param port_id: The port ID the hook is associated with.
-        :param value: The tensor value to be processed by the hook.
-        :returns: The processed tensor value after all applicable hooks have been applied.
+        :param hook: The pre-function hook to be stored.
+        :returns: A handle for removing the registered hook.
+        """
+        return self._insert_hook(HookType.PRE_HOOK, op_name, port_id, hook)
+
+    def register_post_function_hook(self, op_name: str, port_id: int, hook: nn.Module) -> RemovableHookHandle:
+        """
+        Registers a post-function hook to be executed before a specific operation.
+
+        :param op_name: The operation name the hook is associated with.
+        :param port_id: The port ID the hook is associated with.
+        :param hook: The pre-function hook to be stored.
+        :returns: A handle for removing the registered hook.
+        """
+        return self._insert_hook(HookType.POST_HOOK, op_name, port_id, hook)
+
+    def _execute_hooks(self, hook_type: HookType, op_name: str, port_id: int, value: Any) -> Any:
+        """
+        Executes all hooks of a given type (pre or post) for a specific operation and port,
+        passing and potentially modifying a value.
+
+        :param hook_type: The type of hook to execute (pre-hook or post-hook).
+        :param op_name: The operation name the hooks are associated with.
+        :param port_id: The port ID the hooks are associated with.
+        :param value: The input value to be passed through the hooks.
+        :returns: The modified value after all hooks have been applied.
         """
         hook_key = self._generate_key(hook_type, op_name, port_id)
-        for group_name in sorted(self.storage):
-            if hook_key in self.storage[group_name]:
-                value = self.storage[group_name][hook_key](value)
+        if hook_key not in self.storage:
+            return value
+        for hook in self.storage[hook_key].values():
+            value = hook(value)
         return value
 
-    def remove_group(self, group_name: str) -> None:
+    def execute_pre_function_hooks(self, op_name: str, port_id: int, value: Any) -> Any:
         """
-        Remove all hooks associated with a specific group name.
+        Executes all pre-function hooks for a given operation and port.
 
-        :param group_name: The group name to remove from the storage.
+        :param op_name: The operation name the hooks are associated with.
+        :param port_id: The port ID the hooks are associated with.
+        :param value: The input value to be passed through the pre-function hooks.
+        :returns: The value after all pre-function hooks have been executed.
         """
-        self.storage.pop(group_name)
+        return self._execute_hooks(HookType.PRE_HOOK, op_name, port_id, value)
+
+    def execute_post_function_hooks(self, op_name: str, port_id: int, value: Any) -> Any:
+        """
+        Executes all post-function hooks for a given operation and port.
+
+        :param op_name: The operation name the hooks are associated with.
+        :param port_id: The port ID the hooks are associated with.
+        :param value: The input value to be passed through the pre-function hooks.
+        :returns: The value after all post-function hooks have been executed.
+        """
+        return self._execute_hooks(HookType.POST_HOOK, op_name, port_id, value)

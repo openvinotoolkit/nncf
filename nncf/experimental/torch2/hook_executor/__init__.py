@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from nncf.experimental.torch2.hook_executor.wrapper import get_hook_storage as get_hook_storage
-from nncf.experimental.torch2.hook_executor.wrapper import insert_hook as insert_hook
 from nncf.experimental.torch2.hook_executor.wrapper import is_wrapped as is_wrapped
-from nncf.experimental.torch2.hook_executor.wrapper import remove_group as remove_group
+from nncf.experimental.torch2.hook_executor.wrapper import register_post_function_hook as register_post_function_hook
+from nncf.experimental.torch2.hook_executor.wrapper import register_pre_function_hook as register_pre_function_hook
 from nncf.experimental.torch2.hook_executor.wrapper import wrap_model as wrap_model

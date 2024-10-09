@@ -19,15 +19,15 @@ from typing import Any, Callable, Dict, Tuple, cast
 from torch import nn
 
 import nncf
-from nncf.experimental.torch2.hook_executor.hook_executor_mode import HookExecutorMode
+from nncf.experimental.torch2.hook_executor.hook_executor_mode import FunctionHookMode
 from nncf.experimental.torch2.hook_executor.hook_storage import HookStorage
-from nncf.experimental.torch2.hook_executor.hook_storage import HookType
+from nncf.experimental.torch2.hook_executor.hook_storage import RemovableHookHandle
 
-ATR_HOOK_STORAGE = "__hooks"
+ATR_HOOK_STORAGE = "__nncf_hooks"
 
 
 class ForwardWithHooks:
-    """Class to wrap forward function of nn.Module, to forward function of the model with enabled HookExecutorMode"""
+    """Class to wrap forward function of nn.Module, to forward function of the model with enabled FunctionHookMode"""
 
     __slots__ = "_func", "__dict__", "__weakref__"
     _func: Callable[..., Any]
@@ -46,7 +46,7 @@ class ForwardWithHooks:
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         model = cast(nn.Module, self._func.__self__)  # type: ignore[attr-defined]
-        with HookExecutorMode(model=model, hook_storage=get_hook_storage(model)) as ctx:
+        with FunctionHookMode(model=model, hook_storage=get_hook_storage(model)) as ctx:
             args, kwargs = ctx.process_model_inputs(args, kwargs)
             outputs = self._func(*args, **kwargs)
             outputs = ctx.process_model_outputs(outputs)
@@ -93,7 +93,7 @@ class ForwardWithHooks:
 class ReplicateForDataParallel:
     """
     Class to wrap _replicate_for_data_parallel function of nn.Module,
-    to correctly wrap forward with enabled HookExecutorMode.
+    to correctly wrap forward with enabled FunctionHookMode.
     """
 
     __slots__ = "_func", "__dict__", "__weakref__"
@@ -155,7 +155,7 @@ def wrap_model(model: nn.Module) -> nn.Module:
 
     This function modifies the given model by:
     1. Replacing the model's `forward` method with a wrapped version (`ForwardWithHooks`) that allows
-       additional hooks to be executed during the forward pass by using HookExecutorMode.
+       additional hooks to be executed during the forward pass by using FunctionHookMode.
     2. Wrapping the model's `_replicate_for_data_parallel` method with `ReplicateForDataParallel`,
        which allows custom behavior when the model is replicated across multiple devices (e.g., for
        data parallelism).
@@ -201,19 +201,30 @@ def get_hook_storage(model: nn.Module) -> HookStorage:
     return cast(HookStorage, getattr(model, ATR_HOOK_STORAGE))
 
 
-def insert_hook(
-    model: nn.Module, group_name: str, hook_type: HookType, op_name: str, port_id: int, module: nn.Module
-) -> None:
+def register_pre_function_hook(model: nn.Module, op_name: str, port_id: int, hook: nn.Module) -> RemovableHookHandle:
     """
-    Inserts a hook into the model's `HookStorage` for a specified operation.
+    Registers a pre-function hook for a specific operation in the model.
+
+    :param model: The model to register the hook to.
+    :param op_name: The name of the operation associated with the hook.
+    :param port_id: The port ID associated with the hook.
+    :param hook: The pre-function hook to be executed.
+
+    :returns: A handle that can be used to remove the hook later.
     """
-    storage = get_hook_storage(model)
-    storage.insert_hook(group_name, hook_type, op_name, port_id, module)
+    hook_storage = get_hook_storage(model)
+    return hook_storage.register_pre_function_hook(op_name, port_id, hook)
 
 
-def remove_group(model: nn.Module, group_name: str) -> None:
+def register_post_function_hook(model: nn.Module, op_name: str, port_id: int, hook: nn.Module):
     """
-    Removes all hooks associated with a specific group from the model's `HookStorage`.
+    Registers a post-function hook for a specific operation in the model.
+
+    :param model: The model to register the hook to.
+    :param op_name: The name of the operation associated with the hook.
+    :param port_id: The port ID associated with the hook.
+    :param hook: The pre-function hook to be executed.
+    :returns: A handle that can be used to remove the hook later.
     """
-    storage = get_hook_storage(model)
-    storage.remove_group(group_name)
+    hook_storage = get_hook_storage(model)
+    return hook_storage.register_post_function_hook(op_name, port_id, hook)
