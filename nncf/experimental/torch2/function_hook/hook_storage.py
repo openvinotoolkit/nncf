@@ -53,10 +53,8 @@ class HookStorage(nn.Module):
     """
     A module for storing and executing hooks.
 
-    The storage structure is defined as:
-        storage[hook_key][hook_id]
-
-    :param storage: A instance of nn.ModuleDict for storing hooks.
+    :param pre_hooks: A instance of nn.ModuleDict for storing pre-hooks.
+    :param post_hooks: A instance of nn.ModuleDict for storing post-hooks.
     """
 
     def __init__(self) -> None:
