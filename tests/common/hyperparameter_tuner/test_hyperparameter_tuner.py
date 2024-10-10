@@ -430,3 +430,44 @@ def test_find_best_combination(
     combination_score_func = lambda x: scores[x]
     actual_combination_key = find_best_combination(combinations, combination_score_func, param_settings)
     assert expected_combination_key == actual_combination_key
+
+
+@pytest.mark.parametrize(
+    "params, number_combinations, number_considered_combinations",
+    [
+        # two_parameter-scores_different
+        (  # param_settings
+            {
+                "param_1": [0, 1, 2],
+                "param_2": [True, False],
+            },
+            # number of combinations are considered
+            # 2 combinations is for default value for each parameter,
+            # 5 combinations is sum number of values for each param
+            2 + 5,
+        ),
+        # three_parameter-scores_different
+        (  # param_settings
+            {
+                "param_1": [0, 1],
+                "param_2": [2, 3],
+                "param_3": [4, 5],
+            },
+            # number of combinations are considered
+            # 3 combinations is for default value for each parameter,
+            # 6 combinations is sum number of values for each param
+            3 + 6,
+        ),
+    ],
+)
+def test_number_of_combinations_considered(params, number_considered_combinations):
+    score_f_called_cnt = 0
+
+    def score_f(key):
+        nonlocal score_f_called_cnt
+        score_f_called_cnt += 1
+        return 1
+
+    combinations = create_combinations(params)
+    find_best_combination(combinations, score_f, params)
+    assert number_considered_combinations == score_f_called_cnt
