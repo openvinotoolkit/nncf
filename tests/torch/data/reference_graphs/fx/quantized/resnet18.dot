@@ -207,7 +207,7 @@ strict digraph  {
 "3 conv2d_scale_0_updated_constant0" -> "6 mul_tensor"  [label="(64, 1, 1, 1)", style=solid];
 "4 compressed_weight_updated_constant0" -> "6 mul_tensor"  [label="(64, 3, 7, 7)", style=solid];
 "5 conv1_weight_bias_0_0" -> "7 conv2d"  [label="(64,)", style=solid];
-"6 mul_tensor" -> "7 conv2d"  [label=None, style=solid];
+"6 mul_tensor" -> "7 conv2d"  [label="(64, 3, 7, 7)", style=solid];
 "7 conv2d" -> "8 relu_"  [label="(1, 64, 112, 112)", style=solid];
 "8 relu_" -> "9 quantize_per_tensor_default_1"  [label="(1, 64, 112, 112)", style=solid];
 "9 quantize_per_tensor_default_1" -> "10 dequantize_per_tensor_default_1"  [label="(1, 64, 112, 112)", style=solid];
@@ -217,7 +217,7 @@ strict digraph  {
 "12 conv2d_1_scale_0_updated_constant0" -> "15 mul_tensor_1"  [label="(64, 1, 1, 1)", style=solid];
 "13 compressed_weight_updated_constant1" -> "15 mul_tensor_1"  [label="(64, 64, 3, 3)", style=solid];
 "14 layer1_0_conv1_weight_bias_0_0" -> "16 conv2d_1"  [label="(64,)", style=solid];
-"15 mul_tensor_1" -> "16 conv2d_1"  [label=None, style=solid];
+"15 mul_tensor_1" -> "16 conv2d_1"  [label="(64, 64, 3, 3)", style=solid];
 "16 conv2d_1" -> "17 relu__1"  [label="(1, 64, 56, 56)", style=solid];
 "17 relu__1" -> "18 quantize_per_tensor_default_2"  [label="(1, 64, 56, 56)", style=solid];
 "18 quantize_per_tensor_default_2" -> "19 dequantize_per_tensor_default_2"  [label="(1, 64, 56, 56)", style=solid];
@@ -225,7 +225,7 @@ strict digraph  {
 "20 conv2d_2_scale_0_updated_constant0" -> "23 mul_tensor_2"  [label="(64, 1, 1, 1)", style=solid];
 "21 compressed_weight_updated_constant2" -> "23 mul_tensor_2"  [label="(64, 64, 3, 3)", style=solid];
 "22 layer1_0_conv2_weight_bias_0_0" -> "24 conv2d_2"  [label="(64,)", style=solid];
-"23 mul_tensor_2" -> "24 conv2d_2"  [label=None, style=solid];
+"23 mul_tensor_2" -> "24 conv2d_2"  [label="(64, 64, 3, 3)", style=solid];
 "24 conv2d_2" -> "25 quantize_per_tensor_default_3"  [label="(1, 64, 56, 56)", style=solid];
 "25 quantize_per_tensor_default_3" -> "26 dequantize_per_tensor_default_3"  [label="(1, 64, 56, 56)", style=solid];
 "26 dequantize_per_tensor_default_3" -> "27 add_"  [label="(1, 64, 56, 56)", style=solid];
@@ -238,7 +238,7 @@ strict digraph  {
 "32 conv2d_3_scale_0_updated_constant0" -> "35 mul_tensor_3"  [label="(64, 1, 1, 1)", style=solid];
 "33 compressed_weight_updated_constant3" -> "35 mul_tensor_3"  [label="(64, 64, 3, 3)", style=solid];
 "34 layer1_1_conv1_weight_bias_0_0" -> "36 conv2d_3"  [label="(64,)", style=solid];
-"35 mul_tensor_3" -> "36 conv2d_3"  [label=None, style=solid];
+"35 mul_tensor_3" -> "36 conv2d_3"  [label="(64, 64, 3, 3)", style=solid];
 "36 conv2d_3" -> "37 relu__3"  [label="(1, 64, 56, 56)", style=solid];
 "37 relu__3" -> "38 quantize_per_tensor_default_5"  [label="(1, 64, 56, 56)", style=solid];
 "38 quantize_per_tensor_default_5" -> "39 dequantize_per_tensor_default_6"  [label="(1, 64, 56, 56)", style=solid];
@@ -246,7 +246,7 @@ strict digraph  {
 "40 conv2d_4_scale_0_updated_constant0" -> "43 mul_tensor_4"  [label="(64, 1, 1, 1)", style=solid];
 "41 compressed_weight_updated_constant4" -> "43 mul_tensor_4"  [label="(64, 64, 3, 3)", style=solid];
 "42 layer1_1_conv2_weight_bias_0_0" -> "44 conv2d_4"  [label="(64,)", style=solid];
-"43 mul_tensor_4" -> "44 conv2d_4"  [label=None, style=solid];
+"43 mul_tensor_4" -> "44 conv2d_4"  [label="(64, 64, 3, 3)", style=solid];
 "44 conv2d_4" -> "45 quantize_per_tensor_default_6"  [label="(1, 64, 56, 56)", style=solid];
 "45 quantize_per_tensor_default_6" -> "46 dequantize_per_tensor_default_7"  [label="(1, 64, 56, 56)", style=solid];
 "46 dequantize_per_tensor_default_7" -> "47 add__1"  [label="(1, 64, 56, 56)", style=solid];
@@ -259,7 +259,7 @@ strict digraph  {
 "52 conv2d_5_scale_0_updated_constant0" -> "55 mul_tensor_5"  [label="(128, 1, 1, 1)", style=solid];
 "53 compressed_weight_updated_constant5" -> "55 mul_tensor_5"  [label="(128, 64, 3, 3)", style=solid];
 "54 layer2_0_conv1_weight_bias_0_0" -> "56 conv2d_5"  [label="(128,)", style=solid];
-"55 mul_tensor_5" -> "56 conv2d_5"  [label=None, style=solid];
+"55 mul_tensor_5" -> "56 conv2d_5"  [label="(128, 64, 3, 3)", style=solid];
 "56 conv2d_5" -> "57 relu__5"  [label="(1, 128, 28, 28)", style=solid];
 "57 relu__5" -> "58 quantize_per_tensor_default_8"  [label="(1, 128, 28, 28)", style=solid];
 "58 quantize_per_tensor_default_8" -> "59 dequantize_per_tensor_default_10"  [label="(1, 128, 28, 28)", style=solid];
@@ -267,14 +267,14 @@ strict digraph  {
 "60 conv2d_6_scale_0_updated_constant0" -> "63 mul_tensor_6"  [label="(128, 1, 1, 1)", style=solid];
 "61 compressed_weight_updated_constant6" -> "63 mul_tensor_6"  [label="(128, 128, 3, 3)", style=solid];
 "62 layer2_0_conv2_weight_bias_0_0" -> "64 conv2d_6"  [label="(128,)", style=solid];
-"63 mul_tensor_6" -> "64 conv2d_6"  [label=None, style=solid];
+"63 mul_tensor_6" -> "64 conv2d_6"  [label="(128, 128, 3, 3)", style=solid];
 "64 conv2d_6" -> "65 quantize_per_tensor_default_9"  [label="(1, 128, 28, 28)", style=solid];
 "65 quantize_per_tensor_default_9" -> "66 dequantize_per_tensor_default_11"  [label="(1, 128, 28, 28)", style=solid];
 "66 dequantize_per_tensor_default_11" -> "74 add__2"  [label="(1, 128, 28, 28)", style=solid];
 "67 conv2d_7_scale_0_updated_constant0" -> "70 mul_tensor_7"  [label="(128, 1, 1, 1)", style=solid];
 "68 compressed_weight_updated_constant7" -> "70 mul_tensor_7"  [label="(128, 64, 1, 1)", style=solid];
 "69 layer2_0_downsample_0_weight_bias_0_0" -> "71 conv2d_7"  [label="(128,)", style=solid];
-"70 mul_tensor_7" -> "71 conv2d_7"  [label=None, style=solid];
+"70 mul_tensor_7" -> "71 conv2d_7"  [label="(128, 64, 1, 1)", style=solid];
 "71 conv2d_7" -> "72 quantize_per_tensor_default_10"  [label="(1, 128, 28, 28)", style=solid];
 "72 quantize_per_tensor_default_10" -> "73 dequantize_per_tensor_default_12"  [label="(1, 128, 28, 28)", style=solid];
 "73 dequantize_per_tensor_default_12" -> "74 add__2"  [label="(1, 128, 28, 28)", style=solid];
@@ -287,7 +287,7 @@ strict digraph  {
 "79 conv2d_8_scale_0_updated_constant0" -> "82 mul_tensor_8"  [label="(128, 1, 1, 1)", style=solid];
 "80 compressed_weight_updated_constant8" -> "82 mul_tensor_8"  [label="(128, 128, 3, 3)", style=solid];
 "81 layer2_1_conv1_weight_bias_0_0" -> "83 conv2d_8"  [label="(128,)", style=solid];
-"82 mul_tensor_8" -> "83 conv2d_8"  [label=None, style=solid];
+"82 mul_tensor_8" -> "83 conv2d_8"  [label="(128, 128, 3, 3)", style=solid];
 "83 conv2d_8" -> "84 relu__7"  [label="(1, 128, 28, 28)", style=solid];
 "84 relu__7" -> "85 quantize_per_tensor_default_12"  [label="(1, 128, 28, 28)", style=solid];
 "85 quantize_per_tensor_default_12" -> "86 dequantize_per_tensor_default_15"  [label="(1, 128, 28, 28)", style=solid];
@@ -295,7 +295,7 @@ strict digraph  {
 "87 conv2d_9_scale_0_updated_constant0" -> "90 mul_tensor_9"  [label="(128, 1, 1, 1)", style=solid];
 "88 compressed_weight_updated_constant9" -> "90 mul_tensor_9"  [label="(128, 128, 3, 3)", style=solid];
 "89 layer2_1_conv2_weight_bias_0_0" -> "91 conv2d_9"  [label="(128,)", style=solid];
-"90 mul_tensor_9" -> "91 conv2d_9"  [label=None, style=solid];
+"90 mul_tensor_9" -> "91 conv2d_9"  [label="(128, 128, 3, 3)", style=solid];
 "91 conv2d_9" -> "92 quantize_per_tensor_default_13"  [label="(1, 128, 28, 28)", style=solid];
 "92 quantize_per_tensor_default_13" -> "93 dequantize_per_tensor_default_16"  [label="(1, 128, 28, 28)", style=solid];
 "93 dequantize_per_tensor_default_16" -> "94 add__3"  [label="(1, 128, 28, 28)", style=solid];
@@ -308,7 +308,7 @@ strict digraph  {
 "99 conv2d_10_scale_0_updated_constant0" -> "102 mul_tensor_10"  [label="(256, 1, 1, 1)", style=solid];
 "100 compressed_weight_updated_constant10" -> "102 mul_tensor_10"  [label="(256, 128, 3, 3)", style=solid];
 "101 layer3_0_conv1_weight_bias_0_0" -> "103 conv2d_10"  [label="(256,)", style=solid];
-"102 mul_tensor_10" -> "103 conv2d_10"  [label=None, style=solid];
+"102 mul_tensor_10" -> "103 conv2d_10"  [label="(256, 128, 3, 3)", style=solid];
 "103 conv2d_10" -> "104 relu__9"  [label="(1, 256, 14, 14)", style=solid];
 "104 relu__9" -> "105 quantize_per_tensor_default_15"  [label="(1, 256, 14, 14)", style=solid];
 "105 quantize_per_tensor_default_15" -> "106 dequantize_per_tensor_default_19"  [label="(1, 256, 14, 14)", style=solid];
@@ -316,14 +316,14 @@ strict digraph  {
 "107 conv2d_11_scale_0_updated_constant0" -> "110 mul_tensor_11"  [label="(256, 1, 1, 1)", style=solid];
 "108 compressed_weight_updated_constant11" -> "110 mul_tensor_11"  [label="(256, 256, 3, 3)", style=solid];
 "109 layer3_0_conv2_weight_bias_0_0" -> "111 conv2d_11"  [label="(256,)", style=solid];
-"110 mul_tensor_11" -> "111 conv2d_11"  [label=None, style=solid];
+"110 mul_tensor_11" -> "111 conv2d_11"  [label="(256, 256, 3, 3)", style=solid];
 "111 conv2d_11" -> "112 quantize_per_tensor_default_16"  [label="(1, 256, 14, 14)", style=solid];
 "112 quantize_per_tensor_default_16" -> "113 dequantize_per_tensor_default_20"  [label="(1, 256, 14, 14)", style=solid];
 "113 dequantize_per_tensor_default_20" -> "121 add__4"  [label="(1, 256, 14, 14)", style=solid];
 "114 conv2d_12_scale_0_updated_constant0" -> "117 mul_tensor_12"  [label="(256, 1, 1, 1)", style=solid];
 "115 compressed_weight_updated_constant12" -> "117 mul_tensor_12"  [label="(256, 128, 1, 1)", style=solid];
 "116 layer3_0_downsample_0_weight_bias_0_0" -> "118 conv2d_12"  [label="(256,)", style=solid];
-"117 mul_tensor_12" -> "118 conv2d_12"  [label=None, style=solid];
+"117 mul_tensor_12" -> "118 conv2d_12"  [label="(256, 128, 1, 1)", style=solid];
 "118 conv2d_12" -> "119 quantize_per_tensor_default_17"  [label="(1, 256, 14, 14)", style=solid];
 "119 quantize_per_tensor_default_17" -> "120 dequantize_per_tensor_default_21"  [label="(1, 256, 14, 14)", style=solid];
 "120 dequantize_per_tensor_default_21" -> "121 add__4"  [label="(1, 256, 14, 14)", style=solid];
@@ -336,7 +336,7 @@ strict digraph  {
 "126 conv2d_13_scale_0_updated_constant0" -> "129 mul_tensor_13"  [label="(256, 1, 1, 1)", style=solid];
 "127 compressed_weight_updated_constant13" -> "129 mul_tensor_13"  [label="(256, 256, 3, 3)", style=solid];
 "128 layer3_1_conv1_weight_bias_0_0" -> "130 conv2d_13"  [label="(256,)", style=solid];
-"129 mul_tensor_13" -> "130 conv2d_13"  [label=None, style=solid];
+"129 mul_tensor_13" -> "130 conv2d_13"  [label="(256, 256, 3, 3)", style=solid];
 "130 conv2d_13" -> "131 relu__11"  [label="(1, 256, 14, 14)", style=solid];
 "131 relu__11" -> "132 quantize_per_tensor_default_19"  [label="(1, 256, 14, 14)", style=solid];
 "132 quantize_per_tensor_default_19" -> "133 dequantize_per_tensor_default_24"  [label="(1, 256, 14, 14)", style=solid];
@@ -344,7 +344,7 @@ strict digraph  {
 "134 conv2d_14_scale_0_updated_constant0" -> "137 mul_tensor_14"  [label="(256, 1, 1, 1)", style=solid];
 "135 compressed_weight_updated_constant14" -> "137 mul_tensor_14"  [label="(256, 256, 3, 3)", style=solid];
 "136 layer3_1_conv2_weight_bias_0_0" -> "138 conv2d_14"  [label="(256,)", style=solid];
-"137 mul_tensor_14" -> "138 conv2d_14"  [label=None, style=solid];
+"137 mul_tensor_14" -> "138 conv2d_14"  [label="(256, 256, 3, 3)", style=solid];
 "138 conv2d_14" -> "139 quantize_per_tensor_default_20"  [label="(1, 256, 14, 14)", style=solid];
 "139 quantize_per_tensor_default_20" -> "140 dequantize_per_tensor_default_25"  [label="(1, 256, 14, 14)", style=solid];
 "140 dequantize_per_tensor_default_25" -> "141 add__5"  [label="(1, 256, 14, 14)", style=solid];
@@ -357,7 +357,7 @@ strict digraph  {
 "146 conv2d_15_scale_0_updated_constant0" -> "149 mul_tensor_15"  [label="(512, 1, 1, 1)", style=solid];
 "147 compressed_weight_updated_constant15" -> "149 mul_tensor_15"  [label="(512, 256, 3, 3)", style=solid];
 "148 layer4_0_conv1_weight_bias_0_0" -> "150 conv2d_15"  [label="(512,)", style=solid];
-"149 mul_tensor_15" -> "150 conv2d_15"  [label=None, style=solid];
+"149 mul_tensor_15" -> "150 conv2d_15"  [label="(512, 256, 3, 3)", style=solid];
 "150 conv2d_15" -> "151 relu__13"  [label="(1, 512, 7, 7)", style=solid];
 "151 relu__13" -> "152 quantize_per_tensor_default_22"  [label="(1, 512, 7, 7)", style=solid];
 "152 quantize_per_tensor_default_22" -> "153 dequantize_per_tensor_default_28"  [label="(1, 512, 7, 7)", style=solid];
@@ -365,14 +365,14 @@ strict digraph  {
 "154 conv2d_16_scale_0_updated_constant0" -> "157 mul_tensor_16"  [label="(512, 1, 1, 1)", style=solid];
 "155 compressed_weight_updated_constant16" -> "157 mul_tensor_16"  [label="(512, 512, 3, 3)", style=solid];
 "156 layer4_0_conv2_weight_bias_0_0" -> "158 conv2d_16"  [label="(512,)", style=solid];
-"157 mul_tensor_16" -> "158 conv2d_16"  [label=None, style=solid];
+"157 mul_tensor_16" -> "158 conv2d_16"  [label="(512, 512, 3, 3)", style=solid];
 "158 conv2d_16" -> "159 quantize_per_tensor_default_23"  [label="(1, 512, 7, 7)", style=solid];
 "159 quantize_per_tensor_default_23" -> "160 dequantize_per_tensor_default_29"  [label="(1, 512, 7, 7)", style=solid];
 "160 dequantize_per_tensor_default_29" -> "168 add__6"  [label="(1, 512, 7, 7)", style=solid];
 "161 conv2d_17_scale_0_updated_constant0" -> "164 mul_tensor_17"  [label="(512, 1, 1, 1)", style=solid];
 "162 compressed_weight_updated_constant17" -> "164 mul_tensor_17"  [label="(512, 256, 1, 1)", style=solid];
 "163 layer4_0_downsample_0_weight_bias_0_0" -> "165 conv2d_17"  [label="(512,)", style=solid];
-"164 mul_tensor_17" -> "165 conv2d_17"  [label=None, style=solid];
+"164 mul_tensor_17" -> "165 conv2d_17"  [label="(512, 256, 1, 1)", style=solid];
 "165 conv2d_17" -> "166 quantize_per_tensor_default_24"  [label="(1, 512, 7, 7)", style=solid];
 "166 quantize_per_tensor_default_24" -> "167 dequantize_per_tensor_default_30"  [label="(1, 512, 7, 7)", style=solid];
 "167 dequantize_per_tensor_default_30" -> "168 add__6"  [label="(1, 512, 7, 7)", style=solid];
@@ -385,7 +385,7 @@ strict digraph  {
 "173 conv2d_18_scale_0_updated_constant0" -> "176 mul_tensor_18"  [label="(512, 1, 1, 1)", style=solid];
 "174 compressed_weight_updated_constant18" -> "176 mul_tensor_18"  [label="(512, 512, 3, 3)", style=solid];
 "175 layer4_1_conv1_weight_bias_0_0" -> "177 conv2d_18"  [label="(512,)", style=solid];
-"176 mul_tensor_18" -> "177 conv2d_18"  [label=None, style=solid];
+"176 mul_tensor_18" -> "177 conv2d_18"  [label="(512, 512, 3, 3)", style=solid];
 "177 conv2d_18" -> "178 relu__15"  [label="(1, 512, 7, 7)", style=solid];
 "178 relu__15" -> "179 quantize_per_tensor_default_26"  [label="(1, 512, 7, 7)", style=solid];
 "179 quantize_per_tensor_default_26" -> "180 dequantize_per_tensor_default_33"  [label="(1, 512, 7, 7)", style=solid];
@@ -393,7 +393,7 @@ strict digraph  {
 "181 conv2d_19_scale_0_updated_constant0" -> "184 mul_tensor_19"  [label="(512, 1, 1, 1)", style=solid];
 "182 compressed_weight_updated_constant19" -> "184 mul_tensor_19"  [label="(512, 512, 3, 3)", style=solid];
 "183 layer4_1_conv2_weight_bias_0_0" -> "185 conv2d_19"  [label="(512,)", style=solid];
-"184 mul_tensor_19" -> "185 conv2d_19"  [label=None, style=solid];
+"184 mul_tensor_19" -> "185 conv2d_19"  [label="(512, 512, 3, 3)", style=solid];
 "185 conv2d_19" -> "186 quantize_per_tensor_default_27"  [label="(1, 512, 7, 7)", style=solid];
 "186 quantize_per_tensor_default_27" -> "187 dequantize_per_tensor_default_34"  [label="(1, 512, 7, 7)", style=solid];
 "187 dequantize_per_tensor_default_34" -> "188 add__7"  [label="(1, 512, 7, 7)", style=solid];
@@ -408,6 +408,6 @@ strict digraph  {
 "196 linear_scale_0_updated_constant0" -> "199 mul_tensor_20"  [label="(1000, 1)", style=solid];
 "197 compressed_weight_updated_constant20" -> "199 mul_tensor_20"  [label="(1000, 512)", style=solid];
 "198 _param_constant61_0_0" -> "200 linear"  [label="(1000,)", style=solid];
-"199 mul_tensor_20" -> "200 linear"  [label=None, style=solid];
+"199 mul_tensor_20" -> "200 linear"  [label="(1000, 512)", style=solid];
 "200 linear" -> "201 output"  [label="(1, 1000)", style=solid];
 }

@@ -887,7 +887,7 @@ strict digraph  {
 "3 conv2d_scale_0_updated_constant0" -> "6 mul_tensor"  [label="(768, 1, 1, 1)", style=solid];
 "4 compressed_weight_updated_constant0" -> "6 mul_tensor"  [label="(768, 3, 16, 16)", style=solid];
 "5 _param_constant1_0_0" -> "7 conv2d"  [label="(768,)", style=solid];
-"6 mul_tensor" -> "7 conv2d"  [label=None, style=solid];
+"6 mul_tensor" -> "7 conv2d"  [label="(768, 3, 16, 16)", style=solid];
 "7 conv2d" -> "8 reshape"  [label="(1, 768, 14, 14)", style=solid];
 "8 reshape" -> "9 permute"  [label="(1, 768, 196)", style=solid];
 "9 permute" -> "12 cat"  [label="(1, 196, 768)", style=solid];
@@ -908,7 +908,7 @@ strict digraph  {
 "23 linear_scale_0_updated_constant0" -> "26 mul_tensor_1"  [label="(2304, 1)", style=solid];
 "24 compressed_weight_updated_constant1" -> "26 mul_tensor_1"  [label="(2304, 768)", style=solid];
 "25 _param_constant7_0_0" -> "27 linear"  [label="(2304,)", style=solid];
-"26 mul_tensor_1" -> "27 linear"  [label=None, style=solid];
+"26 mul_tensor_1" -> "27 linear"  [label="(2304, 768)", style=solid];
 "27 linear" -> "28 unflatten"  [label="(197, 1, 2304)", style=solid];
 "28 unflatten" -> "29 unsqueeze"  [label="(197, 1, 3, 768)", style=solid];
 "29 unsqueeze" -> "30 transpose_1"  [label="(1, 197, 1, 3, 768)", style=solid];
@@ -942,7 +942,7 @@ strict digraph  {
 "55 linear_1_scale_0_updated_constant0" -> "58 mul_tensor_2"  [label="(768, 1)", style=solid];
 "56 compressed_weight_updated_constant2" -> "58 mul_tensor_2"  [label="(768, 768)", style=solid];
 "57 _param_constant9_0_0" -> "59 linear_1"  [label="(768,)", style=solid];
-"58 mul_tensor_2" -> "59 linear_1"  [label=None, style=solid];
+"58 mul_tensor_2" -> "59 linear_1"  [label="(768, 768)", style=solid];
 "59 linear_1" -> "60 view_7"  [label="(197, 768)", style=solid];
 "60 view_7" -> "61 transpose_5"  [label="(197, 1, 768)", style=solid];
 "61 transpose_5" -> "62 dropout_1"  [label="(1, 197, 768)", style=solid];
@@ -958,7 +958,7 @@ strict digraph  {
 "70 linear_2_scale_0_updated_constant0" -> "73 mul_tensor_3"  [label="(3072, 1)", style=solid];
 "71 compressed_weight_updated_constant3" -> "73 mul_tensor_3"  [label="(3072, 768)", style=solid];
 "72 _param_constant13_0_0" -> "74 linear_2"  [label="(3072,)", style=solid];
-"73 mul_tensor_3" -> "74 linear_2"  [label=None, style=solid];
+"73 mul_tensor_3" -> "74 linear_2"  [label="(3072, 768)", style=solid];
 "74 linear_2" -> "75 gelu"  [label="(1, 197, 3072)", style=solid];
 "75 gelu" -> "76 dropout_2"  [label="(1, 197, 3072)", style=solid];
 "76 dropout_2" -> "77 dropout_2_0_0_nncf_smooth_quant_0"  [label="(1, 197, 3072)", style=solid];
@@ -968,7 +968,7 @@ strict digraph  {
 "80 linear_3_scale_0_updated_constant0" -> "83 mul_tensor_4"  [label="(768, 1)", style=solid];
 "81 compressed_weight_updated_constant4" -> "83 mul_tensor_4"  [label="(768, 3072)", style=solid];
 "82 _param_constant15_0_0" -> "84 linear_3"  [label="(768,)", style=solid];
-"83 mul_tensor_4" -> "84 linear_3"  [label=None, style=solid];
+"83 mul_tensor_4" -> "84 linear_3"  [label="(768, 3072)", style=solid];
 "84 linear_3" -> "85 dropout_3"  [label="(1, 197, 768)", style=solid];
 "85 dropout_3" -> "86 add_2"  [label="(1, 197, 768)", style=solid];
 "86 add_2" -> "89 layer_norm_2"  [label="(1, 197, 768)", style=solid];
@@ -983,7 +983,7 @@ strict digraph  {
 "94 linear_4_scale_0_updated_constant0" -> "97 mul_tensor_5"  [label="(2304, 1)", style=solid];
 "95 compressed_weight_updated_constant5" -> "97 mul_tensor_5"  [label="(2304, 768)", style=solid];
 "96 _param_constant19_0_0" -> "98 linear_4"  [label="(2304,)", style=solid];
-"97 mul_tensor_5" -> "98 linear_4"  [label=None, style=solid];
+"97 mul_tensor_5" -> "98 linear_4"  [label="(2304, 768)", style=solid];
 "98 linear_4" -> "99 unflatten_1"  [label="(197, 1, 2304)", style=solid];
 "99 unflatten_1" -> "100 unsqueeze_1"  [label="(197, 1, 3, 768)", style=solid];
 "100 unsqueeze_1" -> "101 transpose_7"  [label="(1, 197, 1, 3, 768)", style=solid];
@@ -1017,7 +1017,7 @@ strict digraph  {
 "126 linear_5_scale_0_updated_constant0" -> "129 mul_tensor_6"  [label="(768, 1)", style=solid];
 "127 compressed_weight_updated_constant6" -> "129 mul_tensor_6"  [label="(768, 768)", style=solid];
 "128 _param_constant21_0_0" -> "130 linear_5"  [label="(768,)", style=solid];
-"129 mul_tensor_6" -> "130 linear_5"  [label=None, style=solid];
+"129 mul_tensor_6" -> "130 linear_5"  [label="(768, 768)", style=solid];
 "130 linear_5" -> "131 view_15"  [label="(197, 768)", style=solid];
 "131 view_15" -> "132 transpose_11"  [label="(197, 1, 768)", style=solid];
 "132 transpose_11" -> "133 dropout_4"  [label="(1, 197, 768)", style=solid];
@@ -1033,7 +1033,7 @@ strict digraph  {
 "141 linear_6_scale_0_updated_constant0" -> "144 mul_tensor_7"  [label="(3072, 1)", style=solid];
 "142 compressed_weight_updated_constant7" -> "144 mul_tensor_7"  [label="(3072, 768)", style=solid];
 "143 _param_constant25_0_0" -> "145 linear_6"  [label="(3072,)", style=solid];
-"144 mul_tensor_7" -> "145 linear_6"  [label=None, style=solid];
+"144 mul_tensor_7" -> "145 linear_6"  [label="(3072, 768)", style=solid];
 "145 linear_6" -> "146 gelu_1"  [label="(1, 197, 3072)", style=solid];
 "146 gelu_1" -> "147 dropout_5"  [label="(1, 197, 3072)", style=solid];
 "147 dropout_5" -> "148 dropout_5_0_0_nncf_smooth_quant_0"  [label="(1, 197, 3072)", style=solid];
@@ -1043,7 +1043,7 @@ strict digraph  {
 "151 linear_7_scale_0_updated_constant0" -> "154 mul_tensor_8"  [label="(768, 1)", style=solid];
 "152 compressed_weight_updated_constant8" -> "154 mul_tensor_8"  [label="(768, 3072)", style=solid];
 "153 _param_constant27_0_0" -> "155 linear_7"  [label="(768,)", style=solid];
-"154 mul_tensor_8" -> "155 linear_7"  [label=None, style=solid];
+"154 mul_tensor_8" -> "155 linear_7"  [label="(768, 3072)", style=solid];
 "155 linear_7" -> "156 dropout_6"  [label="(1, 197, 768)", style=solid];
 "156 dropout_6" -> "157 add_4"  [label="(1, 197, 768)", style=solid];
 "157 add_4" -> "160 layer_norm_4"  [label="(1, 197, 768)", style=solid];
@@ -1058,7 +1058,7 @@ strict digraph  {
 "165 linear_8_scale_0_updated_constant0" -> "168 mul_tensor_9"  [label="(2304, 1)", style=solid];
 "166 compressed_weight_updated_constant9" -> "168 mul_tensor_9"  [label="(2304, 768)", style=solid];
 "167 _param_constant31_0_0" -> "169 linear_8"  [label="(2304,)", style=solid];
-"168 mul_tensor_9" -> "169 linear_8"  [label=None, style=solid];
+"168 mul_tensor_9" -> "169 linear_8"  [label="(2304, 768)", style=solid];
 "169 linear_8" -> "170 unflatten_2"  [label="(197, 1, 2304)", style=solid];
 "170 unflatten_2" -> "171 unsqueeze_2"  [label="(197, 1, 3, 768)", style=solid];
 "171 unsqueeze_2" -> "172 transpose_13"  [label="(1, 197, 1, 3, 768)", style=solid];
@@ -1092,7 +1092,7 @@ strict digraph  {
 "197 linear_9_scale_0_updated_constant0" -> "200 mul_tensor_10"  [label="(768, 1)", style=solid];
 "198 compressed_weight_updated_constant10" -> "200 mul_tensor_10"  [label="(768, 768)", style=solid];
 "199 _param_constant33_0_0" -> "201 linear_9"  [label="(768,)", style=solid];
-"200 mul_tensor_10" -> "201 linear_9"  [label=None, style=solid];
+"200 mul_tensor_10" -> "201 linear_9"  [label="(768, 768)", style=solid];
 "201 linear_9" -> "202 view_23"  [label="(197, 768)", style=solid];
 "202 view_23" -> "203 transpose_17"  [label="(197, 1, 768)", style=solid];
 "203 transpose_17" -> "204 dropout_7"  [label="(1, 197, 768)", style=solid];
@@ -1108,7 +1108,7 @@ strict digraph  {
 "212 linear_10_scale_0_updated_constant0" -> "215 mul_tensor_11"  [label="(3072, 1)", style=solid];
 "213 compressed_weight_updated_constant11" -> "215 mul_tensor_11"  [label="(3072, 768)", style=solid];
 "214 _param_constant37_0_0" -> "216 linear_10"  [label="(3072,)", style=solid];
-"215 mul_tensor_11" -> "216 linear_10"  [label=None, style=solid];
+"215 mul_tensor_11" -> "216 linear_10"  [label="(3072, 768)", style=solid];
 "216 linear_10" -> "217 gelu_2"  [label="(1, 197, 3072)", style=solid];
 "217 gelu_2" -> "218 dropout_8"  [label="(1, 197, 3072)", style=solid];
 "218 dropout_8" -> "219 dropout_8_0_0_nncf_smooth_quant_0"  [label="(1, 197, 3072)", style=solid];
@@ -1118,7 +1118,7 @@ strict digraph  {
 "222 linear_11_scale_0_updated_constant0" -> "225 mul_tensor_12"  [label="(768, 1)", style=solid];
 "223 compressed_weight_updated_constant12" -> "225 mul_tensor_12"  [label="(768, 3072)", style=solid];
 "224 _param_constant39_0_0" -> "226 linear_11"  [label="(768,)", style=solid];
-"225 mul_tensor_12" -> "226 linear_11"  [label=None, style=solid];
+"225 mul_tensor_12" -> "226 linear_11"  [label="(768, 3072)", style=solid];
 "226 linear_11" -> "227 dropout_9"  [label="(1, 197, 768)", style=solid];
 "227 dropout_9" -> "228 add_6"  [label="(1, 197, 768)", style=solid];
 "228 add_6" -> "231 layer_norm_6"  [label="(1, 197, 768)", style=solid];
@@ -1133,7 +1133,7 @@ strict digraph  {
 "236 linear_12_scale_0_updated_constant0" -> "239 mul_tensor_13"  [label="(2304, 1)", style=solid];
 "237 compressed_weight_updated_constant13" -> "239 mul_tensor_13"  [label="(2304, 768)", style=solid];
 "238 _param_constant43_0_0" -> "240 linear_12"  [label="(2304,)", style=solid];
-"239 mul_tensor_13" -> "240 linear_12"  [label=None, style=solid];
+"239 mul_tensor_13" -> "240 linear_12"  [label="(2304, 768)", style=solid];
 "240 linear_12" -> "241 unflatten_3"  [label="(197, 1, 2304)", style=solid];
 "241 unflatten_3" -> "242 unsqueeze_3"  [label="(197, 1, 3, 768)", style=solid];
 "242 unsqueeze_3" -> "243 transpose_19"  [label="(1, 197, 1, 3, 768)", style=solid];
@@ -1167,7 +1167,7 @@ strict digraph  {
 "268 linear_13_scale_0_updated_constant0" -> "271 mul_tensor_14"  [label="(768, 1)", style=solid];
 "269 compressed_weight_updated_constant14" -> "271 mul_tensor_14"  [label="(768, 768)", style=solid];
 "270 _param_constant45_0_0" -> "272 linear_13"  [label="(768,)", style=solid];
-"271 mul_tensor_14" -> "272 linear_13"  [label=None, style=solid];
+"271 mul_tensor_14" -> "272 linear_13"  [label="(768, 768)", style=solid];
 "272 linear_13" -> "273 view_31"  [label="(197, 768)", style=solid];
 "273 view_31" -> "274 transpose_23"  [label="(197, 1, 768)", style=solid];
 "274 transpose_23" -> "275 dropout_10"  [label="(1, 197, 768)", style=solid];
@@ -1183,7 +1183,7 @@ strict digraph  {
 "283 linear_14_scale_0_updated_constant0" -> "286 mul_tensor_15"  [label="(3072, 1)", style=solid];
 "284 compressed_weight_updated_constant15" -> "286 mul_tensor_15"  [label="(3072, 768)", style=solid];
 "285 _param_constant49_0_0" -> "287 linear_14"  [label="(3072,)", style=solid];
-"286 mul_tensor_15" -> "287 linear_14"  [label=None, style=solid];
+"286 mul_tensor_15" -> "287 linear_14"  [label="(3072, 768)", style=solid];
 "287 linear_14" -> "288 gelu_3"  [label="(1, 197, 3072)", style=solid];
 "288 gelu_3" -> "289 dropout_11"  [label="(1, 197, 3072)", style=solid];
 "289 dropout_11" -> "290 dropout_11_0_0_nncf_smooth_quant_0"  [label="(1, 197, 3072)", style=solid];
@@ -1193,7 +1193,7 @@ strict digraph  {
 "293 linear_15_scale_0_updated_constant0" -> "296 mul_tensor_16"  [label="(768, 1)", style=solid];
 "294 compressed_weight_updated_constant16" -> "296 mul_tensor_16"  [label="(768, 3072)", style=solid];
 "295 _param_constant51_0_0" -> "297 linear_15"  [label="(768,)", style=solid];
-"296 mul_tensor_16" -> "297 linear_15"  [label=None, style=solid];
+"296 mul_tensor_16" -> "297 linear_15"  [label="(768, 3072)", style=solid];
 "297 linear_15" -> "298 dropout_12"  [label="(1, 197, 768)", style=solid];
 "298 dropout_12" -> "299 add_8"  [label="(1, 197, 768)", style=solid];
 "299 add_8" -> "302 layer_norm_8"  [label="(1, 197, 768)", style=solid];
@@ -1208,7 +1208,7 @@ strict digraph  {
 "307 linear_16_scale_0_updated_constant0" -> "310 mul_tensor_17"  [label="(2304, 1)", style=solid];
 "308 compressed_weight_updated_constant17" -> "310 mul_tensor_17"  [label="(2304, 768)", style=solid];
 "309 _param_constant55_0_0" -> "311 linear_16"  [label="(2304,)", style=solid];
-"310 mul_tensor_17" -> "311 linear_16"  [label=None, style=solid];
+"310 mul_tensor_17" -> "311 linear_16"  [label="(2304, 768)", style=solid];
 "311 linear_16" -> "312 unflatten_4"  [label="(197, 1, 2304)", style=solid];
 "312 unflatten_4" -> "313 unsqueeze_4"  [label="(197, 1, 3, 768)", style=solid];
 "313 unsqueeze_4" -> "314 transpose_25"  [label="(1, 197, 1, 3, 768)", style=solid];
@@ -1242,7 +1242,7 @@ strict digraph  {
 "339 linear_17_scale_0_updated_constant0" -> "342 mul_tensor_18"  [label="(768, 1)", style=solid];
 "340 compressed_weight_updated_constant18" -> "342 mul_tensor_18"  [label="(768, 768)", style=solid];
 "341 _param_constant57_0_0" -> "343 linear_17"  [label="(768,)", style=solid];
-"342 mul_tensor_18" -> "343 linear_17"  [label=None, style=solid];
+"342 mul_tensor_18" -> "343 linear_17"  [label="(768, 768)", style=solid];
 "343 linear_17" -> "344 view_39"  [label="(197, 768)", style=solid];
 "344 view_39" -> "345 transpose_29"  [label="(197, 1, 768)", style=solid];
 "345 transpose_29" -> "346 dropout_13"  [label="(1, 197, 768)", style=solid];
@@ -1258,7 +1258,7 @@ strict digraph  {
 "354 linear_18_scale_0_updated_constant0" -> "357 mul_tensor_19"  [label="(3072, 1)", style=solid];
 "355 compressed_weight_updated_constant19" -> "357 mul_tensor_19"  [label="(3072, 768)", style=solid];
 "356 _param_constant61_0_0" -> "358 linear_18"  [label="(3072,)", style=solid];
-"357 mul_tensor_19" -> "358 linear_18"  [label=None, style=solid];
+"357 mul_tensor_19" -> "358 linear_18"  [label="(3072, 768)", style=solid];
 "358 linear_18" -> "359 gelu_4"  [label="(1, 197, 3072)", style=solid];
 "359 gelu_4" -> "360 dropout_14"  [label="(1, 197, 3072)", style=solid];
 "360 dropout_14" -> "361 dropout_14_0_0_nncf_smooth_quant_0"  [label="(1, 197, 3072)", style=solid];
@@ -1268,7 +1268,7 @@ strict digraph  {
 "364 linear_19_scale_0_updated_constant0" -> "367 mul_tensor_20"  [label="(768, 1)", style=solid];
 "365 compressed_weight_updated_constant20" -> "367 mul_tensor_20"  [label="(768, 3072)", style=solid];
 "366 _param_constant63_0_0" -> "368 linear_19"  [label="(768,)", style=solid];
-"367 mul_tensor_20" -> "368 linear_19"  [label=None, style=solid];
+"367 mul_tensor_20" -> "368 linear_19"  [label="(768, 3072)", style=solid];
 "368 linear_19" -> "369 dropout_15"  [label="(1, 197, 768)", style=solid];
 "369 dropout_15" -> "370 add_10"  [label="(1, 197, 768)", style=solid];
 "370 add_10" -> "373 layer_norm_10"  [label="(1, 197, 768)", style=solid];
@@ -1283,7 +1283,7 @@ strict digraph  {
 "378 linear_20_scale_0_updated_constant0" -> "381 mul_tensor_21"  [label="(2304, 1)", style=solid];
 "379 compressed_weight_updated_constant21" -> "381 mul_tensor_21"  [label="(2304, 768)", style=solid];
 "380 _param_constant67_0_0" -> "382 linear_20"  [label="(2304,)", style=solid];
-"381 mul_tensor_21" -> "382 linear_20"  [label=None, style=solid];
+"381 mul_tensor_21" -> "382 linear_20"  [label="(2304, 768)", style=solid];
 "382 linear_20" -> "383 unflatten_5"  [label="(197, 1, 2304)", style=solid];
 "383 unflatten_5" -> "384 unsqueeze_5"  [label="(197, 1, 3, 768)", style=solid];
 "384 unsqueeze_5" -> "385 transpose_31"  [label="(1, 197, 1, 3, 768)", style=solid];
@@ -1317,7 +1317,7 @@ strict digraph  {
 "410 linear_21_scale_0_updated_constant0" -> "413 mul_tensor_22"  [label="(768, 1)", style=solid];
 "411 compressed_weight_updated_constant22" -> "413 mul_tensor_22"  [label="(768, 768)", style=solid];
 "412 _param_constant69_0_0" -> "414 linear_21"  [label="(768,)", style=solid];
-"413 mul_tensor_22" -> "414 linear_21"  [label=None, style=solid];
+"413 mul_tensor_22" -> "414 linear_21"  [label="(768, 768)", style=solid];
 "414 linear_21" -> "415 view_47"  [label="(197, 768)", style=solid];
 "415 view_47" -> "416 transpose_35"  [label="(197, 1, 768)", style=solid];
 "416 transpose_35" -> "417 dropout_16"  [label="(1, 197, 768)", style=solid];
@@ -1333,7 +1333,7 @@ strict digraph  {
 "425 linear_22_scale_0_updated_constant0" -> "428 mul_tensor_23"  [label="(3072, 1)", style=solid];
 "426 compressed_weight_updated_constant23" -> "428 mul_tensor_23"  [label="(3072, 768)", style=solid];
 "427 _param_constant73_0_0" -> "429 linear_22"  [label="(3072,)", style=solid];
-"428 mul_tensor_23" -> "429 linear_22"  [label=None, style=solid];
+"428 mul_tensor_23" -> "429 linear_22"  [label="(3072, 768)", style=solid];
 "429 linear_22" -> "430 gelu_5"  [label="(1, 197, 3072)", style=solid];
 "430 gelu_5" -> "431 dropout_17"  [label="(1, 197, 3072)", style=solid];
 "431 dropout_17" -> "432 dropout_17_0_0_nncf_smooth_quant_0"  [label="(1, 197, 3072)", style=solid];
@@ -1343,7 +1343,7 @@ strict digraph  {
 "435 linear_23_scale_0_updated_constant0" -> "438 mul_tensor_24"  [label="(768, 1)", style=solid];
 "436 compressed_weight_updated_constant24" -> "438 mul_tensor_24"  [label="(768, 3072)", style=solid];
 "437 _param_constant75_0_0" -> "439 linear_23"  [label="(768,)", style=solid];
-"438 mul_tensor_24" -> "439 linear_23"  [label=None, style=solid];
+"438 mul_tensor_24" -> "439 linear_23"  [label="(768, 3072)", style=solid];
 "439 linear_23" -> "440 dropout_18"  [label="(1, 197, 768)", style=solid];
 "440 dropout_18" -> "441 add_12"  [label="(1, 197, 768)", style=solid];
 "441 add_12" -> "444 layer_norm_12"  [label="(1, 197, 768)", style=solid];
@@ -1358,7 +1358,7 @@ strict digraph  {
 "449 linear_24_scale_0_updated_constant0" -> "452 mul_tensor_25"  [label="(2304, 1)", style=solid];
 "450 compressed_weight_updated_constant25" -> "452 mul_tensor_25"  [label="(2304, 768)", style=solid];
 "451 _param_constant79_0_0" -> "453 linear_24"  [label="(2304,)", style=solid];
-"452 mul_tensor_25" -> "453 linear_24"  [label=None, style=solid];
+"452 mul_tensor_25" -> "453 linear_24"  [label="(2304, 768)", style=solid];
 "453 linear_24" -> "454 unflatten_6"  [label="(197, 1, 2304)", style=solid];
 "454 unflatten_6" -> "455 unsqueeze_6"  [label="(197, 1, 3, 768)", style=solid];
 "455 unsqueeze_6" -> "456 transpose_37"  [label="(1, 197, 1, 3, 768)", style=solid];
@@ -1392,7 +1392,7 @@ strict digraph  {
 "481 linear_25_scale_0_updated_constant0" -> "484 mul_tensor_26"  [label="(768, 1)", style=solid];
 "482 compressed_weight_updated_constant26" -> "484 mul_tensor_26"  [label="(768, 768)", style=solid];
 "483 _param_constant81_0_0" -> "485 linear_25"  [label="(768,)", style=solid];
-"484 mul_tensor_26" -> "485 linear_25"  [label=None, style=solid];
+"484 mul_tensor_26" -> "485 linear_25"  [label="(768, 768)", style=solid];
 "485 linear_25" -> "486 view_55"  [label="(197, 768)", style=solid];
 "486 view_55" -> "487 transpose_41"  [label="(197, 1, 768)", style=solid];
 "487 transpose_41" -> "488 dropout_19"  [label="(1, 197, 768)", style=solid];
@@ -1408,7 +1408,7 @@ strict digraph  {
 "496 linear_26_scale_0_updated_constant0" -> "499 mul_tensor_27"  [label="(3072, 1)", style=solid];
 "497 compressed_weight_updated_constant27" -> "499 mul_tensor_27"  [label="(3072, 768)", style=solid];
 "498 _param_constant85_0_0" -> "500 linear_26"  [label="(3072,)", style=solid];
-"499 mul_tensor_27" -> "500 linear_26"  [label=None, style=solid];
+"499 mul_tensor_27" -> "500 linear_26"  [label="(3072, 768)", style=solid];
 "500 linear_26" -> "501 gelu_6"  [label="(1, 197, 3072)", style=solid];
 "501 gelu_6" -> "502 dropout_20"  [label="(1, 197, 3072)", style=solid];
 "502 dropout_20" -> "503 dropout_20_0_0_nncf_smooth_quant_0"  [label="(1, 197, 3072)", style=solid];
@@ -1418,7 +1418,7 @@ strict digraph  {
 "506 linear_27_scale_0_updated_constant0" -> "509 mul_tensor_28"  [label="(768, 1)", style=solid];
 "507 compressed_weight_updated_constant28" -> "509 mul_tensor_28"  [label="(768, 3072)", style=solid];
 "508 _param_constant87_0_0" -> "510 linear_27"  [label="(768,)", style=solid];
-"509 mul_tensor_28" -> "510 linear_27"  [label=None, style=solid];
+"509 mul_tensor_28" -> "510 linear_27"  [label="(768, 3072)", style=solid];
 "510 linear_27" -> "511 dropout_21"  [label="(1, 197, 768)", style=solid];
 "511 dropout_21" -> "512 add_14"  [label="(1, 197, 768)", style=solid];
 "512 add_14" -> "515 layer_norm_14"  [label="(1, 197, 768)", style=solid];
@@ -1433,7 +1433,7 @@ strict digraph  {
 "520 linear_28_scale_0_updated_constant0" -> "523 mul_tensor_29"  [label="(2304, 1)", style=solid];
 "521 compressed_weight_updated_constant29" -> "523 mul_tensor_29"  [label="(2304, 768)", style=solid];
 "522 _param_constant91_0_0" -> "524 linear_28"  [label="(2304,)", style=solid];
-"523 mul_tensor_29" -> "524 linear_28"  [label=None, style=solid];
+"523 mul_tensor_29" -> "524 linear_28"  [label="(2304, 768)", style=solid];
 "524 linear_28" -> "525 unflatten_7"  [label="(197, 1, 2304)", style=solid];
 "525 unflatten_7" -> "526 unsqueeze_7"  [label="(197, 1, 3, 768)", style=solid];
 "526 unsqueeze_7" -> "527 transpose_43"  [label="(1, 197, 1, 3, 768)", style=solid];
@@ -1467,7 +1467,7 @@ strict digraph  {
 "552 linear_29_scale_0_updated_constant0" -> "555 mul_tensor_30"  [label="(768, 1)", style=solid];
 "553 compressed_weight_updated_constant30" -> "555 mul_tensor_30"  [label="(768, 768)", style=solid];
 "554 _param_constant93_0_0" -> "556 linear_29"  [label="(768,)", style=solid];
-"555 mul_tensor_30" -> "556 linear_29"  [label=None, style=solid];
+"555 mul_tensor_30" -> "556 linear_29"  [label="(768, 768)", style=solid];
 "556 linear_29" -> "557 view_63"  [label="(197, 768)", style=solid];
 "557 view_63" -> "558 transpose_47"  [label="(197, 1, 768)", style=solid];
 "558 transpose_47" -> "559 dropout_22"  [label="(1, 197, 768)", style=solid];
@@ -1483,7 +1483,7 @@ strict digraph  {
 "567 linear_30_scale_0_updated_constant0" -> "570 mul_tensor_31"  [label="(3072, 1)", style=solid];
 "568 compressed_weight_updated_constant31" -> "570 mul_tensor_31"  [label="(3072, 768)", style=solid];
 "569 _param_constant97_0_0" -> "571 linear_30"  [label="(3072,)", style=solid];
-"570 mul_tensor_31" -> "571 linear_30"  [label=None, style=solid];
+"570 mul_tensor_31" -> "571 linear_30"  [label="(3072, 768)", style=solid];
 "571 linear_30" -> "572 gelu_7"  [label="(1, 197, 3072)", style=solid];
 "572 gelu_7" -> "573 dropout_23"  [label="(1, 197, 3072)", style=solid];
 "573 dropout_23" -> "574 dropout_23_0_0_nncf_smooth_quant_0"  [label="(1, 197, 3072)", style=solid];
@@ -1493,7 +1493,7 @@ strict digraph  {
 "577 linear_31_scale_0_updated_constant0" -> "580 mul_tensor_32"  [label="(768, 1)", style=solid];
 "578 compressed_weight_updated_constant32" -> "580 mul_tensor_32"  [label="(768, 3072)", style=solid];
 "579 _param_constant99_0_0" -> "581 linear_31"  [label="(768,)", style=solid];
-"580 mul_tensor_32" -> "581 linear_31"  [label=None, style=solid];
+"580 mul_tensor_32" -> "581 linear_31"  [label="(768, 3072)", style=solid];
 "581 linear_31" -> "582 dropout_24"  [label="(1, 197, 768)", style=solid];
 "582 dropout_24" -> "583 add_16"  [label="(1, 197, 768)", style=solid];
 "583 add_16" -> "586 layer_norm_16"  [label="(1, 197, 768)", style=solid];
@@ -1508,7 +1508,7 @@ strict digraph  {
 "591 linear_32_scale_0_updated_constant0" -> "594 mul_tensor_33"  [label="(2304, 1)", style=solid];
 "592 compressed_weight_updated_constant33" -> "594 mul_tensor_33"  [label="(2304, 768)", style=solid];
 "593 _param_constant103_0_0" -> "595 linear_32"  [label="(2304,)", style=solid];
-"594 mul_tensor_33" -> "595 linear_32"  [label=None, style=solid];
+"594 mul_tensor_33" -> "595 linear_32"  [label="(2304, 768)", style=solid];
 "595 linear_32" -> "596 unflatten_8"  [label="(197, 1, 2304)", style=solid];
 "596 unflatten_8" -> "597 unsqueeze_8"  [label="(197, 1, 3, 768)", style=solid];
 "597 unsqueeze_8" -> "598 transpose_49"  [label="(1, 197, 1, 3, 768)", style=solid];
@@ -1542,7 +1542,7 @@ strict digraph  {
 "623 linear_33_scale_0_updated_constant0" -> "626 mul_tensor_34"  [label="(768, 1)", style=solid];
 "624 compressed_weight_updated_constant34" -> "626 mul_tensor_34"  [label="(768, 768)", style=solid];
 "625 _param_constant105_0_0" -> "627 linear_33"  [label="(768,)", style=solid];
-"626 mul_tensor_34" -> "627 linear_33"  [label=None, style=solid];
+"626 mul_tensor_34" -> "627 linear_33"  [label="(768, 768)", style=solid];
 "627 linear_33" -> "628 view_71"  [label="(197, 768)", style=solid];
 "628 view_71" -> "629 transpose_53"  [label="(197, 1, 768)", style=solid];
 "629 transpose_53" -> "630 dropout_25"  [label="(1, 197, 768)", style=solid];
@@ -1558,7 +1558,7 @@ strict digraph  {
 "638 linear_34_scale_0_updated_constant0" -> "641 mul_tensor_35"  [label="(3072, 1)", style=solid];
 "639 compressed_weight_updated_constant35" -> "641 mul_tensor_35"  [label="(3072, 768)", style=solid];
 "640 _param_constant109_0_0" -> "642 linear_34"  [label="(3072,)", style=solid];
-"641 mul_tensor_35" -> "642 linear_34"  [label=None, style=solid];
+"641 mul_tensor_35" -> "642 linear_34"  [label="(3072, 768)", style=solid];
 "642 linear_34" -> "643 gelu_8"  [label="(1, 197, 3072)", style=solid];
 "643 gelu_8" -> "644 dropout_26"  [label="(1, 197, 3072)", style=solid];
 "644 dropout_26" -> "645 dropout_26_0_0_nncf_smooth_quant_0"  [label="(1, 197, 3072)", style=solid];
@@ -1568,7 +1568,7 @@ strict digraph  {
 "648 linear_35_scale_0_updated_constant0" -> "651 mul_tensor_36"  [label="(768, 1)", style=solid];
 "649 compressed_weight_updated_constant36" -> "651 mul_tensor_36"  [label="(768, 3072)", style=solid];
 "650 _param_constant111_0_0" -> "652 linear_35"  [label="(768,)", style=solid];
-"651 mul_tensor_36" -> "652 linear_35"  [label=None, style=solid];
+"651 mul_tensor_36" -> "652 linear_35"  [label="(768, 3072)", style=solid];
 "652 linear_35" -> "653 dropout_27"  [label="(1, 197, 768)", style=solid];
 "653 dropout_27" -> "654 add_18"  [label="(1, 197, 768)", style=solid];
 "654 add_18" -> "657 layer_norm_18"  [label="(1, 197, 768)", style=solid];
@@ -1583,7 +1583,7 @@ strict digraph  {
 "662 linear_36_scale_0_updated_constant0" -> "665 mul_tensor_37"  [label="(2304, 1)", style=solid];
 "663 compressed_weight_updated_constant37" -> "665 mul_tensor_37"  [label="(2304, 768)", style=solid];
 "664 _param_constant115_0_0" -> "666 linear_36"  [label="(2304,)", style=solid];
-"665 mul_tensor_37" -> "666 linear_36"  [label=None, style=solid];
+"665 mul_tensor_37" -> "666 linear_36"  [label="(2304, 768)", style=solid];
 "666 linear_36" -> "667 unflatten_9"  [label="(197, 1, 2304)", style=solid];
 "667 unflatten_9" -> "668 unsqueeze_9"  [label="(197, 1, 3, 768)", style=solid];
 "668 unsqueeze_9" -> "669 transpose_55"  [label="(1, 197, 1, 3, 768)", style=solid];
@@ -1617,7 +1617,7 @@ strict digraph  {
 "694 linear_37_scale_0_updated_constant0" -> "697 mul_tensor_38"  [label="(768, 1)", style=solid];
 "695 compressed_weight_updated_constant38" -> "697 mul_tensor_38"  [label="(768, 768)", style=solid];
 "696 _param_constant117_0_0" -> "698 linear_37"  [label="(768,)", style=solid];
-"697 mul_tensor_38" -> "698 linear_37"  [label=None, style=solid];
+"697 mul_tensor_38" -> "698 linear_37"  [label="(768, 768)", style=solid];
 "698 linear_37" -> "699 view_79"  [label="(197, 768)", style=solid];
 "699 view_79" -> "700 transpose_59"  [label="(197, 1, 768)", style=solid];
 "700 transpose_59" -> "701 dropout_28"  [label="(1, 197, 768)", style=solid];
@@ -1633,7 +1633,7 @@ strict digraph  {
 "709 linear_38_scale_0_updated_constant0" -> "712 mul_tensor_39"  [label="(3072, 1)", style=solid];
 "710 compressed_weight_updated_constant39" -> "712 mul_tensor_39"  [label="(3072, 768)", style=solid];
 "711 _param_constant121_0_0" -> "713 linear_38"  [label="(3072,)", style=solid];
-"712 mul_tensor_39" -> "713 linear_38"  [label=None, style=solid];
+"712 mul_tensor_39" -> "713 linear_38"  [label="(3072, 768)", style=solid];
 "713 linear_38" -> "714 gelu_9"  [label="(1, 197, 3072)", style=solid];
 "714 gelu_9" -> "715 dropout_29"  [label="(1, 197, 3072)", style=solid];
 "715 dropout_29" -> "716 dropout_29_0_0_nncf_smooth_quant_0"  [label="(1, 197, 3072)", style=solid];
@@ -1643,7 +1643,7 @@ strict digraph  {
 "719 linear_39_scale_0_updated_constant0" -> "722 mul_tensor_40"  [label="(768, 1)", style=solid];
 "720 compressed_weight_updated_constant40" -> "722 mul_tensor_40"  [label="(768, 3072)", style=solid];
 "721 _param_constant123_0_0" -> "723 linear_39"  [label="(768,)", style=solid];
-"722 mul_tensor_40" -> "723 linear_39"  [label=None, style=solid];
+"722 mul_tensor_40" -> "723 linear_39"  [label="(768, 3072)", style=solid];
 "723 linear_39" -> "724 dropout_30"  [label="(1, 197, 768)", style=solid];
 "724 dropout_30" -> "725 add_20"  [label="(1, 197, 768)", style=solid];
 "725 add_20" -> "728 layer_norm_20"  [label="(1, 197, 768)", style=solid];
@@ -1658,7 +1658,7 @@ strict digraph  {
 "733 linear_40_scale_0_updated_constant0" -> "736 mul_tensor_41"  [label="(2304, 1)", style=solid];
 "734 compressed_weight_updated_constant41" -> "736 mul_tensor_41"  [label="(2304, 768)", style=solid];
 "735 _param_constant127_0_0" -> "737 linear_40"  [label="(2304,)", style=solid];
-"736 mul_tensor_41" -> "737 linear_40"  [label=None, style=solid];
+"736 mul_tensor_41" -> "737 linear_40"  [label="(2304, 768)", style=solid];
 "737 linear_40" -> "738 unflatten_10"  [label="(197, 1, 2304)", style=solid];
 "738 unflatten_10" -> "739 unsqueeze_10"  [label="(197, 1, 3, 768)", style=solid];
 "739 unsqueeze_10" -> "740 transpose_61"  [label="(1, 197, 1, 3, 768)", style=solid];
@@ -1692,7 +1692,7 @@ strict digraph  {
 "765 linear_41_scale_0_updated_constant0" -> "768 mul_tensor_42"  [label="(768, 1)", style=solid];
 "766 compressed_weight_updated_constant42" -> "768 mul_tensor_42"  [label="(768, 768)", style=solid];
 "767 _param_constant129_0_0" -> "769 linear_41"  [label="(768,)", style=solid];
-"768 mul_tensor_42" -> "769 linear_41"  [label=None, style=solid];
+"768 mul_tensor_42" -> "769 linear_41"  [label="(768, 768)", style=solid];
 "769 linear_41" -> "770 view_87"  [label="(197, 768)", style=solid];
 "770 view_87" -> "771 transpose_65"  [label="(197, 1, 768)", style=solid];
 "771 transpose_65" -> "772 dropout_31"  [label="(1, 197, 768)", style=solid];
@@ -1708,7 +1708,7 @@ strict digraph  {
 "780 linear_42_scale_0_updated_constant0" -> "783 mul_tensor_43"  [label="(3072, 1)", style=solid];
 "781 compressed_weight_updated_constant43" -> "783 mul_tensor_43"  [label="(3072, 768)", style=solid];
 "782 _param_constant133_0_0" -> "784 linear_42"  [label="(3072,)", style=solid];
-"783 mul_tensor_43" -> "784 linear_42"  [label=None, style=solid];
+"783 mul_tensor_43" -> "784 linear_42"  [label="(3072, 768)", style=solid];
 "784 linear_42" -> "785 gelu_10"  [label="(1, 197, 3072)", style=solid];
 "785 gelu_10" -> "786 dropout_32"  [label="(1, 197, 3072)", style=solid];
 "786 dropout_32" -> "787 dropout_32_0_0_nncf_smooth_quant_0"  [label="(1, 197, 3072)", style=solid];
@@ -1718,7 +1718,7 @@ strict digraph  {
 "790 linear_43_scale_0_updated_constant0" -> "793 mul_tensor_44"  [label="(768, 1)", style=solid];
 "791 compressed_weight_updated_constant44" -> "793 mul_tensor_44"  [label="(768, 3072)", style=solid];
 "792 _param_constant135_0_0" -> "794 linear_43"  [label="(768,)", style=solid];
-"793 mul_tensor_44" -> "794 linear_43"  [label=None, style=solid];
+"793 mul_tensor_44" -> "794 linear_43"  [label="(768, 3072)", style=solid];
 "794 linear_43" -> "795 dropout_33"  [label="(1, 197, 768)", style=solid];
 "795 dropout_33" -> "796 add_22"  [label="(1, 197, 768)", style=solid];
 "796 add_22" -> "799 layer_norm_22"  [label="(1, 197, 768)", style=solid];
@@ -1733,7 +1733,7 @@ strict digraph  {
 "804 linear_44_scale_0_updated_constant0" -> "807 mul_tensor_45"  [label="(2304, 1)", style=solid];
 "805 compressed_weight_updated_constant45" -> "807 mul_tensor_45"  [label="(2304, 768)", style=solid];
 "806 _param_constant139_0_0" -> "808 linear_44"  [label="(2304,)", style=solid];
-"807 mul_tensor_45" -> "808 linear_44"  [label=None, style=solid];
+"807 mul_tensor_45" -> "808 linear_44"  [label="(2304, 768)", style=solid];
 "808 linear_44" -> "809 unflatten_11"  [label="(197, 1, 2304)", style=solid];
 "809 unflatten_11" -> "810 unsqueeze_11"  [label="(197, 1, 3, 768)", style=solid];
 "810 unsqueeze_11" -> "811 transpose_67"  [label="(1, 197, 1, 3, 768)", style=solid];
@@ -1767,7 +1767,7 @@ strict digraph  {
 "836 linear_45_scale_0_updated_constant0" -> "839 mul_tensor_46"  [label="(768, 1)", style=solid];
 "837 compressed_weight_updated_constant46" -> "839 mul_tensor_46"  [label="(768, 768)", style=solid];
 "838 _param_constant141_0_0" -> "840 linear_45"  [label="(768,)", style=solid];
-"839 mul_tensor_46" -> "840 linear_45"  [label=None, style=solid];
+"839 mul_tensor_46" -> "840 linear_45"  [label="(768, 768)", style=solid];
 "840 linear_45" -> "841 view_95"  [label="(197, 768)", style=solid];
 "841 view_95" -> "842 transpose_71"  [label="(197, 1, 768)", style=solid];
 "842 transpose_71" -> "843 dropout_34"  [label="(1, 197, 768)", style=solid];
@@ -1783,7 +1783,7 @@ strict digraph  {
 "851 linear_46_scale_0_updated_constant0" -> "854 mul_tensor_47"  [label="(3072, 1)", style=solid];
 "852 compressed_weight_updated_constant47" -> "854 mul_tensor_47"  [label="(3072, 768)", style=solid];
 "853 _param_constant145_0_0" -> "855 linear_46"  [label="(3072,)", style=solid];
-"854 mul_tensor_47" -> "855 linear_46"  [label=None, style=solid];
+"854 mul_tensor_47" -> "855 linear_46"  [label="(3072, 768)", style=solid];
 "855 linear_46" -> "856 gelu_11"  [label="(1, 197, 3072)", style=solid];
 "856 gelu_11" -> "857 dropout_35"  [label="(1, 197, 3072)", style=solid];
 "857 dropout_35" -> "858 dropout_35_0_0_nncf_smooth_quant_0"  [label="(1, 197, 3072)", style=solid];
@@ -1793,7 +1793,7 @@ strict digraph  {
 "861 linear_47_scale_0_updated_constant0" -> "864 mul_tensor_48"  [label="(768, 1)", style=solid];
 "862 compressed_weight_updated_constant48" -> "864 mul_tensor_48"  [label="(768, 3072)", style=solid];
 "863 _param_constant147_0_0" -> "865 linear_47"  [label="(768,)", style=solid];
-"864 mul_tensor_48" -> "865 linear_47"  [label=None, style=solid];
+"864 mul_tensor_48" -> "865 linear_47"  [label="(768, 3072)", style=solid];
 "865 linear_47" -> "866 dropout_36"  [label="(1, 197, 768)", style=solid];
 "866 dropout_36" -> "867 add_24"  [label="(1, 197, 768)", style=solid];
 "867 add_24" -> "870 layer_norm_24"  [label="(1, 197, 768)", style=solid];
@@ -1808,6 +1808,6 @@ strict digraph  {
 "876 linear_48_scale_0_updated_constant0" -> "879 mul_tensor_49"  [label="(1000, 1)", style=solid];
 "877 compressed_weight_updated_constant49" -> "879 mul_tensor_49"  [label="(1000, 768)", style=solid];
 "878 _param_constant151_0_0" -> "880 linear_48"  [label="(1000,)", style=solid];
-"879 mul_tensor_49" -> "880 linear_48"  [label=None, style=solid];
+"879 mul_tensor_49" -> "880 linear_48"  [label="(1000, 768)", style=solid];
 "880 linear_48" -> "881 output"  [label="(1, 1000)", style=solid];
 }

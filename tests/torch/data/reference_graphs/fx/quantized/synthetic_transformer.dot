@@ -28,7 +28,7 @@ strict digraph  {
 "6 linear_scale_0_updated_constant0" -> "9 mul_tensor"  [label="(5, 1)", style=solid];
 "7 compressed_weight_updated_constant0" -> "9 mul_tensor"  [label="(5, 5)", style=solid];
 "8 _param_constant2_0_0" -> "10 linear"  [label="(5,)", style=solid];
-"9 mul_tensor" -> "10 linear"  [label=None, style=solid];
+"9 mul_tensor" -> "10 linear"  [label="(5, 5)", style=solid];
 "10 linear" -> "11 add_tensor_0_0_nncf_smooth_quant_0"  [label="(5, 5)", style=solid];
 "11 add_tensor_0_0_nncf_smooth_quant_0" -> "12 quantize_per_tensor_default_1"  [label="(5, 5)", style=solid];
 "12 quantize_per_tensor_default_1" -> "13 dequantize_per_tensor_default_1"  [label="(5, 5)", style=solid];
@@ -36,6 +36,6 @@ strict digraph  {
 "14 linear_1_scale_0_updated_constant0" -> "17 mul_tensor_1"  [label="(10, 1)", style=solid];
 "15 compressed_weight_updated_constant1" -> "17 mul_tensor_1"  [label="(10, 5)", style=solid];
 "16 _param_constant4_0_0" -> "18 linear_1"  [label="(10,)", style=solid];
-"17 mul_tensor_1" -> "18 linear_1"  [label=None, style=solid];
+"17 mul_tensor_1" -> "18 linear_1"  [label="(10, 5)", style=solid];
 "18 linear_1" -> "19 output"  [label="(5, 10)", style=solid];
 }

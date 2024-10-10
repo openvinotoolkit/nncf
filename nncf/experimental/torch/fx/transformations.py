@@ -539,10 +539,6 @@ def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
 
 
 def _get_pattern_replacement_per_channel():
-
-    def replacement_graph_per_channel(weight, scale, zero_point, axis, low, high, dtype):
-        return torch.ops.aten.mul.Tensor(weight, scale)
-
     def pattern_per_channel(weight, scale, zero_point, axis, low, high, dtype):
         quantized = torch.ops.quantized_decomposed.quantize_per_channel.default(
             weight, scale, zero_point, axis, low, high, dtype
@@ -551,6 +547,9 @@ def _get_pattern_replacement_per_channel():
             quantized, scale, zero_point, axis, low, high, dtype
         )
         return dequantized
+    
+    def replacement_graph_per_channel(weight, scale, zero_point, axis, low, high, dtype):
+        return torch.ops.aten.mul.Tensor(weight, scale)
 
     return pattern_per_channel, replacement_graph_per_channel
 
@@ -570,6 +569,12 @@ def _get_pattern_replacement_per_tensor():
 
     return pattern_per_tensor, replacement_graph_per_tensor
 
+def _set_meta_for_matches(model: torch.fx.GraphModule, matches: torch.fx.subgraph_rewriter.ReplacedPatterns):
+    for match in matches:
+        for node in match.nodes_map:
+            if node.name == "weight":
+                weight_node = match.nodes_map[node]
+                _set_new_node_meta(match.replacements[0], weight_node, torch.nn.Identity(), model)
 
 def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
     def match_filters(match, original_graph, graph):
@@ -579,10 +584,11 @@ def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
         return False
 
     pattern, replacement = _get_pattern_replacement_per_channel()
-    torch.fx.subgraph_rewriter.replace_pattern_with_filters(model, pattern, replacement, [match_filters])
+    matches_per_channel = torch.fx.subgraph_rewriter.replace_pattern_with_filters(model, pattern, replacement, [match_filters])
+    _set_meta_for_matches(model, matches_per_channel)
     pattern, replacement = _get_pattern_replacement_per_tensor()
-    torch.fx.subgraph_rewriter.replace_pattern_with_filters(model, pattern, replacement, [match_filters])
-
+    matches_per_tensor = torch.fx.subgraph_rewriter.replace_pattern_with_filters(model, pattern, replacement, [match_filters])
+    _set_meta_for_matches(model.graph, matches_per_tensor)
 
 def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule):
     input_tup = []
