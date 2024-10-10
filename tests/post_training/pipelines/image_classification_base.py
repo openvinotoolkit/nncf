@@ -21,6 +21,7 @@ from torchvision import datasets
 import nncf
 from nncf.common.logging.track_progress import track
 from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
+from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import PTQTestPipeline
 
 
@@ -33,18 +34,15 @@ class ImageClassificationBase(PTQTestPipeline):
 
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
 
-    def _validate(self):
-        val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=2, shuffle=False)
-
-        dataset_size = len(val_loader)
-
-        # Initialize result tensors for async inference support.
-        predictions = np.zeros((dataset_size))
-        references = -1 * np.ones((dataset_size))
+    def _validate_ov(
+        self,
+        val_loader: torch.utils.data.DataLoader,
+        predictions: np.ndarray,
+        references: np.ndarray,
+        dataset_size: int,
+    ):
 
         core = ov.Core()
-
         if os.environ.get("INFERENCE_NUM_THREADS"):
             # Set CPU_THREADS_NUM for OpenVINO inference
             inference_num_threads = os.environ.get("INFERENCE_NUM_THREADS")
@@ -73,6 +71,34 @@ class ImageClassificationBase(PTQTestPipeline):
                 references[i] = target
 
             infer_queue.wait_all()
+        return predictions, references
+
+    def _validate_torch_compile(
+        self, val_loader: torch.utils.data.DataLoader, predictions: np.ndarray, references: np.ndarray
+    ):
+        compiled_model = torch.compile(self.compressed_model, backend="openvino")
+        for i, (images, target) in enumerate(val_loader):
+            # W/A for memory leaks when using torch DataLoader and OpenVINO
+            pred = compiled_model(images)
+            pred = torch.argmax(pred, dim=1)
+            predictions[i] = pred.numpy()
+            references[i] = target.numpy()
+        return predictions, references
+
+    def _validate(self):
+        val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=2, shuffle=False)
+
+        dataset_size = len(val_loader)
+
+        # Initialize result tensors for async inference support.
+        predictions = np.zeros((dataset_size))
+        references = -1 * np.ones((dataset_size))
+
+        if self.validate_in_backend and self.backend == BackendType.FX_TORCH:
+            predictions, references = self._validate_torch_compile(val_loader, predictions, references)
+        else:
+            predictions, references = self._validate_ov(val_loader, predictions, references, dataset_size)
 
         acc_top1 = accuracy_score(predictions, references)
 

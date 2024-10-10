@@ -20,6 +20,11 @@ def pytest_addoption(parser):
     parser.addoption("--cuda", action="store_true", help="Enable CUDA_TORCH backend")
     parser.addoption("--benchmark", action="store_true", help="Run benchmark_app")
     parser.addoption(
+        "--validate-in-backend",
+        action="store_true",
+        help="Validate quantized model in native backend, not in openvino.",
+    )
+    parser.addoption(
         "--extra-columns",
         action="store_true",
         help="Add additional columns to reports.csv",
