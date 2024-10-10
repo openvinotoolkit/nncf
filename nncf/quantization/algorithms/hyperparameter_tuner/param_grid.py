@@ -66,7 +66,6 @@ def _get_minmax_quantization_param_grid() -> ParamGrid:
 
     param_grid = {
         "advanced_parameters:quantizer_propagation_rule": [
-            QuantizerPropagationRule.MERGE_ALL_IN_ONE,
             QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME,
         ],
         "preset": [QuantizationPreset.PERFORMANCE, QuantizationPreset.MIXED],
