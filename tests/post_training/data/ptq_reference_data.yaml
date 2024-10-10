@@ -57,7 +57,7 @@ torchvision/swin_v2_s_backend_FP32:
 torchvision/swin_v2_s_backend_OV:
   metric_value: 0.83638
 torchvision/swin_v2_s_backend_FX_TORCH:
-  metric_value: 0.8296
+  metric_value: 0.8360
 timm/crossvit_9_240_backend_CUDA_TORCH:
   metric_value: 0.689
 timm/crossvit_9_240_backend_FP32:

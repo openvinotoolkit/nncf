@@ -9,13 +9,13 @@ strict digraph  {
 "7 _param_constant4" [id=7, type=get_attr];
 "8 linear_1" [id=8, type=linear];
 "9 output" [id=9, type=output];
-"0 arg0_1" -> "2 embedding";
-"1 _param_constant0" -> "2 embedding";
-"2 embedding" -> "5 linear";
-"3 _param_constant1" -> "5 linear";
-"4 _param_constant2" -> "5 linear";
-"5 linear" -> "8 linear_1";
-"6 _param_constant3" -> "8 linear_1";
-"7 _param_constant4" -> "8 linear_1";
-"8 linear_1" -> "9 output";
+"0 arg0_1" -> "2 embedding"  [label="(5,)", style=solid];
+"1 _param_constant0" -> "2 embedding"  [label="(10, 5)", style=solid];
+"2 embedding" -> "5 linear"  [label="(5, 5)", style=solid];
+"3 _param_constant1" -> "5 linear"  [label="(5, 5)", style=solid];
+"4 _param_constant2" -> "5 linear"  [label="(5,)", style=solid];
+"5 linear" -> "8 linear_1"  [label="(5, 5)", style=solid];
+"6 _param_constant3" -> "8 linear_1"  [label="(10, 5)", style=solid];
+"7 _param_constant4" -> "8 linear_1"  [label="(10,)", style=solid];
+"8 linear_1" -> "9 output"  [label="(5, 10)", style=solid];
 }

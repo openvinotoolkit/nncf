@@ -322,8 +322,8 @@ class ScaleEstimation:
                 zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
         # iterative rectification of scale based on grid search
-        for scale_steps in range(scale_steps):
-            factor = 1.0 - 0.05 * scale_steps
+        for scale_step in range(scale_steps):
+            factor = 1.0 - 0.05 * scale_step
             scaled_scale = factor * scale
 
             input_tensors[1] = scaled_scale.data

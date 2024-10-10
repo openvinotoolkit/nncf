@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from typing import Tuple
 
 import pytest
@@ -16,7 +17,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
-from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
+from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTConstNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
@@ -29,10 +30,10 @@ from tests.cross_fw.test_templates.test_min_max import TemplateTestGetTargetPoin
 from tests.cross_fw.test_templates.test_min_max import TemplateTestMinMaxAlgorithm
 
 
-class TestTorchMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
+class TestTorchFXMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
     @property
     def backend(self) -> MinMaxAlgoBackend:
-        return PTMinMaxAlgoBackend
+        return FXMinMaxAlgoBackend
 
     @property
     def conv_metatype(self):
@@ -44,14 +45,14 @@ class TestTorchMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
         return PTTargetPoint(target_point_type, name, input_port_id=port_id)
 
 
-class TestTorchGetTargetPointShape(TemplateTestGetTargetPointShape, TestTorchMinMaxAlgorithm):
+class TestTorchFXGetTargetPointShape(TemplateTestGetTargetPointShape, TestTorchFXMinMaxAlgorithm):
     def get_nncf_graph(self, weight_port_id: int, weight_shape: Tuple[int]) -> NNCFGraph:
         return NNCFGraphToTest(
             conv_metatype=PTConv2dMetatype, nncf_graph_cls=PTNNCFGraph, const_metatype=PTConstNoopMetatype
         ).nncf_graph
 
 
-class TestTorchGetChannelAxes(TemplateTestGetChannelAxes, TestTorchMinMaxAlgorithm):
+class TestTorchFXGetChannelAxes(TemplateTestGetChannelAxes, TestTorchFXMinMaxAlgorithm):
     @property
     def depthwiseconv_metatype(self):
         return PTDepthwiseConv2dSubtype
@@ -62,23 +63,23 @@ class TestTorchGetChannelAxes(TemplateTestGetChannelAxes, TestTorchMinMaxAlgorit
 
     @staticmethod
     def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> BaseLayerAttributes:
-        # This method isn't needed for Torch backend
+        # This method isn't needed for Torch FX backend
         return None
 
     @staticmethod
     def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> BaseLayerAttributes:
-        # This method isn't needed for Torch backend
+        # This method isn't needed for Torch FX backend
         return None
 
     @staticmethod
     def get_matmul_node_attrs(
         weight_port_id: int, transpose_weight: Tuple[int], weight_shape: Tuple[int]
     ) -> BaseLayerAttributes:
-        # This method isn't needed for Torch backend
+        # This method isn't needed for Torch FX backend
         return None
 
     def test_get_channel_axes_matmul_node_ov_onnx(self):
-        pytest.skip("Test is not applied for Torch backend.")
+        pytest.skip("Test is not applied for Torch FX backend.")
 
     def test_get_channel_axes_deptwiseconv_node_ov(self):
-        pytest.skip("Test is not applied for Torch backend.")
+        pytest.skip("Test is not applied for Torch FX backend.")

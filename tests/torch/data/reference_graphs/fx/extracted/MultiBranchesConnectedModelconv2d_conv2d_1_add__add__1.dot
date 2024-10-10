@@ -12,16 +12,16 @@ strict digraph  {
 "10 _tensor_constant0_1" [id=10, type=get_attr];
 "11 add__1" [id=11, type=add_];
 "12 output" [id=12, type=output];
-"0 _param_constant0" -> "3 conv2d";
-"1 _param_constant1" -> "3 conv2d";
-"2 conv2d_input" -> "3 conv2d";
-"3 conv2d" -> "9 add_";
-"4 _param_constant2" -> "7 conv2d_1";
-"5 _param_constant3" -> "7 conv2d_1";
-"6 conv2d_1_input" -> "7 conv2d_1";
-"7 conv2d_1" -> "11 add__1";
-"8 _tensor_constant0" -> "9 add_";
-"9 add_" -> "12 output";
-"10 _tensor_constant0_1" -> "11 add__1";
-"11 add__1" -> "12 output";
+"0 _param_constant0" -> "3 conv2d"  [label="(3, 3, 1, 1)", style=solid];
+"1 _param_constant1" -> "3 conv2d"  [label="(3,)", style=solid];
+"2 conv2d_input" -> "3 conv2d"  [label=None, style=solid];
+"3 conv2d" -> "9 add_"  [label="(1, 3, 3, 3)", style=solid];
+"4 _param_constant2" -> "7 conv2d_1"  [label="(3, 3, 1, 1)", style=solid];
+"5 _param_constant3" -> "7 conv2d_1"  [label="(3,)", style=solid];
+"6 conv2d_1_input" -> "7 conv2d_1"  [label=None, style=solid];
+"7 conv2d_1" -> "11 add__1"  [label="(1, 3, 3, 3)", style=solid];
+"8 _tensor_constant0" -> "9 add_"  [label="(1,)", style=solid];
+"9 add_" -> "12 output"  [label="(1, 3, 3, 3)", style=solid];
+"10 _tensor_constant0_1" -> "11 add__1"  [label="(1,)", style=solid];
+"11 add__1" -> "12 output"  [label="(1, 3, 3, 3)", style=solid];
 }
