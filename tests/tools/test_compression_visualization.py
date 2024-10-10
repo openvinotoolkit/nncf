@@ -1,0 +1,26 @@
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import pytest
+
+from tests.cross_fw.shared.paths import PROJECT_ROOT
+from tools.visualize_compression_results import visualize
+
+
+@pytest.mark.parametrize("csv_file", ["phi3_asym", "llama2_asym"])
+def test_visualization_of_compression_results(csv_file, tmp_path):
+    in_file = PROJECT_ROOT / "tools" / "data" / (csv_file + ".csv")
+
+    visualize(in_file, tmp_path)
+
+    md_file = tmp_path / (in_file.stem + ".md")
+    assert md_file.exists()
+    assert md_file.with_suffix(".png").exists()
