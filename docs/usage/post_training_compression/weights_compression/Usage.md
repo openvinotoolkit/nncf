@@ -589,8 +589,6 @@ AdvancedCompressionParameters(
 
 The tables clearly shows the followings:
 
-More layers in an 8-bit model improves accuracy, but it also increases the footprint significantly.- Scale estimation, AWQ and GPTQ algorithms improve the accuracy of the baseline int4 model without increasing the footprint.- The lora correction algorithm further improves the accuracy of int4 models with a much smaller footprint compared to mixed-precision models that have the same or worse accuracy.
-
 - More layers in 8 bit does improve accuracy, but it also increases the footprint significantly.
 - Scale Estimation, AWQ, GPTQ improve the accuracy of the baseline int4 model without increasing the footprint.
 - The Lora Correction algorithm further improves the accuracy of int4 models with a much smaller footprint compared to mixed-precision models that have the same or worse accuracy.
