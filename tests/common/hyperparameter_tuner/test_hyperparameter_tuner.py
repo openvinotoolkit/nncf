@@ -433,41 +433,42 @@ def test_find_best_combination(
 
 
 @pytest.mark.parametrize(
-    "params, number_combinations, number_considered_combinations",
+    "params, number_considered_combinations",
     [
-        # two_parameter-scores_different
-        (  # param_settings
+        (
             {
                 "param_1": [0, 1, 2],
                 "param_2": [True, False],
             },
-            # number of combinations are considered
-            # 2 combinations is for default value for each parameter,
-            # 5 combinations is sum number of values for each param
+            # Explanation:
+            # 2 combinations for default values of each parameter,
+            # 5 combinations for the sum of values of each parameter.
             2 + 5,
         ),
-        # three_parameter-scores_different
-        (  # param_settings
+        (
             {
                 "param_1": [0, 1],
-                "param_2": [2, 3],
+                "param_2": [2, 3, 8],
                 "param_3": [4, 5],
             },
-            # number of combinations are considered
-            # 3 combinations is for default value for each parameter,
-            # 6 combinations is sum number of values for each param
-            3 + 6,
+            # Explanation:
+            # 3 combinations for default values of each parameter,
+            # 6 combinations for the sum of values of each parameter.
+            3 + 7,
         ),
     ],
 )
 def test_number_of_combinations_considered(params, number_considered_combinations):
-    score_f_called_cnt = 0
+    score_function_call_count = 0
 
     def score_f(key):
-        nonlocal score_f_called_cnt
-        score_f_called_cnt += 1
+        nonlocal score_function_call_count
+        score_function_call_count += 1
         return 1
 
     combinations = create_combinations(params)
     find_best_combination(combinations, score_f, params)
-    assert number_considered_combinations == score_f_called_cnt
+    assert number_considered_combinations == score_function_call_count, (
+        f"Expected {number_considered_combinations} combinations to be considered, "
+        f"but got {score_function_call_count}."
+    )
