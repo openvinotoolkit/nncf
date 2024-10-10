@@ -40,6 +40,7 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
+from nncf.experimental.torch.fx.quantization.backend_parameters import is_weight_compression_needed
 from nncf.scopes import IgnoredScope
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
@@ -94,8 +95,12 @@ def quantize_impl(
     # Revert applied transformation to keep original model
     # bias configuration.
     revert_quantization_transformations(quantized_model)
-    fq_weights_transformation(quantized_model)
-    compress_post_quantize_transformation(quantized_model)
+
+    if(is_weight_compression_needed(advanced_parameters)):
+        compress_post_quantize_transformation(quantized_model)
+    else:
+        fq_weights_transformation(quantized_model)
+
     # Magic. Without this call compiled model
     # is not preformant
     quantized_model = GraphModule(quantized_model, quantized_model.graph)

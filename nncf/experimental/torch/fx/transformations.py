@@ -566,7 +566,7 @@ def _get_pattern_replacement_per_tensor():
         return dequantized
 
     def replacement_graph_per_tensor(weight, scale, zero_point, low, high, dtype):
-        return torch.ops.aten.mul(weight, scale)
+        return torch.ops.aten.mul.Tensor(weight, scale)
 
     return pattern_per_tensor, replacement_graph_per_tensor
 
