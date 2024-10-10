@@ -26,6 +26,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
+from nncf.experimental.torch.fx.quantization.backend_parameters import is_weight_compression_needed
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.experimental.torch.fx.transformations import fq_weights_transformation
@@ -40,7 +41,6 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
-from nncf.experimental.torch.fx.quantization.backend_parameters import is_weight_compression_needed
 from nncf.scopes import IgnoredScope
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
@@ -96,7 +96,7 @@ def quantize_impl(
     # bias configuration.
     revert_quantization_transformations(quantized_model)
 
-    if(is_weight_compression_needed(advanced_parameters)):
+    if is_weight_compression_needed(advanced_parameters):
         compress_post_quantize_transformation(quantized_model)
     else:
         fq_weights_transformation(quantized_model)

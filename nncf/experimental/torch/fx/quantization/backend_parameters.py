@@ -10,7 +10,9 @@
 # limitations under the License.
 
 from typing import Optional
+
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+
 
 class FXBackendParameters:
     COMPRESS_WEIGHTS = "compress_weights"
