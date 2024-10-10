@@ -16,7 +16,6 @@ import torch
 from torch import nn
 
 from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
-from nncf.experimental.torch2.function_hook.hook_storage import HookType
 from tests.torch2.function_hook.helpers import CallCount
 
 
@@ -31,8 +30,8 @@ class CheckPriority(nn.Module):
         return x
 
 
-@pytest.fixture(params=HookType)
-def hook_type(request: pytest.FixtureRequest):
+@pytest.fixture(params=["pre_hook", "post_hook"])
+def hook_type(request: pytest.FixtureRequest) -> str:
     return request.param
 
 
@@ -40,10 +39,10 @@ def test_insert():
     hook_storage = HookStorage()
     hook = nn.Identity()
     hook_storage.register_pre_function_hook("foo", 0, hook)
-    assert hook_storage.storage["pre_hook__foo__0"]["0"] is hook
+    assert hook_storage.pre_hooks["foo__0"]["0"] is hook
 
     hook_storage.register_post_function_hook("foo", 0, hook)
-    assert hook_storage.storage["post_hook__foo__0"]["0"] is hook
+    assert hook_storage.post_hooks["foo__0"]["0"] is hook
 
 
 def test_execute():
@@ -65,13 +64,13 @@ def test_remove_handle():
 
     handle1 = hook_storage.register_pre_function_hook("foo", 0, nn.Identity())
     handle2 = hook_storage.register_pre_function_hook("foo", 0, nn.Identity())
-    assert len(hook_storage.storage["pre_hook__foo__0"]) == 2
+    assert len(hook_storage.pre_hooks["foo__0"]) == 2
 
     handle1.remove()
-    assert len(hook_storage.storage["pre_hook__foo__0"]) == 1
+    assert len(hook_storage.pre_hooks["foo__0"]) == 1
 
     handle2.remove()
-    assert "pre_hook__foo__0" not in hook_storage.storage
+    assert "foo__0" not in hook_storage.pre_hooks
 
 
 def test_excitation_priority():

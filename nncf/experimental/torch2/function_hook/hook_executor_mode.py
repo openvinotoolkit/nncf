@@ -121,11 +121,15 @@ class FunctionHookMode(TorchFunctionMode):
 
         # Hook names
         self.hooks_module_to_group_name: Dict[ReferenceType[nn.Module], str] = {}
-        for hook_key, hook_module_dict in self.hook_storage.storage.named_children():
+        self._get_named_hooks(self.hook_storage.pre_hooks, "pre_hook")
+        self._get_named_hooks(self.hook_storage.post_hooks, "post_hook")
+
+    def _get_named_hooks(self, storage: nn.ModuleDict, prefix: str):
+        for hook_key, hook_module_dict in storage.named_children():
             for hook_id, hook_module in hook_module_dict.named_children():
                 # Replace / to avoid collision with module separator
                 hook_name = hook_key.replace("/", "-")
-                self.hooks_module_to_group_name[ref(hook_module)] = f"{hook_name}[{hook_id}]"
+                self.hooks_module_to_group_name[ref(hook_module)] = f"{prefix}__{hook_name}[{hook_id}]"
 
     def _get_wrapped_call(self, fn_call: MethodType) -> Callable[..., Any]:
         """

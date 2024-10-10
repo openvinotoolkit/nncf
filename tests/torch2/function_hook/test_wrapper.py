@@ -16,7 +16,6 @@ import onnxruntime as ort
 import pytest
 import torch
 
-from nncf.experimental.torch2.function_hook.hook_storage import HookType
 from nncf.experimental.torch2.function_hook.wrapper import is_wrapped
 from nncf.experimental.torch2.function_hook.wrapper import register_post_function_hook
 from nncf.experimental.torch2.function_hook.wrapper import register_pre_function_hook
@@ -136,11 +135,11 @@ def test_torch_save_load(tmp_path: Path):
 @pytest.mark.parametrize(
     "hook_type, target_name",
     (
-        (HookType.POST_HOOK, "x"),
-        (HookType.PRE_HOOK, "/relu/0"),
-        (HookType.POST_HOOK, "/relu/0"),
-        (HookType.PRE_HOOK, "output"),
-        (HookType.POST_HOOK, "conv:weight"),
+        ("post_hook", "x"),
+        ("pre_hook", "/relu/0"),
+        ("post_hook", "/relu/0"),
+        ("pre_hook", "output"),
+        ("post_hook", "conv:weight"),
     ),
 )
 def test_insert_hook(hook_type, target_name):
@@ -150,7 +149,7 @@ def test_insert_hook(hook_type, target_name):
     assert is_wrapped(wrapped)
 
     hook = helpers.CallCount()
-    if hook_type == HookType.PRE_HOOK:
+    if hook_type == "pre_hook":
         register_pre_function_hook(wrapped, target_name, 0, hook)
     else:
         register_post_function_hook(wrapped, target_name, 0, hook)
@@ -159,19 +158,19 @@ def test_insert_hook(hook_type, target_name):
     assert hook.call_count == 1
 
 
-@pytest.mark.parametrize("hook_type", HookType)
-def test_insert_nested_hook(hook_type: HookType):
+@pytest.mark.parametrize("hook_type", ["pre_hook", "post_hook"])
+def test_insert_nested_hook(hook_type: str):
     example_input = helpers.ConvModel.get_example_inputs()
     model = helpers.ConvModel()
     wrapped = wrap_model(model)
 
     hook = helpers.CallCount()
-    if hook_type == HookType.PRE_HOOK:
+    if hook_type == "pre_hook":
         register_pre_function_hook(wrapped, "/relu/0", 0, helpers.AddModule(2.0))
-        register_pre_function_hook(wrapped, f"{hook_type.value}__-relu-0__0[0]/add/0", 0, hook)
+        register_pre_function_hook(wrapped, "pre_hook__-relu-0__0[0]/add/0", 0, hook)
     else:
         register_post_function_hook(wrapped, "/relu/0", 0, helpers.AddModule(2.0))
-        register_post_function_hook(wrapped, f"{hook_type.value}__-relu-0__0[0]/add/0", 0, hook)
+        register_post_function_hook(wrapped, "post_hook__-relu-0__0[0]/add/0", 0, hook)
     wrapped(example_input)
 
     assert hook.call_count == 1

@@ -17,7 +17,6 @@ import pytest
 
 from nncf.experimental.torch2.function_hook.hook_executor_mode import FunctionHookMode
 from nncf.experimental.torch2.function_hook.hook_executor_mode import generate_normalized_op_name
-from nncf.experimental.torch2.function_hook.hook_storage import HookType
 from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from tests.torch2.function_hook import helpers
 
@@ -60,7 +59,7 @@ def test_current_relative_name():
     hook_executor_mode.push_module_call_stack(model.conv)
     # assert hook_executor_mode.get_current_relative_name() == "conv"
 
-    hook_executor_mode.push_module_call_stack(hook_storage.storage[f"{HookType.POST_HOOK}__conv/conv2d/0__0"]["0"])
+    hook_executor_mode.push_module_call_stack(hook_storage.post_hooks["conv/conv2d/0__0"]["0"])
     assert hook_executor_mode.get_current_relative_name() == "conv/post_hook__conv-conv2d-0__0[0]"
 
 
@@ -79,5 +78,5 @@ def test_get_current_executed_op_name():
     hook_executor_mode.register_op("foo")
     assert hook_executor_mode.get_current_executed_op_name("foo") == "conv/foo/1"
 
-    hook_executor_mode.push_module_call_stack(hook_storage.storage[f"{HookType.POST_HOOK}__conv/conv2d/0__0"]["0"])
+    hook_executor_mode.push_module_call_stack(hook_storage.post_hooks["conv/conv2d/0__0"]["0"])
     assert hook_executor_mode.get_current_executed_op_name("foo") == "conv/post_hook__conv-conv2d-0__0[0]/foo/0"
