@@ -15,6 +15,7 @@ from typing import List, Optional, Set, Tuple
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.utils.api_marker import api
+from nncf.parameters import StrEnum
 
 
 class QuantizationTrait(Enum):
@@ -112,7 +113,7 @@ PropagationPath = List[Tuple[str, str]]
 
 
 @api()
-class QuantizerPropagationRule(Enum):
+class QuantizerPropagationRule(StrEnum):
     # While propagating up through a downward-branching node:
     # ... do not merge at all
     DO_NOT_MERGE_BRANCHES = 0
