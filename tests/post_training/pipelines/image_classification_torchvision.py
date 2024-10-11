@@ -19,7 +19,6 @@ import torch
 from torch._export import capture_pre_autograd_graph
 from torchvision import models
 
-from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.torch import disable_patching
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
@@ -80,7 +79,6 @@ class ImageClassificationTorchvision(ImageClassificationBase):
             with torch.no_grad():
                 with disable_patching():
                     self.model = self.model_params.export_fn(model, (self.dummy_tensor,))
-                    constant_fold(self.model)
 
         elif self.backend in PT_BACKENDS:
             self.model = model
