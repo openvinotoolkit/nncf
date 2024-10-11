@@ -23,6 +23,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
+from nncf.openvino.graph.metatypes.groups import ELEMENTWISE_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.model_utils import get_start_nodes_for_activation_path_tracing
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
@@ -44,6 +45,10 @@ from nncf.quantization.range_estimator import AggregatorType
 
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
+    def preserved_metatypes(self) -> List[OperatorMetatype]:
+        return [om.OVConvolutionMetatype, om.OVLSTMSequenceMetatype]
+
+    @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVMatMulMetatype]
 
@@ -54,6 +59,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVConvolutionMetatype]
+
+    @property
+    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+        return ELEMENTWISE_OPERATIONS
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
@@ -219,6 +228,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.OVSumMetatype,
                 om.OVSquaredDifferenceMetatype,
                 om.OVMVNMetatype,
+                om.OVGroupNormalizationMetatype,
                 om.OVBatchNormMetatype,
                 om.OVDivideMetatype,
                 om.OVSqrtMetatype,
@@ -247,13 +257,15 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 ignored_names.add(node.node_name)
         return ignored_names
 
-    @staticmethod
-    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_weight_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
         return [
             node
             for node in nncf_graph.get_all_nodes()
             if isinstance(node.layer_attributes, OVLayerAttributes) and node.metatype in OPERATIONS_WITH_WEIGHTS
         ]
+
+    def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        return node.metatype in self.mat_mul_metatypes and node.layer_attributes is not None
 
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: OVTargetPoint) -> str:

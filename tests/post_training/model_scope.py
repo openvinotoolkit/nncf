@@ -15,6 +15,7 @@ from typing import Dict, List
 import nncf
 from nncf import ModelType
 from nncf import QuantizationPreset
+from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
@@ -47,7 +48,7 @@ QUANTIZATION_MODELS = [
         "backends": ALL_PTQ_BACKENDS + [BackendType.OPTIMUM],
     },
     {
-        "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
+        "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_statefull",
         "model_id": "hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
         "pipeline_cls": CausalLMHF,
         "compression_params": {
@@ -55,6 +56,19 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "subset_size": 2,
         },
+        "params": {"is_stateful": True},
+        "backends": [BackendType.OPTIMUM],
+    },
+    {
+        "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM_stateless",
+        "model_id": "hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
+        "pipeline_cls": CausalLMHF,
+        "compression_params": {
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "subset_size": 2,
+        },
+        "params": {"is_stateful": False},
         "backends": [BackendType.OPTIMUM],
     },
     {
@@ -99,6 +113,17 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTorchvision,
         "compression_params": {},
         "backends": [BackendType.FX_TORCH, BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.OV, BackendType.ONNX],
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "torchvision/mobilenet_v3_small_BC",
+        "model_id": "mobilenet_v3_small",
+        "pipeline_cls": ImageClassificationTorchvision,
+        "compression_params": {
+            "fast_bias_correction": False,
+            "preset": QuantizationPreset.MIXED,
+        },
+        "backends": [BackendType.FX_TORCH, BackendType.OV, BackendType.ONNX],
         "batch_size": 128,
     },
     {
@@ -454,6 +479,22 @@ WEIGHT_COMPRESSION_MODELS = [
         "backends": [BackendType.OV],
     },
     {
+        "reported_name": "tinyllama_NF4_scale_estimation_stateful_per_channel",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": -1,
+            "ratio": 0.1,
+            "mode": CompressWeightsMode.NF4,
+            "scale_estimation": True,
+            "advanced_parameters": AdvancedCompressionParameters(
+                scale_estimation_params=AdvancedScaleEstimationParameters(32, 5, 10, 1.0)
+            ),
+        },
+        "params": {"is_stateful": True},
+        "backends": [BackendType.OV],
+    },
+    {
         "reported_name": "tinyllama_scale_estimation_per_channel",
         "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
         "pipeline_cls": LMWeightCompression,
@@ -481,6 +522,21 @@ WEIGHT_COMPRESSION_MODELS = [
             ),
         },
         "params": {"is_stateful": True},
+        "backends": [BackendType.OV],
+    },
+    {
+        "reported_name": "tinyllama_awq_backup_mode_none",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": 64,
+            "ratio": 0.8,
+            "all_layers": True,
+            "backup_mode": BackupMode.NONE,
+            "mode": CompressWeightsMode.INT4_ASYM,
+            "awq": True,
+            "ignored_scope": nncf.IgnoredScope(types=["Gather"]),
+        },
         "backends": [BackendType.OV],
     },
 ]

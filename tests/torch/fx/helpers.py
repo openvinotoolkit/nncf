@@ -19,7 +19,19 @@ import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
+from torch._export import capture_pre_autograd_graph
 from torch.fx.passes.graph_drawer import FxGraphDrawer
+
+from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
+from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
+from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.operator_metatypes import PTConstNoopMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleDepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import PTSumMetatype
+from tests.cross_fw.test_templates.models import NNCFGraphToTest
+from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
+from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
 
 
 class TinyImagenetDatasetManager:
@@ -109,3 +121,41 @@ class TinyImagenetDatasetManager:
 def visualize_fx_model(model: torch.fx.GraphModule, output_svg_path: str):
     g = FxGraphDrawer(model, output_svg_path)
     g.get_dot_graph().write_svg(output_svg_path)
+
+
+def get_torch_fx_model(model: torch.nn.Module) -> torch.fx.GraphModule:
+    device = next(model.named_parameters())[1].device
+    input_shape = model.INPUT_SIZE
+    if input_shape is None:
+        input_shape = [1, 3, 32, 32]
+    ex_input = torch.ones(input_shape).to(device)
+    model.eval()
+    with disable_patching():
+        fx_model = capture_pre_autograd_graph(model, args=(ex_input,))
+    apply_quantization_transformations(fx_model)
+    return fx_model
+
+
+def get_single_conv_nncf_graph() -> NNCFGraphToTest:
+    return NNCFGraphToTest(
+        conv_metatype=PTModuleConv2dMetatype,
+        nncf_graph_cls=PTNNCFGraph,
+        const_metatype=PTConstNoopMetatype,
+    )
+
+
+def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
+    return NNCFGraphToTestDepthwiseConv(
+        depthwise_conv_metatype=PTModuleDepthwiseConv2dSubtype,
+        nncf_graph_cls=PTNNCFGraph,
+        const_metatype=PTConstNoopMetatype,
+    )
+
+
+def get_sum_aggregation_nncf_graph() -> NNCFGraphToTestSumAggregation:
+    return NNCFGraphToTestSumAggregation(
+        conv_metatype=PTModuleConv2dMetatype,
+        sum_metatype=PTSumMetatype,
+        nncf_graph_cls=PTNNCFGraph,
+        const_metatype=PTConstNoopMetatype,
+    )

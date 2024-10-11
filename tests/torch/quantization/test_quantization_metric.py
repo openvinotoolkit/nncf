@@ -219,7 +219,7 @@ QUANTIZATION_CONFIGURATION_STATS_TEST_CASES = [
         weights={},
         ignored_scopes=[],
         target_device="TRIAL",
-        expected={"quantized_edges_in_cfg": 176, "total_edges_in_cfg": 177},
+        expected={"quantized_edges_in_cfg": 173, "total_edges_in_cfg": 177},
     ),
     CaseStruct(
         initializers={},

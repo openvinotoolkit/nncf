@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from nncf.tensor import Tensor
-from tests.post_training.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
+from tests.cross_fw.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
 
 
 class TestFQParams(TemplateTestFQParams):

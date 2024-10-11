@@ -43,8 +43,8 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationBuilder
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_model_device
-from tests.shared.nx_graph import compare_nx_graph_with_reference
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch import test_models
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_empty_config
@@ -55,6 +55,7 @@ from tests.torch.test_models.synthetic import ArangeModel
 from tests.torch.test_models.synthetic import Baddbmm
 from tests.torch.test_models.synthetic import ConvBNLeakyReLU
 from tests.torch.test_models.synthetic import ConvGeluGetItem
+from tests.torch.test_models.synthetic import ConvolutionWithMinModel
 from tests.torch.test_models.synthetic import ConvRelu6HSwishHSigmoid
 from tests.torch.test_models.synthetic import EmbeddingCatLinearModel
 from tests.torch.test_models.synthetic import EmbeddingSumModel
@@ -109,7 +110,9 @@ def get_full_path_to_the_graph(path_to_dot: str, graph_dir: str) -> None:
     return path_to_dot
 
 
-def check_graph(graph: PTNNCFGraph, path_to_dot: str, graph_dir: str, sort_dot_graph: bool = True) -> None:
+def check_graph(
+    graph: PTNNCFGraph, path_to_dot: str, graph_dir: str, sort_dot_graph: bool = True, extended: bool = False
+) -> None:
     """
     Builds the nx.Digraph for the structural analysis from 'graph', gets the full path to the reference graph from
     'path_to_dot' and 'graph_dir'. Then checks that the reference and the built graphs are identical.
@@ -118,10 +121,11 @@ def check_graph(graph: PTNNCFGraph, path_to_dot: str, graph_dir: str, sort_dot_g
     :param path_to_dot: The filename of the reference graph file.
     :param graph_dir: The parent directory of .dot file.
     :param sort_dot_graph: If True the dumped graph will be sorted, if False - otherwise.
+    :param extended: If true the dumped graph will be extended with edge params and other meta.
     :return: None
     """
 
-    nx_graph = graph.get_graph_for_structure_analysis()
+    nx_graph = graph.get_graph_for_structure_analysis(extended=extended)
     path_to_dot = get_full_path_to_the_graph(path_to_dot, graph_dir)
     compare_nx_graph_with_reference(nx_graph, path_to_dot, sort_dot_graph=sort_dot_graph)
 
@@ -732,7 +736,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
     SingleLayerModelDesc(model_name="relu", layer=torch.relu),
     SingleLayerModelDesc(model_name="relu_", layer=torch.relu_),
     SingleLayerModelDesc(model_name="max", layer=torch.max),
-    SingleLayerModelDesc(model_name="min", layer=torch.min),
+    GeneralModelDesc(model_builder=ConvolutionWithMinModel, input_sample_sizes=([1, 1, 5, 5])),
     GeneralModelDesc(model_builder=ArangeModel),
     SingleLayerModelDesc(model_name="transpose", layer=partial(torch.transpose, dim0=0, dim1=0)),
     GeneralModelDesc(model_builder=TransposeModel, input_sample_sizes=([1])),

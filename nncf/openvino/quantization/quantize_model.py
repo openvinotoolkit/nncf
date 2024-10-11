@@ -29,6 +29,7 @@ from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
 from nncf.openvino.rt_info import dump_parameters
+from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -191,7 +192,7 @@ def native_quantize_impl(
 @tracked_function(
     NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset", "max_drop", "drop_type"]
 )
-def native_quantize_with_accuracy_control_impl(
+def quantize_with_accuracy_control_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
@@ -365,65 +366,6 @@ def quantize_impl(
     )
 
 
-def wrap_validation_fn(validation_fn):
-    """
-    Wraps validation function to support case when it only returns metric value.
-
-    :param validation_fn: Validation function to wrap.
-    :return: Wrapped validation function.
-    """
-
-    def wrapper(*args, **kwargs):
-        retval = validation_fn(*args, **kwargs)
-        if isinstance(retval, tuple):
-            return retval
-        return retval, None
-
-    return wrapper
-
-
-def quantize_with_accuracy_control_impl(
-    model: ov.Model,
-    calibration_dataset: Dataset,
-    validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], float],
-    max_drop: float = 0.01,
-    drop_type: DropType = DropType.ABSOLUTE,
-    preset: Optional[QuantizationPreset] = None,
-    target_device: TargetDevice = TargetDevice.ANY,
-    subset_size: int = 300,
-    fast_bias_correction: bool = True,
-    model_type: Optional[ModelType] = None,
-    ignored_scope: Optional[IgnoredScope] = None,
-    advanced_quantization_parameters: Optional[AdvancedQuantizationParameters] = None,
-    advanced_accuracy_restorer_parameters: Optional[AdvancedAccuracyRestorerParameters] = None,
-) -> ov.Model:
-    """
-    Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend.
-    """
-
-    quantize_with_accuracy_control_fn = native_quantize_with_accuracy_control_impl
-
-    val_func = wrap_validation_fn(validation_fn)
-
-    return quantize_with_accuracy_control_fn(
-        model,
-        calibration_dataset,
-        validation_dataset,
-        val_func,
-        max_drop,
-        drop_type,
-        preset,
-        target_device,
-        subset_size,
-        fast_bias_correction,
-        model_type,
-        ignored_scope,
-        advanced_quantization_parameters,
-        advanced_accuracy_restorer_parameters,
-    )
-
-
 def compress_weights_impl(
     model: ov.Model,
     dataset: Dataset,
@@ -438,6 +380,7 @@ def compress_weights_impl(
     scale_estimation: bool,
     gptq: bool,
     lora_correction: bool,
+    backup_mode: BackupMode,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> ov.Model:
     """
@@ -457,6 +400,7 @@ def compress_weights_impl(
         scale_estimation,
         gptq,
         lora_correction,
+        backup_mode,
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)

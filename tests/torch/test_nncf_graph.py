@@ -15,7 +15,7 @@ from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
-from tests.post_training.test_templates.models import NNCFGraphToTestConstantFiltering
+from tests.cross_fw.test_templates.models import NNCFGraphToTestConstantFiltering
 
 
 class DummyConstantMetatype(OperatorMetatype):

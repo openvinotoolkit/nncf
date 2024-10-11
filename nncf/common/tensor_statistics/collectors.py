@@ -12,9 +12,10 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import List, Optional, Tuple
+from typing import Any, Deque, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
+from numpy.typing import NDArray
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorType
@@ -39,7 +40,7 @@ class TensorStatisticCollectorBase(ABC):
         self._num_samples = num_samples
 
     @property
-    def num_samples(self) -> int:
+    def num_samples(self) -> Union[int, None]:
         return self._num_samples
 
     def register_input(self, x: TensorType) -> TensorType:
@@ -49,38 +50,38 @@ class TensorStatisticCollectorBase(ABC):
         if self._num_samples is not None and self._collected_samples >= self._num_samples:
             return x
         if self._reduction_shape is None:
-            self._reduction_shape = tuple(range(len(x.shape)))
+            self._reduction_shape = tuple(range(len(cast(NNCFTensor, x).shape)))
         self._register_input(x)
         self._collected_samples += 1
         return x
 
     @abstractmethod
-    def _register_input(self, x: TensorType):
+    def _register_input(self, x: TensorType) -> None:
         pass
 
-    def get_statistics(self):
+    def get_statistics(self) -> None:
         """Returns collected statistics, if present."""
         if self._collected_samples == 0:
             raise StatisticsNotCollectedError()
         return self._get_statistics()
 
     @abstractmethod
-    def _get_statistics(self):
+    def _get_statistics(self) -> None:
         pass
 
-    def enable(self):
+    def enable(self) -> None:
         self._enabled = True
 
-    def disable(self):
+    def disable(self) -> None:
         self._enabled = False
 
-    def reset(self):
+    def reset(self) -> None:
         """Resets all the statistics in the collector."""
         self._collected_samples = 0
         self._reset()
 
     @abstractmethod
-    def _reset(self):
+    def _reset(self) -> None:
         pass
 
     def collected_samples(self) -> int:
@@ -102,9 +103,9 @@ class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
         self, reduction_shape: Optional[ReductionAxes] = None, num_samples: int = None, window_size: int = None
     ):
         super().__init__(reduction_shape, num_samples)
-        self._samples = deque(maxlen=window_size)
+        self._samples: Deque[int] = deque(maxlen=window_size)
 
-    def _reset(self):
+    def _reset(self) -> None:
         self._samples.clear()
 
 
@@ -121,10 +122,10 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
 
     @staticmethod
     @abstractmethod
-    def _get_processor():
+    def _get_processor() -> Any:
         pass
 
-    def _register_input_common(self, x: NNCFTensor):
+    def _register_input_common(self, x: NNCFTensor) -> None:
         min_reduced = self._tensor_processor.reduce_min(x, self._reduction_shape)
         if self._use_abs_max:
             x = self._tensor_processor.abs(x)
@@ -140,7 +141,7 @@ class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
         else:
             self._max_values = self._tensor_processor.max(max_reduced, self._max_values)
 
-    def _reset(self):
+    def _reset(self) -> None:
         self._min_values = None
         self._max_values = None
 
@@ -164,15 +165,15 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
         self._use_abs_max = use_abs_max
         self._tensor_processor = self._get_processor()
 
-        self._all_min_values = deque(maxlen=window_size)
-        self._all_max_values = deque(maxlen=window_size)
+        self._all_min_values: Deque[int] = deque(maxlen=window_size)
+        self._all_max_values: Deque[int] = deque(maxlen=window_size)
 
     @staticmethod
     @abstractmethod
-    def _get_processor():
+    def _get_processor() -> Any:
         pass
 
-    def _register_input_common(self, x: NNCFTensor):
+    def _register_input_common(self, x: NNCFTensor) -> None:
         min_reduced = self._tensor_processor.reduce_min(x, self._reduction_shape)
         if self._use_abs_max:
             x = self._tensor_processor.abs(x)
@@ -186,14 +187,14 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
             self._all_max_values.append(max_reduced)
 
     @abstractmethod
-    def _min_aggregate(self):
+    def _min_aggregate(self) -> None:
         pass
 
     @abstractmethod
-    def _max_aggregate(self):
+    def _max_aggregate(self) -> None:
         pass
 
-    def _reset(self):
+    def _reset(self) -> None:
         self._all_min_values.clear()
         self._all_max_values.clear()
 
@@ -217,13 +218,13 @@ class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
         self._use_means_of_mins = use_means_of_mins
         self._use_means_of_maxs = use_means_of_maxs
 
-    def _min_aggregate(self):
+    def _min_aggregate(self) -> Any:
         stacked_min = self._tensor_processor.stack(self._all_min_values)
         if self._use_means_of_mins:
             return self._tensor_processor.mean(stacked_min, axis=0)
         return self._tensor_processor.reduce_min(stacked_min, axis=0)
 
-    def _max_aggregate(self):
+    def _max_aggregate(self) -> Any:
         stacked_max = self._tensor_processor.stack(self._all_max_values)
         if self._use_means_of_maxs:
             return self._tensor_processor.mean(stacked_max, axis=0)
@@ -235,11 +236,11 @@ class MeanMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
     Collector aggregates mean of minimum values and mean of maximum values.
     """
 
-    def _min_aggregate(self):
+    def _min_aggregate(self) -> Any:
         stacked_min = self._tensor_processor.stack(self._all_min_values)
         return self._tensor_processor.mean(stacked_min, axis=0)
 
-    def _max_aggregate(self):
+    def _max_aggregate(self) -> Any:
         stacked_max = self._tensor_processor.stack(self._all_max_values)
         return self._tensor_processor.mean(stacked_max, axis=0)
 
@@ -259,30 +260,30 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         super().__init__(num_samples=num_samples)
         self._channel_axis = channel_axis
         self._tensor_processor = self._get_processor()
-        self._all_values = deque(maxlen=window_size)
-        self._all_shapes = deque(maxlen=window_size)
+        self._all_values: Deque[int] = deque(maxlen=window_size)
+        self._all_shapes: Deque[int] = deque(maxlen=window_size)
 
     @staticmethod
     @abstractmethod
-    def _get_processor():
+    def _get_processor() -> Any:
         pass
 
-    def _register_input_common(self, x: NNCFTensor):
+    def _register_input_common(self, x: NNCFTensor) -> None:
         if self._channel_axis == 0:
             self._all_values.append(self._tensor_processor.batch_mean(x))
         else:
             self._all_values.append(self._tensor_processor.mean_per_channel(x, self._channel_axis))
-        self._all_shapes.append(x.shape)
+        self._all_shapes.append(cast(int, x.shape))
 
-    def _reset(self):
+    def _reset(self) -> None:
         self._all_values.clear()
         self._all_shapes.clear()
 
-    def _mean_aggregate(self):
+    def _mean_aggregate(self) -> Any:
         all_values_stack = self._tensor_processor.stack(self._all_values)
         return self._tensor_processor.mean(all_values_stack, 0)
 
-    def _shape(self):
+    def _shape(self) -> Any:
         return self._all_shapes[0]
 
 
@@ -298,17 +299,17 @@ class RawStatisticCollector(OfflineTensorStatisticCollector):
             the number of samples that will be processed.
         """
         super().__init__(num_samples=num_samples)
-        self._all_values = []
+        self._all_values: List[int] = []
 
     @staticmethod
     @abstractmethod
-    def _get_processor():
+    def _get_processor() -> Any:
         pass
 
-    def _register_input_common(self, x: NNCFTensor):
-        self._all_values.append(x.tensor)
+    def _register_input_common(self, x: NNCFTensor) -> None:
+        self._all_values.append(cast(int, x.tensor))
 
-    def _reset(self):
+    def _reset(self) -> None:
         self._all_values.clear()
 
 
@@ -317,8 +318,10 @@ class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
     Collector estimates median and median absolute deviation (MAD).
     """
 
-    def _prepare_statistics(self):
-        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_shape), discard_zeros=True)
+    def _prepare_statistics(self) -> Tuple[NDArray[Any], NDArray[Any]]:
+        per_channel_history = get_per_channel_history(
+            self._samples, cast(List[int], self._reduction_shape), discard_zeros=True
+        )
         per_channel_median = [np.median(channel_hist) for channel_hist in per_channel_history]
         per_channel_mad = []
         for idx, median in enumerate(per_channel_median):
@@ -343,8 +346,8 @@ class PercentileStatisticCollector(OfflineTensorStatisticCollector):
         super().__init__(reduction_shape, num_samples, window_size)
         self._percentiles_to_collect = percentiles_to_collect
 
-    def _prepare_statistics(self):
-        per_channel_history = get_per_channel_history(self._samples, list(self._reduction_shape))
+    def _prepare_statistics(self) -> Dict[float, Any]:
+        per_channel_history = get_per_channel_history(self._samples, cast(List[int], self._reduction_shape))
         percentile_vs_values_dict = {}
         for pc in self._percentiles_to_collect:
             per_channel_percentiles = [np.percentile(channel_hist, pc) for channel_hist in per_channel_history]
@@ -366,10 +369,10 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
         window_size: int = None,
     ):
         super().__init__(reduction_shape, num_samples, window_size)
-        self._all_pct_values = {}
+        self._all_pct_values: Dict[float, Any] = {}
         for pc in percentiles_to_collect:
             self._all_pct_values[pc] = deque(maxlen=window_size)
 
-    def _reset(self):
+    def _reset(self) -> None:
         for _, val in self._all_pct_values.items():
             val.clear()

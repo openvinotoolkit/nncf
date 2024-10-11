@@ -17,8 +17,8 @@ import jsonschema
 import pytest
 
 from nncf.config import NNCFConfig
-from tests.shared.paths import PROJECT_ROOT
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import TEST_ROOT
 
 GOOD_CONFIG_SOURCES = [
     PROJECT_ROOT / Path("examples/torch/classification/configs"),

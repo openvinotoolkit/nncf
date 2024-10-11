@@ -59,8 +59,8 @@ from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import safe_thread_call
-from tests.shared.nx_graph import compare_nx_graph_with_reference
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_conv
