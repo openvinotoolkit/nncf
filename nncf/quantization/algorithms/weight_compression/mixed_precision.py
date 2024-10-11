@@ -236,6 +236,12 @@ class DataBasedCriterion(DataFreeCriterion):
 
         statistic_container = StatisticPointsContainer()
         for act_node, output_port_id in nodes_and_port_ids:
+            n_dims = len(graph.get_output_edges_by_port_id(act_node, output_port_id)[0].tensor_shape)
+            if n_dims < 3:
+                raise RuntimeError(
+                    f"Data-aware mixed precision criteria are not supported for MatMuls with 1D/2D activations. "
+                    f"Node: {act_node.node_name}, number of dimensions: {n_dims}."
+                )
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, act_node.node_name, port_id=output_port_id
             )
@@ -341,8 +347,8 @@ class MeanVarianceCriterion(DataBasedCriterion):
     STAT_KEY = SensitivityMetric.MEAN_ACTIVATION_VARIANCE.value
 
     def _get_statistic_collector(self, subset_size=None):
-        # Reduce across sequence length dimension
-        return self._backend_entity.mean_variance_statistic_collector(reduction_axes=(1,), subset_size=subset_size)
+        # Reducing across the second-last dimension, assuming it is the sequence length dimension
+        return self._backend_entity.mean_variance_statistic_collector(reduction_axes=(-2,), subset_size=subset_size)
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
@@ -354,8 +360,8 @@ class MaxVarianceCriterion(DataBasedCriterion):
     STAT_KEY = SensitivityMetric.MAX_ACTIVATION_VARIANCE.value
 
     def _get_statistic_collector(self, subset_size=None):
-        # Reduce across sequence length dimension
-        return self._backend_entity.max_variance_statistic_collector(reduction_axes=(1,), subset_size=subset_size)
+        # Reducing across the second-last dimension, assuming it is the sequence length dimension
+        return self._backend_entity.max_variance_statistic_collector(reduction_axes=(-2,), subset_size=subset_size)
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE)
@@ -367,5 +373,5 @@ class MeanMaxCriterion(DataBasedCriterion):
     STAT_KEY = SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE.value
 
     def _get_statistic_collector(self, subset_size=None):
-        # Reduce across sequence length dimension
-        return self._backend_entity.mean_abs_max_statistic_collector(reduction_axes=(1,), subset_size=subset_size)
+        # Reducing across the second-last dimension, assuming it is the sequence length dimension
+        return self._backend_entity.mean_abs_max_statistic_collector(reduction_axes=(-2,), subset_size=subset_size)

@@ -46,6 +46,7 @@ from nncf.quantization.algorithms.weight_compression.scale_estimation import Sca
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
+from nncf.tensor import functions as fns
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -616,10 +617,11 @@ class WeightCompression(Algorithm):
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
             )
-            # Each activation tensor is assumed to have shape [B, L, C], where B=1 and L is a sequence length dimension.
-            # We reduce activations across B and L dimensions, mean is used as a reduction function.
+            # Reduce activations across all but the last dimension. The last dimension is assumed to be the hidden
+            # size dimension.
+            n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
             stat_collector = self._backend_entity.mean_statistic_collector(
-                reduction_axes=(0, 1), subset_size=subset_size
+                reduction_axes=tuple(range(n_dims - 1)), subset_size=subset_size
             )
             statistic_container.add_statistic_point(
                 StatisticPoint(
@@ -664,7 +666,7 @@ class WeightCompression(Algorithm):
                 act_node.node_name, partial(input_filter_func, port_id=output_port_id), self._algorithm_key
             ):
                 raw_statistics = tensor_collector.get_statistics()
-                mean_values.extend(value[0, 0] for value in raw_statistics[self._backend_entity.MEAN_STAT])
+                mean_values.extend(fns.squeeze(value) for value in raw_statistics[self._backend_entity.MEAN_STAT])
                 shapes.extend([tuple(value.data) for value in raw_statistics[self._backend_entity.SHAPE_STAT]])
             stats = WCStatistics(mean_values, shapes)
             # Each activation node may have multiple MatMul nodes which it is an input to

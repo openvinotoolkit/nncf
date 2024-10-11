@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from dataclasses import dataclass
+from functools import reduce
+from operator import mul
 from typing import List, Tuple
 
 from nncf.tensor import Tensor
@@ -38,7 +40,8 @@ def process_stats(stats: WCStatistics, subset_size: int) -> Tuple[Tensor, Tensor
 
     # prevent high memory and time consumption
     if X_full.shape[1] > subset_size:
-        lens = [shape[0] * shape[1] for shape in stats.shapes]
+        # activations were reduced across all but the last dimension
+        lens = [reduce(mul, shape[:-1], 1) for shape in stats.shapes]
         step = X_full.shape[1] // subset_size
         idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
         X = X_full[:, idxs]  # [HiddenDim, ~SubsetSize]

@@ -601,27 +601,33 @@ class SplitConcatModel(OVReferenceModel):
 
 @SYNTHETIC_MODELS.register()
 class IntegerModel(OVReferenceModel):
-    def _create_ov_model(self):
-        input_1 = opset.parameter([1, 7, 1], name="Input")
+    def _create_ov_model(self, dim1=1, dim2=7, dim3=6, max_input_value=2, add_batch_dimension=False):
+        input_1 = opset.parameter([dim1, dim2, dim1], name="Input")
         convert_1 = opset.convert(input_1, destination_type="i64", name="Convert_1")
 
-        gather_1 = opset.gather(convert_1, 2, axis=0, batch_dims=0)
+        gather_1 = opset.gather(convert_1, 0, axis=0, batch_dims=0)
         gather_1.set_friendly_name("Gather_1")
 
-        gather_2_data = opset.constant(self._rng.random((3, 6)), dtype=np.float32, name="gather_2_data")
+        gather_2_data = opset.constant(
+            self._rng.random((max_input_value + 1, dim3)), dtype=np.float32, name="gather_2_data"
+        )
         gather_2 = opset.gather(gather_2_data, gather_1, axis=0, batch_dims=0)
         gather_2.set_friendly_name("Gather_2")
 
         gather_3 = opset.gather(gather_2, 2, axis=0, batch_dims=0)
+        if add_batch_dimension:
+            gather_3 = opset.unsqueeze(gather_3, 0)
         gather_3.set_friendly_name("Gather_3")
 
-        matmul_1_data = opset.constant(self._rng.random((6, 6)), dtype=np.float32, name="matmul_1_data")
+        matmul_1_data = opset.constant(self._rng.random((dim3, dim3)), dtype=np.float32, name="matmul_1_data")
         matmul_1 = opset.matmul(gather_3, matmul_1_data, transpose_a=False, transpose_b=True, name="MatMul_1")
 
         gather_4 = opset.gather(input_1, 0, axis=2, batch_dims=0)
+        if add_batch_dimension:
+            gather_4 = opset.unsqueeze(gather_4, 0)
         gather_4.set_friendly_name("Gather_4")
 
-        matmul_2_data = opset.constant(self._rng.random((6, 7)), dtype=np.float32, name="matmul_2_data")
+        matmul_2_data = opset.constant(self._rng.random((dim3, dim2)), dtype=np.float32, name="matmul_2_data")
         matmul_2 = opset.matmul(gather_4, matmul_2_data, transpose_a=False, transpose_b=True, name="MatMul_2")
         add_1 = opset.add(matmul_1, matmul_2, name="Add_1")
 
@@ -949,8 +955,8 @@ class AWQMatmulModel(OVReferenceModel):
             )
             return (qw - zp) * scale
 
-    def _create_ov_model(self, is_int8=False):
-        input_node = opset.parameter([1, -1, 8], name="Input_1")
+    def _create_ov_model(self, n_extra_dims: int = 1, is_int8=False):
+        input_node = opset.parameter([1] * n_extra_dims + [-1, 8], name="Input_1")
 
         weights_data1 = np.arange(0, 64).reshape(8, 8)
         weights_data1[:] = 2.0

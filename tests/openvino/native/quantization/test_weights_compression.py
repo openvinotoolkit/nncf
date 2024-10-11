@@ -297,8 +297,20 @@ def test_mixed_precision(mode, all_layers, ratio, ref_ids, mocker):
 
 @pytest.mark.parametrize("metric", DATA_BASED_SENSITIVITY_METRICS)
 def test_gather_in_4_bit_if_all_layers_with_data(metric):
-    model = IntegerModel().ov_model
-    dataset = Dataset([np.arange(7).reshape(1, 7, 1)])
+    dim1 = 2  # sequence length dimension
+    dim2 = 7
+    max_input_value = 6
+    model = IntegerModel(dim1=dim1, dim2=dim2, max_input_value=max_input_value, add_batch_dimension=True).ov_model
+
+    input_shape = (dim1, dim2, dim1)
+    n_inputs = input_shape[0] * input_shape[1] * input_shape[2]
+    n_copies = int(np.ceil(n_inputs / (max_input_value + 1)))
+    # Rolling is needed to ensure non-zero variance
+    input_ = [np.roll(np.arange(max_input_value + 1), i + 1) for i in range(n_copies)]
+    input_ = np.hstack(input_)[:n_inputs]
+    input_ = input_.reshape(input_shape)
+
+    dataset = Dataset([input_])
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.INT4_SYM,
@@ -391,7 +403,7 @@ def test_gather_can_be_4_bit_if_all_layers_without_data():
 
 @pytest.mark.parametrize("metric", ALL_SENSITIVITY_METRICS)
 def test_gather_in_8_bit_if_not_all_layers(metric):
-    model = IntegerModel().ov_model
+    model = IntegerModel(add_batch_dimension=True).ov_model
     dataset = Dataset([np.ones([1, 7, 1])])
     compressed_model = compress_weights(
         model,
@@ -735,7 +747,7 @@ def test_raise_error_with_data_metric_and_without_dataset(mode, metric):
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
-    model = IntegerModel().ov_model
+    model = IntegerModel(add_batch_dimension=True).ov_model
     dataset = Dataset([np.ones([1, 7, 1])])
     criterion_cls = MIXED_PRECISION_CRITERIA.get(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
     scores_spy = mocker.spy(criterion_cls, "_calc_sensitivity")
@@ -1353,3 +1365,41 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
             else:
                 assert op.get_element_type() == backup_ov_mode
     assert act_num == num_compressed
+
+
+@pytest.mark.parametrize("n_extra_dims", [0, 1, 2])
+def test_data_aware_algo_with_different_activation_dimensions(n_extra_dims):
+    model = AWQMatmulModel(n_extra_dims=n_extra_dims).ov_model
+    dataset = Dataset([np.ones([1] * n_extra_dims + [8, 8])])
+    compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_ASYM,
+        group_size=-1,
+        dataset=dataset,
+        awq=True,
+    )
+
+
+@pytest.mark.parametrize("n_extra_dims,raises", ([0, True], (1, False), (2, False)))
+def test_data_aware_mixed_precision_with_different_activation_dimensions(n_extra_dims, raises):
+    model = AWQMatmulModel(n_extra_dims=n_extra_dims).ov_model
+    dataset = Dataset([np.ones([1] * n_extra_dims + [8, 8])])
+
+    def call_compression():
+        compress_weights(
+            model,
+            mode=CompressWeightsMode.INT4_ASYM,
+            ratio=0.5,
+            sensitivity_metric=SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
+            group_size=-1,
+            dataset=dataset,
+        )
+
+    if raises:
+        with pytest.raises(RuntimeError) as exc_info:
+            call_compression()
+        assert "Data-aware mixed precision criteria are not supported for MatMuls with 1D/2D activations." in str(
+            exc_info.value
+        )
+    else:
+        call_compression()
