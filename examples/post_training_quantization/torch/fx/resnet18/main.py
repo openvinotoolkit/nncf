@@ -28,7 +28,6 @@ from fastdownload import FastDownload
 import nncf
 import nncf.torch
 from nncf.common.logging.track_progress import track
-from nncf.common.utils.helpers import create_table
 from nncf.torch import disable_patching
 
 IMAGE_SIZE = 64
@@ -196,6 +195,7 @@ def main():
 
     acc1_int8 = validate(val_loader, quantized_fx_model, device)
     print(f"Accuracy@1 of INT8 model: {acc1_int8:.3f}")
+    print(f"Accuracy diff FP32 - INT8: {acc1_fp32 - acc1_int8:.3f}")
 
     ###############################################################################
     # Step 3: Run benchmarks
@@ -203,33 +203,19 @@ def main():
     print("Run benchmark for FP32 model compiled with default backend ...")
     compiled_model = torch.compile(model)
     fp32_latency = measure_latency(compiled_model, example_inputs=example_input)
+    print(f"{fp32_latency:.3f} ms")
 
     print("Run benchmark for FP32 model compiled with openvino backend ...")
     compiled_model = torch.compile(model, backend="openvino")
     fp32_ov_latency = measure_latency(compiled_model, example_inputs=example_input)
+    print(f"{fp32_ov_latency:.3f} ms")
+    print(f"Speed up relative to FP32 model with default backend: x{fp32_latency / fp32_ov_latency:.3f}")
 
     print("Run benchmark for INT8 model compiled with openvino backend ...")
     int8_latency = measure_latency(quantized_fx_model, example_inputs=example_input)
-
-    ###############################################################################
-    # Step 4: Summary
-    print(os.linesep + "[Step 4] Summary")
-    tabular_data = [
-        ["Accuracy@1", acc1_fp32, acc1_int8, f"Diff: {acc1_fp32 - acc1_int8:.3f}"],
-        [
-            "Performance in original backend, mseconds",
-            f"{fp32_latency:.3f}",
-            "-",
-            f"Speedup x{fp32_latency / int8_latency:.3f}",
-        ],
-        [
-            "Performance in openvino backend, mseconds",
-            f"{fp32_ov_latency:.3f}",
-            f"{int8_latency:.3f}",
-            f"Speedup x{fp32_ov_latency / int8_latency:.3f}",
-        ],
-    ]
-    print(create_table(["", "FP32", "INT8", "Summary"], tabular_data))
+    print(f"{int8_latency:.3f} ms")
+    print(f"Speed up relative to FP32 model with default backend: x{fp32_latency / int8_latency:.3f}")
+    print(f"Speed up relative to FP32 model with openvino backend: x{fp32_ov_latency / int8_latency:.3f}")
 
     return acc1_fp32, acc1_int8, fp32_latency, fp32_ov_latency, int8_latency
 
