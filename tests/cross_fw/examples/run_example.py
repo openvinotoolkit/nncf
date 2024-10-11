@@ -194,7 +194,8 @@ def post_training_quantization_torch_fx_resnet18():
         "fp32_top1": float(results[0]),
         "int8_top1": float(results[1]),
         "fp32_latency": float(results[2]),
-        "int8_latency": float(results[3]),
+        "fp32_ov_latency": float(results[3]),
+        "int8_latency": float(results[4]),
     }
 
 
