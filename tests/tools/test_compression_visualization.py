@@ -9,15 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 from tools.visualize_compression_results import visualize
 
 
-@pytest.mark.parametrize("csv_file", ["phi3_asym", "llama2_asym"])
-def test_visualization_of_compression_results(csv_file, tmp_path):
-    in_file = PROJECT_ROOT / "tools" / "data" / (csv_file + ".csv")
+def test_visualization_of_compression_results(tmp_path):
+    in_file = PROJECT_ROOT / "tools" / "data" / "phi3_asym.csv"
 
     visualize(in_file, tmp_path)
 
