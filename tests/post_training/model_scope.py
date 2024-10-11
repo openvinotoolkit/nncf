@@ -26,6 +26,7 @@ from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
 from tests.post_training.pipelines.base import NNCF_PTQ_BACKENDS
 from tests.post_training.pipelines.base import BackendType
+from tests.post_training.pipelines.base import PrecisionType
 from tests.post_training.pipelines.causal_language_model import CausalLMHF
 from tests.post_training.pipelines.gpt import GPT
 from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
@@ -80,6 +81,30 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
         },
         "backends": [BackendType.TORCH, BackendType.OV, BackendType.OPTIMUM],
+    },
+    {
+        "reported_name": "hf/bert-base-uncased_fp16",
+        "model_id": "bert-base-uncased",
+        "pipeline_cls": MaskedLanguageModelingHF,
+        "compression_params": {
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "subset_size": 2,
+        },
+        "backends": [BackendType.OV],
+        "base_precision": PrecisionType.FP16,
+    },
+    {
+        "reported_name": "hf/bert-base-uncased_bf16",
+        "model_id": "bert-base-uncased",
+        "pipeline_cls": MaskedLanguageModelingHF,
+        "compression_params": {
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "subset_size": 2,
+        },
+        "backends": [BackendType.OV],
+        "base_precision": PrecisionType.BF16,
     },
     # Torchvision models
     {

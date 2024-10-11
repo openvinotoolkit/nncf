@@ -85,7 +85,7 @@ class LMWeightCompression(BaseTestPipeline):
                 raise RuntimeError(f"is_stateful={is_stateful} is not supported for PyTorch backend.")
 
             self.model_hf = AutoModelForCausalLM.from_pretrained(
-                self.model_id, torch_dtype=torch.float32, device_map="cpu"
+                self.model_id, torch_dtype=self.torch_dtype, device_map="cpu"
             )
             self.model = self.model_hf
         elif self.backend == BackendType.OV:
@@ -94,12 +94,22 @@ class LMWeightCompression(BaseTestPipeline):
             if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
                 # export by model_id
                 self.model_hf = OVModelForCausalLM.from_pretrained(
-                    self.model_id, export=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                    self.model_id,
+                    export=True,
+                    load_in_8bit=False,
+                    compile=False,
+                    stateful=is_stateful,
+                    torch_dtype=self.torch_dtype,
                 )
             else:
                 # no export, load from IR. Applicable for sequential run of test cases in local environment.
                 self.model_hf = OVModelForCausalLM.from_pretrained(
-                    self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                    self.fp32_model_dir,
+                    trust_remote_code=True,
+                    load_in_8bit=False,
+                    compile=False,
+                    stateful=is_stateful,
+                    torch_dtype=self.torch_dtype,
                 )
             self.model = self.model_hf.model
         else:
@@ -110,7 +120,7 @@ class LMWeightCompression(BaseTestPipeline):
             self._dump_model_fp32()
 
     def prepare_preprocessor(self) -> None:
-        self.preprocessor = AutoTokenizer.from_pretrained(self.model_id)
+        self.preprocessor = AutoTokenizer.from_pretrained(self.model_id, torch_dtype=self.torch_dtype)
 
     def get_transform_calibration_fn(self):
         def transform_fn(data, max_tokens=128, filter_bad_tokens=True):
@@ -271,7 +281,12 @@ class LMWeightCompression(BaseTestPipeline):
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
             print("Collection ground-truth reference data")
             model_gold = OVModelForCausalLM.from_pretrained(
-                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                self.fp32_model_dir,
+                trust_remote_code=True,
+                load_in_8bit=False,
+                compile=False,
+                stateful=is_stateful,
+                torch_dtype=self.torch_dtype,
             )
             evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
             evaluator.dump_gt(str(gt_data_path))
@@ -291,6 +306,7 @@ class LMWeightCompression(BaseTestPipeline):
                 compile=False,
                 stateful=is_stateful,
                 ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
+                torch_dtype=self.torch_dtype,
             )
         print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)

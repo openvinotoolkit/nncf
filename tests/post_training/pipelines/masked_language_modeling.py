@@ -30,12 +30,16 @@ class MaskedLanguageModelingHF(PTQTestPipeline):
 
     def prepare_model(self) -> None:
         if self.backend in PT_BACKENDS:
-            self.model_hf = transformers.AutoModelForSequenceClassification.from_pretrained(self.model_id)
+            self.model_hf = transformers.AutoModelForSequenceClassification.from_pretrained(
+                self.model_id, torch_dtype=self.torch_dtype
+            )
             self.model = self.model_hf
             self.model.config.torchscript = True  # Set to export by convert_model via torch.jit.trace
             self.dummy_tensor = self.model_hf.dummy_inputs["input_ids"]
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
-            self.model_hf = OVModelForSequenceClassification.from_pretrained(self.model_id, export=True, compile=False)
+            self.model_hf = OVModelForSequenceClassification.from_pretrained(
+                self.model_id, export=True, compile=False, torch_dtype=self.torch_dtype
+            )
             self.model = self.model_hf.model
 
         if self.backend == BackendType.ONNX:
@@ -65,7 +69,7 @@ class MaskedLanguageModelingHF(PTQTestPipeline):
             ov.serialize(self.model, self.fp32_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:
-        self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id)
+        self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id, torch_dtype=self.torch_dtype)
 
     def get_transform_calibration_fn(self):
         if self.backend in PT_BACKENDS:
@@ -86,7 +90,7 @@ class MaskedLanguageModelingHF(PTQTestPipeline):
         return transform_func
 
     def prepare_calibration_dataset(self):
-        quantizer = OVQuantizer.from_pretrained(self.model_hf)
+        quantizer = OVQuantizer.from_pretrained(self.model_hf, torch_dtype=self.torch_dtype)
 
         num_samples = self.compression_params.get("subset_size", 300)
 
