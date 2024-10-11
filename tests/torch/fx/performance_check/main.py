@@ -222,6 +222,57 @@ def process_model(model_name: str):
     return result
 
 
+def process_model_native_to_ov(model_name: str):
+    result = {"name": model_name}
+    model_config = MODEL_SCOPE[model_name]
+    pt_model = model_config.model_builder.build()
+    example_inputs = model_config.model_builder.get_example_inputs()
+    export_inputs = example_inputs[0] if isinstance(example_inputs[0], tuple) else example_inputs
+    save_dir = Path(__file__).parent.resolve() / model_name
+    save_dir.mkdir(exist_ok=True)
+
+    # Check native performance
+    with disable_patching():
+        latency_native = measure_time(pt_model, example_inputs, model_config.num_iters)
+    result["pt_latency"] = latency_native
+    print(f"pt latency: {latency_native}")
+
+    # Check native compiled performance
+    with disable_patching():
+        latency_compiled_native = measure_time(torch.compile(pt_model), example_inputs, model_config.num_iters)
+    result["pt_latency_compiled"] = latency_compiled_native
+    print(f"pt latency compiled {latency_compiled_native}")
+
+    # Check openvino compiled performance
+    with disable_patching():
+        latency_compiled_ov = measure_time(
+            torch.compile(pt_model, backend="openvino"), example_inputs, model_config.num_iters
+        )
+    result["ov_latency_compiled"] = latency_compiled_ov
+    print(f"ov_latency_compiled: {latency_compiled_ov}")
+
+    # Check FX INT8 with openvino compiled performance
+    with disable_patching():
+        with torch.no_grad():
+            exported_model = capture_pre_autograd_graph(pt_model, export_inputs)
+
+    with disable_patching():
+        with torch.no_grad():
+            quant_fx_model = nncf.quantize(
+                exported_model,
+                nncf.Dataset(example_inputs),
+                **model_config.quantization_params,
+            )
+
+    with disable_patching():
+        latency_compiled_ov = measure_time(
+            torch.compile(quant_fx_model, backend="openvino"), example_inputs, model_config.num_iters
+        )
+    result["int8_ov_latency_compiled"] = latency_compiled_ov
+    print(f"int8_ov_latency_compiled: {latency_compiled_ov}")
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", help="Target model name", type=str, default="all")
@@ -241,7 +292,7 @@ def main():
         print("---------------------------------------------------")
         print(f"name: {model_name}")
         try:
-            results_list.append({**process_model(model_name), **process_model_ov(model_name)})
+            results_list.append({**process_model_native_to_ov(model_name)})
         except Exception as e:
             print(f"FAILS TO CHECK PERFORMANCE FOR {model_name} MODEL:")
             err_msg = str(e)

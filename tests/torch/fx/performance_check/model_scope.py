@@ -29,7 +29,7 @@ from tests.torch.fx.performance_check.model_builders.ultralytics import Ultralyt
 class ModelConfig:
     model_builder: BaseModelBuilder
     quantization_params: Dict[str, Any]
-    num_iters: int = 500
+    num_iters: int = 5000
 
 
 MODEL_SCOPE = {
