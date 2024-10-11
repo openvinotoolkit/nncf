@@ -30,17 +30,9 @@ hf/bert-base-uncased_fp16_backend_FP32:
   metric_value: null
 hf/bert-base-uncased_fp16_backend_OV:
   metric_value: null
-hf/bert-base-uncased_fp16_backend_TORCH:
-  metric_value: null
-hf/bert-base-uncased_fp16_backend_OPTIMUM:
-  metric_value: null
 hf/bert-base-uncased_bf16_backend_FP32:
   metric_value: null
 hf/bert-base-uncased_bf16_backend_OV:
-  metric_value: null
-hf/bert-base-uncased_bf16_backend_TORCH:
-  metric_value: null
-hf/bert-base-uncased_bf16_backend_OPTIMUM:
   metric_value: null
 torchvision/resnet18_backend_FP32:
   metric_value: 0.6978

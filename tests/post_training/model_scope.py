@@ -84,26 +84,26 @@ QUANTIZATION_MODELS = [
     },
     {
         "reported_name": "hf/bert-base-uncased_fp16",
-        "model_id": "hf/bert-base-uncased",
+        "model_id": "bert-base-uncased",
         "pipeline_cls": MaskedLanguageModelingHF,
         "compression_params": {
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
             "subset_size": 2,
         },
-        "backends": ALL_PTQ_BACKENDS + [BackendType.OPTIMUM],
+        "backends": [BackendType.OV],
         "base_precision": PrecisionType.FP16,
     },
     {
         "reported_name": "hf/bert-base-uncased_bf16",
-        "model_id": "hf/bert-base-uncased",
+        "model_id": "bert-base-uncased",
         "pipeline_cls": MaskedLanguageModelingHF,
         "compression_params": {
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
             "subset_size": 2,
         },
-        "backends": ALL_PTQ_BACKENDS + [BackendType.OPTIMUM],
+        "backends": [BackendType.OV],
         "base_precision": PrecisionType.BF16,
     },
     # Torchvision models

@@ -43,9 +43,7 @@ class MaskedLanguageModelingHF(PTQTestPipeline):
             self.model = self.model_hf.model
 
         if self.backend == BackendType.ONNX:
-            self.model_hf = ORTModelForSequenceClassification.from_pretrained(
-                self.model_id, export=True, torch_dtype=self.torch_dtype
-            )
+            self.model_hf = ORTModelForSequenceClassification.from_pretrained(self.model_id, export=True)
             self.model = onnx.load(self.model_hf.model_path)
 
         self._dump_model_fp32()
