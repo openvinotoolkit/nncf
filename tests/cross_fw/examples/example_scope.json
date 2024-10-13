@@ -39,9 +39,9 @@
         "requirements": "examples/post_training_quantization/openvino/yolov8/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "fp32_mAP": 0.45252755065175254,
-            "int8_mAP": 0.4561537594798616,
-            "accuracy_drop": -0.00362620882
+            "fp32_mAP": 0.45211533555124545,
+            "int8_mAP": 0.45778860542769056,
+            "accuracy_drop": -0.0056732698764451195
         },
         "performance_metrics": {
             "fp32_fps": 170.69,
@@ -114,8 +114,8 @@
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
             "fp32_top1": 0.987770676612854,
-            "int8_top1": 0.9775795936584473,
-            "accuracy_drop": 0.010191082954406738
+            "int8_top1": 0.9691720008850098,
+            "accuracy_drop": 0.01859867572784424
         },
         "performance_metrics": {
             "fp32_fps": 1703.04,
@@ -218,11 +218,11 @@
         "python_version": [3,10,0],
         "accuracy_tolerance_after_training": 0.02,
         "accuracy_metrics": {
-            "fp32_f1score": 0.9919999837875366,
+            "fp32_f1score": 1.0,
             "int8_init_f1score": 0.9767441749572754
         },
         "accuracy_metrics_after_training": {
-            "int8_f1score": 0.9919999837875366,
+            "int8_f1score": 1.0,
             "accuracy_drop": 0.0
         },
         "performance_metrics": {

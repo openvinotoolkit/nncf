@@ -76,6 +76,8 @@ def test_examples(
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(PROJECT_ROOT)  # need this to be able to import from tests.* in run_example.py
+    env["ONEDNN_MAX_CPU_ISA"] = "AVX2"  # Set ISA to AVX2 to get CPU independent results
+    env["CUDA_VISIBLE_DEVICES"] = ""  # Disable GPU
 
     metrics_file_path = tmp_path / "metrics.json"
     python_executable_with_venv = get_python_executable_with_venv(venv_path)
@@ -87,17 +89,17 @@ def test_examples(
     cmd.run()
 
     measured_metrics = load_json(metrics_file_path)
-
+    print(measured_metrics)
     for name, value in example_params[ACCURACY_METRICS].items():
         assert measured_metrics[name] == pytest.approx(
             value, abs=example_params.get("accuracy_tolerance", ACCURACY_TOLERANCE)
-        )
+        ), f"metric {name}: {measured_metrics[name]} != {value}"
 
     if ACCURACY_METRICS_AFTER_TRAINING in example_params:
         for name, value in example_params[ACCURACY_METRICS_AFTER_TRAINING].items():
             assert measured_metrics[name] == pytest.approx(
                 value, abs=example_params.get("accuracy_tolerance_after_training", ACCURACY_TOLERANCE)
-            )
+            ), f"metric {name}: {measured_metrics[name]} != {value}"
 
     if MODEL_SIZE_METRICS in example_params:
         for name, value in example_params[MODEL_SIZE_METRICS].items():
