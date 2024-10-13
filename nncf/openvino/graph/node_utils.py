@@ -318,12 +318,15 @@ def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes] = None) -> I
         reduction_axes_ = np.array(all_axes if reduction_axes is None else reduction_axes, dtype=np.int64)
 
         variance = var_op(node.output(output_port_id), f"{output_node_name}/var", reduction_axes_)
-        result = opset.reduce_mean(
-            variance,
-            reduction_axes=all_axes,
-            keep_dims=False,
-            name=output_node_name,
-        )
+        if np.array_equal(reduction_axes_, all_axes):
+            result = opset.squeeze(variance, axes=all_axes, name=output_node_name)
+        else:
+            result = opset.reduce_mean(
+                variance,
+                reduction_axes=all_axes,
+                keep_dims=False,
+                name=output_node_name,
+            )
 
         return result
 
@@ -344,12 +347,15 @@ def get_inplace_max_var_op(reduction_axes: Optional[ReductionAxes] = None) -> In
         reduction_axes_ = np.array(all_axes if reduction_axes is None else reduction_axes, dtype=np.int64)
 
         variance = var_op(node.output(output_port_id), f"{output_node_name}/var", reduction_axes_)
-        result = opset.reduce_max(
-            variance,
-            reduction_axes=all_axes,
-            keep_dims=False,
-            name=output_node_name,
-        )
+        if np.array_equal(reduction_axes_, all_axes):
+            result = opset.squeeze(variance, axes=all_axes, name=output_node_name)
+        else:
+            result = opset.reduce_max(
+                variance,
+                reduction_axes=all_axes,
+                keep_dims=False,
+                name=output_node_name,
+            )
 
         return result
 
@@ -368,14 +374,18 @@ def get_inplace_mean_max_op(reduction_axes: Optional[ReductionAxes], use_abs_max
     def get_mean_max_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
         partial_shape = get_partial_shape_safe(node, output_port_id)
         all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)
+        reduction_axes_ = np.array(all_axes if reduction_axes is None else reduction_axes, dtype=np.int64)
 
         max_op = get_inplace_max_op(reduction_axes, use_abs_max)(node, output_port_id, f"{output_node_name}/max")
-        result = opset.reduce_mean(
-            max_op,
-            reduction_axes=all_axes,
-            keep_dims=False,
-            name=output_node_name,
-        )
+        if np.array_equal(reduction_axes_, all_axes):
+            result = opset.squeeze(max_op, axes=all_axes, name=output_node_name)
+        else:
+            result = opset.reduce_mean(
+                max_op,
+                reduction_axes=all_axes,
+                keep_dims=False,
+                name=output_node_name,
+            )
 
         return result
 

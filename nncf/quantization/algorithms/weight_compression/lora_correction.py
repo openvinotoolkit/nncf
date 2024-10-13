@@ -15,11 +15,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from nncf.common.logging import nncf_logger
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters
-from nncf.quantization.algorithms.weight_compression.activation_stats import WCStatistics
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
@@ -81,7 +81,9 @@ class LoraCorrectionAlgorithm:
     The method reduces quantization noise after weight compression using low rank adapters.
     """
 
-    def __init__(self, statistics: Dict[str, WCStatistics], lora_correction_params: AdvancedLoraCorrectionParameters):
+    def __init__(
+        self, statistics: Dict[str, WCTensorStatistic], lora_correction_params: AdvancedLoraCorrectionParameters
+    ):
         """
         :param statistics: Input activation statistics for each node.
         :param lora_correction_params: parameters to configure the algorithm.
@@ -135,7 +137,7 @@ class LoraCorrectionAlgorithm:
         compression_config: WeightCompressionConfig,
         reduction_axes: Tuple[int, ...],
         lora_correction_params: AdvancedLoraCorrectionParameters,
-        layer_statistics: WCStatistics,
+        layer_statistics: WCTensorStatistic,
         is_debug: Optional[bool] = False,
     ):
         """

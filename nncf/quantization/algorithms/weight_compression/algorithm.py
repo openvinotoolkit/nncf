@@ -27,6 +27,7 @@ from nncf.common.logging.track_progress import track
 from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
@@ -36,7 +37,6 @@ from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.weight_compression.activation_stats import WCStatistics
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
@@ -46,7 +46,6 @@ from nncf.quantization.algorithms.weight_compression.scale_estimation import Sca
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
-from nncf.tensor import functions as fns
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -633,7 +632,7 @@ class WeightCompression(Algorithm):
 
     def _get_statistics(
         self, matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]], statistic_points
-    ) -> Dict[str, WCStatistics]:
+    ) -> Dict[str, WCTensorStatistic]:
         """
         Retrieve collected statistics.
 
@@ -653,22 +652,21 @@ class WeightCompression(Algorithm):
                 and point.target_point.port_id == port_id
             )
 
-        # For each node we store statistics in a WCStatistics data-class. It contains the following fields:
+        # For each node we store statistics in a WCTensorStatistics data-class. It contains the following fields:
         #   mean_values=[mean_value_1, ..., mean_value_n]
         #   shapes=[shape_1, ..., shape_n]
         # Where mean_value is a 1D tensor representing an activation reduced over batch and sequence length dimensions,
         # shape is an original shape of an activation before reduction, n is the size of the dataset (or subset_size).
         statistics = {}
         for (act_node, output_port_id), matmul_nodes in matmul_input_to_output_nodes_map.items():
-            mean_values = []
-            shapes = []
-            for tensor_collector in statistic_points.get_algo_statistics_for_node(
-                act_node.node_name, partial(input_filter_func, port_id=output_port_id), self._algorithm_key
-            ):
-                raw_statistics = tensor_collector.get_statistics()
-                mean_values.extend(fns.squeeze(value) for value in raw_statistics[self._backend_entity.MEAN_STAT])
-                shapes.extend([tuple(value.data) for value in raw_statistics[self._backend_entity.SHAPE_STAT]])
-            stats = WCStatistics(mean_values, shapes)
+            tensor_collectors = list(
+                statistic_points.get_algo_statistics_for_node(
+                    act_node.node_name, partial(input_filter_func, port_id=output_port_id), self._algorithm_key
+                )
+            )
+            assert len(tensor_collectors) == 1
+            stats = tensor_collectors[0].get_statistics()
+
             # Each activation node may have multiple MatMul nodes which it is an input to
             for node in matmul_nodes:
                 statistics[node.node_name] = copy.deepcopy(stats)

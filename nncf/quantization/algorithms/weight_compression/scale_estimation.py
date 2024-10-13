@@ -17,10 +17,10 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import CompressWeightsMode
-from nncf.quantization.algorithms.weight_compression.activation_stats import WCStatistics
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -51,7 +51,7 @@ class ScaleEstimation:
         name_to_node_mapping: Dict[str, Any],
         all_weight_params: List[WeightCompressionParameters],
         nodes_to_compress: List[NNCFNode],
-        statistics: Dict[str, WCStatistics],
+        statistics: Dict[str, WCTensorStatistic],
         subset_size: int = 32,
         initial_steps: int = 5,
         scale_steps: int = 10,
@@ -163,7 +163,7 @@ class ScaleEstimation:
     @staticmethod
     def calculate_quantization_params(
         backend_entity: WeightCompressionAlgoBackend,
-        statistics: WCStatistics,
+        statistics: WCTensorStatistic,
         weight: Tensor,
         reduction_axes: Tuple[int, ...],
         config: WeightCompressionConfig,
