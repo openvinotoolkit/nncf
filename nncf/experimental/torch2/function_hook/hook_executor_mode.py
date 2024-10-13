@@ -124,7 +124,18 @@ class FunctionHookMode(TorchFunctionMode):
         self._get_named_hooks(self.hook_storage.pre_hooks, "pre_hook")
         self._get_named_hooks(self.hook_storage.post_hooks, "post_hook")
 
-    def _get_named_hooks(self, storage: nn.ModuleDict, prefix: str):
+    def _get_named_hooks(self, storage: nn.ModuleDict, prefix: str) -> None:
+        """
+        Associates named hooks from the given module storage with a group name, updating
+        the `hooks_module_to_group_name` dictionary for each hook.
+
+        The group name is formatted as '{prefix}__{hook_key}[{hook_id}]', and any forward
+        slashes in the hook key are replaced with dashes to avoid conflicts with separator
+        characters used by the module hierarchy.
+
+        :param storage: A module that stores hook modules.
+        :param prefix: A string prefix used to group hooks by their context or origin.
+        """
         for hook_key, hook_module_dict in storage.named_children():
             for hook_id, hook_module in hook_module_dict.named_children():
                 # Replace / to avoid collision with module separator
