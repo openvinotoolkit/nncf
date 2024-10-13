@@ -184,6 +184,33 @@ def test_post_quantization_compression(model_case: ModelCase, quantization_param
                 result = node.target(*tuple(input_tup))
                 assert result.dtype == torch.float32
 
+@pytest.mark.parametrize(
+    ("model_case", "quantization_parameters"), TEST_MODELS_QUANIZED, ids=[m[0].model_id for m in TEST_MODELS_QUANIZED]
+)
+def test_FQ_transformation(model_case: ModelCase, quantization_parameters):
+    with disable_patching():
+        torch.manual_seed(42)
+        model = getattr(models, model_case.model_id)().eval()
+        input_ids = torch.ones(model_case.input_shape)
+        exported_model = capture_pre_autograd_graph(model, args=(input_ids,))
+        from nncf.experimental.torch.fx.quantization.backend_parameters import FXBackendParameters
+        quantization_parameters["advanced_parameters"] = nncf.AdvancedQuantizationParameters(backend_params={FXBackendParameters.COMPRESS_WEIGHTS: False})
+        quantization_parameters["subset_size"] = 1
+        quantized_model = nncf.quantize(
+            exported_model, calibration_dataset=nncf.Dataset([input_ids]), **quantization_parameters
+        )
+
+    for node in quantized_model.graph.nodes:
+        if node.target in [torch.ops.quantized_decomposed.dequantize_per_channel.default, torch.ops.quantized_decomposed.dequantize_per_tensor.default]:
+            input_tup = []
+            quantize_node = node.args[0]
+            input_tup = _get_node_inputs(quantize_node, quantized_model)
+            if input_tup:
+                quantized_value = quantize_node.target(*tuple(input_tup))
+                input_tup[0] = quantized_value
+                result = node.target(*tuple(input_tup))
+                fp_value = get_tensor_constant_from_node(quantize_node.args[0], quantized_model)
+                assert torch.all(result == fp_value)
 
 def count_constants(model) -> int:
     num_constant_nodes = 0

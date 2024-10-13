@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import copy
-from typing import Callable, List, Optional
+from typing import Callable, Iterable, List, Optional, Union
 
 import torch
 import torch.fx
@@ -30,7 +30,7 @@ TransformationFNType = Callable[[torch.fx.GraphModule], None]
 
 
 def _set_new_node_meta(
-    new_node: torch.fx.Node, prev_node: torch.fx.Node, target_module: torch.nn.Module, model: torch.fx.GraphModule
+    new_node: torch.fx.Node, prev_nodes: Union[List[torch.fx.Node], torch.fx.Node], target_module: torch.nn.Module, model: torch.fx.GraphModule
 ):
     """
     Sets correct meta \"val\" value to the new node.
@@ -40,18 +40,19 @@ def _set_new_node_meta(
         New node expected to have only one input node.
     :param target_module: Module which is being called by the new node.
     """
-    val = (
-        prev_node.meta["val"]
-        if prev_node.op not in ["get_attr"]
-        else get_tensor_constant_from_node(prev_node, model).data
-    )
-    val = val if isinstance(val, tuple) else (val,)
-    retval = []
-    for t in val:
-        retval.append(torch.ones(t.shape))
+    vals = []
+    prev_nodes = [prev_nodes] if not isinstance(prev_nodes, Iterable) else prev_nodes
+    for prev_node in prev_nodes:
+        val = (
+            prev_node.meta["val"]
+            if prev_node.op not in ["get_attr"]
+            else get_tensor_constant_from_node(prev_node, model).data
+        )
+        val = val[0] if isinstance(val, tuple) else val
+        vals.append(val)
 
     with torch.no_grad():
-        new_node.meta["val"] = target_module(*val)
+        new_node.meta["val"] = target_module(*tuple(vals))
 
 
 def module_insertion_transformation_builder(
@@ -571,10 +572,7 @@ def _get_pattern_replacement_per_tensor():
 
 def _set_meta_for_matches(model: torch.fx.GraphModule, matches: torch.fx.subgraph_rewriter.ReplacedPatterns):
     for match in matches:
-        for node in match.nodes_map:
-            if node.name == "weight":
-                weight_node = match.nodes_map[node]
-                _set_new_node_meta(match.replacements[0], weight_node, torch.nn.Identity(), model)
+        _set_new_node_meta(match.replacements[0], list(match.replacements[0].args), torch.mul, model)
 
 def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
     def match_filters(match, original_graph, graph):
