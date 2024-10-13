@@ -28,6 +28,7 @@ from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.experimental.torch.fx.quantization.backend_parameters import FXBackendParameters
 from nncf.experimental.torch.fx.transformations import _get_node_inputs
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
@@ -194,7 +195,6 @@ def test_FQ_transformation(model_case: ModelCase, quantization_parameters):
         model = getattr(models, model_case.model_id)().eval()
         input_ids = torch.ones(model_case.input_shape)
         exported_model = capture_pre_autograd_graph(model, args=(input_ids,))
-        from nncf.experimental.torch.fx.quantization.backend_parameters import FXBackendParameters
 
         quantization_parameters["advanced_parameters"] = nncf.AdvancedQuantizationParameters(
             backend_params={FXBackendParameters.COMPRESS_WEIGHTS: False}
