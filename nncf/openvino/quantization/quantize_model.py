@@ -369,7 +369,18 @@ def quantize_impl(
     )
 
 
-@tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithCompressWeightsApi(), "mode"])
+@tracked_function(
+    NNCF_OV_CATEGORY,
+    [
+        CompressionStartedWithCompressWeightsApi(),
+        "mode",
+        "awq",
+        "scale_estimation",
+        "gptq",
+        "lora_correction",
+        "backup_mode",
+    ],
+)
 def compress_weights_impl(
     model: ov.Model,
     dataset: Dataset,

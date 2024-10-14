@@ -86,7 +86,18 @@ def quantize_impl(
     return quantized_model
 
 
-@tracked_function(NNCF_PT_CATEGORY, [CompressionStartedWithCompressWeightsApi(), "mode"])
+@tracked_function(
+    NNCF_PT_CATEGORY,
+    [
+        CompressionStartedWithCompressWeightsApi(),
+        "mode",
+        "awq",
+        "scale_estimation",
+        "gptq",
+        "lora_correction",
+        "backup_mode",
+    ],
+)
 def compress_weights_impl(
     model: torch.nn.Module,
     dataset: Dataset,
