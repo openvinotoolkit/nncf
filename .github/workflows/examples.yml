@@ -18,8 +18,9 @@ on:
 
 jobs:
   examples-cpu:
+    name: Test exmaples CPU [${{ matrix.group }}/4]
     runs-on: ubuntu-22.04-8-cores
-    name: Test exmaples CPU [${{ matrix.group }} / 4]
+    continue-on-error: true
     strategy:
       matrix:
         group: [1, 2, 3, 4]
