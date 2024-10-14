@@ -158,9 +158,23 @@ class OVAvgPoolMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVAdaptiveAvgPoolMetatype(OVOpMetatype):
+    name = "AdaptiveAvgPoolOp"
+    op_names = ["AdaptiveAvgPool"]
+    hw_config_names = [HWConfigOpName.AVGPOOL]
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVMaxPoolMetatype(OVOpMetatype):
     name = "MaxPoolOp"
     op_names = ["MaxPool"]
+    hw_config_names = [HWConfigOpName.MAXPOOL]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVAdaptiveMaxPoolMetatype(OVOpMetatype):
+    name = "AdaptiveMaxPoolOp"
+    op_names = ["AdaptiveMaxPool"]
     hw_config_names = [HWConfigOpName.MAXPOOL]
 
 

@@ -24,11 +24,15 @@ from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_scale
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.tensor import functions as fns
 
@@ -157,6 +161,10 @@ class AWQ(Algorithm):
             for weight_op_friendly_name, _ in self._backend_entity.get_weight_names_and_port_ids(nncf_node, graph):
                 target_node_names.append(weight_op_friendly_name)
 
+            # skip node if it is in IgnoredScope or should not be compressed
+            if target_node_names[-1] not in name_mapping:
+                continue
+
             weight_params = self._all_weight_params[name_mapping[target_node_names[-1]]]
 
             if weight_params.compression_config.num_bits != 4:
@@ -244,11 +252,16 @@ class AWQ(Algorithm):
                 alpha = self._alpha_min
                 for _ in range(self._steps):
                     cur_scale = gscale**alpha
-
-                    g_compressed_weighs, g_c_scale, g_c_zp = do_int_quantization(
-                        gweight * cur_scale, reduction_axis, awq_config
-                    )
-                    g_decompressed_weighs = do_int_dequantization(g_compressed_weighs, g_c_scale, g_c_zp)
+                    weights_to_fake_quantize = gweight * cur_scale
+                    if config.mode == CompressWeightsMode.NF4:
+                        g_c_scale = calculate_nf4_scale(weights_to_fake_quantize, reduction_axis)
+                        g_compressed_weighs = do_nf4_quantization(weights_to_fake_quantize, g_c_scale)
+                        g_decompressed_weighs = do_nf4_dequantization(g_compressed_weighs, g_c_scale)
+                    else:
+                        g_compressed_weighs, g_c_scale, g_c_zp = do_int_quantization(
+                            weights_to_fake_quantize, reduction_axis, awq_config
+                        )
+                        g_decompressed_weighs = do_int_dequantization(g_compressed_weighs, g_c_scale, g_c_zp)
                     sacts = gacts / fns.unsqueeze(cur_scale, 1)
 
                     cur_out = fns.matmul(g_decompressed_weighs, sacts)

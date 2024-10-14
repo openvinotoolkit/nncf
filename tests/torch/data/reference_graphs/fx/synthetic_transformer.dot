@@ -1,0 +1,21 @@
+strict digraph  {
+"0 arg0_1" [id=0, type=input];
+"1 _param_constant0" [id=1, type=get_attr];
+"2 embedding" [id=2, type=embedding];
+"3 _param_constant1" [id=3, type=get_attr];
+"4 _param_constant2" [id=4, type=get_attr];
+"5 linear" [id=5, type=linear];
+"6 _param_constant3" [id=6, type=get_attr];
+"7 _param_constant4" [id=7, type=get_attr];
+"8 linear_1" [id=8, type=linear];
+"9 output" [id=9, type=output];
+"0 arg0_1" -> "2 embedding"  [label="(5,)", style=solid];
+"1 _param_constant0" -> "2 embedding"  [label="(10, 5)", style=solid];
+"2 embedding" -> "5 linear"  [label="(5, 5)", style=solid];
+"3 _param_constant1" -> "5 linear"  [label="(5, 5)", style=solid];
+"4 _param_constant2" -> "5 linear"  [label="(5,)", style=solid];
+"5 linear" -> "8 linear_1"  [label="(5, 5)", style=solid];
+"6 _param_constant3" -> "8 linear_1"  [label="(10, 5)", style=solid];
+"7 _param_constant4" -> "8 linear_1"  [label="(10,)", style=solid];
+"8 linear_1" -> "9 output"  [label="(5, 10)", style=solid];
+}

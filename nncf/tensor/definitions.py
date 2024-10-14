@@ -37,6 +37,12 @@ class TensorDataType(Enum):
     int64 = auto()
     uint8 = auto()
 
+    def is_float(self):
+        """
+        :return: True if the tensor data type is a floating-point type, else False.
+        """
+        return self in [TensorDataType.float16, TensorDataType.bfloat16, TensorDataType.float32, TensorDataType.float64]
+
 
 class TensorDeviceType(Enum):
     """
