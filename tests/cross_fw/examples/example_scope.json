@@ -39,9 +39,9 @@
         "requirements": "examples/post_training_quantization/openvino/yolov8/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "fp32_mAP": 0.45211533555124545,
+            "fp32_mAP": 0.4521154302569843,
             "int8_mAP": 0.4599022156047055,
-            "accuracy_drop": -0.0056732698764451195
+            "accuracy_drop": -0.0077867853477212035
         },
         "performance_metrics": {
             "fp32_fps": 170.69,

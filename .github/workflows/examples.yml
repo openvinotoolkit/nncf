@@ -10,13 +10,19 @@ on:
       pull_request_number:
         description: 'The pull request number'
         required: true
-        default: ''
+        type: number
       pytest_args:
         description: 'Pytest arguments'
         default: ''
+        type: string
+
 jobs:
   examples-cpu:
-    runs-on: ubuntu-20.04-16-cores
+    runs-on: ubuntu-22.04-8-cores
+    name: Test exmaples CPU [${{ matrix.group }} / 4]
+    strategy:
+      matrix:
+        group: [1, 2, 3, 4]
     defaults:
       run:
         shell: bash
@@ -26,7 +32,7 @@ jobs:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
       - name: Fetch and Checkout the Pull Request Branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
           git checkout pr-${{ github.event.inputs.pull_request_number }}
@@ -43,6 +49,6 @@ jobs:
       - name: Print installed modules
         run: pip list
       - name: Run examples test scope
-        run: python -m pytest -ra tests/cross_fw/examples -s ${{ github.event.inputs.pytest_args || '' }}
+        run: python -m pytest -ra tests/cross_fw/examples --splits 4 --group ${{ matrix.group }} -s ${{ github.event.inputs.pytest_args || '' }}
         env:
           TQDM_DISABLE: 1

@@ -55,6 +55,8 @@ def test_examples(
     ov_version_override: str,
     data: str,
 ):
+    print("\n" + "-" * 64)
+    print(f"Example name: {example_name}")
     python_version = sys.version_info
     example_python_version = tuple(example_params.get("python_version", python_version))
     if python_version < example_python_version:
@@ -63,16 +65,17 @@ def test_examples(
     backend = example_params["backend"]
     skip_if_backend_not_selected(backend, backends_list)
     venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {backend})
+    pip_with_venv = get_pip_executable_with_venv(venv_path)
     if "requirements" in example_params:
-        pip_with_venv = get_pip_executable_with_venv(venv_path)
         requirements = PROJECT_ROOT / example_params["requirements"]
         run_cmd_line = f"{pip_with_venv} install -r {requirements}"
         subprocess.run(run_cmd_line, check=True, shell=True)
 
     if ov_version_override is not None:
-        pip_with_venv = get_pip_executable_with_venv(venv_path)
         ov_version_cmd_line = f"{pip_with_venv} install {ov_version_override}"
         subprocess.run(ov_version_cmd_line, check=True, shell=True)
+
+    subprocess.run(f"{pip_with_venv} list", check=True, shell=True)
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(PROJECT_ROOT)  # need this to be able to import from tests.* in run_example.py
