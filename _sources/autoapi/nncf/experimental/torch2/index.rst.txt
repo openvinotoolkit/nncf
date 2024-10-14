@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.experimental.torch2`
+==================================
+
+.. py:module:: nncf.experimental.torch2
+
+
