@@ -200,23 +200,23 @@ def main():
     ###############################################################################
     # Step 3: Run benchmarks
     print(os.linesep + "[Step 3] Run benchmarks")
-    print("Run benchmark for FP32 model compiled with default backend ...")
+    print("Benchmark FP32 model compiled with default backend ...")
     compiled_model = torch.compile(model)
     fp32_latency = measure_latency(compiled_model, example_inputs=example_input)
     print(f"{fp32_latency:.3f} ms")
 
-    print("Run benchmark for FP32 model compiled with openvino backend ...")
+    print("Benchmark FP32 model compiled with openvino backend ...")
     compiled_model = torch.compile(model, backend="openvino")
     fp32_ov_latency = measure_latency(compiled_model, example_inputs=example_input)
     print(f"{fp32_ov_latency:.3f} ms")
-    print(f"Speed up relative to FP32 model with default backend: x{fp32_latency / fp32_ov_latency:.3f}")
 
-    print("Run benchmark for INT8 model compiled with openvino backend ...")
+    print("Benchmark INT8 model compiled with openvino backend ...")
     int8_latency = measure_latency(quantized_fx_model, example_inputs=example_input)
     print(f"{int8_latency:.3f} ms")
-    print(f"Speed up relative to FP32 model with default backend: x{fp32_latency / int8_latency:.3f}")
-    print(f"Speed up relative to FP32 model with openvino backend: x{fp32_ov_latency / int8_latency:.3f}")
 
+    print('[Step 4] torch.compile(..., backend="openvino") speed ups:')
+    print(f"FP32 model: x{fp32_latency / fp32_ov_latency:.3f}")
+    print(f"INT8 model: x{fp32_ov_latency / int8_latency:.3f}")
     return acc1_fp32, acc1_int8, fp32_latency, fp32_ov_latency, int8_latency
 
 
