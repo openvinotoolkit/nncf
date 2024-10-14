@@ -97,6 +97,7 @@ files = [
     "nncf/common/accuracy_aware_training/",
     "nncf/common/utils/",
     "nncf/common/tensor_statistics",
+    "nncf/experimental/torch2",
 ]
 
 [tool.ruff]
