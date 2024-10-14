@@ -13,11 +13,11 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import openvino.runtime as ov
-from openvino.properties.hint import inference_precision
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.openvino.engine import OVCompiledModelEngine
+from nncf.openvino.engine import get_compile_config
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.groups import CONSTANT_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
@@ -32,7 +32,6 @@ from nncf.openvino.graph.model_utils import model_has_state
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
-from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.backend import PreparedModel
 
@@ -44,10 +43,7 @@ class OVPreparedModel(PreparedModel):
 
     def __init__(self, model: ov.Model, backend_params: Optional[Dict[str, Any]] = None):
         self._stateful = model_has_state(model)
-        config = None
-        inference_precision_hint = backend_params.get(BackendParameters.INFERENCE_PRECISION_HINT, None)
-        if inference_precision_hint:
-            config = {inference_precision: inference_precision_hint}
+        config = get_compile_config(backend_params)
         self._compiled_model = ov.compile_model(model, device_name="CPU", config=config)
         self._engine = None
 

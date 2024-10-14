@@ -20,6 +20,21 @@ from nncf.openvino.graph.model_utils import model_has_state
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 
 
+def get_compile_config(backend_params: Optional[Dict[str, Any]] = None):
+    """
+    Returns config to compile model.
+
+    :params backend_params: Backend-specific params.
+    :return: Config to compile model.
+    """
+    config = None
+    if backend_params:
+        inference_precision_hint = backend_params.get(BackendParameters.INFERENCE_PRECISION_HINT, None)
+        if inference_precision_hint:
+            config = {inference_precision: inference_precision_hint}
+    return config
+
+
 class OVCompiledModelEngine(Engine):
     """
     Implementation of the engine to infer OpenVINO compiled model.
@@ -67,11 +82,7 @@ class OVNativeEngine(Engine):
     def __init__(self, model: ov.Model, backend_params: Optional[Dict[str, Any]] = None):
         ie = ov.Core()
         stateful = model_has_state(model)
-        config = None
-        inference_precision_hint = backend_params.get(BackendParameters.INFERENCE_PRECISION_HINT, None)
-        if inference_precision_hint:
-            config = {inference_precision: inference_precision_hint}
-
+        config = get_compile_config(backend_params)
         compiled_model = ie.compile_model(model, device_name="CPU", config=config)
         self.engine = OVCompiledModelEngine(compiled_model, stateful)
 
