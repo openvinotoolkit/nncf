@@ -51,6 +51,11 @@ jobs:
         run: pip list
       - name: Run examples test scope
         run: |
-          python -m pytest -ra tests/cross_fw/examples --durations-path=tests/cross_fw/examples/.test_durations --splitting-algorithm=least_duration --splits 4 --group ${{ matrix.group }} -s ${{ github.event.inputs.pytest_args || '' }}
+          python -m pytest -ras tests/cross_fw/examples \
+            --durations-path=tests/cross_fw/examples/.test_durations \
+            --splitting-algorithm=least_duration \
+            --splits 4 \
+            --group ${{ matrix.group }} \
+            ${{ github.event.inputs.pytest_args || '' }}
         env:
           TQDM_DISABLE: 1
