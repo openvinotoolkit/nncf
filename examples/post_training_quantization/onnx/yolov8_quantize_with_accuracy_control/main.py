@@ -130,7 +130,7 @@ def prepare_onnx_model(model: YOLO, model_name: str) -> Tuple[onnx.ModelProto, P
 
 
 def quantize_ac(
-    model: onnx.ModelProto, data_loader: torch.utils.data.DataLoader, validator_ac: Validator
+    model: onnx.ModelProto, data_loader: torch.utils.data.DataLoader, validator_ac: Validator, subset_size: int = 128
 ) -> onnx.ModelProto:
     input_name = model.graph.input[0].name
 
@@ -182,7 +182,7 @@ def quantize_ac(
         print(f"Validate: dataset length = {counter}, metric value = {stats_metrics:.3f}")
         return stats_metrics, None
 
-    quantization_dataset = nncf.Dataset(data_loader, transform_fn)
+    quantization_dataset = nncf.Dataset(data_loader, transform_fn, subset_size=subset_size)
 
     validation_fn = partial(validation_ac, validator=validator_ac)
 
