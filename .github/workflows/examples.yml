@@ -50,8 +50,10 @@ jobs:
       - name: Print installed modules
         run: pip list
       - name: Run examples test scope
+        continue-on-error: true
         run: |
           python -m pytest -ras tests/cross_fw/examples \
+            --junit-xml=pytest-results.xml \
             --durations-path=tests/cross_fw/examples/.test_durations \
             --splitting-algorithm=least_duration \
             --splits 4 \
@@ -59,3 +61,8 @@ jobs:
             ${{ github.event.inputs.pytest_args || '' }}
         env:
           TQDM_DISABLE: 1
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: pytest-results.xml
