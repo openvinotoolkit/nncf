@@ -16,8 +16,10 @@ from typing import Any, Callable, Tuple
 
 import pytest
 import torch
+import torch.ao.quantization
 import torchvision.models as models
 from torch._export import capture_pre_autograd_graph
+from torch.ao.quantization.fx.utils import create_getattr_from_value
 
 import nncf
 from nncf.common.factory import NNCFGraph
@@ -30,6 +32,7 @@ from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.quantization.backend_parameters import FXBackendParameters
 from nncf.experimental.torch.fx.transformations import _get_node_inputs
+from nncf.experimental.torch.fx.transformations import _set_new_node_meta
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import shared_constants_unification_transformation
@@ -37,6 +40,7 @@ from nncf.torch import disable_patching
 from nncf.torch.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from tests.torch.fx.test_sanity import count_q_dq
 from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
 from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
@@ -48,6 +52,13 @@ class ModelExtractionTestCase:
     model: torch.nn.Module
     input_shape: Tuple[int, ...]
     command: PTModelExtractionCommand
+
+
+@dataclass
+class ModelCase:
+    model_builder: Callable[[], torch.nn.Module]
+    model_id: str
+    input_shape: Tuple[int]
 
 
 EXTRACTED_GRAPHS_DIR_NAME = Path("fx") / "extracted"
@@ -139,13 +150,6 @@ def test_output_insertion_transformation(tuple_output, target_point):
         TRANSFORMED_GRAPH_DIR_NAME,
         extended=True,
     )
-
-
-@dataclass
-class ModelCase:
-    model_builder: Callable[[], torch.nn.Module]
-    model_id: str
-    input_shape: Tuple[int]
 
 
 def torchvision_model_case(model_id: str, input_shape: Tuple[int,]):
@@ -255,6 +259,58 @@ def get_shared_constant_nodes(nncf_graph: NNCFGraph):
         if node.metatype in CONST_NOOP_METATYPES and len(consumer_nodes) > 1:
             shared_const_node_consumer_node[node] = consumer_nodes
     return shared_const_node_consumer_node
+
+
+def insert_qdq_add_nodes(model: torch.fx.GraphModule):
+    const_node = get_graph_node_by_name(model.graph, "_param_constant0")
+    quantize_op = torch.ops.quantized_decomposed.quantize_per_channel.default
+    dequantize_op = torch.ops.quantized_decomposed.dequantize_per_channel.default
+    add_op = torch.add
+    conv_node = get_graph_node_by_name(model.graph, "conv2d")
+    with model.graph.inserting_before(conv_node):
+        scale_node = create_getattr_from_value(
+            model,
+            model.graph,
+            "scale_node",
+            torch.ones(
+                [
+                    3,
+                ]
+            ),
+        )
+        zp_node = create_getattr_from_value(
+            model,
+            model.graph,
+            "weight_node",
+            torch.ones(
+                [
+                    3,
+                ]
+            ),
+        )
+        qdq_args = (scale_node, zp_node, 0, -128, 127, torch.int8)
+        q_node = model.graph.create_node("call_function", quantize_op, (const_node,) + qdq_args, {})
+        add_node = model.graph.create_node("call_function", add_op, (q_node, 0), {})
+        dq_node = model.graph.create_node("call_function", dequantize_op, (add_node,) + qdq_args, {})
+    _set_new_node_meta(q_node, (const_node,) + qdq_args, quantize_op, model)
+    _set_new_node_meta(add_node, (q_node, 0), add_op, model)
+    _set_new_node_meta(dq_node, (add_node,) + qdq_args, dequantize_op, model)
+    conv_node.replace_input_with(const_node, dq_node)
+
+
+def test_different_qdq_pattern():
+    model = MultiBranchesConnectedModel()
+    ex_input = torch.ones(1, 3, 224, 224)
+    captured_model = _capture_model(model, ex_input)
+    quantized_before_insertion = nncf.quantize(captured_model, nncf.Dataset([ex_input]))
+    q_before, dq_before = count_q_dq(quantized_before_insertion)
+    insert_qdq_add_nodes(captured_model)
+    quantized_after_insertion = nncf.quantize(captured_model, nncf.Dataset([ex_input]))
+    q_after, dq_after = count_q_dq(quantized_after_insertion)
+    assert q_before == 5
+    assert dq_before == 6
+    assert q_after == 6
+    assert dq_after == 7
 
 
 def test_update_shared_constant():
