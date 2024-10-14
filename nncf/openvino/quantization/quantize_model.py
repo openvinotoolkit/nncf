@@ -49,6 +49,7 @@ from nncf.quantization.quantize_model import BATCHWISE_STATISTICS_WARNING
 from nncf.quantization.quantize_model import is_model_no_batchwise_support
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
+from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
 from nncf.scopes import validate_ignored_scope
@@ -366,6 +367,7 @@ def quantize_impl(
     )
 
 
+@tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithCompressWeightsApi(), "mode"])
 def compress_weights_impl(
     model: ov.Model,
     dataset: Dataset,
