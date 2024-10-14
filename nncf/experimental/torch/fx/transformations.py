@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import copy
-from typing import Callable, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import torch
 import torch.fx
@@ -27,6 +27,22 @@ from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 TransformationFNType = Callable[[torch.fx.GraphModule], None]
+
+# Copied from torch.fx.Node
+BaseArgumentTypes = Union[
+    str,
+    int,
+    float,
+    bool,
+    complex,
+    torch.dtype,
+    torch.Tensor,
+    torch.device,
+    torch.memory_format,
+    torch.layout,
+    torch._ops.OpOverload,
+]
+Argument = Optional[Union[Tuple[Any, ...], List[Any], Dict[str, Any], slice, range, torch.fx.Node, BaseArgumentTypes]]
 
 QUANTIZE_NODES = [
     torch.ops.quantized_decomposed.quantize_per_tensor.default,
@@ -45,7 +61,7 @@ QDQ_PAIR = {
 
 def _set_new_node_meta(
     new_node: torch.fx.Node,
-    prev_nodes: Union[List[Union[torch.fx.Node, int, float, torch.dtype]], torch.fx.Node],
+    prev_nodes: Tuple[Argument, ...],
     target_module: torch.nn.Module,
     model: torch.fx.GraphModule,
 ):
@@ -60,17 +76,16 @@ def _set_new_node_meta(
     vals = []
     prev_nodes = [prev_nodes] if not isinstance(prev_nodes, Iterable) else prev_nodes
     for prev_node in prev_nodes:
-        val = (
-            (
+        val = prev_node
+        if isinstance(prev_node, torch.fx.Node):
+            val = (
                 prev_node.meta["val"]
                 if prev_node.op not in ["get_attr"]
                 else get_tensor_constant_from_node(prev_node, model).data
             )
-            if isinstance(prev_node, torch.fx.Node)
-            else prev_node
-        )
-
-        val = val[0] if isinstance(val, tuple) else val
+            # TODO(anzr299): Support output port id here.
+            # Output port 0 is used by default
+            val = val[0] if isinstance(val, tuple) else val
         vals.append(val)
     with torch.no_grad():
         new_node.meta["val"] = target_module(*tuple(vals))
@@ -560,7 +575,9 @@ def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
     model.recompile()
 
 
-def _get_pattern_replacement_per_channel() -> None:
+def _get_pattern_replacement_per_channel() -> (
+    Tuple[Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, int, torch.dtype], torch.Tensor]]
+):
     """
     Returns the patter and replacement function for the subgraph rewriter to
     match and replace for per_tensor quantization
@@ -581,7 +598,9 @@ def _get_pattern_replacement_per_channel() -> None:
     return pattern_per_channel, replacement_graph_per_channel
 
 
-def _get_pattern_replacement_per_tensor() -> None:
+def _get_pattern_replacement_per_tensor() -> (
+    Tuple[Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, torch.dtype], torch.Tensor]]
+):
     """
     Returns the patter and replacement function for the subgraph rewriter to
     match and replace for per_tensor quantization
@@ -656,17 +675,14 @@ def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> Option
     :param node: Node to get the inputs from
     :param model: Model to which the node belongs
     """
-    input_tup = []
-    for params in node.args:
-        if isinstance(params, torch.fx.Node):
-            if params.op == "get_attr":
-                value = get_tensor_constant_from_node(params, model)
-                input_tup.append(value)
-            else:
+    args = []
+    for arg in node.args:
+        if isinstance(arg, torch.fx.Node):
+            if arg.op != "get_attr":
                 return None
-        else:
-            input_tup.append(params)
-    return input_tup
+            arg = get_tensor_constant_from_node(arg, model)
+        args.append(arg)
+    return tuple(args)
 
 
 def _compress_qdq_constant_transformation(model: torch.fx.GraphModule) -> None:
@@ -675,19 +691,21 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule) -> None:
     :param: model: Model to apply transformations to.
     """
     for node in model.graph.nodes:
-        if node.target in DEQUANTIZE_NODES:
-            quantize_node = node.all_input_nodes[0]
-            if quantize_node.target != QDQ_PAIR[node.target]:
-                pass
-            port_id = 0
-            input_tup = _get_node_inputs(quantize_node, model)
-            if input_tup:
-                if quantize_node.target == torch.ops.quantized_decomposed.quantize_per_channel.default:
-                    _reshape_scale_zp(model, quantize_node)
-                result = quantize_node.target(*tuple(input_tup))
-                constant_update_fn(
-                    model, quantize_node, result, port_id, updated_node_name="compressed_weight_updated_constant"
-                )
+        if node.target not in DEQUANTIZE_NODES:
+            continue
+        quantize_node = node.all_input_nodes[0]
+        if quantize_node.target != QDQ_PAIR[node.target]:
+            continue
+        port_id = 0
+        args = _get_node_inputs(quantize_node, model)
+        if not args:
+            continue
+        if quantize_node.target == torch.ops.quantized_decomposed.quantize_per_channel.default:
+            _reshape_scale_zp(model, quantize_node)
+        result = quantize_node.target(*args)
+        constant_update_fn(
+            model, quantize_node, result, port_id, updated_node_name="compressed_weight_updated_constant"
+        )
 
 
 def _reshape_scale_zp(model: torch.fx.GraphModule, node: torch.fx.Node) -> None:
@@ -718,23 +736,24 @@ def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
     :param model: Model to apply transformations to.
     """
     for node in model.graph.nodes:
-        if node.target in DEQUANTIZE_NODES:
-            port_id = 0
-            quantize_node = node.all_input_nodes[0]
-            # Case where Quantize Dequantize nodes are not consecutive
-            if quantize_node.target != QDQ_PAIR[node.target]:
-                continue
-            input_tup = _get_node_inputs(quantize_node, model)
-            if input_tup:
-                input_tup[0] = quantize_node.target(*tuple(input_tup))
-                result = node.target(*tuple(input_tup))
-                constant_update_fn(
-                    model,
-                    quantize_node,
-                    result,
-                    port_id,
-                    updated_node_name="compressed_weight_updated_constant",
-                )
+        if node.target not in DEQUANTIZE_NODES:
+            continue
+        port_id = 0
+        quantize_node = node.all_input_nodes[0]
+        # Case where Quantize Dequantize nodes are not consecutive
+        if quantize_node.target != QDQ_PAIR[node.target]:
+            continue
+        args = _get_node_inputs(quantize_node, model)
+        if not args:
+            continue
+        result = node.target(quantize_node.target(*args), *args[1:])
+        constant_update_fn(
+            model,
+            quantize_node,
+            result,
+            port_id,
+            updated_node_name="compressed_weight_updated_constant",
+        )
 
 
 def compress_post_quantize_transformation(model: torch.fx.GraphModule) -> None:

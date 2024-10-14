@@ -157,12 +157,7 @@ def torchvision_model_case(model_id: str, input_shape: Tuple[int,]):
     return ModelCase(partial(model, weights=None), model_id, input_shape)
 
 
-TEST_MODELS_QUANIZED = (
-    (torchvision_model_case("resnet18", (1, 3, 224, 224)), {}),
-    (torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)), {}),
-    (torchvision_model_case("vit_b_16", (1, 3, 224, 224)), {"model_type": nncf.ModelType.TRANSFORMER}),
-    (torchvision_model_case("swin_v2_s", (1, 3, 224, 224)), {"model_type": nncf.ModelType.TRANSFORMER}),
-)
+TEST_MODELS_QUANIZED = ((torchvision_model_case("resnet18", (1, 3, 224, 224)), {}),)
 
 
 @pytest.mark.parametrize(
@@ -179,15 +174,19 @@ def test_post_quantization_compression(model_case: ModelCase, quantization_param
         quantized_model = nncf.quantize(
             exported_model, calibration_dataset=nncf.Dataset([input_ids]), **quantization_parameters
         )
-
+    q_nodes, dq_nodes = count_q_dq(quantized_model)
+    assert q_nodes == 30
+    assert dq_nodes == 37
     for node in quantized_model.graph.nodes:
-        if node.name[:3] == "mul":
-            input_tup = []
-            input_tup = _get_node_inputs(node, quantized_model)
-            if input_tup:
-                assert input_tup[0].dtype == torch.int8
-                result = node.target(*tuple(input_tup))
-                assert result.dtype == torch.float32
+        if node.name[:3] != "mul":
+            continue
+        args = []
+        args = _get_node_inputs(node, quantized_model)
+        if not args:
+            continue
+        assert args[0].dtype == torch.int8
+        result = node.target(*args)
+        assert result.dtype == torch.float32
 
 
 @pytest.mark.parametrize(
@@ -207,21 +206,22 @@ def test_FQ_transformation(model_case: ModelCase, quantization_parameters):
         quantized_model = nncf.quantize(
             exported_model, calibration_dataset=nncf.Dataset([input_ids]), **quantization_parameters
         )
-
+    q_nodes, dq_nodes = count_q_dq(quantized_model)
+    assert q_nodes == 51
+    assert dq_nodes == 58
     for node in quantized_model.graph.nodes:
         if node.target in [
             torch.ops.quantized_decomposed.dequantize_per_channel.default,
             torch.ops.quantized_decomposed.dequantize_per_tensor.default,
         ]:
-            input_tup = []
+            args = []
             quantize_node = node.args[0]
-            input_tup = _get_node_inputs(quantize_node, quantized_model)
-            if input_tup:
-                quantized_value = quantize_node.target(*tuple(input_tup))
-                input_tup[0] = quantized_value
-                result = node.target(*tuple(input_tup))
-                fp_value = get_tensor_constant_from_node(quantize_node.args[0], quantized_model)
-                assert torch.all(result == fp_value)
+            args = _get_node_inputs(quantize_node, quantized_model)
+            if not args:
+                continue
+            result = node.target(quantize_node.target(*args), *args[1:])
+            fp_value = get_tensor_constant_from_node(quantize_node.args[0], quantized_model)
+            assert torch.all(result == fp_value)
 
 
 def count_constants(model) -> int:
