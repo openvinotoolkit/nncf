@@ -25,47 +25,9 @@ from nncf.experimental.common.tensor_statistics.collectors import QuantileReduce
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.quantization.advanced_parameters import StatisticsType
-
-
-class ONNXBasicReducer(TensorReducerBase):
-    def get_inplace_fn(self):
-        raise NotImplementedError("ONNX backend has no support of inplace statistics yet.")
-
-
-class ONNXMinReducer(ONNXBasicReducer, MinReducer):
-    pass
-
-
-class ONNXMaxReducer(ONNXBasicReducer, MaxReducer):
-    pass
-
-
-class ONNXAbsMaxReducer(ONNXBasicReducer, AbsMaxReducer):
-    pass
-
-
-class ONNXMeanReducer(ONNXBasicReducer, MeanReducer):
-    pass
-
-
-class ONNXQuantileReducer(ONNXBasicReducer, QuantileReducer):
-    pass
-
-
-class ONNXAbsQuantileReducer(ONNXBasicReducer, AbsQuantileReducer):
-    pass
-
-
-class ONNXBatchMeanReducer(ONNXBasicReducer, BatchMeanReducer):
-    pass
-
-
-class ONNXMeanPerChanelReducer(ONNXBasicReducer, MeanPerChReducer):
-    pass
 
 
 def get_mean_statistic_collector(
@@ -83,9 +45,9 @@ def get_mean_statistic_collector(
     """
     inplace = False
     if channel_axis == 0:
-        reducer = ONNXBatchMeanReducer(inplace)
+        reducer = BatchMeanReducer(inplace)
     else:
-        reducer = ONNXMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
+        reducer = MeanPerChReducer(channel_axis=channel_axis, inplace=inplace)
     noop_reducer = NoopReducer()
 
     kwargs = {
@@ -118,10 +80,10 @@ def get_raw_stat_collector(num_samples: int) -> TensorCollector:
 
 
 ONNX_REDUCERS_MAP = {
-    StatisticsType.MIN: ONNXMinReducer,
-    StatisticsType.MAX: ONNXMaxReducer,
-    StatisticsType.ABS_MAX: ONNXAbsMaxReducer,
-    StatisticsType.MEAN: ONNXMeanReducer,
-    StatisticsType.QUANTILE: ONNXQuantileReducer,
-    StatisticsType.ABS_QUANTILE: ONNXAbsQuantileReducer,
+    StatisticsType.MIN: MinReducer,
+    StatisticsType.MAX: MaxReducer,
+    StatisticsType.ABS_MAX: AbsMaxReducer,
+    StatisticsType.MEAN: MeanReducer,
+    StatisticsType.QUANTILE: QuantileReducer,
+    StatisticsType.ABS_QUANTILE: AbsQuantileReducer,
 }

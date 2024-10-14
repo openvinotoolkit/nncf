@@ -18,18 +18,18 @@ import torch
 
 import nncf
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import MinReducer
+from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.torch.tensor_statistics.algo import create_register_input_hook
-from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
-from nncf.torch.tensor_statistics.collectors import PTAbsQuantileReducer
-from nncf.torch.tensor_statistics.collectors import PTBatchMeanReducer
-from nncf.torch.tensor_statistics.collectors import PTMaxReducer
-from nncf.torch.tensor_statistics.collectors import PTMeanPerChanelReducer
-from nncf.torch.tensor_statistics.collectors import PTMeanReducer
-from nncf.torch.tensor_statistics.collectors import PTMinReducer
-from nncf.torch.tensor_statistics.collectors import PTQuantileReducer
 from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggregators
 
 
@@ -46,14 +46,14 @@ class BaseTestReducersAggregators(TemplateTestReducersAggregators, ABC):
     @pytest.fixture(scope="module")
     def reducers(self):
         return {
-            "min": PTMinReducer,
-            "max": PTMaxReducer,
-            "abs_max": PTAbsMaxReducer,
-            "mean": PTMeanReducer,
-            "quantile": PTQuantileReducer,
-            "abs_quantile": PTAbsQuantileReducer,
-            "batch_mean": PTBatchMeanReducer,
-            "mean_per_ch": PTMeanPerChanelReducer,
+            "min": MinReducer,
+            "max": MaxReducer,
+            "abs_max": AbsMaxReducer,
+            "mean": MeanReducer,
+            "quantile": QuantileReducer,
+            "abs_quantile": AbsQuantileReducer,
+            "batch_mean": BatchMeanReducer,
+            "mean_per_ch": MeanPerChReducer,
         }
 
     def all_close(self, val, ref) -> bool:
