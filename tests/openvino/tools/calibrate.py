@@ -49,6 +49,7 @@ from nncf.common.logging.logger import set_log_file
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.data.dataset import DataProvider
+from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
@@ -108,6 +109,13 @@ def parse_args():
     parser.add_argument("--impl", help="NNCF OpenVINO backend implementation.", choices=["pot", "native"], default=None)
 
     parser.add_argument("--batch_size", help="Batch size", type=int, default=1)
+
+    parser.add_argument(
+        "--inference_precision_hint",
+        help="Hint for device to use specified precision for inference.",
+        choices=["fp32"],
+        default=None,
+    )
 
     return parser.parse_args()
 
@@ -930,7 +938,7 @@ class ACDattasetWrapper:
             return sequence_subset_size
 
 
-def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_parameters):
+def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_parameters, inference_precision_hint):
     ov_model = ov.Core().read_model(model=xml_path, weights=bin_path)
     model_evaluator = create_model_evaluator(accuracy_checker_config)
     if isinstance(model_evaluator, ModelEvaluator):
@@ -939,7 +947,13 @@ def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_par
 
     advanced_parameters = quantization_parameters.get("advanced_parameters", AdvancedQuantizationParameters())
     if quantization_parameters.get("mode", None) is not None:
-        advanced_parameters.backend_params = None
+        advanced_parameters.backend_params = {}
+
+    if inference_precision_hint:
+        advanced_parameters.backend_params.update(
+            {BackendParameters.INFERENCE_PRECISION_HINT: inference_precision_hint}
+        )
+
     quantization_parameters["advanced_parameters"] = advanced_parameters
 
     transform_fn = get_transform_fn(model_evaluator, ov_model)
@@ -986,7 +1000,7 @@ def initialize_model_and_evaluator(xml_path: str, bin_path: str, accuracy_checke
 
 
 def quantize_model_with_accuracy_control(
-    xml_path: str, bin_path: str, accuracy_checker_config, quantization_parameters
+    xml_path: str, bin_path: str, accuracy_checker_config, quantization_parameters, inference_precision_hint
 ):
     ov_model, model_evaluator = initialize_model_and_evaluator(xml_path, bin_path, accuracy_checker_config)
 
@@ -1014,6 +1028,12 @@ def quantize_model_with_accuracy_control(
     advanced_parameters = quantization_parameters.get(
         "advanced_quantization_parameters", AdvancedQuantizationParameters()
     )
+
+    if inference_precision_hint:
+        advanced_parameters.backend_params.update(
+            {BackendParameters.INFERENCE_PRECISION_HINT: inference_precision_hint}
+        )
+
     quantization_parameters["advanced_quantization_parameters"] = advanced_parameters
 
     quantized_model = nncf.quantize_with_accuracy_control(
@@ -1174,6 +1194,7 @@ def main():
                 "bin_path": bin_path,
                 "accuracy_checker_config": accuracy_checker_config,
                 "quantization_parameters": algo_config,
+                "inference_precision_hint": args.inference_precision_hint,
             }
 
             output_model = algo_fn(**quantize_model_arguments)
