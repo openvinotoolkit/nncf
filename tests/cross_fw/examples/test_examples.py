@@ -76,7 +76,7 @@ def test_examples(
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(PROJECT_ROOT)  # need this to be able to import from tests.* in run_example.py
-    env["ONEDNN_MAX_CPU_ISA"] = "AVX2"  # Set ISA to AVX2 to get CPU independent results
+    env["ONEDNN_MAX_CPU_ISA"] = "SSE41"  # Set ISA to SSE41 to get CPU independent results
     env["CUDA_VISIBLE_DEVICES"] = ""  # Disable GPU
 
     metrics_file_path = tmp_path / "metrics.json"
