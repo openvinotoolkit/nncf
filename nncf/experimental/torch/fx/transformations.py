@@ -562,7 +562,7 @@ def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
 
 def _get_pattern_replacement_per_channel() -> None:
     """
-    Returns the patter and replacement function for the subgraph rewriter to 
+    Returns the patter and replacement function for the subgraph rewriter to
     match and replace for per_tensor quantization
     """
 
@@ -576,14 +576,14 @@ def _get_pattern_replacement_per_channel() -> None:
         return dequantized
 
     def replacement_graph_per_channel(weight, scale, zero_point, axis, low, high, dtype):
-        return torch.ops.aten.mul.Tensor(weight, scale)
+        return torch.ops.aten.sub.Tensor(torch.ops.aten.mul.Tensor(weight, scale), zero_point)
 
     return pattern_per_channel, replacement_graph_per_channel
 
 
 def _get_pattern_replacement_per_tensor() -> None:
     """
-    Returns the patter and replacement function for the subgraph rewriter to 
+    Returns the patter and replacement function for the subgraph rewriter to
     match and replace for per_tensor quantization
     """
 
@@ -597,7 +597,7 @@ def _get_pattern_replacement_per_tensor() -> None:
         return dequantized
 
     def replacement_graph_per_tensor(weight, scale, zero_point, low, high, dtype):
-        return torch.ops.aten.mul.Tensor(weight, scale)
+        return torch.ops.aten.sub.Tensor(torch.ops.aten.mul.Tensor(weight, scale), zero_point)
 
     return pattern_per_tensor, replacement_graph_per_tensor
 
@@ -683,33 +683,37 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule) -> None:
             input_tup = _get_node_inputs(quantize_node, model)
             if input_tup:
                 if quantize_node.target == torch.ops.quantized_decomposed.quantize_per_channel.default:
-                    _reshape_scale(model, quantize_node)
+                    _reshape_scale_zp(model, quantize_node)
                 result = quantize_node.target(*tuple(input_tup))
                 constant_update_fn(
                     model, quantize_node, result, port_id, updated_node_name="compressed_weight_updated_constant"
                 )
 
 
-def _reshape_scale(model: torch.fx.GraphModule, node: torch.fx.Node) -> None:
+def _reshape_scale_zp(model: torch.fx.GraphModule, node: torch.fx.Node) -> None:
     """
-    Reshape scale so that it can be multiplied elementwise with the weight for per channel quantization.
+    Reshape scale and zero point so that it can be multiplied elementwise with the weight for per channel quantization.
     :param model: Model to apply transformations to.
     :param node: quantize node whose scale has to be reshaped
     """
     weight_node = node.all_input_nodes[0]
     scale_node = node.all_input_nodes[1]
+    zp_node = node.all_input_nodes[2]
     axis = node.args[3]
     scale_value = get_tensor_constant_from_node(scale_node, model)
     weight_value = get_tensor_constant_from_node(weight_node, model)
+    zp_value = get_tensor_constant_from_node(zp_node, model)
     new_shape = [1] * weight_value.dim()
     new_shape[axis] = scale_value.shape[0]
     scale_value = scale_value.reshape(new_shape)
+    zp_value = zp_value.reshape(new_shape)
+    constant_update_fn(model, node, zp_value, 2, updated_node_name=zp_node.name + "_updated_constant")
     constant_update_fn(model, node, scale_value, 1, updated_node_name=scale_node.name + "_updated_constant")
 
 
 def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
     """
-    This function applies a transformation to replace the FP32 weights with Fake Quantized 
+    This function applies a transformation to replace the FP32 weights with Fake Quantized
     FP values to avoid the rounding error when converting to OpenVino model.
     :param model: Model to apply transformations to.
     """
