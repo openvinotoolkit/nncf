@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import nncf
 from nncf.common.logging import nncf_logger
@@ -69,15 +69,19 @@ class Evaluator:
     """
 
     def __init__(
-        self, validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]]
+        self,
+        validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
+        backend_params: Optional[Dict[str, Any]] = None,
     ):
         """
         :param validation_fn: Validation function to validate model.
+        :param backend_params: Backend-specific params.
         """
         self._validation_fn = validation_fn
         self._metric_mode = None
         self._num_passed_iterations = 0
         self._enable_iteration_count = False
+        self._backend_params = backend_params
 
     @property
     def num_passed_iterations(self) -> int:
@@ -123,7 +127,7 @@ class Evaluator:
         if backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.accuracy_control.openvino_backend import OVPreparedModel
 
-            return OVPreparedModel(model)
+            return OVPreparedModel(model, self._backend_params)
 
         if backend == BackendType.ONNX:
             from nncf.quantization.algorithms.accuracy_control.onnx_backend import ONNXPreparedModel

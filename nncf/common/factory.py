@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TypeVar
+from typing import Any, Dict, Optional, TypeVar
 
 import nncf
 from nncf.common.engine import Engine
@@ -87,11 +87,12 @@ class ModelTransformerFactory:
 
 class EngineFactory:
     @staticmethod
-    def create(model: TModel) -> Engine:
+    def create(model: TModel, backend_params: Optional[Dict[str, Any]] = None) -> Engine:
         """
         Factory method to create backend-specific Engine instance based on the input model.
 
         :param model: backend-specific model instance.
+        :param backend_params: backend-specific params.
         :return: backend-specific Engine instance.
         """
         model_backend = get_backend(model)
@@ -102,7 +103,7 @@ class EngineFactory:
         if model_backend == BackendType.OPENVINO:
             from nncf.openvino.engine import OVNativeEngine
 
-            return OVNativeEngine(model)
+            return OVNativeEngine(model, backend_params)
         if model_backend in (BackendType.TORCH, BackendType.TORCH_FX):
             from nncf.torch.engine import PTEngine
 
@@ -139,11 +140,14 @@ class CommandCreatorFactory:
 
 class StatisticsAggregatorFactory:
     @staticmethod
-    def create(model: TModel, dataset: Dataset) -> aggregator.StatisticsAggregator:
+    def create(
+        model: TModel, dataset: Dataset, backend_params: Optional[Dict[str, Any]] = None
+    ) -> aggregator.StatisticsAggregator:
         """
         Factory method to create backend-specific `StatisticsAggregator` instance based on the input model.
 
         :param model: backend-specific model instance
+        :param backend_params: backend-specific params.
         :return: backend-specific `StatisticsAggregator` instance
         """
         model_backend = get_backend(model)
@@ -154,7 +158,7 @@ class StatisticsAggregatorFactory:
         if model_backend == BackendType.OPENVINO:
             from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 
-            return OVStatisticsAggregator(dataset)
+            return OVStatisticsAggregator(dataset, backend_params)
         if model_backend == BackendType.TORCH:
             from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 

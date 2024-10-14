@@ -154,4 +154,4 @@ def create_ptq_pipeline(
             )
         )
 
-    return Pipeline(pipeline_steps)
+    return Pipeline(pipeline_steps, advanced_parameters.backend_params)

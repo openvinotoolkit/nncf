@@ -9,13 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import openvino.runtime as ov
+from openvino.properties.hint import inference_precision
 
 from nncf.common.engine import Engine
 from nncf.openvino.graph.model_utils import model_has_state
+from nncf.openvino.quantization.backend_parameters import BackendParameters
 
 
 class OVCompiledModelEngine(Engine):
@@ -62,10 +64,15 @@ class OVNativeEngine(Engine):
     to infer the model.
     """
 
-    def __init__(self, model: ov.Model):
+    def __init__(self, model: ov.Model, backend_params: Optional[Dict[str, Any]] = None):
         ie = ov.Core()
         stateful = model_has_state(model)
-        compiled_model = ie.compile_model(model, device_name="CPU")
+        config = None
+        inference_precision_hint = backend_params.get(BackendParameters.INFERENCE_PRECISION_HINT, None)
+        if inference_precision_hint:
+            config = {inference_precision: inference_precision_hint}
+
+        compiled_model = ie.compile_model(model, device_name="CPU", config=config)
         self.engine = OVCompiledModelEngine(compiled_model, stateful)
 
     def infer(

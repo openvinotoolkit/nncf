@@ -37,10 +37,11 @@ class StatisticsAggregator(ABC):
     Base class for statistics collection.
     """
 
-    def __init__(self, dataset: Dataset[DataItem, ModelInput]):
+    def __init__(self, dataset: Dataset[DataItem, ModelInput], backend_params: Optional[Dict[str, Any]] = None):
         self.dataset = dataset
         self.stat_subset_size = None
         self.statistic_points = StatisticPointsContainer()
+        self._backend_params = backend_params
 
     def _get_iterations_number(self) -> Optional[int]:
         """
@@ -67,7 +68,7 @@ class StatisticsAggregator(ABC):
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
         transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
         model_with_outputs: TModel = model_transformer.transform(transformation_layout)
-        engine = factory.EngineFactory.create(model_with_outputs)
+        engine = factory.EngineFactory.create(model_with_outputs, self._backend_params)
 
         iterations_number = self._get_iterations_number()
         empty_statistics = True

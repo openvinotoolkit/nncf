@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, TypeVar, Union
+from typing import Any, Dict, List, Optional, TypeVar, Union
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
@@ -30,6 +30,7 @@ def collect_statistics(
     model: TModel,
     graph: NNCFGraph,
     dataset: Dataset,
+    backend_params: Optional[Dict[str, Any]] = None,
 ) -> StatisticPointsContainer:
     """
     Utility method for collecting statistics by model.
@@ -38,12 +39,13 @@ def collect_statistics(
     :param model: A model.
     :param graph: A graph assosiated with a model.
     :param dataset: A dataset.
+    :param backend_params: Backend-specific params.
     :return: Collected statistics.
     """
     if not isinstance(containers, list):
         containers = [containers]
 
-    statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
+    statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset, backend_params)
     for container in containers:
         statistics_aggregator.register_statistic_points(container)
     statistics_aggregator.collect_statistics(model, graph)
@@ -66,11 +68,13 @@ class Pipeline:
     algorithms in this step.
     """
 
-    def __init__(self, pipeline_steps: List[PipelineStep]):
+    def __init__(self, pipeline_steps: List[PipelineStep], backend_params: Optional[Dict[str, Any]] = None):
         """
         :param pipeline_steps: A sequence of pipeline steps to be executed in order.
+        :param backend_params: Backend-specific params.
         """
         self._pipeline_steps = pipeline_steps
+        self._backend_params = backend_params
 
     @property
     def pipeline_steps(self) -> List[PipelineStep]:
@@ -158,7 +162,9 @@ class Pipeline:
             step_statistics = step_index_to_statistics.get(step_index)
             if step_statistics is None:
                 statistic_points = self.get_statistic_points_for_step(step_index, step_model, step_graph)
-                step_statistics = collect_statistics(statistic_points, step_model, step_graph, dataset)
+                step_statistics = collect_statistics(
+                    statistic_points, step_model, step_graph, dataset, self._backend_params
+                )
 
             # Run current pipeline step
             step_model = self.run_step(step_index, step_statistics, step_model, step_graph)
