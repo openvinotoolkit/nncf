@@ -562,7 +562,7 @@ def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
 
 def _get_pattern_replacement_per_channel() -> None:
     """
-    Returns the patter and replacement function for the subgraph rewriter to
+    Returns the patter and replacement function for the subgraph rewriter to 
     match and replace for per_tensor quantization
     """
 
@@ -583,7 +583,7 @@ def _get_pattern_replacement_per_channel() -> None:
 
 def _get_pattern_replacement_per_tensor() -> None:
     """
-    Returns the patter and replacement function for the subgraph rewriter to
+    Returns the patter and replacement function for the subgraph rewriter to 
     match and replace for per_tensor quantization
     """
 
@@ -675,7 +675,6 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule) -> None:
     :param: model: Model to apply transformations to.
     """
     for node in model.graph.nodes:
-        print(node.target)
         if node.target in DEQUANTIZE_NODES:
             quantize_node = node.all_input_nodes[0]
             if quantize_node.target != QDQ_PAIR[node.target]:
@@ -710,7 +709,7 @@ def _reshape_scale(model: torch.fx.GraphModule, node: torch.fx.Node) -> None:
 
 def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
     """
-    This function applies a transformation to replace the FP32 weights with Fake Quantized
+    This function applies a transformation to replace the FP32 weights with Fake Quantized 
     FP values to avoid the rounding error when converting to OpenVino model.
     :param model: Model to apply transformations to.
     """
@@ -808,7 +807,7 @@ def separate_linear_and_bias(model: torch.fx.GraphModule):
     for n in model.graph.nodes:
         if not _is_linear(n):
             continue
-        if len(n.args) < 3 or n.args[2] is None:
+        if len(n.args) < 3 or n.args[2] is None or n.args[1].op != "get_attr":
             continue
         linear_node = n
         linear_bias_node = linear_node.args[2]
