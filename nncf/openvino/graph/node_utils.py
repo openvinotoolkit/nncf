@@ -212,7 +212,10 @@ def get_ov_model_reduce_node_name(output_name: str, reduce_node_name: str, port_
 
 
 def get_inplace_reduce_op(
-    op: Type[ov.Node], reduction_axes: Optional[ReductionAxes], use_abs: bool
+    op: Type[ov.Node],
+    reduction_axes: Optional[ReductionAxes],
+    use_abs: bool,
+    keep_dims: bool = True,
 ) -> InplaceInsertionFnType:
     """
     Returns inplace insertion function that adds reduce node to a passed node.
@@ -220,7 +223,8 @@ def get_inplace_reduce_op(
     :param op: OpenVINO reduction operation type to insert.
     :param reduction_axes: Target reduction axes for the reduction node.
         Reduce along all axes in case reduction_axes are None.
-    :param use_abs: Wheather reduce absolute values of input tensors or not.
+    :param use_abs: Whether reduce absolute values of input tensors or not.
+    :param keep_dims: Whether to keep the original dimension length or return result as a scalar.
     :returns: Inplace insertion function to use in ModelTransformer.
     """
 
@@ -239,7 +243,7 @@ def get_inplace_reduce_op(
         return op(
             op_input.output(output_port_id),
             reduction_axes=np.array(reduction_axes_, dtype=np.int64),
-            keep_dims=True,
+            keep_dims=keep_dims,
             name=output_node_name,
         )
 
@@ -257,16 +261,19 @@ def get_inplace_min_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInsert
     return get_inplace_reduce_op(opset.reduce_min, reduction_axes, False)
 
 
-def get_inplace_max_op(reduction_axes: Optional[ReductionAxes], use_abs_max: bool) -> InplaceInsertionFnType:
+def get_inplace_max_op(
+    reduction_axes: Optional[ReductionAxes], use_abs_max: bool, keep_dims: bool = True
+) -> InplaceInsertionFnType:
     """
     Returns inplace max function that adds reduce max node to a passed node.
 
     :param reduction_axes: Target reduction axes for the reduction node.
         Reduce along all axes in case reduction_axes are None.
-    :param use_abs: Wheather reduce absolute values of input tensors or not.
+    :param use_abs_max: Whether reduce absolute values of input tensors or not.
+    :param keep_dims: Whether to keep the original dimension length or return result as a scalar.
     :returns: Inplace insertion function to use in ModelTransformer.
     """
-    return get_inplace_reduce_op(opset.reduce_max, reduction_axes, use_abs_max)
+    return get_inplace_reduce_op(opset.reduce_max, reduction_axes, use_abs_max, keep_dims)
 
 
 def get_inplace_mean_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInsertionFnType:
@@ -280,26 +287,29 @@ def get_inplace_mean_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInser
     return get_inplace_reduce_op(opset.reduce_mean, reduction_axes, False)
 
 
-def var_op(op_input: ov.Output, base_node_name: str, reduction_axes: Optional[np.ndarray] = None) -> ov.Node:
+def var_op(
+    op_input: ov.Output, output_node_name: str, reduction_axes: Optional[np.ndarray] = None, keep_dims: bool = True
+) -> ov.Node:
     """
     Return a subgraph computing variance on a given output.
 
     :param op_input: An output to compute variance for.
-    :param base_node_name: Variance subgraph domain name.
+    :param output_node_name: Variance output name.
+    :param keep_dims: Whether to keep the original dimension length or return result as a scalar.
     :param reduction_axes: Axes along which to compute variance.
     """
     mean = opset.reduce_mean(
         op_input,
         reduction_axes=reduction_axes,
         keep_dims=True,
-        name=f"{base_node_name}/mean",
+        name=f"{output_node_name}/mean",
     )
-    diff = opset.squared_difference(mean, op_input, name=f"{base_node_name}/squared_diff")
+    diff = opset.squared_difference(mean, op_input, name=f"{output_node_name}/squared_diff")
     variance = opset.reduce_mean(
         diff,
         reduction_axes=reduction_axes,
-        keep_dims=True,
-        name=f"{base_node_name}/variance",
+        keep_dims=keep_dims,
+        name=output_node_name,
     )
     return variance
 
@@ -317,12 +327,12 @@ def get_inplace_mean_var_op(reduction_axes: Optional[ReductionAxes] = None) -> I
         all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)
         reduction_axes_ = np.array(all_axes if reduction_axes is None else reduction_axes, dtype=np.int64)
 
-        variance = var_op(node.output(output_port_id), f"{output_node_name}/var", reduction_axes_)
-        if np.array_equal(reduction_axes_, all_axes):
-            result = opset.squeeze(variance, axes=all_axes, name=output_node_name)
-        else:
+        reduce_all = np.array_equal(reduction_axes_, all_axes)
+        var_op_name = output_node_name if reduce_all else f"{output_node_name}/var"
+        result = var_op(node.output(output_port_id), var_op_name, reduction_axes_, keep_dims=not reduce_all)
+        if not reduce_all:
             result = opset.reduce_mean(
-                variance,
+                result,
                 reduction_axes=all_axes,
                 keep_dims=False,
                 name=output_node_name,
@@ -346,12 +356,12 @@ def get_inplace_max_var_op(reduction_axes: Optional[ReductionAxes] = None) -> In
         all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)
         reduction_axes_ = np.array(all_axes if reduction_axes is None else reduction_axes, dtype=np.int64)
 
-        variance = var_op(node.output(output_port_id), f"{output_node_name}/var", reduction_axes_)
-        if np.array_equal(reduction_axes_, all_axes):
-            result = opset.squeeze(variance, axes=all_axes, name=output_node_name)
-        else:
+        reduce_all = np.array_equal(reduction_axes_, all_axes)
+        var_op_name = output_node_name if reduce_all else f"{output_node_name}/var"
+        result = var_op(node.output(output_port_id), var_op_name, reduction_axes_, keep_dims=not reduce_all)
+        if not reduce_all:
             result = opset.reduce_max(
-                variance,
+                result,
                 reduction_axes=all_axes,
                 keep_dims=False,
                 name=output_node_name,
@@ -376,12 +386,14 @@ def get_inplace_mean_max_op(reduction_axes: Optional[ReductionAxes], use_abs_max
         all_axes = np.arange(partial_shape.rank.get_length()).astype(np.int64)
         reduction_axes_ = np.array(all_axes if reduction_axes is None else reduction_axes, dtype=np.int64)
 
-        max_op = get_inplace_max_op(reduction_axes, use_abs_max)(node, output_port_id, f"{output_node_name}/max")
-        if np.array_equal(reduction_axes_, all_axes):
-            result = opset.squeeze(max_op, axes=all_axes, name=output_node_name)
-        else:
+        reduce_all = np.array_equal(reduction_axes_, all_axes)
+        max_op_name = output_node_name if reduce_all else f"{output_node_name}/max"
+        result = get_inplace_max_op(reduction_axes, use_abs_max, keep_dims=not reduce_all)(
+            node, output_port_id, max_op_name
+        )
+        if not reduce_all:
             result = opset.reduce_mean(
-                max_op,
+                result,
                 reduction_axes=all_axes,
                 keep_dims=False,
                 name=output_node_name,
