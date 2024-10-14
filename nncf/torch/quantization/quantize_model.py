@@ -30,6 +30,7 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
+from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
 from nncf.telemetry.decorator import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
@@ -39,6 +40,7 @@ from nncf.torch.model_creation import wrap_model
 DEFAULT_RANGE_TYPE = "mean_min_max"
 
 
+@tracked_function(NNCF_PT_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
 def quantize_impl(
     model: torch.nn.Module,
     calibration_dataset: Dataset,
