@@ -176,19 +176,39 @@
 #         env:
 #           NUM_WORKERS: 6
 
-#   tools:
-#     runs-on: ubuntu-20.04
-#     steps:
-#       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
-#         with:
-#           lfs: true
-#       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
-#         with:
-#           python-version: 3.10.14
-#           cache: pip
-#       - name: Install NNCF and test requirements
-#         run: pip install -r tests/tools/requirements.txt
-#       - name: Print installed modules
-#         run: pip list
-#       - name: Run tools precommit test scope
-#         run: PYTHONPATH=./ pytest -ra tests/tools
+
+  # tools:
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+  #       with:
+  #         lfs: true
+  #     - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+  #       with:
+  #         python-version: 3.10.14
+  #         cache: pip
+  #     - name: Install NNCF and test requirements
+  #       run: pip install -r tests/tools/requirements.txt
+  #     - name: Print installed modules
+  #       run: pip list
+  #     - name: Run tools precommit test scope
+  #       run: PYTHONPATH=./ pytest -ra tests/tools
+
+  # pytorch2-cpu:
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+  #       with:
+  #         lfs: true
+  #     - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+  #       with:
+  #         python-version: 3.10.14
+  #         cache: pip
+  #     - name: Install NNCF and test requirements
+  #       run: |
+  #         pip install -e .
+  #         pip install -r tests/torch2/requirements.txt
+  #     - name: Print installed modules
+  #       run: pip list
+  #     - name: Run torch2 precommit test scope
+  #       run: pytest -ra tests/torch2 -m "not cuda"

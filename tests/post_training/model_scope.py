@@ -15,6 +15,7 @@ from typing import Dict, List
 import nncf
 from nncf import ModelType
 from nncf import QuantizationPreset
+from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
@@ -496,6 +497,21 @@ WEIGHT_COMPRESSION_MODELS = [
             ),
         },
         "params": {"is_stateful": True},
+        "backends": [BackendType.OV],
+    },
+    {
+        "reported_name": "tinyllama_awq_backup_mode_none",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": 64,
+            "ratio": 0.8,
+            "all_layers": True,
+            "backup_mode": BackupMode.NONE,
+            "mode": CompressWeightsMode.INT4_ASYM,
+            "awq": True,
+            "ignored_scope": nncf.IgnoredScope(types=["Gather"]),
+        },
         "backends": [BackendType.OV],
     },
 ]

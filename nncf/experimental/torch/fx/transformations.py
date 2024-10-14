@@ -28,7 +28,9 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 TransformationFNType = Callable[[torch.fx.GraphModule], None]
 
 
-def _set_new_node_meta(new_node: torch.fx.Node, prev_node: torch.fx.Node, target_module: torch.nn.Module):
+def _set_new_node_meta(
+    new_node: torch.fx.Node, prev_node: torch.fx.Node, target_module: torch.nn.Module, model: torch.fx.GraphModule
+):
     """
     Sets correct meta \"val\" value to the new node.
 
@@ -37,7 +39,11 @@ def _set_new_node_meta(new_node: torch.fx.Node, prev_node: torch.fx.Node, target
         New node expected to have only one input node.
     :param target_module: Module which is being called by the new node.
     """
-    val = prev_node.meta["val"]
+    val = (
+        prev_node.meta["val"]
+        if prev_node.op not in ["get_attr"]
+        else get_tensor_constant_from_node(prev_node, model).data
+    )
     val = val if isinstance(val, tuple) else (val,)
     retval = []
     for t in val:
@@ -71,16 +77,16 @@ def module_insertion_transformation_builder(
             target_node = get_graph_node_by_name(graph, target_point.target_node_name)
 
             if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
-                _set_new_node_meta(new_node, target_node, module_to_insert)
+                _set_new_node_meta(new_node, target_node, module_to_insert, model)
                 with graph.inserting_after(target_node):
-                    for user in target_node.users:
+                    for user in list(target_node.users):
                         if user is new_node:
                             continue
                         user.replace_input_with(target_node, new_node)
 
             else:
                 prev_node = target_node.args[target_point.input_port_id]
-                _set_new_node_meta(new_node, prev_node, module_to_insert)
+                _set_new_node_meta(new_node, prev_node, module_to_insert, model)
                 target_node.replace_input_with(prev_node, new_node)
 
     return module_insertion_transformation
@@ -136,17 +142,42 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
     return bias_update_transformation
 
 
-def constant_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> TransformationFNType:
+def shared_constants_unification_transformation(model: torch.fx.GraphModule):
+    """
+    checks FX graph for shared constants and eliminates redundant
+    shared constant while keeping only the first instance of the constant node.
+    This unification transformation is cruicial since the current algorithms(min_max, solver, BC, etc.)
+    for torch fx do not utilize the is_shared attribute of nodes for shared constants.
+
+    :param model: Target Torch FX GraphModule
+    """
+    prev_targets = {}
+
+    for source_node in model.graph.nodes:
+        dist_node = list(source_node.users)
+        if source_node.target in prev_targets and source_node.op in ("get_attr",):
+            dist_node[0].replace_input_with(source_node, prev_targets[source_node.target])
+        else:
+            prev_targets[source_node.target] = source_node
+
+    model.graph.eliminate_dead_code()
+    model.recompile()
+
+
+def constant_update_transformation_builder(
+    node: NNCFNode, value: torch.Tensor, input_port_id: int = 1
+) -> TransformationFNType:
     """
     Return transformation which updates constant of the given node to the given value.
 
     :param node: Node which requires bias constant update.
     :param value: New value to use as the node constant.
+    :param input_port_id: Port Id of the constant.
     :return: Transformation which updates constant of the given node to the given value.
     """
 
     def constant_update_transformation(model: torch.fx.GraphModule):
-        constant_update_fn(model, get_graph_node_by_name(model.graph, node.node_name), value, input_port_id=1)
+        constant_update_fn(model, get_graph_node_by_name(model.graph, node.node_name), value, input_port_id)
 
     return constant_update_transformation
 
@@ -161,9 +192,6 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
     :param input_port_id: Target constant input port id.
     """
     graph = model.graph
-    with graph.inserting_before(node):
-        new_constant = create_getattr_from_value(model, graph, node.name + "_updated_constant", value)
-
     args = list(node.args)
     # A bias node suppose to have constant on the second input port.
     if args[input_port_id].op != "get_attr":
@@ -174,11 +202,14 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
 
     # Update metadata of the new constant node.
     previous_const = args[input_port_id]
-    new_constant.meta = copy(previous_const.meta)
-    new_constant.meta["val"] = value
+    consumer_nodes = list(previous_const.users)
+    # This list of consumer nodes will always be topologically sorted
+    # To ensure the updated node has the right order,
+    # we insert constant node before the node placed at the highest order in topological order.
+    with graph.inserting_before(consumer_nodes[0]):
+        new_constant = create_getattr_from_value(model, graph, node.name + "_updated_constant", value)
 
-    args[input_port_id] = new_constant
-    node.args = tuple(args)
+    previous_const.replace_all_uses_with(new_constant, propagate_meta=True)
     graph.eliminate_dead_code()
 
 
@@ -509,6 +540,7 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     fuse_conv_bn(model)
     separate_conv_and_bias(model)
     separate_linear_and_bias(model)
+    shared_constants_unification_transformation(model)
 
 
 def revert_quantization_transformations(model: torch.fx.GraphModule) -> None:
