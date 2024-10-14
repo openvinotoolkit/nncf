@@ -316,6 +316,7 @@ class AWQ(Algorithm):
         for node_name, scale in self._scale_per_target_node.items():
             for mean_stat in statistics[node_name].mean_values:
                 mean_stat *= fns.squeeze(scale)
+        return statistics
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         """

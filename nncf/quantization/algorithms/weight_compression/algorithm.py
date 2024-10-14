@@ -362,12 +362,14 @@ class WeightCompression(Algorithm):
     ) -> TModel:
         self._set_backend_entity(model)
         nodes_to_compress = self._get_nodes_to_compress(graph)
+
+        statistics = None
         data_aware_mixed_precision = (
             self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
         )
         data_aware_compression = self._awq or self._scale_estimation or self._lora_correction or self._gptq
         if data_aware_mixed_precision or data_aware_compression:
-            self._collect_statistics(dataset, nodes_to_compress, graph, model)
+            statistics = self._collect_statistics(dataset, nodes_to_compress, graph, model)
         all_weight_params: List[WeightCompressionParameters] = []
         weight_names = set()
 
@@ -452,7 +454,7 @@ class WeightCompression(Algorithm):
                 self._backend_entity.name_to_node_mapping,
                 all_weight_params,
                 nodes_to_compress,
-                self._statistics,
+                statistics,
                 awq_params.subset_size,
                 awq_params.percent_to_apply,
                 awq_params.alpha_min,
@@ -461,7 +463,8 @@ class WeightCompression(Algorithm):
             )
             awq_algo.apply(model, graph)
             # After applying AWQ we need to update statistics since AWQ alters the activations
-            awq_algo.update_statistics(self._statistics)
+            statistics = awq_algo.update_statistics(statistics)
+            # del is used to prematurely mark non-necessary data as free for garbage collection
             del awq_algo
 
         scales = {}
@@ -469,6 +472,7 @@ class WeightCompression(Algorithm):
         lora_correction_algo = None
         description = "Applying Weight Compression"
         if self._gptq:
+            del statistics
             model, scales, zero_points = self._gptq_algo.apply(
                 model=model,
                 graph=graph,
@@ -479,23 +483,23 @@ class WeightCompression(Algorithm):
         else:
             if self._scale_estimation:
                 scale_estimation_params = self._advanced_parameters.scale_estimation_params
-                scale_algo = ScaleEstimation(
+                scales = ScaleEstimation(
                     model,
                     self._backend_entity.name_to_node_mapping,
                     all_weight_params,
                     nodes_to_compress,
-                    self._statistics,
+                    statistics,
                     scale_estimation_params.subset_size,
                     scale_estimation_params.initial_steps,
                     scale_estimation_params.scale_steps,
                     scale_estimation_params.weight_penalty,
-                )
-                scales = scale_algo.apply(model, graph)
+                ).apply(model, graph)
 
             if self._lora_correction:
                 lora_correction_params = self._advanced_parameters.lora_correction_params
-                lora_correction_algo = LoraCorrectionAlgorithm(self._statistics, lora_correction_params)
+                lora_correction_algo = LoraCorrectionAlgorithm(statistics, lora_correction_params)
                 description += " with correction of low-rank adapters"
+            del statistics
 
         # Sort weight params to start compression with the bigger constants. This lowers peak memory footprint.
         all_weight_params = sorted(all_weight_params, key=lambda wp: wp.num_weights, reverse=True)
@@ -591,8 +595,10 @@ class WeightCompression(Algorithm):
 
         statistics_aggregator.collect_statistics(model, graph)
 
+        statistics = None
         if statistic_points is not None:
-            self._statistics = self._get_statistics(matmul_input_to_output_nodes_map, statistic_points)
+            statistics = self._get_statistics(matmul_input_to_output_nodes_map, statistic_points)
+        return statistics
 
     def get_statistic_points(
         self,
