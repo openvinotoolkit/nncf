@@ -126,6 +126,17 @@ Classes
        the calibration dataset, then in case batch_size of the data source > 1 batchwise_statistics sets to True,
        otherwise sets to False.
    :type batchwise_statistics: Optional[bool]
+   :param quantizer_propagation_rule: An instance of the `QuantizerPropagationRule` enum that
+       specifies how quantizers should be propagated and merged across branching nodes in the
+       model's computational graph. The strategies are as follows:
+       - DO_NOT_MERGE_BRANCHES: No merging of quantization parameters across branches.
+       - MERGE_IF_ALL_BRANCHES_SAME : Merge only if all branch quantization configurations are identical.
+       - MERGE_WITH_POTENTIAL_REQUANTIZATION: Merge common configurations and allow for requantization
+       on branches with additional options.
+       - MERGE_ALL_IN_ONE: Attempt to merge into a single global quantization configuration
+       if possible given hardware constraints.
+       MERGE_ALL_IN_ONE is a default value.
+   :type quantizer_propagation_rule: QuantizerPropagationRule
    :param activations_quantization_params: Quantization parameters for activations.
    :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
    :param weights_quantization_params: Quantization parameters for weights.

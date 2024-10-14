@@ -4,6 +4,15 @@
 .. py:module:: nncf.common.quantization
 
 
+Subpackages
+-----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 3
+
+   quantizer_propagation/index.rst
+
+
 Submodules
 ----------
 .. toctree::
