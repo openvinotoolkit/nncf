@@ -361,7 +361,7 @@ class AdvancedCompressionParameters:
     """
     Contains advanced parameters for compression algorithms.
 
-    :param statistics_file_path: File path to dump statistics. Supported extensions: .pkl, .gz.
+    :param statistics_file_path: File path to dump statistics.
     :type statistics_file_path: str
     :param awq_params: Advanced parameters for AWQ algorithm.
     :type awq_params: AdvancedAWQParameters
