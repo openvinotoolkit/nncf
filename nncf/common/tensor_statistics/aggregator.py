@@ -89,23 +89,42 @@ class StatisticsAggregator(ABC):
             raise nncf.ValidationError(EMPTY_DATASET_ERROR)
 
     def load_statistics_from_file(self, file_name: str) -> None:
+        """
+        Loads statistics from a file and populates the statistic points with the loaded data.
+
+        :param file_name: The name of the file from which to load the statistics.
+        """
         loaded_data = StatisticsSerializer.load_from_file(file_name)
         self._load_statistics(loaded_data)
 
     def _load_statistics(self, data: Dict[str, Any]) -> None:
+        """
+        Loads statistics into the registered statistic points from the given data.
+
+        :param data: A dictionary containing the statistics loaded from a file.
+        """
         for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
             statistics = tensor_collector.get_statistics()
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
             if statistics_key not in data:
                 raise ValueError(f"Not found statistics for {statistics_key}")
-            statistics = tensor_collector.get_statistics()
             statistics.load_data(data[statistics_key])
 
     def dump_statistics(self, file_name: str) -> None:
+        """
+        Dumps the current statistics to a file in a compressed format.
+
+        :param file_name: The name of the file where the statistics will be saved.
+        """
         data_to_dump = self._prepare_statistics()
         StatisticsSerializer.dump_to_file(data_to_dump, file_name)
 
     def _prepare_statistics(self) -> Dict[str, Any]:
+        """
+        Prepares the statistics data for dumping into a file.
+
+        :return: A dictionary containing the statistics data to be dumped.
+        """
         data_to_dump = {}
         for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
             statistics = tensor_collector.get_statistics()
