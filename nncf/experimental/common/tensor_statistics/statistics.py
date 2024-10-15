@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, ClassVar, Dict, Tuple, Type
+from typing import Any, ClassVar, Dict, List, Tuple, Type
 
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -66,11 +66,6 @@ class MeanTensorStatistic(TensorStatistic):
 
     mean_values: Tensor
     shape: Tuple[int, ...]
-
-    def __eq__(self, other: TensorStatistic):
-        if isinstance(other, MeanTensorStatistic):
-            return self.shape == other.shape and fns.allclose(self.mean_values, other.mean_values)
-        return False
 
     def get_data(self):
         return self.mean_values, self.shape
@@ -207,6 +202,22 @@ class MeanMagnitudeTensorStatistic(TensorStatistic):
 
     def load_data(self, mean_magnitude):
         self.mean_magnitude = mean_magnitude
+
+
+@dataclass
+class WCTensorStatistic(TensorStatistic):
+    MEAN_STAT = "mean_values"
+    SHAPE_STAT = "shape_values"
+
+    mean_values: List[Tensor]
+    shape_values: List[Tuple[int, ...]]
+
+    def get_data(self):
+        return self.mean_values, self.shape_values
+
+    def load_data(self, mean_values, shape_values):
+        self.mean_values = mean_values
+        self.shape_values = shape_values
 
 
 def build_statistic_container(
