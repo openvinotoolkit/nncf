@@ -19,14 +19,10 @@ import nncf
 import nncf.tensor.functions as fns
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
-from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import PercentileTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import build_statistic_container
 from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.tensor import Tensor
 
@@ -200,6 +196,7 @@ class TensorCollector:
         self._stat_container_kwargs_map: Dict[str, Tuple[int, int, int]] = {}
         self._stat_container = statistic_container
         self._enabled = True
+        self.statistics = None
 
     @property
     def num_samples(self) -> Optional[int]:
@@ -311,7 +308,8 @@ class TensorCollector:
 
         :returns: Aggregated values.
         """
-
+        if self.statistics:
+            return self.statistics
         aggregated_values = self._aggregate()
         kwargs = {}
         for container_key, branch_key in self._stat_container_kwargs_map.items():
@@ -319,7 +317,8 @@ class TensorCollector:
 
         if not self._stat_container:
             return kwargs
-        return self._build_statistic_container(self._stat_container, kwargs)
+        self.statistics = build_statistic_container(self._stat_container, kwargs)
+        return self.statistics
 
     def replace_aggregator(self, key: Tuple[int, int, int], aggregator: AggregatorBase) -> None:
         """
@@ -355,43 +354,6 @@ class TensorCollector:
         for reducer, names in output_info:
             target_inputs[reducer] = [outputs[name] for name in names]
         return target_inputs
-
-    @staticmethod
-    def _build_statistic_container(statistic_container_cls: Type[TensorStatistic], kwargs: Dict[Any, Any]):
-        if issubclass(statistic_container_cls, MinMaxTensorStatistic):
-            return statistic_container_cls(
-                min_values=kwargs[MinMaxTensorStatistic.MIN_STAT], max_values=kwargs[MinMaxTensorStatistic.MAX_STAT]
-            )
-        if issubclass(statistic_container_cls, MeanTensorStatistic):
-            return statistic_container_cls(
-                mean_values=kwargs[MeanTensorStatistic.MEAN_STAT], shape=kwargs[MeanTensorStatistic.SHAPE_STAT]
-            )
-        if issubclass(statistic_container_cls, RawTensorStatistic):
-            return statistic_container_cls(values=kwargs[RawTensorStatistic.VALUES_STATS])
-        if issubclass(statistic_container_cls, MedianMADTensorStatistic):
-            return statistic_container_cls(
-                median_values=kwargs[MedianMADTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY][
-                    MedianMADTensorStatistic.MEDIAN_VALUES_STAT
-                ],
-                mad_values=kwargs[MedianMADTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY][
-                    MedianMADTensorStatistic.MAD_VALUES_STAT
-                ],
-            )
-        if issubclass(statistic_container_cls, PercentileTensorStatistic):
-            if PercentileTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY in kwargs:
-                percentile_vs_values_dict = kwargs[PercentileTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY]
-            else:
-                percentile_vs_values_dict = {}
-                for (_, percentile), value in kwargs.items():
-                    percentile_vs_values_dict[percentile] = value
-            return statistic_container_cls(percentile_vs_values_dict=percentile_vs_values_dict)
-        if issubclass(statistic_container_cls, WCTensorStatistic):
-            mean_values = [fns.squeeze(it) for it in kwargs[WCTensorStatistic.MEAN_STAT]]
-            shapes = [tuple(it.data) for it in kwargs[WCTensorStatistic.SHAPE_STAT]]
-            return statistic_container_cls(mean_values=mean_values, shapes=shapes)
-        raise nncf.InternalError(
-            f"Statistic collector class {statistic_container_cls} is not supported by the TensorCollector class."
-        )
 
 
 class MergedTensorCollector(TensorCollector):

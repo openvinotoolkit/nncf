@@ -14,6 +14,7 @@ from collections import OrderedDict
 from collections import defaultdict
 from functools import partial
 from functools import reduce
+from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple, TypeVar
 
 import nncf
@@ -137,7 +138,7 @@ class WeightCompression(Algorithm):
         criterion_cls = MIXED_PRECISION_CRITERIA.get(self._sensitivity_metric)
         self._mixed_precision_algo = criterion_cls(primary_config, self._ratio)
         self._mixed_precision_statistics = None
-
+        self._statistics_file_path = self._advanced_parameters.statistics_file_path
         if self._gptq:
             gptq_params = self._advanced_parameters.gptq_params
             self._gptq_algo = GPTQ(
@@ -592,8 +593,13 @@ class WeightCompression(Algorithm):
                     model, graph, matmul_input_to_output_nodes_map.keys(), self._subset_size
                 )
                 statistics_aggregator.register_statistic_points(statistic_points)
-
-        statistics_aggregator.collect_statistics(model, graph)
+        if not self._statistics_file_path:
+            statistics_aggregator.collect_statistics(model, graph)
+        elif Path(self._statistics_file_path).exists():
+            statistics_aggregator.load_statistics_from_file(self._statistics_file_path)
+        else:
+            statistics_aggregator.collect_statistics(model, graph)
+            statistics_aggregator.dump_statistics(self._statistics_file_path)
 
         statistics = None
         if statistic_points is not None:
