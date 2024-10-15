@@ -34,6 +34,7 @@ from nncf.common.utils.os import safe_open
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.quantization.backend_parameters import FXBackendParameters
+from nncf.experimental.torch.fx.transformations import DEQUANTIZE_NODE_TARGETS
 from nncf.experimental.torch.fx.transformations import _get_node_inputs
 from nncf.experimental.torch.fx.transformations import shared_constants_unification_transformation
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -215,10 +216,7 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters, compres
 
 def check_fq_values(quantized_model):
     for node in quantized_model.graph.nodes:
-        if node.target not in [
-            torch.ops.quantized_decomposed.dequantize_per_channel.default,
-            torch.ops.quantized_decomposed.dequantize_per_tensor.default,
-        ]:
+        if node.target not in DEQUANTIZE_NODE_TARGETS:
             continue
         args = []
         quantize_node = node.args[0]

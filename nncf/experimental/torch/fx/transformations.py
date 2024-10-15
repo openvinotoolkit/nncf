@@ -44,18 +44,24 @@ BaseArgumentTypes = Union[
 ]
 Argument = Optional[Union[Tuple[Any, ...], List[Any], Dict[str, Any], slice, range, torch.fx.Node, BaseArgumentTypes]]
 
-QUANTIZE_NODES = [
+QUANTIZE_NODE_TARGETS = [
     torch.ops.quantized_decomposed.quantize_per_tensor.default,
     torch.ops.quantized_decomposed.quantize_per_channel.default,
 ]
-DEQUANTIZE_NODES = [
+DEQUANTIZE_NODE_TARGETS = [
     torch.ops.quantized_decomposed.dequantize_per_tensor.default,
     torch.ops.quantized_decomposed.dequantize_per_channel.default,
 ]
 # Map quantize_per_tensor to dequantize_per_tensor, the same for per_channel and vice-versa
 QDQ_PAIR = {
-    **{quantize_node: dequantize_node for quantize_node, dequantize_node in zip(QUANTIZE_NODES, DEQUANTIZE_NODES)},
-    **{dequantize_node: quantize_node for quantize_node, dequantize_node in zip(QUANTIZE_NODES, DEQUANTIZE_NODES)},
+    **{
+        quantize_node: dequantize_node
+        for quantize_node, dequantize_node in zip(QUANTIZE_NODE_TARGETS, DEQUANTIZE_NODE_TARGETS)
+    },
+    **{
+        dequantize_node: quantize_node
+        for quantize_node, dequantize_node in zip(QUANTIZE_NODE_TARGETS, DEQUANTIZE_NODE_TARGETS)
+    },
 }
 
 
@@ -234,6 +240,7 @@ def constant_update_fn(
     :param node: Given graph node.
     :param value: New value to use as the node constant.
     :param input_port_id: Target constant input port id.
+    :param updated_node_name: Name of the constant node after updating. Default is nodename_updated_constant
     """
     graph = model.graph
     node_name = updated_node_name if updated_node_name else node.name + "_updated_constant"
@@ -691,7 +698,7 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule) -> None:
     :param: model: Model to apply transformations to.
     """
     for node in model.graph.nodes:
-        if node.target not in DEQUANTIZE_NODES:
+        if node.target not in DEQUANTIZE_NODE_TARGETS:
             continue
         quantize_node = node.all_input_nodes[0]
         if quantize_node.target != QDQ_PAIR[node.target]:
@@ -736,7 +743,7 @@ def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
     :param model: Model to apply transformations to.
     """
     for node in model.graph.nodes:
-        if node.target not in DEQUANTIZE_NODES:
+        if node.target not in DEQUANTIZE_NODE_TARGETS:
             continue
         port_id = 0
         quantize_node = node.all_input_nodes[0]
