@@ -21,6 +21,7 @@ from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
@@ -44,7 +45,6 @@ from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import SymmetricWeightsDecompressor
-from nncf.torch.tensor_statistics.collectors import PTMeanReducer
 
 
 class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
@@ -148,7 +148,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def mean_statistic_collector(
         self, reduction_axes: Tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
-        mean_reducer = PTMeanReducer(reduction_axes)
+        mean_reducer = MeanReducer(reduction_axes)
         shape_reducer = ShapeReducer()
         collector = TensorCollector(WCTensorStatistic)
         collector.register_statistic_branch(WCTensorStatistic.MEAN_STAT, mean_reducer, NoopAggregator(subset_size))
