@@ -125,7 +125,7 @@ MultiBranchesConnectedModel_TARGET_POINTS = (
 
 
 @pytest.mark.parametrize("leaf", [False, True], ids=["no_leaf", "leaf"])
-def test_model_insertion_transformation(leaf):
+def test_model_insertion_transformation(leaf: bool):
     class TestInsertModule(torch.nn.Module):
         def forward(self, x):
             return x + 1
@@ -146,7 +146,7 @@ def test_model_insertion_transformation(leaf):
 
 
 @pytest.mark.parametrize("bias", [True, False], ids=["bias", "constant"])
-def test_constant_update_transformation(bias):
+def test_constant_update_transformation(bias: bool):
     model = MultiBranchesConnectedModel()
     captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
@@ -165,7 +165,7 @@ def test_constant_update_transformation(bias):
 
 
 @pytest.mark.parametrize("bias", [True, False], ids=["bias", "constant"])
-def test_constant_update_transformation_no_constant(bias):
+def test_constant_update_transformation_no_constant(bias: bool):
     model = MultiBranchesConnectedModel()
     captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
@@ -239,7 +239,15 @@ class TestQDQInsertion:
             assert dq_node.args[-1] == ref_dtype
 
     @pytest.mark.parametrize("target_point", MultiBranchesConnectedModel_TARGET_POINTS)
-    def test_one_target_point(self, is_per_channel, quantization_mode, q_min, q_max, dtype, target_point):
+    def test_one_target_point(
+        self,
+        is_per_channel: bool,
+        quantization_mode: QuantizationMode,
+        q_min: int,
+        q_max: int,
+        dtype: torch.dtype,
+        target_point: PTTargetPoint,
+    ):
         symmetric = quantization_mode == QuantizationMode.SYMMETRIC
         quantizer = self._get_quantizer(is_per_channel, symmetric, q_min, q_max, dtype)
         transformation = qdq_insertion_transformation_builder(quantizer, [target_point])
@@ -282,7 +290,16 @@ class TestQDQInsertion:
             ),
         ],
     )
-    def test_shared_target_point(self, is_per_channel, quantization_mode, q_min, q_max, dtype, target_points, weights):
+    def test_shared_target_point(
+        self,
+        is_per_channel: bool,
+        quantization_mode: QuantizationMode,
+        q_min: int,
+        q_max: int,
+        dtype: torch.dtype,
+        target_points: PTTargetPoint,
+        weights: bool,
+    ):
         symmetric = quantization_mode == QuantizationMode.SYMMETRIC
         quantizer = self._get_quantizer(is_per_channel, symmetric, q_min, q_max, dtype)
         transformation = qdq_insertion_transformation_builder(quantizer, target_points)
@@ -325,7 +342,7 @@ def test_node_removal_transformation():
 
 @pytest.mark.parametrize("tuple_output", [False, True], ids=["node_out", "tuple_out"])
 @pytest.mark.parametrize("target_point", MultiBranchesConnectedModel_TARGET_POINTS)
-def test_output_insertion_transformation(tuple_output, target_point):
+def test_output_insertion_transformation(tuple_output: bool, target_point: PTTargetPoint):
     model = MultiBranchesConnectedModel()
     captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
 
@@ -347,7 +364,7 @@ def test_output_insertion_transformation(tuple_output, target_point):
     )
 
 
-def count_constants(model) -> int:
+def count_constants(model: torch.fx.GraphModule) -> int:
     num_constant_nodes = 0
     for node in model.graph.nodes:
         if node.op == "get_attr":
