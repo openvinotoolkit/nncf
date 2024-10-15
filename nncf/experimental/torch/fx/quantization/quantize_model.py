@@ -115,7 +115,10 @@ def quantize_impl(
 
     quantized_model.meta.update(original_graph_meta)
     quantized_model = _disallow_eval_train(quantized_model)
-
+    # This is to ensure that the buffer of the model is updated.
+    # It was noted that every update or any transformation added
+    # another value in the buffer. This step removes the duplicate
+    # values in the buffer
     quantized_model = GraphModule(quantized_model, quantized_model.graph)
 
     return quantized_model
