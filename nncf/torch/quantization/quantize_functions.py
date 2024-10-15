@@ -259,6 +259,7 @@ def decompress_asymmetric(input: torch.Tensor, scale: torch.Tensor, zero_point: 
     :return: The decompressed tensor
     """
     input = input.type(dtype=scale.dtype)
+    zero_point = zero_point.type(dtype=scale.dtype)
     decompressed_input = (input - zero_point) * scale
     return decompressed_input
 
@@ -275,3 +276,30 @@ def decompress_symmetric(input: torch.Tensor, scale: torch.Tensor) -> torch.Tens
     input = input.type(dtype=scale.dtype)
     decompressed_input = input * scale
     return decompressed_input
+
+
+def pack_uint4(tensor: torch.Tensor) -> torch.Tensor:
+    if tensor.dtype != torch.uint8:
+        raise ValueError(f"Invalid tensor dtype {tensor.type}. torch.uint8 type is supported.")
+    packed_tensor = tensor.contiguous()
+    packed_tensor = packed_tensor.reshape(-1, 2)
+    packed_tensor = torch.bitwise_and(packed_tensor[..., ::2], 15) | packed_tensor[..., 1::2] << 4
+    return packed_tensor
+
+
+@register_operator()
+def unpack_uint4(packed_tensor: torch.Tensor) -> torch.Tensor:
+    return torch.stack((torch.bitwise_and(packed_tensor, 15), torch.bitwise_right_shift(packed_tensor, 4)), dim=-1)
+
+
+def pack_int4(tensor: torch.Tensor) -> torch.Tensor:
+    if tensor.dtype != torch.int8:
+        raise ValueError(f"Invalid tensor dtype {tensor.type}. torch.int8 type is supported.")
+    tensor = tensor + 8
+    return pack_uint4(tensor.type(torch.uint8))
+
+
+@register_operator()
+def unpack_int4(packed_tensor: torch.Tensor) -> torch.Tensor:
+    t = unpack_uint4(packed_tensor)
+    return t.type(torch.int8) - 8

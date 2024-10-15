@@ -505,10 +505,9 @@ def compress_weights(
         from nncf.torch.model_creation import wrap_model
         from nncf.torch.quantization.quantize_model import compress_weights_impl as pt_compression_weights_impl
 
-        if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
+        if mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]:
             raise nncf.ParameterNotSupportedError(
-                "Torch backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
-                f"but given {mode.value} mode."
+                "Torch backend does not support NF4 and E2M1 modes for weight compression."
             )
 
         if True in [awq, scale_estimation, gptq, lora_correction]:
@@ -541,10 +540,9 @@ def compress_weights(
             compress_weights_impl as fx_compression_weights_impl,
         )
 
-        if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
+        if mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]:
             raise nncf.ParameterNotSupportedError(
-                "TorchFX backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
-                f"but given {mode.value} mode."
+                "Torch backend does not support NF4 and E2M1 modes for weight compression."
             )
 
         if backup_mode is not None:
