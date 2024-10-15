@@ -105,6 +105,7 @@ class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def weight_update_command(node_with_weight: NNCFNode, weight_value: torch.Tensor) -> OVWeightUpdateCommand:
+        # TODO(dlyakhov): Use input port id depending on the node metatype/attributes.
         return FXApplyTransformationCommand(
             constant_update_transformation_builder(node_with_weight, weight_value.data, input_port_id=1)
         )

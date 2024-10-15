@@ -25,6 +25,7 @@ from nncf.common.factory import NNCFGraph
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
@@ -54,8 +55,8 @@ class ModelExtractionTestCase:
     command: PTModelExtractionCommand
 
 
-EXTRACTED_GRAPHS_DIR_NAME = Path("fx") / "extracted"
-TRANSFORMED_GRAPH_DIR_NAME = Path("fx") / "transformed"
+EXTRACTED_GRAPHS_DIR_NAME = str(Path("fx") / "extracted")
+TRANSFORMED_GRAPH_DIR_NAME = str(Path("fx") / "transformed")
 
 MODEL_EXTRACTION_CASES = (
     ModelExtractionTestCase(
@@ -112,7 +113,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
     layout.register(test_case.command)
     extracted_model = FXModelTransformer(captured_model).transform(layout)
     nncf_graph = GraphConverter.create_nncf_graph(extracted_model)
-    check_graph(nncf_graph, f"{get_test_id(test_case)}.dot", str(EXTRACTED_GRAPHS_DIR_NAME), extended=True)
+    check_graph(nncf_graph, f"{get_test_id(test_case)}.dot", EXTRACTED_GRAPHS_DIR_NAME, extended=True)
 
 
 MultiBranchesConnectedModel_TARGET_POINTS = (
@@ -141,9 +142,7 @@ def test_model_insertion_transformation(leaf):
 
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
     assert getattr(captured_model, target_node_name) is test_module_instance
-    check_graph(
-        nncf_graph, f"model_insertion_{'leaf_' if leaf else ''}ref.dot", str(TRANSFORMED_GRAPH_DIR_NAME), extended=True
-    )
+    check_graph(nncf_graph, f"model_insertion{'_leaf' if leaf else ''}.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
 
 
 @pytest.mark.parametrize("bias", [True, False], ids=["bias", "constant"])
@@ -162,7 +161,7 @@ def test_constant_update_transformation(bias):
     assert get_tensor_constant_from_node(add_node.args[1], captured_model) == new_value
 
     transformed_nncf_graph = GraphConverter.create_nncf_graph(captured_model)
-    check_graph(transformed_nncf_graph, "constant_update_ref.dot", str(TRANSFORMED_GRAPH_DIR_NAME), extended=True)
+    check_graph(transformed_nncf_graph, "constant_update.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
 
 
 @pytest.mark.parametrize("bias", [True, False], ids=["bias", "constant"])
@@ -179,8 +178,6 @@ def test_constant_update_transformation_no_constant(bias):
         transformation(captured_model)
 
 
-@pytest.mark.parametrize("per_channel", [False, True], ids=["per_tensor", "per_channel"])
-@pytest.mark.parametrize("symmetric", [True, False], ids=["symmetric", "assymetric"])
 @pytest.mark.parametrize(
     "q_min,q_max,dtype",
     [(-128, 127, torch.qint8), (0, 255, torch.quint8)],
@@ -242,22 +239,26 @@ class TestQDQInsertion:
             assert dq_node.args[-1] == ref_dtype
 
     @pytest.mark.parametrize("target_point", MultiBranchesConnectedModel_TARGET_POINTS)
-    def test_one_target_point(self, per_channel, symmetric, q_min, q_max, dtype, target_point):
-        quantizer = self._get_quantizer(per_channel, symmetric, q_min, q_max, dtype)
+    def test_one_target_point(self, is_per_channel, quantization_mode, q_min, q_max, dtype, target_point):
+        symmetric = quantization_mode == QuantizationMode.SYMMETRIC
+        quantizer = self._get_quantizer(is_per_channel, symmetric, q_min, q_max, dtype)
         transformation = qdq_insertion_transformation_builder(quantizer, [target_point])
 
         model = MultiBranchesConnectedModel()
         captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
         transformation(captured_model)
 
-        self._check_qdq_params(captured_model, target_point, dtype, per_channel)
+        self._check_qdq_params(captured_model, target_point, dtype, is_per_channel)
 
         nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+        ref_name = (
+            f"qdq_insert_{_target_point_to_str(target_point)}"
+            f"_{'per_channel' if is_per_channel else 'per_tensor'}.dot"
+        )
         check_graph(
             nncf_graph,
-            f"qdq_insert_{_target_point_to_str(target_point)}"
-            f"_{'per_channel' if per_channel else 'per_tensor'}_ref.dot",
-            str(TRANSFORMED_GRAPH_DIR_NAME),
+            ref_name,
+            TRANSFORMED_GRAPH_DIR_NAME,
             extended=True,
         )
 
@@ -281,8 +282,9 @@ class TestQDQInsertion:
             ),
         ],
     )
-    def test_shared_target_point(self, per_channel, symmetric, q_min, q_max, dtype, target_points, weights):
-        quantizer = self._get_quantizer(per_channel, symmetric, q_min, q_max, dtype)
+    def test_shared_target_point(self, is_per_channel, quantization_mode, q_min, q_max, dtype, target_points, weights):
+        symmetric = quantization_mode == QuantizationMode.SYMMETRIC
+        quantizer = self._get_quantizer(is_per_channel, symmetric, q_min, q_max, dtype)
         transformation = qdq_insertion_transformation_builder(quantizer, target_points)
 
         model = MultiBranchesConnectedModel()
@@ -295,14 +297,17 @@ class TestQDQInsertion:
         transformation(captured_model)
 
         for target_point in target_points:
-            self._check_qdq_params(captured_model, target_point, dtype, per_channel)
+            self._check_qdq_params(captured_model, target_point, dtype, is_per_channel)
 
         nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+        ref_name = (
+            f"qdq_shared_insert_{'weights' if weights else 'activations'}"
+            f"_{'per_channel' if is_per_channel else 'per_tensor'}.dot"
+        )
         check_graph(
             nncf_graph,
-            f"qdq_shared_insert_{'weights' if weights else 'activations'}"
-            f"_{'per_channel' if per_channel else 'per_tensor'}_ref.dot",
-            str(TRANSFORMED_GRAPH_DIR_NAME),
+            ref_name,
+            TRANSFORMED_GRAPH_DIR_NAME,
             extended=True,
         )
 
@@ -315,7 +320,7 @@ def test_node_removal_transformation():
     transformation = node_removal_transformation_builder(node, input_port_id=0)
     transformation(captured_model)
     transformed_nncf_graph = GraphConverter.create_nncf_graph(captured_model)
-    check_graph(transformed_nncf_graph, "node_removal_ref.dot", str(TRANSFORMED_GRAPH_DIR_NAME), extended=True)
+    check_graph(transformed_nncf_graph, "node_removal_ref.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
 
 
 @pytest.mark.parametrize("tuple_output", [False, True], ids=["node_out", "tuple_out"])
@@ -333,9 +338,10 @@ def test_output_insertion_transformation(tuple_output, target_point):
     transformation(captured_model)
 
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+    ref_name = f"output_insertion_{_target_point_to_str(target_point)}.dot"
     check_graph(
         nncf_graph,
-        f"output_insertion_{_target_point_to_str(target_point)}_ref.dot",
+        ref_name,
         TRANSFORMED_GRAPH_DIR_NAME,
         extended=True,
     )
