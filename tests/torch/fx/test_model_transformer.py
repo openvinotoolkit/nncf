@@ -10,14 +10,12 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Tuple
 
 import pytest
 import torch
 import torch.ao.quantization
-import torchvision.models as models
 from torch._export import capture_pre_autograd_graph
 from torch.ao.quantization.fx.utils import create_getattr_from_value
 
@@ -30,8 +28,6 @@ from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
-from nncf.experimental.torch.fx.quantization.backend_parameters import FXBackendParameters
-from nncf.experimental.torch.fx.transformations import _get_node_inputs
 from nncf.experimental.torch.fx.transformations import _set_new_node_meta
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
