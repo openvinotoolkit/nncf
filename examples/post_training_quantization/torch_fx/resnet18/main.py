@@ -28,6 +28,7 @@ from fastdownload import FastDownload
 import nncf
 import nncf.torch
 from nncf.common.logging.track_progress import track
+from nncf.common.utils.helpers import create_table
 from nncf.torch import disable_patching
 
 IMAGE_SIZE = 64
@@ -62,7 +63,7 @@ def get_resnet18_model(device: torch.device) -> torch.nn.Module:
     return model
 
 
-def measure_latency(model, example_inputs, num_iters=2000):
+def measure_latency(model, example_inputs, num_iters=2000) -> float:
     with torch.no_grad():
         model(example_inputs)
         total_time = 0
@@ -172,7 +173,7 @@ def main():
     model = get_resnet18_model(device)
     model, acc1_fp32 = load_checkpoint(model)
 
-    print(f"Accuracy@1 of original FP32 model: {acc1_fp32}")
+    print(f"Accuracy@1 of original FP32 model: {acc1_fp32:.3f}")
 
     val_loader, calibration_dataset = create_data_loaders()
 
@@ -215,8 +216,13 @@ def main():
     print(f"{int8_latency:.3f} ms")
 
     print('[Step 4] torch.compile(..., backend="openvino") speed ups:')
-    print(f"FP32 model: x{fp32_latency / fp32_ov_latency:.3f}")
-    print(f"INT8 model: x{fp32_ov_latency / int8_latency:.3f}")
+
+    tabular_data = [
+        ["default", "FP32", f"{fp32_latency:.3f}", ""],
+        ["openvino", "FP32", f"{fp32_ov_latency:.3f}", f"x{fp32_latency / fp32_ov_latency:.3f}"],
+        ["openvino", "INT8", f"{int8_latency:.3f}", f"x{fp32_latency / int8_latency:.3f}"],
+    ]
+    print(create_table(["Backend", "Precision", "Performance (ms)", "Speed up"], tabular_data))
     return acc1_fp32, acc1_int8, fp32_latency, fp32_ov_latency, int8_latency
 
 
