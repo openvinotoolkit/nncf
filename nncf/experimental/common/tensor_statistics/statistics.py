@@ -240,4 +240,8 @@ def build_statistic_container(
                 MedianMADTensorStatistic.MAD_VALUES_STAT
             ],
         )
+    if issubclass(statistic_container_cls, WCTensorStatistic):
+        mean_values = [fns.squeeze(it) for it in kwargs[WCTensorStatistic.MEAN_STAT]]
+        shapes = [tuple(it.data) for it in kwargs[WCTensorStatistic.SHAPE_STAT]]
+        return statistic_container_cls(mean_values=mean_values, shape_values=shapes)
     return statistic_container_cls(**kwargs)
