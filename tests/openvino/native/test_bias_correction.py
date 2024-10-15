@@ -25,11 +25,14 @@ from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
 from tests.cross_fw.test_templates.helpers import SplittedModel
+from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
 from tests.cross_fw.test_templates.test_bias_correction import TemplateTestBCAlgorithm
 from tests.openvino.native.common import compare_nncf_graphs
 
 
 class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
+    TRANSPOSE_CONV_NAME = "/conv/ConvTranspose/WithoutBiases"
+
     @staticmethod
     def list_to_backend_type(data: List) -> np.ndarray:
         return np.array(data)
@@ -43,6 +46,10 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
         ov_model = ov.convert_model(onnx_path)
+        if isinstance(model, TransposeConvTestModel):
+            for node in ov_model.get_ops():
+                if node.get_type_name() == "ConvolutionBackpropData":
+                    node.set_friendly_name(TestOVBCAlgorithm.TRANSPOSE_CONV_NAME)
         return ov_model
 
     @staticmethod
@@ -75,10 +82,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
     def check_bias(model: ov.Model, ref_biases: Dict) -> None:
         nncf_graph = NNCFGraphFactory.create(model)
         for ref_name, ref_value in ref_biases.items():
-            if ref_name == "/conv/ConvTranspose/WithoutBiases":
-                node = nncf_graph.get_nodes_by_types(["ConvolutionBackpropData"])[0]
-            else:
-                node = nncf_graph.get_node_by_name(ref_name)
+            node = nncf_graph.get_node_by_name(ref_name)
             ref_value = np.array(ref_value)
             curr_value = get_bias_value(node, nncf_graph, model)
             curr_value = curr_value.reshape(ref_value.shape)
@@ -211,6 +215,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
             ),
             (ConvTestModel, {("/conv/Conv/WithoutBiases", 0): ("input.1", 0)}),
             (DepthwiseConvTestModel, {("/conv/Conv/WithoutBiases", 0): ("input.1", 0)}),
+            (TransposeConvTestModel, {(TRANSPOSE_CONV_NAME, 0): ("input.1", 0)}),
         ),
     )
     def test_verify_collected_stat_inputs_map(self, model_cls, ref_stat_inputs_map, tmpdir):
