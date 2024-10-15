@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from nncf.common.logging import nncf_logger
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.parameters import CompressWeightsMode
@@ -80,12 +81,14 @@ class LoraCorrectionAlgorithm:
     The method reduces quantization noise after weight compression using low rank adapters.
     """
 
-    def __init__(self, activations: Dict[str, List[Tensor]], lora_correction_params: AdvancedLoraCorrectionParameters):
+    def __init__(
+        self, statistics: Dict[str, WCTensorStatistic], lora_correction_params: AdvancedLoraCorrectionParameters
+    ):
         """
-        :param activations: The input activations of the layers considered for compression.
+        :param statistics: Input activation statistics for each node.
         :param lora_correction_params: parameters to configure the algorithm.
         """
-        self._activations = activations
+        self._statistics = statistics
         self._lora_correction_params = lora_correction_params
         self._debug_interface = DebugInterface() if is_debug() else None
 
@@ -112,7 +115,7 @@ class LoraCorrectionAlgorithm:
         :return: two low rank matrices in the order of execution of corresponding linear layers.
         """
         layer_name = wc_params.node_with_weight.node_name
-        layer_activations = self._activations[layer_name]
+        layer_statistics = self._statistics[layer_name]
         is_debug = self._debug_interface is not None
         lora_A, lora_B, mean_noises = self.calculate_low_rank_matrices(
             weight,
@@ -120,7 +123,7 @@ class LoraCorrectionAlgorithm:
             wc_params.compression_config,
             wc_params.reduction_axes,
             self._lora_correction_params,
-            layer_activations,
+            layer_statistics,
             is_debug,
         )
         if is_debug:
@@ -134,7 +137,7 @@ class LoraCorrectionAlgorithm:
         compression_config: WeightCompressionConfig,
         reduction_axes: Tuple[int, ...],
         lora_correction_params: AdvancedLoraCorrectionParameters,
-        layer_activations: List[Tensor],
+        layer_statistics: WCTensorStatistic,
         is_debug: Optional[bool] = False,
     ):
         """
@@ -149,8 +152,7 @@ class LoraCorrectionAlgorithm:
         :param compression_config: configuration of weight compression for the weight node.
         :param reduction_axes: axes along which different statistics reduced.
         :param lora_correction_params: parameters to configure the algorithm.
-        :param layer_activations: list of activation statistics for a layer that contains
-            N tensors with shape [SeqLen, HiddenDim].
+        :param layer_statistics: an object containing statistics for the layer.
         :param is_debug: whether to collect debug information, defaults to False.
         :return: two low rank matrices in the order of execution of corresponding linear layers and list of mean noises.
             Noises are collected from each step of the algorithm if debug was enabled.
@@ -188,7 +190,7 @@ class LoraCorrectionAlgorithm:
             svd_residual = fns.transpose(svd_residual)
         residual = svd_residual.clone()  # [H, O]
 
-        s, X = process_stats(layer_activations, subset_size)  # [H], [H, SS]
+        s, X = process_stats(layer_statistics, subset_size)  # [H], [H, SS]
         X = fns.transpose(X)  # [SS, H]
         if compression_config.group_size > 0:
             # Multiply residual of weights by maximum channel magnitude of activations normalized per quantization
