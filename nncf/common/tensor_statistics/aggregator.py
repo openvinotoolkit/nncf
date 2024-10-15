@@ -123,7 +123,7 @@ class StatisticsAggregator(ABC):
         :return: Statistics key.
         """
         target_point_id = f"{target_point.target_node_name}_{target_point.type}_{target_point.port_id}"  # type: ignore[attr-defined]
-        return statistics.__class__.__name__ + target_point_id
+        return f"{statistics.__class__.__name__}_{target_point_id}"
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
@@ -197,43 +197,30 @@ class StatisticsSerializer:
     @staticmethod
     def load_from_file(file_name: str) -> Any:
         """
-        Loads statistics from a file. If the file name ends with '.gz', the file is decompressed using gzip.
-
+        Loads statistics from a gzip-compressed file.
         :param file_name: The name of the file from which to load the statistics.
         :return: The loaded statistics.
         """
         try:
-            if file_name.endswith(".gz"):
-                with gzip.open(file_name, "rb") as f:
-                    return pickle.load(f)
-            else:
-                with open(file_name, "rb") as f:
-                    return pickle.load(f)
+            with gzip.open(file_name, "rb") as f:
+                return pickle.load(f)
         except FileNotFoundError:
             nncf_logger.error(f"File not found: {file_name}")
             raise
-        except pickle.UnpicklingError:
-            nncf_logger.error(f"Error unpickling file: {file_name}")
-            raise
-        except IOError as e:
-            nncf_logger.error(f"Failed to read from file {file_name}: {e}")
+        except (pickle.UnpicklingError, IOError) as e:
+            nncf_logger.error(f"Error loading statistics from {file_name}: {e}")
             raise
 
     @staticmethod
     def dump_to_file(statistics: Dict[str, TensorType], file_name: str) -> None:
         """
-        Dumps a statistics to a file. If the file name ends with '.gz', the file is compressed using gzip.
-
+        Dumps statistics to a gzip-compressed file.
         :param data: The statistics to be dumped.
         :param file_name: The name of the file where the statistics will be dumped.
         """
         try:
-            if file_name.endswith(".gz"):
-                with gzip.open(file_name, "wb") as f:
-                    pickle.dump(statistics, f)
-            else:
-                with open(file_name, "wb") as f:
-                    pickle.dump(statistics, f)
+            with gzip.open(file_name, "wb") as f:
+                pickle.dump(statistics, f)
         except (IOError, pickle.PicklingError) as e:
             nncf_logger.error(f"Failed to write data to file {file_name}: {e}")
             raise
