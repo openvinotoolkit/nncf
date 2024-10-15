@@ -253,8 +253,8 @@ def build_statistic_container(
         return statistic_container_cls(percentile_vs_values_dict=percentile_vs_values_dict)
     if issubclass(statistic_container_cls, WCTensorStatistic):
         mean_values = [fns.squeeze(it) for it in kwargs[WCTensorStatistic.MEAN_STAT]]
-        shapes = [tuple(it.data) for it in kwargs[WCTensorStatistic.SHAPE_STAT]]
-        return statistic_container_cls(mean_values=mean_values, shapes=shapes)
+        shape_values = [tuple(it.data) for it in kwargs[WCTensorStatistic.SHAPE_STAT]]
+        return statistic_container_cls(mean_values=mean_values, shape_values=shape_values)
     if issubclass(statistic_container_cls, MeanMagnitudeTensorStatistic):
         return statistic_container_cls(mean_magnitude=kwargs[MeanMagnitudeTensorStatistic.MEAN_MAGNITUDE_STAT])
     if issubclass(statistic_container_cls, MaxVarianceTensorStatistic):
@@ -262,10 +262,10 @@ def build_statistic_container(
     if issubclass(statistic_container_cls, MeanVarianceTensorStatistic):
         return statistic_container_cls(mean_variance=kwargs[MeanVarianceTensorStatistic.MEAN_VARIANCE_STAT])
     if issubclass(statistic_container_cls, HessianTensorStatistic):
-        return statistic_container_cls(mean_variance=kwargs[HessianTensorStatistic.HESSIAN_INPUT_ACTIVATION_STATS])
+        return statistic_container_cls(hessian=kwargs[HessianTensorStatistic.HESSIAN_INPUT_ACTIVATION_STATS])
     if issubclass(statistic_container_cls, WeightQuantizationErrorTensorStatistic):
         return statistic_container_cls(
-            mean_variance=kwargs[WeightQuantizationErrorTensorStatistic.WEIGHT_QUANTIZATION_ERROR_STATS]
+            weight_quantization_error=kwargs[WeightQuantizationErrorTensorStatistic.WEIGHT_QUANTIZATION_ERROR_STATS]
         )
     raise nncf.InternalError(
         f"Statistic collector class {statistic_container_cls} is not supported by the TensorCollector class."

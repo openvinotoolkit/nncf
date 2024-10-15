@@ -18,6 +18,7 @@ from typing import Any, Dict, Optional, TypeVar
 import nncf
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.logging.track_progress import track
@@ -26,6 +27,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.data.dataset import DataItem
 from nncf.data.dataset import Dataset
 from nncf.data.dataset import ModelInput
+from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")
@@ -90,7 +92,7 @@ class StatisticsAggregator(ABC):
         loaded_data = StatisticsSerializer.load_from_file(file_name)
         self._load_statistics(loaded_data)
 
-    def _load_statistics(self, data) -> None:
+    def _load_statistics(self, data: Dict[str, Any]) -> None:
         for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
             statistics = tensor_collector.get_statistics()
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
@@ -103,7 +105,7 @@ class StatisticsAggregator(ABC):
         data_to_dump = self._prepare_statistics()
         StatisticsSerializer.dump_to_file(data_to_dump, file_name)
 
-    def _prepare_statistics(self):
+    def _prepare_statistics(self) -> Dict[str, Any]:
         data_to_dump = {}
         for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
             statistics = tensor_collector.get_statistics()
@@ -112,8 +114,15 @@ class StatisticsAggregator(ABC):
             data_to_dump[statistics_key] = data
         return data_to_dump
 
-    def _get_statistics_key(self, statistics, target_point):
-        target_point_id = f"{target_point.target_node_name}_{target_point.type}_{target_point.port_id}"
+    def _get_statistics_key(self, statistics: TensorStatistic, target_point: TargetPoint) -> str:
+        """
+        Returns key of statistics.
+
+        :param statistics: Statistics value.
+        :param target_point: Statistics target point.
+        :return: Statistics key.
+        """
+        target_point_id = f"{target_point.target_node_name}_{target_point.type}_{target_point.port_id}"  # type: ignore[attr-defined]
         return statistics.__class__.__name__ + target_point_id
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
@@ -186,7 +195,7 @@ class StatisticsAggregator(ABC):
 
 class StatisticsSerializer:
     @staticmethod
-    def load_from_file(file_name: str) -> Dict[str, TensorType]:
+    def load_from_file(file_name: str) -> Any:
         """
         Loads statistics from a file. If the file name ends with '.gz', the file is decompressed using gzip.
 
