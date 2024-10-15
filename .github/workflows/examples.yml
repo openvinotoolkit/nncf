@@ -2,18 +2,17 @@ name: Test examples
 permissions: read-all
 
 on:
+  pull_request: # TODO: remove
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       pull_request_number:
         description: 'The pull request number'
-        required: true
-        type: number
+        default: ''
       pytest_args:
         description: 'Pytest arguments'
         default: ''
-        type: string
 
 jobs:
   examples-cpu:
@@ -32,7 +31,7 @@ jobs:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
       - name: Fetch and Checkout the Pull Request Branch
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
         run: |
           git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
           git checkout pr-${{ github.event.inputs.pull_request_number }}
@@ -49,7 +48,6 @@ jobs:
       - name: Print installed modules
         run: pip list
       - name: Run examples test scope
-        continue-on-error: true
         run: |
           python -m pytest -ras tests/cross_fw/examples \
             --junit-xml=pytest-results-${{ matrix.group }}.xml \
@@ -62,6 +60,7 @@ jobs:
           TQDM_DISABLE: 1
       - name: Upload artifact
         uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
         with:
           name: pytest-results-${{ matrix.group }}
           path: pytest-results-${{ matrix.group }}.xml
