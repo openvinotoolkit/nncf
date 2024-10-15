@@ -1181,6 +1181,7 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     EnvInfo.print_info()
+    nncf_logger.info(f"inference_precision_hint: {args.inference_precision_hint}")
 
     algo_name_to_method_map = {
         "quantize": quantize_model,
