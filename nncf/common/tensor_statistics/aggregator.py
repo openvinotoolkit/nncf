@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import gzip
 import pickle
 from abc import ABC
 from abc import abstractmethod
@@ -185,25 +186,45 @@ class StatisticsAggregator(ABC):
 
 class StatisticsSerializer:
     @staticmethod
-    def load_from_file(file_name: str) -> dict:
+    def load_from_file(file_name: str) -> Dict[str, TensorType]:
+        """
+        Loads statistics from a file. If the file name ends with '.gz', the file is decompressed using gzip.
+
+        :param file_name: The name of the file from which to load the statistics.
+        :return: The loaded statistics.
+        """
         try:
-            with open(file_name, "rb") as f:
-                return pickle.load(f)
+            if file_name.endswith(".gz"):
+                with gzip.open(file_name, "rb") as f:
+                    return pickle.load(f)
+            else:
+                with open(file_name, "rb") as f:
+                    return pickle.load(f)
         except FileNotFoundError:
             nncf_logger.error(f"File not found: {file_name}")
             raise
         except pickle.UnpicklingError:
             nncf_logger.error(f"Error unpickling file: {file_name}")
             raise
-        except Exception as e:
-            nncf_logger.error(f"Failed to open file {file_name} with error: {e}")
+        except IOError as e:
+            nncf_logger.error(f"Failed to read from file {file_name}: {e}")
             raise
 
     @staticmethod
-    def dump_to_file(data: dict, file_name: str) -> None:
+    def dump_to_file(statistics: Dict[str, TensorType], file_name: str) -> None:
+        """
+        Dumps a statistics to a file. If the file name ends with '.gz', the file is compressed using gzip.
+
+        :param data: The statistics to be dumped.
+        :param file_name: The name of the file where the statistics will be dumped.
+        """
         try:
-            with open(file_name, "wb") as f:
-                pickle.dump(data, f)
-        except Exception as e:
-            nncf_logger.error(f"Failed to write to file {file_name} with error: {e}")
+            if file_name.endswith(".gz"):
+                with gzip.open(file_name, "wb") as f:
+                    pickle.dump(statistics, f)
+            else:
+                with open(file_name, "wb") as f:
+                    pickle.dump(statistics, f)
+        except (IOError, pickle.PicklingError) as e:
+            nncf_logger.error(f"Failed to write data to file {file_name}: {e}")
             raise
