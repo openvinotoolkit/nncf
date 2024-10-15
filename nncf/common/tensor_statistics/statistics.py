@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import Counter
-from typing import Any, Dict, TypeVar, cast
+from typing import Any, Dict, List, Tuple, TypeVar, cast
 
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -120,3 +120,26 @@ class RawTensorStatistic(TensorStatistic):
         if not isinstance(other, RawTensorStatistic):
             return False
         return self.tensor_eq(self.values, other.values)
+
+
+class WCTensorStatistic(TensorStatistic):
+    MEAN_STAT = "mean_values"
+    SHAPE_STAT = "shape_values"
+
+    def __init__(self, mean_values: List[Tensor], shapes: List[Tuple[int]]):
+        """
+        :param mean_values: List of N tensors of shape [HiddenDim] obtained by reducing activations along batch and
+            sequence length dimensions.
+        :param shapes: List of N tuples containing original shapes of activations before reduction.
+        """
+        self.mean_values = mean_values
+        self.shapes = shapes
+
+    def __eq__(self, other: Any) -> bool:
+        shapes_equal = all(self.shapes[i] == other.shapes[i] for i in range(len(self.mean_values)))
+        if not shapes_equal:
+            return False
+        mean_values_equal = all(
+            self.tensor_eq(self.mean_values[i], other.mean_values[i]) for i in range(len(self.mean_values))
+        )
+        return mean_values_equal

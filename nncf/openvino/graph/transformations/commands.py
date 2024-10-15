@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import openvino.runtime as ov
@@ -64,7 +64,7 @@ class OVInplaceFnInsertionCommand(OVInsertionCommand):
         inplace_op_fn: InplaceInsertionFnType,
         fn_output_port_id: int,
         last_inplace_node_name: str,
-        output_dtype: ov.Type = ov.Type.f32,
+        output_dtype: Optional[ov.Type] = None,
     ):
         super().__init__(target_point)
         self.inplace_op_fn = inplace_op_fn
