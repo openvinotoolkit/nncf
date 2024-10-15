@@ -80,7 +80,7 @@ INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
 class LMLinearModel(OVReferenceModel):
     HIDDEN_DIM = 16
     OUTPUT_DIM = 32
-    INPUT_SHAPE = [24, HIDDEN_DIM]  # [SeqLen, HiddenDim]
+    INPUT_SHAPE = [1, 24, HIDDEN_DIM]  # [B, SeqLen, HiddenDim]
 
     def _create_ov_model(self, transpose_b: bool = True):
         input_1 = opset.parameter(self.INPUT_SHAPE, name="Input")
@@ -278,7 +278,7 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
 )
 def test_mixed_precision(mode, all_layers, ratio, ref_ids, mocker):
     model = SequentialMatmulModel().ov_model
-    dataset = Dataset([np.ones([3, 3]), np.arange(9).reshape(3, 3)])
+    dataset = Dataset([np.ones([1, 3, 3]), np.arange(9).reshape(1, 3, 3)])
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.NF4,
@@ -297,8 +297,20 @@ def test_mixed_precision(mode, all_layers, ratio, ref_ids, mocker):
 
 @pytest.mark.parametrize("metric", DATA_BASED_SENSITIVITY_METRICS)
 def test_gather_in_4_bit_if_all_layers_with_data(metric):
-    model = IntegerModel().ov_model
-    dataset = Dataset([np.arange(7).reshape(1, 7, 1)])
+    dim1 = 2  # sequence length dimension
+    dim2 = 7
+    max_input_value = 6
+    model = IntegerModel(dim1=dim1, dim2=dim2, max_input_value=max_input_value, add_batch_dimension=True).ov_model
+
+    input_shape = (dim1, dim2, dim1)
+    n_inputs = input_shape[0] * input_shape[1] * input_shape[2]
+    n_copies = int(np.ceil(n_inputs / (max_input_value + 1)))
+    # Rolling is needed to ensure non-zero variance
+    input_ = [np.roll(np.arange(max_input_value + 1), i + 1) for i in range(n_copies)]
+    input_ = np.hstack(input_)[:n_inputs]
+    input_ = input_.reshape(input_shape)
+
+    dataset = Dataset([input_])
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.INT4_SYM,
@@ -391,7 +403,7 @@ def test_gather_can_be_4_bit_if_all_layers_without_data():
 
 @pytest.mark.parametrize("metric", ALL_SENSITIVITY_METRICS)
 def test_gather_in_8_bit_if_not_all_layers(metric):
-    model = IntegerModel().ov_model
+    model = IntegerModel(add_batch_dimension=True).ov_model
     dataset = Dataset([np.ones([1, 7, 1])])
     compressed_model = compress_weights(
         model,
@@ -412,10 +424,10 @@ def test_gather_in_8_bit_if_not_all_layers(metric):
 
 MAX_BASELINE_SCORE = 1 / np.finfo(np.float32).eps
 NON_ZERO_ROW = [-4, 1, 2]
-ACTIVATION = np.array([NON_ZERO_ROW, [0, 0, 0], [0, 0, 0]])
-MAX_VAR = 3.555555  # np.max(np.var(ACTIVATION, 0))
-MEAN_VAR = 1.555555  # np.mean(np.var(ACTIVATION, 0))
-MEAN_MAX = 2.333333  # np.mean(np.max(np.abs(ACTIVATION), 0))
+ACTIVATION = np.array([[NON_ZERO_ROW, [0, 0, 0], [0, 0, 0]]])
+MAX_VAR = 3.555555  # np.max(np.var(ACTIVATION, 1))
+MEAN_VAR = 1.555555  # np.mean(np.var(ACTIVATION, 1))
+MEAN_MAX = 2.333333  # np.mean(np.max(np.abs(ACTIVATION), 1))
 HESSIAN_TRACE = (16 + 1 + 4) * 2 / 9  # sum(i*i for i in NON_ZERO_ROW) * 2 / ACTIVATION.size
 
 
@@ -735,7 +747,7 @@ def test_raise_error_with_data_metric_and_without_dataset(mode, metric):
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
-    model = IntegerModel().ov_model
+    model = IntegerModel(add_batch_dimension=True).ov_model
     dataset = Dataset([np.ones([1, 7, 1])])
     criterion_cls = MIXED_PRECISION_CRITERIA.get(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
     scores_spy = mocker.spy(criterion_cls, "_calc_sensitivity")
@@ -748,7 +760,7 @@ def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
 @pytest.mark.parametrize("mode", INT4_MODES)
 def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
     model = AWQMatmulModel().ov_model
-    dataset = Dataset([np.ones([8, 8])])
+    dataset = Dataset([np.ones([1, 8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
@@ -759,7 +771,7 @@ def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(mode, wit
     n_layers = 8
     n_awq_target = n_layers - 1  # first MatMul is always int8
     model = AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers).ov_model
-    dataset = Dataset([np.ones([8, 8])])
+    dataset = Dataset([np.ones([1, 8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
@@ -773,7 +785,7 @@ def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(mode, wit
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
     model = AWQMatmulModel(is_int8=True).ov_model
-    dataset = Dataset([np.ones([8, 8])])
+    dataset = Dataset([np.ones([1, 8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
@@ -781,7 +793,7 @@ def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_awq_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
-    dataset = Dataset([np.ones([8, 8])])
+    dataset = Dataset([np.ones([1, 8, 8])])
     compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, awq=True)
 
 
@@ -890,7 +902,7 @@ def test_duplicate_names_generation():
 )
 def test_call_max_var_criterion_with_dataset_by_default_scale_estimation(mode, compressed_weight_dtype, mocker):
     model = AWQMatmulModel().ov_model
-    dataset = Dataset([np.ones([8, 8])])
+    dataset = Dataset([np.ones([1, 8, 8])])
     from nncf.quantization.algorithms.weight_compression import scale_estimation
     from nncf.quantization.algorithms.weight_compression.algorithm import ScaleEstimation
 
@@ -906,7 +918,7 @@ def test_call_max_var_criterion_with_dataset_by_default_scale_estimation(mode, c
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_scale_estimation_for_compressed_model(mode):
     model = AWQMatmulModel(is_int8=True).ov_model
-    dataset = Dataset([np.ones([8, 8])])
+    dataset = Dataset([np.ones([1, 8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, scale_estimation=True)
 
@@ -914,7 +926,7 @@ def test_call_max_var_criterion_with_dataset_scale_estimation_for_compressed_mod
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_scale_estimation_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
-    dataset = Dataset([np.ones([8, 8])])
+    dataset = Dataset([np.ones([1, 8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, scale_estimation=True)
 
@@ -922,7 +934,7 @@ def test_call_max_var_criterion_with_dataset_scale_estimation_neg_group_size(mod
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_gptq(mode):
     model = AWQMatmulModel().ov_model
-    dataset = Dataset([np.ones([8, 8])])
+    dataset = Dataset([np.ones([1, 8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, gptq=True)
 
@@ -952,7 +964,7 @@ def test_call_gptq(mode):
 )
 def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
     model = SequentialMatmulModel().ov_model
-    dataset = Dataset([np.ones([3, 3]), np.arange(9).reshape(3, 3)])
+    dataset = Dataset([np.ones([1, 3, 3]), np.arange(9).reshape(3, 3)])
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.E2M1,
@@ -1028,7 +1040,7 @@ def test_compressed_weighs_range(mode, data):
 def test_call_max_var_criterion_with_dataset_gptq_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
     sz = 8
-    dataset = Dataset([np.ones([sz, sz])])
+    dataset = Dataset([np.ones([1, sz, sz])])
 
     compressed_model = compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, gptq=True)
 
@@ -1043,7 +1055,7 @@ def test_one_dimentional_samples(mode):
     model = AWQMatmulModel().ov_model
     sz = 8
     n_samples = 10
-    dataset = Dataset([np.ones([i + 1, sz]) for i in range(n_samples)])
+    dataset = Dataset([np.ones([1, i + 1, sz]) for i in range(n_samples)])
 
     compressed_model = compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, awq=True)
 
@@ -1057,7 +1069,7 @@ def test_awq_with_ignored_scope():
     model = AWQMatmulModel().ov_model
     sz = 8
     n_samples = 10
-    dataset = Dataset([np.ones([i + 1, sz]) for i in range(n_samples)])
+    dataset = Dataset([np.ones([1, i + 1, sz]) for i in range(n_samples)])
 
     compressed_model = compress_weights(
         model,
@@ -1264,7 +1276,7 @@ def test_compression_with_lora_with_subset_size(mocker):
 def test_lora_with_mixed_precision():
     model = AWQMatmulModel().ov_model
     sz = 8
-    dataset = Dataset([np.ones([sz, sz])])
+    dataset = Dataset([np.ones([1, sz, sz])])
 
     compressed_model = compress_weights(
         model, mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, group_size=-1, dataset=dataset, lora_correction=True
@@ -1324,7 +1336,7 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
     model = AWQMatmulModel().ov_model
     sz = 8
     n_samples = 10
-    dataset = Dataset([np.ones([i + 1, sz]) for i in range(n_samples)])
+    dataset = Dataset([np.ones([1, i + 1, sz]) for i in range(n_samples)])
 
     compressed_model = compress_weights(
         model,
@@ -1353,3 +1365,41 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
             else:
                 assert op.get_element_type() == backup_ov_mode
     assert act_num == num_compressed
+
+
+@pytest.mark.parametrize("n_extra_dims", [0, 1, 2])
+def test_data_aware_algo_with_different_activation_dimensions(n_extra_dims):
+    model = AWQMatmulModel(n_extra_dims=n_extra_dims).ov_model
+    dataset = Dataset([np.ones([1] * n_extra_dims + [8, 8])])
+    compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_ASYM,
+        group_size=-1,
+        dataset=dataset,
+        awq=True,
+    )
+
+
+@pytest.mark.parametrize("n_extra_dims,raises", ([0, True], (1, False), (2, False)))
+def test_data_aware_mixed_precision_with_different_activation_dimensions(n_extra_dims, raises):
+    model = AWQMatmulModel(n_extra_dims=n_extra_dims).ov_model
+    dataset = Dataset([np.ones([1] * n_extra_dims + [8, 8])])
+
+    def call_compression():
+        compress_weights(
+            model,
+            mode=CompressWeightsMode.INT4_ASYM,
+            ratio=0.5,
+            sensitivity_metric=SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
+            group_size=-1,
+            dataset=dataset,
+        )
+
+    if raises:
+        with pytest.raises(RuntimeError) as exc_info:
+            call_compression()
+        assert "Data-aware mixed precision criteria are not supported for MatMuls with 1D/2D activations." in str(
+            exc_info.value
+        )
+    else:
+        call_compression()

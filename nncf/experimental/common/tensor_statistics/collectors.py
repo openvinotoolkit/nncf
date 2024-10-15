@@ -19,6 +19,7 @@ import nncf
 import nncf.tensor.functions as fns
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
@@ -193,7 +194,7 @@ class TensorCollector:
     a dict could be collected by `get_statistics` call.
     """
 
-    def __init__(self, statistic_container: Optional[TensorStatistic] = None) -> None:
+    def __init__(self, statistic_container: Optional[Type[TensorStatistic]] = None) -> None:
         self._reducers: Set[TensorReducerBase] = set()
         self._aggregators: Dict[Tuple[int, int, int], AggregatorBase] = {}
         self._stat_container_kwargs_map: Dict[str, Tuple[int, int, int]] = {}
@@ -384,6 +385,10 @@ class TensorCollector:
                 for (_, percentile), value in kwargs.items():
                     percentile_vs_values_dict[percentile] = value
             return statistic_container_cls(percentile_vs_values_dict=percentile_vs_values_dict)
+        if issubclass(statistic_container_cls, WCTensorStatistic):
+            mean_values = [fns.squeeze(it) for it in kwargs[WCTensorStatistic.MEAN_STAT]]
+            shapes = [tuple(it.data) for it in kwargs[WCTensorStatistic.SHAPE_STAT]]
+            return statistic_container_cls(mean_values=mean_values, shapes=shapes)
         raise nncf.InternalError(
             f"Statistic collector class {statistic_container_cls} is not supported by the TensorCollector class."
         )
@@ -440,6 +445,17 @@ class RawReducer(NoopReducer):
 
     def __call__(self, x: List[Tensor]):
         return self._reduce_out_of_place(x)
+
+
+class ShapeReducer(TensorReducerBase):
+    def __init__(self, inplace: bool = False):
+        super().__init__(inplace=inplace)
+
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        return [Tensor(x[0].shape)]
+
+    def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
+        return None
 
 
 class MinReducer(TensorReducerBase):
@@ -778,6 +794,21 @@ class PercentileAggregator(AggregatorBase):
                 value = fns.reshape(value, shape_after_aggregation)
             retval[percentile] = value
         return retval
+
+
+class HAWQAggregator(AggregatorBase):
+    def __init__(self, num_samples: Optional[int] = None):
+        super().__init__(num_samples=num_samples)
+        self._container = Tensor(0.0)
+
+    def _register_reduced_input_impl(self, x: TensorType) -> None:
+        trace = fns.sum(fns.multiply(x, x))
+        # NOTE: average trace?? divide by number of diagonal elements
+        # TODO: revise this formula as possibly it is with an error; adopted from previous HAWQ implementation
+        self._container = (self._container + trace) / x.size
+
+    def _aggregate_impl(self) -> List[TensorType]:
+        return [self._container * 2 / self._collected_samples]
 
 
 def _move_axes_flatten_cat(
