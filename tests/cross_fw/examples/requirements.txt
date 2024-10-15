@@ -1,3 +1,4 @@
 -c ../../../constraints.txt
 pytest
 pytest-cov
+pytest-split
