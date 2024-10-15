@@ -50,13 +50,6 @@ class ModelExtractionTestCase:
     command: PTModelExtractionCommand
 
 
-@dataclass
-class ModelCase:
-    model_builder: Callable[[], torch.nn.Module]
-    model_id: str
-    input_shape: Tuple[int]
-
-
 EXTRACTED_GRAPHS_DIR_NAME = Path("fx") / "extracted"
 TRANSFORMED_GRAPH_DIR_NAME = Path("fx") / "transformed"
 
@@ -215,7 +208,7 @@ def insert_qdq_add_nodes(model: torch.fx.GraphModule):
         qdq_args = (scale_node, zp_node, 0, -128, 127, torch.int8)
         q_node = model.graph.create_node("call_function", quantize_op, (const_node,) + qdq_args, {})
         add_node = model.graph.create_node("call_function", add_op, (q_node, 0), {})
-        dq_node = model.graph.create_node("call_function", dequantize_op, qdq_args, {"input": add_node})
+        dq_node = model.graph.create_node("call_function", dequantize_op, (add_node,) + qdq_args, {})
     _set_new_node_meta(q_node, (const_node,) + qdq_args, quantize_op, model)
     _set_new_node_meta(add_node, (q_node, 0), add_op, model)
     _set_new_node_meta(dq_node, (add_node,) + qdq_args, dequantize_op, model)
