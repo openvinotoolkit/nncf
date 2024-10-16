@@ -108,7 +108,7 @@ class StatisticsAggregator(ABC):
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
             if statistics_key not in data:
                 raise ValueError(f"Not found statistics for {statistics_key}")
-            statistics.load_data(data[statistics_key])
+            tensor_collector = data[statistics_key]
 
     def dump_statistics(self, file_name: str) -> None:
         """
@@ -129,8 +129,7 @@ class StatisticsAggregator(ABC):
         for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
             statistics = tensor_collector.get_statistics()
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
-            data = statistics.get_data()
-            data_to_dump[statistics_key] = data
+            data_to_dump[statistics_key] = statistics
         return data_to_dump
 
     def _get_statistics_key(self, statistics: TensorStatistic, target_point: TargetPoint) -> str:
