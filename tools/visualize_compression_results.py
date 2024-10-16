@@ -169,7 +169,7 @@ def visualize(input_file: str, output_dir: str):
 
 def main(argv):
     parser = ArgumentParser()
-    parser.add_argument("-i", "--input_file", help="Input .csv file", default="data/phi3_asym.csv")
+    parser.add_argument("-i", "--input_file", help="Input .csv file", default="phi3_asym.csv")
     parser.add_argument("-o", "--output_dir", help="Directory for output files (.csv, .md and .png)", default="")
     args = parser.parse_args(args=argv)
 

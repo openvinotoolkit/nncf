@@ -9,13 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tests.cross_fw.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tools.visualize_compression_results import visualize
 
 
 def test_visualization_of_compression_results(tmp_path):
-    in_file = PROJECT_ROOT / "tools" / "data" / "phi3_asym.csv"
-    ref_md_file = PROJECT_ROOT / "tools" / "data" / "phi3_asym.md"
+    in_file = TEST_ROOT / "tools" / "data" / "phi3_asym.csv"
+    ref_md_file = TEST_ROOT / "tools" / "data" / "phi3_asym.md"
 
     visualize(in_file, tmp_path)
 
