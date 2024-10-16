@@ -80,7 +80,6 @@ def _set_new_node_meta(
     :param target_module: Module which is being called by the new node.
     """
     vals = []
-    prev_nodes = [prev_nodes] if not isinstance(prev_nodes, Iterable) else prev_nodes
     for prev_node in prev_nodes:
         val = prev_node
         if isinstance(prev_node, torch.fx.Node):
@@ -240,7 +239,7 @@ def constant_update_fn(
     :param node: Given graph node.
     :param value: New value to use as the node constant.
     :param input_port_id: Target constant input port id.
-    :param updated_node_name: Name of the constant node after updating. Default is nodename_updated_constant
+    :param updated_node_name: Name of the constant node after updating. Default is `nodename` + `_updated_constant`.
     """
     graph = model.graph
     node_name = updated_node_name if updated_node_name else node.name + "_updated_constant"
@@ -678,7 +677,8 @@ def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
 
 def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> Optional[Tuple[Union[torch.Tensor, int]]]:
     """
-    Gets the inputs for the Quantize node which quantize the weights. Otherwise return None
+    Gets the inputs for the Quantize node which quantize the weights. Otherwise returns None.
+
     :param node: Node to get the inputs from
     :param model: Model to which the node belongs
     """
