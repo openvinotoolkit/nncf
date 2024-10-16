@@ -107,7 +107,7 @@ class StatisticsAggregator(ABC):
             statistics = tensor_collector.get_statistics()
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
             if statistics_key not in data:
-                raise ValueError(f"Not found statistics for {statistics_key}")
+                raise nncf.ValidationError(f"Not found statistics for {statistics_key}")
             statistics.load_data(data[statistics_key])
 
     def dump_statistics(self, file_name: str) -> None:
@@ -209,8 +209,6 @@ class StatisticsAggregator(ABC):
         :param target_point: Statistics target point.
         :return: Statistics key.
         """
-        target_point_id = f"{target_point.target_node_name}_{target_point.type}_{target_point.port_id}"  # type: ignore[attr-defined]
-        return f"{statistics.__class__.__name__}_{target_point_id}"
 
 
 class StatisticsSerializer:
