@@ -23,10 +23,12 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.openvino.graph.node_utils import get_ov_model_reduce_node_name
 from nncf.openvino.graph.node_utils import get_reducer_output_node_names
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.tensor import Tensor
 
 
@@ -125,3 +127,14 @@ class OVStatisticsAggregator(StatisticsAggregator):
     @staticmethod
     def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, Tensor]:
         return {n: Tensor(v) for n, v in outputs.items()}
+
+    def _get_statistics_key(self, statistics: TensorStatistic, target_point: OVTargetPoint) -> str:
+        """
+        Returns key of statistics.
+
+        :param statistics: Statistics value.
+        :param target_point: Statistics target point.
+        :return: Statistics key.
+        """
+        target_point_id = f"{target_point.target_node_name}_{target_point.type}_{target_point.port_id}"  # type: ignore[attr-defined]
+        return f"{statistics.__class__.__name__}_{target_point_id}"

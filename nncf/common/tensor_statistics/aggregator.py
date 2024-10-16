@@ -108,7 +108,7 @@ class StatisticsAggregator(ABC):
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
             if statistics_key not in data:
                 raise ValueError(f"Not found statistics for {statistics_key}")
-            tensor_collector = data[statistics_key]
+            statistics.load_data(data[statistics_key])
 
     def dump_statistics(self, file_name: str) -> None:
         """
@@ -129,19 +129,9 @@ class StatisticsAggregator(ABC):
         for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
             statistics = tensor_collector.get_statistics()
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
-            data_to_dump[statistics_key] = statistics
+            data = statistics.get_data()
+            data_to_dump[statistics_key] = data
         return data_to_dump
-
-    def _get_statistics_key(self, statistics: TensorStatistic, target_point: TargetPoint) -> str:
-        """
-        Returns key of statistics.
-
-        :param statistics: Statistics value.
-        :param target_point: Statistics target point.
-        :return: Statistics key.
-        """
-        target_point_id = f"{target_point.target_node_name}_{target_point.type}_{target_point.port_id}"  # type: ignore[attr-defined]
-        return f"{statistics.__class__.__name__}_{target_point_id}"
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
@@ -209,6 +199,18 @@ class StatisticsAggregator(ABC):
         :param outputs: raw model outputs
         :return: processed model outputs in Dict[str, Tensor] format
         """
+
+    @abstractmethod
+    def _get_statistics_key(self, statistics: TensorStatistic, target_point: TargetPoint) -> str:
+        """
+        Returns key of statistics.
+
+        :param statistics: Statistics value.
+        :param target_point: Statistics target point.
+        :return: Statistics key.
+        """
+        target_point_id = f"{target_point.target_node_name}_{target_point.type}_{target_point.port_id}"  # type: ignore[attr-defined]
+        return f"{statistics.__class__.__name__}_{target_point_id}"
 
 
 class StatisticsSerializer:

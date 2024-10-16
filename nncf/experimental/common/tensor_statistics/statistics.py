@@ -25,6 +25,17 @@ class TensorStatistic:
 
     TENSOR_STATISTIC_OUTPUT_KEY = "tensor_statistic_output"
 
+    def get_data(self):
+        return {key: getattr(self, key) for key in self.keys()}
+
+    def load_data(self, data: Dict[str, Any]):
+        for key in self.keys():
+            setattr(self, key, data.get(key))
+
+    @classmethod
+    def keys(cls):
+        return []
+
 
 @dataclass
 class MinMaxTensorStatistic(TensorStatistic):
@@ -34,12 +45,9 @@ class MinMaxTensorStatistic(TensorStatistic):
     min_values: Tensor
     max_values: Tensor
 
-    def get_data(self):
-        return self.min_values, self.max_values
-
-    def load_data(self, min_values, max_values):
-        self.min_values = min_values
-        self.max_values = max_values
+    @classmethod
+    def keys(cls):
+        return [cls.MIN_STAT, cls.MAX_STAT]
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MinMaxTensorStatistic):
@@ -53,11 +61,9 @@ class AbsMaxTensorStatistic(TensorStatistic):
 
     abs_max: Tensor
 
-    def get_data(self):
-        return self.abs_max
-
-    def load_data(self, abs_max):
-        self.abs_max = abs_max
+    @classmethod
+    def keys(cls):
+        return [cls.ABS_MAX_STAT]
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, AbsMaxTensorStatistic):
@@ -73,12 +79,9 @@ class MeanTensorStatistic(TensorStatistic):
     mean_values: Tensor
     shape: Tuple[int, ...]
 
-    def get_data(self):
-        return self.mean_values, self.shape
-
-    def load_data(self, mean_values, shape):
-        self.mean_values = mean_values
-        self.shape = shape
+    @classmethod
+    def keys(cls):
+        return [cls.MEAN_STAT, cls.SHAPE_STAT]
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanTensorStatistic):
@@ -94,6 +97,10 @@ class MedianMADTensorStatistic(TensorStatistic):
     median_values: Tensor
     mad_values: Tensor
 
+    @classmethod
+    def keys(cls):
+        return [cls.MEDIAN_VALUES_STAT, cls.MAD_VALUES_STAT]
+
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MedianMADTensorStatistic):
             return fns.allclose(self.median_values, other.median_values) and fns.allclose(
@@ -101,19 +108,16 @@ class MedianMADTensorStatistic(TensorStatistic):
             )
         return False
 
-    def get_data(self):
-        return self.median_values, self.mad_values
-
-    def load_data(self, median_values, mad_values):
-        self.median_values = median_values
-        self.mad_values = mad_values
-
 
 @dataclass
 class PercentileTensorStatistic(TensorStatistic):
     PERCENTILE_VS_VALUE_DICT: ClassVar[str] = "percentile_vs_values_dict"
 
     percentile_vs_values_dict: Dict[str, Tensor]
+
+    @classmethod
+    def keys(cls):
+        return [cls.PERCENTILE_VS_VALUE_DICT]
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, PercentileTensorStatistic):
@@ -125,12 +129,6 @@ class PercentileTensorStatistic(TensorStatistic):
             return True
         return False
 
-    def get_data(self):
-        return self.percentile_vs_values_dict
-
-    def load_data(self, percentile_vs_values_dict):
-        self.percentile_vs_values_dict = percentile_vs_values_dict
-
 
 @dataclass
 class RawTensorStatistic(TensorStatistic):
@@ -138,16 +136,14 @@ class RawTensorStatistic(TensorStatistic):
 
     values: Tensor
 
+    @classmethod
+    def keys(cls):
+        return [cls.VALUES_STATS]
+
     def __eq__(self, other: RawTensorStatistic) -> bool:
-        if isinstance(other, PercentileTensorStatistic):
+        if isinstance(other, RawTensorStatistic):
             return fns.allclose(self.values, other.values)
         return False
-
-    def get_data(self):
-        return self.values
-
-    def load_data(self, values):
-        self.values = values
 
 
 @dataclass
@@ -156,11 +152,9 @@ class HessianTensorStatistic(TensorStatistic):
 
     hessian: Tensor
 
-    def get_data(self):
-        return self.hessian
-
-    def load_data(self, hessian):
-        self.hessian = hessian
+    @classmethod
+    def keys(cls):
+        return [cls.HESSIAN_INPUT_ACTIVATION_STATS]
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, HessianTensorStatistic):
@@ -174,11 +168,9 @@ class MeanVarianceTensorStatistic(TensorStatistic):
 
     mean_variance: Tensor
 
-    def get_data(self):
-        return self.mean_variance
-
-    def load_data(self, mean_variance):
-        self.mean_variance = mean_variance
+    @classmethod
+    def keys(cls):
+        return [cls.MEAN_VARIANCE_STAT]
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanVarianceTensorStatistic):
@@ -192,11 +184,9 @@ class MaxVarianceTensorStatistic(TensorStatistic):
 
     max_variance: Tensor
 
-    def get_data(self):
-        return self.max_variance
-
-    def load_data(self, max_variance):
-        self.max_variance = max_variance
+    @classmethod
+    def keys(cls):
+        return [cls.MAX_VARIANCE_STAT]
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MaxVarianceTensorStatistic):
@@ -210,11 +200,9 @@ class MeanMagnitudeTensorStatistic(TensorStatistic):
 
     mean_magnitude: Tensor
 
-    def get_data(self):
-        return self.mean_magnitude
-
-    def load_data(self, mean_magnitude):
-        self.mean_magnitude = mean_magnitude
+    @classmethod
+    def keys(cls):
+        return [cls.MEAN_MAGNITUDE_STAT]
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanMagnitudeTensorStatistic):
@@ -230,12 +218,9 @@ class WCTensorStatistic(TensorStatistic):
     mean_values: List[Tensor]
     shape_values: List[Tuple[int, ...]]
 
-    def get_data(self):
-        return self.mean_values, self.shape_values
-
-    def load_data(self, mean_values, shape_values):
-        self.mean_values = mean_values
-        self.shape_values = shape_values
+    @classmethod
+    def keys(cls):
+        return [cls.MEAN_STAT, cls.SHAPE_STAT]
 
     def __eq__(self, other: WCTensorStatistic):
         if isinstance(other, WCTensorStatistic):

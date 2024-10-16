@@ -296,11 +296,11 @@ class DataBasedCriterion(DataFreeCriterion):
             act_node.node_name, input_filter_func, self._algorithm_key
         ):
             statistics = tensor_collector.get_statistics()
-            data = statistics.get_data()
-            if isinstance(data, Tensor):
-                stats.append(data)
-            else:
-                stats.extend(data)
+            for data in statistics.get_data().values():
+                if isinstance(data, Tensor):
+                    stats.append(data)
+                else:
+                    stats.extend(data)
         return stats
 
 

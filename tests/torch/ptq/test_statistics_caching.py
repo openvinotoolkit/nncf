@@ -16,7 +16,7 @@ from tests.cross_fw.test_templates.test_statistics_caching import TemplateTestSt
 
 class TestStatisticsCaching(TemplateTestStatisticsCaching):
     def create_target_point(self, target_point_type: TargetType, name: str, port_id: int) -> PTTargetPoint:
-        return PTTargetPoint(target_point_type, name, port_id)
+        return PTTargetPoint(target_type=target_point_type, target_node_name=name, input_port_id=port_id)
 
     def get_statistics_aggregator(self):
         return PTStatisticsAggregator(None)
