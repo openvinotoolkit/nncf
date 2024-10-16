@@ -112,6 +112,17 @@ class MedianMADTensorStatistic(TensorStatistic):
             )
         return False
 
+    @classmethod
+    def from_kwargs(cls, kwargs: Dict[str, Any]) -> TensorStatistic:
+        return cls(
+            median_values=kwargs[MedianMADTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY][
+                MedianMADTensorStatistic.MEDIAN_VALUES_STAT
+            ],
+            mad_values=kwargs[MedianMADTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY][
+                MedianMADTensorStatistic.MAD_VALUES_STAT
+            ],
+        )
+
 
 @dataclass
 class PercentileTensorStatistic(TensorStatistic):
@@ -132,6 +143,16 @@ class PercentileTensorStatistic(TensorStatistic):
                     return False
             return True
         return False
+
+    @classmethod
+    def from_kwargs(cls, kwargs: Dict[str, Any]) -> TensorStatistic:
+        if PercentileTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY in kwargs:
+            percentile_vs_values_dict = kwargs[PercentileTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY]
+        else:
+            percentile_vs_values_dict = {}
+            for (_, percentile), value in kwargs.items():
+                percentile_vs_values_dict[percentile] = value
+        return cls(percentile_vs_values_dict=percentile_vs_values_dict)
 
 
 @dataclass
@@ -236,3 +257,9 @@ class WCTensorStatistic(TensorStatistic):
                     return False
             return True
         return False
+
+    @classmethod
+    def from_kwargs(cls, kwargs: Dict[str, Any]) -> TensorStatistic:
+        mean_values = [fns.squeeze(it) for it in kwargs[WCTensorStatistic.MEAN_STAT]]
+        shape_values = [tuple(it.data) for it in kwargs[WCTensorStatistic.SHAPE_STAT]]
+        return cls(mean_values=mean_values, shape_values=shape_values)
