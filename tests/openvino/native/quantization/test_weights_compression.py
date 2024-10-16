@@ -1403,3 +1403,45 @@ def test_data_aware_mixed_precision_with_different_activation_dimensions(n_extra
         )
     else:
         call_compression()
+
+
+@pytest.mark.parametrize(
+    "sensitivity_metric",
+    (
+        SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
+        SensitivityMetric.MAX_ACTIVATION_VARIANCE,
+        SensitivityMetric.MEAN_ACTIVATION_VARIANCE,
+        SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
+    ),
+)
+def test_weight_compression_caching(tmp_path, mocker, sensitivity_metric):
+    """ """
+    from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
+
+    collect_statistics_spy = mocker.spy(OVStatisticsAggregator, "collect_statistics")
+    load_statistics_from_file_spy = mocker.spy(OVStatisticsAggregator, "load_statistics_from_file")
+    dump_statistics_spy = mocker.spy(OVStatisticsAggregator, "dump_statistics")
+    dataset_size = 4
+    model = LMLinearModel().ov_model
+    input_data = [np.ones(inp.shape) for inp in model.inputs] * dataset_size
+    dataset = Dataset(input_data)
+    test_file = f"statistics_{sensitivity_metric}"
+    compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        sensitivity_metric=sensitivity_metric,
+        dataset=dataset,
+        ratio=0.8,
+        advanced_parameters=CompressionParams(statistics_file_path=tmp_path / test_file),
+    )
+    compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        sensitivity_metric=sensitivity_metric,
+        dataset=dataset,
+        ratio=0.8,
+        advanced_parameters=CompressionParams(statistics_file_path=tmp_path / test_file),
+    )
+    assert collect_statistics_spy.call_count == 1
+    assert load_statistics_from_file_spy.call_count == 1
+    assert dump_statistics_spy.call_count == 1
