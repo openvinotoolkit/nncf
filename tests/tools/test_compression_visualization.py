@@ -15,9 +15,11 @@ from tools.visualize_compression_results import visualize
 
 def test_visualization_of_compression_results(tmp_path):
     in_file = PROJECT_ROOT / "tools" / "data" / "phi3_asym.csv"
+    ref_md_file = PROJECT_ROOT / "tools" / "data" / "phi3_asym.md"
 
     visualize(in_file, tmp_path)
 
     md_file = tmp_path / (in_file.stem + ".md")
     assert md_file.exists()
     assert md_file.with_suffix(".png").exists()
+    assert ref_md_file.read_text() == md_file.read_text()
