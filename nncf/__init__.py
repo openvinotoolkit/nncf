@@ -32,6 +32,7 @@ from nncf.errors import UnsupportedDatasetError as UnsupportedDatasetError
 from nncf.errors import UnsupportedModelError as UnsupportedModelError
 from nncf.errors import UnsupportedVersionError as UnsupportedVersionError
 from nncf.errors import ValidationError as ValidationError
+from nncf.parameters import BackupMode as BackupMode
 from nncf.parameters import CompressWeightsMode as CompressWeightsMode
 from nncf.parameters import DropType as DropType
 from nncf.parameters import ModelType as ModelType

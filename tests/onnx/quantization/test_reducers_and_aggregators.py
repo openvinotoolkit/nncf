@@ -15,14 +15,14 @@ import numpy as np
 import pytest
 
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.onnx.statistics.collectors import ONNXAbsMaxReducer
-from nncf.onnx.statistics.collectors import ONNXAbsQuantileReducer
-from nncf.onnx.statistics.collectors import ONNXBatchMeanReducer
-from nncf.onnx.statistics.collectors import ONNXMaxReducer
-from nncf.onnx.statistics.collectors import ONNXMeanPerChanelReducer
-from nncf.onnx.statistics.collectors import ONNXMeanReducer
-from nncf.onnx.statistics.collectors import ONNXMinReducer
-from nncf.onnx.statistics.collectors import ONNXQuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import MinReducer
+from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.tensor import Tensor
 from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggregators
 
@@ -39,14 +39,14 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
     @pytest.fixture(scope="module")
     def reducers(self):
         return {
-            "min": ONNXMinReducer,
-            "max": ONNXMaxReducer,
-            "abs_max": ONNXAbsMaxReducer,
-            "mean": ONNXMeanReducer,
-            "quantile": ONNXQuantileReducer,
-            "abs_quantile": ONNXAbsQuantileReducer,
-            "batch_mean": ONNXBatchMeanReducer,
-            "mean_per_ch": ONNXMeanPerChanelReducer,
+            "min": MinReducer,
+            "max": MaxReducer,
+            "abs_max": AbsMaxReducer,
+            "mean": MeanReducer,
+            "quantile": QuantileReducer,
+            "abs_quantile": AbsQuantileReducer,
+            "batch_mean": BatchMeanReducer,
+            "mean_per_ch": MeanPerChReducer,
         }
 
     def all_close(self, val, ref) -> bool:

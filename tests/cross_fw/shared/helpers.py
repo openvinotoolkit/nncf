@@ -22,8 +22,8 @@ import numpy as np
 import nncf
 from nncf.common.utils.os import is_linux
 from nncf.common.utils.os import is_windows
-from tests.shared.paths import GITHUB_REPO_URL
-from tests.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import GITHUB_REPO_URL
+from tests.cross_fw.shared.paths import PROJECT_ROOT
 
 TensorType = TypeVar("TensorType")
 
@@ -79,9 +79,9 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
     elif package_type == "pip_git_develop":
         run_cmd_line = f"{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf"
     elif package_type == "build_s":
-        run_cmd_line = f"{python_executable_with_venv} -m build -n -s"
+        run_cmd_line = f"{python_executable_with_venv} -m build -s"
     elif package_type == "build_w":
-        run_cmd_line = f"{python_executable_with_venv} -m build -n -w"
+        run_cmd_line = f"{python_executable_with_venv} -m build -w"
     else:
         raise nncf.ValidationError(f"Invalid package type: {package_type}")
 

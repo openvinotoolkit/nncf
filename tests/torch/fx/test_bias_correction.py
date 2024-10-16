@@ -23,8 +23,10 @@ from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_bias_value
 from nncf.quantization.algorithms.bias_correction.torch_fx_backend import FXBiasCorrectionAlgoBackend
 from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
 from tests.cross_fw.test_templates.helpers import SplittedModel
+from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
 from tests.cross_fw.test_templates.test_bias_correction import TemplateTestBCAlgorithm
 from tests.torch.fx.helpers import get_torch_fx_model
 
@@ -56,8 +58,10 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
 
     @staticmethod
     def map_references(ref_biases: Dict, model_cls: Any) -> Dict[str, List]:
-        if model_cls is ConvTestModel:
+        if model_cls is ConvTestModel or model_cls is DepthwiseConvTestModel:
             return {"conv2d": ref_biases["/conv/Conv"]}
+        if model_cls is TransposeConvTestModel:
+            return {"conv_transpose2d": ref_biases["/conv/ConvTranspose"]}
         mapping = dict()
         for name, value in ref_biases.items():
             conv_idx = int(name[re.search(r"\d", name).start()])
@@ -208,6 +212,8 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
                 },
             ),
             (ConvTestModel, {("conv2d", 0): ("arg0_1", 0)}),
+            (DepthwiseConvTestModel, {("conv2d", 0): ("arg0_1", 0)}),
+            (TransposeConvTestModel, {("conv_transpose2d", 0): ("arg0_1", 0)}),
         ),
     )
     def test_verify_collected_stat_inputs_map(self, model_cls, ref_stat_inputs_map, tmpdir):

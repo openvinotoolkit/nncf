@@ -20,7 +20,7 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.visualization import Su
 from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
 from nncf.torch.exporter import PTExporter
 from nncf.torch.model_creation import create_nncf_network
-from tests.shared.nx_graph import compare_nx_graph_with_reference
+from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc
 from tests.torch.nas.creators import create_bootstrap_nas_training_algo

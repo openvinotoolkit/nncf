@@ -48,7 +48,7 @@ from nncf import NNCFConfig
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.utils import is_main_process
-from tests.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import PROJECT_ROOT
 
 CONFIGS = list((PROJECT_ROOT / Path("examples/torch/classification/configs/quantization")).glob("*"))
 

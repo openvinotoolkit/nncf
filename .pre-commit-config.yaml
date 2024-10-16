@@ -7,7 +7,6 @@ repos:
     hooks:
       - id: black
         files: '^.*\.py'
-        args: ["--line-length", "120"]
 
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0

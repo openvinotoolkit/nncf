@@ -30,7 +30,7 @@ from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
-from tests.shared.isolation_runner import run_pytest_case_function_in_separate_process
+from tests.cross_fw.shared.isolation_runner import run_pytest_case_function_in_separate_process
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args

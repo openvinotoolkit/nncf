@@ -166,7 +166,7 @@ TEST_CASES_CONV = [
         (1, 3, 3, 3),
         0,
         OVLayerAttributes(
-            {1: {"name": "Const", "shape": (4, 3, 2, 1)}},
+            {1: {"name": "Const", "shape": (4, 3, 2, 1), "dtype": "f32"}},
             ConvolutionLayerAttributes(
                 weight_requires_grad=False,
                 in_channels=3,
@@ -193,7 +193,7 @@ TEST_CASES_CONV = [
         (1, 3, 3, 3),
         0,
         OVLayerAttributes(
-            {1: {"name": "Const", "shape": (4, 3, 1, 1)}},
+            {1: {"name": "Const", "shape": (4, 3, 1, 1), "dtype": "f32"}},
             ConvolutionLayerAttributes(
                 weight_requires_grad=False,
                 in_channels=3,
@@ -220,7 +220,7 @@ TEST_CASES_CONV = [
         (1, 3, 3, 3),
         0,
         OVLayerAttributes(
-            {1: {"name": "Const", "shape": (3, 3, 1, 1, 1)}},
+            {1: {"name": "Const", "shape": (3, 3, 1, 1, 1), "dtype": "f32"}},
             ConvolutionLayerAttributes(
                 weight_requires_grad=False,
                 in_channels=1,
@@ -248,7 +248,7 @@ TEST_CASES_CONV = [
         (1, 10, 3, 3),
         0,
         OVLayerAttributes(
-            {1: {"name": "Const", "shape": (5, 10, 2, 1, 1)}},
+            {1: {"name": "Const", "shape": (5, 10, 2, 1, 1), "dtype": "f32"}},
             ConvolutionLayerAttributes(
                 weight_requires_grad=False,
                 in_channels=2,
@@ -276,7 +276,7 @@ TEST_CASES_CONV = [
         (1, 3, 3, 3),
         0,
         OVLayerAttributes(
-            {1: {"name": "Const", "shape": (3, 4, 2, 1)}},
+            {1: {"name": "Const", "shape": (3, 4, 2, 1), "dtype": "f32"}},
             ConvolutionLayerAttributes(
                 weight_requires_grad=False,
                 in_channels=3,
@@ -303,7 +303,7 @@ TEST_CASES_CONV = [
         (1, 3, 3, 3),
         0,
         OVLayerAttributes(
-            {1: {"name": "Const", "shape": (3, 1, 3, 1, 1)}},
+            {1: {"name": "Const", "shape": (3, 1, 3, 1, 1), "dtype": "f32"}},
             ConvolutionLayerAttributes(
                 weight_requires_grad=False,
                 in_channels=1,
@@ -335,7 +335,7 @@ TEST_CASES_LINEAR = [
         (1, 3, 4),
         0,
         OVLayerAttributes(
-            {1: {"name": "Const", "shape": (1, 4), "transpose": True}},
+            {1: {"name": "Const", "shape": (1, 4), "dtype": "f32", "transpose": True}},
             LinearLayerAttributes(
                 weight_requires_grad=False,
                 in_features=4,
@@ -352,7 +352,7 @@ TEST_CASES_LINEAR = [
         (1, 3, 4),
         0,
         OVLayerAttributes(
-            {1: {"name": "Const", "shape": (3, 1), "transpose": False}},
+            {1: {"name": "Const", "shape": (3, 1), "dtype": "f32", "transpose": False}},
             LinearLayerAttributes(
                 weight_requires_grad=False,
                 in_features=3,
@@ -369,7 +369,7 @@ TEST_CASES_LINEAR = [
         (1, 3, 4),
         1,
         OVLayerAttributes(
-            {0: {"name": "Const", "shape": (3, 1), "transpose": True}},
+            {0: {"name": "Const", "shape": (3, 1), "dtype": "f32", "transpose": True}},
             LinearLayerAttributes(
                 weight_requires_grad=False,
                 in_features=3,
@@ -386,7 +386,7 @@ TEST_CASES_LINEAR = [
         (1, 3, 4),
         1,
         OVLayerAttributes(
-            {0: {"name": "Const", "shape": (1, 4), "transpose": False}},
+            {0: {"name": "Const", "shape": (1, 4), "dtype": "f32", "transpose": False}},
             LinearLayerAttributes(
                 weight_requires_grad=False,
                 in_features=4,
@@ -403,7 +403,7 @@ TEST_CASES_LINEAR = [
         (1, 3, 4),
         0,
         OVLayerAttributes(
-            {1: {"name": "Const", "shape": (4,), "transpose": False}},
+            {1: {"name": "Const", "shape": (4,), "dtype": "f32", "transpose": False}},
             LinearLayerAttributes(
                 weight_requires_grad=False,
                 in_features=4,
@@ -425,7 +425,7 @@ TEST_CASES_NO_WEGIHTS_LAYOUT = [
         (1, 3, 4, 5),
         0,
         OVLayerAttributes(
-            {1: {"name": "Const", "shape": (1, 1, 1, 1)}},
+            {1: {"name": "Const", "shape": (1, 1, 1, 1), "dtype": "f32"}},
             GenericWeightedLayerAttributes(False, weight_shape=(1, 1, 1, 1)),
             {},
         ),
@@ -438,10 +438,10 @@ TEST_CASES_NO_WEGIHTS_LAYOUT = [
         0,
         OVLayerAttributes(
             {
-                1: {"name": "hs", "shape": (2, 1, 4)},
-                2: {"name": "cs", "shape": (2, 1, 4)},
-                4: {"name": "w", "shape": (1, 16, 4)},
-                5: {"name": "r", "shape": (1, 16, 4)},
+                1: {"name": "hs", "shape": (2, 1, 4), "dtype": "f32"},
+                2: {"name": "cs", "shape": (2, 1, 4), "dtype": "f32"},
+                4: {"name": "w", "shape": (1, 16, 4), "dtype": "f32"},
+                5: {"name": "r", "shape": (1, 16, 4), "dtype": "f32"},
             },
             None,
             {},
