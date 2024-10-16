@@ -59,6 +59,11 @@ class AbsMaxTensorStatistic(TensorStatistic):
     def load_data(self, abs_max):
         self.abs_max = abs_max
 
+    def __eq__(self, other: TensorStatistic):
+        if isinstance(other, AbsMaxTensorStatistic):
+            return fns.allclose(self.abs_max, other.abs_max)
+        return False
+
 
 @dataclass
 class MeanTensorStatistic(TensorStatistic):
@@ -74,6 +79,11 @@ class MeanTensorStatistic(TensorStatistic):
     def load_data(self, mean_values, shape):
         self.mean_values = mean_values
         self.shape = shape
+
+    def __eq__(self, other: TensorStatistic):
+        if isinstance(other, MeanTensorStatistic):
+            return self.shape == other.shape and fns.allclose(self.mean_values, other.mean_values)
+        return False
 
 
 @dataclass
@@ -152,6 +162,11 @@ class HessianTensorStatistic(TensorStatistic):
     def load_data(self, hessian):
         self.hessian = hessian
 
+    def __eq__(self, other: TensorStatistic):
+        if isinstance(other, HessianTensorStatistic):
+            return fns.allclose(self.hessian, other.hessian)
+        return False
+
 
 @dataclass
 class MeanVarianceTensorStatistic(TensorStatistic):
@@ -164,6 +179,11 @@ class MeanVarianceTensorStatistic(TensorStatistic):
 
     def load_data(self, mean_variance):
         self.mean_variance = mean_variance
+
+    def __eq__(self, other: TensorStatistic):
+        if isinstance(other, MeanVarianceTensorStatistic):
+            return fns.allclose(self.mean_variance, other.mean_variance)
+        return False
 
 
 @dataclass
@@ -178,6 +198,11 @@ class MaxVarianceTensorStatistic(TensorStatistic):
     def load_data(self, max_variance):
         self.max_variance = max_variance
 
+    def __eq__(self, other: TensorStatistic):
+        if isinstance(other, MaxVarianceTensorStatistic):
+            return fns.allclose(self.max_variance, other.max_variance)
+        return False
+
 
 @dataclass
 class MeanMagnitudeTensorStatistic(TensorStatistic):
@@ -190,6 +215,11 @@ class MeanMagnitudeTensorStatistic(TensorStatistic):
 
     def load_data(self, mean_magnitude):
         self.mean_magnitude = mean_magnitude
+
+    def __eq__(self, other: TensorStatistic):
+        if isinstance(other, MeanMagnitudeTensorStatistic):
+            return fns.allclose(self.mean_magnitude, other.mean_magnitude)
+        return False
 
 
 @dataclass
@@ -206,6 +236,17 @@ class WCTensorStatistic(TensorStatistic):
     def load_data(self, mean_values, shape_values):
         self.mean_values = mean_values
         self.shape_values = shape_values
+
+    def __eq__(self, other: WCTensorStatistic):
+        if isinstance(other, WCTensorStatistic):
+            for self_v, other_v in zip(self.mean_values, other.mean_values):
+                if not fns.allclose(self_v, other_v):
+                    return False
+            for self_v, other_v in zip(self.shape_values, other.shape_values):
+                if not fns.allclose(self_v, other_v):
+                    return False
+            return True
+        return False
 
 
 def build_statistic_container(
