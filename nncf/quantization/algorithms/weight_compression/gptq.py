@@ -18,6 +18,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import CompressWeightsMode
@@ -265,9 +266,10 @@ class GPTQ:
                     else:
                         if self._scale_estimation and block_compression_config.num_bits == 4:
                             activations = [inp.squeeze()[:, (i1 + i) : (i1 + i + group_size)] for inp in inputs]
+                            wc_statistics = self._activations_to_wc_statistics(activations)
                             scale, zero_point = ScaleEstimation.calculate_quantization_params(
                                 self._backend_entity,
-                                activations,
+                                wc_statistics,
                                 weight_tensor[:, (i1 + i) : (i1 + i + group_size)],
                                 reduction_axes,
                                 wc_params.compression_config,
@@ -325,3 +327,15 @@ class GPTQ:
         else:
             zero_points = None
         return scales, zero_points
+
+    @staticmethod
+    def _activations_to_wc_statistics(activations: List[Tensor]) -> WCTensorStatistic:
+        # The code below mimics the logic from WeightCompression.get_statistic_points
+        mean_values = []
+        shapes = []
+        for act in activations:
+            shapes.append(act.shape)
+            reduction_shape = tuple(range(act.ndim - 1))
+            mean_values.append(fns.mean(act, axis=reduction_shape))
+        wc_statistics = WCTensorStatistic(mean_values, shapes)
+        return wc_statistics
