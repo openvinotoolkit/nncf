@@ -279,8 +279,8 @@ strict digraph  {
 "18 _param_constant5_0_0" -> "19 conv2d_1"  [label="(64,)", style=solid];
 "19 conv2d_1" -> "20 relu_1"  [label="(1, 64, 220, 220)", style=solid];
 "20 relu_1" -> "21 quantize_per_tensor_default"  [label="(1, 64, 220, 220)", style=solid];
-"21 quantize_per_tensor_default" -> "22 dequantize_per_tensor_default_1"  [label="(1, 64, 220, 220)", style=solid];
 "21 quantize_per_tensor_default" -> "23 dequantize_per_tensor_default"  [label="(1, 64, 220, 220)", style=solid];
+"21 quantize_per_tensor_default" -> "22 dequantize_per_tensor_default_1"  [label="(1, 64, 220, 220)", style=solid];
 "22 dequantize_per_tensor_default_1" -> "222 slice_13"  [label="(1, 64, 220, 220)", style=solid];
 "23 dequantize_per_tensor_default" -> "24 max_pool2d"  [label="(1, 64, 220, 220)", style=solid];
 "24 max_pool2d" -> "31 conv2d_2"  [label="(1, 64, 110, 110)", style=solid];
@@ -306,8 +306,8 @@ strict digraph  {
 "40 _param_constant13_0_0" -> "41 conv2d_3"  [label="(128,)", style=solid];
 "41 conv2d_3" -> "42 relu_3"  [label="(1, 128, 106, 106)", style=solid];
 "42 relu_3" -> "43 quantize_per_tensor_default_3"  [label="(1, 128, 106, 106)", style=solid];
-"43 quantize_per_tensor_default_3" -> "44 dequantize_per_tensor_default_5"  [label="(1, 128, 106, 106)", style=solid];
 "43 quantize_per_tensor_default_3" -> "45 dequantize_per_tensor_default_4"  [label="(1, 128, 106, 106)", style=solid];
+"43 quantize_per_tensor_default_3" -> "44 dequantize_per_tensor_default_5"  [label="(1, 128, 106, 106)", style=solid];
 "44 dequantize_per_tensor_default_5" -> "188 slice_9"  [label="(1, 128, 106, 106)", style=solid];
 "45 dequantize_per_tensor_default_4" -> "46 max_pool2d_1"  [label="(1, 128, 106, 106)", style=solid];
 "46 max_pool2d_1" -> "53 conv2d_4"  [label="(1, 128, 53, 53)", style=solid];
@@ -333,8 +333,8 @@ strict digraph  {
 "62 _param_constant21_0_0" -> "63 conv2d_5"  [label="(256,)", style=solid];
 "63 conv2d_5" -> "64 relu_5"  [label="(1, 256, 49, 49)", style=solid];
 "64 relu_5" -> "65 quantize_per_tensor_default_4"  [label="(1, 256, 49, 49)", style=solid];
-"65 quantize_per_tensor_default_4" -> "66 dequantize_per_tensor_default_7"  [label="(1, 256, 49, 49)", style=solid];
 "65 quantize_per_tensor_default_4" -> "67 dequantize_per_tensor_default_6"  [label="(1, 256, 49, 49)", style=solid];
+"65 quantize_per_tensor_default_4" -> "66 dequantize_per_tensor_default_7"  [label="(1, 256, 49, 49)", style=solid];
 "66 dequantize_per_tensor_default_7" -> "154 slice_5"  [label="(1, 256, 49, 49)", style=solid];
 "67 dequantize_per_tensor_default_6" -> "68 max_pool2d_2"  [label="(1, 256, 49, 49)", style=solid];
 "68 max_pool2d_2" -> "75 conv2d_6"  [label="(1, 256, 24, 24)", style=solid];
@@ -360,8 +360,8 @@ strict digraph  {
 "84 _param_constant29_0_0" -> "85 conv2d_7"  [label="(512,)", style=solid];
 "85 conv2d_7" -> "86 relu_7"  [label="(1, 512, 20, 20)", style=solid];
 "86 relu_7" -> "87 quantize_per_tensor_default_7"  [label="(1, 512, 20, 20)", style=solid];
-"87 quantize_per_tensor_default_7" -> "88 dequantize_per_tensor_default_11"  [label="(1, 512, 20, 20)", style=solid];
 "87 quantize_per_tensor_default_7" -> "89 dequantize_per_tensor_default_10"  [label="(1, 512, 20, 20)", style=solid];
+"87 quantize_per_tensor_default_7" -> "88 dequantize_per_tensor_default_11"  [label="(1, 512, 20, 20)", style=solid];
 "88 dequantize_per_tensor_default_11" -> "120 slice_1"  [label="(1, 512, 20, 20)", style=solid];
 "89 dequantize_per_tensor_default_10" -> "90 max_pool2d_3"  [label="(1, 512, 20, 20)", style=solid];
 "90 max_pool2d_3" -> "97 conv2d_8"  [label="(1, 512, 10, 10)", style=solid];
