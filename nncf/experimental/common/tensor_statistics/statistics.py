@@ -33,7 +33,7 @@ class TensorStatistic:
 
     @classmethod
     def from_kwargs(cls, kwargs: Dict[str, Any]) -> TensorStatistic:
-        args = {key: kwargs[key] for key in cls}
+        args = {key: kwargs[key] for key in cls.keys()}  # noqa: SIM118
         return cls(**args)
 
     @classmethod
