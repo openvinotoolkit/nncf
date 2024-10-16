@@ -22,7 +22,6 @@ from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import build_statistic_container
 from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.tensor import Tensor
 
@@ -317,7 +316,7 @@ class TensorCollector:
 
         if not self._stat_container:
             return kwargs
-        self.statistics = build_statistic_container(self._stat_container, kwargs)
+        self.statistics = self._stat_container.from_kwargs(kwargs)
         return self.statistics
 
     def replace_aggregator(self, key: Tuple[int, int, int], aggregator: AggregatorBase) -> None:
