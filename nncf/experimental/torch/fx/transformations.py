@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import copy
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.fx
@@ -630,6 +630,7 @@ def _get_pattern_replacement_per_tensor() -> (
 def _set_meta_for_matches(model: torch.fx.GraphModule, matches: torch.fx.subgraph_rewriter.ReplacedPatterns) -> None:
     """
     Sets the meta for the nodes which were matched by the subgraph_rewriter pattern.
+
     :param model: Model whose nodes' meta are to be set.
     :param matches: matches returned by the subgraph_rewriter
     """
@@ -719,6 +720,7 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule) -> None:
 def _reshape_scale_zp(model: torch.fx.GraphModule, node: torch.fx.Node) -> None:
     """
     Reshape scale and zero point so that it can be multiplied elementwise with the weight for per channel quantization.
+
     :param model: Model to apply transformations to.
     :param node: quantize node whose scale has to be reshaped
     """
@@ -741,7 +743,7 @@ def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
     """
     This function applies a transformation to replace the FP32 weights with Fake Quantized
     FP values to avoid the rounding error when converting to OpenVino model.
-    
+
     :param model: Model to apply transformations to.
     """
     for node in model.graph.nodes:
@@ -768,6 +770,7 @@ def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
 def compress_post_quantize_transformation(model: torch.fx.GraphModule) -> None:
     """
     Applies transformation to compress the weights to Int8 after the quantization step.
+
     :param model: Model to apply transformations to.
     """
     _compress_qdq_constant_transformation(model)
@@ -777,6 +780,7 @@ def compress_post_quantize_transformation(model: torch.fx.GraphModule) -> None:
 def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     """
     Applies quantization transformations to the model.
+
     :param model: Model to apply transformations to.
     """
     # BatchNorm operations have 3 output ports,
@@ -792,6 +796,7 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
 def revert_quantization_transformations(model: torch.fx.GraphModule) -> None:
     """
     Reverts quantization transformations from the model.
+
     :param model: Model to revert transformations from.
     """
     merge_conv_and_bias(model)
@@ -839,6 +844,8 @@ def separate_linear_and_bias(model: torch.fx.GraphModule):
     for n in model.graph.nodes:
         if not _is_linear(n):
             continue
+        # This check also makes sure to ignore linear nodes which might already
+        # have quantization applied to the weights.
         if len(n.args) < 3 or n.args[2] is None or n.args[1].op != "get_attr":
             continue
         linear_node = n
@@ -882,6 +889,8 @@ def separate_conv_and_bias(model: torch.fx.GraphModule):
     for n in model.graph.nodes:
         if not _is_conv(n):
             continue
+        # This check also makes sure to ignore convolution nodes which might
+        # already have quantization applied to the weights.
         if len(n.args) < 3 or n.args[2] is None or n.args[1].op != "get_attr":
             continue
         conv_node = n
