@@ -695,6 +695,7 @@ def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> Option
 def _compress_qdq_constant_transformation(model: torch.fx.GraphModule) -> None:
     """
     Change the FP32 weight value to Int8 and also reshape the scale for per_channel_quantization.
+
     :param: model: Model to apply transformations to.
     """
     for node in model.graph.nodes:
@@ -740,6 +741,7 @@ def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
     """
     This function applies a transformation to replace the FP32 weights with Fake Quantized
     FP values to avoid the rounding error when converting to OpenVino model.
+    
     :param model: Model to apply transformations to.
     """
     for node in model.graph.nodes:
