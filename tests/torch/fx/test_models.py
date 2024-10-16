@@ -207,7 +207,6 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters, compres
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     check_graph(nncf_graph, get_dot_filename(model_case.model_id), save_dir, extended=True)
     q_nodes, dq_nodes = count_q_dq(quantized_model)
-    print("THIS: ", q_nodes, dq_nodes)
     assert q_nodes == compress_n_qdq[compress_weights][0]
     assert dq_nodes == compress_n_qdq[compress_weights][1]
     check_fq_values(quantized_model)
