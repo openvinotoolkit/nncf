@@ -1393,6 +1393,12 @@ def test_data_aware_algo_with_different_activation_dimensions(n_extra_dims):
             scale_estimation=True,
             advanced_parameters=CompressionParams(gptq_params=GPTQParams(subset_size=2)),
         ),
+        dict(
+            awq=True,
+            gptq=True,
+            scale_estimation=True,
+            advanced_parameters=CompressionParams(gptq_params=GPTQParams(subset_size=2)),
+        ),
     ],
 )
 def test_compression_with_different_algo_combinations(kwargs):
