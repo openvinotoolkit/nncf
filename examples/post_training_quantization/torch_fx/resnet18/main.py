@@ -189,12 +189,13 @@ def main():
     input_shape = (1, 3, IMAGE_SIZE, IMAGE_SIZE)
     example_input = torch.ones(*input_shape).to(device)
 
-    fx_model = torch.export.export(model.eval(), args=(example_input,)).module()
-    quantized_fx_model = nncf.quantize(fx_model, quantization_dataset)
+    with disable_patching():
+        fx_model = torch.export.export(model.eval(), args=(example_input,)).module()
+        quantized_fx_model = nncf.quantize(fx_model, quantization_dataset)
+        quantized_fx_model = torch.compile(quantized_fx_model, backend="openvino")
 
-    quantized_fx_model = torch.compile(quantized_fx_model, backend="openvino")
+        acc1_int8 = validate(val_loader, quantized_fx_model, device)
 
-    acc1_int8 = validate(val_loader, quantized_fx_model, device)
     print(f"Accuracy@1 of INT8 model: {acc1_int8:.3f}")
     print(f"Accuracy diff FP32 - INT8: {acc1_fp32 - acc1_int8:.3f}")
 
@@ -202,17 +203,20 @@ def main():
     # Step 3: Run benchmarks
     print(os.linesep + "[Step 3] Run benchmarks")
     print("Benchmark FP32 model compiled with default backend ...")
-    compiled_model = torch.compile(model)
-    fp32_latency = measure_latency(compiled_model, example_inputs=example_input)
+    with disable_patching():
+        compiled_model = torch.compile(model)
+        fp32_latency = measure_latency(compiled_model, example_inputs=example_input)
     print(f"{fp32_latency:.3f} ms")
 
     print("Benchmark FP32 model compiled with openvino backend ...")
-    compiled_model = torch.compile(model, backend="openvino")
-    fp32_ov_latency = measure_latency(compiled_model, example_inputs=example_input)
+    with disable_patching():
+        compiled_model = torch.compile(model, backend="openvino")
+        fp32_ov_latency = measure_latency(compiled_model, example_inputs=example_input)
     print(f"{fp32_ov_latency:.3f} ms")
 
     print("Benchmark INT8 model compiled with openvino backend ...")
-    int8_latency = measure_latency(quantized_fx_model, example_inputs=example_input)
+    with disable_patching():
+        int8_latency = measure_latency(quantized_fx_model, example_inputs=example_input)
     print(f"{int8_latency:.3f} ms")
 
     print('[Step 4] torch.compile(..., backend="openvino") speed ups:')
@@ -227,5 +231,4 @@ def main():
 
 
 if __name__ == "__main__":
-    with disable_patching():
-        main()
+    main()
