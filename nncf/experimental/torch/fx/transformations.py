@@ -120,7 +120,7 @@ def module_insertion_transformation_builder(
             target_node = get_graph_node_by_name(graph, target_point.target_node_name)
 
             if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
-                _set_new_node_meta(new_node, target_node, module_to_insert, model)
+                _set_new_node_meta(new_node, [target_node], module_to_insert, model)
                 with graph.inserting_after(target_node):
                     for user in list(target_node.users):
                         if user is new_node:
@@ -129,7 +129,7 @@ def module_insertion_transformation_builder(
 
             else:
                 prev_node = target_node.args[target_point.input_port_id]
-                _set_new_node_meta(new_node, prev_node, module_to_insert, model)
+                _set_new_node_meta(new_node, [prev_node], module_to_insert, model)
                 target_node.replace_input_with(prev_node, new_node)
 
     return module_insertion_transformation
@@ -636,7 +636,7 @@ def _set_meta_for_matches(model: torch.fx.GraphModule, matches: torch.fx.subgrap
     """
     for match in matches:
         mul_node = match.replacements[0]
-        _set_new_node_meta(mul_node, list(mul_node.args), torch.mul, model)
+        _set_new_node_meta(mul_node, mul_node.args, torch.mul, model)
 
 
 def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
