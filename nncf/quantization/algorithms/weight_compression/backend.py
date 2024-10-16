@@ -13,12 +13,16 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Dict, Iterable, List, Optional, Tuple, TypeVar
 
+from nncf import SensitivityMetric
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
+from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
@@ -194,15 +198,15 @@ class WeightCompressionAlgoBackend(ABC):
         :return: Backend-specific TargetPoint.
         """
 
-    @staticmethod
     @abstractmethod
-    def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorStatisticCollectorBase:
+    def mean_statistic_collector(
+        self, reduction_axes: Tuple[int], subset_size: Optional[int] = None
+    ) -> TensorStatisticCollectorBase:
         """
-        Returns backend-specific raw statistic collector.
-        This statistic collector is used for raw data calculation, without aggregating.
+        Return mean statistic collector
 
-        :param num_samples: Maximum number of samples to collect.
-        :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
+        :param reduction_axes: Axes along which to apply mean reduction
+        :param subset_size: Number of samples to collect
         """
 
     @staticmethod
@@ -243,3 +247,34 @@ class AWQAlgoBackend(WeightCompressionAlgoBackend):
         """
         Returns scale insertion command/transformation for applying AWQ algorithm.
         """
+
+
+class MixedPrecisionAlgoBackend(ABC):
+    @staticmethod
+    def hawq_statistic_collector(subset_size: Optional[int] = None) -> TensorCollector:
+        reducer = NoopReducer()
+        aggregator = HAWQAggregator(num_samples=subset_size)
+        collector = TensorCollector()
+        collector.register_statistic_branch(SensitivityMetric.HESSIAN_INPUT_ACTIVATION.value, reducer, aggregator)
+        return collector
+
+    @staticmethod
+    @abstractmethod
+    def mean_variance_statistic_collector(
+        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+    ) -> TensorCollector:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def max_variance_statistic_collector(
+        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+    ) -> TensorCollector:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def mean_abs_max_statistic_collector(
+        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+    ) -> TensorCollector:
+        pass

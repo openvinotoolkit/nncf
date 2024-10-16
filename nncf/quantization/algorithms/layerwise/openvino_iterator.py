@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from collections import defaultdict
+from itertools import islice
 from typing import Dict, List, Optional, Tuple
 
 import openvino.runtime as ov
@@ -200,7 +201,7 @@ class OVLayerwiseIterator(LayerwiseIterator):
                         and input_id not in subgraph_outputs
                     ):
                         subgraph_outputs.append(input_id)
-            feed_dicts = self._dataset.get_inference_data(range(self._subset_size))
+            feed_dicts = islice(self._dataset.get_inference_data(), self._subset_size)
         else:
             subgraph_inputs = step.subgraph_inputs
             subgraph_outputs = step.subgraph_outputs

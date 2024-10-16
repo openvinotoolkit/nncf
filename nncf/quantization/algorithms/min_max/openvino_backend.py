@@ -228,6 +228,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.OVSumMetatype,
                 om.OVSquaredDifferenceMetatype,
                 om.OVMVNMetatype,
+                om.OVGroupNormalizationMetatype,
                 om.OVBatchNormMetatype,
                 om.OVDivideMetatype,
                 om.OVSqrtMetatype,
@@ -256,13 +257,15 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 ignored_names.add(node.node_name)
         return ignored_names
 
-    @staticmethod
-    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_weight_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
         return [
             node
             for node in nncf_graph.get_all_nodes()
             if isinstance(node.layer_attributes, OVLayerAttributes) and node.metatype in OPERATIONS_WITH_WEIGHTS
         ]
+
+    def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        return node.metatype in self.mat_mul_metatypes and node.layer_attributes is not None
 
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: OVTargetPoint) -> str:

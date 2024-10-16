@@ -27,10 +27,10 @@ from examples.tensorflow.common.prepare_checkpoint import main as prepare_checkp
 from examples.tensorflow.object_detection import main as od_main
 from examples.tensorflow.segmentation import evaluation as seg_eval
 from examples.tensorflow.segmentation import train as seg_train
-from tests.shared.config_factory import ConfigFactory
-from tests.shared.helpers import remove_line_breaks
-from tests.shared.paths import TEST_ROOT
-from tests.shared.paths import get_accuracy_aware_checkpoint_dir_path
+from tests.cross_fw.shared.config_factory import ConfigFactory
+from tests.cross_fw.shared.helpers import remove_line_breaks
+from tests.cross_fw.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.paths import get_accuracy_aware_checkpoint_dir_path
 from tests.tensorflow.helpers import get_cifar10_dataset_builders
 from tests.tensorflow.helpers import get_coco_dataset_builders
 from tests.tensorflow.test_models import SequentialModel

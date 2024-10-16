@@ -39,8 +39,9 @@ jobs:
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        NNCF_RELEASE_BUILD: "1"
       run: |
-        python -m build -C--global-option=--release
+        python -m build
 
         # Disallow uploading dev packages
         for file in dist/*; do

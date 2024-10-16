@@ -9,8 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import List, Optional
 
+from nncf.common.tensor import TensorType
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
@@ -25,14 +26,20 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
+from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_max_op
+from nncf.openvino.graph.node_utils import get_inplace_max_var_op
+from nncf.openvino.graph.node_utils import get_inplace_mean_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
+from nncf.openvino.graph.node_utils import get_inplace_mean_var_op
 from nncf.openvino.graph.node_utils import get_inplace_min_op
+from nncf.openvino.graph.node_utils import get_inplace_shape_op
 from nncf.quantization.advanced_parameters import StatisticsType
 
 
@@ -58,6 +65,35 @@ class OVMeanReducer(MeanReducer):
 
     def get_inplace_fn(self):
         return get_inplace_mean_op(self._reduction_axes)
+
+
+class OVMeanVarianceReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
+
+    def get_inplace_fn(self):
+        return get_inplace_mean_var_op(self._reduction_axes)
+
+
+class OVMaxVarianceReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
+
+    def get_inplace_fn(self):
+        return get_inplace_max_var_op(self._reduction_axes)
+
+
+class OVMeanAbsMaxReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
+
+    def get_inplace_fn(self):
+        return get_inplace_mean_max_op(self._reduction_axes, True)
+
+
+class OVShapeReducer(ShapeReducer):
+    def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
+        return get_inplace_shape_op()
 
 
 class OVBatchMeanReducer(BatchMeanReducer):

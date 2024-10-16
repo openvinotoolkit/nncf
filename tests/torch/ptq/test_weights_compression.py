@@ -13,6 +13,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 
+from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.quantization import compress_weights
@@ -214,6 +215,9 @@ class EmptyModel(torch.nn.Module):
         {"awq": True},
         {"scale_estimation": True},
         {"lora_correction": True},
+        {"backup_mode": BackupMode.NONE},
+        {"backup_mode": BackupMode.INT8_ASYM},
+        {"backup_mode": BackupMode.INT8_SYM},
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):

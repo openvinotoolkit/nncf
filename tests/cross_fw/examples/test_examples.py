@@ -17,14 +17,14 @@ from typing import Any, Dict, List
 
 import pytest
 
-from tests.shared.case_collection import skip_if_backend_not_selected
-from tests.shared.command import Command
-from tests.shared.helpers import create_venv_with_nncf
-from tests.shared.helpers import get_pip_executable_with_venv
-from tests.shared.helpers import get_python_executable_with_venv
-from tests.shared.helpers import load_json
-from tests.shared.paths import PROJECT_ROOT
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.case_collection import skip_if_backend_not_selected
+from tests.cross_fw.shared.command import Command
+from tests.cross_fw.shared.helpers import create_venv_with_nncf
+from tests.cross_fw.shared.helpers import get_pip_executable_with_venv
+from tests.cross_fw.shared.helpers import get_python_executable_with_venv
+from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import TEST_ROOT
 
 EXAMPLE_TEST_ROOT = TEST_ROOT / "cross_fw" / "examples"
 EXAMPLE_SCOPE_PATH = EXAMPLE_TEST_ROOT / "example_scope.json"
@@ -55,6 +55,8 @@ def test_examples(
     ov_version_override: str,
     data: str,
 ):
+    print("\n" + "-" * 64)
+    print(f"Example name: {example_name}")
     python_version = sys.version_info
     example_python_version = tuple(example_params.get("python_version", python_version))
     if python_version < example_python_version:
@@ -63,19 +65,22 @@ def test_examples(
     backend = example_params["backend"]
     skip_if_backend_not_selected(backend, backends_list)
     venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {backend})
+    pip_with_venv = get_pip_executable_with_venv(venv_path)
     if "requirements" in example_params:
-        pip_with_venv = get_pip_executable_with_venv(venv_path)
         requirements = PROJECT_ROOT / example_params["requirements"]
         run_cmd_line = f"{pip_with_venv} install -r {requirements}"
         subprocess.run(run_cmd_line, check=True, shell=True)
 
     if ov_version_override is not None:
-        pip_with_venv = get_pip_executable_with_venv(venv_path)
         ov_version_cmd_line = f"{pip_with_venv} install {ov_version_override}"
         subprocess.run(ov_version_cmd_line, check=True, shell=True)
 
+    subprocess.run(f"{pip_with_venv} list", check=True, shell=True)
+
     env = os.environ.copy()
     env["PYTHONPATH"] = str(PROJECT_ROOT)  # need this to be able to import from tests.* in run_example.py
+    env["ONEDNN_MAX_CPU_ISA"] = "AVX2"  # Set ISA to AVX2 to get CPU independent results
+    env["CUDA_VISIBLE_DEVICES"] = ""  # Disable GPU
 
     metrics_file_path = tmp_path / "metrics.json"
     python_executable_with_venv = get_python_executable_with_venv(venv_path)
@@ -87,17 +92,17 @@ def test_examples(
     cmd.run()
 
     measured_metrics = load_json(metrics_file_path)
-
+    print(measured_metrics)
     for name, value in example_params[ACCURACY_METRICS].items():
         assert measured_metrics[name] == pytest.approx(
             value, abs=example_params.get("accuracy_tolerance", ACCURACY_TOLERANCE)
-        )
+        ), f"metric {name}: {measured_metrics[name]} != {value}"
 
     if ACCURACY_METRICS_AFTER_TRAINING in example_params:
         for name, value in example_params[ACCURACY_METRICS_AFTER_TRAINING].items():
             assert measured_metrics[name] == pytest.approx(
                 value, abs=example_params.get("accuracy_tolerance_after_training", ACCURACY_TOLERANCE)
-            )
+            ), f"metric {name}: {measured_metrics[name]} != {value}"
 
     if MODEL_SIZE_METRICS in example_params:
         for name, value in example_params[MODEL_SIZE_METRICS].items():

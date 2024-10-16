@@ -17,7 +17,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import Dict, Tuple, Union
 
-from tests.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import PROJECT_ROOT
 
 
 def post_training_quantization_mobilenet_v2(example_root_dir: str) -> Dict[str, float]:
@@ -174,6 +174,14 @@ def llm_tune_params() -> Dict[str, float]:
     awq, ratio, group_size = llm_tune_params_main()
 
     return {"awq": bool(awq), "ratio": ratio, "group_size": group_size}
+
+
+def llm_compression_synthetic() -> Dict[str, float]:
+    from examples.llm_compression.openvino.tiny_llama_synthetic_data.main import main as llm_compression_synthetic_main
+
+    result = llm_compression_synthetic_main()
+
+    return {"word_count": len(result.split())}
 
 
 def quantization_aware_training_torch_resnet18():
