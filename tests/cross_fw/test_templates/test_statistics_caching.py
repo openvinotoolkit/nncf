@@ -26,16 +26,31 @@ class TemplateTestStatisticsCaching:
     @property
     @abstractmethod
     def create_target_point(self, target_point_type: TargetType, name: str, port_id: int) -> TargetPoint:
-        "Creates backend specific TargetPoint."
+        """
+        Creates a backend-specific TargetPoint.
+
+        :param target_point_type: The type of target point (e.g., PRE_LAYER_OPERATION).
+        :param name: The name of the target point.
+        :param port_id: The port ID for the target point.
+        :return: A backend-specific TargetPoint.
+        """
+        pass
 
     @abstractmethod
-    def get_statistics_aggregator(self, dataset):
-        """_summary_
-
-        :param _type_ dataset: _description_
+    def get_statistics_aggregator(self):
         """
+        Returns a statistics aggregator. Must be implemented by subclasses.
 
-    def _create_dummy_statistic_point(self):
+        :return: Statistics aggregator instance specific to the backend.
+        """
+        pass
+
+    def _create_dummy_statistic_point(self) -> StatisticPoint:
+        """
+        Creates a dummy statistic point for testing purposes.
+
+        :return: A StatisticPoint object with dummy data.
+        """
         dummy_t_p = self.create_target_point(TargetType.PRE_LAYER_OPERATION, "dummy_name", 0)
         dummy_tensor_collector = TensorCollector()
         dummy_tensor_collector.statistics = MinMaxTensorStatistic(Tensor(np.zeros((3))), Tensor(np.ones((3))))
@@ -43,7 +58,12 @@ class TemplateTestStatisticsCaching:
             target_point=dummy_t_p, tensor_collector=dummy_tensor_collector, algorithm="dummy_algorithm"
         )
 
-    def test_dump_and_load_statistics(self, tmp_path):
+    def test_dump_and_load_statistics(self, tmp_path: Path):
+        """
+        Tests the dumping and loading of statistics to and from a file.
+
+        :param tmp_path: The temporary path provided by pytest.
+        """
         test_file = "test"
         aggregator = self.get_statistics_aggregator()
         statistics_points = StatisticPointsContainer()
@@ -53,10 +73,16 @@ class TemplateTestStatisticsCaching:
 
         aggregator.statistic_points = statistics_points
         aggregator.dump_statistics(tmp_path / test_file)
-        assert Path(tmp_path / test_file).exists()
+        assert (tmp_path / test_file).exists(), "Statistics file was not created"
+
         aggregator.load_statistics_from_file(tmp_path / test_file)
 
-    def test_dump_statistics(self, tmp_path):
+    def test_dump_statistics(self, tmp_path: Path):
+        """
+        Tests the dumping of statistics to a file.
+
+        :param tmp_path: The temporary path provided by pytest.
+        """
         test_file = "test"
         aggregator = self.get_statistics_aggregator()
         statistics_points = StatisticPointsContainer()
@@ -66,4 +92,4 @@ class TemplateTestStatisticsCaching:
 
         aggregator.statistic_points = statistics_points
         aggregator.dump_statistics(tmp_path / test_file)
-        assert Path(tmp_path / test_file).exists()
+        assert (tmp_path / test_file).exists(), "Statistics file was not created"
