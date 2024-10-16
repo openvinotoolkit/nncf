@@ -1441,6 +1441,7 @@ def test_weight_compression_caching(tmp_path, mocker, sensitivity_metric):
         mode=CompressWeightsMode.INT4_SYM,
         sensitivity_metric=sensitivity_metric,
         dataset=dataset,
+        ratio=0.8,
         advanced_parameters=CompressionParams(statistics_file_path=tmp_path / test_file),
     )
 
@@ -1449,6 +1450,7 @@ def test_weight_compression_caching(tmp_path, mocker, sensitivity_metric):
         mode=CompressWeightsMode.INT4_SYM,
         sensitivity_metric=sensitivity_metric,
         dataset=dataset,
+        ratio=0.8,
         advanced_parameters=CompressionParams(statistics_file_path=tmp_path / test_file),
     )
 
