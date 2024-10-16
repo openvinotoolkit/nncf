@@ -14,12 +14,13 @@ from __future__ import annotations
 import inspect
 import types
 from collections import defaultdict
+from contextlib import contextmanager
 from dataclasses import dataclass
 from dataclasses import field
 from itertools import chain
 from types import MethodType
 from types import TracebackType
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type
 from weakref import ReferenceType
 from weakref import ref
 
@@ -112,6 +113,7 @@ class FunctionHookMode(TorchFunctionMode):
         self.module_call_stack: List[nn.Module] = []
         self.nested_enter_count = 0
         self.op_calls: Dict[str, int] = defaultdict(int)
+        self.enabled: bool = True
 
         # Variables for hooks after constant nodes
         self.const_name_map: WeakUnhashableKeyMap[torch.Tensor, str] = WeakUnhashableKeyMap()
@@ -214,7 +216,8 @@ class FunctionHookMode(TorchFunctionMode):
         kwargs = kwargs or {}
 
         fn_name = func.__name__
-        if fn_name in IGNORED_FN_NAMES:
+
+        if not self.enabled or fn_name in IGNORED_FN_NAMES:
             return func(*args, **kwargs)
 
         op_name = self.get_current_executed_op_name(fn_name)
@@ -363,12 +366,15 @@ class FunctionHookMode(TorchFunctionMode):
 
             if isinstance(output, list):
                 for idx, value in enumerate(output):
-                    output[idx] = self.hook_storage.execute_post_function_hooks(op_meta.op_name, idx, value)
+                    output[idx] = self.process_post_function_hooks_for_value(value, op_meta, idx)
                 if cls_tuple is not None:
                     output = cls_tuple(output)
             else:
-                output = self.hook_storage.execute_post_function_hooks(op_meta.op_name, 0, output)
+                output = self.process_post_function_hooks_for_value(output, op_meta, 0)
         return output
+
+    def process_post_function_hooks_for_value(self, value: Any, op_meta: OpMeta, port_id: int) -> Any:
+        return self.hook_storage.execute_post_function_hooks(op_meta.op_name, port_id, value)
 
     def process_model_inputs(self, args: Tuple[Any], kwargs: Dict[str, Any]) -> Tuple[Tuple[Any], Dict[str, Any]]:
         """
@@ -384,13 +390,13 @@ class FunctionHookMode(TorchFunctionMode):
         # Hooks available only for named arguments
         for name, value in bound_arguments.arguments.items():
             if isinstance(value, Tensor):
-                bound_arguments.arguments[name] = self.execute_hooks_for_input(name, value)
+                bound_arguments.arguments[name] = self.execute_hooks_for_model_input(name, value)
 
         return bound_arguments.args, bound_arguments.kwargs
 
-    def execute_hooks_for_input(self, name: str, value: Any) -> Any:
+    def execute_hooks_for_model_input(self, name: str, value: Any) -> Any:
         """
-        Executes the post-hook for an input tensor.
+        Executes the post-hooks for an input tensor.
 
         :param name: The name of the input argument.
         :param value: The value of the input argument.
@@ -406,7 +412,7 @@ class FunctionHookMode(TorchFunctionMode):
         :returns: The processed outputs with hooks applied.
         """
         if isinstance(outputs, Tensor):
-            return self.hook_storage.execute_pre_function_hooks("output", 0, outputs)
+            return self.execute_hooks_for_model_output("output", outputs)
 
         cls_tuple = None
         if isinstance(outputs, tuple):
@@ -416,7 +422,27 @@ class FunctionHookMode(TorchFunctionMode):
             outputs = list(outputs)
             for idx, val in enumerate(outputs):
                 if isinstance(val, Tensor):
-                    outputs[idx] = self.hook_storage.execute_pre_function_hooks(f"output_{idx}", 0, val)
+                    outputs[idx] = self.execute_hooks_for_model_output(f"output_{idx}", val)
         if cls_tuple is not None:
             outputs = cls_tuple(outputs)
         return outputs
+
+    def execute_hooks_for_model_output(self, name: str, value: Any) -> Any:
+        """
+        Executes the pre-hooks for an input tensor.
+
+        :param name: The name of the input argument.
+        :param value: The value of the input argument.
+        :returns: The processed value after the hook is executed.
+        """
+        return self.hook_storage.execute_pre_function_hooks(name, 0, value)
+
+    @contextmanager
+    def disable(self) -> Iterator[None]:
+        """
+        Temporarily disables the function tracing and execution hooks within a context.
+        """
+        ret = self.enabled
+        self.enabled = False
+        yield
+        self.enabled = ret
