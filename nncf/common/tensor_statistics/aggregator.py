@@ -224,11 +224,9 @@ class StatisticsSerializer:
             with gzip.open(file_name, "rb") as f:
                 return pickle.load(f)
         except FileNotFoundError:
-            nncf_logger.error(f"File not found: {file_name}")
-            raise
-        except (pickle.UnpicklingError, IOError) as e:
-            nncf_logger.error(f"Error loading statistics from {file_name}: {e}")
-            raise
+            raise nncf.ValidationError(f"File not found: {file_name}")
+        except (pickle.UnpicklingError, IOError):
+            raise nncf.ValidationError(f"Error loading statistics from {file_name}")
 
     @staticmethod
     def dump_to_file(statistics: Dict[str, TensorType], file_name: str) -> None:

@@ -141,19 +141,6 @@ class RawTensorStatistic(TensorStatistic):
 
 
 @dataclass
-class WeightQuantizationErrorTensorStatistic(TensorStatistic):
-    WEIGHT_QUANTIZATION_ERROR_STATS: ClassVar[str] = "weight_quantization_error"
-
-    weight_quantization_error: Tensor
-
-    def get_data(self):
-        return self.weight_quantization_error
-
-    def load_data(self, weight_quantization_error):
-        self.weight_quantization_error = weight_quantization_error
-
-
-@dataclass
 class HessianTensorStatistic(TensorStatistic):
     HESSIAN_INPUT_ACTIVATION_STATS: ClassVar[str] = "hessian"
 
@@ -263,10 +250,6 @@ def build_statistic_container(
         return statistic_container_cls(mean_variance=kwargs[MeanVarianceTensorStatistic.MEAN_VARIANCE_STAT])
     if issubclass(statistic_container_cls, HessianTensorStatistic):
         return statistic_container_cls(hessian=kwargs[HessianTensorStatistic.HESSIAN_INPUT_ACTIVATION_STATS])
-    if issubclass(statistic_container_cls, WeightQuantizationErrorTensorStatistic):
-        return statistic_container_cls(
-            weight_quantization_error=kwargs[WeightQuantizationErrorTensorStatistic.WEIGHT_QUANTIZATION_ERROR_STATS]
-        )
     raise nncf.InternalError(
         f"Statistic collector class {statistic_container_cls} is not supported by the TensorCollector class."
     )
