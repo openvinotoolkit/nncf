@@ -573,7 +573,7 @@ Below are the tables showing the accuracy/footprint trade-off for `meta-llama/Ll
 `microsoft/Phi-3-mini-4k-instruct` compressed with different options.
 
 Compression ratio is defined as the ratio between the size of fp32 model and size of the compressed one.
-Accuracy metrics are measured on 3 tasks [lambada openai](https://huggingface.co/datasets/EleutherAI/lambada_openai), [wikitext](https://arxiv.org/pdf/1609.07843.pdf), [WWB](https://github.com/openvinotoolkit/openvino.genai/tree/master/llm_bench/python/who_what_benchmark/whowhatbench).
+Accuracy metrics are measured on 3 tasks [lambada openai](https://huggingface.co/datasets/EleutherAI/lambada_openai), [wikitext](https://arxiv.org/pdf/1609.07843.pdf), [WWB](https://github.com/openvinotoolkit/openvino.genai/tree/master/tools/who_what_benchmark).
 The `average relative error` in the tables below is the mean of relative errors for each of four tasks with respect to
 the metric value for fp32 model. All int4 models are compressed group-wise with `group_size=64` and `mode=CompressionMode.INT4_ASYM` and
 with calibration dataset based on 128 samples from `wikitext-2-v1`. Int8 model is compressed with `mode=CompressionMode.INT8_ASYM`.

@@ -22,4 +22,4 @@ def test_visualization_of_compression_results(tmp_path):
     md_file = tmp_path / (in_file.stem + ".md")
     assert md_file.exists()
     assert md_file.with_suffix(".png").exists()
-    assert ref_md_file.read_text() == md_file.read_text()
+    assert ref_md_file.read_text()[:-1] == md_file.read_text()  # ref file ends with a newline character by code style
