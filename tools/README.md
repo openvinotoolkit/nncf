@@ -129,9 +129,9 @@ The result of the script is a .md file with a table:
 | int4                                      | 100%    | 0%      |                | 11.9%                          | 7.1x                  |
 
 Also it plots a trade-off between accuracy and footprint by processing a CSV file in a specific format.
-The resulting images are employed for [the relevant section](docs/usage/post_training_compression/weights_compression/Usage.md#accuracyfootprint-trade-off) in the Weight Compression documentation:
+The resulting images are employed for [the relevant section](/docs/usage/post_training_compression/weights_compression/Usage.md#accuracyfootprint-trade-off) in the Weight Compression documentation:
 
-![alt text](../docs/usage/post_training_compression/weights_compression/phi3_asym.png)
+![alt text](/docs/usage/post_training_compression/weights_compression/phi3_asym.png)
 
 ### CSV-file format
 
