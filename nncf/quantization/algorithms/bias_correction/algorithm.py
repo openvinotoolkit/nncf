@@ -420,7 +420,7 @@ class BiasCorrection(Algorithm):
         """
         output_fp = self._get_fp_outputs(statistic_points, node.node_name)
         output_tensor_name = self._backend_entity.get_output_name(model, node.node_name, OUTPUT_PORT_OF_NODE)
-        engine = EngineFactory.create(model)
+        engine = EngineFactory.create(model, use_fp32_precision=True)
         channel_axis = node.metatype.output_channel_axis
         q_outputs = []
         for feed_dict in feed_dicts:
@@ -469,7 +469,7 @@ class BiasCorrection(Algorithm):
         :param feed_dicts: List of dictionaries with the input data for the subgraph.
         :param subgraph_data: A dictionary with the needed list of the statistic nodes that will be updated.
         """
-        engine = EngineFactory.create(model)
+        engine = EngineFactory.create(model, use_fp32_precision=True)
         for feed_dict in feed_dicts:
             new_q_output = engine.infer(feed_dict)
             for output_node_name, output_id in subgraph_data["subgraph_output_ids"]:
