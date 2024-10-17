@@ -617,7 +617,7 @@ def compress_weights(
         and not Path(advanced_parameters.statistics_file_path).exists()
     )
     if is_to_cache_statistics:
-        from nncf.openvino.quantization.collect_statistics import cache_statistics
+        from nncf.openvino.quantization.cache_statistics import cache_statistics
 
         cache_statistics(
             model,

@@ -17,16 +17,9 @@ from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 
 
-def _register_main_algorithm(statistics_aggregator, model, graph, subset_size, compression_algorithm):
-    nodes_to_compress = compression_algorithm._get_nodes_to_compress(graph)
-    matmul_nodes_to_compress = [
-        node for node in nodes_to_compress if node.metatype in compression_algorithm._backend_entity.matmul_metatypes
-    ]
-
-    matmul_input_to_output_nodes_map = compression_algorithm._get_matmul_input_to_output_nodes_map(
-        matmul_nodes_to_compress, graph
-    )
-
+def _register_main_algorithm(
+    statistics_aggregator, model, graph, subset_size, compression_algorithm, matmul_input_to_output_nodes_map
+):
     statistic_points = compression_algorithm.get_statistic_points(
         model, graph, matmul_input_to_output_nodes_map.keys(), subset_size
     )
@@ -63,10 +56,14 @@ def register_statistics(statistics_aggregator, model, graph, subset_size, compre
     matmul_nodes_to_compress = [
         node for node in nodes_to_compress if node.metatype in compression_algorithm._backend_entity.matmul_metatypes
     ]
-
-    _register_main_algorithm(statistics_aggregator, model, graph, subset_size, compression_algorithm)
+    matmul_input_to_output_nodes_map = compression_algorithm._get_matmul_input_to_output_nodes_map(
+        matmul_nodes_to_compress, graph
+    )
+    _register_main_algorithm(
+        statistics_aggregator, model, graph, subset_size, compression_algorithm, matmul_input_to_output_nodes_map
+    )
     _register_gptq(statistics_aggregator, model, graph, matmul_nodes_to_compress, subset_size)
-    _register_mixed_precision(statistics_aggregator, model, graph, matmul_nodes_to_compress, subset_size)
+    _register_mixed_precision(statistics_aggregator, model, graph, matmul_input_to_output_nodes_map, subset_size)
 
 
 def cache_statistics(
