@@ -100,6 +100,7 @@ class StatisticsAggregator(ABC):
         """
         loaded_data = StatisticsSerializer.load_from_file(file_name)
         self._load_statistics(loaded_data)
+        nncf_logger.info("Statistics were successfully loaded from a file {file_name}.")
 
     def _load_statistics(self, data: Dict[str, Any]) -> None:
         """
@@ -122,6 +123,7 @@ class StatisticsAggregator(ABC):
         """
         data_to_dump = self._prepare_statistics()
         StatisticsSerializer.dump_to_file(data_to_dump, file_name)
+        nncf_logger.info("Statistics were successfully saved to a file {file_name}.")
 
     def _prepare_statistics(self) -> Dict[str, Any]:
         """
