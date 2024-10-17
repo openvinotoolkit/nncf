@@ -120,6 +120,7 @@ def quantize(model: ov.Model, data_loader: torch.utils.data.DataLoader, validato
     quantized_model = nncf.quantize(
         model,
         quantization_dataset,
+        subset_size=128,
         preset=nncf.QuantizationPreset.MIXED,
         ignored_scope=nncf.IgnoredScope(
             types=["Multiply", "Subtract", "Sigmoid"],
