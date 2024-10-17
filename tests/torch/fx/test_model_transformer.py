@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Tuple
@@ -29,6 +30,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
@@ -48,6 +50,7 @@ from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from tests.torch.fx.test_sanity import count_q_dq
 from tests.torch.test_compressed_graph import check_graph
+from tests.torch.test_models.synthetic import ConstantFoldingTestModel
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
 from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
@@ -478,3 +481,15 @@ def test_update_shared_constant():
     fx_node_to_check_const_value = get_tensor_constant_from_node(fx_node_to_check_const, captured_model)
 
     assert fx_node_to_check_const_value == torch.tensor([100])
+
+
+def test_constant_folding():
+    model = ConstantFoldingTestModel()
+    captured_model = _capture_model(model, torch.ones(model.INPUT_SIZE))
+    folded_model = deepcopy(captured_model)
+    constant_fold(folded_model)
+    ex_input = torch.ones(model.INPUT_SIZE)
+    assert torch.allclose(captured_model(ex_input), folded_model(ex_input))
+
+    nncf_graph = GraphConverter.create_nncf_graph(folded_model)
+    check_graph(nncf_graph, "folded_model.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
