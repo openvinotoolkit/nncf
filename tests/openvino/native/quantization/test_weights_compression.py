@@ -1469,5 +1469,5 @@ def test_weight_compression_caching(tmp_path, mocker, sensitivity_metric):
     )
 
     assert collect_statistics_spy.call_count == 1, "Statistics should only be collected once"
-    assert load_statistics_from_file_spy.call_count == 1, "Statistics should be loaded from file only once."
-    assert dump_statistics_spy.call_count == 1, "Statistics should only be dumped once, but were dumped multiple times."
+    assert load_statistics_from_file_spy.call_count == 2, "Statistics should be loaded from file twice."
+    assert dump_statistics_spy.call_count == 1, "Statistics should only be dumped once."

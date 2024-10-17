@@ -314,6 +314,10 @@ class HAWQCriterion(DataBasedCriterion):
 
     STAT_KEY = SensitivityMetric.HESSIAN_INPUT_ACTIVATION.value
 
+    def __init__(self, primary_config: WeightCompressionConfig, ratio: float):
+        super().__init__(primary_config, ratio)
+        self._algorithm_key += "_" + self.STAT_KEY
+
     def _calc_weight_sensitivity(
         self,
         weight_param: WeightCompressionParameters,
@@ -348,6 +352,10 @@ class MeanVarianceCriterion(DataBasedCriterion):
 
     STAT_KEY = SensitivityMetric.MEAN_ACTIVATION_VARIANCE.value
 
+    def __init__(self, primary_config: WeightCompressionConfig, ratio: float):
+        super().__init__(primary_config, ratio)
+        self._algorithm_key += "_" + self.STAT_KEY
+
     def _get_statistic_collector(self, subset_size=None):
         # Reducing across the second-last dimension, assuming it is the sequence length dimension
         return self._backend_entity.mean_variance_statistic_collector(reduction_axes=(-2,), subset_size=subset_size)
@@ -361,6 +369,10 @@ class MaxVarianceCriterion(DataBasedCriterion):
 
     STAT_KEY = SensitivityMetric.MAX_ACTIVATION_VARIANCE.value
 
+    def __init__(self, primary_config: WeightCompressionConfig, ratio: float):
+        super().__init__(primary_config, ratio)
+        self._algorithm_key += "_" + self.STAT_KEY
+
     def _get_statistic_collector(self, subset_size=None):
         # Reducing across the second-last dimension, assuming it is the sequence length dimension
         return self._backend_entity.max_variance_statistic_collector(reduction_axes=(-2,), subset_size=subset_size)
@@ -373,6 +385,10 @@ class MeanMaxCriterion(DataBasedCriterion):
     """
 
     STAT_KEY = SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE.value
+
+    def __init__(self, primary_config: WeightCompressionConfig, ratio: float):
+        super().__init__(primary_config, ratio)
+        self._algorithm_key += "_" + self.STAT_KEY
 
     def _get_statistic_collector(self, subset_size=None):
         # Reducing across the second-last dimension, assuming it is the sequence length dimension

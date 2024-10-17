@@ -16,6 +16,7 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Unio
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
+import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.logging import nncf_logger
@@ -29,6 +30,7 @@ from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
+from nncf.openvino.quantization.cache_statistics import register_statistics
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
 from nncf.openvino.rt_info import dump_parameters
 from nncf.parameters import BackupMode
@@ -47,8 +49,6 @@ from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_ac
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
-from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
-from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.quantize_model import BATCHWISE_STATISTICS_WARNING
 from nncf.quantization.quantize_model import is_model_no_batchwise_support
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
@@ -408,62 +408,14 @@ def compress_weights_impl(
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)
-    compression_algorithm._set_backend_entity(model)
-    statistic_points = None
+
+    statistics_points = None
     if advanced_parameters and advanced_parameters.statistics_file_path:
-        # Main algo
-        statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
-
-        nodes_to_compress = compression_algorithm._get_nodes_to_compress(graph)
-        matmul_nodes_to_compress = [
-            node
-            for node in nodes_to_compress
-            if node.metatype in compression_algorithm._backend_entity.matmul_metatypes
-        ]
-
-        matmul_input_to_output_nodes_map = compression_algorithm._get_matmul_input_to_output_nodes_map(
-            matmul_nodes_to_compress, graph
-        )
-        statistic_points = compression_algorithm.get_statistic_points(
-            model, graph, matmul_input_to_output_nodes_map.keys(), subset_size
-        )
-        statistics_aggregator.register_statistic_points(statistic_points)
-
-        # GPTQ
-        gptq_params = advanced_parameters.gptq_params
-        gptq_algo = GPTQ(
-            damp_percent=gptq_params.damp_percent,
-            block_size=gptq_params.block_size,
-            subset_size=subset_size,
-            scale_estimation=True,
-        )
-
-        statistic_points = gptq_algo.get_statistic_points(model, graph, matmul_nodes_to_compress)
-        statistics_aggregator.register_statistic_points(statistic_points)
-
-        # MixedPrecsion
-        sensitivities_to_collect = [
-            SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
-            SensitivityMetric.MEAN_ACTIVATION_VARIANCE,
-            SensitivityMetric.MAX_ACTIVATION_VARIANCE,
-            SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
-        ]
-        for sensitivity in sensitivities_to_collect:
-            criterion_cls = MIXED_PRECISION_CRITERIA.get(sensitivity)
-            mixed_prec_algo = criterion_cls(None, None)
-            statistic_points = mixed_prec_algo.get_statistic_points(
-                model, graph, matmul_input_to_output_nodes_map.keys(), subset_size
-            )
-            statistics_aggregator.register_statistic_points(statistic_points)
-            del mixed_prec_algo
-            print(f"Statistics for {sensitivity} were registered")
         if not Path(advanced_parameters.statistics_file_path).exists():
-            statistics_aggregator.collect_statistics(model, graph)
-            statistics_aggregator.dump_statistics(advanced_parameters.statistics_file_path)
-            print("Statistics are saved")
-        else:
-            statistics_aggregator.load_statistics_from_file(advanced_parameters.statistics_file_path)
-            print("Statistics are loaded")
-        statistic_points = statistics_aggregator.statistic_points
+            raise nncf.InternalError("File with cached statistics is not found.")
+        statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
+        register_statistics(statistics_aggregator, model, graph, subset_size, compression_algorithm)
+        statistics_aggregator.load_statistics_from_file(advanced_parameters.statistics_file_path)
+        statistics_points = statistics_aggregator.statistic_points
 
-    return compression_algorithm.apply(model, graph, dataset=dataset, statistic_points=statistic_points)
+    return compression_algorithm.apply(model, graph, statistics_points, dataset)

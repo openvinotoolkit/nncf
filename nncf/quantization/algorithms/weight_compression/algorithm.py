@@ -366,7 +366,7 @@ class WeightCompression(Algorithm):
     ) -> TModel:
         self._set_backend_entity(model)
         nodes_to_compress = self._get_nodes_to_compress(graph)
-
+        is_statistics_provided = statistic_points is not None
         statistics = None
 
         if self._data_aware_mixed_precision or self._data_aware_compression:
@@ -376,10 +376,12 @@ class WeightCompression(Algorithm):
             matmul_input_to_output_nodes_map = self._get_matmul_input_to_output_nodes_map(
                 matmul_nodes_to_compress, graph
             )
-            if statistic_points:
-                statistics = self._get_statistics(matmul_input_to_output_nodes_map, statistic_points)
-            else:
-                statistics = self._collect_statistics(dataset, matmul_input_to_output_nodes_map, graph, model)
+            if not is_statistics_provided:
+                statistic_points = self._collect_statistics(dataset, matmul_input_to_output_nodes_map, graph, model)
+            if statistic_points is not None:
+                statistics = self._get_statistics_for_weights_compression(
+                    matmul_input_to_output_nodes_map, statistic_points
+                )
 
         all_weight_params: List[WeightCompressionParameters] = []
         weight_names = set()
@@ -484,6 +486,8 @@ class WeightCompression(Algorithm):
         description = "Applying Weight Compression"
         if self._gptq:
             del statistics
+            if not is_statistics_provided:
+                statistic_points = None
             model, scales, zero_points = self._gptq_algo.apply(
                 model=model,
                 graph=graph,
@@ -582,8 +586,6 @@ class WeightCompression(Algorithm):
         :param model: Model for statistics collection.
         """
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
-        statistic_points = None
-
         if self._data_aware_mixed_precision:
             mixed_precision_statistics = self._mixed_precision_algo.get_statistic_points(
                 model, graph, matmul_input_to_output_nodes_map.keys(), self._subset_size
@@ -596,11 +598,7 @@ class WeightCompression(Algorithm):
             statistics_aggregator.register_statistic_points(statistic_points)
 
         statistics_aggregator.collect_statistics(model, graph)
-
-        statistics = None
-        if statistic_points is not None:
-            statistics = self._get_statistics(matmul_input_to_output_nodes_map, statistic_points)
-        return statistics
+        return statistics_aggregator.statistic_points
 
     def get_statistic_points(
         self,
@@ -638,10 +636,12 @@ class WeightCompression(Algorithm):
 
         return statistic_container
 
-    def _get_statistics(
+    def _get_statistics_for_weights_compression(
         self, matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]], statistic_points
     ) -> Dict[str, WCTensorStatistic]:
         """
+        # TODO: add clarification that THIS FUNCTION IS ONLY FOR WC STATISTICS, NOT MIXED PRECISION
+
         Retrieve collected statistics.
 
         :param matmul_input_to_output_nodes_map: A mapping from activation node and a port id to corresponding matmul
@@ -672,11 +672,13 @@ class WeightCompression(Algorithm):
                     act_node.node_name, partial(input_filter_func, port_id=output_port_id), self._algorithm_key
                 )
             )
-            assert len(tensor_collectors) == 1
-            stats = tensor_collectors[0].get_statistics()
+            # TODO: need better clarification
+            # Statistics could be empty in case when the statistics have only other algorithms but not WC statistics
+            if tensor_collectors:
+                assert len(tensor_collectors) == 1
+                stats = tensor_collectors[0].get_statistics()
 
-            # Each activation node may have multiple MatMul nodes which it is an input to
-            for node in matmul_nodes:
-                statistics[node.node_name] = copy.deepcopy(stats)
-
+                # Each activation node may have multiple MatMul nodes which it is an input to
+                for node in matmul_nodes:
+                    statistics[node.node_name] = copy.deepcopy(stats)
         return statistics

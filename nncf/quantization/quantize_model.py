@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import nncf
@@ -609,6 +610,32 @@ def compress_weights(
 
     if compression_weights_impl is None:
         raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
+
+    is_to_cache_statistics = (
+        advanced_parameters
+        and advanced_parameters.statistics_file_path
+        and not Path(advanced_parameters.statistics_file_path).exists()
+    )
+    if is_to_cache_statistics:
+        from nncf.openvino.quantization.collect_statistics import cache_statistics
+
+        cache_statistics(
+            model,
+            dataset,
+            mode,
+            ratio,
+            group_size,
+            ignored_scope,
+            all_layers,
+            sensitivity_metric,
+            awq,
+            subset_size,
+            scale_estimation,
+            gptq,
+            lora_correction,
+            backup_mode,
+            advanced_parameters,
+        )
 
     return compression_weights_impl(
         model,
