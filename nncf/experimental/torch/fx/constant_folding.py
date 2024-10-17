@@ -18,7 +18,7 @@ import torch.utils._pytree as pytree
 aten = torch.ops.aten
 
 
-def replace_node_with_constant(
+def _replace_node_with_constant(
     gm: torch.fx.GraphModule,
     node: torch.fx.Node,
     constant: torch.Tensor,
@@ -52,13 +52,13 @@ def replace_node_with_constant(
     setattr(gm, qualname, constant)
 
 
-def is_const_source(node: torch.fx.Node, lifted_constants: Optional[Dict[str, Any]]) -> bool:
+def _is_const_source(node: torch.fx.Node, lifted_constants: Optional[Dict[str, Any]]) -> bool:
     return node.op == "get_attr" or (
         node.op == "placeholder" and lifted_constants is not None and node.name in lifted_constants
     )
 
 
-class ConstantFolder(torch.fx.Interpreter):
+class _ConstantFolder(torch.fx.Interpreter):
     def __init__(
         self,
         gm: torch.fx.GraphModule,
@@ -101,7 +101,7 @@ class ConstantFolder(torch.fx.Interpreter):
                 and len(node.users) == 1
                 and is_woq_int8_pattern(next(iter(node.users)))
             )
-        ) and is_const_source(
+        ) and _is_const_source(
             node.args[0], self.lifted_constants  # type: ignore[arg-type]
         ):
             # Case 1: int8_weight -> dq -> bf16_weight
@@ -180,7 +180,7 @@ class ConstantFolder(torch.fx.Interpreter):
         # TODO - more complicated strategy
         if (
             self.skip_constructors
-            and not is_const_source(node, self.lifted_constants)
+            and not _is_const_source(node, self.lifted_constants)
             and not any(isinstance(e, torch.Tensor) for e in flattened_inputs)
         ):
             return self.unknown_value
@@ -193,7 +193,7 @@ class ConstantFolder(torch.fx.Interpreter):
         if out == self.unknown_value:
             return self.unknown_value
 
-        if not is_const_source(node, self.lifted_constants) and isinstance(out, torch.Tensor):
+        if not _is_const_source(node, self.lifted_constants) and isinstance(out, torch.Tensor):
             if out.device.type == "meta":
                 return out
 
@@ -247,11 +247,11 @@ def constant_fold(
     :param gm: Given graph model.
     """
     with torch.utils._python_dispatch._disable_current_modes():
-        cf = ConstantFolder(gm, skip_constructors=True)
+        cf = _ConstantFolder(gm, skip_constructors=True)
         cf.run()
 
         for node, constant in cf.node_replacements.items():
-            replace_node_with_constant(gm, node, constant)
+            _replace_node_with_constant(gm, node, constant)
 
         erased_params = []
         for node in gm.graph.find_nodes(op="get_attr"):
