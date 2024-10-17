@@ -373,7 +373,12 @@ class ScaleEstimation:
 
     @staticmethod
     def activations_to_wc_statistics(activations: List[Tensor]) -> WCTensorStatistic:
-        # The code below mimics the logic from WeightCompression.get_statistic_points
+        """
+        Mimic the activation reducing logic from WeightCompression.get_statistic_points.
+
+        :param activations: List of raw activations.
+        :return: Instance of WCTensorStatistic class containing reduced activations and shapes.
+        """
         mean_values = []
         shapes = []
         for act in activations:
