@@ -30,6 +30,7 @@ from nncf.openvino.graph.node_utils import get_const_value
 from nncf.parameters import BackupMode
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
+from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
@@ -1377,29 +1378,42 @@ def test_data_aware_algo_with_different_activation_dimensions(n_extra_dims):
         group_size=-1,
         dataset=dataset,
         awq=True,
+        ratio=0.5,
+        sensitivity_metric=SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
     )
 
 
-@pytest.mark.parametrize("n_extra_dims,raises", ([0, True], (1, False), (2, False)))
-def test_data_aware_mixed_precision_with_different_activation_dimensions(n_extra_dims, raises):
-    model = AWQMatmulModel(n_extra_dims=n_extra_dims).ov_model
-    dataset = Dataset([np.ones([1] * n_extra_dims + [8, 8])])
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        dict(scale_estimation=True),
+        dict(lora_correction=True),
+        dict(
+            gptq=True,
+            scale_estimation=True,
+            advanced_parameters=CompressionParams(gptq_params=GPTQParams(subset_size=2)),
+        ),
+        dict(
+            awq=True,
+            gptq=True,
+            scale_estimation=True,
+            advanced_parameters=CompressionParams(gptq_params=GPTQParams(subset_size=2)),
+        ),
+    ],
+)
+def test_compression_with_different_algo_combinations(kwargs):
+    dataset_size = 4
+    model = LMLinearModel().ov_model
+    input_data = [np.ones(inp.shape) for inp in model.inputs] * dataset_size
+    dataset = Dataset(input_data)
 
-    def call_compression():
-        compress_weights(
-            model,
-            mode=CompressWeightsMode.INT4_ASYM,
-            ratio=0.5,
-            sensitivity_metric=SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
-            group_size=-1,
-            dataset=dataset,
-        )
-
-    if raises:
-        with pytest.raises(RuntimeError) as exc_info:
-            call_compression()
-        assert "Data-aware mixed precision criteria are not supported for MatMuls with 1D/2D activations." in str(
-            exc_info.value
-        )
-    else:
-        call_compression()
+    compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=1.0,
+        group_size=8,
+        subset_size=2,
+        dataset=dataset,
+        all_layers=True,
+        **kwargs,
+    )
