@@ -569,14 +569,13 @@ Here is the perplexity and accuracy with data-free and data-aware mixed-precisio
 
 #### Accuracy/Footprint trade-off
 
-Below are the tables showing the accuracy/footprint trade-off for `Qwen/Qwen2-7B` and
+Below are the tables showing the accuracy/footprint trade-off for `meta-llama/Llama-2-7b-chat-hf` and
 `microsoft/Phi-3-mini-4k-instruct` compressed with different options.
 
 Compression ratio is defined as the ratio between the size of fp32 model and size of the compressed one.
-Accuracy metrics are measured on 4 tasks [lambada openai](https://huggingface.co/datasets/EleutherAI/lambada_openai), [wikitext](https://arxiv.org/pdf/1609.07843.pdf),
-[winogrande](https://arxiv.org/abs/1907.10641), [WWB](https://github.com/openvinotoolkit/openvino.genai/tree/master/llm_bench/python/who_what_benchmark/whowhatbench).
+Accuracy metrics are measured on 3 tasks [lambada openai](https://huggingface.co/datasets/EleutherAI/lambada_openai), [wikitext](https://arxiv.org/pdf/1609.07843.pdf), [WWB](https://github.com/openvinotoolkit/openvino.genai/tree/master/tools/who_what_benchmark).
 The `average relative error` in the tables below is the mean of relative errors for each of four tasks with respect to
-the metric value for fp32 model. All int4 models are compressed group-wise with `group_size=128` and `mode=CompressionMode.INT4_SYM` and
+the metric value for fp32 model. All int4 models are compressed group-wise with `group_size=64` and `mode=CompressionMode.INT4_ASYM` and
 with calibration dataset based on 128 samples from `wikitext-2-v1`. Int8 model is compressed with `mode=CompressionMode.INT8_ASYM`.
 The following advanced parameters were used for AWQ, Scale Estimation and Lora Correction algorithms:
 
@@ -590,229 +589,44 @@ AdvancedCompressionParameters(
 
 The tables clearly shows the followings:
 
-- More layers in 8 bit does improve accuracy, but it increases the footprint a lot.
-- Scale Estimation, AWQ, GPTQ do improve accuracy of the baseline int4 model without footprint increase.
-- Lora correction algorithm improves the accuracy of int4 models further with a footprint much less compared to mixed-precision models with the same or worse accuracy.
+- More layers in 8 bit does improve accuracy, but it also increases the footprint significantly.
+- Scale Estimation, AWQ, GPTQ improve the accuracy of the baseline int4 model without increasing the footprint.
+- The Lora Correction algorithm further improves the accuracy of int4 models with a much smaller footprint compared to mixed-precision models that have the same or worse accuracy.
 
-Accuracy/footprint trade-off for `Qwen/Qwen2-7B`:
+Accuracy/footprint trade-off for `meta-llama/Llama-2-7b-chat-hf`:
 
-<div class="tg-wrap"><table><thead>
-  <tr>
-    <th>Mode </th>
-    <th>%int4</th>
-    <th>%int8</th>
-    <th>lora<br>rank</th>
-    <th>average<br>relative<br>error</th>
-    <th>compression<br>rate</th>
-  </tr></thead>
-<tbody>
-  <tr>
-    <td>fp32</td>
-    <td>0%</td>
-    <td>0%</td>
-    <td></td>
-    <td>0.0%</td>
-    <td>1.0x</td>
-  </tr>
-  <tr>
-    <td>int8</td>
-    <td>0%</td>
-    <td>100%</td>
-    <td></td>
-    <td>7.9%</td>
-    <td>3.9x</td>
-  </tr>
-  <tr>
-    <td>int4 + awq + scale&nbsp;estimation + lora&nbsp;correction</td>
-    <td>100%</td>
-    <td>0%</td>
-    <td>256</td>
-    <td>16.5%</td>
-    <td>5.8x</td>
-  </tr>
-  <tr>
-    <td>int4 + awq + scale&nbsp;estimation</td>
-    <td>40%</td>
-    <td>60%</td>
-    <td></td>
-    <td>17.1%</td>
-    <td>4.7x</td>
-  </tr>
-  <tr>
-    <td>int4 + awq + scale&nbsp;estimation</td>
-    <td>60%</td>
-    <td>40%</td>
-    <td></td>
-    <td>17.1%</td>
-    <td>5.2x</td>
-  </tr>
-  <tr>
-    <td>int4 + awq + scale&nbsp;estimation + lora&nbsp;correction</td>
-    <td>100%</td>
-    <td>0%</td>
-    <td>32</td>
-    <td>17.4%</td>
-    <td>6.5x</td>
-  </tr>
-  <tr>
-    <td>int4 + awq + scale&nbsp;estimation + lora&nbsp;correction</td>
-    <td>100%</td>
-    <td>0%</td>
-    <td>8</td>
-    <td>17.5%</td>
-    <td>6.6x</td>
-  </tr>
-  <tr>
-    <td>int4 + awq + scale&nbsp;estimation</td>
-    <td>80%</td>
-    <td>20%</td>
-    <td></td>
-    <td>17.5%</td>
-    <td>5.8x</td>
-  </tr>
-  <tr>
-    <td>int4 + awq + scale&nbsp;estimation + lora&nbsp;correction</td>
-    <td>100%</td>
-    <td>0%</td>
-    <td>16</td>
-    <td>18.0%</td>
-    <td>6.6x</td>
-  </tr>
-  <tr>
-    <td>int4 + awq + scale&nbsp;estimation</td>
-    <td>100%</td>
-    <td>0%</td>
-    <td></td>
-    <td>18.4%</td>
-    <td>6.7x</td>
-  </tr>
-  <tr>
-    <td>int4 + awq + scale&nbsp;estimation + gptq</td>
-    <td>100%</td>
-    <td>0%</td>
-    <td></td>
-    <td>20.2%</td>
-    <td>6.7x</td>
-  </tr>
-  <tr>
-    <td>int4</td>
-    <td>100%</td>
-    <td>0%</td>
-    <td></td>
-    <td>21.4%</td>
-    <td>6.7x</td>
-  </tr>
-</tbody></table></div>
+| mode                                            | %int4   | %int8   | lora<br>rank   | average<br>relative<br>error   | compression<br>rate   |
+|:------------------------------------------------|:--------|:--------|:---------------|:-------------------------------|:----------------------|
+| fp32                                            | 0%      | 0%      |                | 0.0%                           | 1.0x                  |
+| int4 + awq + scale estimation + lora correction | 100%    | 0%      | 256.0          | 2.5%                           | 6.1x                  |
+| int4 + awq + scale estimation                   | 40%     | 60%     |                | 2.5%                           | 4.8x                  |
+| int4 + awq + scale estimation                   | 60%     | 40%     |                | 2.7%                           | 5.4x                  |
+| int4 + awq + scale estimation                   | 80%     | 20%     |                | 3.5%                           | 6.2x                  |
+| int4 + awq + scale estimation + lora correction | 100%    | 0%      | 128.0          | 3.6%                           | 6.6x                  |
+| int4 + awq + scale estimation + lora correction | 100%    | 0%      | 32.0           | 3.9%                           | 7.0x                  |
+| int4 + awq + scale estimation + gptq            | 100%    | 0%      |                | 4.1%                           | 7.2x                  |
+| int4 + awq + scale estimation                   | 100%    | 0%      |                | 5.3%                           | 7.2x                  |
+| int4                                            | 100%    | 0%      |                | 8.5%                           | 7.2x                  |
+
+![alt text](llama2_asym.png)
 
 Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
 
-<div class="tg-wrap"><table><thead>
-  <tr>
-    <th>Mode </th>
-    <th>%int4</th>
-    <th>%int8</th>
-    <th>lora<br>rank</th>
-    <th>average<br>relative<br>error</th>
-    <th>compression<br>rate</th>
-  </tr></thead>
-<tbody>
-  <tr>
-    <td>fp32</td>
-    <td>0%</td>
-    <td>0%</td>
-    <td></td>
-    <td>0.0%</td>
-    <td>1.0x</td>
-  </tr>
-  <tr>
-    <td>int8</td>
-    <td>0%</td>
-    <td>100%</td>
-    <td></td>
-    <td>7.3%</td>
-    <td>4.0x</td>
-  </tr>
-  <tr>
-    <td>int4 + scale&nbsp;estimation</td>
-    <td>40%</td>
-    <td>60%</td>
-    <td></td>
-    <td>16.9%</td>
-    <td>4.9x</td>
-  </tr>
-  <tr>
-    <td>int4 + scale&nbsp;estimation</td>
-    <td>60%</td>
-    <td>40%</td>
-    <td></td>
-    <td>18.4%</td>
-    <td>5.5x</td>
-  </tr>
-  <tr>
-    <td>int4 + scale&nbsp;estimation + lora&nbsp;correction</td>
-    <td>100%</td>
-    <td>0%</td>
-    <td>256</td>
-    <td>18.7%</td>
-    <td>6.2x</td>
-  </tr>
-  <tr>
-    <td>int4 + scale&nbsp;estimation + lora&nbsp;correction</td>
-    <td>100%</td>
-    <td>0%</td>
-    <td>16</td>
-    <td>20.5%</td>
-    <td>7.3x</td>
-  </tr>
-  <tr>
-    <td>int4 + scale&nbsp;estimation + lora&nbsp;correction</td>
-    <td>100%</td>
-    <td>0%</td>
-    <td>32</td>
-    <td>20.6%</td>
-    <td>7.2x</td>
-  </tr>
-  <tr>
-    <td>int4 + scale&nbsp;estimation</td>
-    <td>80%</td>
-    <td>20%</td>
-    <td></td>
-    <td>21.3%</td>
-    <td>6.3x</td>
-  </tr>
-  <tr>
-    <td>int4 + scale&nbsp;estimation + gptq</td>
-    <td>100%</td>
-    <td>0%</td>
-    <td></td>
-    <td>21.7%</td>
-    <td>7.4x</td>
-  </tr>
-  <tr>
-    <td>int4 + scale&nbsp;estimation + lora&nbsp;correction</td>
-    <td>100%</td>
-    <td>0%</td>
-    <td>8</td>
-    <td>22.1%</td>
-    <td>7.3x</td>
-  </tr>
-  <tr>
-    <td>int4 + scale&nbsp;estimation</td>
-    <td>100%</td>
-    <td>0%</td>
-    <td></td>
-    <td>24.5%</td>
-    <td>7.4x</td>
-  </tr>
-  <tr>
-    <td>int4</td>
-    <td>100%</td>
-    <td>0%</td>
-    <td></td>
-    <td>25.3%</td>
-    <td>7.4x</td>
-  </tr>
-</tbody></table></div>
+| mode                                      | %int4   | %int8   | lora<br>rank   | average<br>relative<br>error   | compression<br>rate   |
+|:------------------------------------------|:--------|:--------|:---------------|:-------------------------------|:----------------------|
+| fp32                                      | 0%      | 0%      |                | 0.0%                           | 1.0x                  |
+| int8                                      | 0%      | 100%    |                | 1.0%                           | 4.0x                  |
+| int4 + scale estimation + lora correction | 100%    | 0%      | 256.0          | 3.9%                           | 6.0x                  |
+| int4 + scale estimation                   | 40%     | 60%     |                | 4.1%                           | 4.8x                  |
+| int4 + scale estimation                   | 60%     | 40%     |                | 4.3%                           | 5.4x                  |
+| int4 + scale estimation + lora correction | 100%    | 0%      | 128.0          | 4.6%                           | 6.5x                  |
+| int4 + scale estimation                   | 80%     | 20%     |                | 5.7%                           | 6.1x                  |
+| int4 + scale estimation + lora correction | 100%    | 0%      | 8.0            | 5.8%                           | 7.1x                  |
+| int4 + scale estimation + gptq            | 100%    | 0%      |                | 6.1%                           | 7.1x                  |
+| int4 + scale estimation                   | 100%    | 0%      |                | 7.5%                           | 7.1x                  |
+| int4                                      | 100%    | 0%      |                | 11.9%                          | 7.1x                  |
+
+![alt text](phi3_asym.png)
 
 ### Limitations
 

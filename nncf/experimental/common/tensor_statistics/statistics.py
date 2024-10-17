@@ -247,16 +247,14 @@ class WCTensorStatistic(TensorStatistic):
     def keys(cls):
         return [cls.MEAN_STAT, cls.SHAPE_STAT]
 
-    def __eq__(self, other: WCTensorStatistic):
-        if isinstance(other, WCTensorStatistic):
-            for self_v, other_v in zip(self.mean_values, other.mean_values):
-                if not fns.allclose(self_v, other_v):
-                    return False
-            for self_v, other_v in zip(self.shape_values, other.shape_values):
-                if not fns.allclose(self_v, other_v):
-                    return False
-            return True
-        return False
+    def __eq__(self, other: Any) -> bool:
+        shapes_equal = all(self.shapes[i] == other.shapes[i] for i in range(len(self.mean_values)))
+        if not shapes_equal:
+            return False
+        mean_values_equal = all(
+            self.tensor_eq(self.mean_values[i], other.mean_values[i]) for i in range(len(self.mean_values))
+        )
+        return mean_values_equal
 
     @classmethod
     def from_kwargs(cls, kwargs: Dict[str, Any]) -> TensorStatistic:

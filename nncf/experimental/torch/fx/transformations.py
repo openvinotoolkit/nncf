@@ -116,12 +116,13 @@ def leaf_module_insertion_transformation_builder(
     return leaf_module_insertion_transformation
 
 
-def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> TransformationFNType:
+def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor, input_port_id: int) -> TransformationFNType:
     """
     Return transformation which updates constant of the given node with bias to the given value.
 
     :param node: Node with bias which requires bias constant update.
     :param value: New value to use as the bias constant.
+    :param input_port_id: Input port id to get constant node from.
     :return: Transformation which updates constant of the given node with bias to the given value.
     """
 
@@ -137,7 +138,7 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
             raise nncf.InternalError(f"Node {graph_node.name} has {len(add_nodes)} outputs with adds, 1 expected")
 
         bias_node = add_nodes[0]
-        constant_update_fn(model, bias_node, value, input_port_id=1)
+        constant_update_fn(model, bias_node, value, input_port_id=input_port_id)
 
     return bias_update_transformation
 
@@ -228,7 +229,7 @@ def qdq_insertion_transformation_builder(
 
     def qdq_insertion_transformation(model: torch.fx.GraphModule):
         if any(tp.target_type != TargetType.OPERATION_WITH_WEIGHTS for tp in target_points) and len(target_points) > 1:
-            raise RuntimeError(
+            raise nncf.InternalError(
                 "Insertion of shared qdq pair for the weights is not supported."
                 " Please use non shared qdq pairs for the weights quantization."
             )
@@ -569,6 +570,7 @@ def _is_conv(n: torch.fx.Node):
     return n.op == "call_function" and n.target in (
         torch.ops.aten.conv1d.default,
         torch.ops.aten.conv2d.default,
+        torch.ops.aten.conv_transpose2d.input,
     )
 
 

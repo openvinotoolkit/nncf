@@ -371,6 +371,23 @@ class ScaleEstimation:
 
         return result_scale, zp
 
+    @staticmethod
+    def activations_to_wc_statistics(activations: List[Tensor]) -> WCTensorStatistic:
+        """
+        Mimic the activation reducing logic from WeightCompression.get_statistic_points.
+
+        :param activations: List of raw activations.
+        :return: Instance of WCTensorStatistic class containing reduced activations and shapes.
+        """
+        mean_values = []
+        shapes = []
+        for act in activations:
+            shapes.append(act.shape)
+            reduction_shape = tuple(range(act.ndim - 1))
+            mean_values.append(fns.mean(act, axis=reduction_shape))
+        wc_statistics = WCTensorStatistic(mean_values, shapes)
+        return wc_statistics
+
 
 def get_target_zero_mask(compressed_weights: Tensor, zp: Optional[Tensor] = None) -> Tuple[Tensor, Tensor]:
     """

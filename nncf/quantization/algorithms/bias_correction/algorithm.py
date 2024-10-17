@@ -591,10 +591,11 @@ class BiasCorrection(Algorithm):
             input_id = (biased_after_input_node.node_name, edge.input_port_id)
             output_id = (edge.from_node.node_name, edge.output_port_id)
 
+            self._collected_stat_inputs_map[input_id] = output_id
+
             if edge.from_node.node_name in statistic_container:
                 continue
 
-            self._collected_stat_inputs_map[input_id] = output_id
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, edge.from_node.node_name, port_id=edge.output_port_id
             )

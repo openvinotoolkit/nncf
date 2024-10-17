@@ -142,7 +142,11 @@ OPERATIONS_WITH_BIAS_REDUCED = [
     # TODO: Need to add MatMul with the separate bias support (CVS-135433)
 ]
 
-OPERATIONS_WITH_BIAS = [*OPERATIONS_WITH_BIAS_REDUCED, onnx_metatypes.ONNXDepthwiseConvolutionMetatype]
+OPERATIONS_WITH_BIAS = [
+    *OPERATIONS_WITH_BIAS_REDUCED,
+    onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
+    onnx_metatypes.ONNXConvolutionTransposeMetatype,
+]
 
 
 QUANTIZE_DEQUANTIZE_OPERATIONS = [
