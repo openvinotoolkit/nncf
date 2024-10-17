@@ -16,12 +16,13 @@ from typing import Any, Tuple
 import pytest
 import torch
 import torch.ao.quantization
+import torch.fx
 from torch._export import capture_pre_autograd_graph
 from torch.ao.quantization.fx.utils import create_getattr_from_value
-import torch.fx
 from torch.ao.quantization.observer import MinMaxObserver
 from torch.ao.quantization.observer import PerChannelMinMaxObserver
 from torch.quantization.fake_quantize import FakeQuantize
+
 import nncf
 from nncf.common.factory import NNCFGraph
 from nncf.common.factory import NNCFGraphFactory
