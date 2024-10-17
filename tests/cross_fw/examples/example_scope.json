@@ -172,7 +172,7 @@
     },
     "post_training_quantization_torch_fx_resnet18": {
         "backend": "torch",
-        "requirements": "examples/post_training_quantization/torch/fx/resnet18/requirements.txt",
+        "requirements": "examples/post_training_quantization/torch_fx/resnet18/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_tolerance": 0.2,
         "accuracy_metrics": {

@@ -185,7 +185,7 @@ def llm_compression_synthetic() -> Dict[str, float]:
 
 
 def post_training_quantization_torch_fx_resnet18():
-    from examples.post_training_quantization.torch.fx.resnet18.main import main as resnet18_main
+    from examples.post_training_quantization.torch_fx.resnet18.main import main as resnet18_main
 
     # Set manual seed and determenistic cuda mode to make the test determenistic
     results = resnet18_main()
