@@ -260,6 +260,9 @@ class WCTensorStatistic(TensorStatistic):
 
     @classmethod
     def from_kwargs(cls, kwargs: Dict[str, Any]) -> TensorStatistic:
-        mean_values = [fns.squeeze(it) for it in kwargs[WCTensorStatistic.MEAN_STAT]]
-        shape_values = [tuple(it.data) for it in kwargs[WCTensorStatistic.SHAPE_STAT]]
+        mean_values, shape_values = None, None
+        if WCTensorStatistic.MEAN_STAT in kwargs and kwargs[WCTensorStatistic.MEAN_STAT] is not None:
+            mean_values = [fns.squeeze(it) for it in kwargs[WCTensorStatistic.MEAN_STAT]]
+        if WCTensorStatistic.SHAPE_STAT in kwargs and kwargs[WCTensorStatistic.SHAPE_STAT] is not None:
+            shape_values = [tuple(it.data) for it in kwargs[WCTensorStatistic.SHAPE_STAT]]
         return cls(mean_values=mean_values, shape_values=shape_values)

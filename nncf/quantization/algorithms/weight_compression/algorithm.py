@@ -550,6 +550,38 @@ class WeightCompression(Algorithm):
         port_id = activation_edge.output_port_id
         return activation_node, port_id
 
+    def _helper(self, statistics_aggregator, nodes: List[NNCFNode], graph: NNCFGraph, model: TModel):
+        matmul_input_to_output_nodes_map = None
+
+        data_aware_precision_assignment = (
+            self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
+        )
+        data_aware_compression = self._awq or self._scale_estimation or self._lora_correction
+        if data_aware_compression or data_aware_precision_assignment:
+            # Collect statistics only for weighted MatMul nodes
+            matmul_metatypes = self._backend_entity.matmul_metatypes
+            matmul_nodes = filter(lambda node: node.metatype in matmul_metatypes, nodes)
+
+            # Each weighted MatMul node has two input nodes: an activation and a weight.
+            # A single activation may be an input to multiple MatMul nodes.
+            # Below is a mapping from activation node and a port id to corresponding matmul nodes which accept this
+            # activation as an input.
+            matmul_input_to_output_nodes_map = defaultdict(list)
+            for node in matmul_nodes:
+                act_node, output_port_id = self._get_activation_node_and_port(node, graph)
+                matmul_input_to_output_nodes_map[(act_node, output_port_id)].append(node)
+
+            if data_aware_precision_assignment:
+                self._mixed_precision_statistics = self._mixed_precision_algo.get_statistic_points(
+                    model, graph, matmul_input_to_output_nodes_map.keys(), self._subset_size
+                )
+                statistics_aggregator.register_statistic_points(self._mixed_precision_statistics)
+            if data_aware_compression:
+                statistic_points = self.get_statistic_points(
+                    model, graph, matmul_input_to_output_nodes_map.keys(), self._subset_size
+                )
+                statistics_aggregator.register_statistic_points(statistic_points)
+
     def _collect_statistics(self, dataset: Dataset, nodes: List[NNCFNode], graph: NNCFGraph, model: TModel):
         """
         Collects statistics required for data-aware algorithms and/or mixed precision assignment.

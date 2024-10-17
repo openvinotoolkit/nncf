@@ -10,12 +10,14 @@
 # limitations under the License.
 
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
 from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -404,4 +406,37 @@ def compress_weights_impl(
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)
+
+    if advanced_parameters.statistics_file_path and not Path(advanced_parameters.statistics_file_path).exists():
+        statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
+
+        sensitivities_to_collect = [
+            SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
+            SensitivityMetric.MEAN_ACTIVATION_VARIANCE,
+            SensitivityMetric.MAX_ACTIVATION_VARIANCE,
+            SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
+        ]
+        for sensitivity in sensitivities_to_collect:
+            compression_algorithm_for_statistics = WeightCompression(
+                mode=mode,
+                ratio=ratio,
+                group_size=group_size,
+                ignored_scope=ignored_scope,
+                all_layers=all_layers,
+                sensitivity_metric=sensitivity,
+                subset_size=subset_size,
+                lora_correction=lora_correction,
+                backup_mode=backup_mode,
+                advanced_parameters=advanced_parameters,
+                awq=True,
+                scale_estimation=True,
+                gptq=True,
+            )
+            compression_algorithm_for_statistics._set_backend_entity(model)
+            nodes_to_compress = compression_algorithm_for_statistics._get_nodes_to_compress(graph)
+            compression_algorithm_for_statistics._helper(statistics_aggregator, nodes_to_compress, graph, model)
+            print(f"Statistics for {sensitivity} were registered")
+        statistics_aggregator.collect_statistics(model, graph)
+        statistics_aggregator.dump_statistics(advanced_parameters.statistics_file_path)
+
     return compression_algorithm.apply(model, graph, dataset=dataset)
