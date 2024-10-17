@@ -52,7 +52,7 @@ class LayerwiseEngine:
         self._collect_inputs = collect_inputs
 
         self._backend_entity = None
-        self._algorithm_key = f"LayerwiseEngine_{hash(self)}"
+        self._algorithm_key = "LayerwiseEngine"
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
@@ -84,11 +84,7 @@ class LayerwiseEngine:
             # For the floating-point statistics collected in POST_LAYER style,
             # we also need to determine the output port id.
             # For the cases when the layer has more than one (0) output port.
-            return (
-                self._algorithm_key in point.algorithm_to_tensor_collectors
-                and point.target_point.type == TargetType.POST_LAYER_OPERATION
-                and point.target_point.port_id == port_id
-            )
+            return point.target_point.type == TargetType.POST_LAYER_OPERATION and point.target_point.port_id == port_id
 
         res = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(

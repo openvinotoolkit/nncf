@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABC
 from abc import abstractmethod
 from typing import Iterable, List, Optional, Tuple, TypeVar
 
@@ -57,7 +58,7 @@ class MixedPrecisionCriterion(Algorithm):
         """
         self._primary_config = primary_config
         self._ratio = ratio
-        self._algorithm_key = f"MPC_{hash(self)}"
+        self._algorithm_key = "MPC"
         self._backend_entity = None
 
     @abstractmethod
@@ -189,7 +190,7 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         raise RuntimeError("No statistics collection intended for data-free mixed precision criterion")
 
 
-class DataBasedCriterion(DataFreeCriterion):
+class DataBasedCriterion(DataFreeCriterion, ABC):
     """
     Data-based mixed precision criterion that takes into account outliers in the input statistics.
     Expecting statistics of the following shape: [hidden_dim]
@@ -286,8 +287,7 @@ class DataBasedCriterion(DataFreeCriterion):
             # we also need to determine the output port id.
             # For the cases when the layer has more than one (0) output port.
             return (
-                self._algorithm_key in point.algorithm_to_tensor_collectors
-                and point.target_point.type == TargetType.POST_LAYER_OPERATION
+                point.target_point.type == TargetType.POST_LAYER_OPERATION
                 and point.target_point.port_id == output_port_id
             )
 
