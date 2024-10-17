@@ -84,7 +84,11 @@ class LayerwiseEngine:
             # For the floating-point statistics collected in POST_LAYER style,
             # we also need to determine the output port id.
             # For the cases when the layer has more than one (0) output port.
-            return point.target_point.type == TargetType.POST_LAYER_OPERATION and point.target_point.port_id == port_id
+            return (
+                self._algorithm_key in point.algorithm_to_tensor_collectors
+                and point.target_point.type == TargetType.POST_LAYER_OPERATION
+                and point.target_point.port_id == port_id
+            )
 
         res = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(

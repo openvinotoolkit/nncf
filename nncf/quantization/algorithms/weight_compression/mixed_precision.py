@@ -287,7 +287,8 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
             # we also need to determine the output port id.
             # For the cases when the layer has more than one (0) output port.
             return (
-                point.target_point.type == TargetType.POST_LAYER_OPERATION
+                self._algorithm_key in point.algorithm_to_tensor_collectors
+                and point.target_point.type == TargetType.POST_LAYER_OPERATION
                 and point.target_point.port_id == output_port_id
             )
 
