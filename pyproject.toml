@@ -149,3 +149,6 @@ notice-rgx = """\
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
+
+[tool.pytest.ini_options]
+pythonpath = "."
