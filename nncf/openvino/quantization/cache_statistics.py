@@ -29,7 +29,7 @@ from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXE
 from nncf.scopes import IgnoredScope
 
 
-def _register_main_algorithm(
+def register_statistics_for_algorithm(
     statistics_aggregator: StatisticsAggregator,
     model: ov.Model,
     graph: NNCFGraph,
@@ -37,7 +37,7 @@ def _register_main_algorithm(
     compression_algorithm: WeightCompression,
     matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
 ) -> None:
-    """Registers the main compression algorithm statistics."""
+    """Registers the statistics of the provided algorithm."""
     statistic_points = compression_algorithm.get_statistic_points(
         model, graph, matmul_input_to_output_nodes_map.keys(), subset_size
     )
@@ -103,7 +103,7 @@ def register_all_statistics(
         nodes_to_compress, graph
     )
 
-    _register_main_algorithm(
+    register_statistics_for_algorithm(
         statistics_aggregator, model, graph, subset_size, compression_algorithm, matmul_input_to_output_nodes_map
     )
 

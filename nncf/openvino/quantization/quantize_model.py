@@ -30,7 +30,7 @@ from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
-from nncf.openvino.quantization.cache_statistics import register_statistics
+from nncf.openvino.quantization.cache_statistics import register_statistics_for_algorithm
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
 from nncf.openvino.rt_info import dump_parameters
 from nncf.parameters import BackupMode
@@ -414,7 +414,7 @@ def compress_weights_impl(
         if not Path(advanced_parameters.statistics_file_path).exists():
             raise nncf.InternalError("File with cached statistics is not found.")
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
-        register_statistics(statistics_aggregator, model, graph, subset_size, compression_algorithm)
+        register_statistics_for_algorithm(statistics_aggregator, model, graph, subset_size, compression_algorithm)
         statistics_aggregator.load_statistics_from_file(advanced_parameters.statistics_file_path)
         statistics_points = statistics_aggregator.statistic_points
 
