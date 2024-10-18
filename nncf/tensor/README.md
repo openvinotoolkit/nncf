@@ -191,7 +191,6 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
         "onnxruntime",
         "openvino",
         "tensorflow",
-        "tensorflow_addons",
         "nncf.tensor.functions.torch_*",
         "nncf.tensor.functions.numpy_*",
         "nncf.tensor.functions.<NEW_BACKEND>_*",
