@@ -719,6 +719,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         if prop_quantizer.unified_scale_type is not None:
             gid = self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(prop_quantizer.id)
             self._unified_scale_group_manager.remove_from_group(gid, prop_quantizer)
+        self._pqs_after_weight_dependent_output_quantized_nodes.pop(prop_quantizer, None)
 
     def propagate_quantizer_via_path(
         self, prop_quantizer: PropagatingQuantizer, path: PropagationPath
