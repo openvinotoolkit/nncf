@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from copy import copy
+from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import torch
@@ -637,7 +638,9 @@ def _set_meta_for_matches(model: torch.fx.GraphModule, matches: torch.fx.subgrap
     """
     for match in matches:
         mul_node = match.replacements[0]
+        sub_node = match.replacements[1]
         _set_new_node_meta(mul_node, mul_node.args, torch.mul, model)
+        _set_new_node_meta(sub_node, sub_node.args, torch.sub, model)
 
 
 def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
@@ -667,11 +670,13 @@ def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
     matches_per_channel = torch.fx.subgraph_rewriter.replace_pattern_with_filters(
         model, pattern, replacement, [match_filters]
     )
+    _compress_qdq_constant_transformation(model, matches_per_channel)
     _set_meta_for_matches(model, matches_per_channel)
     pattern, replacement = _get_pattern_replacement_per_tensor()
     matches_per_tensor = torch.fx.subgraph_rewriter.replace_pattern_with_filters(
         model, pattern, replacement, [match_filters]
     )
+    _compress_qdq_constant_transformation(model, matches_per_tensor)
     _set_meta_for_matches(model.graph, matches_per_tensor)
 
     return matches_per_channel, matches_per_tensor
@@ -694,50 +699,60 @@ def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> Option
     return tuple(args)
 
 
-def _compress_qdq_constant_transformation(model: torch.fx.GraphModule) -> None:
+def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) -> None:
     """
     Change the FP32 weight value to Int8 and also reshape the scale for per_channel_quantization.
 
     :param: model: Model to apply transformations to.
     """
-    for node in model.graph.nodes:
-        if node.target not in DEQUANTIZE_NODE_TARGETS:
-            continue
-        quantize_node = node.all_input_nodes[0]
-        if quantize_node.target != QDQ_PAIR[node.target]:
-            continue
+    for match in matches:
+        mul_node = match.replacements[0]
+        sub_node = match.replacements[1]
+        weight_node, scale_node, zp_node, axis = None, None, None, None
+        nodes_map = {node.name: match.nodes_map[node] for node in match.nodes_map}
+        get_const = partial(get_tensor_constant_from_node, model=model)
+        weight_node = get_const(nodes_map["weight"])
+        scale_node = get_const(nodes_map["scale"])
+        zp_node = get_const(nodes_map["zero_point"])
+        axis = nodes_map["axis"]
         port_id = 0
-        args = _get_node_inputs(quantize_node, model)
-        if not args:
-            continue
-        if quantize_node.target == torch.ops.quantized_decomposed.quantize_per_channel.default:
-            _reshape_scale_zp(model, quantize_node)
-        result = quantize_node.target(*args)
-        constant_update_fn(
-            model, quantize_node, result, port_id, updated_node_name="compressed_weight_updated_constant"
+        result = None
+        if axis is not None:
+            result = torch.ops.quantized_decomposed.quantize_per_channel.default(
+                weight_node, scale_node, zp_node, axis, -128, 127, torch.int8
+            )
+            _reshape_scale_zp(model, sub_node, mul_node, weight_node, scale_node, zp_node, axis)
+        result = (
+            result
+            if result is not None
+            else torch.ops.quantized_decomposed.quantize_per_tensor.default(
+                weight_node, scale_node, zp_node, -128, 127, torch.int8
+            )
         )
+        constant_update_fn(model, mul_node, result, port_id, updated_node_name="compressed_weight_updated_constant")
 
 
-def _reshape_scale_zp(model: torch.fx.GraphModule, node: torch.fx.Node) -> None:
+def _reshape_scale_zp(
+    model: torch.fx.GraphModule,
+    sub_node: torch.fx.Node,
+    mul_node: torch.fx.Node,
+    weight: torch.Tensor,
+    scale: Union[torch.Tensor, float],
+    zp: Union[torch.Tensor, float, int],
+    axis: int,
+) -> None:
     """
     Reshape scale and zero point so that it can be multiplied elementwise with the weight for per channel quantization.
 
     :param model: Model to apply transformations to.
     :param node: quantize node whose scale has to be reshaped
     """
-    weight_node = node.all_input_nodes[0]
-    scale_node = node.all_input_nodes[1]
-    zp_node = node.all_input_nodes[2]
-    axis = node.args[3]
-    scale_value = get_tensor_constant_from_node(scale_node, model)
-    weight_value = get_tensor_constant_from_node(weight_node, model)
-    zp_value = get_tensor_constant_from_node(zp_node, model)
-    new_shape = [1] * weight_value.dim()
-    new_shape[axis] = scale_value.shape[0]
-    scale_value = scale_value.reshape(new_shape)
-    zp_value = zp_value.reshape(new_shape)
-    constant_update_fn(model, node, zp_value, 2, updated_node_name=zp_node.name + "_updated_constant")
-    constant_update_fn(model, node, scale_value, 1, updated_node_name=scale_node.name + "_updated_constant")
+    new_shape = [1] * weight.dim()
+    new_shape[axis] = scale.shape[0]
+    scale = scale.reshape(new_shape)
+    zp = zp.reshape(new_shape)
+    constant_update_fn(model, sub_node, zp, 1, updated_node_name="zero_point_updated_constant")
+    constant_update_fn(model, mul_node, scale, 1, updated_node_name="scale_updated_constant")
 
 
 def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
@@ -774,7 +789,6 @@ def compress_post_quantize_transformation(model: torch.fx.GraphModule) -> None:
 
     :param model: Model to apply transformations to.
     """
-    _compress_qdq_constant_transformation(model)
     _remove_constant_qdq_transformation(model)
 
 
