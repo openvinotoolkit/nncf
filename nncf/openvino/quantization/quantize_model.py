@@ -49,7 +49,9 @@ from nncf.quantization.quantize_model import BATCHWISE_STATISTICS_WARNING
 from nncf.quantization.quantize_model import is_model_no_batchwise_support
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
+from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
+from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi
 from nncf.scopes import IgnoredScope
 from nncf.scopes import validate_ignored_scope
 from nncf.telemetry.decorator import tracked_function
@@ -190,7 +192,8 @@ def native_quantize_impl(
 
 
 @tracked_function(
-    NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset", "max_drop", "drop_type"]
+    NNCF_OV_CATEGORY,
+    [CompressionStartedWithQuantizeWithAccuracyControlApi(), "target_device", "preset", "max_drop", "drop_type"],
 )
 def quantize_with_accuracy_control_impl(
     model: ov.Model,
@@ -366,6 +369,18 @@ def quantize_impl(
     )
 
 
+@tracked_function(
+    NNCF_OV_CATEGORY,
+    [
+        CompressionStartedWithCompressWeightsApi(),
+        "mode",
+        "awq",
+        "scale_estimation",
+        "gptq",
+        "lora_correction",
+        "backup_mode",
+    ],
+)
 def compress_weights_impl(
     model: ov.Model,
     dataset: Dataset,

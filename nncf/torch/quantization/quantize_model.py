@@ -29,13 +29,18 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
+from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
+from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
+from nncf.telemetry.decorator import tracked_function
+from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.torch.graph.operator_metatypes import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 from nncf.torch.model_creation import wrap_model
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
 
 
+@tracked_function(NNCF_PT_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
 def quantize_impl(
     model: torch.nn.Module,
     calibration_dataset: Dataset,
@@ -81,6 +86,18 @@ def quantize_impl(
     return quantized_model
 
 
+@tracked_function(
+    NNCF_PT_CATEGORY,
+    [
+        CompressionStartedWithCompressWeightsApi(),
+        "mode",
+        "awq",
+        "scale_estimation",
+        "gptq",
+        "lora_correction",
+        "backup_mode",
+    ],
+)
 def compress_weights_impl(
     model: torch.nn.Module,
     dataset: Dataset,
