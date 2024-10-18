@@ -119,7 +119,7 @@ class WeightCompression(Algorithm):
         self._ratio = ratio
         self._ignored_scope = ignored_scope
         self._backend_entity = None
-        self._algorithm_key = "CW"
+        self._algorithm_key = f"CW_{hash(self)}"
         self._statistics = {}
         self._all_layers = all_layers
         self._sensitivity_metric = sensitivity_metric

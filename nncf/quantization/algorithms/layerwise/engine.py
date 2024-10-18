@@ -52,7 +52,7 @@ class LayerwiseEngine:
         self._collect_inputs = collect_inputs
 
         self._backend_entity = None
-        self._algorithm_key = "LayerwiseEngine"
+        self._algorithm_key = f"LayerwiseEngine_{hash(self)}"
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
