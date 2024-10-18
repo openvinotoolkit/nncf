@@ -643,43 +643,6 @@ def _set_meta_for_matches(model: torch.fx.GraphModule, matches: torch.fx.subgrap
         _set_new_node_meta(sub_node, sub_node.args, torch.sub, model)
 
 
-def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
-    """
-    Removes the Quantize/De-Quantize nodes for weight nodes by matching the pattern to be like follows:
-    weight scale zp
-        \   |    /
-         Quantize
-            |
-        Dequantize
-
-    and replace with the following:
-     weight scale
-       \     /
-       Multiply
-
-    :param model: Model to apply transformations to.
-    """
-
-    def match_filters(match, original_graph, graph):
-        for node in match.nodes_map:
-            if node.name == "weight" and match.nodes_map[node].op == "get_attr":
-                return True
-        return False
-
-    pattern, replacement = _get_pattern_replacement_per_channel()
-    matches_per_channel = torch.fx.subgraph_rewriter.replace_pattern_with_filters(
-        model, pattern, replacement, [match_filters]
-    )
-    _compress_qdq_constant_transformation(model, matches_per_channel)
-    _set_meta_for_matches(model, matches_per_channel)
-    pattern, replacement = _get_pattern_replacement_per_tensor()
-    matches_per_tensor = torch.fx.subgraph_rewriter.replace_pattern_with_filters(
-        model, pattern, replacement, [match_filters]
-    )
-    _compress_qdq_constant_transformation(model, matches_per_tensor)
-    _set_meta_for_matches(model.graph, matches_per_tensor)
-
-
 def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> Optional[Tuple[Union[torch.Tensor, int]]]:
     """
     Gets the inputs for the Quantize node which quantize the weights. Otherwise returns None.
@@ -720,13 +683,10 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) 
                 weight_node, scale_node, zp_node, axis, -128, 127, torch.int8
             )
             _reshape_scale_zp(model, sub_node, mul_node, weight_node, scale_node, zp_node, axis)
-        result = (
-            result
-            if result is not None
-            else torch.ops.quantized_decomposed.quantize_per_tensor.default(
+        else:
+            result = torch.ops.quantized_decomposed.quantize_per_tensor.default(
                 weight_node, scale_node, zp_node, -128, 127, torch.int8
             )
-        )
         constant_update_fn(model, mul_node, result, port_id, updated_node_name="compressed_weight_updated_constant")
 
 
@@ -784,10 +744,39 @@ def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
 def compress_post_quantize_transformation(model: torch.fx.GraphModule) -> None:
     """
     Applies transformation to compress the weights to Int8 after the quantization step.
+    Starts by removing the Quantize/De-Quantize nodes for weight nodes by matching the pattern
+    to be like follows:
+
+    weight scale zp
+        \   |    /
+         Quantize
+            |
+        Dequantize
+
+    and replace with the following:
+     weight scale
+       \     /
+       Multiply  Zero Point
+          |     /
+        Subtract
+
+    and then also updates the weights to int8 values and reshape the scale and zero point.
 
     :param model: Model to apply transformations to.
     """
-    _remove_constant_qdq_transformation(model)
+
+    def match_filters(match, original_graph, graph):
+        for node in match.nodes_map:
+            if node.name == "weight" and match.nodes_map[node].op == "get_attr":
+                return True
+        return False
+
+    patterns = [_get_pattern_replacement_per_channel(), _get_pattern_replacement_per_tensor()]
+
+    for pattern, replacement in patterns:
+        matches = torch.fx.subgraph_rewriter.replace_pattern_with_filters(model, pattern, replacement, [match_filters])
+        _compress_qdq_constant_transformation(model, matches)
+        _set_meta_for_matches(model, matches)
 
 
 def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
