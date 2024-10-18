@@ -38,8 +38,9 @@ def accuracy_aware_fit(
     if result_dict_to_val_metric_fn is None:
         result_dict_to_val_metric_fn = lambda metric: metric
 
-    with cls_instance.distribute_strategy.scope(), tf_internals.keras_engine.training_utils.RespectCompiledTrainableState(  # noqa: E501
-        cls_instance
+    with (
+        cls_instance.distribute_strategy.scope(),
+        tf_internals.keras_engine.training_utils.RespectCompiledTrainableState(cls_instance),  # noqa: E501
     ):
         data_handler = tf_internals.keras_engine.data_adapter.DataHandler(
             x=train_dataset,

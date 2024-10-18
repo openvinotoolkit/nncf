@@ -8,7 +8,7 @@ description = "Neural Networks Compression Framework"
 readme="docs/PyPiPublishing.md"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Intel" }, { email = "alexander.kozlov@intel.com" }]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dynamic = ["version"]
 keywords = [
     "bert",
@@ -38,7 +38,7 @@ dependencies = [
     "natsort>=7.1.0",
     "networkx>=2.6, <=3.3",
     "ninja>=1.10.0.post2, <1.12",
-    "numpy>=1.19.1, <1.27",
+    "numpy>=1.19.1, <2.2.0",
     "openvino-telemetry>=2023.2.0",
     "packaging>=20.0",
     "pandas>=1.1.5,<2.3",
