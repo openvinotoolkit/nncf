@@ -677,7 +677,6 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) 
         zp_node = get_const(nodes_map["zero_point"])
         axis = nodes_map["axis"]
         port_id = 0
-        result = None
         if axis is not None:
             result = torch.ops.quantized_decomposed.quantize_per_channel.default(
                 weight_node, scale_node, zp_node, axis, -128, 127, torch.int8
