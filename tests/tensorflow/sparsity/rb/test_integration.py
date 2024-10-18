@@ -14,7 +14,6 @@ from pathlib import Path
 
 import pytest
 import tensorflow as tf
-import tensorflow_addons as tfa
 from tensorflow.python.framework.config import disable_op_determinism
 from tensorflow.python.framework.config import enable_op_determinism
 
@@ -191,8 +190,8 @@ def test_rb_sparse_target_lenet(distributed, deterministic_mode):
         metrics = [
             tf.keras.metrics.CategoricalAccuracy(name="acc@1"),
             tf.keras.metrics.TopKCategoricalAccuracy(k=5, name="acc@5"),
-            tfa.metrics.MeanMetricWrapper(loss_obj, name="ce_loss"),
-            tfa.metrics.MeanMetricWrapper(compress_algo.loss, name="cr_loss"),
+            tf.keras.metrics.MeanMetricWrapper(loss_obj, name="ce_loss"),
+            tf.keras.metrics.MeanMetricWrapper(compress_algo.loss, name="cr_loss"),
         ]
 
         compress_model.add_loss(compress_algo.loss)
