@@ -1,6 +1,4 @@
--c ../../../../constraints.txt
 torch
-datasets
 numpy>=1.23.5
 openvino==2024.4
 optimum-intel[openvino]>=1.13.0
