@@ -317,6 +317,8 @@ class TensorCollector:
         if not self._stat_container:
             return kwargs
         self.statistics = self._stat_container.from_kwargs(kwargs)
+        # Statistics can not be collected more than once.
+        self.disable()
         return self.statistics
 
     def replace_aggregator(self, key: Tuple[int, int, int], aggregator: AggregatorBase) -> None:
