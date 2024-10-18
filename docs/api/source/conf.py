@@ -137,7 +137,6 @@ mock_modules = [
     "openvino",
     "tensorflow",
     "keras",
-    "tensorflow_addons",
     # Need add backend implementation functions to avoid endless loops on registered functions by mock module,
     "nncf.tensor.functions.numpy_numeric",
     "nncf.tensor.functions.numpy_linalg",
