@@ -248,7 +248,7 @@ class WeightCompression(Algorithm):
         ratio_defining_params: List[WeightCompressionParameters],
         model: TModel,
         graph: NNCFGraph,
-        statistics_points,
+        statistics_points: StatisticPointsContainer,
     ) -> None:
         """
         Sets the appropriate compression configuration for weights based on some criteria.
@@ -257,7 +257,8 @@ class WeightCompression(Algorithm):
             backup precisions.
         :param model: The model.
         :param graph: The model graph associated with the model.
-        """  # TODO: add docstrings
+        :param statistics_points: Statistics points.
+        """
         primary_config = WeightCompressionConfig(mode=self._mode, group_size=self._group_size)
         if self._ratio == 1:
             for weight_param in ratio_defining_params:
@@ -565,7 +566,9 @@ class WeightCompression(Algorithm):
         port_id = activation_edge.output_port_id
         return activation_node, port_id
 
-    def _get_matmul_input_to_output_nodes_map(self, matmul_nodes, graph):
+    def _get_matmul_input_to_output_nodes_map(
+        self, matmul_nodes: List[NNCFNode], graph: NNCFGraph
+    ) -> Dict[Tuple[NNCFNode, int], List[NNCFNode]]:
         # Each weighted MatMul node has two input nodes: an activation and a weight.
         # A single activation may be an input to multiple MatMul nodes.
         # Below is a mapping from activation node and a port id to corresponding matmul nodes which accept this
@@ -576,12 +579,18 @@ class WeightCompression(Algorithm):
             matmul_input_to_output_nodes_map[(act_node, output_port_id)].append(node)
         return matmul_input_to_output_nodes_map
 
-    def _collect_statistics(self, dataset: Dataset, matmul_input_to_output_nodes_map, graph: NNCFGraph, model: TModel):
+    def _collect_statistics(
+        self,
+        dataset: Dataset,
+        matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
+        graph: NNCFGraph,
+        model: TModel,
+    ):
         """
-        Collects statistics required for data-aware algorithms and/or mixed precision assignment.
+        Creates statistics aggregator, registers all statistics specified for algorithm, and then collect them.
 
         :param dataset: Dataset to collect values.
-        :param nodes: List of nodes, whose inputs are collected.
+        :param matmul_input_to_output_nodes_map: Nodes, whose inputs are collected.
         :param graph: Model graph.
         :param model: Model for statistics collection.
         """
@@ -640,9 +649,7 @@ class WeightCompression(Algorithm):
         self, matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]], statistic_points
     ) -> Dict[str, WCTensorStatistic]:
         """
-        # TODO: add clarification that THIS FUNCTION IS ONLY FOR WC STATISTICS, NOT MIXED PRECISION
-
-        Retrieve collected statistics.
+        Retrieve collected statistics only for WC algorithm and not for MixedPrecision.
 
         :param matmul_input_to_output_nodes_map: A mapping from activation node and a port id to corresponding matmul
             nodes which accept this activation as an input.
@@ -672,7 +679,6 @@ class WeightCompression(Algorithm):
                     act_node.node_name, partial(input_filter_func, port_id=output_port_id), self._algorithm_key
                 )
             )
-            # TODO: need better clarification
             # Statistics could be empty in case when the statistics have only other algorithms but not WC statistics
             if tensor_collectors:
                 assert len(tensor_collectors) == 1
