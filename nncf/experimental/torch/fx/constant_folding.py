@@ -222,6 +222,19 @@ class ConstantFolder(torch.fx.Interpreter):
             env[n] = self.unknown_value  # type: ignore[assignment]
 
 
+def _is_impure(node: torch.fx.Node) -> bool:
+    """
+    Returns True if the node call affects the model outputs even in case
+    the node have zero users, False otherwise.
+
+    :param node: A node to check.
+    :return: True if the node call affects the model outputs even in case
+        the node have zero users, False otherwise.
+
+    """
+    return node.op in {"placeholder", "output"}
+
+
 def constant_fold(
     gm: torch.fx.GraphModule,
     constraint_fn: Optional[Callable[[torch.fx.Node], bool]] = None,
@@ -252,6 +265,8 @@ def constant_fold(
         for node in erased_params:
             gm.graph.erase_node(node)
 
-        gm.graph.eliminate_dead_code()
+        # Custom _is_impure function allows to eliminate all layers with zero
+        # users including inplace ops like relu_ besides output and placeholders.
+        gm.graph.eliminate_dead_code(_is_impure)
         gm.graph.lint()
         gm.recompile()
