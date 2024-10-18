@@ -302,17 +302,6 @@ def test_register_unnamed_statistics(mocker):
         assert all(v[0] == inputs_)
 
 
-def test_wrong_statistic_container_class():
-    class BadStatContainer:
-        pass
-
-    tensor_collector = TensorCollector(BadStatContainer)
-    tensor_collector.register_statistic_branch("A", DummyTensorReducer("A"), DummyTensorAggregator())
-    tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
-    with pytest.raises(nncf.InternalError):
-        tensor_collector.get_statistics()
-
-
 class TemplateTestStatisticCollector:
     @abstractmethod
     def get_nncf_tensor(self, value: np.ndarray) -> NNCFTensor:

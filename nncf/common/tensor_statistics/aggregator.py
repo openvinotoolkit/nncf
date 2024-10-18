@@ -8,6 +8,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import gzip
+import pickle
 from abc import ABC
 from abc import abstractmethod
 from itertools import islice
@@ -16,6 +18,7 @@ from typing import Any, Dict, Optional, TypeVar
 import nncf
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
@@ -24,6 +27,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.data.dataset import DataItem
 from nncf.data.dataset import Dataset
 from nncf.data.dataset import ModelInput
+from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")
@@ -87,6 +91,53 @@ class StatisticsAggregator(ABC):
                 f"Dataset contains only {processed_samples} samples, "
                 f"smaller than the requested subset size {self.stat_subset_size}."
             )
+
+    def load_statistics_from_file(self, file_name: str) -> None:
+        """
+        Loads statistics from a file and populates the statistic points with the loaded data.
+
+        :param file_name: The name of the file from which to load the statistics.
+        """
+        loaded_data = StatisticsSerializer.load_from_file(file_name)
+        self._load_statistics(loaded_data)
+        nncf_logger.info(f"Statistics were successfully loaded from a file {file_name}.")
+
+    def _load_statistics(self, data: Dict[str, Any]) -> None:
+        """
+        Loads statistics into the registered statistic points from the given data.
+
+        :param data: A dictionary containing the statistics loaded from a file.
+        """
+        for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
+            statistics = tensor_collector.get_statistics()
+            statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
+            if statistics_key not in data:
+                raise nncf.ValidationError(f"Not found statistics for {statistics_key}")
+            statistics.load_data(data[statistics_key])
+
+    def dump_statistics(self, file_name: str) -> None:
+        """
+        Dumps the current statistics to a file in a compressed format.
+
+        :param file_name: The name of the file where the statistics will be saved.
+        """
+        data_to_dump = self._prepare_statistics()
+        StatisticsSerializer.dump_to_file(data_to_dump, file_name)
+        nncf_logger.info(f"Statistics were successfully saved to a file {file_name}.")
+
+    def _prepare_statistics(self) -> Dict[str, Any]:
+        """
+        Prepares the statistics data for dumping into a file.
+
+        :return: A dictionary containing the statistics data to be dumped.
+        """
+        data_to_dump = {}
+        for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
+            statistics = tensor_collector.get_statistics()
+            statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
+            data = statistics.get_data()
+            data_to_dump[statistics_key] = data
+        return data_to_dump
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
@@ -154,3 +205,44 @@ class StatisticsAggregator(ABC):
         :param outputs: raw model outputs
         :return: processed model outputs in Dict[str, Tensor] format
         """
+
+    @abstractmethod
+    def _get_statistics_key(self, statistics: TensorStatistic, target_point: TargetPoint) -> str:
+        """
+        Returns key of statistics.
+
+        :param statistics: Statistics value.
+        :param target_point: Statistics target point.
+        :return: Statistics key.
+        """
+
+
+class StatisticsSerializer:
+    @staticmethod
+    def load_from_file(file_name: str) -> Any:
+        """
+        Loads statistics from a gzip-compressed file.
+        :param file_name: The name of the file from which to load the statistics.
+        :return: The loaded statistics.
+        """
+        try:
+            with gzip.open(file_name, "rb") as f:
+                return pickle.load(f)
+        except FileNotFoundError:
+            raise nncf.ValidationError(f"File not found: {file_name}")
+        except (pickle.UnpicklingError, IOError):
+            raise nncf.ValidationError(f"Error loading statistics from {file_name}")
+
+    @staticmethod
+    def dump_to_file(statistics: Dict[str, TensorType], file_name: str) -> None:
+        """
+        Dumps statistics to a gzip-compressed file.
+        :param data: The statistics to be dumped.
+        :param file_name: The name of the file where the statistics will be dumped.
+        """
+        try:
+            with gzip.open(file_name, "wb") as f:
+                pickle.dump(statistics, f)
+        except (IOError, pickle.PicklingError) as e:
+            nncf_logger.error(f"Failed to write data to file {file_name}: {e}")
+            raise

@@ -27,10 +27,10 @@ from nncf.common.logging.track_progress import track
 from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
+from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
@@ -137,7 +137,7 @@ class WeightCompression(Algorithm):
         criterion_cls = MIXED_PRECISION_CRITERIA.get(self._sensitivity_metric)
         self._mixed_precision_algo = criterion_cls(primary_config, self._ratio)
         self._mixed_precision_statistics = None
-
+        self._statistics_file_path = self._advanced_parameters.statistics_file_path
         if self._gptq:
             gptq_params = self._advanced_parameters.gptq_params
             self._gptq_algo = GPTQ(
@@ -146,6 +146,11 @@ class WeightCompression(Algorithm):
                 subset_size=gptq_params.subset_size,
                 scale_estimation=self._scale_estimation,
             )
+        # Is data aware compression
+        self._data_aware_mixed_precision = (
+            self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
+        )
+        self._data_aware_compression = self._awq or self._scale_estimation or self._lora_correction or self._gptq
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -243,6 +248,7 @@ class WeightCompression(Algorithm):
         ratio_defining_params: List[WeightCompressionParameters],
         model: TModel,
         graph: NNCFGraph,
+        statistics_points: StatisticPointsContainer,
     ) -> None:
         """
         Sets the appropriate compression configuration for weights based on some criteria.
@@ -251,15 +257,14 @@ class WeightCompression(Algorithm):
             backup precisions.
         :param model: The model.
         :param graph: The model graph associated with the model.
+        :param statistics_points: Statistics points.
         """
         primary_config = WeightCompressionConfig(mode=self._mode, group_size=self._group_size)
         if self._ratio == 1:
             for weight_param in ratio_defining_params:
                 weight_param.compression_config = primary_config
         else:
-            self._mixed_precision_algo.apply(
-                model, graph, self._mixed_precision_statistics, weight_params=ratio_defining_params
-            )
+            self._mixed_precision_algo.apply(model, graph, statistics_points, weight_params=ratio_defining_params)
 
     @staticmethod
     def _proportion_str(num_weights_list: List[int], total_num_weights: int, total_num_params: int) -> str:
@@ -362,14 +367,23 @@ class WeightCompression(Algorithm):
     ) -> TModel:
         self._set_backend_entity(model)
         nodes_to_compress = self._get_nodes_to_compress(graph)
-
+        is_statistics_provided = statistic_points is not None
         statistics = None
-        data_aware_mixed_precision = (
-            self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
-        )
-        data_aware_compression = self._awq or self._scale_estimation or self._lora_correction or self._gptq
-        if data_aware_mixed_precision or data_aware_compression:
-            statistics = self._collect_statistics(dataset, nodes_to_compress, graph, model)
+
+        if self._data_aware_mixed_precision or self._data_aware_compression:
+            matmul_nodes_to_compress = filter(
+                lambda node: node.metatype in self._backend_entity.matmul_metatypes, nodes_to_compress
+            )
+            matmul_input_to_output_nodes_map = self._get_matmul_input_to_output_nodes_map(
+                matmul_nodes_to_compress, graph
+            )
+            if not is_statistics_provided:
+                statistic_points = self._collect_statistics(dataset, matmul_input_to_output_nodes_map, graph, model)
+            if statistic_points is not None:
+                statistics = self._get_statistics_for_weights_compression(
+                    matmul_input_to_output_nodes_map, statistic_points
+                )
+
         all_weight_params: List[WeightCompressionParameters] = []
         weight_names = set()
 
@@ -421,7 +435,7 @@ class WeightCompression(Algorithm):
                 weight_names.add(weight_name)
 
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_shared)
-        self._set_weight_compression_config(ratio_defining_params, model, graph)
+        self._set_weight_compression_config(ratio_defining_params, model, graph, statistic_points)
         ignored_scope_weight_statistics = self._get_ignored_scope_weight_statistics(model, graph)
         nncf_logger.info(
             self._get_bitwidth_distribution_str(
@@ -473,11 +487,14 @@ class WeightCompression(Algorithm):
         description = "Applying Weight Compression"
         if self._gptq:
             del statistics
+            if not is_statistics_provided:
+                statistic_points = None
             model, scales, zero_points = self._gptq_algo.apply(
                 model=model,
                 graph=graph,
                 dataset=dataset,
                 weight_compression_parameters=all_weight_params,
+                statistic_points=statistic_points,
                 backend_entity=self._backend_entity,
             )
         else:
@@ -549,56 +566,48 @@ class WeightCompression(Algorithm):
         port_id = activation_edge.output_port_id
         return activation_node, port_id
 
-    def _collect_statistics(self, dataset: Dataset, nodes: List[NNCFNode], graph: NNCFGraph, model: TModel):
+    def _get_matmul_input_to_output_nodes_map(
+        self, matmul_nodes: List[NNCFNode], graph: NNCFGraph
+    ) -> Dict[Tuple[NNCFNode, int], List[NNCFNode]]:
+        # Each weighted MatMul node has two input nodes: an activation and a weight.
+        # A single activation may be an input to multiple MatMul nodes.
+        # Below is a mapping from activation node and a port id to corresponding matmul nodes which accept this
+        # activation as an input.
+        matmul_input_to_output_nodes_map = defaultdict(list)
+        for node in matmul_nodes:
+            act_node, output_port_id = self._get_activation_node_and_port(node, graph)
+            matmul_input_to_output_nodes_map[(act_node, output_port_id)].append(node)
+        return matmul_input_to_output_nodes_map
+
+    def _collect_statistics(
+        self,
+        dataset: Dataset,
+        matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
+        graph: NNCFGraph,
+        model: TModel,
+    ):
         """
-        Collects statistics required for data-aware algorithms and/or mixed precision assignment.
+        Creates statistics aggregator, registers all statistics specified for algorithm, and then collect them.
 
         :param dataset: Dataset to collect values.
-        :param nodes: List of nodes, whose inputs are collected.
+        :param matmul_input_to_output_nodes_map: Nodes, whose inputs are collected.
         :param graph: Model graph.
         :param model: Model for statistics collection.
         """
-
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
-
-        statistic_points = None
-        matmul_input_to_output_nodes_map = None
-
-        data_aware_precision_assignment = (
-            self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
-        )
-        data_aware_compression = self._awq or self._scale_estimation or self._lora_correction
-        if data_aware_compression or data_aware_precision_assignment:
-            # Collect statistics only for weighted MatMul nodes
-            matmul_metatypes = self._backend_entity.matmul_metatypes
-            matmul_nodes = filter(lambda node: node.metatype in matmul_metatypes, nodes)
-
-            # Each weighted MatMul node has two input nodes: an activation and a weight.
-            # A single activation may be an input to multiple MatMul nodes.
-            # Below is a mapping from activation node and a port id to corresponding matmul nodes which accept this
-            # activation as an input.
-            matmul_input_to_output_nodes_map = defaultdict(list)
-            for node in matmul_nodes:
-                act_node, output_port_id = self._get_activation_node_and_port(node, graph)
-                matmul_input_to_output_nodes_map[(act_node, output_port_id)].append(node)
-
-            if data_aware_precision_assignment:
-                self._mixed_precision_statistics = self._mixed_precision_algo.get_statistic_points(
-                    model, graph, matmul_input_to_output_nodes_map.keys(), self._subset_size
-                )
-                statistics_aggregator.register_statistic_points(self._mixed_precision_statistics)
-            if data_aware_compression:
-                statistic_points = self.get_statistic_points(
-                    model, graph, matmul_input_to_output_nodes_map.keys(), self._subset_size
-                )
-                statistics_aggregator.register_statistic_points(statistic_points)
+        if self._data_aware_mixed_precision:
+            mixed_precision_statistics = self._mixed_precision_algo.get_statistic_points(
+                model, graph, matmul_input_to_output_nodes_map.keys(), self._subset_size
+            )
+            statistics_aggregator.register_statistic_points(mixed_precision_statistics)
+        if self._data_aware_compression:
+            statistic_points = self.get_statistic_points(
+                model, graph, matmul_input_to_output_nodes_map.keys(), self._subset_size
+            )
+            statistics_aggregator.register_statistic_points(statistic_points)
 
         statistics_aggregator.collect_statistics(model, graph)
-
-        statistics = None
-        if statistic_points is not None:
-            statistics = self._get_statistics(matmul_input_to_output_nodes_map, statistic_points)
-        return statistics
+        return statistics_aggregator.statistic_points
 
     def get_statistic_points(
         self,
@@ -636,11 +645,11 @@ class WeightCompression(Algorithm):
 
         return statistic_container
 
-    def _get_statistics(
+    def _get_statistics_for_weights_compression(
         self, matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]], statistic_points
     ) -> Dict[str, WCTensorStatistic]:
         """
-        Retrieve collected statistics.
+        Retrieve collected statistics only for WC algorithm and not for MixedPrecision.
 
         :param matmul_input_to_output_nodes_map: A mapping from activation node and a port id to corresponding matmul
             nodes which accept this activation as an input.
@@ -670,11 +679,12 @@ class WeightCompression(Algorithm):
                     act_node.node_name, partial(input_filter_func, port_id=output_port_id), self._algorithm_key
                 )
             )
-            assert len(tensor_collectors) == 1
-            stats = tensor_collectors[0].get_statistics()
+            # Statistics could be empty in case when the statistics have only other algorithms but not WC statistics
+            if tensor_collectors:
+                assert len(tensor_collectors) == 1
+                stats = tensor_collectors[0].get_statistics()
 
-            # Each activation node may have multiple MatMul nodes which it is an input to
-            for node in matmul_nodes:
-                statistics[node.node_name] = copy.deepcopy(stats)
-
+                # Each activation node may have multiple MatMul nodes which it is an input to
+                for node in matmul_nodes:
+                    statistics[node.node_name] = copy.deepcopy(stats)
         return statistics
