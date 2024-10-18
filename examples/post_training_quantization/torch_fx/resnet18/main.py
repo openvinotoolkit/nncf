@@ -219,8 +219,7 @@ def main():
         int8_latency = measure_latency(quantized_fx_model, example_inputs=example_input)
     print(f"{int8_latency:.3f} ms")
 
-    print('[Step 4] torch.compile(..., backend="openvino") speed ups:')
-
+    print("[Step 4] Summary:")
     tabular_data = [
         ["default", "FP32", f"{fp32_latency:.3f}", ""],
         ["openvino", "FP32", f"{fp32_ov_latency:.3f}", f"x{fp32_latency / fp32_ov_latency:.3f}"],
