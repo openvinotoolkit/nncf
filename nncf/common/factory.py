@@ -87,13 +87,11 @@ class ModelTransformerFactory:
 
 class EngineFactory:
     @staticmethod
-    def create(model: TModel, use_fp32_precision: bool = False) -> Engine:
+    def create(model: TModel) -> Engine:
         """
         Factory method to create backend-specific Engine instance based on the input model.
 
         :param model: backend-specific model instance.
-        :param use_fp32_precision: A flag that determines whether to force the engine to use FP32
-            precision during inference.
         :return: backend-specific Engine instance.
         """
         model_backend = get_backend(model)
@@ -104,7 +102,7 @@ class EngineFactory:
         if model_backend == BackendType.OPENVINO:
             from nncf.openvino.engine import OVNativeEngine
 
-            return OVNativeEngine(model, use_fp32_precision)
+            return OVNativeEngine(model)
         if model_backend in (BackendType.TORCH, BackendType.TORCH_FX):
             from nncf.torch.engine import PTEngine
 

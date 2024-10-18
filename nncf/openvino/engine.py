@@ -64,7 +64,12 @@ class OVNativeEngine(Engine):
     to infer the model.
     """
 
-    def __init__(self, model: ov.Model, use_fp32_precision: bool = False):
+    def __init__(self, model: ov.Model, use_fp32_precision: bool = True):
+        """
+        :param model: Model.
+        :param use_fp32_precision: A flag that determines whether to force the engine to use FP32
+            precision during inference.
+        """
         config = None
         if use_fp32_precision:
             config = {inference_precision: Type.f32}

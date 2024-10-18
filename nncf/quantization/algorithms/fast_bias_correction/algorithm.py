@@ -338,7 +338,7 @@ class FastBiasCorrection(Algorithm):
         :param output_name: Name of the output tensor for the data collection.
         :return: Calculated bias shift.
         """
-        engine = EngineFactory.create(model, use_fp32_precision=True)
+        engine = EngineFactory.create(model)
         raw_output = engine.infer(input_blob)
         q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
         q_outputs = mean_per_channel(q_outputs, output_channel_axis)
