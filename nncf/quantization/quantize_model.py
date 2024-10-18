@@ -36,7 +36,12 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResult
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
 from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
+from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
+from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
+from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi
 from nncf.scopes import IgnoredScope
+from nncf.telemetry.decorator import tracked_function
+from nncf.telemetry.events import MODEL_BASED_CATEGORY
 
 TTensor = TypeVar("TTensor")
 
@@ -111,6 +116,14 @@ def _update_advanced_quantization_parameters(
 
 
 @api(canonical_alias="nncf.quantize")
+@tracked_function(
+    MODEL_BASED_CATEGORY,
+    [
+        CompressionStartedWithQuantizeApi(),
+        "target_device",
+        "preset",
+    ],
+)
 def quantize(
     model: TModel,
     calibration_dataset: Dataset,
@@ -265,6 +278,16 @@ def wrap_validation_fn(validation_fn):
 
 
 @api(canonical_alias="nncf.quantize_with_accuracy_control")
+@tracked_function(
+    MODEL_BASED_CATEGORY,
+    [
+        CompressionStartedWithQuantizeWithAccuracyControlApi(),
+        "target_device",
+        "preset",
+        "max_drop",
+        "drop_type",
+    ],
+)
 def quantize_with_accuracy_control(
     model: TModel,
     calibration_dataset: Dataset,
@@ -380,6 +403,18 @@ def quantize_with_accuracy_control(
 
 
 @api(canonical_alias="nncf.compress_weights")
+@tracked_function(
+    MODEL_BASED_CATEGORY,
+    [
+        CompressionStartedWithCompressWeightsApi(),
+        "mode",
+        "awq",
+        "scale_estimation",
+        "gptq",
+        "lora_correction",
+        "backup_mode",
+    ],
+)
 def compress_weights(
     model: TModel,
     mode=CompressWeightsMode.INT8_ASYM,

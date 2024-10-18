@@ -10,14 +10,23 @@
 # limitations under the License.
 
 from contextlib import contextmanager
-from typing import Optional
+from typing import Optional, TypeVar
 
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
+
+# Backend categories
 NNCF_TF_CATEGORY = "nncf_tf"
 NNCF_PT_CATEGORY = "nncf_pt"
 NNCF_ONNX_CATEGORY = "nncf_onnx"
 NNCF_OV_CATEGORY = "nncf_ov"
 
+# Dynamic categories
+MODEL_BASED_CATEGORY = "model_based"
+
 CURRENT_CATEGORY = None
+
+TModel = TypeVar("TModel")
 
 
 def _set_current_category(category: str):
@@ -27,6 +36,21 @@ def _set_current_category(category: str):
 
 def get_current_category() -> Optional[str]:
     return CURRENT_CATEGORY
+
+
+def get_model_based_category(model: TModel) -> str:
+    category_by_backend = {
+        BackendType.ONNX: NNCF_ONNX_CATEGORY,
+        BackendType.OPENVINO: NNCF_OV_CATEGORY,
+        BackendType.TORCH: NNCF_PT_CATEGORY,
+        BackendType.TENSORFLOW: NNCF_TF_CATEGORY,
+    }
+    category = None
+    if model is not None:
+        model_backend = get_backend(model)
+        category = category_by_backend[model_backend]
+
+    return category
 
 
 @contextmanager
