@@ -679,8 +679,6 @@ def _remove_constant_qdq_transformation(model: torch.fx.GraphModule) -> None:
     _compress_qdq_constant_transformation(model, matches_per_tensor)
     _set_meta_for_matches(model.graph, matches_per_tensor)
 
-    return matches_per_channel, matches_per_tensor
-
 
 def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> Optional[Tuple[Union[torch.Tensor, int]]]:
     """
