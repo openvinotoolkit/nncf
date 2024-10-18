@@ -35,9 +35,20 @@ def register_statistics_for_algorithm(
     graph: NNCFGraph,
     subset_size: int,
     compression_algorithm: WeightCompression,
-    matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
 ) -> None:
     """Registers the statistics of the provided algorithm."""
+    compression_algorithm._set_backend_entity(model)
+
+    nodes_to_compress = [
+        node
+        for node in compression_algorithm._get_nodes_to_compress(graph)
+        if node.metatype in compression_algorithm._backend_entity.matmul_metatypes
+    ]
+
+    matmul_input_to_output_nodes_map = compression_algorithm._get_matmul_input_to_output_nodes_map(
+        nodes_to_compress, graph
+    )
+
     statistic_points = compression_algorithm.get_statistic_points(
         model, graph, matmul_input_to_output_nodes_map.keys(), subset_size
     )
@@ -103,9 +114,7 @@ def register_all_statistics(
         nodes_to_compress, graph
     )
 
-    register_statistics_for_algorithm(
-        statistics_aggregator, model, graph, subset_size, compression_algorithm, matmul_input_to_output_nodes_map
-    )
+    register_statistics_for_algorithm(statistics_aggregator, model, graph, subset_size, compression_algorithm)
 
     if gptq:
         _register_gptq(statistics_aggregator, model, graph, nodes_to_compress, subset_size)
