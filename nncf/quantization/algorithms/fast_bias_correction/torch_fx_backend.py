@@ -23,7 +23,7 @@ from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_utils import get_target_point
 from nncf.experimental.torch.fx.node_utils import get_bias_value
 from nncf.experimental.torch.fx.node_utils import is_node_with_bias
-from nncf.experimental.torch.fx.transformations import bias_update_transformation_builder
+from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
@@ -41,7 +41,9 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def create_bias_correction_command(
         node: NNCFNode, bias_value: Tensor, nncf_graph: NNCFGraph
     ) -> FXApplyTransformationCommand:
-        return FXApplyTransformationCommand(bias_update_transformation_builder(node, bias_value.data, input_port_id=1))
+        return FXApplyTransformationCommand(
+            constant_update_transformation_builder(node, bias_value.data, input_port_id=2)
+        )
 
     @staticmethod
     def model_extraction_command(
