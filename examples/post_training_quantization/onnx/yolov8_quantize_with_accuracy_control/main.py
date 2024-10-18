@@ -190,6 +190,7 @@ def quantize_ac(
         model,
         quantization_dataset,
         quantization_dataset,
+        subset_size=len(data_loader),
         validation_fn=validation_fn,
         max_drop=0.003,
         preset=nncf.QuantizationPreset.MIXED,

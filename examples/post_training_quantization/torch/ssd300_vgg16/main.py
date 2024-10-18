@@ -152,7 +152,7 @@ def main():
 
     # Quantize model
     calibration_dataset = nncf.Dataset(dataset, partial(transform_fn, device=device))
-    quantized_model = nncf.quantize(model, calibration_dataset)
+    quantized_model = nncf.quantize(model, calibration_dataset, subset_size=len(dataset))
 
     # Convert to OpenVINO
     dummy_input = torch.randn(1, 3, 480, 480)
