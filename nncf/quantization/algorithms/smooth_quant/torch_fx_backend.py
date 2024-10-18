@@ -42,7 +42,7 @@ PT_PRE_LAYER_TARGET_TYPE = TargetType.OPERATOR_PRE_HOOK
 class FXSQMultiply(torch.nn.Module):
     def __init__(self, scale: torch.Tensor):
         super().__init__()
-        self._scale_value = scale
+        self._scale_value = torch.nn.Parameter(scale)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return torch.mul(x, self._scale_value)

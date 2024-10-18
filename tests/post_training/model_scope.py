@@ -87,7 +87,14 @@ QUANTIZATION_MODELS = [
         "model_id": "resnet18",
         "pipeline_cls": ImageClassificationTorchvision,
         "compression_params": {},
-        "backends": [BackendType.FX_TORCH, BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.OV, BackendType.ONNX],
+        "backends": [
+            BackendType.FX_TORCH,
+            BackendType.CUDA_FX_TORCH,
+            BackendType.TORCH,
+            BackendType.CUDA_TORCH,
+            BackendType.OV,
+            BackendType.ONNX,
+        ],
         "batch_size": 128,
     },
     {
@@ -98,7 +105,7 @@ QUANTIZATION_MODELS = [
             "fast_bias_correction": False,
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": [BackendType.FX_TORCH, BackendType.OV, BackendType.ONNX],
+        "backends": [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH, BackendType.OV, BackendType.ONNX],
         "batch_size": 128,
     },
     {
@@ -109,7 +116,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.15),
         },
-        "backends": [BackendType.FX_TORCH, BackendType.OV],
+        "backends": [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH, BackendType.OV],
         "batch_size": 1,
     },
     {
@@ -120,7 +127,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.5),
         },
-        "backends": [BackendType.FX_TORCH, BackendType.OV],
+        "backends": [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH, BackendType.OV],
         "batch_size": 1,
     },
     # Timm models
