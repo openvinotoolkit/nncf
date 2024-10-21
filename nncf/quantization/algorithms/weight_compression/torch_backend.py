@@ -217,7 +217,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 CompressWeightsMode.INT8_SYM,
                 CompressWeightsMode.INT8,
             ]:
-                raise ValueError(f"{compression_config.mode.value} is not supported.")
+                raise nncf.ParameterNotSupportedError(f"{compression_config.mode.value} is not supported.")
 
             weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
             weight_name = weight_node.layer_attributes.name

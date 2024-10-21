@@ -161,7 +161,7 @@ def quantize(
     :rtype: TModel
     """
     if subset_size < 1:
-        raise ValueError("Subset size must be positive.")
+        raise nncf.ValidationError("Subset size must be positive.")
 
     advanced_parameters = _update_advanced_quantization_parameters(advanced_parameters, calibration_dataset)
 
@@ -471,13 +471,13 @@ def compress_weights(
         from nncf.torch.quantization.quantize_model import compress_weights_impl as pt_compression_weights_impl
 
         if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 "Torch backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
                 f"but given {mode.value} mode."
             )
 
         if True in [awq, scale_estimation, gptq, lora_correction]:
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 "Torch backend does not support 'awq', 'scale_estimation', 'gptq' and 'lora_correction' options. "
                 "Set them to None."
             )
@@ -487,14 +487,14 @@ def compress_weights(
 
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
-                raise ValueError(
+                raise nncf.ValidationError(
                     "Tracing capabilities with tracing parameters are required in the PyTorch model "
                     "for nncf.compress_weights(). Please wrap the model using "
                     "nncf.torch.wrap_model(model, example_input, trace_parameters=True) before calling "
                     "nncf.compress_weights()."
                 )
         elif dataset is None:
-            raise AttributeError("Please provide a dataset of at least one element for PyTorch model tracing.")
+            raise nncf.ValidationError("Please provide a dataset of at least one element for PyTorch model tracing.")
         else:
             example_input = next(iter(dataset.get_inference_data()))
             model = wrap_model(model, example_input=example_input, trace_parameters=True)
@@ -507,7 +507,7 @@ def compress_weights(
         )
 
         if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 "TorchFX backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
                 f"but given {mode.value} mode."
             )
@@ -516,12 +516,12 @@ def compress_weights(
             raise AttributeError("TorchFX backend does not support backup_mode option.")
 
         if any((awq, scale_estimation, gptq, lora_correction)):
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 "TorchFX backend does not support 'awq', 'scale_estimation', 'gptq',"
                 "and 'lora_correction' options. Set them to None."
             )
         if dataset:
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 "TorchFX only supports data-free weights compression," "Set the 'dataset' option to None"
             )
         compression_weights_impl = fx_compression_weights_impl
@@ -532,13 +532,13 @@ def compress_weights(
         if any((awq, scale_estimation, gptq, lora_correction)) and (
             dataset is None or mode == CompressWeightsMode.E2M1
         ):
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 "Scale estimation, AWQ, GPTQ or Lora Correction algorithm is defined, "
                 "but dataset is None or mode is E2M1."
             )
 
         if gptq and lora_correction:
-            raise AttributeError(
+            raise nncf.ValidationError(
                 "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
             )
 
@@ -550,13 +550,13 @@ def compress_weights(
         if group_size is None:
             group_size = -1
         if ratio != 1 or group_size != -1:
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 "INT8 modes assume per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
 
         if backup_mode is not None:
-            raise AttributeError("INT8 modes do not support the `backup_mode` option")
+            raise nncf.ParameterNotSupportedError("INT8 modes do not support the `backup_mode` option")
 
         options = {
             "all_layers": all_layers,
@@ -569,7 +569,7 @@ def compress_weights(
         }
         unsupported_for_int8 = [name for name, value in options.items() if value is not None]
         if unsupported_for_int8:
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 f"INT8 modes do not support {', '.join(unsupported_for_int8)} option(s). Set them to None."
             )
 
@@ -598,14 +598,14 @@ def compress_weights(
     if backup_mode is None:
         backup_mode = BackupMode.INT8_ASYM
     if ratio != 1 and dataset is None and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
-        raise AttributeError(
+        raise nncf.ValidationError(
             f"Mixed precision selection based on the given sensitivity metric={sensitivity_metric.value} requires "
             "a dataset, but it's not provided."
         )
     if ratio < 0 or ratio > 1:
-        raise ValueError(f"The ratio should be between 0 and 1, but ratio={ratio} is specified.")
+        raise nncf.ValidationError(f"The ratio should be between 0 and 1, but ratio={ratio} is specified.")
     if subset_size is None or subset_size <= 0:
-        raise ValueError(f"The subset_size value should be positive, but subset_size={subset_size} is given.")
+        raise nncf.ValidationError(f"The subset_size value should be positive, but subset_size={subset_size} is given.")
 
     if compression_weights_impl is None:
         raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")

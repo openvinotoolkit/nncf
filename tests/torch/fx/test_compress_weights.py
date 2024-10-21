@@ -15,6 +15,7 @@ import pytest
 import torch
 from torch._export import capture_pre_autograd_graph
 
+import nncf
 from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf.common.factory import NNCFGraphFactory
@@ -218,7 +219,7 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
     exported_model = _capture_model(dummy_torch_model, dummy_input)
-    with pytest.raises(AttributeError):
+    with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(exported_model, mode=mode, **params)
 
 
@@ -227,7 +228,7 @@ def test_raise_error_with_not_int8(mode):
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
     exported_model = _capture_model(dummy_torch_model, dummy_input)
-    with pytest.raises(AttributeError):
+    with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(exported_model, mode=mode)
 
 
