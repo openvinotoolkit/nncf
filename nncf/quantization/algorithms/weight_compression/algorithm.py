@@ -378,7 +378,8 @@ class WeightCompression(Algorithm):
                 matmul_nodes_to_compress, graph
             )
             if not is_statistics_provided:
-                statistic_points = self._collect_statistics(dataset, matmul_input_to_output_nodes_map, graph, model)
+                statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
+                statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
             if statistic_points is not None:
                 statistics = self._get_statistics_for_weights_compression(
                     matmul_input_to_output_nodes_map, statistic_points
@@ -487,8 +488,8 @@ class WeightCompression(Algorithm):
         description = "Applying Weight Compression"
         if self._gptq:
             del statistics
-            if not is_statistics_provided:
-                statistic_points = None
+            # if not is_statistics_provided:
+            statistic_points = None
             model, scales, zero_points = self._gptq_algo.apply(
                 model=model,
                 graph=graph,
@@ -582,9 +583,9 @@ class WeightCompression(Algorithm):
     def _collect_statistics(
         self,
         dataset: Dataset,
-        matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
         graph: NNCFGraph,
         model: TModel,
+        statistic_points: StatisticPointsContainer,
     ):
         """
         Creates statistics aggregator, registers all statistics specified for algorithm, and then collect them.
@@ -595,17 +596,7 @@ class WeightCompression(Algorithm):
         :param model: Model for statistics collection.
         """
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
-        if self._data_aware_mixed_precision:
-            mixed_precision_statistics = self._mixed_precision_algo.get_statistic_points(
-                model, graph, matmul_input_to_output_nodes_map.keys(), self._subset_size
-            )
-            statistics_aggregator.register_statistic_points(mixed_precision_statistics)
-        if self._data_aware_compression:
-            statistic_points = self.get_statistic_points(
-                model, graph, matmul_input_to_output_nodes_map.keys(), self._subset_size
-            )
-            statistics_aggregator.register_statistic_points(statistic_points)
-
+        statistics_aggregator.register_statistic_points(statistic_points)
         statistics_aggregator.collect_statistics(model, graph)
         return statistics_aggregator.statistic_points
 
@@ -625,23 +616,31 @@ class WeightCompression(Algorithm):
         :param subset_size: Number of samples to collect.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
-
         statistic_container = StatisticPointsContainer()
-        for node, output_port_id in nodes_and_port_ids:
-            statistic_point = self._backend_entity.target_point(
-                TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
-            )
-            # Reduce activations across all but the last dimension. The last dimension is assumed to be the hidden
-            # size dimension.
-            n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
-            stat_collector = self._backend_entity.mean_statistic_collector(
-                reduction_axes=tuple(range(n_dims - 1)), subset_size=subset_size
-            )
-            statistic_container.add_statistic_point(
-                StatisticPoint(
-                    target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
+        if self._data_aware_compression:
+            for node, output_port_id in nodes_and_port_ids:
+                statistic_point = self._backend_entity.target_point(
+                    TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
                 )
+                # Reduce activations across all but the last dimension. The last dimension is assumed to be the hidden
+                # size dimension.
+                n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
+                stat_collector = self._backend_entity.mean_statistic_collector(
+                    reduction_axes=tuple(range(n_dims - 1)), subset_size=subset_size
+                )
+                statistic_container.add_statistic_point(
+                    StatisticPoint(
+                        target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
+                    )
+                )
+        if self._data_aware_mixed_precision:
+            # Add statistics from mixed_precision_algo
+            mixed_precision_statistics = self._mixed_precision_algo.get_statistic_points(
+                model, graph, nodes_and_port_ids, self._subset_size
             )
+            for points in mixed_precision_statistics.values():
+                for p in points:
+                    statistic_container.add_statistic_point(p)
 
         return statistic_container
 

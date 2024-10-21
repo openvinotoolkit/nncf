@@ -116,8 +116,8 @@ def register_all_statistics(
 
     register_statistics_for_algorithm(statistics_aggregator, model, graph, subset_size, compression_algorithm)
 
-    if gptq:
-        _register_gptq(statistics_aggregator, model, graph, nodes_to_compress, subset_size)
+    # if gptq:
+    #     _register_gptq(statistics_aggregator, model, graph, nodes_to_compress, subset_size)
 
     if mixed_precision:
         _register_mixed_precision(statistics_aggregator, model, graph, matmul_input_to_output_nodes_map, subset_size)
