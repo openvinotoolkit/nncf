@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.experimental.torch.fx.quantization.backend_parameters`
+====================================================================
+
+.. py:module:: nncf.experimental.torch.fx.quantization.backend_parameters
+
+
