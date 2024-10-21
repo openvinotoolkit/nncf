@@ -11,6 +11,8 @@
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import openvino as ov
+from openvino import Type
+from openvino.properties.hint import inference_precision
 from openvino.runtime import opset13 as opset
 
 from nncf.common.graph import NNCFGraph
@@ -345,7 +347,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         model = ov.Model([result], parameters)
 
-        compiled_model = ov.compile_model(model, device_name="CPU")
+        compiled_model = ov.compile_model(model, device_name="CPU", config={inference_precision: Type.f32})
 
         return lambda parameters: compiled_model(parameters)[0]
 
@@ -378,7 +380,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         model = ov.Model([result], parameters)
 
-        compiled_model = ov.compile_model(model, device_name="CPU")
+        compiled_model = ov.compile_model(model, device_name="CPU", config={inference_precision: Type.f32})
 
         return lambda parameters: compiled_model(parameters)[0]
 
