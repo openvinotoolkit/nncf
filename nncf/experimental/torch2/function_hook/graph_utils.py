@@ -97,6 +97,6 @@ class TensorInfo:
     tensor_source: TensorSource
     shape: Tuple[int, ...]
     dtype: torch.dtype
+    output_port_id: int
     source_node_id: Optional[int]
-    output_port_id: Optional[int]
     name_in_model: Optional[str]

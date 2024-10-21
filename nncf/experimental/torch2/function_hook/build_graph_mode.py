@@ -11,10 +11,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, MutableMapping, Tuple
-from weakref import ref
+from typing import Any, Dict, Tuple, Union, cast
 
-import networkx as nx
+import networkx as nx  # type: ignore[import-untyped]
 import torch
 from torch import nn
 
@@ -31,6 +30,7 @@ from nncf.experimental.torch2.function_hook.hook_executor_mode import FunctionHo
 from nncf.experimental.torch2.function_hook.hook_executor_mode import OpMeta
 from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
 from nncf.experimental.torch2.function_hook.weak_map import WeakUnhashableKeyMap
+from nncf.experimental.torch2.function_hook.wrapper import ForwardWithHooks
 from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 
 
@@ -54,24 +54,26 @@ class GraphBuilderMode(FunctionHookMode):
         super().__init__(model=model, hook_storage=hook_storage)
         self.next_node_id: int = 0
         self.graph: nx.DiGraph = nx.DiGraph()
-        self.tensor_info: MutableMapping[ref[torch.Tensor], TensorInfo] = WeakUnhashableKeyMap()
+        self.tensor_info: WeakUnhashableKeyMap[Union[torch.Tensor, torch.nn.Parameter], TensorInfo] = (
+            WeakUnhashableKeyMap()
+        )
 
         for name, parameter in self.model.named_parameters():
             self.tensor_info[parameter] = TensorInfo(
                 tensor_source=TensorSource.parameter,
                 shape=tuple(parameter.shape),
                 dtype=parameter.dtype,
-                source_node_id=None,
                 output_port_id=0,
+                source_node_id=None,
                 name_in_model=name,
             )
-        for name, parameter in self.model.named_buffers():
-            self.tensor_info[parameter] = TensorInfo(
+        for name, buffer in self.model.named_buffers():
+            self.tensor_info[buffer] = TensorInfo(
                 tensor_source=TensorSource.buffer,
-                shape=tuple(parameter.shape),
-                dtype=parameter.dtype,
-                source_node_id=None,
+                shape=tuple(buffer.shape),
+                dtype=buffer.dtype,
                 output_port_id=0,
+                source_node_id=None,
                 name_in_model=name,
             )
 
@@ -100,8 +102,8 @@ class GraphBuilderMode(FunctionHookMode):
                 tensor_source=TensorSource.input,
                 shape=tuple(tensor.shape),
                 dtype=tensor.dtype,
-                source_node_id=node_id,
                 output_port_id=0,
+                source_node_id=node_id,
                 name_in_model=None,
             )
             self.graph.add_node(node_id, type=NodeType.input, meta=InOutMeta.from_tensor(tensor, node_name))
@@ -122,7 +124,7 @@ class GraphBuilderMode(FunctionHookMode):
         """
         node_id = self.register_new_node_id()
         tensor_info = self.tensor_info.get(tensor)
-        if tensor_info is not None:
+        if tensor_info is not None and isinstance(tensor_info.output_port_id, int):
             with self.disable():
                 self.graph.add_edge(
                     tensor_info.source_node_id,
@@ -170,12 +172,12 @@ class GraphBuilderMode(FunctionHookMode):
                 fn_name = "transpose"
                 # grad_fn collect arguments as _saved_dim0=18446744073709551614
                 fn_kwargs = {
-                    "dim0": -(2**64 - output.grad_fn._saved_dim0),
-                    "dim1": -(2**64 - output.grad_fn._saved_dim1),
+                    "dim0": -(2**64 - output.grad_fn._saved_dim0),  # type: ignore[attr-defined]
+                    "dim1": -(2**64 - output.grad_fn._saved_dim1),  # type: ignore[attr-defined]
                 }
             if output.grad_fn.name() == "PermuteBackward0":
                 fn_name = "permute"
-                fn_kwargs = {"dims": output.grad_fn._saved_dims}
+                fn_kwargs = {"dims": output.grad_fn._saved_dims}  # type: ignore[attr-defined]
 
         if fn_name is not None and fn_kwargs is not None:
             self.graph.nodes[op_meta.extra_info["node_id"]]["meta"].fn_name = fn_name
@@ -197,7 +199,7 @@ class GraphBuilderMode(FunctionHookMode):
         outputs = super().execute_post_hooks(outputs, op_meta)
         return outputs
 
-    def execute_hooks_for_parameter(self, value: torch.Tensor):
+    def execute_hooks_for_parameter(self, value: torch.Tensor) -> torch.Tensor:
         """
         Overload execute_hooks_for_parameter to register parameters to the graph
         """
@@ -208,6 +210,7 @@ class GraphBuilderMode(FunctionHookMode):
             tensor_info is not None
             and tensor_info.source_node_id is None
             and tensor_info.tensor_source in [TensorSource.buffer, TensorSource.parameter]
+            and isinstance(tensor_info.name_in_model, str)
         ):
             node_id = self.register_new_node_id()
             with self.disable():
@@ -282,12 +285,12 @@ class GraphBuilderMode(FunctionHookMode):
         self.graph.add_node(
             node_id,
             type=NodeType.fn_call,
-            meta=FunctionMeta(op_name=op_name, fn_name=op_meta.func.__name__, args=op_attrs, kwargs=op_kwargs),
+            meta=FunctionMeta(op_name=op_name, fn_name=op_meta.func.__name__, args=tuple(op_attrs), kwargs=op_kwargs),
         )
 
         logger.debug(f"GraphBuilderMode.process_op_inputs: {node_id=} {op_name=} {op_attrs=} {op_kwargs=}")
 
-    def process_post_function_hooks_for_value(self, value: Any, op_meta: OpMeta, port_id: int):
+    def process_post_function_hooks_for_value(self, value: Any, op_meta: OpMeta, port_id: int) -> Any:
         """
         Overload process_post_function_hooks_for_value to get register output tensors to the graph
         """
@@ -297,8 +300,8 @@ class GraphBuilderMode(FunctionHookMode):
                     tensor_source=TensorSource.function,
                     shape=tuple(value.shape),
                     dtype=value.dtype,
-                    source_node_id=op_meta.extra_info["node_id"],
                     output_port_id=port_id,
+                    source_node_id=op_meta.extra_info["node_id"],
                     name_in_model=None,
                 )
         return super().process_post_function_hooks_for_value(value, op_meta, port_id)
@@ -315,11 +318,12 @@ def build_graph(model: nn.Module, *args: Any, **kwargs: Any) -> nx.DiGraph:
     :return: A nx.DiGraph where nodes represent operations of model.
     """
 
-    with torch.enable_grad():
+    with torch.enable_grad():  # type: ignore
         # Gradient use to get information about __get__ functions to detect tensor.(T, mT) attributes
         with GraphBuilderMode(model=model, hook_storage=get_hook_storage(model)) as ctx:
             args, kwargs = ctx.process_model_inputs(args, kwargs)
-            outputs = model.forward._func(*args, **kwargs)
+            wrapped_forward = cast(ForwardWithHooks, model.forward)
+            outputs = wrapped_forward._func(*args, **kwargs)
             outputs = ctx.process_model_outputs(outputs)
     return ctx.graph
 

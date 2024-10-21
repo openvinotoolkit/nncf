@@ -30,7 +30,7 @@ class WeakUnhashableKeyMap(Generic[_K, _V]):
 
     def __init__(self) -> None:
         """Initialize an empty WeakUnhashableKeyMap."""
-        self._data: Dict[int, Tuple[weakref.ref[_K], _V]] = {}
+        self._data: Dict[int, Tuple[weakref.ReferenceType[_K], _V]] = {}
 
     def __getitem__(self, obj: Any) -> Any:
         """

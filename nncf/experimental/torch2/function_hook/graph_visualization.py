@@ -13,8 +13,8 @@ import hashlib
 from enum import Enum
 from typing import Any, Dict, Tuple
 
-import networkx as nx
-import pydot
+import networkx as nx  # type: ignore[import-untyped]
+import pydot  # type: ignore[import-untyped]
 
 from nncf.experimental.torch2.function_hook.graph_utils import ConstMeta
 from nncf.experimental.torch2.function_hook.graph_utils import EdgeMeta
