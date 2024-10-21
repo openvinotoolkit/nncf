@@ -628,13 +628,13 @@ def compress_weights(
             ignored_scope,
             all_layers,
             sensitivity_metric,
-            awq,
-            subset_size,
-            scale_estimation,
-            gptq,
-            lora_correction,
-            backup_mode,
-            advanced_parameters,
+            awq=True,
+            subset_size=subset_size,
+            scale_estimation=True,
+            gptq=True,
+            lora_correction=True,
+            backup_mode=backup_mode,
+            advanced_parameters=advanced_parameters,
         )
 
     return compression_weights_impl(
