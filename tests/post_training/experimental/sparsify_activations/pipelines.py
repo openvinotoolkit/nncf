@@ -21,12 +21,12 @@ import torch
 import torch.utils
 import torch.utils.data
 import torchvision
+from datasets import load_dataset
 from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoModelForCausalLM
 
 import nncf
-from datasets import load_dataset
 from nncf.experimental.torch.sparsify_activations import sparsify_activations
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
 from nncf.experimental.torch.sparsify_activations.torch_backend import PTSparsifyActivationsAlgoBackend
