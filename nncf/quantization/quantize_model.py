@@ -483,7 +483,7 @@ def compress_weights(
             )
 
         if backup_mode is not None:
-            raise AttributeError("Torch backend does not support backup_mode option.")
+            raise nncf.ParameterNotSupportedError("Torch backend does not support backup_mode option.")
 
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
@@ -513,7 +513,7 @@ def compress_weights(
             )
 
         if backup_mode is not None:
-            raise AttributeError("TorchFX backend does not support backup_mode option.")
+            raise nncf.ParameterNotSupportedError("TorchFX backend does not support backup_mode option.")
 
         if any((awq, scale_estimation, gptq, lora_correction)):
             raise nncf.ParameterNotSupportedError(
