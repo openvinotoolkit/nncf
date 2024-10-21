@@ -52,9 +52,9 @@ MODELS = (
     SanitySampleCase(
         "resnet18",
         "https://storage.openvinotoolkit.org/repositories/nncf/openvino_notebook_ckpts/302_resnet18_fp32_v1.pth",
-        55.35,
-        51,
-        58,
+        55.30,
+        30,
+        37,
     ),
 )
 
