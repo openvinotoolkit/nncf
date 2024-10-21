@@ -21,17 +21,17 @@ import torch
 import torch.utils
 import torch.utils.data
 import torchvision
-from datasets import load_dataset
 from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoModelForCausalLM
 
 import nncf
+from datasets import load_dataset
 from nncf.experimental.torch.sparsify_activations import sparsify_activations
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
 from nncf.experimental.torch.sparsify_activations.torch_backend import PTSparsifyActivationsAlgoBackend
-from nncf.torch.quantization.layers import AsymmetricWeightsDecompressor
-from nncf.torch.quantization.layers import SymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 from tests.post_training.pipelines.base import LIMIT_LENGTH_OF_STATUS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
@@ -267,7 +267,7 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
         if self.backend == BackendType.CUDA_TORCH:
             self.model_hf.float()
             for module in self.model_hf.nncf.modules():
-                if isinstance(module, (AsymmetricWeightsDecompressor, SymmetricWeightsDecompressor)):
+                if isinstance(module, (INT8AsymmetricWeightsDecompressor, INT8SymmetricWeightsDecompressor)):
                     module.result_dtype = torch.float32
             export_from_model(
                 self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32", device="cuda"

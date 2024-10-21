@@ -24,6 +24,8 @@ from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.quantization import compress_weights
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from tests.torch.ptq.test_weights_compression import ALL_SENSITIVITY_METRICS
+from tests.torch.ptq.test_weights_compression import INT4_MODES
+from tests.torch.ptq.test_weights_compression import INT8_MODES
 from tests.torch.ptq.test_weights_compression import SUPPORTED_MODES
 from tests.torch.ptq.test_weights_compression import UNSUPPORTED_MODES
 from tests.torch.ptq.test_weights_compression import ConvolutionModel
@@ -77,10 +79,13 @@ def _capture_model(model, inputs):
 
 @pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_weights(mode):
-    model = ShortTransformer(5, 10)
-    input_ids = torch.randint(0, 10, (5,))
+    model = ShortTransformer(8, 16)
+    input_ids = torch.randint(0, 10, (8,))
     exported_model = _capture_model(model, input_ids)
-    compressed_model = compress_weights(exported_model, mode=mode)
+    kwargs = {}
+    if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
+        kwargs["group_size"] = 4
+    compressed_model = compress_weights(exported_model, mode=mode, **kwargs)
     dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
     n_compressed_weights = 0
     n_target_modules = 0
@@ -92,7 +97,7 @@ def test_compress_weights(mode):
     assert n_target_modules == n_compressed_weights
 
 
-@pytest.mark.parametrize("mode", SUPPORTED_MODES)
+@pytest.mark.parametrize("mode", INT8_MODES)
 def test_compress_weights_graph_edge(mode):
     model = ShortTransformer(5, 10)
     input_ids = torch.randint(0, 10, (5,))
@@ -109,10 +114,13 @@ def test_compress_weights_graph_edge(mode):
 @pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_weights_shared_weights(mocker, mode):
     with disable_patching():
-        model = ShortTransformer(5, 10, share_weights=True)
-        input_ids = torch.randint(0, 10, (5,))
+        model = ShortTransformer(8, 16, share_weights=True)
+        input_ids = torch.randint(0, 10, (8,))
         exported_model = _capture_model(model, input_ids)
-        compressed_model = compress_weights(exported_model, mode=mode)
+        kwargs = {}
+        if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
+            kwargs["group_size"] = 4
+        compressed_model = compress_weights(exported_model, mode=mode, **kwargs)
     dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
     n_compressed_weights = 0
     n_target_modules = 0
@@ -142,11 +150,14 @@ def test_compress_weights_shared_weights(mocker, mode):
 @pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compressed_model_inference(mode):
     torch.manual_seed(42)
-    model = ShortTransformer(5, 10, share_weights=True)
-    input_ids = torch.randint(0, 10, (5,))
+    model = ShortTransformer(8, 16, share_weights=True)
+    input_ids = torch.randint(0, 10, (8,))
     exported_model = _capture_model(model, input_ids)
     exported_model_output = exported_model(input_ids)
-    compressed_model = compress_weights(exported_model, mode=mode)
+    kwargs = {}
+    if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
+        kwargs["group_size"] = 4
+    compressed_model = compress_weights(exported_model, mode=mode, **kwargs)
     compressed_model_outputs = compressed_model(input_ids)
 
     assert (
@@ -161,7 +172,7 @@ def test_compress_weights_model_size_conv(mode):
     dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
     model = ConvolutionModel()
 
-    input_ids = torch.randint(0, 10, [1, 3, 300, 300])
+    input_ids = torch.randint(0, 10, [1, 3, 256, 256])
     exported_model = _capture_model(model, input_ids)
     model_size = get_model_size(exported_model)
     compressed_model = compress_weights(exported_model, mode=mode)
@@ -182,9 +193,11 @@ def test_compress_weights_model_size_conv(mode):
 @pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_weights_functional_model(mode):
     model = FunctionalModel()
-    decompressor_type = "symmetric" if mode == CompressWeightsMode.INT8_SYM else "asymmetric"
+    decompressor_type = (
+        "symmetric" if mode in (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT4_SYM) else "asymmetric"
+    )
 
-    input_ids = torch.randint(0, 10, [1, 3, 300, 300])
+    input_ids = torch.randint(0, 10, [1, 3, 256, 256])
     exported_model = _capture_model(model, input_ids)
     compressed_model = compress_weights(exported_model, mode=mode)
 
@@ -196,7 +209,7 @@ def test_compress_weights_functional_model(mode):
     assert n_compressed_weights == 4
 
 
-@pytest.mark.parametrize("mode", SUPPORTED_MODES)
+@pytest.mark.parametrize("mode", INT8_MODES)
 @pytest.mark.parametrize(
     "params",
     (
@@ -220,6 +233,27 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
     dummy_input = torch.Tensor()
     exported_model = _capture_model(dummy_torch_model, dummy_input)
     with pytest.raises(nncf.ParameterNotSupportedError):
+        compress_weights(exported_model, mode=mode, **params)
+
+
+@pytest.mark.parametrize("mode", INT4_MODES)
+@pytest.mark.parametrize(
+    "params",
+    (
+        {"ratio": 0.5},
+        *({"sensitivity_metric": metric} for metric in ALL_SENSITIVITY_METRICS),
+        {"gptq": True},
+        {"awq": True},
+        {"scale_estimation": True},
+        {"lora_correction": True},
+        {"dataset": Dataset([1])},
+    ),
+)
+def test_raise_error_with_unsupported_params_for_int8(mode, params):
+    dummy_torch_model = EmptyModel()
+    dummy_input = torch.Tensor()
+    exported_model = _capture_model(dummy_torch_model, dummy_input)
+    with pytest.raises(AttributeError):
         compress_weights(exported_model, mode=mode, **params)
 
 
@@ -252,7 +286,7 @@ def test_model_devices_and_precisions(use_cuda, dtype):
     model = MatMulModel().to(device)
     if dtype == torch.float16:
         model.half()
-    dummy_input = torch.rand((1, 300), dtype=dtype, device=device)
+    dummy_input = torch.rand((1, 256), dtype=dtype, device=device)
     exported_model = _capture_model(model, dummy_input)
     compressed_model = compress_weights(exported_model)
     result = compressed_model(dummy_input)

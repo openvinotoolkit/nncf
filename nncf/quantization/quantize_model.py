@@ -510,14 +510,21 @@ def compress_weights(
                 "Torch backend does not support NF4 and E2M1 modes for weight compression."
             )
 
-        if True in [awq, scale_estimation, gptq, lora_correction]:
+        options = {
+            "sensitivity_metric": sensitivity_metric,
+            "awq": awq,
+            "scale_estimation": scale_estimation,
+            "gptq": gptq,
+            "lora_correction": lora_correction,
+        }
+        unsupported_options = [name for name, value in options.items() if value is not None]
+        if unsupported_options:
             raise nncf.ParameterNotSupportedError(
-                "Torch backend does not support 'awq', 'scale_estimation', 'gptq' and 'lora_correction' options. "
-                "Set them to None."
+                f"Torch backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
             )
 
-        if backup_mode is not None:
-            raise nncf.ParameterNotSupportedError("Torch backend does not support backup_mode option.")
+        if ratio is not None and ratio != 1:
+            raise AttributeError("Torch backend does not support ratio != 1.")
 
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
@@ -545,14 +552,22 @@ def compress_weights(
                 "Torch backend does not support NF4 and E2M1 modes for weight compression."
             )
 
-        if backup_mode is not None:
-            raise nncf.ParameterNotSupportedError("TorchFX backend does not support backup_mode option.")
-
-        if any((awq, scale_estimation, gptq, lora_correction)):
+        options = {
+            "sensitivity_metric": sensitivity_metric,
+            "awq": awq,
+            "scale_estimation": scale_estimation,
+            "gptq": gptq,
+            "lora_correction": lora_correction,
+        }
+        unsupported_options = [name for name, value in options.items() if value is not None]
+        if unsupported_options:
             raise nncf.ParameterNotSupportedError(
-                "TorchFX backend does not support 'awq', 'scale_estimation', 'gptq',"
-                "and 'lora_correction' options. Set them to None."
+                f"TorchFX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
             )
+
+        if ratio is not None and ratio != 1:
+            raise AttributeError("TorchFX backend does not support ratio != 1.")
+
         if dataset:
             raise nncf.ParameterNotSupportedError(
                 "TorchFX only supports data-free weights compression," "Set the 'dataset' option to None"
