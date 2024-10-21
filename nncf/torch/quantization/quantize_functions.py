@@ -279,6 +279,15 @@ def decompress_symmetric(input: torch.Tensor, scale: torch.Tensor) -> torch.Tens
 
 
 def pack_uint4(tensor: torch.Tensor) -> torch.Tensor:
+    """
+    Packs a tensor containing uint4 values (in the range [0, 15]) into a tensor with uint8 values,
+    where each element stores two uint4 values.
+
+    :param tensor: A tensor of dtype `torch.uint8` where each element represents a uint4 value.
+        The tensor should contain values in the range [0, 15].
+    :return: A packed tensor of dtype `torch.uint8` where each element packs two uint4 values.
+    :raises ValueError: If the input tensor is not of type `torch.uint8`.
+    """
     if tensor.dtype != torch.uint8:
         raise ValueError(f"Invalid tensor dtype {tensor.type}. torch.uint8 type is supported.")
     packed_tensor = tensor.contiguous()
@@ -289,10 +298,26 @@ def pack_uint4(tensor: torch.Tensor) -> torch.Tensor:
 
 @register_operator()
 def unpack_uint4(packed_tensor: torch.Tensor) -> torch.Tensor:
+    """
+    Unpacks a tensor where each uint8 element stores two uint4 values back into a tensor with
+    individual uint4 values.
+
+    :param packed_tensor: A tensor of dtype `torch.uint8` where each element packs two uint4 values.
+    :return: A tensor of dtype `torch.uint8` where each element represents a uint4 value.
+    """
     return torch.stack((torch.bitwise_and(packed_tensor, 15), torch.bitwise_right_shift(packed_tensor, 4)), dim=-1)
 
 
 def pack_int4(tensor: torch.Tensor) -> torch.Tensor:
+    """
+    Packs a tensor containing int4 values (in the range [-8, 7]) into a tensor with uint8 values,
+    where each element stores two int4 values.
+
+    :param tensor: A tensor of dtype `torch.int8` where each element represents an int4 value.
+        The tensor should contain values in the range [-8, 7].
+    :return: A packed tensor of dtype `torch.uint8` where each element packs two int4 values.
+    :raises ValueError: If the input tensor is not of type `torch.int8`.
+    """
     if tensor.dtype != torch.int8:
         raise ValueError(f"Invalid tensor dtype {tensor.type}. torch.int8 type is supported.")
     tensor = tensor + 8
@@ -301,5 +326,12 @@ def pack_int4(tensor: torch.Tensor) -> torch.Tensor:
 
 @register_operator()
 def unpack_int4(packed_tensor: torch.Tensor) -> torch.Tensor:
+    """
+    Unpacks a tensor where each uint8 element stores two int4 values back into a tensor with
+    individual int4 values.
+
+    :param packed_tensor: A tensor of dtype `torch.uint8` where each element packs two int4 values.
+    :return: A tensor of dtype `torch.int8` where each element represents an int4 value.
+    """
     t = unpack_uint4(packed_tensor)
     return t.type(torch.int8) - 8
