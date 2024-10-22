@@ -324,7 +324,6 @@ def test_ptq_quantization(
 def test_weight_compression(
     wc_reference_data: dict,
     test_case_name: str,
-    data_dir: Path,
     output_dir: Path,
     wc_result_data: Dict[str, RunInfo],
     no_eval: bool,
@@ -351,7 +350,7 @@ def test_weight_compression(
         pipeline_kwargs.update(
             {
                 "output_dir": output_dir,
-                "data_dir": data_dir,
+                "data_dir": None,
                 "no_eval": no_eval,
                 "run_benchmark_app": run_benchmark_app,
                 "batch_size": batch_size,

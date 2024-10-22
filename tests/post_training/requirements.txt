@@ -6,6 +6,7 @@ onnxruntime
 openvino
 pytest
 pytest-forked
+pytest-split
 
 librosa==0.10.0
 memory-profiler==0.61.0
