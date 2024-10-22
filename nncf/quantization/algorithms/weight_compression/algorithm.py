@@ -274,7 +274,7 @@ class WeightCompression(Algorithm):
     def available_backends(self) -> List[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
-    def _set_backend_entity(self, model: TModel) -> None:
+    def set_backend_entity(self, model: TModel) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm.
 
@@ -298,7 +298,7 @@ class WeightCompression(Algorithm):
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 
-    def _get_nodes_to_compress(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_nodes_to_compress(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
         """
         Collects nodes in the model's graph corresponding to the layers for weight compression.
 
@@ -483,8 +483,8 @@ class WeightCompression(Algorithm):
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
-        self._set_backend_entity(model)
-        nodes_to_compress = self._get_nodes_to_compress(graph)
+        self.set_backend_entity(model)
+        nodes_to_compress = self.get_nodes_to_compress(graph)
         is_statistics_provided = statistic_points is not None
         statistics = None
 
@@ -492,7 +492,7 @@ class WeightCompression(Algorithm):
             matmul_nodes_to_compress = filter(
                 lambda node: node.metatype in self._backend_entity.matmul_metatypes, nodes_to_compress
             )
-            matmul_input_to_output_nodes_map = self._get_matmul_input_to_output_nodes_map(
+            matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(
                 matmul_nodes_to_compress, graph
             )
             if not is_statistics_provided:
@@ -685,13 +685,20 @@ class WeightCompression(Algorithm):
         port_id = activation_edge.output_port_id
         return activation_node, port_id
 
-    def _get_matmul_input_to_output_nodes_map(
+    def get_matmul_input_to_output_nodes_map(
         self, matmul_nodes: List[NNCFNode], graph: NNCFGraph
     ) -> Dict[Tuple[NNCFNode, int], List[NNCFNode]]:
-        # Each weighted MatMul node has two input nodes: an activation and a weight.
-        # A single activation may be an input to multiple MatMul nodes.
-        # Below is a mapping from activation node and a port id to corresponding matmul nodes which accept this
-        # activation as an input.
+        """
+        Each weighted MatMul node has two input nodes: an activation and a weight.
+        A single activation may be an input to multiple MatMul nodes.
+        Returns a mapping from activation node and a port id to corresponding matmul nodes which accept this
+        activation as an input.
+
+        :param matmul_nodes: Matmul nodes.
+        :param graph: NNCFGraph instance.
+        :return: A mapping from activation node and a port id to corresponding matmul nodes which accept this
+        activation as an input.
+        """
         matmul_input_to_output_nodes_map = defaultdict(list)
         for node in matmul_nodes:
             act_node, output_port_id = self._get_activation_node_and_port(node, graph)
@@ -763,7 +770,7 @@ class WeightCompression(Algorithm):
 
         # Statistics for GPTQ
         if self._gptq:
-            nodes_to_compress = self._get_nodes_to_compress(graph)
+            nodes_to_compress = self.get_nodes_to_compress(graph)
             gptq_statistics = self._gptq_algo.get_statistic_points(model, graph, nodes_to_compress)
             for points in gptq_statistics.values():
                 for p in points:

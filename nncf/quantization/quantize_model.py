@@ -489,7 +489,7 @@ def compress_weights(
             raise AttributeError("Torch backend does not support backup_mode option.")
 
         if advanced_parameters and advanced_parameters.statistics_file_path:
-            raise AttributeError("TorchFX does not supports statistics caching.")
+            raise AttributeError("Torch does not support statistics caching.")
 
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
@@ -587,14 +587,14 @@ def compress_weights(
         raise nncf.UnsupportedBackendError(f"Unsupported type of backend for weight compression: {backend}")
 
     is_to_cache_statistics = (
-        advanced_parameters
-        and advanced_parameters.statistics_file_path
-        and not Path(advanced_parameters.statistics_file_path).exists()
+        weight_compression_configuration["advanced_parameters"]
+        and weight_compression_configuration["advanced_parameters"].statistics_file_path
+        and not Path(weight_compression_configuration["advanced_parameters"].statistics_file_path).exists()
     )
     if is_to_cache_statistics:
-        from nncf.openvino.quantization.cache_statistics import cache_statistics
+        from nncf.openvino.quantization.cache_statistics import cache_weight_compression_statistics
 
-        cache_statistics(model, dataset, subset_size, advanced_parameters.statistics_file_path)
+        cache_weight_compression_statistics(model, dataset, subset_size, advanced_parameters.statistics_file_path)
 
     return compression_weights_impl(
         model=model,

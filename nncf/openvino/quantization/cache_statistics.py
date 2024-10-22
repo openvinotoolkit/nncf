@@ -34,15 +34,15 @@ def register_statistics_for_algorithm(
     compression_algorithm: WeightCompression,
 ) -> None:
     """Registers the statistics of the provided algorithm."""
-    compression_algorithm._set_backend_entity(model)
+    compression_algorithm.set_backend_entity(model)
 
     nodes_to_compress = [
         node
-        for node in compression_algorithm._get_nodes_to_compress(graph)
+        for node in compression_algorithm.get_nodes_to_compress(graph)
         if node.metatype in compression_algorithm._backend_entity.matmul_metatypes
     ]
 
-    matmul_input_to_output_nodes_map = compression_algorithm._get_matmul_input_to_output_nodes_map(
+    matmul_input_to_output_nodes_map = compression_algorithm.get_matmul_input_to_output_nodes_map(
         nodes_to_compress, graph
     )
 
@@ -101,7 +101,7 @@ def register_all_statistics(
     """Registers all necessary statistics for compression."""
     compression_algorithm._set_backend_entity(model)
 
-    nodes_to_compress = compression_algorithm._get_nodes_to_compress(graph)
+    nodes_to_compress = compression_algorithm.get_nodes_to_compress(graph)
     matmul_nodes_to_compress = [
         node for node in nodes_to_compress if node.metatype in compression_algorithm._backend_entity.matmul_metatypes
     ]
