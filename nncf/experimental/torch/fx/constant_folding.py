@@ -240,17 +240,22 @@ class _ConstantFolder(torch.fx.Interpreter):
 
 def constant_fold(
     gm: torch.fx.GraphModule,
+    constraint_fn: Optional[Callable[[torch.fx.Node], bool]] = None,
 ) -> None:
     """
-    Calcualtes constant subgraphs values and replaces them with a constan node inplace.
+    Calcualtes constant subgraphs values and replaces them with a constant node inplace.
 
     :param gm: Given graph model.
+    :param constraint_fn: Constraint function which takes a node and returs the constraint:
+        should the node be constant folded or not.
     """
     with torch.utils._python_dispatch._disable_current_modes():
         cf = _ConstantFolder(gm, skip_constructors=True)
         cf.run()
 
         for node, constant in cf.node_replacements.items():
+            if constraint_fn is not None and not constraint_fn(node):
+                continue
             _replace_node_with_constant(gm, node, constant)
 
         erased_params = []

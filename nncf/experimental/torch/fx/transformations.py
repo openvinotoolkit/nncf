@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from copy import copy
-from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import torch
@@ -670,13 +669,17 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) 
     for match in matches:
         mul_node = match.replacements[0]
         sub_node = match.replacements[1]
-        weight_node, scale_node, zp_node, axis = None, None, None, None
         nodes_map = {node.name: match.nodes_map[node] for node in match.nodes_map}
-        get_const = partial(get_tensor_constant_from_node, model=model)
+
+        def get_const(arg: Union[torch.fx.Node, float, int]):
+            if isinstance(arg, torch.fx.Node):
+                return get_tensor_constant_from_node(arg, model)
+            return arg
+
         weight_node = get_const(nodes_map["weight"])
         scale_node = get_const(nodes_map["scale"])
         zp_node = get_const(nodes_map["zero_point"])
-        axis = nodes_map["axis"]
+        axis = nodes_map.get("axis")
         port_id = 0
         if axis is not None:
             result = torch.ops.quantized_decomposed.quantize_per_channel.default(
@@ -789,11 +792,24 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     # to make it easier for algorithms to work
     # with the target graph BatchNorm operations
     # are being fused
-    constant_fold(model)
+    fold_constant_except_qdq(model)
     fuse_conv_bn(model)
     separate_conv_and_bias(model)
     separate_linear_and_bias(model)
     shared_constants_unification_transformation(model)
+
+
+def fold_constant_except_qdq(model: torch.fx.GraphModule):
+    """
+    Performs constant folding avoiding quantize-dequantize pattern.
+
+    :param model: Model to perform constant folding on.
+    """
+
+    def constraint_fn(node: torch.fx.Node):
+        return node.op != "call_function" or node.target not in QUANTIZE_NODE_TARGETS + DEQUANTIZE_NODE_TARGETS
+
+    constant_fold(model, constraint_fn=constraint_fn)
 
 
 def revert_quantization_transformations(model: torch.fx.GraphModule) -> None:
