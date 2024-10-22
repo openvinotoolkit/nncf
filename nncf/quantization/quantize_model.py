@@ -486,6 +486,9 @@ def compress_weights(
         if backup_mode is not None:
             raise AttributeError("Torch backend does not support backup_mode option.")
 
+        if advanced_parameters and advanced_parameters.statistics_file_path:
+            raise AttributeError("TorchFX does not supports statistics caching.")
+
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
                 raise ValueError(
@@ -525,6 +528,8 @@ def compress_weights(
             raise AttributeError(
                 "TorchFX only supports data-free weights compression," "Set the 'dataset' option to None"
             )
+        if advanced_parameters and advanced_parameters.statistics_file_path:
+            raise AttributeError("TorchFX does not supports statistics caching.")
         compression_weights_impl = fx_compression_weights_impl
 
     if backend == BackendType.OPENVINO:
