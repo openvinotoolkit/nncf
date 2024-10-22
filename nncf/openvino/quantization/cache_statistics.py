@@ -104,20 +104,19 @@ def register_all_statistics(
     """Registers all necessary statistics for compression."""
     compression_algorithm._set_backend_entity(model)
 
-    nodes_to_compress = [
-        node
-        for node in compression_algorithm._get_nodes_to_compress(graph)
-        if node.metatype in compression_algorithm._backend_entity.matmul_metatypes
+    nodes_to_compress = compression_algorithm._get_nodes_to_compress(graph)
+    matmul_nodes_to_compress = [
+        node for node in nodes_to_compress if node.metatype in compression_algorithm._backend_entity.matmul_metatypes
     ]
 
     matmul_input_to_output_nodes_map = compression_algorithm._get_matmul_input_to_output_nodes_map(
-        nodes_to_compress, graph
+        matmul_nodes_to_compress, graph
     )
 
     register_statistics_for_algorithm(statistics_aggregator, model, graph, subset_size, compression_algorithm)
 
-    # if gptq:
-    #     _register_gptq(statistics_aggregator, model, graph, nodes_to_compress, subset_size)
+    if gptq:
+        _register_gptq(statistics_aggregator, model, graph, nodes_to_compress, subset_size)
 
     if mixed_precision:
         _register_mixed_precision(statistics_aggregator, model, graph, matmul_input_to_output_nodes_map, subset_size)
