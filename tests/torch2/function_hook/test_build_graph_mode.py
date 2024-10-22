@@ -65,8 +65,8 @@ def test_execute_hooks_for_model_output():
         NodeType.const,
         tuple(tensor.shape),
         tensor.dtype,
-        node_id,
         0,
+        node_id,
         None,
     )
     ctx.execute_hooks_for_model_output("output", tensor)
@@ -102,10 +102,10 @@ def test_execute_pre_hooks():
         "meta": FunctionMeta(
             op_name="/relu/0",
             fn_name="relu",
-            args=[
+            args=(
                 TensorMeta(dtype=torch.float32, shape=(1,), requires_grad=False),
                 TensorMeta(dtype=torch.float32, shape=(1, 1, 1, 1), requires_grad=True),
-            ],
+            ),
             kwargs={"b": TensorMeta(dtype=torch.float32, shape=(1,), requires_grad=True)},
         ),
     }
@@ -141,14 +141,14 @@ def test_execute_post_hooks(example_outputs: Union[torch.Tensor, List[torch.Tens
 
     if isinstance(example_outputs, list):
         assert ctx.tensor_info[example_outputs[0]] == TensorInfo(TensorSource.function, (), torch.int64, 0, 0, None)
-        assert ctx.tensor_info[example_outputs[1]] == TensorInfo(TensorSource.function, (1,), torch.int64, 0, 1, None)
+        assert ctx.tensor_info[example_outputs[1]] == TensorInfo(TensorSource.function, (1,), torch.int64, 1, 0, None)
 
     if isinstance(example_outputs, torch.return_types.max):
         assert ctx.tensor_info[example_outputs.values] == TensorInfo(
             TensorSource.function, (), torch.float32, 0, 0, None
         )
         assert ctx.tensor_info[example_outputs.indices] == TensorInfo(
-            TensorSource.function, (1,), torch.int64, 0, 1, None
+            TensorSource.function, (1,), torch.int64, 1, 0, None
         )
 
 
@@ -191,14 +191,14 @@ def test_tensor_attributes(attr):
         ref_meta = FunctionMeta(
             op_name="/__get__/0",
             fn_name="permute",
-            args=[TensorMeta(dtype=torch.float32, shape=(2, 3), requires_grad=True)],
+            args=(TensorMeta(dtype=torch.float32, shape=(2, 3), requires_grad=True),),
             kwargs={"dims": (1, 0)},
         )
     else:
         ref_meta = FunctionMeta(
             op_name="/__get__/0",
             fn_name="transpose",
-            args=[TensorMeta(dtype=torch.float32, shape=(2, 3), requires_grad=True)],
+            args=(TensorMeta(dtype=torch.float32, shape=(2, 3), requires_grad=True),),
             kwargs={"dim0": -2, "dim1": -1},
         )
     assert graph.nodes[1]["type"] == NodeType.fn_call
