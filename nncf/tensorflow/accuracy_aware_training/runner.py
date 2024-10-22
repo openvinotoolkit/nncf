@@ -34,9 +34,6 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     def reset_training(self):
         self.configure_optimizers()
 
-        # if isinstance(self.optimizer, tfa.optimizers.MultiOptimizer):
-        #     optimizers = [optimizer_spec.optimizer for optimizer_spec in self.optimizer.optimizer_specs]
-        # else:
         optimizers = self.optimizer if isinstance(self.optimizer, (tuple, list)) else [self.optimizer]
 
         for optimizer in optimizers:
