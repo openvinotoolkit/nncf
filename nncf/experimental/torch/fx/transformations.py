@@ -671,7 +671,7 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) 
         sub_node = match.replacements[1]
         nodes_map = {node.name: match.nodes_map[node] for node in match.nodes_map}
 
-        def get_const(arg: Union[torch.fx.Node, float, int]):
+        def get_const(arg: Optional[Union[torch.fx.Node, float, int]]):
             if isinstance(arg, torch.fx.Node):
                 return get_tensor_constant_from_node(arg, model)
             return arg
@@ -679,7 +679,7 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) 
         weight_node = get_const(nodes_map["weight"])
         scale_node = get_const(nodes_map["scale"])
         zp_node = get_const(nodes_map["zero_point"])
-        axis = nodes_map.get("axis")
+        axis = get_const(nodes_map.get("axis"))
         port_id = 0
         if axis is not None:
             result = torch.ops.quantized_decomposed.quantize_per_channel.default(
