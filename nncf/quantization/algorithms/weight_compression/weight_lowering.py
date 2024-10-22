@@ -17,8 +17,9 @@ import numpy as np
 import nncf
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters, \
-    get_compress_decompress_weight_model, get_compress_weight_model
+from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
+from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_decompress_weight_model
+from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_weight_model
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -494,8 +495,12 @@ def do_int_quantization(
 
 
 def calculate_quantized_dequantized_weight(
-    weight: Tensor, config: WeightCompressionConfig, scale: Tensor, zero_point: Optional[Tensor] = None,
-    invert_division: Optional[bool] = False, ov_model_params: Optional[OVModelParameters] = None,
+    weight: Tensor,
+    config: WeightCompressionConfig,
+    scale: Tensor,
+    zero_point: Optional[Tensor] = None,
+    invert_division: Optional[bool] = False,
+    ov_model_params: Optional[OVModelParameters] = None,
 ) -> Tensor:
     accelerate_through_ov = is_openvino_available()
 

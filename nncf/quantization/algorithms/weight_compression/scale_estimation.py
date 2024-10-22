@@ -307,7 +307,6 @@ class ScaleEstimation:
             factor = 1.0 - 0.05 * scale_step
             scaled_scale = factor * scale
 
-            input_tensors[1] = scaled_scale.data
             if config.mode == CompressWeightsMode.NF4:
                 out = do_nf4_quantization(original_weight, scaled_scale)
             else:
@@ -319,7 +318,6 @@ class ScaleEstimation:
             near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
 
-            input_tensors[1] = near_to_ideal_scale.data
             if config.mode == CompressWeightsMode.NF4:
                 g_compressed_weighs = do_nf4_quantization(original_weight, near_to_ideal_scale)
                 out = do_nf4_dequantization(g_compressed_weighs, near_to_ideal_scale)
