@@ -60,7 +60,7 @@ NON_INT8_MODES = [
 
 
 def get_weight_compression_configuration(
-    mode: CompressWeightsMode,
+    mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM,
     dataset: Optional[Dataset] = None,
     ratio: Optional[float] = None,
     group_size: Optional[int] = None,
@@ -74,6 +74,9 @@ def get_weight_compression_configuration(
     backup_mode: Optional[BackupMode] = None,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ):
+    """
+    Generates a configuration dictionary for weight compression based on the provided parameters.
+    """
     group_size = (
         -1
         if group_size is None and mode in INT8_MODES
@@ -120,6 +123,9 @@ def check_user_compression_configuration(
     backup_mode: Optional[BackupMode],
     advanced_parameters: Optional[AdvancedCompressionParameters],
 ):
+    """
+    Validates the user's weight compression configuration for correctness.
+    """
     if mode in INT8_MODES:
         if (ratio and ratio != 1) or (group_size and group_size != -1):
             raise AttributeError(
