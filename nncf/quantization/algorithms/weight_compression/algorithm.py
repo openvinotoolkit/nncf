@@ -14,7 +14,7 @@ from collections import OrderedDict
 from collections import defaultdict
 from functools import partial
 from functools import reduce
-from typing import Dict, Iterable, List, Optional, Tuple, TypeVar
+from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -73,7 +73,7 @@ def get_weight_compression_configuration(
     sensitivity_metric: Optional[SensitivityMetric] = None,
     backup_mode: Optional[BackupMode] = None,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
-):
+) -> Dict[str, Any]:
     """
     Generates a configuration dictionary for weight compression based on the provided parameters.
     """
@@ -122,7 +122,7 @@ def check_user_compression_configuration(
     sensitivity_metric: Optional[SensitivityMetric],
     backup_mode: Optional[BackupMode],
     advanced_parameters: Optional[AdvancedCompressionParameters],
-):
+) -> None:
     """
     Validates the user's weight compression configuration for correctness.
     """
