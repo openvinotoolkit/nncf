@@ -37,7 +37,7 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResult
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
 from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
-from nncf.quantization.algorithms.weight_compression.algorithm import check_weight_compression_configuration
+from nncf.quantization.algorithms.weight_compression.algorithm import check_user_compression_configuration
 from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
 from nncf.scopes import IgnoredScope
 
@@ -393,7 +393,7 @@ def compress_weights(
     dataset: Optional[Dataset] = None,
     sensitivity_metric: Optional[SensitivityMetric] = None,
     *,
-    subset_size: Optional[int] = 128,
+    subset_size: int = 128,
     awq: Optional[bool] = None,
     scale_estimation: Optional[bool] = None,
     gptq: Optional[bool] = None,
@@ -551,7 +551,22 @@ def compress_weights(
             )
 
         compression_weights_impl = ov_compress_weights_impl
-
+    check_user_compression_configuration(
+        mode,
+        subset_size,
+        dataset,
+        ratio,
+        group_size,
+        all_layers,
+        awq,
+        scale_estimation,
+        gptq,
+        lora_correction,
+        ignored_scope,
+        sensitivity_metric,
+        backup_mode,
+        advanced_parameters,
+    )
     weight_compression_configuration = get_weight_compression_configuration(
         mode,
         dataset,
@@ -567,7 +582,6 @@ def compress_weights(
         backup_mode,
         advanced_parameters,
     )
-    check_weight_compression_configuration(dataset, subset_size, weight_compression_configuration)
 
     if compression_weights_impl is None:
         raise nncf.UnsupportedBackendError(f"Unsupported type of backend for weight compression: {backend}")

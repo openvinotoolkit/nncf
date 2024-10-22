@@ -875,7 +875,7 @@ def test_default_subset_value():
     assert default_value == 128
 
 
-@pytest.mark.parametrize("subset_size", (-1, 0, None))
+@pytest.mark.parametrize("subset_size", (-1, 0))
 def test_invalid_subset_size(subset_size):
     model = IdentityMatmul().ov_model
     dataset = Dataset([ACTIVATION])

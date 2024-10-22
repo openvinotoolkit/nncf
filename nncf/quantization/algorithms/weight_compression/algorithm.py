@@ -50,6 +50,14 @@ from nncf.scopes import get_ignored_node_names_from_ignored_scope
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 
+INT8_MODES = [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]
+NON_INT8_MODES = [
+    CompressWeightsMode.INT4_SYM,
+    CompressWeightsMode.INT4_ASYM,
+    CompressWeightsMode.NF4,
+    CompressWeightsMode.E2M1,
+]
+
 
 def get_weight_compression_configuration(
     mode: CompressWeightsMode,
@@ -66,24 +74,23 @@ def get_weight_compression_configuration(
     backup_mode: Optional[BackupMode] = None,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ):
-    ratio = 1 if ratio is None else ratio
-    # INT8
-    if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
-        group_size = -1 if group_size is None else group_size
-        sensitivity_metric = (
-            SensitivityMetric.WEIGHT_QUANTIZATION_ERROR if sensitivity_metric is None else sensitivity_metric
-        )
-    # NOT INT8
-    if mode in [
-        CompressWeightsMode.INT4_SYM,
-        CompressWeightsMode.INT4_ASYM,
-        CompressWeightsMode.NF4,
-        CompressWeightsMode.E2M1,
-    ]:
-        group_size = 128 if group_size is None else group_size
-        backup_mode = BackupMode.INT8_ASYM if backup_mode is None else backup_mode
-        all_layers = False if all_layers is None else all_layers
-        sensitivity_metric = (
+    group_size = (
+        -1
+        if group_size is None and mode in INT8_MODES
+        else 128 if group_size is None and mode in NON_INT8_MODES else group_size
+    )
+
+    return {
+        "mode": mode,
+        "ratio": ratio or 1,
+        "group_size": group_size,
+        "all_layers": all_layers or False,
+        "awq": awq or False,
+        "scale_estimation": scale_estimation or False,
+        "gptq": gptq or False,
+        "lora_correction": lora_correction or False,
+        "ignored_scope": ignored_scope or IgnoredScope(),
+        "sensitivity_metric": (
             (
                 SensitivityMetric.WEIGHT_QUANTIZATION_ERROR
                 if dataset is None
@@ -91,66 +98,69 @@ def get_weight_compression_configuration(
             )
             if sensitivity_metric is None
             else sensitivity_metric
-        )
-        awq = False if awq is None else awq
-        scale_estimation = False if scale_estimation is None else scale_estimation
-        gptq = False if gptq is None else gptq
-        lora_correction = False if lora_correction is None else lora_correction
-
-    weight_compression_configuration = {
-        "mode": mode,
-        "ratio": ratio,
-        "group_size": group_size,
-        "all_layers": all_layers,
-        "awq": awq,
-        "scale_estimation": scale_estimation,
-        "gptq": gptq,
-        "lora_correction": lora_correction,
-        "ignored_scope": IgnoredScope() if ignored_scope is None else ignored_scope,
-        "sensitivity_metric": sensitivity_metric,
-        "backup_mode": backup_mode,
-        "advanced_parameters": AdvancedCompressionParameters() if advanced_parameters is None else advanced_parameters,
+        ),
+        "backup_mode": backup_mode or BackupMode.INT8_ASYM,
+        "advanced_parameters": advanced_parameters or AdvancedCompressionParameters(),
     }
-    return weight_compression_configuration
 
 
-def check_weight_compression_configuration(dataset, subset_size, weight_compression_configuration):
-    mode = weight_compression_configuration["mode"]
-    ratio = weight_compression_configuration["ratio"]
-    all_layers = weight_compression_configuration["all_layers"]
-    backup_mode = weight_compression_configuration["backup_mode"]
-    sensitivity_metric = weight_compression_configuration["sensitivity_metric"]
-    awq = weight_compression_configuration["awq"]
-    gptq = weight_compression_configuration["gptq"]
-    scale_estimation = weight_compression_configuration["scale_estimation"]
-    lora_correction = weight_compression_configuration["lora_correction"]
+def check_user_compression_configuration(
+    mode: CompressWeightsMode,
+    subset_size: int,
+    dataset: Optional[Dataset],
+    ratio: Optional[float],
+    group_size: Optional[int],
+    all_layers: Optional[bool],
+    awq: Optional[bool],
+    scale_estimation: Optional[bool],
+    gptq: Optional[bool],
+    lora_correction: Optional[bool],
+    ignored_scope: Optional[IgnoredScope],
+    sensitivity_metric: Optional[SensitivityMetric],
+    backup_mode: Optional[BackupMode],
+    advanced_parameters: Optional[AdvancedCompressionParameters],
+):
+    if mode in INT8_MODES:
+        if (ratio and ratio != 1) or (group_size and group_size != -1):
+            raise AttributeError(
+                "INT8 modes require per-channel quantization of all layers in 8 bit. "
+                "Default values of `ratio` (1) and `group_size` (-1) cannot be overridden."
+            )
 
-    if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
-        if backup_mode is not None:
-            raise AttributeError("INT8 modes do not support the `backup_mode` option")
+        if backup_mode:
+            raise AttributeError("INT8 modes do not support the `backup_mode` option.")
 
-        options = {
+        unsupported_options = {
             "all_layers": all_layers,
+            "sensitivity_metric": sensitivity_metric,
+            "dataset": dataset,
             "awq": awq,
             "scale_estimation": scale_estimation,
             "gptq": gptq,
             "lora_correction": lora_correction,
         }
-        unsupported_for_int8 = [name for name, value in options.items() if value]
+        unsupported_for_int8 = [name for name, value in unsupported_options.items() if value is not None]
         if unsupported_for_int8:
             raise AttributeError(
-                f"INT8 modes do not support {', '.join(unsupported_for_int8)} option(s). Set them to False."
+                f"INT8 modes do not support {', '.join(unsupported_for_int8)} option(s). Set them to None."
             )
 
-    if ratio != 1 and dataset is None and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
-        raise AttributeError(
-            f"Mixed precision selection based on the given sensitivity metric={sensitivity_metric.value} requires "
-            "a dataset, but it's not provided."
-        )
-    if ratio < 0 or ratio > 1:
+    if ratio is not None and not (0 <= ratio <= 1):
         raise ValueError(f"The ratio should be between 0 and 1, but ratio={ratio} is specified.")
-    if subset_size is None or subset_size <= 0:
+
+    if subset_size <= 0:
         raise ValueError(f"The subset_size value should be positive, but subset_size={subset_size} is given.")
+
+    if (
+        ratio
+        and dataset is None
+        and sensitivity_metric is not None
+        and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR
+    ):
+        raise AttributeError(
+            f"Mixed precision selection with sensitivity metric={sensitivity_metric.value} \
+            requires a dataset, but it's not provided."
+        )
 
 
 class WeightCompression(Algorithm):
@@ -648,7 +658,7 @@ class WeightCompression(Algorithm):
                 "scale_estimation": self._scale_estimation,
                 "gptq": self._gptq,
                 "lora_correction": self._lora_correction,
-                "backup_mode": self._backup_mode.value if self._backup_mode else None,
+                "backup_mode": self._backup_mode.value,
                 "advanced_parameters": convert_to_dict_recursively(self._advanced_parameters),
             },
             algo_name="weight_compression",
