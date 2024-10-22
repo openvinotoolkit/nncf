@@ -146,7 +146,7 @@ class WeightCompression(Algorithm):
                 subset_size=gptq_params.subset_size,
                 scale_estimation=self._scale_estimation,
             )
-        # Is data aware compression
+
         self._data_aware_mixed_precision = (
             self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
         )
@@ -488,14 +488,12 @@ class WeightCompression(Algorithm):
         description = "Applying Weight Compression"
         if self._gptq:
             del statistics
-            # if not is_statistics_provided:
-            statistic_points = None
             model, scales, zero_points = self._gptq_algo.apply(
                 model=model,
                 graph=graph,
                 dataset=dataset,
                 weight_compression_parameters=all_weight_params,
-                statistic_points=statistic_points,
+                statistic_points=None,  # GPTQ does not support statistics caching
                 backend_entity=self._backend_entity,
             )
         else:
@@ -617,6 +615,7 @@ class WeightCompression(Algorithm):
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
         statistic_container = StatisticPointsContainer()
+        # Statistics for data aware algorithms
         if self._data_aware_compression:
             for node, output_port_id in nodes_and_port_ids:
                 statistic_point = self._backend_entity.target_point(
@@ -633,8 +632,8 @@ class WeightCompression(Algorithm):
                         target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
                     )
                 )
+        # Statistics for mixed precision algorithm
         if self._data_aware_mixed_precision:
-            # Add statistics from mixed_precision_algo
             mixed_precision_statistics = self._mixed_precision_algo.get_statistic_points(
                 model, graph, nodes_and_port_ids, self._subset_size
             )
@@ -648,7 +647,7 @@ class WeightCompression(Algorithm):
         self, matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]], statistic_points
     ) -> Dict[str, WCTensorStatistic]:
         """
-        Retrieve collected statistics only for WC algorithm and not for MixedPrecision.
+        Retrieve collected statistics only for WeightCompression algorithm and not for MixedPrecision.
 
         :param matmul_input_to_output_nodes_map: A mapping from activation node and a port id to corresponding matmul
             nodes which accept this activation as an input.
@@ -678,7 +677,8 @@ class WeightCompression(Algorithm):
                     act_node.node_name, partial(input_filter_func, port_id=output_port_id), self._algorithm_key
                 )
             )
-            # Statistics could be empty in case when the statistics have only other algorithms but not WC statistics
+            # Statistics could be empty in case when the statistics is registered for another algorithm,
+            # e.g. mixed precision.
             if tensor_collectors:
                 assert len(tensor_collectors) == 1
                 stats = tensor_collectors[0].get_statistics()
