@@ -38,7 +38,10 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
         for optimizer in optimizers:
             scheduler = optimizer.learning_rate
-            if isinstance(scheduler, tf.Variable):
+            # pylint: disable=protected-access
+            if isinstance(scheduler, tf.Variable) and not isinstance(
+                optimizer._learning_rate, schedules.LearningRateSchedule
+            ):
                 scheduler = scheduler * self.base_lr_reduction_factor_during_search
                 optimizer.learning_rate = scheduler
                 optimizer.lr = scheduler
