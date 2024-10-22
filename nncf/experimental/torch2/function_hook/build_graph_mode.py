@@ -36,11 +36,11 @@ from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 
 class GraphBuilderMode(FunctionHookMode):
     """
-    A class that extends the `FunctionHookMode` and constructs nx.DiGraph representing
+    A class that extends the `FunctionHookMode` and constructs nx.MultiDiGraph representing
     the operations within a PyTorch model. Each operation in the model is represented as a node in the graph.
 
     :param next_node_id: The index of the last added node in the graph.
-    :param graph: An instance of `networkx.DiGraph` used to represent the graph of model.
+    :param graph: An instance of `networkx.MultiDiGraph` used to represent the graph of model.
     :param tensor_info: A dictionary mapping tensor objects to tensor info.
     """
 
@@ -53,7 +53,7 @@ class GraphBuilderMode(FunctionHookMode):
         """
         super().__init__(model=model, hook_storage=hook_storage)
         self.next_node_id: int = 0
-        self.graph: nx.DiGraph = nx.DiGraph()
+        self.graph: nx.MultiDiGraph = nx.MultiDiGraph()
         self.tensor_info: WeakUnhashableKeyMap[Union[torch.Tensor, torch.nn.Parameter], TensorInfo] = (
             WeakUnhashableKeyMap()
         )
@@ -307,15 +307,15 @@ class GraphBuilderMode(FunctionHookMode):
         return super().process_post_function_hooks_for_value(value, op_meta, port_id)
 
 
-def build_graph(model: nn.Module, *args: Any, **kwargs: Any) -> nx.DiGraph:
+def build_graph(model: nn.Module, *args: Any, **kwargs: Any) -> nx.MultiDiGraph:
     """
     Constructs a computational graph of the given model.
 
-    This function builds a directed graph `nx.DiGraph` representing the operations
+    This function builds a directed graph `nx.MultiDiGraph` representing the operations
     and data flow within the model by leveraging hooks by using GraphBuilderMode.
 
     :param model: The PyTorch model for which the computational graph will be built.
-    :return: A nx.DiGraph where nodes represent operations of model.
+    :return: A nx.MultiDiGraph where nodes represent operations of model.
     """
 
     with torch.enable_grad():  # type: ignore

@@ -238,6 +238,7 @@ def test_remove_get_node_with_no_tensor_output():
     hook_storage = get_hook_storage(model)
     hook_storage.register_pre_function_hook("/add/1", 0, HookWithAttribute())
 
+    # Set requires_grad=True to get grad_fn
     graph = build_graph(model, torch.ones(2, 3, requires_grad=True))
 
     nodes = list(graph.nodes(data=True))
@@ -246,3 +247,26 @@ def test_remove_get_node_with_no_tensor_output():
     )
     assert len(get_op_nodes) == 1
     assert get_op_nodes[0][1]["meta"].op_name == "/__get__/1"
+
+
+class ModelMultiEdge(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = x + x
+        return x
+
+
+def test_multi_edges():
+    model = ModelMultiEdge()
+    model = wrap_model(model)
+    graph = build_graph(model, torch.ones(1, 1))
+
+    edges = list(graph.edges(data=True))
+    ref_edges = [
+        (0, 1, {"meta": EdgeMeta(dtype=torch.float32, shape=(1, 1), input_port=0, output_port=0)}),
+        (0, 1, {"meta": EdgeMeta(dtype=torch.float32, shape=(1, 1), input_port=1, output_port=0)}),
+        (1, 2, {"meta": EdgeMeta(dtype=torch.float32, shape=(1, 1), input_port=0, output_port=0)}),
+    ]
+    assert edges == ref_edges

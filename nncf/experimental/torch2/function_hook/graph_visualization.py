@@ -204,7 +204,7 @@ def get_style(node: Dict[str, Any], style: PydotStyleTemplate) -> Dict[str, str]
     raise ValueError(f"Unknown meta node {type(meta)}")
 
 
-def to_pydot(nx_graph: nx.DiGraph, style_template: PydotStyleTemplate = PydotStyleTemplate.full) -> pydot.Graph:
+def to_pydot(nx_graph: nx.MultiDiGraph, style_template: PydotStyleTemplate = PydotStyleTemplate.full) -> pydot.Graph:
     """
     Converts a NetworkX directed graph to a Pydot graph with specified styling.
 
