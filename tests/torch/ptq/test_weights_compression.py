@@ -16,9 +16,7 @@ import torch.nn.functional as F
 from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
-from nncf.data.dataset import Dataset
 from nncf.quantization import compress_weights
-from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.torch import wrap_model
 from nncf.torch.quantization.layers import AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import SymmetricWeightsDecompressor
@@ -280,58 +278,3 @@ def test_model_devices_and_precisions(use_cuda, dtype):
     assert compressed_model.state_dict()["_nncf.external_op.weights_decompressor_w._scale"].dtype == torch.float16
     # Result should be in the precision of the model
     assert result.dtype == dtype
-
-
-@pytest.mark.parametrize(
-    "sensitivity_metric",
-    [
-        SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
-        SensitivityMetric.MAX_ACTIVATION_VARIANCE,
-        SensitivityMetric.MEAN_ACTIVATION_VARIANCE,
-        SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
-    ],
-)
-def test_weight_compression_caching(tmp_path, mocker, sensitivity_metric):
-    """
-    Tests the caching behavior of weight compression with different sensitivity metrics.
-    Ensures that statistics are collected, dumped, and loaded correctly during compression
-    with a PyTorch model.
-
-    :param tmp_path: Temporary path for storing statistics.
-    :param mocker: Mocker fixture for spying on methods.
-    :param sensitivity_metric: Sensitivity metric for weight compression.
-    """
-    pytest.skip("Skipping test: Torch does not support data-aware methods for weight compression.")
-
-    from nncf.torch.statistics.aggregator import PTStatisticsAggregator
-
-    collect_statistics_spy = mocker.spy(PTStatisticsAggregator, "collect_statistics")
-    load_statistics_from_file_spy = mocker.spy(PTStatisticsAggregator, "load_statistics_from_file")
-    dump_statistics_spy = mocker.spy(PTStatisticsAggregator, "dump_statistics")
-
-    dataset_size = 4
-    model = ShortTransformer(5, 10)
-    input_data = [torch.randint(0, 10, (5,)) for _ in range(dataset_size)]
-    dataset = Dataset(input_data)
-
-    test_file = f"statistics_{sensitivity_metric}"
-
-    compress_weights(
-        model,
-        mode=CompressWeightsMode.INT8_SYM,
-        sensitivity_metric=sensitivity_metric,
-        dataset=dataset,
-        advanced_parameters=CompressionParams(statistics_file_path=tmp_path / test_file),
-    )
-
-    compress_weights(
-        model,
-        mode=CompressWeightsMode.INT8_SYM,
-        sensitivity_metric=sensitivity_metric,
-        dataset=dataset,
-        advanced_parameters=CompressionParams(statistics_file_path=tmp_path / test_file),
-    )
-
-    assert collect_statistics_spy.call_count == 1, "Statistics should be collected only once."
-    assert load_statistics_from_file_spy.call_count == 1, "Statistics should be loaded from file only once."
-    assert dump_statistics_spy.call_count == 1, "Statistics should be dumped only once."
