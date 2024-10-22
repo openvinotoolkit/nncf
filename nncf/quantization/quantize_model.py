@@ -37,6 +37,8 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResult
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
 from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
+from nncf.quantization.algorithms.weight_compression.algorithm import check_weight_compression_configuration
+from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
 from nncf.scopes import IgnoredScope
 
 TTensor = TypeVar("TTensor")
@@ -550,71 +552,25 @@ def compress_weights(
 
         compression_weights_impl = ov_compress_weights_impl
 
-    if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
-        if ratio is None:
-            ratio = 1
-        if group_size is None:
-            group_size = -1
-        if ratio != 1 or group_size != -1:
-            raise AttributeError(
-                "INT8 modes assume per-channel quantization of all layers in 8 bit. "
-                "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
-            )
-
-        if backup_mode is not None:
-            raise AttributeError("INT8 modes do not support the `backup_mode` option")
-
-        options = {
-            "all_layers": all_layers,
-            "sensitivity_metric": sensitivity_metric,
-            "dataset": dataset,
-            "awq": awq,
-            "scale_estimation": scale_estimation,
-            "gptq": gptq,
-            "lora_correction": lora_correction,
-        }
-        unsupported_for_int8 = [name for name, value in options.items() if value is not None]
-        if unsupported_for_int8:
-            raise AttributeError(
-                f"INT8 modes do not support {', '.join(unsupported_for_int8)} option(s). Set them to None."
-            )
-
-    if ratio is None:
-        ratio = 1
-    if group_size is None:
-        group_size = 128
-    if all_layers is None:
-        all_layers = False
-    if awq is None:
-        awq = False
-    if scale_estimation is None:
-        scale_estimation = False
-    if gptq is None:
-        gptq = False
-    if lora_correction is None:
-        lora_correction = False
-    if ignored_scope is None:
-        ignored_scope = IgnoredScope()
-    if sensitivity_metric is None:
-        sensitivity_metric = (
-            SensitivityMetric.WEIGHT_QUANTIZATION_ERROR
-            if dataset is None
-            else SensitivityMetric.MAX_ACTIVATION_VARIANCE
-        )
-    if backup_mode is None:
-        backup_mode = BackupMode.INT8_ASYM
-    if ratio != 1 and dataset is None and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
-        raise AttributeError(
-            f"Mixed precision selection based on the given sensitivity metric={sensitivity_metric.value} requires "
-            "a dataset, but it's not provided."
-        )
-    if ratio < 0 or ratio > 1:
-        raise ValueError(f"The ratio should be between 0 and 1, but ratio={ratio} is specified.")
-    if subset_size is None or subset_size <= 0:
-        raise ValueError(f"The subset_size value should be positive, but subset_size={subset_size} is given.")
+    weight_compression_configuration = get_weight_compression_configuration(
+        mode,
+        dataset,
+        ratio,
+        group_size,
+        all_layers,
+        awq,
+        scale_estimation,
+        gptq,
+        lora_correction,
+        ignored_scope,
+        sensitivity_metric,
+        backup_mode,
+        advanced_parameters,
+    )
+    check_weight_compression_configuration(dataset, subset_size, weight_compression_configuration)
 
     if compression_weights_impl is None:
-        raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
+        raise nncf.UnsupportedBackendError(f"Unsupported type of backend for weight compression: {backend}")
 
     is_to_cache_statistics = (
         advanced_parameters
@@ -624,40 +580,13 @@ def compress_weights(
     if is_to_cache_statistics:
         from nncf.openvino.quantization.cache_statistics import cache_statistics
 
-        cache_statistics(
-            model,
-            dataset,
-            mode,
-            ratio,
-            group_size,
-            ignored_scope,
-            all_layers,
-            sensitivity_metric,
-            awq=True,
-            subset_size=subset_size,
-            scale_estimation=True,
-            gptq=True,
-            lora_correction=True,
-            backup_mode=backup_mode,
-            advanced_parameters=advanced_parameters,
-        )
+        cache_statistics(model, dataset, subset_size, advanced_parameters.statistics_file_path)
 
     return compression_weights_impl(
-        model,
-        dataset,
-        mode,
-        ratio,
-        group_size,
-        ignored_scope,
-        all_layers,
-        sensitivity_metric,
-        awq,
-        subset_size,
-        scale_estimation,
-        gptq,
-        lora_correction,
-        backup_mode,
-        advanced_parameters,
+        model=model,
+        dataset=dataset,
+        subset_size=subset_size,
+        **weight_compression_configuration,
     )
 
 
