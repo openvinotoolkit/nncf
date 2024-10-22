@@ -587,8 +587,7 @@ def compress_weights(
         raise nncf.UnsupportedBackendError(f"Unsupported type of backend for weight compression: {backend}")
 
     is_to_cache_statistics = (
-        weight_compression_configuration["advanced_parameters"]
-        and weight_compression_configuration["advanced_parameters"].statistics_file_path
+        weight_compression_configuration["advanced_parameters"].statistics_file_path
         and not Path(weight_compression_configuration["advanced_parameters"].statistics_file_path).exists()
     )
     if is_to_cache_statistics:
