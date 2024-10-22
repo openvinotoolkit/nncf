@@ -16,10 +16,10 @@ from typing import Any, Dict, Tuple
 import networkx as nx  # type: ignore[import-untyped]
 import pydot  # type: ignore[import-untyped]
 
-from nncf.experimental.torch2.function_hook.graph_utils import ConstMeta
-from nncf.experimental.torch2.function_hook.graph_utils import EdgeMeta
-from nncf.experimental.torch2.function_hook.graph_utils import FunctionMeta
-from nncf.experimental.torch2.function_hook.graph_utils import InOutMeta
+from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
+from nncf.experimental.torch2.function_hook.graph.graph_utils import EdgeMeta
+from nncf.experimental.torch2.function_hook.graph.graph_utils import FunctionMeta
+from nncf.experimental.torch2.function_hook.graph.graph_utils import InOutMeta
 
 
 class PydotStyleTemplate(Enum):

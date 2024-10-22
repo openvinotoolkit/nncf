@@ -16,16 +16,16 @@ import torch
 from pytest import FixtureRequest
 from torch import nn
 
-from nncf.experimental.torch2.function_hook.build_graph_mode import GraphBuilderMode
-from nncf.experimental.torch2.function_hook.build_graph_mode import build_graph
-from nncf.experimental.torch2.function_hook.graph_utils import ConstMeta
-from nncf.experimental.torch2.function_hook.graph_utils import EdgeMeta
-from nncf.experimental.torch2.function_hook.graph_utils import FunctionMeta
-from nncf.experimental.torch2.function_hook.graph_utils import InOutMeta
-from nncf.experimental.torch2.function_hook.graph_utils import NodeType
-from nncf.experimental.torch2.function_hook.graph_utils import TensorInfo
-from nncf.experimental.torch2.function_hook.graph_utils import TensorMeta
-from nncf.experimental.torch2.function_hook.graph_utils import TensorSource
+from nncf.experimental.torch2.function_hook.graph.build_graph_mode import GraphBuilderMode
+from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
+from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
+from nncf.experimental.torch2.function_hook.graph.graph_utils import EdgeMeta
+from nncf.experimental.torch2.function_hook.graph.graph_utils import FunctionMeta
+from nncf.experimental.torch2.function_hook.graph.graph_utils import InOutMeta
+from nncf.experimental.torch2.function_hook.graph.graph_utils import NodeType
+from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorInfo
+from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorMeta
+from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorSource
 from nncf.experimental.torch2.function_hook.hook_executor_mode import OpMeta
 from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
 from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
@@ -74,7 +74,7 @@ def test_execute_hooks_for_model_output():
     assert ctx.graph.nodes[1]["type"] == NodeType.output
     assert ctx.graph.nodes[1]["meta"] == InOutMeta(tensor.dtype, tuple(tensor.shape), "output")
 
-    assert ctx.graph.edges[0, 1]["meta"] == EdgeMeta(dtype=torch.float32, shape=(1,), input_port=0, output_port=0)
+    assert ctx.graph.edges[0, 1, 0]["meta"] == EdgeMeta(dtype=torch.float32, shape=(1,), input_port=0, output_port=0)
 
 
 def test_execute_pre_hooks():
