@@ -38,8 +38,8 @@ class Unpickler(pickle.Unpickler):
         "torch.nn": {"Module"},
         "torch.optim.adam": {"Adam"},
         "nncf.api.compression": {"CompressionStage", "CompressionLevel"},
-        "numpy.core.multiarray": {"scalar"},
-        "numpy._core.multiarray.scalar": {"scalar"},
+        "numpy.core.multiarray": {"scalar"},  # numpy<2
+        "numpy._core.multiarray": {"scalar"},  # numpy>=2
         "numpy": {"dtype"},
         "_codecs": {"encode"},
     }
