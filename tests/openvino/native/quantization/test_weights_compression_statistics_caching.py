@@ -19,6 +19,7 @@ from transformers import AutoTokenizer
 
 import nncf
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.scopes import IgnoredScope
 
 
 def create_transform_fn(model, tokenizer):
@@ -56,12 +57,13 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
 
     The test iterates over various combinations of compression parameters, including:
 
-    - AWQ (Advanced Weight Quantization)
+    - AWQ
     - Group size for quantization
     - Compression ratios
     - Sensitivity metrics (e.g., Hessian Input Activation)
-    - GPTQ (Gradient Post Training Quantization)
+    - GPTQ
     - Scale estimation
+    - Ignored scope
     """
     from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 
@@ -82,6 +84,16 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
         nncf.SensitivityMetric.MAX_ACTIVATION_VARIANCE,
     ]
     gptq_values = [False]  # [True, False] ticket: 155538
+    ignored_scope_values = [
+        IgnoredScope(),
+        IgnoredScope(
+            names=[
+                "__module.model.model.decoder.layers.1.self_attn.q_proj/prim::PythonOp/MatMul",
+                "__module.model.model.decoder.layers.11.self_attn.k_proj/prim::PythonOp/MatMul",
+                "__module.model.model.decoder.layers.11.self_attn.k_proj/prim::PythonOp/MatMul",
+            ]
+        ),
+    ]
 
     MODEL_ID = "facebook/opt-125m"
 
@@ -94,13 +106,13 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
 
     load_statistics_number = 0
 
-    # Test basic configurations (AWQ, group size, ratio, sensitivity metric)
-    for awq, group_size, ratio, sensitivity_metric in product(
-        awq_values, group_size_values, ratio_values, sensitivity_metric_values
+    # Test basic configurations (AWQ, group size, ratio, sensitivity metric, ignored_scope)
+    for awq, group_size, ratio, sensitivity_metric, ignored_scope in product(
+        awq_values, group_size_values, ratio_values, sensitivity_metric_values, ignored_scope_values
     ):
         print(
             f"Testing configuration: awq={awq}, group_size={group_size}, ratio={ratio}, \
-            sensitivity_metric={sensitivity_metric}"
+            sensitivity_metric={sensitivity_metric}, ignored_scope is empty={len(ignored_scope.names) > 0}"
         )
 
         # Perform the compression test
@@ -115,6 +127,7 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
             scale_estimation=False,
             subset_size=subset_size,
             sensitivity_metric=sensitivity_metric,
+            ignored_scope=ignored_scope,
             advanced_parameters=AdvancedCompressionParameters(statistics_file_path=tmp_path / "statistics"),
         )
         load_statistics_number += 1
@@ -134,11 +147,11 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
             scale_estimation=scale_estimation,
             subset_size=subset_size,
             sensitivity_metric=sensitivity_metric_values[0],  # Using the first sensitivity metric
+            ignored_scope=ignored_scope[0],
             advanced_parameters=AdvancedCompressionParameters(statistics_file_path=tmp_path / "statistics"),
         )
         load_statistics_number += 1
 
-    # Assertions to verify statistics behavior
     assert collect_statistics_spy.call_count == 1, "Statistics should be collected only once."
     assert (
         load_statistics_from_file_spy.call_count == load_statistics_number
