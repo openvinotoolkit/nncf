@@ -349,6 +349,17 @@ class FunctionHookMode(TorchFunctionMode):
                 )
         return tuple(_args), kwargs
 
+    def process_post_function_hooks_for_value(self, value: Any, op_meta: OpMeta, port_id: int) -> Any:
+        """
+        Executes post-hooks on a value after an operation.
+
+        :param value: The output value.
+        :param op_meta: Metadata about the operation.
+        :param port_id: The id of output port.
+        :return: The modified output after post-hooks.
+        """
+        return self.hook_storage.execute_post_function_hooks(op_meta.op_name, port_id, value)
+
     def execute_post_hooks(self, output: Any, op_meta: OpMeta) -> Any:
         """
         Execute post-hooks for the operation.
@@ -372,9 +383,6 @@ class FunctionHookMode(TorchFunctionMode):
             else:
                 output = self.process_post_function_hooks_for_value(output, op_meta, 0)
         return output
-
-    def process_post_function_hooks_for_value(self, value: Any, op_meta: OpMeta, port_id: int) -> Any:
-        return self.hook_storage.execute_post_function_hooks(op_meta.op_name, port_id, value)
 
     def process_model_inputs(self, args: Tuple[Any], kwargs: Dict[str, Any]) -> Tuple[Tuple[Any], Dict[str, Any]]:
         """

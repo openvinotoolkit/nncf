@@ -86,7 +86,9 @@ class GraphBuilderMode(FunctionHookMode):
 
     def register_new_node_id(self) -> int:
         """
-        Return unique id for new node.
+        Generates and returns a unique id for a new node in the graph.
+
+        :return: A unique id for a new node.
         """
         key = self.next_node_id
         self.next_node_id += 1
@@ -95,6 +97,9 @@ class GraphBuilderMode(FunctionHookMode):
     def register_node_for_model_input_tensor(self, node_name: str, tensor: torch.Tensor) -> None:
         """
         Register a node for model input.
+
+        :param node_name: The name of the input node to be registered.
+        :param tensor: The tensor associated with the model's input.
         """
         node_id = self.register_new_node_id()
         with self.disable():
@@ -112,6 +117,10 @@ class GraphBuilderMode(FunctionHookMode):
     def execute_hooks_for_model_input(self, name: str, value: Any) -> Any:
         """
         Overloaded function to register a model input to the graph.
+
+        :param name: The name of the input argument.
+        :param value: The value of the input argument.
+        :returns: The processed value after the hook is executed.
         """
         if isinstance(value, torch.Tensor):
             self.register_node_for_model_input_tensor(name, value)
@@ -121,6 +130,9 @@ class GraphBuilderMode(FunctionHookMode):
         """
         Registers a node for a model's output tensor in graph, creating an edge between
         the tensor's source node and the output node.
+
+        :param node_name: The name of the output node to be registered.
+        :param tensor: The tensor associated with the model's output.
         """
         node_id = self.register_new_node_id()
         tensor_info = self.tensor_info.get(tensor)
@@ -137,6 +149,10 @@ class GraphBuilderMode(FunctionHookMode):
     def execute_hooks_for_model_output(self, name: str, value: Any) -> Any:
         """
         Overloaded function to register a model output to the graph.
+
+        :param name: The name of the input argument.
+        :param value: The value of the input argument.
+        :returns: The processed value after the hook is executed.
         """
         value = super().execute_hooks_for_model_output(name, value)
         if isinstance(value, torch.Tensor):
@@ -148,6 +164,11 @@ class GraphBuilderMode(FunctionHookMode):
     ) -> Tuple[Tuple[Any, ...], Dict[str, Any]]:
         """
         Overloaded function to register a model output to the graph.
+
+        :param args: The arguments to the function.
+        :param kwargs: The keyword arguments to the function.
+        :param op_meta: Metadata for the operation.
+        :returns: The modified arguments and keyword arguments after pre-hooks.
         """
         _args, _kwargs = super().execute_pre_hooks(args, kwargs, op_meta)
         self.register_op_node(_args, _kwargs, op_meta)
@@ -201,7 +222,10 @@ class GraphBuilderMode(FunctionHookMode):
 
     def execute_hooks_for_parameter(self, value: torch.Tensor) -> torch.Tensor:
         """
-        Overload execute_hooks_for_parameter to register parameters to the graph
+        Overload execute_hooks_for_parameter to register parameters to the graph.
+
+        :param value: The tensor to which the post-hook will be applied.
+        :returns: The processed tensor with the applied post-hook, if applicable.
         """
         if not isinstance(value, torch.nn.Parameter):
             return value
@@ -226,6 +250,11 @@ class GraphBuilderMode(FunctionHookMode):
     def register_op_input_tensor(self, tensor: torch.Tensor, op_node_id: int, port_id: int, op_meta: OpMeta) -> None:
         """
         Registers a tensor input by creating an edge between the tensor's source node and the current operation node.
+
+        :param tensor: Input tensor for the operation.
+        :param node_id: Id if operation node.
+        :param port_id: Port id of input argument.
+        :param op_meta: Metadata about the operation.
         """
         tensor_info = self.tensor_info.get(tensor, None)
         if tensor_info is None:
@@ -240,6 +269,14 @@ class GraphBuilderMode(FunctionHookMode):
     def register_op_input(self, arg: Any, node_id: int, port_id: int, op_meta: OpMeta) -> Any:
         """
         Registers an operation input. Handles tensors or collections of tensors on one input port.
+
+        :param arg: Operation input argument.
+        :param node_id: Id if operation node.
+        :param port_id: Port id of input argument.
+        :param op_meta: Metadata about the operation.
+        :return: Descriptor of the input. For a Tensor, this is a `TensorMeta` object.
+             For a collection of Tensors, a collection of `TensorMeta` objects is returned.
+             For other types, the original input `arg` is returned as-is.
         """
         if isinstance(arg, torch.Tensor):
             self.register_op_input_tensor(arg, node_id, port_id, op_meta)
@@ -293,6 +330,10 @@ class GraphBuilderMode(FunctionHookMode):
     def process_post_function_hooks_for_value(self, value: Any, op_meta: OpMeta, port_id: int) -> Any:
         """
         Overload process_post_function_hooks_for_value to get register output tensors to the graph
+
+        :param output: The output of the function.
+        :param op_meta: Metadata for the operation.
+        :returns: The modified output after post-hooks.
         """
         if isinstance(value, torch.Tensor):
             with self.disable():
@@ -326,6 +367,3 @@ def build_graph(model: nn.Module, *args: Any, **kwargs: Any) -> nx.MultiDiGraph:
             outputs = wrapped_forward._func(*args, **kwargs)
             outputs = ctx.process_model_outputs(outputs)
     return ctx.graph
-
-
-torch.nn.functional.adaptive_avg_pool1d
