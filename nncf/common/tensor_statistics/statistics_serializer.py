@@ -13,7 +13,7 @@ import json
 import pickle
 import re
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, cast
 
 import nncf
 
@@ -36,7 +36,7 @@ def load_metadata(dir_path: Path) -> Dict[str, Any]:
     metadata_file = dir_path / METADATA_FILE
     if metadata_file.exists():
         with open(metadata_file, "r") as f:
-            return json.load(f)
+            return cast(Dict[str, Any], json.load(f))
     return {"mapping": {}, "metadata": {}}
 
 

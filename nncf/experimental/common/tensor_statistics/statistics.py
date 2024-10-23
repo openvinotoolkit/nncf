@@ -38,7 +38,7 @@ class TensorStatistic:
 
     @classmethod
     def keys(cls):
-        return []
+        return ()
 
 
 @dataclass
@@ -51,7 +51,7 @@ class MinMaxTensorStatistic(TensorStatistic):
 
     @classmethod
     def keys(cls):
-        return [cls.MIN_STAT, cls.MAX_STAT]
+        return (cls.MIN_STAT, cls.MAX_STAT)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MinMaxTensorStatistic):
@@ -67,7 +67,7 @@ class AbsMaxTensorStatistic(TensorStatistic):
 
     @classmethod
     def keys(cls):
-        return [cls.ABS_MAX_STAT]
+        return (cls.ABS_MAX_STAT,)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, AbsMaxTensorStatistic):
@@ -85,7 +85,7 @@ class MeanTensorStatistic(TensorStatistic):
 
     @classmethod
     def keys(cls):
-        return [cls.MEAN_STAT, cls.SHAPE_STAT]
+        return (cls.MEAN_STAT, cls.SHAPE_STAT)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanTensorStatistic):
@@ -103,7 +103,7 @@ class MedianMADTensorStatistic(TensorStatistic):
 
     @classmethod
     def keys(cls):
-        return [cls.MEDIAN_VALUES_STAT, cls.MAD_VALUES_STAT]
+        return (cls.MEDIAN_VALUES_STAT, cls.MAD_VALUES_STAT)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MedianMADTensorStatistic):
@@ -128,7 +128,7 @@ class PercentileTensorStatistic(TensorStatistic):
 
     @classmethod
     def keys(cls):
-        return [cls.PERCENTILE_VS_VALUE_DICT]
+        return (cls.PERCENTILE_VS_VALUE_DICT,)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, PercentileTensorStatistic):
@@ -159,7 +159,7 @@ class RawTensorStatistic(TensorStatistic):
 
     @classmethod
     def keys(cls):
-        return [cls.VALUES_STATS]
+        return (cls.VALUES_STATS,)
 
     def __eq__(self, other: RawTensorStatistic) -> bool:
         if isinstance(other, RawTensorStatistic):
@@ -175,7 +175,7 @@ class HessianTensorStatistic(TensorStatistic):
 
     @classmethod
     def keys(cls):
-        return [cls.HESSIAN_INPUT_ACTIVATION_STATS]
+        return (cls.HESSIAN_INPUT_ACTIVATION_STATS,)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, HessianTensorStatistic):
@@ -191,7 +191,7 @@ class MeanVarianceTensorStatistic(TensorStatistic):
 
     @classmethod
     def keys(cls):
-        return [cls.MEAN_VARIANCE_STAT]
+        return (cls.MEAN_VARIANCE_STAT,)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanVarianceTensorStatistic):
@@ -207,7 +207,7 @@ class MaxVarianceTensorStatistic(TensorStatistic):
 
     @classmethod
     def keys(cls):
-        return [cls.MAX_VARIANCE_STAT]
+        return (cls.MAX_VARIANCE_STAT,)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MaxVarianceTensorStatistic):
@@ -223,7 +223,7 @@ class MeanMagnitudeTensorStatistic(TensorStatistic):
 
     @classmethod
     def keys(cls):
-        return [cls.MEAN_MAGNITUDE_STAT]
+        return (cls.MEAN_MAGNITUDE_STAT,)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanMagnitudeTensorStatistic):
@@ -241,7 +241,7 @@ class WCTensorStatistic(TensorStatistic):
 
     @classmethod
     def keys(cls):
-        return [cls.MEAN_STAT, cls.SHAPE_STAT]
+        return (cls.MEAN_STAT, cls.SHAPE_STAT)
 
     def __eq__(self, other: Any) -> bool:
         shapes_equal = all(self.shapes[i] == other.shapes[i] for i in range(len(self.mean_values)))
