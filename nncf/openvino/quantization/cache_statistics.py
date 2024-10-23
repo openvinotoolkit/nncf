@@ -95,7 +95,7 @@ def register_all_statistics(
     graph: NNCFGraph,
     subset_size: int,
     compression_algorithm: WeightCompression,
-    gptq: bool = True,
+    gptq: bool = False,  # GPTQ does not support statistics caching
     mixed_precision: bool = True,
 ) -> None:
     """Registers all necessary statistics for compression."""

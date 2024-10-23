@@ -606,14 +606,12 @@ class WeightCompression(Algorithm):
         description = "Applying Weight Compression"
         if self._gptq:
             del statistics
-            if not is_statistics_provided:
-                statistic_points = None
             model, scales, zero_points = self._gptq_algo.apply(
                 model=model,
                 graph=graph,
                 dataset=dataset,
                 weight_compression_parameters=all_weight_params,
-                statistic_points=statistic_points,
+                statistic_points=None,  # GPTQ does not support providing statistics
                 backend_entity=self._backend_entity,
             )
         else:
@@ -765,14 +763,6 @@ class WeightCompression(Algorithm):
                 model, graph, nodes_and_port_ids, self._subset_size
             )
             for points in mixed_precision_statistics.values():
-                for p in points:
-                    statistic_container.add_statistic_point(p)
-
-        # Statistics for GPTQ
-        if self._gptq:
-            nodes_to_compress = self.get_nodes_to_compress(graph)
-            gptq_statistics = self._gptq_algo.get_statistic_points(model, graph, nodes_to_compress)
-            for points in gptq_statistics.values():
                 for p in points:
                     statistic_container.add_statistic_point(p)
 
