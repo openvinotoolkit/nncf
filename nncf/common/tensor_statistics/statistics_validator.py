@@ -8,13 +8,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import nncf
 from nncf.common.utils.backend import BackendType
 
 
-def validate_backend(data: Dict[str, Any], backend: Optional[BackendType]) -> None:
+def validate_backend(data: Dict[str, Any], backend: BackendType) -> None:
     """
     Checks whether backend in loaded data is equal to a provided backend.
 
@@ -24,7 +24,7 @@ def validate_backend(data: Dict[str, Any], backend: Optional[BackendType]) -> No
     if "backend" not in data:
         raise nncf.ValidationError("The provided metadata has no information about backend.")
     data_backend = data["backend"]
-    if data["backend"] != backend.value:
+    if data_backend != backend.value:
         raise nncf.ValidationError(
             f"Backend in loaded statistics {data_backend} does not match to an expected backend {backend.value}."
         )

@@ -44,7 +44,7 @@ class StatisticsAggregator(ABC):
     Base class for statistics collection.
     """
 
-    BACKEND: BackendType = None
+    BACKEND: BackendType
 
     def __init__(self, dataset: Dataset[DataItem, ModelInput]):
         self.dataset = dataset

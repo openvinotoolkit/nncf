@@ -59,13 +59,13 @@ def load_from_dir(dir_path: str) -> Tuple[Dict[str, Any], Dict[str, str]]:
     2) Metadata dictionary.
     """
     statistics = {}
-    dir_path = Path(dir_path)
-    if not dir_path.exists():
+    path = Path(dir_path)
+    if not path.exists():
         raise nncf.ValidationError("The provided directory path does not exist.")
-    metadata = load_metadata(dir_path)
+    metadata = load_metadata(path)
     mapping = metadata.get("mapping", {})
 
-    for statistics_file in dir_path.iterdir():
+    for statistics_file in path.iterdir():
         if statistics_file.name == METADATA_FILE:
             continue  # Skip the metadata file
 
@@ -88,14 +88,14 @@ def dump_to_dir(
     :param dir_path: The path to the directory where the statistics will be dumped.
     :param additional_metadata: A dictionary containing any additional metadata to be saved with the mapping.
     """
-    dir_path = Path(dir_path)
-    dir_path.mkdir(parents=True, exist_ok=True)
+    path = Path(dir_path)
+    path.mkdir(parents=True, exist_ok=True)
 
     metadata, mapping = {}, {}
 
     for original_name, statistics_value in statistics.items():
         sanitized_name = sanitize_filename(original_name)
-        file_path = dir_path / sanitized_name
+        file_path = path / sanitized_name
 
         # Update the mapping
         mapping[sanitized_name] = original_name
@@ -112,4 +112,4 @@ def dump_to_dir(
 
     # Update the mapping in the metadata file
     metadata["mapping"] = mapping
-    save_metadata(metadata, dir_path)
+    save_metadata(metadata, path)
