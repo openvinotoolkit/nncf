@@ -99,4 +99,5 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         :return: Statistics key.
         """
         target_point_id = f"{target_point.target_node_name}_{target_point.type}_{target_point.port_id}"
-        return f"{statistics.__class__.__name__}_{target_point_id}"
+        backend_name = "ONNX"
+        return f"{statistics.__class__.__name__}_{target_point_id}_{backend_name}"
