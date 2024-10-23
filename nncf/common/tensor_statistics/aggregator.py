@@ -24,6 +24,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.utils.backend import BackendType
 from nncf.data.dataset import DataItem
 from nncf.data.dataset import Dataset
 from nncf.data.dataset import ModelInput
@@ -223,7 +224,14 @@ class StatisticsAggregator(ABC):
 
 class StatisticsValidator:
     @staticmethod
-    def check_backend(data, backend):
+    def check_backend(data: Dict[str, Any], backend: BackendType) -> bool:
+        """
+        Checks whether backend in loaded data is equal to a provided backend.
+
+        :param data: Loaded statistics.
+        :param backend: Provided backend.
+        :return:
+        """
         return data["backend"] == backend
 
 

@@ -81,7 +81,7 @@ class TemplateTestStatisticsCaching:
 
     def test_incorrect_backend_statistics_load(self, tmp_path: Path):
         """
-        Tests the dumping and loading of statistics to and from a file.
+        Tests the dumping and loading of statistics to and from a file with non matched backends.
 
         :param tmp_path: The temporary path provided by pytest.
         """
