@@ -22,10 +22,10 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
-from tests.post_training.test_templates.models import NNCFGraphToTest
-from tests.post_training.test_templates.test_min_max import TemplateTestGetChannelAxes
-from tests.post_training.test_templates.test_min_max import TemplateTestGetTargetPointShape
-from tests.post_training.test_templates.test_min_max import TemplateTestMinMaxAlgorithm
+from tests.cross_fw.test_templates.models import NNCFGraphToTest
+from tests.cross_fw.test_templates.test_min_max import TemplateTestGetChannelAxes
+from tests.cross_fw.test_templates.test_min_max import TemplateTestGetTargetPointShape
+from tests.cross_fw.test_templates.test_min_max import TemplateTestMinMaxAlgorithm
 
 
 class TestOVMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
@@ -43,7 +43,7 @@ class TestOVMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
 
 class TestOVGetTargetPointShape(TemplateTestGetTargetPointShape, TestOVMinMaxAlgorithm):
     def get_nncf_graph(self, weight_port_id: int, weight_shape: Tuple[int]) -> NNCFGraph:
-        conv_layer_attrs = OVLayerAttributes({weight_port_id: {"name": "dummy", "shape": weight_shape}})
+        conv_layer_attrs = OVLayerAttributes({weight_port_id: {"name": "dummy", "shape": weight_shape, "dtype": "f32"}})
         return NNCFGraphToTest(OVConvolutionMetatype, conv_layer_attrs).nncf_graph
 
 
@@ -58,7 +58,7 @@ class TestOVGetChannelAxes(TemplateTestGetChannelAxes, TestOVMinMaxAlgorithm):
 
     @staticmethod
     def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> OVLayerAttributes:
-        constant_attributes = {weight_port_id: {"name": "dummy", "shape": weight_shape}}
+        constant_attributes = {weight_port_id: {"name": "dummy", "shape": weight_shape, "dtype": "f32"}}
         return OVLayerAttributes(constant_attributes, {}, {})
 
     @staticmethod
@@ -69,7 +69,7 @@ class TestOVGetChannelAxes(TemplateTestGetChannelAxes, TestOVMinMaxAlgorithm):
     def get_matmul_node_attrs(
         weight_port_id: int, transpose_weight: Tuple[int], weight_shape: Tuple[int]
     ) -> OVLayerAttributes:
-        constant_attributes = {weight_port_id: {"name": "dummy", "shape": weight_shape}}
+        constant_attributes = {weight_port_id: {"name": "dummy", "shape": weight_shape, "dtype": "f32"}}
         constant_attributes[weight_port_id]["transpose"] = transpose_weight
         return OVLayerAttributes(constant_attributes, {}, {})
 

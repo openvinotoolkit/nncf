@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Set, Tuple
 
 import openvino.runtime as ov
 
@@ -48,7 +48,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def model_extraction_command(
-        input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
+        input_ids: Set[Tuple[str, int]], output_ids: Set[Tuple[str, int]]
     ) -> OVModelExtractionCommand:
         return OVModelExtractionCommand(input_ids, output_ids)
 
@@ -110,3 +110,7 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def remove_fq_from_inputs(model: ov.Model, nncf_graph: NNCFGraph) -> ov.Model:
         return remove_fq_from_inputs(model, nncf_graph)
+
+    @staticmethod
+    def get_port_id(target_point: OVTargetPoint) -> int:
+        return target_point.port_id

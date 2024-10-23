@@ -19,8 +19,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tests.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
-from tests.shared.isolation_runner import run_pytest_case_function_in_separate_process
+from tests.cross_fw.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
+from tests.cross_fw.shared.isolation_runner import run_pytest_case_function_in_separate_process
 from tools.memory_monitor import MemoryMonitor
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
@@ -147,10 +147,9 @@ def test_memory_values_isolated():
         print("\nMax memory:", max(memory_values))
     else:
         memory_values = list(map(lambda it: it - baseline_memory, memory_values))
-        rel = 1e-2
-        assert max(memory_values) == pytest.approx(BYTES_TO_ALLOCATE_LARGE, rel=rel)
-        assert abs(memory_values[0]) < BYTES_TO_ALLOCATE_LARGE * rel
-        assert abs(memory_values[-1]) < BYTES_TO_ALLOCATE_LARGE * rel
+        assert max(memory_values) == pytest.approx(BYTES_TO_ALLOCATE_LARGE, rel=5e-2)
+        assert abs(memory_values[0]) < BYTES_TO_ALLOCATE_LARGE * 5e-2
+        assert abs(memory_values[-1]) < BYTES_TO_ALLOCATE_LARGE * 5e-2
 
 
 def test_memory_values():

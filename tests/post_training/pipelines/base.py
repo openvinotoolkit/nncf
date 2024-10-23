@@ -30,7 +30,7 @@ from optimum.intel import OVQuantizer
 
 import nncf
 from nncf import TargetDevice
-from tests.shared.command import Command
+from tests.cross_fw.shared.command import Command
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
 from tools.memory_monitor import memory_monitor_context
@@ -439,7 +439,7 @@ class PTQTestPipeline(BaseTestPipeline):
             for i in range(node.get_output_size()):
                 if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
                     num_int8 += 1
-                if node.get_output_element_type(i).get_type_name() in ["i4", "u4"]:
+                if node.get_output_element_type(i).get_type_name() in ["i4", "u4", "nf4"]:
                     num_int4 += 1
 
         self.run_info.num_compress_nodes.num_int8 = num_int8

@@ -18,14 +18,14 @@ from torchvision import models
 
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
+from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.onnx.conftest import ONNX_TEST_ROOT
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.onnx.models import OneConvolutionalModel
 from tests.onnx.opset_converter import convert_opset_version
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
-from tests.shared.nx_graph import compare_nx_graph_with_reference
-from tests.shared.paths import TEST_ROOT
 
 REFERENCE_GRAPHS_DIR = ONNX_TEST_ROOT / "data" / "reference_graphs" / "original_nncf_graph"
 

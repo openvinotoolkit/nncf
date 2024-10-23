@@ -22,10 +22,10 @@ from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.model_creation import wrap_model
-from tests.post_training.test_templates.helpers import ConvTestModel
-from tests.post_training.test_templates.helpers import LinearMultiShapeModel
-from tests.post_training.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
-from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
+from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import LinearMultiShapeModel
+from tests.cross_fw.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
+from tests.cross_fw.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
 
 PT_LINEAR_MODEL_SQ_MAP = {
     ("Linear1",): "LinearMultiShapeModel/split_0_1_0/nncf_smooth_quant",

@@ -11,6 +11,7 @@
 """
 Structures and functions for passing advanced parameters to NNCF post-training quantization APIs.
 """
+
 import sys
 from dataclasses import dataclass
 from dataclasses import field
@@ -20,6 +21,7 @@ from enum import Enum
 from typing import Any, Dict, Optional, Union
 
 import nncf
+from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.api_marker import api
 from nncf.parameters import StrEnum
@@ -197,6 +199,17 @@ class AdvancedQuantizationParameters:
         the calibration dataset, then in case batch_size of the data source > 1 batchwise_statistics sets to True,
         otherwise sets to False.
     :type batchwise_statistics: Optional[bool]
+    :param quantizer_propagation_rule: An instance of the `QuantizerPropagationRule` enum that
+        specifies how quantizers should be propagated and merged across branching nodes in the
+        model's computational graph. The strategies are as follows:
+        - DO_NOT_MERGE_BRANCHES: No merging of quantization parameters across branches.
+        - MERGE_IF_ALL_BRANCHES_SAME : Merge only if all branch quantization configurations are identical.
+        - MERGE_WITH_POTENTIAL_REQUANTIZATION: Merge common configurations and allow for requantization
+        on branches with additional options.
+        - MERGE_ALL_IN_ONE: Attempt to merge into a single global quantization configuration
+        if possible given hardware constraints.
+        MERGE_ALL_IN_ONE is a default value.
+    :type quantizer_propagation_rule: QuantizerPropagationRule
     :param activations_quantization_params: Quantization parameters for activations.
     :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
     :param weights_quantization_params: Quantization parameters for weights.
@@ -211,7 +224,7 @@ class AdvancedQuantizationParameters:
         It regulates the calculation of the smooth scale. The default value stored in AdvancedSmoothQuantParameters.
         A negative value for each field switches off type smoothing. In case of inaccurate results,
         fields may be adjusted in the range from 0 to 1 or set -1 to disable smoothing for type.
-    :type smooth_quant_alpha: AdvancedSmoothQuantParameters
+    :type smooth_quant_alphas: nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters
     :param smooth_quant_alpha: Deprecated SmoothQuant-related parameter.
     :type smooth_quant_alpha: float
     :param backend_params: Backend-specific parameters.
@@ -229,6 +242,7 @@ class AdvancedQuantizationParameters:
     # Advanced Quantization parameters
     activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None
     weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None
+    quantizer_propagation_rule: QuantizerPropagationRule = QuantizerPropagationRule.MERGE_ALL_IN_ONE
 
     # Range estimator parameters
     activations_range_estimator_params: RangeEstimatorParameters = field(default_factory=RangeEstimatorParameters)
@@ -316,6 +330,33 @@ class AdvancedGPTQParameters:
 
 @api()
 @dataclass
+class AdvancedLoraCorrectionParameters:
+    """
+    Contains advanced parameters for lora correction algorithm.
+
+    :param adapter_rank: rank of lora adapters. Defaults to 16.
+    :type adapter_rank: int
+    :param num_iterations: number of correction iterations. Defaults to 3.
+    :type num_iterations: int
+    :param apply_regularization: Whether to add a regularization during the correction process. Defaults to True.
+        Helpful for big rank values to avoid overfitting.
+    :type apply_regularization: bool
+    :param subset_size: Number of data samples for lora correction algorithm. Defaults to 128.
+    :type subset_size: int
+    :param use_int8_adapters: Whether to 8-bit quantize lora adapters, otherwise they kept in the original weights
+        precision. Defaults to True.
+    :type use_int8_adapters: bool
+    """
+
+    adapter_rank: int = 8
+    num_iterations: int = 3
+    apply_regularization: bool = True
+    subset_size: int = 128
+    use_int8_adapters: bool = True
+
+
+@api()
+@dataclass
 class AdvancedCompressionParameters:
     """
     Contains advanced parameters for compression algorithms.
@@ -336,6 +377,9 @@ class AdvancedCompressionParameters:
 
     # Advanced GPTQ algorithm parameters
     gptq_params: AdvancedGPTQParameters = field(default_factory=AdvancedGPTQParameters)
+
+    # Advanced Lora Correction algorithm parameters
+    lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
 
 
 @api()

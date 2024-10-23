@@ -11,7 +11,7 @@
 
 import pytest
 
-from tests.shared.isolation_runner import run_pytest_case_function_in_separate_process
+from tests.cross_fw.shared.isolation_runner import run_pytest_case_function_in_separate_process
 from tests.torch.quantization.extensions.isolated_cases import (
     test_missing_cuda_compiler_fails_with_message_isolated_calledprocesserror,
 )

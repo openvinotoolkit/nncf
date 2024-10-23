@@ -22,6 +22,7 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
+from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -246,12 +247,29 @@ def quantize(
     raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
 
 
+def wrap_validation_fn(validation_fn):
+    """
+    Wraps validation function to support case when it only returns metric value.
+
+    :param validation_fn: Validation function to wrap.
+    :return: Wrapped validation function.
+    """
+
+    def wrapper(*args, **kwargs):
+        retval = validation_fn(*args, **kwargs)
+        if isinstance(retval, tuple):
+            return retval
+        return retval, None
+
+    return wrapper
+
+
 @api(canonical_alias="nncf.quantize_with_accuracy_control")
 def quantize_with_accuracy_control(
     model: TModel,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], float],
+    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: Optional[QuantizationPreset] = None,
@@ -316,6 +334,9 @@ def quantize_with_accuracy_control(
     )
 
     backend = get_backend(model)
+
+    validation_fn = wrap_validation_fn(validation_fn)
+
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import quantize_with_accuracy_control_impl
 
@@ -373,6 +394,8 @@ def compress_weights(
     awq: Optional[bool] = None,
     scale_estimation: Optional[bool] = None,
     gptq: Optional[bool] = None,
+    lora_correction: Optional[bool] = None,
+    backup_mode: Optional[BackupMode] = None,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> TModel:
     """
@@ -419,8 +442,16 @@ def compress_weights(
     :param scale_estimation: Indicates whether a scale estimation algorithm is used that minimizes the L2 error
         between the original and compressed layers.
     :type scale_estimation: bool
-    :param gptq: Indicates whether use GPTQ algorithm.
+    :param gptq: Indicates whether to use GPTQ algorithm.
     :type gptq: bool
+    :param lora_correction: Indicates whether to use Lora Correction algorithm.
+    :type lora_correction: bool
+    :param backup_mode: Defines a backup mode for mixed-precision weight compression.
+        NONE stands for original floating-point precision of the model weights.
+            In this mode, weights are retained in their original precision without any quantization.
+        INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
+        INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
+    :type backup_mode: nncf.BackupMode
     :param advanced_parameters: Advanced parameters for compression algorithms.
     :type advanced_parameters: nncf.AdvancedCompressionParameters
     :return: The non-trainable model with compressed weights.
@@ -445,11 +476,14 @@ def compress_weights(
                 f"but given {mode.value} mode."
             )
 
-        if True in [awq, scale_estimation, gptq]:
+        if True in [awq, scale_estimation, gptq, lora_correction]:
             raise AttributeError(
-                "Torch backend doesn`t supports scale estimation and AWQ algorithm, "
-                "but awq=True or scale_estimation=True or gptq=True is specified."
+                "Torch backend does not support 'awq', 'scale_estimation', 'gptq' and 'lora_correction' options. "
+                "Set them to None."
             )
+
+        if backup_mode is not None:
+            raise AttributeError("Torch backend does not support backup_mode option.")
 
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
@@ -467,21 +501,45 @@ def compress_weights(
         dataset = None
         compression_weights_impl = pt_compression_weights_impl
 
+    if backend == BackendType.TORCH_FX:
+        from nncf.experimental.torch.fx.quantization.quantize_model import (
+            compress_weights_impl as fx_compression_weights_impl,
+        )
+
+        if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
+            raise AttributeError(
+                "TorchFX backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
+                f"but given {mode.value} mode."
+            )
+
+        if backup_mode is not None:
+            raise AttributeError("TorchFX backend does not support backup_mode option.")
+
+        if any((awq, scale_estimation, gptq, lora_correction)):
+            raise AttributeError(
+                "TorchFX backend does not support 'awq', 'scale_estimation', 'gptq',"
+                "and 'lora_correction' options. Set them to None."
+            )
+        if dataset:
+            raise AttributeError(
+                "TorchFX only supports data-free weights compression," "Set the 'dataset' option to None"
+            )
+        compression_weights_impl = fx_compression_weights_impl
+
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import compress_weights_impl as ov_compress_weights_impl
 
-        if any((awq, scale_estimation)) and (
-            dataset is None or mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
+        if any((awq, scale_estimation, gptq, lora_correction)) and (
+            dataset is None or mode == CompressWeightsMode.E2M1
         ):
             raise AttributeError(
-                "Scale estimation or AWQ algorithm defined, but dataset is None or mode is (NF4 or E2M1)."
+                "Scale estimation, AWQ, GPTQ or Lora Correction algorithm is defined, "
+                "but dataset is None or mode is E2M1."
             )
-        if gptq and (dataset is None or mode == CompressWeightsMode.E2M1):
-            raise AttributeError("GPTQ algorithm defined, but dataset is None or mode is E2M1.")
 
-        if gptq and scale_estimation:
+        if gptq and lora_correction:
             raise AttributeError(
-                "Simultaneous use of Scale estimation and GPTQ algorithms is not supported. Select one of them."
+                "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
             )
 
         compression_weights_impl = ov_compress_weights_impl
@@ -493,14 +551,26 @@ def compress_weights(
             group_size = -1
         if ratio != 1 or group_size != -1:
             raise AttributeError(
-                "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
+                "INT8 modes assume per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
-        options = [all_layers, sensitivity_metric, dataset, awq, scale_estimation, gptq]
-        if any(option is not None for option in options):
+
+        if backup_mode is not None:
+            raise AttributeError("INT8 modes do not support the `backup_mode` option")
+
+        options = {
+            "all_layers": all_layers,
+            "sensitivity_metric": sensitivity_metric,
+            "dataset": dataset,
+            "awq": awq,
+            "scale_estimation": scale_estimation,
+            "gptq": gptq,
+            "lora_correction": lora_correction,
+        }
+        unsupported_for_int8 = [name for name, value in options.items() if value is not None]
+        if unsupported_for_int8:
             raise AttributeError(
-                "INT8 modes do not support `all_layers`, `sensitivity_metric`, `awq`, `scale_estimation`, `gptq` "
-                "and `dataset` options. Set them to None."
+                f"INT8 modes do not support {', '.join(unsupported_for_int8)} option(s). Set them to None."
             )
 
     if ratio is None:
@@ -515,6 +585,8 @@ def compress_weights(
         scale_estimation = False
     if gptq is None:
         gptq = False
+    if lora_correction is None:
+        lora_correction = False
     if ignored_scope is None:
         ignored_scope = IgnoredScope()
     if sensitivity_metric is None:
@@ -523,6 +595,8 @@ def compress_weights(
             if dataset is None
             else SensitivityMetric.MAX_ACTIVATION_VARIANCE
         )
+    if backup_mode is None:
+        backup_mode = BackupMode.INT8_ASYM
     if ratio != 1 and dataset is None and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
         raise AttributeError(
             f"Mixed precision selection based on the given sensitivity metric={sensitivity_metric.value} requires "
@@ -549,6 +623,8 @@ def compress_weights(
         subset_size,
         scale_estimation,
         gptq,
+        lora_correction,
+        backup_mode,
         advanced_parameters,
     )
 

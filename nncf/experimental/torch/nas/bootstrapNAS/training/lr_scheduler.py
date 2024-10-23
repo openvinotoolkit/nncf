@@ -147,7 +147,7 @@ class GlobalLRScheduler(BaseLRScheduler):
         base_lr: float,
         num_epochs: float,
         warmup_epochs: float = 0,
-        warmup_lr: float = 3.4e-4
+        warmup_lr: float = 3.4e-4,
     ):
         super().__init__(optimizer, num_steps_in_epoch)
         self._base_lr = base_lr

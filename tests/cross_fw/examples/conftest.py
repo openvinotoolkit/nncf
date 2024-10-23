@@ -31,6 +31,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--ov_version_override", default=None, help="Parameter to set OpenVINO into the env with the version from PyPI"
     )
+    parser.addoption("--data", type=str, default=None, help="Path to test datasets")
 
 
 @pytest.fixture(scope="module")
@@ -46,3 +47,8 @@ def is_check_performance(request):
 @pytest.fixture(scope="module")
 def ov_version_override(request):
     return request.config.getoption("--ov_version_override")
+
+
+@pytest.fixture(scope="module")
+def data(request):
+    return request.config.getoption("--data")

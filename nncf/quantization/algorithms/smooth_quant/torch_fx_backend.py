@@ -20,6 +20,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
@@ -34,7 +35,6 @@ from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
-from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
 
 PT_PRE_LAYER_TARGET_TYPE = TargetType.OPERATOR_PRE_HOOK
 
@@ -89,7 +89,7 @@ class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
     ) -> TensorCollector:
         collector = TensorCollector()
-        reducer = PTAbsMaxReducer(reduction_axes=stats_reduction_axes)
+        reducer = AbsMaxReducer(reduction_axes=stats_reduction_axes)
         aggregator = MaxAggregator(num_samples=num_samples)
         collector.register_statistic_branch(branch_key, reducer, aggregator)
         return collector
@@ -105,7 +105,10 @@ class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def weight_update_command(node_with_weight: NNCFNode, weight_value: torch.Tensor) -> OVWeightUpdateCommand:
-        return FXApplyTransformationCommand(constant_update_transformation_builder(node_with_weight, weight_value.data))
+        # TODO(dlyakhov): Use input port id depending on the node metatype/attributes.
+        return FXApplyTransformationCommand(
+            constant_update_transformation_builder(node_with_weight, weight_value.data, input_port_id=1)
+        )
 
     @staticmethod
     def scale_insertion_command(

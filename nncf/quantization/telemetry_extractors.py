@@ -23,3 +23,8 @@ class CompressionStartedWithQuantizeApi(TelemetryExtractor):
 class CompressionStartedWithQuantizeWithAccuracyControlApi(TelemetryExtractor):
     def extract(self, _: Any) -> CollectedEvent:
         return CollectedEvent(name="compression_started", data="quantize_with_accuracy_control_api")
+
+
+class CompressionStartedWithCompressWeightsApi(TelemetryExtractor):
+    def extract(self, _: Any) -> CollectedEvent:
+        return CollectedEvent(name="compression_started", data="compress_weights_api")

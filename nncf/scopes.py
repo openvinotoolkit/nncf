@@ -48,6 +48,11 @@ def get_ignored_node_names_from_subgraph(graph: NNCFGraph, subgraph: Subgraph) -
     ignored_names = set()
     for start_node_name in subgraph.inputs:
         for end_node_name in subgraph.outputs:
+            if start_node_name == end_node_name:
+                # For networkx<3.3 nx.get_all_simple_paths returns empty path for this case
+                node = graph.get_node_by_name(start_node_name)
+                ignored_names.add(node.node_name)
+                continue
             for path in graph.get_all_simple_paths(start_node_name, end_node_name):
                 for node_key in path:
                     node = graph.get_node_by_key(node_key)

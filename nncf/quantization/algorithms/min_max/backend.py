@@ -34,6 +34,14 @@ TModel = TypeVar("TModel")
 class MinMaxAlgoBackend(ABC):
     @property
     @abstractmethod
+    def preserved_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for backend-specific metatypes that require preserving float subgraphs
+        when removing the ShapeOf subgraph.
+        """
+
+    @property
+    @abstractmethod
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific MatMul metatypes.
@@ -65,6 +73,13 @@ class MinMaxAlgoBackend(ABC):
     def dropout_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific Dropout metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific Elementwises metatypes.
         """
 
     @property
@@ -288,12 +303,21 @@ class MinMaxAlgoBackend(ABC):
         :return: List of ignored names.
         """
 
-    @staticmethod
     @abstractmethod
-    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_weight_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
         """
         Returns nodes that have weights.
 
         :param nncf_graph: Instance of NNCFGraph.
         :return: All nodes with weights.
+        """
+
+    @abstractmethod
+    def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        """
+        Returns true if given nncf matmul node is a matmul with a constant, False otherwise.
+
+        :param Node: Instance of NNCFNode.
+        :param nncf_graph: Instance of NNCFGraph.
+        :return: True if given nncf matmul node is a matmul with a constant, False otherwise.
         """
