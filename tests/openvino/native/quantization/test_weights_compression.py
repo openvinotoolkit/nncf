@@ -1425,6 +1425,7 @@ def test_data_aware_algo_with_different_activation_dimensions(n_extra_dims):
     [
         LMLinearModel.INPUT_SHAPE,
         [3, 5, 16],
+        [1, 1, 16],
     ],
 )
 @pytest.mark.parametrize(
@@ -1470,6 +1471,7 @@ def test_compression_with_different_algo_combinations(input_shape, kwargs):
         dict(lora_correction=True),
         dict(
             gptq=True,
+            awq=True,
             scale_estimation=True,
             advanced_parameters=CompressionParams(gptq_params=GPTQParams(subset_size=2)),
         ),
