@@ -21,10 +21,10 @@ class ModelProcessedWithStripApi(TelemetryExtractor):
 
 
 class NNCFNetworkGeneratedFromWrapApi(TelemetryExtractor):
-    def extract(self) -> CollectedEvent:
+    def extract(self, _: Any) -> CollectedEvent:
         return CollectedEvent(name="nncf_network_generated", data="wrap_api")
 
 
 class DatasetGeneratedFromApi(TelemetryExtractor):
-    def extract(self) -> CollectedEvent:
+    def extract(self, _: Any) -> CollectedEvent:
         return CollectedEvent(name="dataset_generated", data="generate_api")
