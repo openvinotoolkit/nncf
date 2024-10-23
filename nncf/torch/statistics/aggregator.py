@@ -29,7 +29,7 @@ from nncf.torch.tensor_statistics.algo import create_register_input_hook
 
 
 class PTStatisticsAggregator(StatisticsAggregator):
-    BACKEND = BackendType.ONNX
+    BACKEND = BackendType.TORCH
     HOOKS_GROUP_NAME = "statistics_hooks"
 
     def collect_statistics(self, model: NNCFNetwork, graph: NNCFGraph) -> None:
