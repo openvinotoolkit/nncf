@@ -16,7 +16,7 @@ on:
 
 jobs:
   examples-cpu:
-    name: Test exmaples CPU [${{ matrix.group }}/4]
+    name: Weight compression [${{ matrix.group }}/2]
     runs-on: ubuntu-22.04-16-cores
     strategy:
       fail-fast: false
@@ -58,6 +58,7 @@ jobs:
             ${{ github.event.inputs.pytest_args || '' }}
         env:
           TQDM_DISABLE: 1
+          HOME_HF: "/home/runner/hf_home"
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}

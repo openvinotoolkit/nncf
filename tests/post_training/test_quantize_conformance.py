@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import re
 import time
 import traceback
@@ -29,6 +30,8 @@ from tests.post_training.model_scope import WC_TEST_CASES
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import RunInfo
+
+os.environ["ONEDNN_MAX_CPU_ISA"] = "AVX2"
 
 DATA_ROOT = Path(__file__).parent / "data"
 
