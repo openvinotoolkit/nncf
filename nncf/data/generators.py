@@ -15,7 +15,7 @@ import nncf
 from nncf.common.logging.track_progress import track
 from nncf.common.telemetry_extractors import DatasetGeneratedFromApi
 from nncf.telemetry import tracked_function
-from nncf.telemetry.events import NNCF_COMMON_CATEGORY
+from nncf.telemetry.events import MODEL_BASED_CATEGORY
 
 BASE_VOCAB_SIZE = 12000
 
@@ -24,7 +24,7 @@ TTokenizer = TypeVar("TTokenizer")
 
 
 @tracked_function(
-    category=NNCF_COMMON_CATEGORY,
+    category=MODEL_BASED_CATEGORY,
     extractors=[
         DatasetGeneratedFromApi(),
     ],
