@@ -32,8 +32,8 @@ class TensorStatistic:
             setattr(self, key, data.get(key))
 
     @classmethod
-    def from_kwargs(cls, kwargs: Dict[str, Any]) -> TensorStatistic:
-        args = {key: kwargs[key] for key in cls.keys()}  # noqa: SIM118
+    def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
+        args = {key: config[key] for key in cls.keys()}  # noqa: SIM118
         return cls(**args)
 
     @classmethod
@@ -113,10 +113,10 @@ class MedianMADTensorStatistic(TensorStatistic):
         return False
 
     @classmethod
-    def from_kwargs(cls, kwargs: Dict[str, Any]) -> TensorStatistic:
+    def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
         return cls(
-            median_values=kwargs[cls.TENSOR_STATISTIC_OUTPUT_KEY][cls.MEDIAN_VALUES_STAT],
-            mad_values=kwargs[cls.TENSOR_STATISTIC_OUTPUT_KEY][cls.MAD_VALUES_STAT],
+            median_values=config[cls.TENSOR_STATISTIC_OUTPUT_KEY][cls.MEDIAN_VALUES_STAT],
+            mad_values=config[cls.TENSOR_STATISTIC_OUTPUT_KEY][cls.MAD_VALUES_STAT],
         )
 
 
@@ -141,12 +141,12 @@ class PercentileTensorStatistic(TensorStatistic):
         return False
 
     @classmethod
-    def from_kwargs(cls, kwargs: Dict[str, Any]) -> TensorStatistic:
-        if cls.TENSOR_STATISTIC_OUTPUT_KEY in kwargs:
-            percentile_vs_values_dict = kwargs[cls.TENSOR_STATISTIC_OUTPUT_KEY]
+    def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
+        if cls.TENSOR_STATISTIC_OUTPUT_KEY in config:
+            percentile_vs_values_dict = config[cls.TENSOR_STATISTIC_OUTPUT_KEY]
         else:
             percentile_vs_values_dict = {}
-            for (_, percentile), value in kwargs.items():
+            for (_, percentile), value in config.items():
                 percentile_vs_values_dict[percentile] = value
         return cls(percentile_vs_values_dict=percentile_vs_values_dict)
 
@@ -253,10 +253,10 @@ class WCTensorStatistic(TensorStatistic):
         return mean_values_equal
 
     @classmethod
-    def from_kwargs(cls, kwargs: Dict[str, Any]) -> TensorStatistic:
+    def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
         mean_values, shape_values = None, None
-        if cls.MEAN_STAT in kwargs and kwargs[cls.MEAN_STAT] is not None:
-            mean_values = [fns.squeeze(it) for it in kwargs[cls.MEAN_STAT]]
-        if cls.SHAPE_STAT in kwargs and kwargs[cls.SHAPE_STAT] is not None:
-            shape_values = [tuple(it.data) for it in kwargs[cls.SHAPE_STAT]]
+        if cls.MEAN_STAT in config and config[cls.MEAN_STAT] is not None:
+            mean_values = [fns.squeeze(it) for it in config[cls.MEAN_STAT]]
+        if cls.SHAPE_STAT in config and config[cls.SHAPE_STAT] is not None:
+            shape_values = [tuple(it.data) for it in config[cls.SHAPE_STAT]]
         return cls(mean_values=mean_values, shape_values=shape_values)

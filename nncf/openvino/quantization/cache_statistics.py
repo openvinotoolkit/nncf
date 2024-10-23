@@ -125,7 +125,7 @@ def cache_weight_compression_statistics(
     """Caches compression statistics for the given model and dataset for WeightCompression."""
     model = remove_friendly_name_duplicates(model)
     weight_compression_configuration = get_weight_compression_configuration(
-        awq=True, scale_estimation=True, gptq=True, lora_correction=True
+        awq=True, scale_estimation=True, lora_correction=True
     )
     compression_algorithm = WeightCompression(**weight_compression_configuration, subset_size=subset_size)
 
