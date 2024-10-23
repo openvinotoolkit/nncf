@@ -34,7 +34,7 @@ from nncf.tensor import Tensor
 
 
 class OVStatisticsAggregator(StatisticsAggregator):
-    BACKEND = BackendType.OPENVINO
+    BACKEND: BackendType = BackendType.OPENVINO
 
     def collect_statistics(self, model: ov.Model, graph: NNCFGraph) -> None:
         self._name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}

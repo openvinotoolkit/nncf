@@ -23,8 +23,8 @@ def validate_backend(data: Dict[str, Any], backend: Optional[BackendType]) -> No
     """
     if "backend" not in data:
         raise nncf.ValidationError("The provided metadata has no information about backend.")
-    b = data["backend"]
+    data_backend = data["backend"]
     if data["backend"] != backend.value:
         raise nncf.ValidationError(
-            f"Backend in loaded statistics {b} does not match to an expected backend {backend.value}."
+            f"Backend in loaded statistics {data_backend} does not match to an expected backend {backend.value}."
         )

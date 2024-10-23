@@ -53,7 +53,7 @@ class TensorCollectorModule(torch.nn.Module):
 
 
 class FXStatisticsAggregator(StatisticsAggregator):
-    BACKEND = BackendType.TORCH_FX
+    BACKEND: BackendType = BackendType.TORCH_FX
     HOOKS_GROUP_NAME = "statistics_hooks"
 
     def collect_statistics(self, model: NNCFNetwork, graph: NNCFGraph) -> None:

@@ -32,7 +32,7 @@ from nncf.tensor import Tensor
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
-    BACKEND = BackendType.ONNX
+    BACKEND: BackendType = BackendType.ONNX
 
     def collect_statistics(self, model: onnx.ModelProto, graph: NNCFGraph) -> None:
         self.input_edges_mapping = get_input_edges_mapping(graph)

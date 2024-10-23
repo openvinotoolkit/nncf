@@ -25,6 +25,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.utils.backend import BackendType
 from nncf.data.dataset import DataItem
 from nncf.data.dataset import Dataset
 from nncf.data.dataset import ModelInput
@@ -43,7 +44,7 @@ class StatisticsAggregator(ABC):
     Base class for statistics collection.
     """
 
-    BACKEND = None
+    BACKEND: BackendType = None
 
     def __init__(self, dataset: Dataset[DataItem, ModelInput]):
         self.dataset = dataset

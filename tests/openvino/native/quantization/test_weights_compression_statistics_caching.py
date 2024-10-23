@@ -68,7 +68,7 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
     from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 
     collect_statistics_spy = mocker.spy(OVStatisticsAggregator, "collect_statistics")
-    load_statistics_from_file_spy = mocker.spy(OVStatisticsAggregator, "load_statistics_from_file")
+    load_statistics_from_dir_spy = mocker.spy(OVStatisticsAggregator, "load_statistics_from_dir")
     dump_statistics_spy = mocker.spy(OVStatisticsAggregator, "dump_statistics")
 
     # Constant Parameters
@@ -154,7 +154,7 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
 
     assert collect_statistics_spy.call_count == 1, "Statistics should be collected only once."
     assert (
-        load_statistics_from_file_spy.call_count == load_statistics_number
+        load_statistics_from_dir_spy.call_count == load_statistics_number
     ), f"Statistics should be loaded {load_statistics_number} times, \
-    but was {load_statistics_from_file_spy.call_count}."
+    but was {load_statistics_from_dir_spy.call_count}."
     assert dump_statistics_spy.call_count == 1, "Statistics should be dumped only once."
