@@ -63,6 +63,8 @@ jobs:
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: pytest-results-${{ matrix.group }}
-          path: pytest-results-${{ matrix.group }}.xml
           overwrite: True
+          name: pytest-results-${{ matrix.group }}
+          path: |
+            pytest-results-${{ matrix.group }}.xml
+            tmp/results.csv
