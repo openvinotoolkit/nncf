@@ -15,6 +15,8 @@ import re
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+import nncf
+
 METADATA_FILE = "statistics_metadata.json"
 
 
@@ -54,10 +56,12 @@ def load_from_dir(dir_path: str) -> Tuple[Dict[str, Any], Dict[str, str]]:
     Loads statistics from gzip-compressed files in the given directory.
     :param dir_path: The path to the directory from which to load the statistics.
     :return: 1) A dictionary with the original statistic names as keys and the loaded statistics as values.
-                2) Metadata dictionary.
+    2) Metadata dictionary.
     """
     statistics = {}
     dir_path = Path(dir_path)
+    if not dir_path.exists():
+        raise nncf.ValidationError("The provided directory path does not exist.")
     metadata = load_metadata(dir_path)
     mapping = metadata.get("mapping", {})
 

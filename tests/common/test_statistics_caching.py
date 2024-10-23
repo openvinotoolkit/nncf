@@ -71,19 +71,19 @@ def test_dump_and_load_statistics(tmp_path, dummy_statistics):
     """
     Tests that dumped statistics can be loaded and match the original.
     """
-    test_file = "test"
-    statistics_serializer.dump_to_file(dummy_statistics, tmp_path / test_file)
-    assert (tmp_path / test_file).exists(), "Dumped file was not created"
+    test_dir = "test_dir"
+    statistics_serializer.dump_to_dir(dummy_statistics, tmp_path / test_dir)
+    assert (tmp_path / test_dir).exists(), "Dumped file was not created"
 
-    loaded_statistics = statistics_serializer.load_from_file(tmp_path / test_file)
+    loaded_statistics, _ = statistics_serializer.load_from_dir(tmp_path / test_dir)
     assert _compare_dicts(dummy_statistics, loaded_statistics), "Loaded statistics do not match the original"
 
 
-def test_load_statistics_from_non_existent_file():
+def test_load_statistics_from_non_existent_dir():
     """
-    Tests that attempting to load statistics from a non-existent file raises an error.
+    Tests that attempting to load statistics from a non-existent directory raises an error.
     """
-    file_path = "non_existent_file"
+    file_path = "non_existent_dir"
     with pytest.raises(nncf.ValidationError) as exc_info:
-        statistics_serializer.load_from_file(file_path)
-    assert "File not found" in str(exc_info)
+        statistics_serializer.load_from_dir(file_path)
+    assert "The provided directory path does not exist." in str(exc_info)
