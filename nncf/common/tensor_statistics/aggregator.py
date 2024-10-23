@@ -8,14 +8,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import gzip
-import pickle
+
 from abc import ABC
 from abc import abstractmethod
 from itertools import islice
 from typing import Any, Dict, Optional, TypeVar
 
 import nncf
+import nncf.common.tensor_statistics.statistics_serializer as statistics_serializer
+import nncf.common.tensor_statistics.statistics_validator as statistics_validator
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -24,7 +25,6 @@ from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.common.utils.backend import BackendType
 from nncf.data.dataset import DataItem
 from nncf.data.dataset import Dataset
 from nncf.data.dataset import ModelInput
@@ -95,17 +95,16 @@ class StatisticsAggregator(ABC):
                 f"smaller than the requested subset size {self.stat_subset_size}."
             )
 
-    def load_statistics_from_file(self, file_name: str) -> None:
+    def load_statistics_from_dir(self, dir_path: str) -> None:
         """
         Loads statistics from a file and populates the statistic points with the loaded data.
 
-        :param file_name: The name of the file from which to load the statistics.
+        :param file_name: The name of the file from which to load the statistics. # TODO
         """
-        loaded_data = StatisticsSerializer.load_from_file(file_name)
-        if not StatisticsValidator.check_backend(loaded_data, self.BACKEND):
-            raise nncf.ValidationError("Backend key in loaded statistics is not matched to a model backend.")
+        loaded_data, metadata = statistics_serializer.load_from_dir(dir_path)
+        statistics_validator.validate_backend(metadata, self.BACKEND)
         self._load_statistics(loaded_data)
-        nncf_logger.info(f"Statistics were successfully loaded from a file {file_name}.")
+        nncf_logger.info(f"Statistics were successfully loaded from a directory {dir_path}.")
 
     def _load_statistics(self, data: Dict[str, Any]) -> None:
         """
@@ -120,15 +119,15 @@ class StatisticsAggregator(ABC):
                 raise nncf.ValidationError(f"Not found statistics for {statistics_key}")
             statistics.load_data(data[statistics_key])
 
-    def dump_statistics(self, file_name: str) -> None:
+    def dump_statistics(self, dir_path: str) -> None:
         """
         Dumps the current statistics to a file in a compressed format.
 
         :param file_name: The name of the file where the statistics will be saved.
         """
         data_to_dump = self._prepare_statistics()
-        StatisticsSerializer.dump_to_file(data_to_dump, file_name)
-        nncf_logger.info(f"Statistics were successfully saved to a file {file_name}.")
+        statistics_serializer.dump_to_dir(data_to_dump, dir_path, {"backend": self.BACKEND.value})
+        nncf_logger.info(f"Statistics were successfully saved to a directory {dir_path}.")
 
     def _prepare_statistics(self) -> Dict[str, Any]:
         """
@@ -136,7 +135,7 @@ class StatisticsAggregator(ABC):
 
         :return: A dictionary containing the statistics data to be dumped.
         """
-        data_to_dump = {"backend": self.BACKEND}
+        data_to_dump = {}
         for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
             statistics = tensor_collector.get_statistics()
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
@@ -220,47 +219,3 @@ class StatisticsAggregator(ABC):
         :param target_point: Statistics target point.
         :return: Statistics key.
         """
-
-
-class StatisticsValidator:
-    @staticmethod
-    def check_backend(data: Dict[str, Any], backend: Optional[BackendType]) -> bool:
-        """
-        Checks whether backend in loaded data is equal to a provided backend.
-
-        :param data: Loaded statistics.
-        :param backend: Provided backend.
-        :return: True, if matched, False - otherwise.
-        """
-        return bool(data["backend"] == backend)
-
-
-class StatisticsSerializer:
-    @staticmethod
-    def load_from_file(file_name: str) -> Any:
-        """
-        Loads statistics from a gzip-compressed file.
-        :param file_name: The name of the file from which to load the statistics.
-        :return: The loaded statistics.
-        """
-        try:
-            with gzip.open(file_name, "rb") as f:
-                return pickle.load(f)
-        except FileNotFoundError:
-            raise nncf.ValidationError(f"File not found: {file_name}")
-        except (pickle.UnpicklingError, IOError):
-            raise nncf.ValidationError(f"Error loading statistics from {file_name}")
-
-    @staticmethod
-    def dump_to_file(statistics: Dict[str, TensorType], file_name: str) -> None:
-        """
-        Dumps statistics to a gzip-compressed file.
-        :param data: The statistics to be dumped.
-        :param file_name: The name of the file where the statistics will be dumped.
-        """
-        try:
-            with gzip.open(file_name, "wb") as f:
-                pickle.dump(statistics, f)
-        except (IOError, pickle.PicklingError) as e:
-            nncf_logger.error(f"Failed to write data to file {file_name}: {e}")
-            raise

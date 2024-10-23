@@ -14,7 +14,7 @@ import numpy as np
 import pytest
 
 import nncf
-from nncf.common.tensor_statistics.aggregator import StatisticsSerializer
+import nncf.common.tensor_statistics.statistics_serializer as statistics_serializer
 from nncf.tensor import Tensor
 from nncf.tensor.functions import allclose
 
@@ -72,10 +72,10 @@ def test_dump_and_load_statistics(tmp_path, dummy_statistics):
     Tests that dumped statistics can be loaded and match the original.
     """
     test_file = "test"
-    StatisticsSerializer.dump_to_file(dummy_statistics, tmp_path / test_file)
+    statistics_serializer.dump_to_file(dummy_statistics, tmp_path / test_file)
     assert (tmp_path / test_file).exists(), "Dumped file was not created"
 
-    loaded_statistics = StatisticsSerializer.load_from_file(tmp_path / test_file)
+    loaded_statistics = statistics_serializer.load_from_file(tmp_path / test_file)
     assert _compare_dicts(dummy_statistics, loaded_statistics), "Loaded statistics do not match the original"
 
 
@@ -84,6 +84,6 @@ def test_load_statistics_from_non_existent_file():
     Tests that attempting to load statistics from a non-existent file raises an error.
     """
     file_path = "non_existent_file"
-    with pytest.raises(nncf.ValidationError) as excinfo:
-        StatisticsSerializer.load_from_file(file_path)
-    assert "File not found" in str(excinfo)
+    with pytest.raises(nncf.ValidationError) as exc_info:
+        statistics_serializer.load_from_file(file_path)
+    assert "File not found" in str(exc_info)

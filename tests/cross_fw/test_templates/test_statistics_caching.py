@@ -66,7 +66,7 @@ class TemplateTestStatisticsCaching:
 
         :param tmp_path: The temporary path provided by pytest.
         """
-        test_file = "test"
+        test_dir = "test_dir"
         aggregator = self.get_statistics_aggregator()
         statistics_points = StatisticPointsContainer()
 
@@ -74,10 +74,10 @@ class TemplateTestStatisticsCaching:
         statistics_points.add_statistic_point(dummy_statistic_point)
 
         aggregator.statistic_points = statistics_points
-        aggregator.dump_statistics(tmp_path / test_file)
-        assert (tmp_path / test_file).exists(), "Statistics file was not created"
+        aggregator.dump_statistics(tmp_path / test_dir)
+        assert (tmp_path / test_dir).exists(), "Statistics file was not created"
 
-        aggregator.load_statistics_from_file(tmp_path / test_file)
+        aggregator.load_statistics_from_dir(tmp_path / test_dir)
 
     def test_incorrect_backend_statistics_load(self, tmp_path: Path):
         """
@@ -98,4 +98,4 @@ class TemplateTestStatisticsCaching:
         # spoil backend
         aggregator.BACKEND = "incorrect_backend"
         with pytest.raises(ValidationError):
-            aggregator.load_statistics_from_file(tmp_path / test_file)
+            aggregator.load_statistics_from_dir(tmp_path / test_file)

@@ -415,7 +415,7 @@ def compress_weights_impl(
             raise nncf.InternalError("File with cached statistics is not found.")
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         register_statistics_for_algorithm(statistics_aggregator, model, graph, subset_size, compression_algorithm)
-        statistics_aggregator.load_statistics_from_file(advanced_parameters.statistics_file_path)
+        statistics_aggregator.load_statistics_from_dir(advanced_parameters.statistics_file_path)
         statistics_points = statistics_aggregator.statistic_points
 
     return compression_algorithm.apply(model, graph, statistics_points, dataset)
