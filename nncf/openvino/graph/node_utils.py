@@ -107,7 +107,7 @@ def get_number_if_op(model: ov.Model) -> int:
     return cnt_if_op(model, 0)
 
 
-def get_const_value(const_node: ov.Node) -> np.ndarray:
+def get_const_value(const_node: ov.Node, bf16_to_fp32: Optional[bool] = True) -> np.ndarray:
     """
     Returns the constant tensor for the node.
     This method is applicable only for the floating-point constant data.
@@ -115,9 +115,7 @@ def get_const_value(const_node: ov.Node) -> np.ndarray:
     :param const_node: OpenVINO node.
     :return: The constant value.
     """
-    INPUT_DTYPE = os.environ.get("INPUT_DTYPE", "fp32")
-    NUMPY_COMPRESSION = bool(int(os.environ.get("NUMPY_COMPRESSION", "0")))
-    if const_node.get_element_type() == ov.Type.bf16 and (INPUT_DTYPE != "bf16" or NUMPY_COMPRESSION):
+    if const_node.get_element_type() == ov.Type.bf16 and bf16_to_fp32:
         # Fixed FP32 data type as the result for BF16 constant
         return const_node.get_data(dtype=np.float32)
     return const_node.data

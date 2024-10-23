@@ -10,7 +10,9 @@
 # limitations under the License.
 
 import inspect
+import os
 from dataclasses import dataclass
+from functools import partial
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -20,18 +22,19 @@ from openvino.runtime import opset13 as opset
 import nncf
 from nncf import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
+from nncf.tensor import TensorDataType, Tensor
 
 
 @dataclass
 class OVModelParameters:
+    input_dtype: TensorDataType
     dynamic: bool = False
     recompile: bool = False
     release_memory: bool = True
     share_outputs: bool = True
-    input_dtype: str = "fp32"
 
     def __hash__(self):
-        return hash((self.dynamic, self.recompile, self.release_memory, self.share_outputs, self.input_dtype))
+        return hash((self.input_dtype, self.dynamic, self.recompile, self.release_memory, self.share_outputs))
 
 
 class CompiledModelCache:
@@ -58,25 +61,44 @@ def cache_results(func):
         new_kwargs = {name: arg for name, arg in zip(sig.parameters, args)}
         new_kwargs.update(kwargs)
         cache_key = (func.__name__, frozenset(new_kwargs.items()))
-        recompile = new_kwargs.get("ov_model_params", OVModelParameters()).recompile
         cache = COMPILED_MODEL_CACHE._cache
-        if not recompile and cache_key in cache:
+        if cache_key in cache:
             return cache[cache_key]
         result = func(*args, **kwargs)
-        cache[cache_key] = result
+        recompile = new_kwargs["ov_model_params"].recompile
+        if not recompile:
+            cache[cache_key] = result
         return result
 
     return wrapper
 
 
-@cache_results
+def run_model(ov_model_params, compiled_model, inputs):
+    # Returns results as numpy tensors
+    outputs = compiled_model(inputs, share_outputs=ov_model_params.share_outputs)
+    outputs = [Tensor(outputs[i]) for i in range(len(outputs))]
+    if ov_model_params.release_memory:
+        compiled_model.release_memory()
+    return outputs
+
+
+def run_model_via_infer_request(ov_model_params, compiled_model, inputs):
+    # Returns results as ov tensors
+    infer_request = compiled_model.create_infer_request()
+    infer_request.infer(inputs, share_outputs=ov_model_params.share_outputs)
+    outputs = [Tensor(infer_request.get_output_tensor(i)) for i in range(len(infer_request.results))]
+    if ov_model_params.release_memory:
+        compiled_model.release_memory()
+    return outputs
+
+
 def get_compress_weight_model(
+    ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
     weight_shape: Tuple,
     scale_shape: Optional[Tuple] = None,
     zero_point_shape: Optional[Tuple] = None,
     reduction_axes: Optional[Tuple] = None,
-    ov_model_params: Optional[OVModelParameters] = None,
 ):
     if scale_shape is None and zero_point_shape is not None:
         raise Exception("Zero point shape can only be provided if scale shape is provided.")
@@ -101,16 +123,13 @@ def get_compress_weight_model(
     )
 
 
-@cache_results
 def get_compress_decompress_weight_model(
+    ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
     weight_shape: Tuple,
     scale_shape: Optional[Tuple],
     zero_point_shape: Optional[Tuple] = None,
-    ov_model_params: Optional[OVModelParameters] = None,
 ):
-    if ov_model_params is None:
-        ov_model_params = OVModelParameters()
     if config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM]:
         ov_model_params.dynamic = False
 
@@ -129,24 +148,7 @@ def get_compress_decompress_weight_model(
     )
 
 
-def _build_compress_decompress_model(
-    config: WeightCompressionConfig,
-    ov_model_params: OVModelParameters,
-    weight_shape: Tuple,
-    scale_shape: Tuple,
-    zero_point_shape: Optional[Tuple] = None,
-):
-    ov_parameters, ov_results = _build_compress_model(
-        config, ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes=None, return_nodes=True
-    )
-    return _get_compress_decompress_model(
-        config,
-        ov_model_params,
-        ov_parameters,
-        ov_results,
-    )
-
-
+@cache_results
 def _build_compress_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
@@ -156,11 +158,11 @@ def _build_compress_model(
     reduction_axes: Optional[Tuple] = None,
     return_nodes: bool = False,
 ):
-    if ov_model_params.input_dtype == "fp32":
+    if ov_model_params.input_dtype == TensorDataType.float32:
         input_dtype = ov.Type.f32
-    elif ov_model_params.input_dtype == "fp16":
+    elif ov_model_params.input_dtype == TensorDataType.float16:
         input_dtype = ov.Type.f16
-    elif ov_model_params.input_dtype == "bf16":
+    elif ov_model_params.input_dtype == TensorDataType.bfloat16:
         input_dtype = ov.Type.bf16
     else:
         raise Exception
@@ -243,6 +245,25 @@ def _build_compress_model(
     )
 
 
+@cache_results
+def _build_compress_decompress_model(
+    config: WeightCompressionConfig,
+    ov_model_params: OVModelParameters,
+    weight_shape: Tuple,
+    scale_shape: Tuple,
+    zero_point_shape: Optional[Tuple] = None,
+):
+    ov_parameters, ov_results = _build_compress_model(
+        config, ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes=None, return_nodes=True
+    )
+    return _get_compress_decompress_model(
+        config,
+        ov_model_params,
+        ov_parameters,
+        ov_results,
+    )
+
+
 def _get_compress_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
@@ -287,15 +308,8 @@ def _get_compress_model(
     model = ov.Model(ov_results, ov_parameters)
     compiled_model = ov.compile_model(model, device_name="CPU")
 
-    def infer(inputs):
-        infer_request = compiled_model.create_infer_request()
-        infer_request.infer(inputs, share_outputs=ov_model_params.share_outputs)
-        outputs = [infer_request.get_output_tensor(i) for i in range(len(infer_request.results))]
-        if ov_model_params.release_memory:
-            compiled_model.release_memory()
-        return outputs
-
-    return infer
+    run_fn = run_model_via_infer_request if config.num_bits == 4 else run_model
+    return partial(run_fn, ov_model_params, compiled_model)
 
 
 def _get_compress_decompress_model(
@@ -322,12 +336,5 @@ def _get_compress_decompress_model(
     model = ov.Model([decompressed_w], parameters)
     compiled_model = ov.compile_model(model, device_name="CPU")
 
-    def infer(inputs):
-        infer_request = compiled_model.create_infer_request()
-        infer_request.infer(inputs, share_outputs=ov_model_params.share_outputs)
-        outputs = [infer_request.get_output_tensor(i) for i in range(len(infer_request.results))]
-        if ov_model_params.release_memory:
-            compiled_model.release_memory()
-        return outputs
-
-    return infer
+    run_fn = run_model_via_infer_request if config.num_bits == 4 else run_model
+    return partial(run_fn, ov_model_params, compiled_model)

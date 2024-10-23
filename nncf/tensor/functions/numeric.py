@@ -130,6 +130,27 @@ def astype(a: Tensor, data_type: TensorDataType) -> Tensor:
 
     :return: Copy of the tensor in specified type.
     """
+    # is_bf16 = getattr(a, "_is_bf16", False)
+    # if is_bf16:
+    #     def bf16_to_fp32_v2(x):
+    #         # Step 1: Interpret the float16 data as uint16 to access the raw bits
+    #         custom16_bits = x.view(np.uint16)  # Keep as uint16
+    #
+    #         # Step 2: Allocate uint32 to hold the result (in-place modification in original variable)
+    #         custom16_bits = custom16_bits.astype(np.uint32)  # Cast to uint32 for safe shifting
+    #
+    #         # Step 3: Extract and shift sign, exponent, and fraction directly into custom16_bits
+    #         custom16_bits = (((custom16_bits & 0x8000) << 16) |  # Extract and move sign bit to bit 31
+    #                          ((custom16_bits & 0x7F80) << 16) |  # Extract and move exponent to bits 30-23
+    #                          ((custom16_bits & 0x007F) << 16))   # Extract and move fraction to bits 22-0
+    #
+    #         # Step 4: Interpret the resulting 32-bit integers as float32
+    #         float32_array = custom16_bits.view(np.float32)
+    #
+    #         return float32_array
+    #
+    #     fp32_data = bf16_to_fp32_v2(a.data)
+    #     Tensor(astype(fp32_data, data_type))
     return Tensor(astype(a.data, data_type))
 
 
