@@ -224,15 +224,15 @@ class StatisticsAggregator(ABC):
 
 class StatisticsValidator:
     @staticmethod
-    def check_backend(data: Dict[str, Any], backend: BackendType) -> bool:
+    def check_backend(data: Dict[str, Any], backend: Optional[BackendType]) -> bool:
         """
         Checks whether backend in loaded data is equal to a provided backend.
 
         :param data: Loaded statistics.
         :param backend: Provided backend.
-        :return:
+        :return: True, if matched, False - otherwise.
         """
-        return data["backend"] == backend
+        return bool(data["backend"] == backend)
 
 
 class StatisticsSerializer:
