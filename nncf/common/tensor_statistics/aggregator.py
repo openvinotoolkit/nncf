@@ -42,6 +42,8 @@ class StatisticsAggregator(ABC):
     Base class for statistics collection.
     """
 
+    BACKEND = None
+
     def __init__(self, dataset: Dataset[DataItem, ModelInput]):
         self.dataset = dataset
         self.stat_subset_size = None
@@ -99,6 +101,8 @@ class StatisticsAggregator(ABC):
         :param file_name: The name of the file from which to load the statistics.
         """
         loaded_data = StatisticsSerializer.load_from_file(file_name)
+        if not StatisticsValidator.check_backend(loaded_data, self.BACKEND):
+            raise nncf.ValidationError("Backend key in loaded statistics is not matched to a model backend.")
         self._load_statistics(loaded_data)
         nncf_logger.info(f"Statistics were successfully loaded from a file {file_name}.")
 
@@ -131,7 +135,7 @@ class StatisticsAggregator(ABC):
 
         :return: A dictionary containing the statistics data to be dumped.
         """
-        data_to_dump = {}
+        data_to_dump = {"backend": self.BACKEND}
         for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
             statistics = tensor_collector.get_statistics()
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
@@ -215,6 +219,12 @@ class StatisticsAggregator(ABC):
         :param target_point: Statistics target point.
         :return: Statistics key.
         """
+
+
+class StatisticsValidator:
+    @staticmethod
+    def check_backend(data, backend):
+        return data["backend"] == backend
 
 
 class StatisticsSerializer:

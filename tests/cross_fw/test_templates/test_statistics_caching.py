@@ -12,11 +12,13 @@ from abc import abstractmethod
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.errors import ValidationError
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensor import Tensor
@@ -76,3 +78,24 @@ class TemplateTestStatisticsCaching:
         assert (tmp_path / test_file).exists(), "Statistics file was not created"
 
         aggregator.load_statistics_from_file(tmp_path / test_file)
+
+    def test_incorrect_backend_statistics_load(self, tmp_path: Path):
+        """
+        Tests the dumping and loading of statistics to and from a file.
+
+        :param tmp_path: The temporary path provided by pytest.
+        """
+        test_file = "test"
+        aggregator = self.get_statistics_aggregator()
+        statistics_points = StatisticPointsContainer()
+
+        dummy_statistic_point = self._create_dummy_statistic_point()
+        statistics_points.add_statistic_point(dummy_statistic_point)
+
+        aggregator.statistic_points = statistics_points
+        aggregator.dump_statistics(tmp_path / test_file)
+        assert (tmp_path / test_file).exists(), "Statistics file was not created"
+        # spoil backend
+        aggregator.BACKEND = "incorrect_backend"
+        with pytest.raises(ValidationError):
+            aggregator.load_statistics_from_file(tmp_path / test_file)

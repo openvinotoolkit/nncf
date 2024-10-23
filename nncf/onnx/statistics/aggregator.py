@@ -20,6 +20,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.onnx.graph.node_utils import get_input_edge
@@ -31,6 +32,8 @@ from nncf.tensor import Tensor
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
+    BACKEND = BackendType.ONNX
+
     def collect_statistics(self, model: onnx.ModelProto, graph: NNCFGraph) -> None:
         self.input_edges_mapping = get_input_edges_mapping(graph)
         self.node_mapping = get_name_to_node_map(model)
@@ -99,5 +102,4 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         :return: Statistics key.
         """
         target_point_id = f"{target_point.target_node_name}_{target_point.type}_{target_point.port_id}"
-        backend_name = "ONNX"
-        return f"{statistics.__class__.__name__}_{target_point_id}_{backend_name}"
+        return f"{statistics.__class__.__name__}_{target_point_id}"
