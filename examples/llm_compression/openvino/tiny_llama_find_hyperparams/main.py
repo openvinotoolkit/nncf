@@ -64,7 +64,7 @@ def compress_model(
         group_size=group_size,
         awq=awq,
         sensitivity_metric=nncf.parameters.SensitivityMetric.MAX_ACTIVATION_VARIANCE,
-        advanced_parameters=AdvancedCompressionParameters(statistics_file_path="statistics.gz"),
+        advanced_parameters=AdvancedCompressionParameters(statistics_dir_path="statistics.gz"),
     )
     return optimized_ov_model
 

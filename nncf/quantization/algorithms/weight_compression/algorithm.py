@@ -255,7 +255,7 @@ class WeightCompression(Algorithm):
         criterion_cls = MIXED_PRECISION_CRITERIA.get(self._sensitivity_metric)
         self._mixed_precision_algo = criterion_cls(primary_config, self._ratio)
         self._mixed_precision_statistics = None
-        self._statistics_file_path = self._advanced_parameters.statistics_file_path
+        self._statistics_dir_path = self._advanced_parameters.statistics_dir_path
         if self._gptq:
             gptq_params = self._advanced_parameters.gptq_params
             self._gptq_algo = GPTQ(

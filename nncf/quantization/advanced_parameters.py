@@ -361,15 +361,15 @@ class AdvancedCompressionParameters:
     """
     Contains advanced parameters for compression algorithms.
 
-    :param statistics_file_path: File path to dump statistics.
-    :type statistics_file_path: str
+    :param statistics_dir_path: Directory path to dump statistics.
+    :type statistics_dir_path: str
     :param awq_params: Advanced parameters for AWQ algorithm.
     :type awq_params: AdvancedAWQParameters
     :param scale_estimation_params: Advanced parameters for scale estimation algorithm.
     :type scale_estimation_params: AdvancedScaleEstimationParameters
     """
 
-    statistics_file_path: Optional[str] = None
+    statistics_dir_path: Optional[str] = None
     # Advanced AWQ algorithm parameters
     awq_params: AdvancedAWQParameters = field(default_factory=AdvancedAWQParameters)
 

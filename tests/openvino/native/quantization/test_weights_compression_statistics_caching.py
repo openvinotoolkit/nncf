@@ -128,7 +128,7 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
             subset_size=subset_size,
             sensitivity_metric=sensitivity_metric,
             ignored_scope=ignored_scope,
-            advanced_parameters=AdvancedCompressionParameters(statistics_file_path=tmp_path / "statistics"),
+            advanced_parameters=AdvancedCompressionParameters(statistics_dir_path=tmp_path / "statistics"),
         )
         load_statistics_number += 1
 
@@ -148,7 +148,7 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
             subset_size=subset_size,
             sensitivity_metric=sensitivity_metric_values[0],  # Using the first sensitivity metric
             ignored_scope=ignored_scope_values[0],
-            advanced_parameters=AdvancedCompressionParameters(statistics_file_path=tmp_path / "statistics"),
+            advanced_parameters=AdvancedCompressionParameters(statistics_dir_path=tmp_path / "statistics"),
         )
         load_statistics_number += 1
 
