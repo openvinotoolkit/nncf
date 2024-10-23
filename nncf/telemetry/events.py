@@ -15,9 +15,13 @@ from typing import Optional, TypeVar
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 
+# General categories
+NNCF_COMMON_CATEGORY = "nncf_common"
+
 # Backend categories
 NNCF_TF_CATEGORY = "nncf_tf"
 NNCF_PT_CATEGORY = "nncf_pt"
+NNCF_PT_FX_CATEGORY = "nncf_pt_fx"
 NNCF_ONNX_CATEGORY = "nncf_onnx"
 NNCF_OV_CATEGORY = "nncf_ov"
 
@@ -44,6 +48,7 @@ def get_model_based_category(model: TModel) -> str:
         BackendType.OPENVINO: NNCF_OV_CATEGORY,
         BackendType.TORCH: NNCF_PT_CATEGORY,
         BackendType.TENSORFLOW: NNCF_TF_CATEGORY,
+        BackendType.TORCH_FX: NNCF_PT_FX_CATEGORY,
     }
     category = None
     if model is not None:
