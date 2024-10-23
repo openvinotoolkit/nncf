@@ -21,6 +21,7 @@ from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
+from nncf.common.telemetry_extractors import NNCFNetworkGeneratedFromWrapApi
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import set_debug_log_dir
 from nncf.config import NNCFConfig
@@ -28,7 +29,6 @@ from nncf.config.extractors import extract_algorithm_names
 from nncf.config.extractors import has_input_info_field
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.config.telemetry_extractors import NNCFNetworkGeneratedFromConfig
-from nncf.config.telemetry_extractors import NNCFNetworkGeneratedFromWrapApi
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
