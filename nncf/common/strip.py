@@ -13,18 +13,14 @@
 from typing import TypeVar
 
 import nncf
-from nncf.common.telemetry_extractors import ModelProcessedWithStripApi
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.telemetry.decorator import tracked_function
-from nncf.telemetry.events import MODEL_BASED_CATEGORY
 
 TModel = TypeVar("TModel")
 
 
 @api(canonical_alias="nncf.strip")
-@tracked_function(category=MODEL_BASED_CATEGORY, extractors=[ModelProcessedWithStripApi()])
 def strip(model: TModel, do_copy: bool = True) -> TModel:
     """
     Returns the model object with as much custom NNCF additions as possible removed
