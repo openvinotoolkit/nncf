@@ -20,7 +20,9 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.transformations import leaf_module_insertion_transformation_builder
 from nncf.tensor import Tensor
@@ -51,6 +53,7 @@ class TensorCollectorModule(torch.nn.Module):
 
 
 class FXStatisticsAggregator(StatisticsAggregator):
+    BACKEND: BackendType = BackendType.TORCH_FX
     HOOKS_GROUP_NAME = "statistics_hooks"
 
     def collect_statistics(self, model: NNCFNetwork, graph: NNCFGraph) -> None:
@@ -121,3 +124,14 @@ class FXStatisticsAggregator(StatisticsAggregator):
     @staticmethod
     def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, Tensor]:
         return outputs
+
+    def _get_statistics_key(self, statistics: TensorStatistic, target_point: PTTargetPoint) -> str:
+        """
+        Returns key of statistics.
+
+        :param statistics: Statistics value.
+        :param target_point: Statistics target point.
+        :return: Statistics key.
+        """
+        target_point_id = f"{target_point.target_node_name}_{target_point.type}_{target_point.input_port_id}"
+        return f"{statistics.__class__.__name__}_{target_point_id}"

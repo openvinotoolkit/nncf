@@ -302,17 +302,6 @@ def test_register_unnamed_statistics(mocker):
         assert all(v[0] == inputs_)
 
 
-def test_wrong_statistic_container_class():
-    class BadStatContainer:
-        pass
-
-    tensor_collector = TensorCollector(BadStatContainer)
-    tensor_collector.register_statistic_branch("A", DummyTensorReducer("A"), DummyTensorAggregator())
-    tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
-    with pytest.raises(nncf.InternalError):
-        tensor_collector.get_statistics()
-
-
 class TemplateTestStatisticCollector:
     @abstractmethod
     def get_nncf_tensor(self, value: np.ndarray) -> NNCFTensor:
@@ -333,10 +322,6 @@ class TemplateTestStatisticCollector:
             {input_name: self.get_nncf_tensor(np.array([]))}, [(hash(reducer), [input_name])]
         )
 
-        stats = collector.get_statistics()
-        assert len(stats) == 1
-        assert stats["A"] is None
-
         inputs = [full_inputs, empty_inputs, full_inputs] if any_not_empty else [empty_inputs, empty_inputs]
         for input_ in inputs:
             collector.register_inputs(input_)
@@ -347,13 +332,12 @@ class TemplateTestStatisticCollector:
             stats = collector.get_statistics()
             assert len(stats) == 1
             assert stats["A"] == self.get_nncf_tensor([100])
-            return
-
-        assert len(aggregator._container) == 0
-        assert aggregator._collected_samples == 0
-        stats = collector.get_statistics()
-        assert len(stats) == 1
-        assert stats["A"] is None
+        else:
+            assert len(aggregator._container) == 0
+            assert aggregator._collected_samples == 0
+            stats = collector.get_statistics()
+            assert len(stats) == 1
+            assert stats["A"] is None
 
     def test_min_max_stat_building(self):
         tensor_collector = TensorCollector(MinMaxTensorStatistic)
@@ -440,3 +424,13 @@ class TemplateTestStatisticCollector:
         statistic = tensor_collector.get_statistics()
         assert isinstance(statistic, RawTensorStatistic)
         assert statistic.values == 1
+
+    @pytest.mark.parametrize("statistic", [None, RawTensorStatistic])
+    def test_tensor_collector_is_disabled_after_get_statistics(self, statistic):
+        tensor_collector = TensorCollector(statistic)
+        tensor_collector.register_statistic_branch(
+            RawTensorStatistic.VALUES_STATS, DummyTensorReducer("A"), DummyTensorAggregator()
+        )
+        assert tensor_collector.enabled
+        _ = tensor_collector.get_statistics()
+        assert not tensor_collector.enabled

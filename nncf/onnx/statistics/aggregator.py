@@ -20,15 +20,20 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
+from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.tensor import Tensor
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
+    BACKEND: BackendType = BackendType.ONNX
+
     def collect_statistics(self, model: onnx.ModelProto, graph: NNCFGraph) -> None:
         self.input_edges_mapping = get_input_edges_mapping(graph)
         self.node_mapping = get_name_to_node_map(model)
@@ -87,3 +92,14 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
     @staticmethod
     def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, Tensor]:
         return {n: Tensor(v) for n, v in outputs.items()}
+
+    def _get_statistics_key(self, statistics: TensorStatistic, target_point: ONNXTargetPoint) -> str:
+        """
+        Returns key of statistics.
+
+        :param statistics: Statistics value.
+        :param target_point: Statistics target point.
+        :return: Statistics key.
+        """
+        target_point_id = f"{target_point.target_node_name}_{target_point.type}_{target_point.port_id}"
+        return f"{statistics.__class__.__name__}_{target_point_id}"

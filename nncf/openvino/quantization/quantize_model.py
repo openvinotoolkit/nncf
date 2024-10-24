@@ -10,12 +10,15 @@
 # limitations under the License.
 
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
+import nncf
 from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -27,6 +30,7 @@ from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
+from nncf.openvino.quantization.cache_statistics import register_statistics_for_algorithm
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
 from nncf.openvino.rt_info import dump_parameters
 from nncf.parameters import BackupMode
@@ -396,4 +400,14 @@ def compress_weights_impl(
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)
-    return compression_algorithm.apply(model, graph, dataset=dataset)
+
+    statistics_points = None
+    if advanced_parameters and advanced_parameters.statistics_dir_path:
+        if not Path(advanced_parameters.statistics_dir_path).exists():
+            raise nncf.InternalError("Directory with cached statistics is not found.")
+        statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
+        register_statistics_for_algorithm(statistics_aggregator, model, graph, subset_size, compression_algorithm)
+        statistics_aggregator.load_statistics_from_dir(advanced_parameters.statistics_dir_path)
+        statistics_points = statistics_aggregator.statistic_points
+
+    return compression_algorithm.apply(model, graph, statistics_points, dataset)
