@@ -57,5 +57,5 @@ jobs:
               issue_number: ${{ steps.status.outputs.pr_number }},
               owner: context.repo.owner,
               repo: context.repo.repo,
-              labels: "API"
+              name: "API"
             })
