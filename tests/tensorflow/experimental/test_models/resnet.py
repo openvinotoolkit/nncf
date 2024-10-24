@@ -57,7 +57,7 @@ class SqueezeExcitation(tf.keras.layers.Layer):
         activation="relu",
         gating_activation="sigmoid",
         round_down_protect=True,
-        **kwargs
+        **kwargs,
     ):
         """Initializes a squeeze and excitation layer.
 
@@ -288,7 +288,7 @@ class ResidualBlock(tf.keras.layers.Layer):
         norm_momentum=0.99,
         norm_epsilon=0.001,
         bn_trainable=True,
-        **kwargs
+        **kwargs,
     ):
         """Initializes a residual block with BN after convolutions.
 
@@ -487,7 +487,7 @@ class BottleneckBlock(tf.keras.layers.Layer):
         norm_momentum=0.99,
         norm_epsilon=0.001,
         bn_trainable=True,
-        **kwargs
+        **kwargs,
     ):
         """Initializes a standard bottleneck block with BN after convolutions.
 
@@ -795,7 +795,7 @@ class ResNet(tf.keras.Model):
         kernel_regularizer: Optional[tf.keras.regularizers.Regularizer] = None,
         bias_regularizer: Optional[tf.keras.regularizers.Regularizer] = None,
         bn_trainable: bool = True,
-        **kwargs
+        **kwargs,
     ):
         """Initializes a ResNet model.
 
@@ -1063,7 +1063,7 @@ class ClassificationModel(tf.keras.Model):
         norm_momentum: float = 0.99,
         norm_epsilon: float = 0.001,
         skip_logits_layer: bool = False,
-        **kwargs
+        **kwargs,
     ):
         """Classification initialization function.
 
