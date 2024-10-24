@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
 import os
 import random
 
@@ -16,6 +17,8 @@ import torch
 from pytest import Config
 from pytest import FixtureRequest
 from pytest import Parser
+
+from nncf import set_log_level
 
 pytest.register_assert_rewrite("tests.torch.helpers")
 
@@ -29,10 +32,10 @@ def disable_tf32_precision():
 
 def pytest_addoption(parser: Parser):
     parser.addoption(
-        "--regen-dot",
+        "--regen-ref-data",
         action="store_true",
         default=False,
-        help="If specified, the reference .dot files will be regenerated using the current state of the repository.",
+        help="If specified, the reference files will be regenerated using the current state of the repository.",
     )
     parser.addoption(
         "--nncf-debug",
@@ -42,17 +45,19 @@ def pytest_addoption(parser: Parser):
     )
 
 
-def pytest_configure(config: Config):
-    regen_dot = config.getoption("--regen-dot", False)
+def pytest_configure(config: Config) -> None:
+    regen_dot = config.getoption("--regen-ref-data", False)
     if regen_dot:
         os.environ["NNCF_TEST_REGEN_DOT"] = "1"
+
     nncf_debug = config.getoption("--nncf-debug", False)
     if nncf_debug:
-        import logging
-
-        from nncf import set_log_level
-
         set_log_level(logging.DEBUG)
+
+
+@pytest.fixture
+def regen_ref_data(request: FixtureRequest):
+    return request.config.getoption("--regen-ref-data", False)
 
 
 @pytest.fixture(params=[pytest.param(True, marks=pytest.mark.cuda), False], ids=["cuda", "cpu"])

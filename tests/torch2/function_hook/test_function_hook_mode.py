@@ -11,14 +11,20 @@
 
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, List, Optional, Union
 
 import pytest
+import torch
+from pytest import FixtureRequest
+from torch import nn
 
 from nncf.experimental.torch2.function_hook.hook_executor_mode import FunctionHookMode
+from nncf.experimental.torch2.function_hook.hook_executor_mode import OpMeta
 from nncf.experimental.torch2.function_hook.hook_executor_mode import generate_normalized_op_name
+from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
 from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from tests.torch2.function_hook import helpers
+from tests.torch2.function_hook.helpers import CallCount
 
 
 @dataclass
@@ -80,3 +86,31 @@ def test_get_current_executed_op_name():
 
     hook_executor_mode.push_module_call_stack(hook_storage.post_hooks["conv/conv2d/0__0"]["0"])
     assert hook_executor_mode.get_current_executed_op_name("foo") == "conv/post_hook__conv-conv2d-0__0[0]/foo/0"
+
+
+@pytest.fixture(params=["tensor", "list", "torch_return_type"])
+def example_outputs(request: FixtureRequest) -> Union[torch.Tensor, List[torch.Tensor], torch.return_types.max]:
+    return {
+        "tensor": torch.tensor(1),
+        "list": [torch.tensor(1), torch.tensor([2])],
+        "torch_return_type": torch.return_types.max((torch.tensor(1), torch.tensor([2]))),
+    }.get(request.param)
+
+
+def test_execute_post_hooks(example_outputs: Union[torch.Tensor, List[torch.Tensor], torch.return_types.max]):
+    op_name = "/relu/0"
+    hook_storage = HookStorage()
+    hook_port_0 = CallCount()
+    hook_port_1 = CallCount()
+    hook_storage.register_post_function_hook(op_name, 0, hook_port_0)
+    hook_storage.register_post_function_hook(op_name, 1, hook_port_1)
+    ctx = FunctionHookMode(nn.Identity(), hook_storage)
+    op_meta = OpMeta("/relu/0", torch.relu)
+    ret_val = ctx.execute_post_hooks(example_outputs, op_meta)
+    assert type(example_outputs) == type(ret_val)
+
+    assert hook_port_0.call_count == 1
+    if isinstance(example_outputs, torch.Tensor):
+        assert hook_port_1.call_count == 0
+    else:
+        assert hook_port_1.call_count == 1
