@@ -429,3 +429,13 @@ class TemplateTestStatisticCollector:
         statistic = tensor_collector.get_statistics()
         assert isinstance(statistic, RawTensorStatistic)
         assert statistic.values == 1
+
+    @pytest.mark.parametrize("statistic", [None, RawTensorStatistic])
+    def test_tensor_collector_is_disabled_after_get_statistics(self, statistic):
+        tensor_collector = TensorCollector(statistic)
+        tensor_collector.register_statistic_branch(
+            RawTensorStatistic.VALUES_STATS, DummyTensorReducer("A"), DummyTensorAggregator()
+        )
+        assert tensor_collector.enabled
+        _ = tensor_collector.get_statistics()
+        assert not tensor_collector.enabled

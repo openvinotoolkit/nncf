@@ -315,8 +315,9 @@ class TensorCollector:
             kwargs[container_key] = aggregated_values[branch_key]
 
         if not self._stat_container:
-            return kwargs
-        self.statistics = self._stat_container.from_config(kwargs)
+            self.statistics = kwargs
+        else:
+            self.statistics = self._stat_container.from_config(kwargs)
         # Statistics can not be collected more than once.
         self.disable()
         return self.statistics
