@@ -32,15 +32,11 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
-from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
-from nncf.telemetry import tracked_function
-from nncf.telemetry.events import NNCF_ONNX_CATEGORY
 
 TTensor = TypeVar("TTensor")
 
 
-@tracked_function(NNCF_ONNX_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
 def quantize_impl(
     model: onnx.ModelProto,
     calibration_dataset: Dataset,
