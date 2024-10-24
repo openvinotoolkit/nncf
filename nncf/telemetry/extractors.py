@@ -54,4 +54,6 @@ class VerbatimTelemetryExtractor(TelemetryExtractor):
     def extract(self, argvalue: SerializableData) -> CollectedEvent:
         if isinstance(argvalue, Enum):
             argvalue = str(argvalue.value)
+        if isinstance(argvalue, bool):
+            argvalue = "enabled" if argvalue else "disabled"
         return CollectedEvent(name=self._argname, data=argvalue)

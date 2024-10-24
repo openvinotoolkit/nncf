@@ -39,7 +39,12 @@ from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_qua
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
 from nncf.quantization.algorithms.weight_compression.algorithm import check_user_compression_configuration
 from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
+from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
+from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
+from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi
 from nncf.scopes import IgnoredScope
+from nncf.telemetry.decorator import tracked_function
+from nncf.telemetry.events import MODEL_BASED_CATEGORY
 
 TTensor = TypeVar("TTensor")
 
@@ -114,6 +119,14 @@ def _update_advanced_quantization_parameters(
 
 
 @api(canonical_alias="nncf.quantize")
+@tracked_function(
+    MODEL_BASED_CATEGORY,
+    [
+        CompressionStartedWithQuantizeApi(),
+        "target_device",
+        "preset",
+    ],
+)
 def quantize(
     model: TModel,
     calibration_dataset: Dataset,
@@ -164,7 +177,7 @@ def quantize(
     :rtype: TModel
     """
     if subset_size < 1:
-        raise ValueError("Subset size must be positive.")
+        raise nncf.ValidationError("Subset size must be positive.")
 
     advanced_parameters = _update_advanced_quantization_parameters(advanced_parameters, calibration_dataset)
 
@@ -268,6 +281,16 @@ def wrap_validation_fn(validation_fn):
 
 
 @api(canonical_alias="nncf.quantize_with_accuracy_control")
+@tracked_function(
+    MODEL_BASED_CATEGORY,
+    [
+        CompressionStartedWithQuantizeWithAccuracyControlApi(),
+        "target_device",
+        "preset",
+        "max_drop",
+        "drop_type",
+    ],
+)
 def quantize_with_accuracy_control(
     model: TModel,
     calibration_dataset: Dataset,
@@ -383,6 +406,18 @@ def quantize_with_accuracy_control(
 
 
 @api(canonical_alias="nncf.compress_weights")
+@tracked_function(
+    MODEL_BASED_CATEGORY,
+    [
+        CompressionStartedWithCompressWeightsApi(),
+        "mode",
+        "awq",
+        "scale_estimation",
+        "gptq",
+        "lora_correction",
+        "backup_mode",
+    ],
+)
 def compress_weights(
     model: TModel,
     mode=CompressWeightsMode.INT8_ASYM,
@@ -474,33 +509,33 @@ def compress_weights(
         from nncf.torch.quantization.quantize_model import compress_weights_impl as pt_compression_weights_impl
 
         if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 "Torch backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
                 f"but given {mode.value} mode."
             )
 
         if True in [awq, scale_estimation, gptq, lora_correction]:
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 "Torch backend does not support 'awq', 'scale_estimation', 'gptq' and 'lora_correction' options. "
                 "Set them to None."
             )
 
         if backup_mode is not None:
-            raise AttributeError("Torch backend does not support backup_mode option.")
+            raise nncf.ParameterNotSupportedError("Torch backend does not support backup_mode option.")
 
         if advanced_parameters and advanced_parameters.statistics_dir_path:
             raise AttributeError("Torch does not support statistics caching.")
 
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
-                raise ValueError(
+                raise nncf.ValidationError(
                     "Tracing capabilities with tracing parameters are required in the PyTorch model "
                     "for nncf.compress_weights(). Please wrap the model using "
                     "nncf.torch.wrap_model(model, example_input, trace_parameters=True) before calling "
                     "nncf.compress_weights()."
                 )
         elif dataset is None:
-            raise AttributeError("Please provide a dataset of at least one element for PyTorch model tracing.")
+            raise nncf.ValidationError("Please provide a dataset of at least one element for PyTorch model tracing.")
         else:
             example_input = next(iter(dataset.get_inference_data()))
             model = wrap_model(model, example_input=example_input, trace_parameters=True)
@@ -513,21 +548,21 @@ def compress_weights(
         )
 
         if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 "TorchFX backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
                 f"but given {mode.value} mode."
             )
 
         if backup_mode is not None:
-            raise AttributeError("TorchFX backend does not support backup_mode option.")
+            raise nncf.ParameterNotSupportedError("TorchFX backend does not support backup_mode option.")
 
         if any((awq, scale_estimation, gptq, lora_correction)):
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 "TorchFX backend does not support 'awq', 'scale_estimation', 'gptq',"
                 "and 'lora_correction' options. Set them to None."
             )
         if dataset:
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 "TorchFX only supports data-free weights compression," "Set the 'dataset' option to None"
             )
         if advanced_parameters and advanced_parameters.statistics_dir_path:
@@ -540,13 +575,13 @@ def compress_weights(
         if any((awq, scale_estimation, gptq, lora_correction)) and (
             dataset is None or mode == CompressWeightsMode.E2M1
         ):
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 "Scale estimation, AWQ, GPTQ or Lora Correction algorithm is defined, "
                 "but dataset is None or mode is E2M1."
             )
 
         if gptq and lora_correction:
-            raise AttributeError(
+            raise nncf.ValidationError(
                 "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
             )
 

@@ -13,6 +13,7 @@ import pytest
 import torch
 import torch.nn.functional as F
 
+import nncf
 from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
@@ -224,7 +225,7 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
     wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
-    with pytest.raises(AttributeError):
+    with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(wrapped_model, mode=mode, **params)
 
 
@@ -233,7 +234,7 @@ def test_raise_error_with_not_int8(mode):
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
     wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
-    with pytest.raises(AttributeError):
+    with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(wrapped_model, mode=mode)
 
 

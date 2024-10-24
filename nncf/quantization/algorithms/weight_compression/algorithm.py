@@ -128,13 +128,13 @@ def check_user_compression_configuration(
     """
     if mode in INT8_MODES:
         if (ratio and ratio != 1) or (group_size and group_size != -1):
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 "INT8 modes require per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) cannot be overridden."
             )
 
         if backup_mode:
-            raise AttributeError("INT8 modes do not support the `backup_mode` option.")
+            raise nncf.ParameterNotSupportedError("INT8 modes do not support the `backup_mode` option.")
 
         unsupported_options = {
             "all_layers": all_layers,
@@ -147,15 +147,15 @@ def check_user_compression_configuration(
         }
         unsupported_for_int8 = [name for name, value in unsupported_options.items() if value is not None]
         if unsupported_for_int8:
-            raise AttributeError(
+            raise nncf.ParameterNotSupportedError(
                 f"INT8 modes do not support {', '.join(unsupported_for_int8)} option(s). Set them to None."
             )
 
     if ratio is not None and not (0 <= ratio <= 1):
-        raise ValueError(f"The ratio should be between 0 and 1, but ratio={ratio} is specified.")
+        raise nncf.ValidationError(f"The ratio should be between 0 and 1, but ratio={ratio} is specified.")
 
     if subset_size <= 0:
-        raise ValueError(f"The subset_size value should be positive, but subset_size={subset_size} is given.")
+        raise nncf.ValidationError(f"The subset_size value should be positive, but subset_size={subset_size} is given.")
 
     if (
         ratio
@@ -163,7 +163,7 @@ def check_user_compression_configuration(
         and sensitivity_metric is not None
         and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR
     ):
-        raise AttributeError(
+        raise nncf.ValidationError(
             f"Mixed precision selection with sensitivity metric={sensitivity_metric.value} \
             requires a dataset, but it's not provided."
         )
@@ -698,6 +698,8 @@ class WeightCompression(Algorithm):
         """
         matmul_input_to_output_nodes_map = defaultdict(list)
         for node in matmul_nodes:
+            if node.layer_attributes.input_attributes["transpose"]:
+                raise nncf.UnsupportedModelError("Transposed input is not supported")
             act_node, output_port_id = self._get_activation_node_and_port(node, graph)
             matmul_input_to_output_nodes_map[(act_node, output_port_id)].append(node)
         return matmul_input_to_output_nodes_map

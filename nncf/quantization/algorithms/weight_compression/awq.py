@@ -13,6 +13,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, TypeVar
 
+import nncf
 from nncf import Dataset
 from nncf import nncf_logger
 from nncf.common.factory import ModelTransformerFactory
@@ -117,7 +118,7 @@ class AWQ(Algorithm):
             self._backend_entity = OVAWQAlgoAlgoBackend(model, self.name_to_node_mapping)
             self._patterns = self._backend_entity.get_awq_patterns()
         else:
-            raise RuntimeError(
+            raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific AWQ entity because {} is not supported!".format(model_backend.value)
             )
 

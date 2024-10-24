@@ -92,7 +92,7 @@ For detailed installation instructions, refer to the
 ### System Requirements
 
 - Ubuntu 18.04 or later (64-bit)
-- Python 3.8 or later
+- Python 3.9 or later
 - Supported frameworks:
   - PyTorch >=2.2, <2.5
   - TensorFlow >=2.8.4, <=2.15.1
