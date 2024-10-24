@@ -37,6 +37,7 @@ def _export_graph_module(model: torch.nn.Module, args: Tuple[Any, ...]) -> torch
 class VisionModelParams:
     weights: models.WeightsEnum
     export_fn: Callable[[torch.nn.Module, Tuple[Any, ...]], torch.fx.GraphModule]
+    export_torch_before_ov_convert: bool = False
 
 
 class ImageClassificationTorchvision(ImageClassificationBase):
@@ -47,8 +48,12 @@ class ImageClassificationTorchvision(ImageClassificationBase):
         models.mobilenet_v3_small: VisionModelParams(
             models.MobileNet_V3_Small_Weights.DEFAULT, _capture_pre_autograd_module
         ),
-        models.vit_b_16: VisionModelParams(models.ViT_B_16_Weights.DEFAULT, _export_graph_module),
-        models.swin_v2_s: VisionModelParams(models.Swin_V2_S_Weights.DEFAULT, _export_graph_module),
+        models.vit_b_16: VisionModelParams(
+            models.ViT_B_16_Weights.DEFAULT, _export_graph_module, export_torch_before_ov_convert=True
+        ),
+        models.swin_v2_s: VisionModelParams(
+            models.Swin_V2_S_Weights.DEFAULT, _export_graph_module, export_torch_before_ov_convert=True
+        ),
     }
 
     def __init__(self, *args, **kwargs):
@@ -92,9 +97,10 @@ class ImageClassificationTorchvision(ImageClassificationBase):
 
         elif self.backend in [BackendType.OV, BackendType.FP32]:
             with torch.no_grad():
-                with disable_patching():
-                    m = torch.export.export(model, args=(self.dummy_tensor,))
-                self.model = ov.convert_model(m, example_input=self.dummy_tensor, input=self.input_size)
+                if self.model_params.export_torch_before_ov_convert:
+                    with disable_patching():
+                        model = torch.export.export(model, (self.dummy_tensor,))
+                self.model = ov.convert_model(model, example_input=self.dummy_tensor, input=self.input_size)
             self.input_name = list(inp.get_any_name() for inp in self.model.inputs)[0]
 
         self._dump_model_fp32()
