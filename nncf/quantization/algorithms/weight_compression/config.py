@@ -46,6 +46,9 @@ class WeightCompressionConfig:
         """
         return self.mode not in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
 
+    def __hash__(self):
+        return hash((self.mode.value, self.group_size))
+
 
 @dataclass
 class WeightCompressionParameters:
