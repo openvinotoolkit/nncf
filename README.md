@@ -439,12 +439,12 @@ conda install -c conda-forge nncf
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.9 or later
 - Supported frameworks:
-  - PyTorch\* >=2.3, <2.5
+  - PyTorch\* >=2.3, <2.6
   - TensorFlow\* >=2.8.4, <=2.15.1
   - ONNX\* ==1.16.0
   - OpenVINO\* >=2022.3.0
 
-This repository is tested on Python* 3.10.14, PyTorch* 2.4.0 (NVidia CUDA\* Toolkit 12.1) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
+This repository is tested on Python* 3.10.14, PyTorch* 2.5.0 (NVidia CUDA\* Toolkit 12.1) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
 
 ## NNCF Compressed NNCF Model Zoo
 
