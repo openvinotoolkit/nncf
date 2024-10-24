@@ -38,7 +38,7 @@ def validate(
 ) -> Tuple[Dict, int, int]:
     validator.seen = 0
     validator.jdict = []
-    validator.stats = []
+    validator.stats = dict(tp_m=[], tp=[], conf=[], pred_cls=[], target_cls=[], target_img=[])
     validator.batch_i = 1
     validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
 
@@ -101,12 +101,11 @@ def print_statistics(stats: np.ndarray, total_images: int, total_objects: int) -
 
 
 def prepare_validation(model: YOLO, args: Any) -> Tuple[Validator, torch.utils.data.DataLoader]:
-    validator = model.smart_load("validator")(args)
+    validator = model.task_map[model.task]["validator"](args=args)
     validator.data = check_det_dataset(args.data)
+    validator.stride = 32
 
     data_loader = validator.get_dataloader(f"{DATASETS_DIR}/coco128-seg", 1)
-
-    validator = model.smart_load("validator")(args)
 
     validator.is_coco = True
     validator.class_map = coco80_to_coco91_class()
@@ -146,7 +145,7 @@ def quantize_ac(
     ) -> float:
         validator.seen = 0
         validator.jdict = []
-        validator.stats = []
+        validator.stats = dict(tp_m=[], tp=[], conf=[], pred_cls=[], target_cls=[], target_img=[])
         validator.batch_i = 1
         validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
 
