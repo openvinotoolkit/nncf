@@ -322,10 +322,6 @@ class TemplateTestStatisticCollector:
             {input_name: self.get_nncf_tensor(np.array([]))}, [(hash(reducer), [input_name])]
         )
 
-        stats = collector.get_statistics()
-        assert len(stats) == 1
-        assert stats["A"] is None
-
         inputs = [full_inputs, empty_inputs, full_inputs] if any_not_empty else [empty_inputs, empty_inputs]
         for input_ in inputs:
             collector.register_inputs(input_)
@@ -336,13 +332,12 @@ class TemplateTestStatisticCollector:
             stats = collector.get_statistics()
             assert len(stats) == 1
             assert stats["A"] == self.get_nncf_tensor([100])
-            return
-
-        assert len(aggregator._container) == 0
-        assert aggregator._collected_samples == 0
-        stats = collector.get_statistics()
-        assert len(stats) == 1
-        assert stats["A"] is None
+        else:
+            assert len(aggregator._container) == 0
+            assert aggregator._collected_samples == 0
+            stats = collector.get_statistics()
+            assert len(stats) == 1
+            assert stats["A"] is None
 
     def test_min_max_stat_building(self):
         tensor_collector = TensorCollector(MinMaxTensorStatistic)
