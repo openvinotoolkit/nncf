@@ -361,6 +361,19 @@ class TestSotaCheckpoints:
             return {"pretrained": True}
         raise RuntimeError("Incorrect config")
 
+    @staticmethod
+    def get_env():
+        """
+        Returns a copy of the current environment with the `PYTHONPATH` variable updated
+        to include the project root directory
+        """
+        env = os.environ.copy()
+        if "PYTHONPATH" in env:
+            env["PYTHONPATH"] += ":" + str(PROJECT_ROOT)
+        else:
+            env["PYTHONPATH"] = str(PROJECT_ROOT)
+        return env
+
     @pytest.mark.eval
     @pytest.mark.parametrize("eval_test_struct", EVAL_TEST_STRUCT, ids=idfn)
     @pytest.mark.parametrize("dataset_type", ("tfds", "tfrecords"))
@@ -405,7 +418,7 @@ class TestSotaCheckpoints:
             **weights_param,
         )
 
-        runner = Command(cmd, cwd=PROJECT_ROOT)
+        runner = Command(cmd, cwd=PROJECT_ROOT, env=self.get_env())
         exit_code = runner.run(assert_returncode_zero=False)
         is_ok = exit_code == 0 and metrics_dump_file_path.exists()
 
@@ -484,7 +497,7 @@ class TestSotaCheckpoints:
             pytest.skip(status)
 
         # WA to avoid OS error
-        env = os.environ.copy()
+        env = self.get_env()
         env["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
         sample_type = eval_test_struct.sample_type
