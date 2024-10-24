@@ -524,7 +524,7 @@ def compress_weights(
             )
 
         if ratio is not None and ratio != 1:
-            raise AttributeError("Torch backend does not support ratio != 1.")
+            raise nncf.ParameterNotSupportedError("Torch backend does not support ratio != 1.")
 
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
@@ -566,7 +566,7 @@ def compress_weights(
             )
 
         if ratio is not None and ratio != 1:
-            raise AttributeError("TorchFX backend does not support ratio != 1.")
+            raise nncf.ParameterNotSupportedError("TorchFX backend does not support ratio != 1.")
 
         if dataset:
             raise nncf.ParameterNotSupportedError(

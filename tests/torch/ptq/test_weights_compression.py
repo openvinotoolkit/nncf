@@ -262,7 +262,7 @@ def test_raise_error_with_unsupported_params_for_int4(mode, params):
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
     wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
-    with pytest.raises(AttributeError):
+    with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(wrapped_model, mode=mode, **params)
 
 
