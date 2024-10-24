@@ -442,6 +442,16 @@ WEIGHT_COMPRESSION_MODELS = [
         "backends": [BackendType.TORCH],
     },
     {
+        "reported_name": "tinyllama_int4_data_free",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "mode": CompressWeightsMode.INT4_ASYM,
+            "group_size": 64,
+        },
+        "backends": [BackendType.TORCH],
+    },
+    {
         "reported_name": "tinyllama_data_aware_gptq",
         "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
         "pipeline_cls": LMWeightCompression,
