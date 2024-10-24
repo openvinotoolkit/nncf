@@ -445,16 +445,15 @@ def do_int_quantization(
     if not is_openvino_available() and weight.backend != TensorBackend.torch:
         log_once(logging.INFO, "Compression time may be improved after installing OpenVINO")
 
+    if config.group_size != -1:
+        # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
+        weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
+
     if not accelerate_through_ov:
         # Reference implementation
-        group_size = config.group_size
 
         if weight.dtype != TensorDataType.float32:
             weight = weight.astype(TensorDataType.float32)
-
-        if group_size != -1:
-            # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
-            weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, group_size)
 
         scale, zero_point = None, None
         if precomputed_zero_point is None or precomputed_zero_point is None:
@@ -484,9 +483,7 @@ def do_int_quantization(
             release_memory=bool(int(os.environ.get("RELEASE_MEMORY", "0"))),
             share_outputs=bool(int(os.environ.get("SHARE_OUTPUTS", "0"))),
         )
-    # TODO: Try reshaping weight before inputing it to the model
-    if config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM]:
-        ov_model_params.dynamic = False
+
     model = get_compress_weight_model(
         ov_model_params,
         config,

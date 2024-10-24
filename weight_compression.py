@@ -133,6 +133,7 @@ def main(args):
         compression_mode = nncf.CompressWeightsMode.INT4_SYM
     else:
         raise ValueError(f"Unknown weight compression mode argument: {args.compression_mode}")
+    # TODO: Consider all_layers=True?
     compressed_model = nncf.compress_weights(model, mode=compression_mode)
     compression_time = time.perf_counter() - start_time
     print(f"Compression Time: {compression_time:.2f} sec.")

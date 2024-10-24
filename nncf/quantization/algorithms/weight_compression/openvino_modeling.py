@@ -130,9 +130,6 @@ def get_compress_decompress_weight_model(
     scale_shape: Optional[Tuple],
     zero_point_shape: Optional[Tuple] = None,
 ):
-    if config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM]:
-        ov_model_params.dynamic = False
-
     if ov_model_params.dynamic:
         weight_shape = (-1,) * len(weight_shape)
         scale_shape = (-1,) * (len(scale_shape) - 1) + (1,)
@@ -181,26 +178,6 @@ def _build_compress_model(
             ov_parameters.append(zero_point)
     else:
         # Compute compressed weight, scale and, possibly, zero point
-
-        group_size = config.group_size
-        if group_size != -1:
-            if isinstance(reduction_axes, tuple) and len(reduction_axes) == 1:
-                reduction_axes = reduction_axes[0]
-            if not isinstance(reduction_axes, int):
-                raise NotImplementedError(
-                    f"Group-wise quantization expects a single reduction axis, but given: {reduction_axes}."
-                )
-            channel_size = weight.shape[reduction_axes]
-            if channel_size % group_size != 0:
-                raise nncf.ValidationError(
-                    f"Channel size {channel_size} should be divisible by size of group {group_size}"
-                )
-
-            num_groups_per_channel = channel_size // group_size
-            shape = list(weight.shape)  # [a1, r, a2] - "r" refers to number of channels along reduction axis
-            shape[reduction_axes : reduction_axes + 1] = (num_groups_per_channel, group_size)
-            weight = opset.reshape(weight, shape, special_zero=False)
-            reduction_axes += 1
 
         mode = config.mode
         num_bits = config.num_bits
