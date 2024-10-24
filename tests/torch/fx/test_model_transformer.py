@@ -34,7 +34,6 @@ from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.transformations import _set_new_node_meta
-from nncf.experimental.torch.fx.transformations import bias_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import leaf_module_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import module_insertion_transformation_builder
@@ -50,6 +49,7 @@ from tests.torch.fx.test_sanity import count_q_dq
 from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
 from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
+from tests.torch.test_models.synthetic import ConvolutionWithSeveralOutputs
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 
 
@@ -113,12 +113,82 @@ def _capture_model(model: torch.nn.Module, inputs: torch.Tensor) -> torch.fx.Gra
 @pytest.mark.parametrize("test_case", MODEL_EXTRACTION_CASES, ids=idfn)
 def test_model_extraction(test_case: ModelExtractionTestCase):
     captured_model = _capture_model(test_case.model(), torch.ones(test_case.input_shape))
+    _, nncf_graph = _extract_model(test_case, captured_model)
+    check_graph(nncf_graph, f"{get_test_id(test_case)}.dot", EXTRACTED_GRAPHS_DIR_NAME, extended=True)
 
+
+@pytest.mark.parametrize(
+    "test_case,tuple_output,ref_output",
+    (
+        (
+            ModelExtractionTestCase(
+                ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output"])
+            ),
+            False,
+            "(conv2d,)",
+        ),
+        (
+            ModelExtractionTestCase(
+                ConvolutionWithNotTensorBiasModel,
+                (1, 1, 3, 3),
+                PTModelExtractionCommand(["conv2d"], ["conv2d", "output", "conv2d"]),
+            ),
+            False,
+            "(conv2d, conv2d, conv2d)",
+        ),
+        (
+            ModelExtractionTestCase(
+                ConvolutionWithSeveralOutputs, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output"])
+            ),
+            False,
+            "([conv2d, add],)",
+        ),
+        (
+            ModelExtractionTestCase(
+                ConvolutionWithSeveralOutputs,
+                (1, 1, 3, 3),
+                PTModelExtractionCommand(["conv2d"], ["conv2d", "output", "conv2d"]),
+            ),
+            False,
+            "(conv2d, [conv2d, add], conv2d)",
+        ),
+        (
+            ModelExtractionTestCase(
+                ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output"])
+            ),
+            True,
+            "(conv2d,)",
+        ),
+        (
+            ModelExtractionTestCase(
+                ConvolutionWithNotTensorBiasModel,
+                (1, 1, 3, 3),
+                PTModelExtractionCommand(["conv2d"], ["conv2d", "output", "conv2d"]),
+            ),
+            True,
+            "(conv2d, conv2d, conv2d)",
+        ),
+    ),
+    ids=idfn,
+)
+def test_model_extraction_with_original_output(test_case: ModelExtractionTestCase, tuple_output: bool, ref_output: str):
+    captured_model = _capture_model(test_case.model(), torch.ones(test_case.input_shape))
+    if tuple_output:
+        output_node = [node for node in captured_model.graph.nodes if node.op == "output"][0]
+        output_node.args = (output_node.args[0][0],)
+        captured_model.recompile()
+    extracted_model, nncf_graph = _extract_model(test_case, captured_model)
+    check_graph(nncf_graph, f"{get_test_id(test_case)}.dot", EXTRACTED_GRAPHS_DIR_NAME, extended=True)
+
+    output_node = [node for node in extracted_model.graph.nodes if node.op == "output"][0]
+    assert str(output_node.args[0]) == ref_output
+
+
+def _extract_model(test_case: ModelExtractionTestCase, captured_model: torch.fx.GraphModule):
     layout = TransformationLayout()
     layout.register(test_case.command)
     extracted_model = FXModelTransformer(captured_model).transform(layout)
-    nncf_graph = GraphConverter.create_nncf_graph(extracted_model)
-    check_graph(nncf_graph, f"{get_test_id(test_case)}.dot", EXTRACTED_GRAPHS_DIR_NAME, extended=True)
+    return extracted_model, GraphConverter.create_nncf_graph(extracted_model)
 
 
 MultiBranchesConnectedModel_TARGET_POINTS = (
@@ -150,16 +220,14 @@ def test_model_insertion_transformation(leaf: bool):
     check_graph(nncf_graph, f"model_insertion{'_leaf' if leaf else ''}.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
 
 
-@pytest.mark.parametrize("bias", [True, False], ids=["bias", "constant"])
-def test_constant_update_transformation(bias: bool):
+def test_constant_update_transformation():
     model = MultiBranchesConnectedModel()
     captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
-    target_node = nncf_graph.get_node_by_name("conv2d" if bias else "add_")
+    target_node = nncf_graph.get_node_by_name("add_")
 
-    builder = bias_update_transformation_builder if bias else constant_update_transformation_builder
     new_value = torch.tensor((42.0,))
-    transformation = builder(target_node, value=new_value, input_port_id=1)
+    transformation = constant_update_transformation_builder(target_node, value=new_value, input_port_id=1)
     transformation(captured_model)
 
     add_node = get_graph_node_by_name(captured_model.graph, "add_")
@@ -169,16 +237,14 @@ def test_constant_update_transformation(bias: bool):
     check_graph(transformed_nncf_graph, "constant_update.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
 
 
-@pytest.mark.parametrize("bias", [True, False], ids=["bias", "constant"])
-def test_constant_update_transformation_no_constant(bias: bool):
+def test_constant_update_transformation_no_constant():
     model = MultiBranchesConnectedModel()
     captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
     target_node = nncf_graph.get_node_by_name("add")
 
-    builder = bias_update_transformation_builder if bias else constant_update_transformation_builder
     new_value = torch.tensor((42.0,))
-    transformation = builder(target_node, value=new_value, input_port_id=1)
+    transformation = constant_update_transformation_builder(target_node, value=new_value, input_port_id=1)
     with pytest.raises(nncf.InternalError):
         transformation(captured_model)
 

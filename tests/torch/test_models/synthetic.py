@@ -514,6 +514,16 @@ class ConvolutionWithNotTensorBiasModel(torch.nn.Module):
         return nn.functional.conv2d(x, w)
 
 
+class ConvolutionWithSeveralOutputs(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 1, 1)
+
+    def forward(self, x):
+        x = self.conv(x)
+        return x, x + 2
+
+
 class ConvolutionWithAllConstantInputsModel(torch.nn.Module):
     def __init__(self):
         super().__init__()

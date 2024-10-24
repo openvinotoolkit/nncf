@@ -66,11 +66,10 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     :return: True if the node has a bias, False otherwise.
     """
     # Assumes that all biases were unfused
-    if node.metatype in FX_OPERATORS_WITH_BIAS_METATYPES:
-        next_nodes = nncf_graph.get_next_nodes(node)
-        if len(next_nodes) != 1:
-            return False
-        return next_nodes[0].metatype in (om.PTAddMetatype,)
+    if node.metatype not in FX_OPERATORS_WITH_BIAS_METATYPES or len(nncf_graph.get_input_edges(node)) != 3:
+        return False
+    const_node = nncf_graph.get_input_edge_by_port_id(node, 2).from_node
+    return const_node.metatype is om.PTConstNoopMetatype
 
 
 def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: torch.fx.GraphModule) -> Tensor:
@@ -82,7 +81,7 @@ def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: torch.fx.GraphM
     :param model: Target GraphModule.
     :return: Bias value of the given node.
     """
-    bias_node = nncf_graph.get_next_nodes(node)[0]
+    bias_node = nncf_graph.get_input_edge_by_port_id(node, 2).from_node
     # TODO(dlyakhov): make a node_name_vs_node map to speed up the process
-    graph_bias_node = get_graph_node_by_name(model.graph, bias_node.node_name)
-    return Tensor(get_tensor_constant_from_node(graph_bias_node.all_input_nodes[1], model))
+    graph_bias_const = get_graph_node_by_name(model.graph, bias_node.node_name)
+    return Tensor(get_tensor_constant_from_node(graph_bias_const, model))
