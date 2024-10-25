@@ -118,7 +118,7 @@ class StatisticsAggregator(ABC):
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
             if statistics_key not in data:
                 raise nncf.ValidationError(f"Not found statistics for {statistics_key}")
-            statistics.load_data(data[statistics_key])
+            tensor_collector.set_cache(data[statistics_key])
 
     def dump_statistics(self, dir_path: str) -> None:
         """

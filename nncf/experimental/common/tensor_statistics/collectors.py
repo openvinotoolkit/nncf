@@ -13,6 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
 from collections import deque
+from copy import deepcopy
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import nncf
@@ -195,7 +196,7 @@ class TensorCollector:
         self._stat_container_kwargs_map: Dict[str, Tuple[int, int, int]] = {}
         self._stat_container = statistic_container
         self._enabled = True
-        self.statistics = None
+        self.clear_cache()
 
     @property
     def num_samples(self) -> Optional[int]:
@@ -264,9 +265,6 @@ class TensorCollector:
         :param inputs: Tensor inputs in format of dict where keys
             are reducer names and values are correspondent input tensors
         """
-        if not self._enabled:
-            return
-
         reduced_inputs = {}
         for reducer in self._reducers:
             reducer_hash = hash(reducer)
@@ -288,7 +286,8 @@ class TensorCollector:
 
         :param input_: Tensor input to register.
         """
-        self.register_inputs({hash(reducer): [input_] for reducer in self._reducers})
+        if self.enabled:
+            self.register_inputs({hash(reducer): [input_] for reducer in self._reducers})
 
     def _aggregate(self) -> None:
         result = {}
@@ -300,27 +299,48 @@ class TensorCollector:
             result[key] = val
         return result
 
+    def set_cache(self, config: Dict[str, Any]) -> None:
+        """
+        Sets cached statistics from given config and disable TensorCollector.
+        :param config: Aggregated values.
+        """
+        self._cached_statistics = self._get_statistics_container(config)
+        self.reset()
+        self.disable()
+
+    def _get_statistics_container(self, config: Dict[str, Any]) -> Union[TensorStatistic, Dict[str, Any]]:
+        """
+        Returns a TensorStatistic instance or a dict with aggregated values.
+
+        :param config: Aggregated values.
+        :return: TensorStatistic instance or a dict.
+        """
+        if not self._stat_container:
+            return config
+        return self._stat_container.from_config(config)
+
+    def clear_cache(self) -> None:
+        """
+        Clears the cached statistics and enables TensorCollector.
+        """
+        self._cached_statistics = None
+        self.enable()
+
     def get_statistics(self) -> Union[TensorStatistic, Dict[str, Any]]:
         """
         Returns aggregated values in format of a TensorStatistic instance or
         a dict.
 
-        :returns: Aggregated values.
+        :return: Aggregated values.
         """
-        if self.statistics:
-            return self.statistics
-        aggregated_values = self._aggregate()
-        kwargs = {}
-        for container_key, branch_key in self._stat_container_kwargs_map.items():
-            kwargs[container_key] = aggregated_values[branch_key]
+        if self._cached_statistics:
+            return deepcopy(self._cached_statistics)
 
-        if not self._stat_container:
-            self.statistics = kwargs
-        else:
-            self.statistics = self._stat_container.from_config(kwargs)
-        # Statistics can not be collected more than once.
-        self.disable()
-        return self.statistics
+        aggregated_values = self._aggregate()
+        statistics_config = {}
+        for container_key, branch_key in self._stat_container_kwargs_map.items():
+            statistics_config[container_key] = aggregated_values[branch_key]
+        return self._get_statistics_container(statistics_config)
 
     def replace_aggregator(self, key: Tuple[int, int, int], aggregator: AggregatorBase) -> None:
         """

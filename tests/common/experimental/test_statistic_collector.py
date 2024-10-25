@@ -30,6 +30,12 @@ from nncf.experimental.common.tensor_statistics.statistics import RawTensorStati
 from nncf.tensor import Tensor
 
 
+class DummyStatContainer:
+    @staticmethod
+    def from_config(config):
+        return config
+
+
 class DummyTensorReducer(TensorReducerBase):
     def __init__(self, output_name: str, inplace: bool = False, inplace_mock=None):
         super().__init__(inplace=inplace)
@@ -322,6 +328,10 @@ class TemplateTestStatisticCollector:
             {input_name: self.get_nncf_tensor(np.array([]))}, [(hash(reducer), [input_name])]
         )
 
+        stats = collector.get_statistics()
+        assert len(stats) == 1
+        assert stats["A"] is None
+
         inputs = [full_inputs, empty_inputs, full_inputs] if any_not_empty else [empty_inputs, empty_inputs]
         for input_ in inputs:
             collector.register_inputs(input_)
@@ -425,12 +435,46 @@ class TemplateTestStatisticCollector:
         assert isinstance(statistic, RawTensorStatistic)
         assert statistic.values == 1
 
-    @pytest.mark.parametrize("statistic", [None, RawTensorStatistic])
-    def test_tensor_collector_is_disabled_after_get_statistics(self, statistic):
-        tensor_collector = TensorCollector(statistic)
-        tensor_collector.register_statistic_branch(
-            RawTensorStatistic.VALUES_STATS, DummyTensorReducer("A"), DummyTensorAggregator()
-        )
-        assert tensor_collector.enabled
-        _ = tensor_collector.get_statistics()
-        assert not tensor_collector.enabled
+    def test_tensor_collector_cache_and_statistics(self):
+        # Initialize a single instance of TensorCollector
+        collector = TensorCollector(DummyStatContainer)
+
+        # Test setting cache
+        cached_statistics = {"values": [1, 2]}
+        collector.set_cache(cached_statistics)
+        assert collector._cached_statistics == cached_statistics, "Cache should match the set value"
+        assert not collector.enabled, "Collector should be disabled after setting cache"
+
+        # Test clearing cache
+        collector.clear_cache()
+        assert collector._cached_statistics is None, "Cache should be cleared"
+        assert collector.enabled, "Collector should be enabled after clearing cache"
+
+        # Test default behavior of get_statistics without cache
+        collector.register_statistic_branch("container_key", DummyTensorReducer("A"), DummyTensorAggregator())
+        collector.register_input_for_all_reducers(Tensor(np.array(1)))
+        statistics = collector.get_statistics()
+        assert statistics == {"container_key": Tensor(np.array(1))}, "Statistics should reflect registered input"
+
+        # Test get_statistics with cache
+        collector.set_cache({"container_key": Tensor(np.array(25))})
+        statistics = collector.get_statistics()
+        assert statistics == {"container_key": Tensor(np.array(25))}, "Statistics should return cached value"
+
+        # Attempt to register new input while cache is set
+        collector.register_input_for_all_reducers(Tensor(np.array(2)))
+        statistics = collector.get_statistics()
+        assert statistics == {"container_key": Tensor(np.array(25))}, "Statistics should still reflect cached value"
+
+        # Clear cache and check behavior
+        collector.clear_cache()
+        empty_stats = {"container_key": None}
+        statistics = collector.get_statistics()
+        assert statistics == empty_stats, "Statistics should be empty after clearing cache"
+
+        # Register new input after clearing cache
+        collector.register_input_for_all_reducers(Tensor(np.array(8)))
+        statistics = collector.get_statistics()
+        assert statistics == {
+            "container_key": Tensor(np.array(8))
+        }, "Statistics should reflect the new input after clearing cache"

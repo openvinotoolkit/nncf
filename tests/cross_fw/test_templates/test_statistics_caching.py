@@ -56,7 +56,7 @@ class TemplateTestStatisticsCaching:
         """
         dummy_t_p = self.create_target_point(TargetType.PRE_LAYER_OPERATION, "dummy_name", 0)
         dummy_tensor_collector = TensorCollector()
-        dummy_tensor_collector.statistics = MinMaxTensorStatistic(Tensor(np.zeros((3))), Tensor(np.ones((3))))
+        dummy_tensor_collector._cached_statistics = MinMaxTensorStatistic(Tensor(np.zeros((3))), Tensor(np.ones((3))))
         return StatisticPoint(
             target_point=dummy_t_p, tensor_collector=dummy_tensor_collector, algorithm="dummy_algorithm"
         )
