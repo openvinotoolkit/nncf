@@ -505,15 +505,15 @@ def do_int_quantization(
     )
 
     if precomputed_scale is None:
-        compressed_weight, scale, zero_point = model(weight.data)
+        compressed_weight, scale, zero_point = model([weight])
         # Scale is always in fp32 so there is no need to store it in ov.Tensor
         if scale.backend == TensorBackend.ov:
             scale = scale.to_backend(TensorBackend.numpy)
     else:
-        inputs = [weight.data, precomputed_scale.data]
+        inputs = [weight, precomputed_scale]
         if precomputed_zero_point is not None:
-            inputs += [precomputed_zero_point.data]
-        compressed_weight = Tensor(model(inputs)[0])
+            inputs += [precomputed_zero_point]
+        compressed_weight = model(inputs)[0]
         scale, zero_point = precomputed_scale, precomputed_zero_point
 
     return compressed_weight, scale, zero_point
@@ -552,9 +552,8 @@ def calculate_quantized_dequantized_weight(
 
     model = get_compress_decompress_weight_model(ov_model_params, config, weight_shape, scale_shape, zero_point_shape)
 
-    inputs = [weight.data, scale.data]
+    inputs = [weight, scale]
     if zero_point is not None:
-        inputs.append(zero_point.data)
-    results = model(inputs)
-    decompressed_weight = [Tensor(it) for it in results][0]
+        inputs.append(zero_point)
+    decompressed_weight = model(inputs)[0]
     return decompressed_weight
