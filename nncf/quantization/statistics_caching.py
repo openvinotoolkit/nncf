@@ -17,7 +17,6 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.data import Dataset
-from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
@@ -26,111 +25,141 @@ from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXE
 
 
 def register_statistics_for_algorithm(
-    statistics_aggregator: StatisticsAggregator,
+    aggregator: StatisticsAggregator,
     model: TModel,
     graph: NNCFGraph,
     subset_size: int,
-    compression_algorithm: WeightCompression,
+    compression_algo: WeightCompression,
 ) -> None:
-    """Registers the statistics of the provided algorithm."""
-    compression_algorithm.set_backend_entity(model)
+    """
+    Registers the statistics required for the given compression algorithm.
+
+    :param aggregator: Aggregator to register statistics.
+    :param model: Model being analyzed.
+    :param graph: Model's computational graph.
+    :param subset_size: Size of dataset subset for statistics.
+    :param compression_algo: WeightCompression algorithm instance.
+    """
+    compression_algo.set_backend_entity(model)
 
     nodes_to_compress = [
         node
-        for node in compression_algorithm.get_nodes_to_compress(graph)
-        if node.metatype in compression_algorithm._backend_entity.matmul_metatypes
+        for node in compression_algo.get_nodes_to_compress(graph)
+        if node.metatype in compression_algo._backend_entity.matmul_metatypes
     ]
 
-    matmul_input_to_output_nodes_map = compression_algorithm.get_matmul_input_to_output_nodes_map(
-        nodes_to_compress, graph
-    )
+    input_output_map = compression_algo.get_matmul_input_to_output_nodes_map(nodes_to_compress, graph)
 
-    statistic_points = compression_algorithm.get_statistic_points(
-        model, graph, matmul_input_to_output_nodes_map.keys(), subset_size
-    )
-    statistics_aggregator.register_statistic_points(statistic_points)
+    statistic_points = compression_algo.get_statistic_points(model, graph, input_output_map.keys(), subset_size)
+    aggregator.register_statistic_points(statistic_points)
 
 
 def _register_gptq(
-    statistics_aggregator: StatisticsAggregator,
+    aggregator: StatisticsAggregator,
     model: TModel,
     graph: NNCFGraph,
-    matmul_nodes_to_compress: List[NNCFNode],
+    nodes_to_compress: List[NNCFNode],
     subset_size: int,
 ) -> None:
-    """Registers GPTQ compression algorithm statistics."""
+    """
+    Registers statistics for the GPTQ compression algorithm.
+
+    :param aggregator: Aggregator to register statistics.
+    :param model: Model being analyzed.
+    :param graph: Model's computational graph.
+    :param nodes_to_compress: Nodes selected for GPTQ compression.
+    :param subset_size: Size of dataset subset for statistics.
+    """
     gptq_algo = GPTQ(subset_size=subset_size)
-    statistic_points = gptq_algo.get_statistic_points(model, graph, matmul_nodes_to_compress)
-    statistics_aggregator.register_statistic_points(statistic_points)
+    statistic_points = gptq_algo.get_statistic_points(model, graph, nodes_to_compress)
+    aggregator.register_statistic_points(statistic_points)
 
 
 def _register_mixed_precision(
-    statistics_aggregator: StatisticsAggregator,
+    aggregator: StatisticsAggregator,
     model: TModel,
     graph: NNCFGraph,
-    matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
+    input_output_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
     subset_size: int,
 ) -> None:
-    """Registers mixed precision compression algorithm statistics."""
-    sensitivities_to_collect = [
+    """
+    Registers statistics for mixed precision compression algorithm.
+
+    :param aggregator: Aggregator to register statistics.
+    :param model: Model being analyzed.
+    :param graph: Model's computational graph.
+    :param input_output_map: Map of input to output nodes for matmul operations.
+    :param subset_size: Size of dataset subset for statistics.
+    """
+    sensitivities = [
         SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
         SensitivityMetric.MEAN_ACTIVATION_VARIANCE,
         SensitivityMetric.MAX_ACTIVATION_VARIANCE,
         SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
     ]
 
-    for sensitivity in sensitivities_to_collect:
+    for sensitivity in sensitivities:
         criterion_cls = MIXED_PRECISION_CRITERIA.get(sensitivity)
         mixed_prec_algo = criterion_cls(None, None)
-        statistic_points = mixed_prec_algo.get_statistic_points(
-            model, graph, matmul_input_to_output_nodes_map.keys(), subset_size
-        )
-        statistics_aggregator.register_statistic_points(statistic_points)
+        statistic_points = mixed_prec_algo.get_statistic_points(model, graph, input_output_map.keys(), subset_size)
+        aggregator.register_statistic_points(statistic_points)
 
 
 def register_all_statistics(
-    statistics_aggregator: StatisticsAggregator,
+    aggregator: StatisticsAggregator,
     model: TModel,
     graph: NNCFGraph,
     subset_size: int,
-    compression_algorithm: WeightCompression,
-    gptq: bool = False,  # GPTQ does not support statistics caching
-    mixed_precision: bool = True,
+    compression_algo: WeightCompression,
+    enable_gptq: bool = False,
+    enable_mixed_precision: bool = True,
 ) -> None:
-    """Registers all necessary statistics for compression."""
-    compression_algorithm.set_backend_entity(model)
+    """
+    Registers all required statistics for the model compression.
 
-    nodes_to_compress = compression_algorithm.get_nodes_to_compress(graph)
-    matmul_nodes_to_compress = [
-        node for node in nodes_to_compress if node.metatype in compression_algorithm._backend_entity.matmul_metatypes
+    :param aggregator: Aggregator to register statistics.
+    :param model: Model being analyzed.
+    :param graph: Model's computational graph.
+    :param subset_size: Size of dataset subset for statistics.
+    :param compression_algo: WeightCompression algorithm instance.
+    :param enable_gptq: Whether to enable GPTQ statistics.
+    :param enable_mixed_precision: Whether to enable mixed precision statistics.
+    """
+    compression_algo.set_backend_entity(model)
+
+    nodes_to_compress = [
+        node
+        for node in compression_algo.get_nodes_to_compress(graph)
+        if node.metatype in compression_algo._backend_entity.matmul_metatypes
     ]
 
-    matmul_input_to_output_nodes_map = compression_algorithm.get_matmul_input_to_output_nodes_map(
-        matmul_nodes_to_compress, graph
-    )
+    input_output_map = compression_algo.get_matmul_input_to_output_nodes_map(nodes_to_compress, graph)
 
-    register_statistics_for_algorithm(statistics_aggregator, model, graph, subset_size, compression_algorithm)
+    register_statistics_for_algorithm(aggregator, model, graph, subset_size, compression_algo)
 
-    if gptq:
-        _register_gptq(statistics_aggregator, model, graph, nodes_to_compress, subset_size)
+    if enable_gptq:
+        _register_gptq(aggregator, model, graph, nodes_to_compress, subset_size)
 
-    if mixed_precision:
-        _register_mixed_precision(statistics_aggregator, model, graph, matmul_input_to_output_nodes_map, subset_size)
+    if enable_mixed_precision:
+        _register_mixed_precision(aggregator, model, graph, input_output_map, subset_size)
 
 
 def cache_weight_compression_statistics(
     model: TModel, dataset: Dataset, subset_size: int, statistics_path: str
 ) -> None:
-    """Caches compression statistics for the given model and dataset for WeightCompression."""
-    model = remove_friendly_name_duplicates(model)
+    """
+    Caches compression statistics for a given model and dataset.
 
-    weight_compression_configuration = get_weight_compression_configuration(
-        awq=True, scale_estimation=True, lora_correction=True
-    )
-    compression_algorithm = WeightCompression(**weight_compression_configuration, subset_size=subset_size)
+    :param model: Model being analyzed.
+    :param dataset: Dataset to analyze model statistics.
+    :param subset_size: Size of dataset subset for statistics.
+    :param statistics_path: Path to save cached statistics.
+    """
+    config = get_weight_compression_configuration(awq=True, scale_estimation=True, lora_correction=True)
+    compression_algo = WeightCompression(**config, subset_size=subset_size)
 
     graph = NNCFGraphFactory.create(model)
-    statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
-    register_all_statistics(statistics_aggregator, model, graph, subset_size, compression_algorithm)
-    statistics_aggregator.collect_statistics(model, graph)
-    statistics_aggregator.dump_statistics(statistics_path)
+    aggregator = StatisticsAggregatorFactory.create(model, dataset)
+    register_all_statistics(aggregator, model, graph, subset_size, compression_algo)
+    aggregator.collect_statistics(model, graph)
+    aggregator.dump_statistics(statistics_path)
