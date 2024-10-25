@@ -23,7 +23,6 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
-from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
@@ -41,6 +40,7 @@ from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipel
 from nncf.quantization.algorithms.weight_compression.algorithm import check_user_compression_configuration
 from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
 from nncf.quantization.algorithms.weight_compression.backend import WEIGHT_COMPRESSION_SUPPORTED_BACKENDS
+from nncf.quantization.statistics_caching import cache_weight_compression_statistics
 from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi
@@ -627,7 +627,7 @@ def compress_weights(
         and not Path(weight_compression_configuration["advanced_parameters"].statistics_path).exists()
     ):
         if backend == BackendType.OPENVINO:
-            from nncf.quantization.statistics_caching import cache_weight_compression_statistics
+            from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 
             model = remove_friendly_name_duplicates(model)
 
