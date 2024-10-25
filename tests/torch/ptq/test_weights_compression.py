@@ -220,7 +220,7 @@ class EmptyModel(torch.nn.Module):
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
-        {"advanced_parameters": AdvancedCompressionParameters(statistics_dir_path="anything")},
+        {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):
@@ -245,9 +245,7 @@ def test_raise_error_for_statistics_caching():
     dummy_input = torch.Tensor()
     wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
     with pytest.raises(nncf.ParameterNotSupportedError):
-        compress_weights(
-            wrapped_model, advanced_parameters=AdvancedCompressionParameters(statistics_dir_path="anything")
-        )
+        compress_weights(wrapped_model, advanced_parameters=AdvancedCompressionParameters(statistics_path="anything"))
 
 
 class DTypeModel(torch.nn.Module):

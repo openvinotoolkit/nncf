@@ -402,12 +402,12 @@ def compress_weights_impl(
     graph = NNCFGraphFactory.create(model)
 
     statistics_points = None
-    if advanced_parameters and advanced_parameters.statistics_dir_path:
-        if not Path(advanced_parameters.statistics_dir_path).exists():
+    if advanced_parameters and advanced_parameters.statistics_path:
+        if not Path(advanced_parameters.statistics_path).exists():
             raise nncf.InternalError("Directory with cached statistics is not found.")
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         register_statistics_for_algorithm(statistics_aggregator, model, graph, subset_size, compression_algorithm)
-        statistics_aggregator.load_statistics_from_dir(advanced_parameters.statistics_dir_path)
+        statistics_aggregator.load_statistics_from_dir(advanced_parameters.statistics_path)
         statistics_points = statistics_aggregator.statistic_points
 
     return compression_algorithm.apply(model, graph, statistics_points, dataset)

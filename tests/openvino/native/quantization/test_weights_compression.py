@@ -728,7 +728,7 @@ def test_raise_error_channel_size_is_not_divisible_by_group_size():
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
-        {"advanced_parameters": AdvancedCompressionParameters(statistics_dir_path="anything")},
+        {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):

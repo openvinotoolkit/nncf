@@ -527,7 +527,7 @@ def compress_weights(
         if backup_mode is not None:
             raise nncf.ParameterNotSupportedError("Torch backend does not support backup_mode option.")
 
-        if advanced_parameters and advanced_parameters.statistics_dir_path:
+        if advanced_parameters and advanced_parameters.statistics_path:
             raise nncf.ParameterNotSupportedError("Torch does not support statistics caching.")
 
         if is_wrapped_model(model):
@@ -569,7 +569,7 @@ def compress_weights(
             raise nncf.ParameterNotSupportedError(
                 "TorchFX only supports data-free weights compression," "Set the 'dataset' option to None"
             )
-        if advanced_parameters and advanced_parameters.statistics_dir_path:
+        if advanced_parameters and advanced_parameters.statistics_path:
             raise nncf.ParameterNotSupportedError("TorchFX does not supports statistics caching.")
         compression_weights_impl = fx_compression_weights_impl
 
@@ -623,10 +623,10 @@ def compress_weights(
     )
 
     if (
-        weight_compression_configuration["advanced_parameters"].statistics_dir_path
-        and not Path(weight_compression_configuration["advanced_parameters"].statistics_dir_path).exists()
+        weight_compression_configuration["advanced_parameters"].statistics_path
+        and not Path(weight_compression_configuration["advanced_parameters"].statistics_path).exists()
     ):
-        cache_weight_compression_statistics(model, dataset, subset_size, advanced_parameters.statistics_dir_path)
+        cache_weight_compression_statistics(model, dataset, subset_size, advanced_parameters.statistics_path)
 
     return compression_weights_impl(
         model=model,

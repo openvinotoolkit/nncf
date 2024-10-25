@@ -213,7 +213,7 @@ def test_compress_weights_functional_model(mode):
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
-        {"advanced_parameters": AdvancedCompressionParameters(statistics_dir_path="anything")},
+        {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):
@@ -238,9 +238,7 @@ def test_raise_error_for_statistics_caching():
     dummy_input = torch.Tensor()
     exported_model = _capture_model(dummy_torch_model, dummy_input)
     with pytest.raises(nncf.ParameterNotSupportedError):
-        compress_weights(
-            exported_model, advanced_parameters=AdvancedCompressionParameters(statistics_dir_path="anything")
-        )
+        compress_weights(exported_model, advanced_parameters=AdvancedCompressionParameters(statistics_path="anything"))
 
 
 def test_get_dtype_attribute_of_parameter():

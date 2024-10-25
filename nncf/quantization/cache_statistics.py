@@ -16,18 +16,18 @@ from nncf.data import Dataset
 
 
 def cache_weight_compression_statistics(
-    model: TModel, dataset: Dataset, subset_size: int, statistics_dir_path: str
+    model: TModel, dataset: Dataset, subset_size: int, statistics_path: str
 ) -> None:
     """
     Caches compression statistics for the given model and dataset for WeightCompression.
     :param model: The model to cache statistics for.
     :param dataset: The dataset to use for caching statistics.
     :param subset_size: The size of the subset of the dataset to use for caching statistics.
-    :param statistics_dir_path: The path to the directory to save the statistics to.
+    :param statistics_path: The path to the directory to save the statistics to.
     """
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.cache_statistics import cache_weight_compression_statistics
 
-        return cache_weight_compression_statistics(model, dataset, subset_size, statistics_dir_path)
+        return cache_weight_compression_statistics(model, dataset, subset_size, statistics_path)
     raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")

@@ -120,7 +120,7 @@ def register_all_statistics(
 
 
 def cache_weight_compression_statistics(
-    model: ov.Model, dataset: Dataset, subset_size: int, statistics_dir_path: str
+    model: ov.Model, dataset: Dataset, subset_size: int, statistics_path: str
 ) -> None:
     """Caches compression statistics for the given model and dataset for WeightCompression."""
     model = remove_friendly_name_duplicates(model)
@@ -133,4 +133,4 @@ def cache_weight_compression_statistics(
     statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
     register_all_statistics(statistics_aggregator, model, graph, subset_size, compression_algorithm)
     statistics_aggregator.collect_statistics(model, graph)
-    statistics_aggregator.dump_statistics(statistics_dir_path)
+    statistics_aggregator.dump_statistics(statistics_path)

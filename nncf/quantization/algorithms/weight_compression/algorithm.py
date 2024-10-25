@@ -133,9 +133,9 @@ def check_user_compression_configuration(
                 "Default values of `ratio` (1) and `group_size` (-1) cannot be overridden."
             )
 
-        if advanced_parameters and advanced_parameters.statistics_dir_path:
+        if advanced_parameters and advanced_parameters.statistics_path:
             raise nncf.ParameterNotSupportedError(
-                "INT8 modes do not support the `statistics_dir_path` option in `AdvancedCompressionParameters`."
+                "INT8 modes do not support the `statistics_path` option in `AdvancedCompressionParameters`."
             )
 
         unsupported_options = {
@@ -257,7 +257,7 @@ class WeightCompression(Algorithm):
         primary_config = WeightCompressionConfig(mode=self._mode, group_size=self._group_size)
         criterion_cls = MIXED_PRECISION_CRITERIA.get(self._sensitivity_metric)
         self._mixed_precision_algo = criterion_cls(primary_config, self._ratio)
-        self._statistics_dir_path = self._advanced_parameters.statistics_dir_path
+        self._statistics_path = self._advanced_parameters.statistics_path
         if self._gptq:
             gptq_params = self._advanced_parameters.gptq_params
             self._gptq_algo = GPTQ(
