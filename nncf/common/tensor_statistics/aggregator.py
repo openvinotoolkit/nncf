@@ -98,9 +98,9 @@ class StatisticsAggregator(ABC):
 
     def load_statistics_from_dir(self, dir_path: str) -> None:
         """
-        Loads statistics from a file and populates the statistic points with the loaded data.
+        Loads statistics from a directory and populates the statistic points with the loaded data.
 
-        :param file_name: The name of the file from which to load the statistics. # TODO
+        :param dir_path: The name of the directory from which to load the statistics.
         """
         loaded_data, metadata = statistics_serializer.load_from_dir(dir_path)
         statistics_validator.validate_backend(metadata, self.BACKEND)
@@ -123,9 +123,9 @@ class StatisticsAggregator(ABC):
 
     def dump_statistics(self, dir_path: str) -> None:
         """
-        Dumps the current statistics to a file in a compressed format.
+        Dumps the current statistics to a directory in a compressed format.
 
-        :param file_name: The name of the file where the statistics will be saved.
+        :param dir_path: The path of the directory where the statistics will be saved.
         """
         data_to_dump = self._prepare_statistics()
         statistics_serializer.dump_to_dir(data_to_dump, dir_path, {"backend": self.BACKEND.value})
@@ -133,7 +133,7 @@ class StatisticsAggregator(ABC):
 
     def _prepare_statistics(self) -> Dict[str, Any]:
         """
-        Prepares the statistics data for dumping into a file.
+        Prepares the statistics data for dumping into a directory.
 
         :return: A dictionary containing the statistics data to be dumped.
         """

@@ -39,6 +39,8 @@ from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_qua
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
 from nncf.quantization.algorithms.weight_compression.algorithm import check_user_compression_configuration
 from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
+from nncf.quantization.algorithms.weight_compression.backend import WEIGHT_COMPRESSION_SUPPORTED_BACKENDS
+from nncf.quantization.cache_statistics import cache_weight_compression_statistics
 from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi
@@ -494,13 +496,15 @@ def compress_weights(
     :type advanced_parameters: nncf.AdvancedCompressionParameters
     :return: The non-trainable model with compressed weights.
     """
+    backend = get_backend(model)
+    if backend not in WEIGHT_COMPRESSION_SUPPORTED_BACKENDS:
+        raise nncf.UnsupportedBackendError(f"Unsupported type of backend for weight compression: {backend}")
     if mode == CompressWeightsMode.INT8:
         warning_deprecated(
             "`CompressWeightsMode.INT8` is deprecated. Please, use `CompressWeightsMode.INT8_ASYM` as value instead."
         )
         mode = CompressWeightsMode.INT8_ASYM
 
-    backend = get_backend(model)
     compression_weights_impl = None
 
     if backend == BackendType.TORCH:
@@ -618,16 +622,10 @@ def compress_weights(
         advanced_parameters,
     )
 
-    if compression_weights_impl is None:
-        raise nncf.UnsupportedBackendError(f"Unsupported type of backend for weight compression: {backend}")
-
-    is_to_cache_statistics = (
+    if (
         weight_compression_configuration["advanced_parameters"].statistics_dir_path
         and not Path(weight_compression_configuration["advanced_parameters"].statistics_dir_path).exists()
-    )
-    if is_to_cache_statistics:
-        from nncf.openvino.quantization.cache_statistics import cache_weight_compression_statistics
-
+    ):
         cache_weight_compression_statistics(model, dataset, subset_size, advanced_parameters.statistics_dir_path)
 
     return compression_weights_impl(

@@ -19,6 +19,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
@@ -28,6 +29,7 @@ from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 
 TModel = TypeVar("TModel")
+WEIGHT_COMPRESSION_SUPPORTED_BACKENDS = [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
 
 class WeightCompressionAlgoBackend(ABC):
