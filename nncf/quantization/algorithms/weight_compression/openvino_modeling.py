@@ -22,7 +22,8 @@ from openvino.runtime import opset13 as opset
 import nncf
 from nncf import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
-from nncf.tensor import TensorDataType, Tensor
+from nncf.tensor import Tensor
+from nncf.tensor import TensorDataType
 
 
 @dataclass

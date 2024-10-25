@@ -194,6 +194,9 @@ class Tensor:
     def clone(self) -> float:
         return _call_function("clone", self)
 
+    def to_backend(self, backend: TensorBackend) -> Tensor:
+        return _call_function("to_backend", self, backend)
+
 
 def _call_function(func_name: str, *args):
     """

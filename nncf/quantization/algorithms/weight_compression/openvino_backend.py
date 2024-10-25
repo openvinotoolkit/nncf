@@ -50,7 +50,8 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
-from nncf.tensor.definitions import TensorDataType, TensorBackend
+from nncf.tensor.definitions import TensorBackend
+from nncf.tensor.definitions import TensorDataType
 
 
 class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
@@ -245,19 +246,25 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         original_shape = weight.shape
         compressed_weight = compress_weight(weight, reduction_axes, compression_config, layer_scales, layer_zero_points)
 
-        compressed_const = self._create_ov_const_from_tensor(compressed_weight.tensor, compression_dtype, name=const_node_name)
+        compressed_const = self._create_ov_const_from_tensor(
+            compressed_weight.tensor, compression_dtype, name=const_node_name
+        )
         if compressed_const.get_element_type() != compression_dtype:
             compressed_const = opset.convert(compressed_const, compression_dtype)
         converted_const = opset.convert(compressed_const, ov.Type.f16)
 
         if compressed_weight.zero_point is not None:
-            zero_point_const = self._create_ov_const_from_tensor(compressed_weight.zero_point, compression_dtype, name=f"{const_node_name}/zero_point")
+            zero_point_const = self._create_ov_const_from_tensor(
+                compressed_weight.zero_point, compression_dtype, name=f"{const_node_name}/zero_point"
+            )
             zero_point_const = opset.convert(zero_point_const, ov.Type.f16)
             converted_const = opset.subtract(
                 converted_const, zero_point_const, name=f"{const_node_name}/zero_point/subtract"
             )
 
-        scale_const = self._create_ov_const_from_tensor(compressed_weight.scale, scale_dtype, name=f"{const_node_name}/scale")
+        scale_const = self._create_ov_const_from_tensor(
+            compressed_weight.scale, scale_dtype, name=f"{const_node_name}/scale"
+        )
         if scale_const.get_element_type() != ov.Type.f16:
             scale_const = opset.convert(scale_const, ov.Type.f16)
 
@@ -291,11 +298,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             const_node = self.name_to_node_mapping[const_node_name]
             const_node_output = const_node.output(0)
             const_dtype = const_node_output.get_element_type()
-            weight = Tensor(get_const_value(const_node))
-            # TODO: try to support bf16 by creating a Tensor with OV backend
-            # weight = Tensor(get_const_value(const_node, bf16_to_fp32=False))
-            # if const_dtype == ov.Type.bf16:
-            #     weight._is_bf16 = True
+            weight = get_const_value(const_node, cast_bf16_to_fp32=False)
+            if const_dtype == ov.Type.bf16:
+                weight = ov.Tensor(weight, weight.shape, ov.Type.bf16)
+            weight = Tensor(weight)
 
             should_add_convert_node = False
             if const_dtype != ov.Type.f16:
@@ -325,6 +331,11 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 target_input.replace_source_output(mul_output)
 
             if lora_correction_algo is not None and lora_correction_algo.is_applicable(wc_params):
+                if weight.backend == TensorBackend.ov:
+                    if weight.dtype == TensorDataType.bfloat16:
+                        weight = weight.astype(TensorDataType.float32)
+                    weight = weight.to_backend(TensorBackend.numpy)
+                # TODO: cast int4 ov tensor too?
                 adapters = lora_correction_algo.calculate_adapters(weight, compressed_weight, wc_params)
                 self.insert_adapters(wc_params, *adapters, int8_lora=lora_correction_algo.use_int8_adapters)
 
@@ -340,11 +351,14 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         dump_parameters(model, parameters, algo_name, path)
 
     @staticmethod
-    def _create_ov_const_from_tensor(x: Tensor, dtype: Optional[ov.Type] = None, name: Optional[str] = None) -> Constant:
+    def _create_ov_const_from_tensor(
+        x: Tensor, dtype: Optional[ov.Type] = None, name: Optional[str] = None
+    ) -> Constant:
         if x.backend == TensorBackend.ov:
             return opset.constant(x.data, name=name)
         const = opset.constant(x.data, dtype=dtype, name=name)
         return const
+
 
 class OVAWQAlgoAlgoBackend(AWQAlgoBackend, OVWeightCompressionAlgoBackend):
     @staticmethod

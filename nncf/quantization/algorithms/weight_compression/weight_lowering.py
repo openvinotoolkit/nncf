@@ -25,7 +25,8 @@ from nncf.quantization.algorithms.weight_compression.openvino_modeling import ge
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
-from nncf.tensor.definitions import TensorDataType, TensorBackend
+from nncf.tensor.definitions import TensorBackend
+from nncf.tensor.definitions import TensorDataType
 from nncf.utils import is_openvino_available
 
 ReductionAxes = Tuple[int, ...]
@@ -378,6 +379,11 @@ def compress_weight(
     :return: The compressed weight and decompression parameters as instance of CompressedWeight
     """
     if not config.is_integer():
+        if weight.backend == TensorBackend.ov:
+            if weight.dtype == TensorDataType.bfloat16:
+                weight = weight.astype(TensorDataType.float32)
+            weight = weight.to_backend(TensorBackend.numpy)
+
         compressed_weight, scale = calculate_normalized_weight_and_fp4_scale(
             weight, reduction_axes, config.group_size, precomputed_scale, config.mode
         )
@@ -441,7 +447,11 @@ def do_int_quantization(
 ):
     assert config.is_integer(), "The function supports integer quantization only"
 
-    accelerate_through_ov = is_openvino_available() and weight.backend != TensorBackend.torch and not bool(int(os.environ.get("NUMPY_COMPRESSION", "0")))
+    accelerate_through_ov = (
+        is_openvino_available()
+        and weight.backend != TensorBackend.torch
+        and not bool(int(os.environ.get("NUMPY_COMPRESSION", "0")))
+    )
     if not is_openvino_available() and weight.backend != TensorBackend.torch:
         log_once(logging.INFO, "Compression time may be improved after installing OpenVINO")
 
@@ -451,6 +461,11 @@ def do_int_quantization(
 
     if not accelerate_through_ov:
         # Reference implementation
+
+        if weight.backend == TensorBackend.ov:
+            if weight.dtype == TensorDataType.bfloat16:
+                weight = weight.astype(TensorDataType.float32)
+            weight = weight.to_backend(TensorBackend.numpy)
 
         if weight.dtype != TensorDataType.float32:
             weight = weight.astype(TensorDataType.float32)
@@ -466,18 +481,14 @@ def do_int_quantization(
         compressed_weights = calculate_quantized_weight(weight, config, scale, zero_point, invert_division)
         return compressed_weights, scale, zero_point
 
-    import openvino as ov
-
     weight_shape = weight.shape
     scale_shape = None if precomputed_scale is None else precomputed_scale.shape
     zero_point_shape = None if precomputed_zero_point is None else precomputed_zero_point.shape
 
-    is_bf16 = getattr(weight, "_is_bf16", False)
-    input_dtype = TensorDataType.bfloat16 if is_bf16 else weight.dtype
     if ov_model_params is None:
-        # ov_model_params = OVModelParameters(input_dtype)
+        # ov_model_params = OVModelParameters(weight.dtype)
         ov_model_params = OVModelParameters(
-            input_dtype,
+            weight.dtype,
             dynamic=bool(int(os.environ.get("DYNAMIC_COMPRESSION", "0"))),
             recompile=bool(int(os.environ.get("RECOMPILE", "0"))),
             release_memory=bool(int(os.environ.get("RELEASE_MEMORY", "0"))),
@@ -493,11 +504,10 @@ def do_int_quantization(
         reduction_axes,
     )
 
-    weight_data = ov.Tensor(weight.data, weight.data.shape, ov.Type.bf16) if is_bf16 else weight.data
     if precomputed_scale is None:
-        compressed_weight, scale, zero_point = model(weight_data)
+        compressed_weight, scale, zero_point = model(weight.data)
     else:
-        inputs = [weight_data, precomputed_scale.data]
+        inputs = [weight.data, precomputed_scale.data]
         if precomputed_zero_point is not None:
             inputs += [precomputed_zero_point.data]
         compressed_weight = Tensor(model(inputs)[0])
@@ -514,7 +524,11 @@ def calculate_quantized_dequantized_weight(
     invert_division: Optional[bool] = False,
     ov_model_params: Optional[OVModelParameters] = None,
 ) -> Tensor:
-    accelerate_through_ov = is_openvino_available() and weight.backend != TensorBackend.torch and not bool(int(os.environ.get("NUMPY_COMPRESSION", "0")))
+    accelerate_through_ov = (
+        is_openvino_available()
+        and weight.backend != TensorBackend.torch
+        and not bool(int(os.environ.get("NUMPY_COMPRESSION", "0")))
+    )
     if not is_openvino_available() and weight.backend != TensorBackend.torch:
         log_once(logging.INFO, "Compression time may be improved after installing OpenVINO")
 
@@ -524,23 +538,18 @@ def calculate_quantized_dequantized_weight(
         decompressed_weight = do_int_dequantization(compressed_weight, scale, zero_point)
         return decompressed_weight
 
-    import openvino as ov
-
     weight_shape = weight.shape
     scale_shape = scale.shape
     zero_point_shape = None if zero_point is None else zero_point.shape
 
-    is_bf16 = getattr(weight, "_is_bf16", False)
-    input_dtype = TensorDataType.bfloat16 if is_bf16 else weight.dtype
     if ov_model_params is None:
-        ov_model_params = OVModelParameters(input_dtype)
+        ov_model_params = OVModelParameters(weight.dtype)
     if config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM]:
         ov_model_params.dynamic = False
 
     model = get_compress_decompress_weight_model(ov_model_params, config, weight_shape, scale_shape, zero_point_shape)
 
-    weight_data = ov.Tensor(weight.data, weight.data.shape, ov.Type.bf16) if is_bf16 else weight.data
-    inputs = [weight_data, scale.data]
+    inputs = [weight.data, scale.data]
     if zero_point is not None:
         inputs.append(zero_point.data)
     results = model(inputs)
