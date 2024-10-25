@@ -258,13 +258,11 @@ def _get_compress_model(
 
     num_bits = config.num_bits
     if config.mode in [CompressWeightsMode.INT8_ASYM, config.mode.INT4_ASYM]:
-        # dtype = ov.Type.u8
         dtype = ov.Type.u8 if config.mode == CompressWeightsMode.INT8_ASYM else ov.Type.u4
         level_low = 0
         level_high = 2**num_bits - 1
-        compressed_w += opset.convert(zp, ov.Type.f32)
+        compressed_w += zp if zp.get_element_type() == ov.Type.f32 else opset.convert(zp, ov.Type.f32)
     elif config.mode in [CompressWeightsMode.INT8_SYM, config.mode.INT4_SYM]:
-        # dtype = ov.Type.i8
         dtype = ov.Type.i8 if config.mode == CompressWeightsMode.INT8_SYM else ov.Type.u4
         level_low = -(2 ** (num_bits - 1))
         level_high = 2 ** (num_bits - 1) - 1
