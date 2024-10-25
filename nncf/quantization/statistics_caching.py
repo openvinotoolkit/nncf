@@ -10,8 +10,7 @@
 # limitations under the License.
 from typing import Dict, List, Tuple
 
-import openvino.runtime as ov
-
+from nncf.api.compression import TModel
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -28,7 +27,7 @@ from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXE
 
 def register_statistics_for_algorithm(
     statistics_aggregator: StatisticsAggregator,
-    model: ov.Model,
+    model: TModel,
     graph: NNCFGraph,
     subset_size: int,
     compression_algorithm: WeightCompression,
@@ -54,7 +53,7 @@ def register_statistics_for_algorithm(
 
 def _register_gptq(
     statistics_aggregator: StatisticsAggregator,
-    model: ov.Model,
+    model: TModel,
     graph: NNCFGraph,
     matmul_nodes_to_compress: List[NNCFNode],
     subset_size: int,
@@ -67,7 +66,7 @@ def _register_gptq(
 
 def _register_mixed_precision(
     statistics_aggregator: StatisticsAggregator,
-    model: ov.Model,
+    model: TModel,
     graph: NNCFGraph,
     matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
     subset_size: int,
@@ -91,7 +90,7 @@ def _register_mixed_precision(
 
 def register_all_statistics(
     statistics_aggregator: StatisticsAggregator,
-    model: ov.Model,
+    model: TModel,
     graph: NNCFGraph,
     subset_size: int,
     compression_algorithm: WeightCompression,
@@ -120,10 +119,11 @@ def register_all_statistics(
 
 
 def cache_weight_compression_statistics(
-    model: ov.Model, dataset: Dataset, subset_size: int, statistics_path: str
+    model: TModel, dataset: Dataset, subset_size: int, statistics_path: str
 ) -> None:
     """Caches compression statistics for the given model and dataset for WeightCompression."""
     model = remove_friendly_name_duplicates(model)
+
     weight_compression_configuration = get_weight_compression_configuration(
         awq=True, scale_estimation=True, lora_correction=True
     )
