@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import inspect
-import os
 from dataclasses import dataclass
 from functools import partial
 from typing import List, Optional, Tuple
@@ -19,7 +18,6 @@ import numpy as np
 import openvino as ov
 from openvino.runtime import opset13 as opset
 
-import nncf
 from nncf import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.tensor import Tensor
@@ -29,13 +27,14 @@ from nncf.tensor import TensorDataType
 @dataclass
 class OVModelParameters:
     input_dtype: TensorDataType
-    dynamic: bool = False
+    dynamic_shapes: bool = False
     recompile: bool = False
     release_memory: bool = True
+    share_inputs: bool = True
     share_outputs: bool = True
 
     def __hash__(self):
-        return hash((self.input_dtype, self.dynamic, self.recompile, self.release_memory, self.share_outputs))
+        return hash((self.input_dtype, self.dynamic_shapes, self.recompile, self.release_memory, self.share_inputs, self.share_outputs))
 
 
 class CompiledModelCache:
@@ -57,7 +56,7 @@ def clear_cache():
 
 
 def cache_results(func):
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, disable_caching=False, **kwargs):
         sig = inspect.signature(func)
         new_kwargs = {name: arg for name, arg in zip(sig.parameters, args)}
         new_kwargs.update(kwargs)
@@ -66,8 +65,7 @@ def cache_results(func):
         if cache_key in cache:
             return cache[cache_key]
         result = func(*args, **kwargs)
-        recompile = new_kwargs["ov_model_params"].recompile
-        if not recompile:
+        if not disable_caching:
             cache[cache_key] = result
         return result
 
@@ -76,7 +74,7 @@ def cache_results(func):
 
 def run_model(ov_model_params, compiled_model, inputs):
     # Returns results as numpy tensors
-    outputs = compiled_model(inputs, share_outputs=ov_model_params.share_outputs)
+    outputs = compiled_model(inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs)
     outputs = [Tensor(outputs[i]) for i in range(len(outputs))]
     if ov_model_params.release_memory:
         compiled_model.release_memory()
@@ -86,7 +84,8 @@ def run_model(ov_model_params, compiled_model, inputs):
 def run_model_via_infer_request(ov_model_params, compiled_model, inputs):
     # Returns results as ov tensors
     infer_request = compiled_model.create_infer_request()
-    infer_request.infer(inputs, share_outputs=ov_model_params.share_outputs)
+    # TODO: try share_inputs=True
+    infer_request.infer(inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs)
     outputs = [Tensor(infer_request.get_output_tensor(i)) for i in range(len(infer_request.results))]
     if ov_model_params.release_memory:
         compiled_model.release_memory()
@@ -106,7 +105,7 @@ def get_compress_weight_model(
     # if (scale_shape is None) != (reduction_axes is not None):
     #     raise Exception("Either one of scale_shape or reduction_axes must be provided at the same time.")
 
-    if ov_model_params.dynamic:
+    if ov_model_params.dynamic_shapes:
         weight_shape = (-1,) * len(weight_shape)
         if scale_shape is not None:
             scale_shape = (-1,) * (len(scale_shape) - 1) + (1,)
@@ -121,6 +120,7 @@ def get_compress_weight_model(
         zero_point_shape,
         reduction_axes,
         return_nodes=False,
+        disable_caching=ov_model_params.recompile,
     )
 
 
@@ -131,7 +131,7 @@ def get_compress_decompress_weight_model(
     scale_shape: Optional[Tuple],
     zero_point_shape: Optional[Tuple] = None,
 ):
-    if ov_model_params.dynamic:
+    if ov_model_params.dynamic_shapes:
         weight_shape = (-1,) * len(weight_shape)
         scale_shape = (-1,) * (len(scale_shape) - 1) + (1,)
         if zero_point_shape is not None:
@@ -143,6 +143,7 @@ def get_compress_decompress_weight_model(
         weight_shape,
         scale_shape,
         zero_point_shape,
+        disable_caching=ov_model_params.recompile,
     )
 
 

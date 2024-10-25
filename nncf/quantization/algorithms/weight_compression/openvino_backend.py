@@ -330,6 +330,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             for target_input in const_node.output(0).get_target_inputs():
                 target_input.replace_source_output(mul_output)
 
+            # if compressed_weight.tensor.backend == TensorBackend.ov:
+            #     if compressed_weight.tensor.dtype == TensorDataType.uint4:
+            #         compressed_weight.tensor = compressed_weight.tensor.astype(TensorDataType.uint8)
+            #     compressed_weight.tensor = compressed_weight.tensor.to_backend(TensorBackend.numpy)
             if lora_correction_algo is not None and lora_correction_algo.is_applicable(wc_params):
                 if weight.backend == TensorBackend.ov:
                     if weight.dtype == TensorDataType.bfloat16:
@@ -351,10 +355,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         dump_parameters(model, parameters, algo_name, path)
 
     @staticmethod
-    def _create_ov_const_from_tensor(
-        x: Tensor, dtype: Optional[ov.Type] = None, name: Optional[str] = None
-    ) -> Constant:
+    def _create_ov_const_from_tensor(x: Tensor, dtype: ov.Type, name: Optional[str] = None) -> Constant:
         if x.backend == TensorBackend.ov:
+            assert x.data.get_element_type() == dtype
             return opset.constant(x.data, name=name)
         const = opset.constant(x.data, dtype=dtype, name=name)
         return const

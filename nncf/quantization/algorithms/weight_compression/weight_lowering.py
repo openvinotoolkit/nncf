@@ -489,7 +489,7 @@ def do_int_quantization(
         # ov_model_params = OVModelParameters(weight.dtype)
         ov_model_params = OVModelParameters(
             weight.dtype,
-            dynamic=bool(int(os.environ.get("DYNAMIC_COMPRESSION", "0"))),
+            dynamic_shapes=bool(int(os.environ.get("DYNAMIC_COMPRESSION", "0"))),
             recompile=bool(int(os.environ.get("RECOMPILE", "0"))),
             release_memory=bool(int(os.environ.get("RELEASE_MEMORY", "0"))),
             share_outputs=bool(int(os.environ.get("SHARE_OUTPUTS", "0"))),
@@ -506,6 +506,9 @@ def do_int_quantization(
 
     if precomputed_scale is None:
         compressed_weight, scale, zero_point = model(weight.data)
+        # Scale is always in fp32 so there is no need to store it in ov.Tensor
+        if scale.backend == TensorBackend.ov:
+            scale = scale.to_backend(TensorBackend.numpy)
     else:
         inputs = [weight.data, precomputed_scale.data]
         if precomputed_zero_point is not None:
