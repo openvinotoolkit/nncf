@@ -24,7 +24,8 @@ from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParamete
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization, CompressedWeight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import CompressedWeight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
 from nncf.tensor import Tensor

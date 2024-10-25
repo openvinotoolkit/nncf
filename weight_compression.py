@@ -20,7 +20,7 @@ from pathlib import Path
 import openvino as ov
 
 import nncf
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import COMPILED_MODEL_CACHE
+from nncf.quantization.algorithms.weight_compression.openvino_modeling import OV_MODEL_CACHE
 from tools.memory_monitor import MemoryMonitor
 from tools.memory_monitor import MemoryType
 
@@ -150,8 +150,8 @@ def main(args):
     time.sleep(0.5)
 
     before_cache_deletion = memory_monitors[2].get_data(True)[1][-1]
-    if not COMPILED_MODEL_CACHE.is_empty():
-        COMPILED_MODEL_CACHE.clear()
+    if not OV_MODEL_CACHE.is_empty():
+        OV_MODEL_CACHE.clear()
         gc.collect()
         time.sleep(memory_monitors[0].interval * 10)
         after_cache_deletion = memory_monitors[2].get_data(True)[1][-1]

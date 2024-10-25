@@ -9,10 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
 from dataclasses import dataclass
 from functools import partial
-from typing import Optional, Tuple, Callable, List
+from typing import Callable, List, Optional, Tuple
 
 import numpy as np
 import openvino as ov
@@ -20,11 +19,16 @@ from openvino.runtime import opset13 as opset
 
 from nncf import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
+from nncf.results_caching import ResultsCacheContainer
+from nncf.results_caching import cache_results
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 
 TensorList = List[Tensor]
 ModelCallable = Callable[[TensorList], TensorList]
+
+
+OV_MODEL_CACHE = ResultsCacheContainer()
 
 
 @dataclass
@@ -38,54 +42,34 @@ class OVModelParameters:
     return_ov_tensors: bool = False
 
     def __hash__(self):
-        return hash((self.input_dtype, self.dynamic_shapes, self.recompile, self.release_memory, self.share_inputs, self.share_outputs, self.return_ov_tensors))
-
-class CompiledModelCache:
-    def __init__(self):
-        self._cache = {}
-
-    def clear(self):
-        self._cache.clear()
-
-    def is_empty(self):
-        return len(self._cache) == 0
-
-
-COMPILED_MODEL_CACHE = CompiledModelCache()
-
-
-def clear_cache():
-    COMPILED_MODEL_CACHE.clear()
-
-
-def cache_results(func):
-    def wrapper(*args, disable_caching=False, **kwargs):
-        sig = inspect.signature(func)
-        new_kwargs = {name: arg for name, arg in zip(sig.parameters, args)}
-        new_kwargs.update(kwargs)
-        cache_key = (func.__name__, frozenset(new_kwargs.items()))
-        cache = COMPILED_MODEL_CACHE._cache
-        if cache_key in cache:
-            return cache[cache_key]
-        result = func(*args, **kwargs)
-        if not disable_caching:
-            cache[cache_key] = result
-        return result
-
-    return wrapper
+        return hash(
+            (
+                self.input_dtype,
+                self.dynamic_shapes,
+                self.recompile,
+                self.release_memory,
+                self.share_inputs,
+                self.share_outputs,
+                self.return_ov_tensors,
+            )
+        )
 
 
 def run_model(ov_model_params: OVModelParameters, compiled_model: ov.CompiledModel, inputs: TensorList) -> TensorList:
     # Returns results as numpy tensors
     inputs = [inp.data for inp in inputs]
-    outputs = compiled_model(inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs)
+    outputs = compiled_model(
+        inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs
+    )
     outputs = [Tensor(outputs[i]) for i in range(len(outputs))]
     if ov_model_params.release_memory:
         compiled_model.release_memory()
     return outputs
 
 
-def run_model_via_infer_request(ov_model_params: OVModelParameters, compiled_model: ov.CompiledModel, inputs: TensorList) -> TensorList:
+def run_model_via_infer_request(
+    ov_model_params: OVModelParameters, compiled_model: ov.CompiledModel, inputs: TensorList
+) -> TensorList:
     # Returns results as ov tensors
     inputs = [inp.data for inp in inputs]
     infer_request = compiled_model.create_infer_request()
@@ -153,7 +137,7 @@ def get_compress_decompress_weight_model(
     )
 
 
-@cache_results
+@cache_results(OV_MODEL_CACHE)
 def _build_compress_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
@@ -256,7 +240,7 @@ def _build_compress_model(
     return partial(run_fn, ov_model_params, compiled_model)
 
 
-@cache_results
+@cache_results(OV_MODEL_CACHE)
 def _build_compress_decompress_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
