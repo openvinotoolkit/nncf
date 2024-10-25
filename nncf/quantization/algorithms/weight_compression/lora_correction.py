@@ -24,7 +24,7 @@ from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParamete
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization, CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
 from nncf.tensor import Tensor
@@ -105,7 +105,7 @@ class LoraCorrectionAlgorithm:
         return wc_params.compression_config.num_bits == 4
 
     def calculate_adapters(
-        self, weight: Tensor, compressed_weight: Tensor, wc_params: WeightCompressionParameters
+        self, weight: Tensor, compressed_weight: CompressedWeight, wc_params: WeightCompressionParameters
     ) -> Tuple[Tensor, Tensor, List[float]]:
         """
         Calculates low rank matrices for a given original and compressed weights.
@@ -134,7 +134,7 @@ class LoraCorrectionAlgorithm:
     @staticmethod
     def calculate_low_rank_matrices(
         weight: Tensor,
-        compressed_weight: Tensor,
+        compressed_weight: CompressedWeight,
         compression_config: WeightCompressionConfig,
         reduction_axes: Tuple[int, ...],
         lora_correction_params: AdvancedLoraCorrectionParameters,
