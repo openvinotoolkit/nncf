@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.telemetry.extractors import CollectedEvent
@@ -22,10 +24,10 @@ class CompressionStartedFromConfig(TelemetryExtractor):
 
 
 class NNCFNetworkGeneratedFromConfig(TelemetryExtractor):
-    def extract(self) -> CollectedEvent:
+    def extract(self, _: Any) -> CollectedEvent:
         return CollectedEvent(name="nncf_network_generated", data="from_config")
 
 
 class NNCFNetworkConfigExtracted(TelemetryExtractor):
-    def extract(self) -> CollectedEvent:
+    def extract(self, _: Any) -> CollectedEvent:
         return CollectedEvent(name="nncf_network_config_extracted", data="get_config")
