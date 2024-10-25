@@ -566,7 +566,7 @@ def compress_weights(
                 "TorchFX only supports data-free weights compression," "Set the 'dataset' option to None"
             )
         if advanced_parameters and advanced_parameters.statistics_dir_path:
-            raise AttributeError("TorchFX does not supports statistics caching.")
+            raise nncf.ParameterNotSupportedError("TorchFX does not supports statistics caching.")
         compression_weights_impl = fx_compression_weights_impl
 
     if backend == BackendType.OPENVINO:
