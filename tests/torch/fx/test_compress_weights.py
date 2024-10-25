@@ -22,6 +22,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.data.dataset import Dataset
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.quantization import compress_weights
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from tests.torch.ptq.test_weights_compression import ALL_SENSITIVITY_METRICS
 from tests.torch.ptq.test_weights_compression import SUPPORTED_MODES
@@ -157,7 +158,6 @@ def test_compressed_model_inference(mode):
 
 @pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_weights_model_size_conv(mode):
-
     dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
     model = ConvolutionModel()
 
@@ -213,6 +213,7 @@ def test_compress_weights_functional_model(mode):
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
+        {"advanced_parameters": AdvancedCompressionParameters(statistics_dir_path="anything")},
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):
@@ -230,6 +231,16 @@ def test_raise_error_with_not_int8(mode):
     exported_model = _capture_model(dummy_torch_model, dummy_input)
     with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(exported_model, mode=mode)
+
+
+def test_raise_error_for_statistics_caching():
+    dummy_torch_model = EmptyModel()
+    dummy_input = torch.Tensor()
+    exported_model = _capture_model(dummy_torch_model, dummy_input)
+    with pytest.raises(nncf.ParameterNotSupportedError):
+        compress_weights(
+            exported_model, advanced_parameters=AdvancedCompressionParameters(statistics_dir_path="anything")
+        )
 
 
 def test_get_dtype_attribute_of_parameter():

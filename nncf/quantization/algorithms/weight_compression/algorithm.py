@@ -133,8 +133,10 @@ def check_user_compression_configuration(
                 "Default values of `ratio` (1) and `group_size` (-1) cannot be overridden."
             )
 
-        if backup_mode:
-            raise nncf.ParameterNotSupportedError("INT8 modes do not support the `backup_mode` option.")
+        if advanced_parameters and advanced_parameters.statistics_dir_path:
+            raise nncf.ParameterNotSupportedError(
+                "INT8 modes do not support the `statistics_dir_path` option in `AdvancedCompressionParameters`."
+            )
 
         unsupported_options = {
             "all_layers": all_layers,
@@ -144,6 +146,7 @@ def check_user_compression_configuration(
             "scale_estimation": scale_estimation,
             "gptq": gptq,
             "lora_correction": lora_correction,
+            "backup_mode": backup_mode,
         }
         unsupported_for_int8 = [name for name, value in unsupported_options.items() if value is not None]
         if unsupported_for_int8:
