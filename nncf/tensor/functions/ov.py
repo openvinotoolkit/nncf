@@ -28,26 +28,34 @@ DTYPE_MAP = {
     TensorDataType.int32: ov.Type.i32,
     TensorDataType.int64: ov.Type.i64,
     TensorDataType.uint8: ov.Type.u8,
+    TensorDataType.uint4: ov.Type.u4,
+    TensorDataType.int4: ov.Type.i4,
 }
 
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
 
-def _bf16_to_fp32(a: ov.Tensor) -> ov.Tensor:
-    assert a.get_element_type() == ov.Type.bf16 and a.data.dtype == np.float16
+def _ov_astype(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
+    from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
+    from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_astype_model
 
-    a = a.data.view(np.uint16)
+    a_dtype = DTYPE_MAP_REV[a.get_element_type()]
+    assert a_dtype in [TensorDataType.bfloat16, TensorDataType.uint4, TensorDataType.int4]
 
-    res = a.astype(np.uint32)
-    res = (
-        ((res & 0x8000) << 16)  # Move sign bit to bit 31
-        | ((res & 0x7F80) << 16)  # Move exponent to bits 30-23
-        | ((res & 0x007F) << 16)
-    )  # Move fraction to bits 22-0
-    res = res.view(np.float32)
-
-    res = ov.Tensor(res)
-    return res
+    model = get_astype_model(
+        OVModelParameters(
+            input_dtype=a_dtype,
+            dynamic_shapes=True,
+            recompile=False,
+            release_memory=True,
+            share_inputs=True,
+            share_outputs=True,
+            return_ov_tensors=True,
+        ),
+        a.shape,
+        dtype,
+    )
+    return model([a])[0].data
 
 
 @numeric.backend.register(ov.Tensor)
@@ -57,10 +65,10 @@ def _(a: ov.Tensor) -> TensorBackend:
 
 @numeric.astype.register(ov.Tensor)
 def _(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
-    if dtype == TensorDataType.bfloat16:
-        raise ValueError("Not supported conversion")
-    if a.get_element_type() == ov.Type.bf16:
-        a = _bf16_to_fp32(a)
+    a_dtype = DTYPE_MAP_REV[a.get_element_type()]
+    if a_dtype in [TensorDataType.bfloat16, TensorDataType.uint4, TensorDataType.int4]:
+        return _ov_astype(a, dtype)
+
     return ov.Tensor(a.data.astype(NP_DTYPE_MAP[dtype]))
 
 
@@ -83,4 +91,15 @@ def _(a: ov.Tensor, shape: Union[int, Tuple[int, ...]]) -> ov.Tensor:
 def _(a: ov.Tensor, b: TensorBackend) -> np.ndarray:
     if b != TensorBackend.numpy:
         raise ValueError("Not supported backend")
+
+    # Cannot convert bfloat16, uint4, int4 to numpy directly
+    a_dtype = DTYPE_MAP_REV[a.get_element_type()]
+    if a_dtype in [TensorDataType.bfloat16, TensorDataType.uint4, TensorDataType.int4]:
+        dtype = TensorDataType.float32
+        if a_dtype == TensorDataType.uint4:
+            dtype = TensorDataType.uint8
+        elif a_dtype == TensorDataType.int4:
+            dtype = TensorDataType.int8
+        a = _ov_astype(a, dtype)
+
     return a.data

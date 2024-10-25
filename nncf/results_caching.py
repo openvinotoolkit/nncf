@@ -36,4 +36,5 @@ def cache_results(cache: ResultsCacheContainer):
             return result
 
         return wrapper
+
     return decorator

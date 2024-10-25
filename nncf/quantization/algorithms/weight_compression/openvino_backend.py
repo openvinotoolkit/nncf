@@ -329,17 +329,13 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             mul_output = mul.output(0)
             for target_input in const_node.output(0).get_target_inputs():
                 target_input.replace_source_output(mul_output)
-
-            # if compressed_weight.tensor.backend == TensorBackend.ov:
-            #     if compressed_weight.tensor.dtype == TensorDataType.uint4:
-            #         compressed_weight.tensor = compressed_weight.tensor.astype(TensorDataType.uint8)
-            #     compressed_weight.tensor = compressed_weight.tensor.to_backend(TensorBackend.numpy)
             if lora_correction_algo is not None and lora_correction_algo.is_applicable(wc_params):
                 if weight.backend == TensorBackend.ov:
-                    if weight.dtype == TensorDataType.bfloat16:
-                        weight = weight.astype(TensorDataType.float32)
                     weight = weight.to_backend(TensorBackend.numpy)
-                # TODO: cast int4 ov tensor too?
+                if compressed_weight.tensor.backend == TensorBackend.ov:
+                    compressed_weight.tensor = compressed_weight.tensor.to_backend(TensorBackend.numpy)
+                if compressed_weight.zero_point.backend == TensorBackend.ov:
+                    compressed_weight.zero_point = compressed_weight.zero_point.to_backend(TensorBackend.numpy)
                 adapters = lora_correction_algo.calculate_adapters(weight, compressed_weight, wc_params)
                 self.insert_adapters(wc_params, *adapters, int8_lora=lora_correction_algo.use_int8_adapters)
 

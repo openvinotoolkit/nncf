@@ -380,8 +380,6 @@ def compress_weight(
     """
     if not config.is_integer():
         if weight.backend == TensorBackend.ov:
-            if weight.dtype == TensorDataType.bfloat16:
-                weight = weight.astype(TensorDataType.float32)
             weight = weight.to_backend(TensorBackend.numpy)
 
         compressed_weight, scale = calculate_normalized_weight_and_fp4_scale(
@@ -463,8 +461,6 @@ def do_int_quantization(
         # Reference implementation
 
         if weight.backend == TensorBackend.ov:
-            if weight.dtype == TensorDataType.bfloat16:
-                weight = weight.astype(TensorDataType.float32)
             weight = weight.to_backend(TensorBackend.numpy)
 
         if weight.dtype != TensorDataType.float32:

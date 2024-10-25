@@ -36,6 +36,8 @@ class TensorDataType(Enum):
     int32 = auto()
     int64 = auto()
     uint8 = auto()
+    uint4 = auto()
+    int4 = auto()
 
     def is_float(self):
         """

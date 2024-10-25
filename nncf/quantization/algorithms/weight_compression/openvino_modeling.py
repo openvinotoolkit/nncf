@@ -23,6 +23,7 @@ from nncf.results_caching import ResultsCacheContainer
 from nncf.results_caching import cache_results
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
+from nncf.tensor.functions.ov import DTYPE_MAP as OV_DTYPE_MAP
 
 TensorList = List[Tensor]
 ModelCallable = Callable[[TensorList], TensorList]
@@ -57,7 +58,8 @@ class OVModelParameters:
 
 def run_model(ov_model_params: OVModelParameters, compiled_model: ov.CompiledModel, inputs: TensorList) -> TensorList:
     # Returns results as numpy tensors
-    inputs = [inp.data for inp in inputs]
+    if any(isinstance(it, Tensor) for it in inputs):
+        inputs = [inp.data for inp in inputs]
     outputs = compiled_model(
         inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs
     )
@@ -71,7 +73,8 @@ def run_model_via_infer_request(
     ov_model_params: OVModelParameters, compiled_model: ov.CompiledModel, inputs: TensorList
 ) -> TensorList:
     # Returns results as ov tensors
-    inputs = [inp.data for inp in inputs]
+    if any(isinstance(it, Tensor) for it in inputs):
+        inputs = [inp.data for inp in inputs]
     infer_request = compiled_model.create_infer_request()
     infer_request.infer(inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs)
     outputs = [Tensor(infer_request.get_output_tensor(i)) for i in range(len(infer_request.results))]
@@ -100,7 +103,8 @@ def get_compress_weight_model(
         if zero_point_shape is not None:
             zero_point_shape = (-1,) * (len(zero_point_shape) - 1) + (1,)
 
-    ov_model_params.return_ov_tensors = config.num_bits == 4
+    if config.num_bits == 4:
+        ov_model_params.return_ov_tensors = True
 
     return _build_compress_model(
         config,
@@ -147,15 +151,7 @@ def _build_compress_model(
     reduction_axes: Optional[Tuple] = None,
     return_nodes: bool = False,
 ) -> ModelCallable:
-    if ov_model_params.input_dtype == TensorDataType.float32:
-        input_dtype = ov.Type.f32
-    elif ov_model_params.input_dtype == TensorDataType.float16:
-        input_dtype = ov.Type.f16
-    elif ov_model_params.input_dtype == TensorDataType.bfloat16:
-        input_dtype = ov.Type.bf16
-    else:
-        raise Exception
-    weight = opset.parameter(weight_shape, name="w", dtype=input_dtype)
+    weight = opset.parameter(weight_shape, name="w", dtype=OV_DTYPE_MAP[ov_model_params.input_dtype])
     ov_parameters = [weight]
 
     if scale_shape is not None:
@@ -212,7 +208,7 @@ def _build_compress_model(
     if config.mode in [CompressWeightsMode.INT8_ASYM, config.mode.INT4_ASYM]:
         dtype = ov.Type.u8 if config.mode == CompressWeightsMode.INT8_ASYM else ov.Type.u4
         level_low = 0
-        level_high = 2 ** num_bits - 1
+        level_high = 2**num_bits - 1
         compressed_w += zero_point
     elif config.mode in [CompressWeightsMode.INT8_SYM, config.mode.INT4_SYM]:
         dtype = ov.Type.i8 if config.mode == CompressWeightsMode.INT8_SYM else ov.Type.u4
@@ -268,6 +264,23 @@ def _build_compress_decompress_model(
         decompressed_w = compressed_w * s
 
     model = ov.Model([decompressed_w], ov_parameters)
+    compiled_model = ov.compile_model(model, device_name="CPU")
+
+    run_fn = run_model_via_infer_request if ov_model_params.return_ov_tensors else run_model
+    return partial(run_fn, ov_model_params, compiled_model)
+
+
+def get_astype_model(ov_model_params: OVModelParameters, arg_shape: Tuple, dtype: TensorDataType) -> ModelCallable:
+    if ov_model_params.dynamic_shapes:
+        arg_shape = (-1,) * len(arg_shape)
+    return _build_astype_model(ov_model_params, arg_shape, dtype)
+
+
+@cache_results(OV_MODEL_CACHE)
+def _build_astype_model(ov_model_params: OVModelParameters, arg_shape: Tuple, dtype: TensorDataType) -> ModelCallable:
+    arg = opset.parameter(arg_shape, dtype=OV_DTYPE_MAP[ov_model_params.input_dtype])
+    res = opset.convert(arg, OV_DTYPE_MAP[dtype])
+    model = ov.Model([res], [arg])
     compiled_model = ov.compile_model(model, device_name="CPU")
 
     run_fn = run_model_via_infer_request if ov_model_params.return_ov_tensors else run_model
