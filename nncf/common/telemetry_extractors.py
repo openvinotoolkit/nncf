@@ -9,23 +9,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.config import NNCFConfig
-from nncf.config.extractors import extract_algorithm_names
+from typing import Any
+
 from nncf.telemetry.extractors import CollectedEvent
 from nncf.telemetry.extractors import TelemetryExtractor
 
 
-class CompressionStartedFromConfig(TelemetryExtractor):
-    def extract(self, argvalue: NNCFConfig) -> CollectedEvent:
-        algo_names = extract_algorithm_names(argvalue)
-        return CollectedEvent(name="compression_started", data=",".join(algo_names))
+class ModelProcessedWithStripApi(TelemetryExtractor):
+    def extract(self, _: Any) -> CollectedEvent:
+        return CollectedEvent(name="model_processed", data="strip_api")
 
 
-class NNCFNetworkGeneratedFromConfig(TelemetryExtractor):
+class NNCFNetworkGeneratedFromWrapApi(TelemetryExtractor):
     def extract(self) -> CollectedEvent:
-        return CollectedEvent(name="nncf_network_generated", data="from_config")
+        return CollectedEvent(name="nncf_network_generated", data="wrap_api")
 
 
-class NNCFNetworkConfigExtracted(TelemetryExtractor):
+class DatasetGeneratedFromApi(TelemetryExtractor):
     def extract(self) -> CollectedEvent:
-        return CollectedEvent(name="nncf_network_config_extracted", data="get_config")
+        return CollectedEvent(name="dataset_generated", data="generate_api")

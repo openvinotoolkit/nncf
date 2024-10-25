@@ -14,9 +14,12 @@ from typing import Any, Dict, List, Tuple, Union
 
 import tensorflow as tf
 
+from nncf.config.telemetry_extractors import NNCFNetworkConfigExtracted
 from nncf.experimental.tensorflow.context import get_current_context
 from nncf.experimental.tensorflow.graph.transformations.commands import TFTargetPoint
 from nncf.experimental.tensorflow.patch_tf import Hook
+from nncf.telemetry import tracked_function
+from nncf.telemetry.events import NNCF_TF_CATEGORY
 from nncf.tensorflow.layers.operation import NNCFOperation
 
 InputSignature = Union[tf.TensorSpec, Dict[str, tf.TensorSpec], Tuple[tf.TensorSpec, ...], List[tf.TensorSpec]]
@@ -75,6 +78,12 @@ class NNCFNetwork(tf.keras.Model):
     def get_nncf_operations_with_params(self) -> List[Tuple[NNCFOperation, Any]]:
         return [(op, hook.get_operation_weights(op.name)) for hook in getattr(self, "_hooks") for op in hook.operations]
 
+    @tracked_function(
+        NNCF_TF_CATEGORY,
+        [
+            NNCFNetworkConfigExtracted(),
+        ],
+    )
     def get_config(self):
         raise NotImplementedError
 
