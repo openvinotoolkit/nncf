@@ -258,5 +258,5 @@ class WCTensorStatistic(TensorStatistic):
         if cls.MEAN_STAT in config and config[cls.MEAN_STAT] is not None:
             mean_values = [fns.squeeze(it) for it in config[cls.MEAN_STAT]]
         if cls.SHAPE_STAT in config and config[cls.SHAPE_STAT] is not None:
-            shape_values = [tuple(it.data) for it in config[cls.SHAPE_STAT]]
+            shape_values = [tuple(it) for it in config[cls.SHAPE_STAT]]
         return cls(mean_values=mean_values, shape_values=shape_values)

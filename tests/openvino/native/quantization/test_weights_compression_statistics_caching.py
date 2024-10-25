@@ -83,24 +83,17 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
         nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
         nncf.SensitivityMetric.MAX_ACTIVATION_VARIANCE,
     ]
-    gptq_values = [False]  # [True, False] ticket: 155538
+    gptq_values = [True, False]
     ignored_scope_values = [
         IgnoredScope(),
-        IgnoredScope(
-            names=[
-                "__module.model.model.decoder.layers.1.self_attn.q_proj/prim::PythonOp/MatMul",
-                "__module.model.model.decoder.layers.11.self_attn.k_proj/prim::PythonOp/MatMul",
-                "__module.model.model.decoder.layers.11.self_attn.k_proj/prim::PythonOp/MatMul",
-            ]
-        ),
+        IgnoredScope(types=["MatMul"]),
     ]
 
-    MODEL_ID = "facebook/opt-125m"
+    MODEL_ID = "hf-internal-testing/tiny-random-OPTForCausalLM"
 
     dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
     model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False, stateful=False)
-
     transform_fn = create_transform_fn(model, tokenizer)
     quantization_dataset = nncf.Dataset(dataset, partial(transform_fn))
 
@@ -112,7 +105,7 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
     ):
         print(
             f"Testing configuration: awq={awq}, group_size={group_size}, ratio={ratio}, \
-            sensitivity_metric={sensitivity_metric}, ignored_scope is empty={len(ignored_scope.names) > 0}"
+            sensitivity_metric={sensitivity_metric}, ignored_scope={ignored_scope}"
         )
 
         # Perform the compression test
@@ -143,7 +136,7 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
             ratio=ratio_values[0],
             awq=True,  # AWQ enabled
             gptq=gptq,
-            group_size=group_size_values[0],  # Using the first group size
+            group_size=group_size_values[1],  # Using the first group size
             scale_estimation=scale_estimation,
             subset_size=subset_size,
             sensitivity_metric=sensitivity_metric_values[0],  # Using the first sensitivity metric

@@ -195,7 +195,7 @@ class TensorCollector:
         self._aggregators: Dict[Tuple[int, int, int], AggregatorBase] = {}
         self._stat_container_kwargs_map: Dict[str, Tuple[int, int, int]] = {}
         self._stat_container = statistic_container
-        self._enabled = True
+        self.enable()
         self.clear_cache()
 
     @property
@@ -301,16 +301,16 @@ class TensorCollector:
             result[key] = val
         return result
 
-    def set_cache(self, config: Dict[str, Any]) -> None:
+    def set_cache(self, statistics: TensorStatistic) -> None:
         """
         Sets cached statistics from given config and disable TensorCollector.
-        :param config: Aggregated values.
+        :param statistics: TensorStatistic.
         """
-        self._cached_statistics = self._get_statistics_container(config)
+        self._cached_statistics = statistics
         self.reset()
         self.disable()
 
-    def _get_statistics_container(self, config: Dict[str, Any]) -> TensorStatistic:
+    def create_statistics_container(self, config: Dict[str, Any]) -> TensorStatistic:
         """
         Returns a TensorStatistic instance with aggregated values.
 
@@ -335,14 +335,14 @@ class TensorCollector:
 
         :return: Aggregated values.
         """
-        if self._cached_statistics:
+        if self._cached_statistics is not None:
             return deepcopy(self._cached_statistics)
 
         aggregated_values = self._aggregate()
         statistics_config = {}
         for container_key, branch_key in self._stat_container_kwargs_map.items():
             statistics_config[container_key] = aggregated_values[branch_key]
-        return self._get_statistics_container(statistics_config)
+        return self.create_statistics_container(statistics_config)
 
     def replace_aggregator(self, key: Tuple[int, int, int], aggregator: AggregatorBase) -> None:
         """
