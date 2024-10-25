@@ -120,7 +120,7 @@ class GraphBuilderMode(FunctionHookMode):
 
         :param name: The name of the input argument.
         :param value: The value of the input argument.
-        :returns: The processed value after the hook is executed.
+        :return: The processed value after the hook is executed.
         """
         if isinstance(value, torch.Tensor):
             self.register_node_for_model_input_tensor(name, value)
@@ -152,7 +152,7 @@ class GraphBuilderMode(FunctionHookMode):
 
         :param name: The name of the input argument.
         :param value: The value of the input argument.
-        :returns: The processed value after the hook is executed.
+        :return: The processed value after the hook is executed.
         """
         value = super().execute_hooks_for_model_output(name, value)
         if isinstance(value, torch.Tensor):
@@ -168,7 +168,7 @@ class GraphBuilderMode(FunctionHookMode):
         :param args: The arguments to the function.
         :param kwargs: The keyword arguments to the function.
         :param op_meta: Metadata for the operation.
-        :returns: The modified arguments and keyword arguments after pre-hooks.
+        :return: The modified arguments and keyword arguments after pre-hooks.
         """
         _args, _kwargs = super().execute_pre_hooks(args, kwargs, op_meta)
         self.register_op_node(_args, _kwargs, op_meta)
@@ -225,7 +225,7 @@ class GraphBuilderMode(FunctionHookMode):
         Overload execute_hooks_for_parameter to register parameters to the graph.
 
         :param value: The tensor to which the post-hook will be applied.
-        :returns: The processed tensor with the applied post-hook, if applicable.
+        :return: The processed tensor with the applied post-hook, if applicable.
         """
         if not isinstance(value, torch.nn.Parameter):
             return value
@@ -333,7 +333,7 @@ class GraphBuilderMode(FunctionHookMode):
 
         :param output: The output of the function.
         :param op_meta: Metadata for the operation.
-        :returns: The modified output after post-hooks.
+        :return: The modified output after post-hooks.
         """
         if isinstance(value, torch.Tensor):
             with self.disable():

@@ -210,7 +210,7 @@ def to_pydot(nx_graph: nx.MultiDiGraph, style_template: PydotStyleTemplate = Pyd
 
     :param nx_graph: Input NetworkX directed graph.
     :param style_template: Style template to determine node and edge styles.
-    :returns: Pydot graph representation of the input NetworkX graph.
+    :return: Pydot graph representation of the input NetworkX graph.
     """
     dot_graph = pydot.Dot("", rankdir="TB")
 

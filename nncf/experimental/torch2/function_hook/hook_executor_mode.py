@@ -65,7 +65,7 @@ def _get_full_fn_name(fn: Callable[..., Any]) -> str:
     Get the full name of a function, including its module if applicable.
 
     :param fn: The function for which to get the full name.
-    :returns: The full name of the function.
+    :return: The full name of the function.
     """
     if inspect.ismethoddescriptor(fn) or inspect.ismethod(fn):
         return fn.__qualname__
@@ -149,7 +149,7 @@ class FunctionHookMode(TorchFunctionMode):
         Wrap a function call to include pushing to and popping from the module call stack.
 
         :param fn_call: The original function call to wrap.
-        :returns: The wrapped function call.
+        :return: The wrapped function call.
         """
 
         def wrapped_call(self_: nn.Module, *args: Tuple[Any, ...], **kwargs: Dict[str, Any]) -> Any:
@@ -165,7 +165,7 @@ class FunctionHookMode(TorchFunctionMode):
         Enter the context manager.
         Wrapping the _call_impl function of each module on first nested enter.
 
-        :returns: The instance of FunctionHookMode.
+        :return: The instance of FunctionHookMode.
         """
         super().__enter__()  # type: ignore
         if self.nested_enter_count == 0:
@@ -211,7 +211,7 @@ class FunctionHookMode(TorchFunctionMode):
         :param types: List of types.
         :param args: The arguments to the function.
         :param kwargs: The keyword arguments to the function.
-        :returns: The output of the function call after hooks have been executed.
+        :return: The output of the function call after hooks have been executed.
         """
         kwargs = kwargs or {}
 
@@ -253,7 +253,7 @@ class FunctionHookMode(TorchFunctionMode):
         """
         Get the name of the current module being executed.
 
-        :returns: The name of the current module.
+        :return: The name of the current module.
         """
         relative_module_names = []
         prev_module = self.module_call_stack[0]
@@ -276,7 +276,7 @@ class FunctionHookMode(TorchFunctionMode):
         Get the name of the current operation being executed.
 
         :param fn_name: The function name of the operation.
-        :returns: The name of the operation.
+        :return: The name of the operation.
         """
         module_name = self.get_current_relative_name()
         op_name = generate_normalized_op_name(module_name, fn_name)
@@ -299,7 +299,7 @@ class FunctionHookMode(TorchFunctionMode):
         If the input is not a `torch.nn.Parameter`, or if no hook is defined, the original tensor is returned unchanged.
 
         :param value: The tensor to which the post-hook will be applied..
-        :returns: The processed tensor with the applied post-hook, if applicable.
+        :return: The processed tensor with the applied post-hook, if applicable.
         """
         if not isinstance(value, torch.nn.Parameter):
             return value
@@ -317,7 +317,7 @@ class FunctionHookMode(TorchFunctionMode):
 
         :param args: The arguments to the function.
         :param kwargs: The keyword arguments to the function.
-        :returns: The modified arguments and keyword arguments after pre-hooks.
+        :return: The modified arguments and keyword arguments after pre-hooks.
         """
         for idx, value in enumerate(args):
             args[idx] = self.execute_hooks_for_parameter(value)
@@ -334,7 +334,7 @@ class FunctionHookMode(TorchFunctionMode):
         :param args: The arguments to the function.
         :param kwargs: The keyword arguments to the function.
         :param op_meta: Metadata for the operation.
-        :returns: The modified arguments and keyword arguments after pre-hooks.
+        :return: The modified arguments and keyword arguments after pre-hooks.
         """
         _args: List[Any] = list(args)
         with self:
@@ -366,7 +366,7 @@ class FunctionHookMode(TorchFunctionMode):
 
         :param output: The output of the function.
         :param op_meta: Metadata for the operation.
-        :returns: The modified output after post-hooks.
+        :return: The modified output after post-hooks.
         """
         with self:
             cls_tuple = None
@@ -390,7 +390,7 @@ class FunctionHookMode(TorchFunctionMode):
 
         :param args: Positional arguments passed to the model's forward method.
         :param kwargs: Keyword arguments passed to the model's forward method.
-        :returns: The processed arguments, with hooks applied to any tensor inputs.
+        :return: The processed arguments, with hooks applied to any tensor inputs.
         """
         forward_signature = inspect.signature(self.model.forward)
         bound_arguments = forward_signature.bind(*args, **kwargs)
@@ -408,7 +408,7 @@ class FunctionHookMode(TorchFunctionMode):
 
         :param name: The name of the input argument.
         :param value: The value of the input argument.
-        :returns: The processed value after the hook is executed.
+        :return: The processed value after the hook is executed.
         """
         return self.hook_storage.execute_post_function_hooks(name, 0, value)
 
@@ -417,7 +417,7 @@ class FunctionHookMode(TorchFunctionMode):
         Processes the outputs from the model, applying pre-hooks to any tensors found in the output.
 
         :param outputs: The outputs returned by the model's forward method.
-        :returns: The processed outputs with hooks applied.
+        :return: The processed outputs with hooks applied.
         """
         if isinstance(outputs, Tensor):
             return self.execute_hooks_for_model_output("output", outputs)
@@ -441,7 +441,7 @@ class FunctionHookMode(TorchFunctionMode):
 
         :param name: The name of the input argument.
         :param value: The value of the input argument.
-        :returns: The processed value after the hook is executed.
+        :return: The processed value after the hook is executed.
         """
         return self.hook_storage.execute_pre_function_hooks(name, 0, value)
 
@@ -449,6 +449,8 @@ class FunctionHookMode(TorchFunctionMode):
     def disable(self) -> Iterator[None]:
         """
         Temporarily disables the function tracing and execution hooks within a context.
+
+        :return: A context manager which temporary disables the function tracing and execution hooks within a context.
         """
         ret = self.enabled
         self.enabled = False
