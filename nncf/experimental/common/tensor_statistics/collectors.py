@@ -265,6 +265,8 @@ class TensorCollector:
         :param inputs: Tensor inputs in format of dict where keys
             are reducer names and values are correspondent input tensors
         """
+        if not self.enabled:
+            return
         reduced_inputs = {}
         for reducer in self._reducers:
             reducer_hash = hash(reducer)
@@ -308,14 +310,14 @@ class TensorCollector:
         self.reset()
         self.disable()
 
-    def _get_statistics_container(self, config: Dict[str, Any]) -> Union[TensorStatistic, Dict[str, Any]]:
+    def _get_statistics_container(self, config: Dict[str, Any]) -> TensorStatistic:
         """
-        Returns a TensorStatistic instance or a dict with aggregated values.
+        Returns a TensorStatistic instance with aggregated values.
 
         :param config: Aggregated values.
-        :return: TensorStatistic instance or a dict.
+        :return: TensorStatistic instance.
         """
-        if not self._stat_container:
+        if not self._stat_container:  # TODO: need to remove an ability to return a Dict.
             return config
         return self._stat_container.from_config(config)
 
@@ -326,7 +328,7 @@ class TensorCollector:
         self._cached_statistics = None
         self.enable()
 
-    def get_statistics(self) -> Union[TensorStatistic, Dict[str, Any]]:
+    def get_statistics(self) -> TensorStatistic:
         """
         Returns aggregated values in format of a TensorStatistic instance or
         a dict.

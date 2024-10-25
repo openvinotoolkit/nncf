@@ -24,10 +24,10 @@ class TensorStatistic:
 
     TENSOR_STATISTIC_OUTPUT_KEY = "tensor_statistic_output"
 
-    def get_data(self):
+    def get_data(self) -> Dict[str, Any]:
         return {key: getattr(self, key) for key in self.keys()}
 
-    def load_data(self, data: Dict):
+    def load_data(self, data: Dict[str, Any]):
         for key in self.keys():
             setattr(self, key, data.get(key))
 
@@ -37,7 +37,7 @@ class TensorStatistic:
         return cls(**args)
 
     @classmethod
-    def keys(cls):
+    def keys(cls) -> Tuple[str]:
         return ()
 
 
