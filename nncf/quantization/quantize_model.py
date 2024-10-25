@@ -524,7 +524,7 @@ def compress_weights(
             raise nncf.ParameterNotSupportedError("Torch backend does not support backup_mode option.")
 
         if advanced_parameters and advanced_parameters.statistics_dir_path:
-            raise AttributeError("Torch does not support statistics caching.")
+            raise nncf.ParameterNotSupportedError("Torch does not support statistics caching.")
 
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:

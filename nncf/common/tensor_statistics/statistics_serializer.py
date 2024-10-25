@@ -75,7 +75,7 @@ def load_from_dir(dir_path: str) -> Tuple[Dict[str, Any], Dict[str, str]]:
                 original_name = mapping.get(sanitized_name, sanitized_name)
                 statistics[original_name] = pickle.load(f)
         except (pickle.UnpicklingError, IOError) as e:
-            raise RuntimeError(f"Error loading statistics from {statistics_file.name}: {e}")
+            raise nncf.InternalError(f"Error loading statistics from {statistics_file.name}: {e}")
     return statistics, metadata.get("metadata", {})
 
 
@@ -104,7 +104,7 @@ def dump_to_dir(
             with gzip.open(file_path, "wb") as f:
                 pickle.dump(statistics_value, f)
         except (IOError, pickle.PicklingError) as e:
-            raise RuntimeError(f"Failed to write data to file {file_path}: {e}")
+            raise nncf.InternalError(f"Failed to write data to file {file_path}: {e}")
 
     # Add additional metadata if provided
     if additional_metadata:

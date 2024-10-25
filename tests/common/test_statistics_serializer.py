@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+import nncf
 from nncf.common.tensor_statistics.statistics_serializer import dump_to_dir
 from nncf.common.tensor_statistics.statistics_serializer import load_from_dir
 from nncf.common.tensor_statistics.statistics_serializer import load_metadata
@@ -79,5 +80,5 @@ def test_invalid_gzip_file(tmp_path):
         f.write("This is not a valid gzip file")
 
     # Expect the load_from_dir to raise an error when trying to load the invalid file
-    with pytest.raises(RuntimeError, match="Error loading statistics"):
+    with pytest.raises(nncf.InternalError, match="Error loading statistics"):
         load_from_dir(tmp_path)

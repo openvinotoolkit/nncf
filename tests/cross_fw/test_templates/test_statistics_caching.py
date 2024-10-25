@@ -14,12 +14,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
-from nncf.errors import ValidationError
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensor import Tensor
@@ -98,5 +98,5 @@ class TemplateTestStatisticsCaching:
         assert (tmp_path / test_file).exists(), "Statistics file was not created"
         # spoil backend
         aggregator.BACKEND = BackendType.TENSORFLOW
-        with pytest.raises(ValidationError):
+        with pytest.raises(nncf.ValidationError):
             aggregator.load_statistics_from_dir(tmp_path / test_file)
