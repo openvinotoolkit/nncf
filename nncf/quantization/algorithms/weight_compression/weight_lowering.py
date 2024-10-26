@@ -481,14 +481,23 @@ def do_int_quantization(
     scale_shape = None if precomputed_scale is None else precomputed_scale.shape
     zero_point_shape = None if precomputed_zero_point is None else precomputed_zero_point.shape
 
+    asym_mode = config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]
     if ov_model_params is None:
-        # ov_model_params = OVModelParameters(weight.dtype)
+        output_dtype = None
+        return_ov_tensors = False
+        if config.num_bits == 4:
+            if weight.backend == TensorBackend.ov:
+                return_ov_tensors = weight.backend == TensorBackend.ov
+            else:
+                output_dtype = TensorDataType.uint8 if asym_mode else TensorDataType.int8
         ov_model_params = OVModelParameters(
-            weight.dtype,
+            input_dtype=weight.dtype,
+            output_dtype=output_dtype,
             dynamic_shapes=bool(int(os.environ.get("DYNAMIC_COMPRESSION", "0"))),
             recompile=bool(int(os.environ.get("RECOMPILE", "0"))),
             release_memory=bool(int(os.environ.get("RELEASE_MEMORY", "0"))),
             share_outputs=bool(int(os.environ.get("SHARE_OUTPUTS", "0"))),
+            return_ov_tensors=return_ov_tensors,
         )
 
     model = get_compress_weight_model(
@@ -501,14 +510,27 @@ def do_int_quantization(
     )
 
     if precomputed_scale is None:
-        compressed_weight, scale, zero_point = model([weight])
+        # weight -> compressed_weight, scale, (zero_point)
+        results = model([weight])
+        if asym_mode:
+            compressed_weight, scale, zero_point = results
+        else:
+            compressed_weight, scale = results
+            zero_point = None
+
         # Scale is always in fp32 so there is no need to store it in ov.Tensor
         if scale.backend == TensorBackend.ov:
             scale = scale.to_backend(TensorBackend.numpy)
+    elif precomputed_zero_point is None and asym_mode:
+        # weight, scale -> compressed_weight, zero_point
+        compressed_weight, zero_point = model([weight, precomputed_scale])
+        scale = precomputed_scale
     else:
-        inputs = [weight, precomputed_scale]
-        if precomputed_zero_point is not None:
-            inputs += [precomputed_zero_point]
+        inputs = (
+            [weight, precomputed_scale]
+            if precomputed_zero_point is None
+            else [weight, precomputed_scale, precomputed_zero_point]
+        )
         compressed_weight = model(inputs)[0]
         scale, zero_point = precomputed_scale, precomputed_zero_point
 

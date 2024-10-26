@@ -11,7 +11,7 @@
 
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, Union
 
 import numpy as np
 import openvino as ov
@@ -35,6 +35,7 @@ OV_MODEL_CACHE = ResultsCacheContainer()
 @dataclass
 class OVModelParameters:
     input_dtype: TensorDataType
+    output_dtype: Optional[TensorDataType] = None
     dynamic_shapes: bool = False
     recompile: bool = False
     release_memory: bool = True
@@ -56,30 +57,28 @@ class OVModelParameters:
         )
 
 
-def run_model(ov_model_params: OVModelParameters, compiled_model: ov.CompiledModel, inputs: TensorList) -> TensorList:
-    # Returns results as numpy tensors
-    if any(isinstance(it, Tensor) for it in inputs):
-        inputs = [inp.data for inp in inputs]
-    outputs = compiled_model(
-        inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs
-    )
-    outputs = [Tensor(outputs[i]) for i in range(len(outputs))]
-    if ov_model_params.release_memory:
-        compiled_model.release_memory()
-    return outputs
-
-
-def run_model_via_infer_request(
-    ov_model_params: OVModelParameters, compiled_model: ov.CompiledModel, inputs: TensorList
+def run_model(
+    ov_model_params: OVModelParameters, compiled_model: ov.CompiledModel, return_ov_tensors: bool, inputs: TensorList
 ) -> TensorList:
-    # Returns results as ov tensors
     if any(isinstance(it, Tensor) for it in inputs):
         inputs = [inp.data for inp in inputs]
-    infer_request = compiled_model.create_infer_request()
-    infer_request.infer(inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs)
-    outputs = [Tensor(infer_request.get_output_tensor(i)) for i in range(len(infer_request.results))]
+
+    if return_ov_tensors:
+        infer_request = compiled_model.create_infer_request()
+        infer_request.infer(
+            inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs
+        )
+        outputs = [infer_request.get_output_tensor(i) for i in range(len(infer_request.results))]
+    else:
+        outputs = compiled_model(
+            inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs
+        )
+        outputs = [outputs[i] for i in range(len(outputs))]
+    outputs = [Tensor(it) for it in outputs]
+
     if ov_model_params.release_memory:
         compiled_model.release_memory()
+
     return outputs
 
 
@@ -93,8 +92,6 @@ def get_compress_weight_model(
 ) -> ModelCallable:
     if scale_shape is None and zero_point_shape is not None:
         raise Exception("Zero point shape can only be provided if scale shape is provided.")
-    # if (scale_shape is None) != (reduction_axes is not None):
-    #     raise Exception("Either one of scale_shape or reduction_axes must be provided at the same time.")
 
     if ov_model_params.dynamic_shapes:
         weight_shape = (-1,) * len(weight_shape)
@@ -102,9 +99,6 @@ def get_compress_weight_model(
             scale_shape = (-1,) * (len(scale_shape) - 1) + (1,)
         if zero_point_shape is not None:
             zero_point_shape = (-1,) * (len(zero_point_shape) - 1) + (1,)
-
-    if config.num_bits == 4:
-        ov_model_params.return_ov_tensors = True
 
     return _build_compress_model(
         config,
@@ -150,28 +144,29 @@ def _build_compress_model(
     zero_point_shape: Optional[Tuple] = None,
     reduction_axes: Optional[Tuple] = None,
     return_nodes: bool = False,
-) -> ModelCallable:
+) -> Union[ModelCallable, Tuple[List[ov._pyopenvino.Node], List[ov._pyopenvino.Node]]]:
     weight = opset.parameter(weight_shape, name="w", dtype=OV_DTYPE_MAP[ov_model_params.input_dtype])
     ov_parameters = [weight]
 
-    if scale_shape is not None:
-        # Compute only the compressed weight
+    mode = config.mode
+    asym_mode = mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]
+    num_bits = config.num_bits
+    eps = np.finfo(np.float32).eps
+    if asym_mode:
+        level_low = 0
+        level_high = 2**num_bits - 1
+    else:
+        level_low = -(2 ** (num_bits - 1))
+        level_high = 2 ** (num_bits - 1) - 1
 
+    min_values = None
+    if scale_shape is not None:
+        # Scale is given as an input
         scale = opset.parameter(scale_shape, name="s", dtype=ov.Type.f32)
         ov_parameters.append(scale)
-
-        zero_point = None
-        if config.mode in [CompressWeightsMode.INT8_ASYM, config.mode.INT4_ASYM]:
-            zero_point = opset.parameter(zero_point_shape, name="zp", dtype=ov.Type.i32)
-            ov_parameters.append(zero_point)
-            zero_point = opset.convert(zero_point, ov.Type.f32)
     else:
-        # Compute compressed weight, scale and, possibly, zero point
-
-        mode = config.mode
-        num_bits = config.num_bits
-        eps = np.finfo(np.float32).eps
-        if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:
+        # Compute scale
+        if asym_mode:
             min_values = opset.reduce_min(
                 weight, reduction_axes=reduction_axes, keep_dims=True
             )  # [a1, r, a2] -> [a1, 1, a2]
@@ -180,49 +175,64 @@ def _build_compress_model(
             )  # [a1, r, a2] -> [a1, 1, a2]
             min_values, max_values = opset.convert(min_values, ov.Type.f32), opset.convert(max_values, ov.Type.f32)
 
-            level_low = 0
-            level_high = 2**num_bits - 1
             levels = level_high - level_low + 1
             scale = (max_values - min_values) / opset.constant(levels - 1, ov.Type.f32)
             scale = opset.select(opset.abs(scale) < eps, eps, scale)
-
-            zero_point = opset.constant(level_low, ov.Type.f32) - opset.round(min_values / scale)
-            zero_point = opset.clamp(zero_point, level_low, level_high)
         else:
-            zero_point = None
-            level_high = opset.constant(2 ** (num_bits - 1), ov.Type.f32)
-
             w_abs_min = opset.abs(opset.reduce_min(weight, reduction_axes=reduction_axes, keep_dims=True))
             w_max = opset.reduce_max(weight, reduction_axes=reduction_axes, keep_dims=True)
             w_abs_min, w_max = opset.convert(w_abs_min, ov.Type.f32), opset.convert(w_max, ov.Type.f32)
 
             scale = opset.select(w_abs_min >= w_max, w_abs_min, opset.constant(0, ov.Type.f32) - w_max)
-            scale /= level_high
+            scale /= opset.constant(level_high, ov.Type.f32)
             scale = opset.select(opset.abs(scale) < eps, eps, scale)
+
+    zero_point = None
+    if zero_point_shape is not None:
+        # Zero point is given as an input
+        zero_point = opset.parameter(zero_point_shape, name="zp", dtype=ov.Type.i32)
+        ov_parameters.append(zero_point)
+        zero_point = opset.convert(zero_point, ov.Type.f32)
+    elif mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:
+        # Compute zero point
+        if min_values is None:
+            min_values = opset.reduce_min(
+                weight, reduction_axes=reduction_axes, keep_dims=True
+            )  # [a1, r, a2] -> [a1, 1, a2]
+            min_values = opset.convert(min_values, ov.Type.f32)
+
+        level_low = 0
+        level_high = 2**num_bits - 1
+        zero_point = opset.constant(level_low, ov.Type.f32) - opset.round(min_values / scale)
+        zero_point = opset.clamp(zero_point, level_low, level_high)
 
     if weight.get_element_type() != ov.Type.f32:
         weight = opset.convert(weight, ov.Type.f32)
     compressed_w = weight / scale
 
-    num_bits = config.num_bits
-    if config.mode in [CompressWeightsMode.INT8_ASYM, config.mode.INT4_ASYM]:
-        dtype = ov.Type.u8 if config.mode == CompressWeightsMode.INT8_ASYM else ov.Type.u4
-        level_low = 0
-        level_high = 2**num_bits - 1
+    if asym_mode:
+        if ov_model_params.output_dtype is not None:
+            dtype = OV_DTYPE_MAP[ov_model_params.output_dtype]
+        else:
+            dtype = ov.Type.u8 if config.mode == CompressWeightsMode.INT8_ASYM else ov.Type.u4
         compressed_w += zero_point
-    elif config.mode in [CompressWeightsMode.INT8_SYM, config.mode.INT4_SYM]:
-        dtype = ov.Type.i8 if config.mode == CompressWeightsMode.INT8_SYM else ov.Type.u4
-        level_low = -(2 ** (num_bits - 1))
-        level_high = 2 ** (num_bits - 1) - 1
     else:
-        raise Exception
+        if ov_model_params.output_dtype is not None:
+            dtype = OV_DTYPE_MAP[ov_model_params.output_dtype]
+        else:
+            dtype = ov.Type.i8 if config.mode == CompressWeightsMode.INT8_SYM else ov.Type.i4
 
     compressed_w = opset.clamp(opset.round(compressed_w), level_low, level_high)
     compressed_w = opset.convert(compressed_w, dtype, name="compressed_weights")
 
     ov_results = [compressed_w]
-    if len(ov_parameters) == 1:
-        ov_results.append(scale)
+    if len(ov_parameters) != 3:
+        # Two cases:
+        #   1. weight -> compressed_weight, scale, (zero_point)
+        #   2. weight, scale -> compressed_weight, (zero_point)
+        if len(ov_parameters) == 1:
+            ov_results.append(scale)
+
         if zero_point is not None:
             ov_results.append(opset.convert(zero_point, compressed_w.get_element_type()))
 
@@ -232,8 +242,7 @@ def _build_compress_model(
     model = ov.Model(ov_results, ov_parameters)
     compiled_model = ov.compile_model(model, device_name="CPU")
 
-    run_fn = run_model_via_infer_request if ov_model_params.return_ov_tensors else run_model
-    return partial(run_fn, ov_model_params, compiled_model)
+    return partial(run_model, ov_model_params, compiled_model, ov_model_params.return_ov_tensors)
 
 
 @cache_results(OV_MODEL_CACHE)
@@ -249,25 +258,32 @@ def _build_compress_decompress_model(
     )
 
     if config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:
-        if len(ov_results) == 1:
-            compressed_w = ov_results[0]
-            s, zp = ov_parameters[1], ov_parameters[2]
+        if len(ov_parameters) == 1:
+            # weight -> compressed_weight, scale, zero_point
+            compressed_w, scale, zero_point = ov_results
+        elif len(ov_parameters) == 2:
+            # weight, scale -> compressed_weight, zero_point
+            compressed_w, zero_point = ov_results
+            scale = ov_parameters[1]
         else:
-            compressed_w, s, zp = ov_results
-        decompressed_w = (compressed_w - zp) * s
+            # weight, scale, zero_point -> compressed_weight
+            compressed_w = ov_results[0]
+            scale, zero_point = ov_parameters[1:]
+        decompressed_w = opset.convert(opset.convert(compressed_w, ov.Type.i32) - zero_point, ov.Type.f32) * scale
     else:
-        if len(ov_results) == 1:
-            compressed_w = ov_results[0]
-            s = ov_parameters[1]
+        if len(ov_parameters) == 1:
+            # weight -> compressed_weight, scale
+            compressed_w, scale = ov_results
         else:
-            compressed_w, s = ov_results
-        decompressed_w = compressed_w * s
+            # weight, scale -> compressed_weight
+            compressed_w = ov_results[0]
+            scale = ov_parameters[1]
+        decompressed_w = opset.convert(compressed_w, ov.Type.f32) * scale
 
     model = ov.Model([decompressed_w], ov_parameters)
     compiled_model = ov.compile_model(model, device_name="CPU")
 
-    run_fn = run_model_via_infer_request if ov_model_params.return_ov_tensors else run_model
-    return partial(run_fn, ov_model_params, compiled_model)
+    return partial(run_model, ov_model_params, compiled_model, ov_model_params.return_ov_tensors)
 
 
 def get_astype_model(ov_model_params: OVModelParameters, arg_shape: Tuple, dtype: TensorDataType) -> ModelCallable:
@@ -283,5 +299,4 @@ def _build_astype_model(ov_model_params: OVModelParameters, arg_shape: Tuple, dt
     model = ov.Model([res], [arg])
     compiled_model = ov.compile_model(model, device_name="CPU")
 
-    run_fn = run_model_via_infer_request if ov_model_params.return_ov_tensors else run_model
-    return partial(run_fn, ov_model_params, compiled_model)
+    return partial(run_model, ov_model_params, compiled_model, ov_model_params.return_ov_tensors)

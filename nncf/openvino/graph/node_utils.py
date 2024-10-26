@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
+
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
@@ -107,7 +107,7 @@ def get_number_if_op(model: ov.Model) -> int:
     return cnt_if_op(model, 0)
 
 
-def get_const_value(const_node: ov.Node, cast_bf16_to_fp32: Optional[bool] = True) -> np.ndarray:
+def get_const_value(const_node: ov.Node, cast_bf16_to_fp32: Optional[bool] = False) -> np.ndarray:
     """
     Returns the constant tensor for the node.
     This method is applicable only for the floating-point constant data.
