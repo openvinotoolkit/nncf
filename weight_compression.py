@@ -191,7 +191,7 @@ def main(args):
         f.write(
             f"{model_path},"
             f"{model_dtype.upper()},"
-            f"{'NumPy' if numpy_compression else 'OV'},"
+            f"{'-' if numpy_compression else 'OV'},"
             f"{'-' if numpy_compression else recompile},"
             f"{'-' if numpy_compression else release_memory},"
             f"{'-' if numpy_compression else share_outputs},"
