@@ -956,7 +956,7 @@ def _get_connected_nodes(graph: torch.fx.Graph) -> List[torch.fx.Node]:
         if current_node in connected_nodes:
             continue
         connected_nodes.add(current_node)
-        nodes_to_visit.extend([node for node in current_node.all_input_nodes])
+        nodes_to_visit.extend(current_node.all_input_nodes)
     return connected_nodes
 
 

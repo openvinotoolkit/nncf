@@ -24,6 +24,8 @@ from torch.ao.quantization.observer import PerChannelMinMaxObserver
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
+import nncf.common
+import nncf.common.factory
 from nncf.common.factory import NNCFGraph
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
@@ -33,6 +35,7 @@ from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.experimental.torch.fx.transformations import _get_connected_nodes
 from nncf.experimental.torch.fx.transformations import _set_new_node_meta
 from nncf.experimental.torch.fx.transformations import bias_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
@@ -478,3 +481,18 @@ def test_update_shared_constant():
     fx_node_to_check_const_value = get_tensor_constant_from_node(fx_node_to_check_const, captured_model)
 
     assert fx_node_to_check_const_value == torch.tensor([100])
+
+
+def test_get_connected_nodes():
+    model = MultiBranchesConnectedModel()
+    ex_inputs = torch.ones((1, 3, 3, 3))
+    captured_model = _capture_model(model, ex_inputs)
+    connected_nodes_list = _get_connected_nodes(captured_model.graph)
+    assert len(connected_nodes_list) == 18
+
+    add_node = get_graph_node_by_name(captured_model.graph, "add__1")
+    conv_1_node = get_graph_node_by_name(captured_model.graph, "conv2d")
+    conv_2_node = get_graph_node_by_name(captured_model.graph, "conv2d_1")
+    add_node.replace_input_with(conv_2_node, conv_1_node)
+    connected_nodes_list = _get_connected_nodes(captured_model.graph)
+    assert len(connected_nodes_list) == 15
