@@ -12,6 +12,7 @@
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
+import nncf
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -101,7 +102,7 @@ class ScaleEstimation:
 
             self._backend_entity = OVWeightCompressionAlgoBackend(model, self.name_to_node_mapping)
         else:
-            raise RuntimeError(
+            raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific AWQ entity because {} is not supported!".format(model_backend.value)
             )
 
@@ -370,6 +371,23 @@ class ScaleEstimation:
             result_scale = fns.squeeze(result_scale, axis=1)
 
         return result_scale, zp
+
+    @staticmethod
+    def activations_to_wc_statistics(activations: List[Tensor]) -> WCTensorStatistic:
+        """
+        Mimic the activation reducing logic from WeightCompression.get_statistic_points.
+
+        :param activations: List of raw activations.
+        :return: Instance of WCTensorStatistic class containing reduced activations and shapes.
+        """
+        mean_values = []
+        shapes = []
+        for act in activations:
+            shapes.append(act.shape)
+            reduction_shape = tuple(range(act.ndim - 1))
+            mean_values.append(fns.mean(act, axis=reduction_shape))
+        wc_statistics = WCTensorStatistic(mean_values, shapes)
+        return wc_statistics
 
 
 def get_target_zero_mask(compressed_weights: Tensor, zp: Optional[Tensor] = None) -> Tuple[Tensor, Tensor]:

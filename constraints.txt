@@ -6,8 +6,8 @@ torch==2.4.0
 torchvision==0.19.0
 
 # ONNX
-onnx==1.16.0
-onnxruntime==1.17.1
+onnx==1.16.2
+onnxruntime==1.19.2
 
 # TensorFlow
 tensorflow==2.12.1; python_version < '3.9'

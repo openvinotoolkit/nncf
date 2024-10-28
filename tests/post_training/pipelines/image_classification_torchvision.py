@@ -92,7 +92,9 @@ class ImageClassificationTorchvision(ImageClassificationBase):
 
         elif self.backend in [BackendType.OV, BackendType.FP32]:
             with torch.no_grad():
-                self.model = ov.convert_model(model, example_input=self.dummy_tensor, input=self.input_size)
+                with disable_patching():
+                    m = torch.export.export(model, args=(self.dummy_tensor,))
+                self.model = ov.convert_model(m, example_input=self.dummy_tensor, input=self.input_size)
             self.input_name = list(inp.get_any_name() for inp in self.model.inputs)[0]
 
         self._dump_model_fp32()

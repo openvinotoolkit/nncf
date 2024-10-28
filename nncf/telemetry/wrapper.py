@@ -16,10 +16,10 @@ from abc import abstractmethod
 from typing import Callable, Optional
 from unittest.mock import MagicMock
 
-from nncf import __version__
 from nncf.common.logging import nncf_logger
 from nncf.definitions import NNCF_CI_ENV_VAR_NAME
 from nncf.definitions import NNCF_DEV_ENV_VAR_NAME
+from nncf.version import __version__ as __version__
 
 NNCFTelemetryStub = MagicMock
 
@@ -92,10 +92,12 @@ class NNCFTelemetry(ITelemetry):
     MEASUREMENT_ID = "G-W5E9RNLD4H"
 
     def __init__(self):
+        self._app_name = "nncf"
+        self._app_version = __version__
         try:
             self._impl = Telemetry(
-                app_name="nncf",
-                app_version=__version__,
+                app_name=self._app_name,
+                app_version=self._app_version,
                 tid=self.MEASUREMENT_ID,
                 backend="ga4",
                 enable_opt_in_dialog=False,
@@ -121,7 +123,16 @@ class NNCFTelemetry(ITelemetry):
     ):
         if event_value is None:
             event_value = 1
-        self._impl.send_event(event_category, event_action, event_label, event_value, force_send, **kwargs)
+        self._impl.send_event(
+            event_category=event_category,
+            event_action=event_action,
+            event_label=event_label,
+            event_value=event_value,
+            app_name=self._app_name,
+            app_version=self._app_version,
+            force_send=force_send,
+            **kwargs,
+        )
 
     @skip_if_raised
     def end_session(self, category: str, **kwargs):

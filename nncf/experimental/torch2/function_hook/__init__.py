@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph as build_graph
 from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage as get_hook_storage
 from nncf.experimental.torch2.function_hook.wrapper import is_wrapped as is_wrapped
 from nncf.experimental.torch2.function_hook.wrapper import register_post_function_hook as register_post_function_hook

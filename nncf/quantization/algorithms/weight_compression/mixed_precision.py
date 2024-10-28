@@ -237,9 +237,9 @@ class DataBasedCriterion(DataFreeCriterion):
         statistic_container = StatisticPointsContainer()
         for act_node, output_port_id in nodes_and_port_ids:
             n_dims = len(graph.get_output_edges_by_port_id(act_node, output_port_id)[0].tensor_shape)
-            if n_dims < 3:
+            if n_dims < 2:
                 raise RuntimeError(
-                    f"Data-aware mixed precision criteria are not supported for MatMuls with 1D/2D activations. "
+                    f"Data-aware mixed precision criteria are not supported for MatMuls with 1D inputs. "
                     f"Node: {act_node.node_name}, number of dimensions: {n_dims}."
                 )
             statistic_point = self._backend_entity.target_point(

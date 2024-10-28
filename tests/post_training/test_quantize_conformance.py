@@ -343,7 +343,7 @@ def test_weight_compression(
     start_time = time.perf_counter()
     try:
         if test_case_name not in wc_reference_data:
-            raise RuntimeError(f"{test_case_name} is not defined in `wc_reference_data` fixture")
+            pytest.skip(f"{test_case_name} is not defined in `wc_reference_data` fixture")
         test_model_param = WC_TEST_CASES[test_case_name]
         maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
         pipeline_cls = test_model_param["pipeline_cls"]

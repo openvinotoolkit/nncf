@@ -49,16 +49,12 @@ from nncf.quantization.quantize_model import BATCHWISE_STATISTICS_WARNING
 from nncf.quantization.quantize_model import is_model_no_batchwise_support
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
-from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
 from nncf.scopes import validate_ignored_scope
-from nncf.telemetry.decorator import tracked_function
-from nncf.telemetry.events import NNCF_OV_CATEGORY
 
 TTensor = TypeVar("TTensor")
 
 
-@tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
 def native_quantize_if_op_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
@@ -141,7 +137,6 @@ def native_quantize_if_op_impl(
     return quantized_model
 
 
-@tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
 def native_quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
@@ -189,9 +184,6 @@ def native_quantize_impl(
     return quantized_model
 
 
-@tracked_function(
-    NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset", "max_drop", "drop_type"]
-)
 def quantize_with_accuracy_control_impl(
     model: ov.Model,
     calibration_dataset: Dataset,

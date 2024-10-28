@@ -126,7 +126,7 @@ class WCTensorStatistic(TensorStatistic):
     MEAN_STAT = "mean_values"
     SHAPE_STAT = "shape_values"
 
-    def __init__(self, mean_values: List[Tensor], shapes: List[Tuple[int]]):
+    def __init__(self, mean_values: List[Tensor], shapes: List[Tuple[int, ...]]):
         """
         :param mean_values: List of N tensors of shape [HiddenDim] obtained by reducing activations along batch and
             sequence length dimensions.
