@@ -11,6 +11,7 @@
 from copy import deepcopy
 from functools import partial
 from itertools import product
+from typing import Tuple
 
 import datasets
 import openvino as ov
@@ -21,12 +22,19 @@ import nncf
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.scopes import IgnoredScope
 
+MODEL_ID = "hf-internal-testing/tiny-random-OPTForCausalLM"
+DEFAULT_RATIO = 0.4
+DEFAULT_GROUP_SIZE = 4
+DEFAULT_SENSITIVITY = nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION
+DEFAULT_IGNORED_SCOPE = IgnoredScope()
+DEFAULT_SUBSET_SIZE = 4
+DEFAULT_MODE = nncf.CompressWeightsMode.INT4_ASYM
 
-def create_transform_fn(model, tokenizer):
+
+def create_transform_fn(model: OVModelForCausalLM, tokenizer: AutoTokenizer):
     def transform_fn(data, model=model, tokenizer=tokenizer):
         tokenized_text = tokenizer(data["text"], return_tensors="np")
         input_ids = tokenized_text["input_ids"]
-
         inputs = {"input_ids": input_ids, "attention_mask": tokenized_text["attention_mask"]}
 
         batch_size = input_ids.shape[0]
@@ -35,83 +43,37 @@ def create_transform_fn(model, tokenizer):
                 model_inputs = model.model.input(input_name)
                 shape = model_inputs.get_partial_shape()
                 shape[0] = batch_size
-                if shape[2].is_dynamic:
-                    shape[2] = 0
-                else:
-                    shape[1] = 0
+                shape[2 if shape[2].is_dynamic else 1] = 0
                 inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
-
         return inputs
 
     return transform_fn
 
 
-def test_weight_compression_statistics_caching(tmp_path, mocker):
-    """
-    Evaluates the weight compression process for the tiny model,
-    specifically focusing on validating the statistics caching mechanism. The test ensures
-    that the caching mechanism behaves correctly by:
+def _setup_model_and_dataset(model_id: str) -> Tuple[OVModelForCausalLM, nncf.Dataset]:
+    dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    model = OVModelForCausalLM.from_pretrained(model_id, export=True, load_in_8bit=False, compile=False, stateful=False)
+    transform_fn = create_transform_fn(model, tokenizer)
+    quantization_dataset = nncf.Dataset(dataset, partial(transform_fn))
+    return model, quantization_dataset
 
-    1. Collecting statistics once during the compression process.
-    2. Loading statistics multiple times, corresponding to the number of different algorithm configurations tested.
 
-    The test iterates over various combinations of compression parameters, including:
-
-    - AWQ
-    - Group size for quantization
-    - Compression ratios
-    - Sensitivity metrics (e.g., Hessian Input Activation)
-    - GPTQ
-    - Scale estimation
-    - Ignored scope
-    """
-    from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
-
-    collect_statistics_spy = mocker.spy(OVStatisticsAggregator, "collect_statistics")
-    load_statistics_from_dir_spy = mocker.spy(OVStatisticsAggregator, "load_statistics_from_dir")
-    dump_statistics_spy = mocker.spy(OVStatisticsAggregator, "dump_statistics")
-
-    # Constant Parameters
-    subset_size = 4
-    mode = nncf.CompressWeightsMode.INT4_ASYM
-
-    # Compression Parameters
-    awq_values = [True, False]
-    group_size_values = [1, 4]
-    ratio_values = [0.4, 0.8]
-    sensitivity_metric_values = [
+def _test_basic_configurations(model, quantization_dataset, tmp_path, subset_size, mode) -> int:
+    awq_options = [True, False]
+    group_size_options = [1, 4]
+    ratio_options = [0.4, 0.8]
+    sensitivity_metrics = [
         nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
         nncf.SensitivityMetric.MAX_ACTIVATION_VARIANCE,
     ]
-    ignored_scope_values = [
-        IgnoredScope(),
-        IgnoredScope(types=["MatMul"]),
-    ]
-    # Advanced parameters
-    gptq_values = [True, False]
-    lora_correction_values = [True, False]
-    scale_estimation_values = [True, False]
+    ignored_scopes = [IgnoredScope(), IgnoredScope(types=["MatMul"])]
 
-    MODEL_ID = "hf-internal-testing/tiny-random-OPTForCausalLM"
-
-    dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False, stateful=False)
-    transform_fn = create_transform_fn(model, tokenizer)
-    quantization_dataset = nncf.Dataset(dataset, partial(transform_fn))
-
-    load_statistics_number = 0
-
-    # Test basic configurations (AWQ, group size, ratio, sensitivity metric, ignored_scope)
-    for awq, group_size, ratio, sensitivity_metric, ignored_scope in product(
-        awq_values, group_size_values, ratio_values, sensitivity_metric_values, ignored_scope_values
+    load_count = 0
+    for awq, group_size, ratio, sensitivity, scope in product(
+        awq_options, group_size_options, ratio_options, sensitivity_metrics, ignored_scopes
     ):
-        print(
-            f"Testing configuration: awq={awq}, group_size={group_size}, ratio={ratio}, \
-            sensitivity_metric={sensitivity_metric}, ignored_scope={ignored_scope}"
-        )
-
-        # Perform the compression test
+        print(f"Testing: AWQ={awq}, Group={group_size}, Ratio={ratio}, Metric={sensitivity}, Scope={scope}")
         nncf.compress_weights(
             deepcopy(model.model),
             mode=mode,
@@ -122,63 +84,90 @@ def test_weight_compression_statistics_caching(tmp_path, mocker):
             group_size=group_size,
             scale_estimation=False,
             subset_size=subset_size,
-            sensitivity_metric=sensitivity_metric,
-            ignored_scope=ignored_scope,
+            sensitivity_metric=sensitivity,
+            ignored_scope=scope,
+            lora_correction=False,
             advanced_parameters=AdvancedCompressionParameters(statistics_path=tmp_path / "statistics"),
         )
-        load_statistics_number += 1
+        load_count += 1
+    return load_count
 
-    # Test advanced configurations (GPTQ, scale estimation)
-    for gptq, scale_estimation in product(gptq_values, scale_estimation_values):
-        print(
-            f"Testing advanced config: awq={True}, gptq={gptq}, scale_estimation={scale_estimation}, \
-            lora_correction={False}"
-        )
 
+def _test_advanced_gptq_scale_estimation(model, quantization_dataset, tmp_path, subset_size, mode) -> int:
+    load_count = 0
+    for gptq, scale_est in product([True, False], [True, False]):
+        print(f"Testing: AWQ=True, GPTQ={gptq}, Scale={scale_est}, LoRA=False")
         nncf.compress_weights(
             deepcopy(model.model),
             mode=mode,
             dataset=quantization_dataset,
-            ratio=ratio_values[0],
-            awq=True,  # AWQ enabled
+            ratio=DEFAULT_RATIO,
+            awq=True,
             gptq=gptq,
-            group_size=group_size_values[1],  # Using the first group size
-            scale_estimation=scale_estimation,
+            group_size=DEFAULT_GROUP_SIZE,
+            scale_estimation=scale_est,
             subset_size=subset_size,
-            sensitivity_metric=sensitivity_metric_values[0],  # Using the first sensitivity metric
-            ignored_scope=ignored_scope_values[0],
-            lora_correction=False,  # LORA correction does not work with GPTQ
+            sensitivity_metric=DEFAULT_SENSITIVITY,
+            ignored_scope=DEFAULT_IGNORED_SCOPE,
+            lora_correction=False,
             advanced_parameters=AdvancedCompressionParameters(statistics_path=tmp_path / "statistics"),
         )
-        load_statistics_number += 1
+        load_count += 1
+    return load_count
 
-    # Test advanced configurations (lora_correction, scale estimation)
-    for scale_estimation, lora_correction in product(scale_estimation_values, lora_correction_values):
-        print(
-            f"Testing advanced config: awq={True}, gptq={False}, scale_estimation={scale_estimation}, \
-                lora_correction={lora_correction}"
-        )
 
+def _test_advanced_lora_scale_estimation(model, quantization_dataset, tmp_path, subset_size, mode) -> int:
+    load_count = 0
+    for scale_est, lora_corr in product([True, False], [True, False]):
+        print(f"Testing: AWQ=True, GPTQ=False, Scale={scale_est}, LoRA={lora_corr}")
         nncf.compress_weights(
             deepcopy(model.model),
             mode=mode,
             dataset=quantization_dataset,
-            ratio=ratio_values[0],
-            awq=True,  # AWQ enabled
-            gptq=False,  # GPTQ does not work with LORA correction
-            group_size=group_size_values[1],  # Using the first group size
-            scale_estimation=scale_estimation,
+            ratio=DEFAULT_RATIO,
+            awq=True,
+            gptq=False,
+            group_size=DEFAULT_GROUP_SIZE,
+            scale_estimation=scale_est,
             subset_size=subset_size,
-            sensitivity_metric=sensitivity_metric_values[0],  # Using the first sensitivity metric
-            ignored_scope=ignored_scope_values[0],
-            lora_correction=lora_correction,
+            sensitivity_metric=DEFAULT_SENSITIVITY,
+            ignored_scope=DEFAULT_IGNORED_SCOPE,
+            lora_correction=lora_corr,
             advanced_parameters=AdvancedCompressionParameters(statistics_path=tmp_path / "statistics"),
         )
-        load_statistics_number += 1
+        load_count += 1
+    return load_count
 
-    assert collect_statistics_spy.call_count == 1, "Statistics should be collected only once."
-    assert (
-        load_statistics_from_dir_spy.call_count == load_statistics_number
-    ), f"Statistics should be loaded {load_statistics_number} times, \
-    but was {load_statistics_from_dir_spy.call_count}."
-    assert dump_statistics_spy.call_count == 1, "Statistics should be dumped only once."
+
+def test_weight_compression_statistics_caching(tmp_path, mocker):
+    """
+    Tests the weight compression process, focusing on the statistics caching mechanism.
+    Ensures that:
+      - Statistics are collected once.
+      - Statistics are loaded according to the number of configurations tested.
+      - Statistics are dumped once.
+    :param tmp_path: Temporary directory path for storing statistics.
+    :param mocker: Mocking utility to spy on function calls.
+    """
+    from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
+
+    model_id = MODEL_ID
+    subset_size = DEFAULT_SUBSET_SIZE
+    mode = DEFAULT_MODE
+
+    # Initialize model, dataset, and spies
+    model, quantization_dataset = _setup_model_and_dataset(model_id)
+    collect_spy = mocker.spy(OVStatisticsAggregator, "collect_statistics")
+    load_spy = mocker.spy(OVStatisticsAggregator, "load_statistics_from_dir")
+    dump_spy = mocker.spy(OVStatisticsAggregator, "dump_statistics")
+
+    # Run tests and count load calls
+    load_count = 0
+    load_count += _test_basic_configurations(model, quantization_dataset, tmp_path, subset_size, mode)
+    load_count += _test_advanced_gptq_scale_estimation(model, quantization_dataset, tmp_path, subset_size, mode)
+    load_count += _test_advanced_lora_scale_estimation(model, quantization_dataset, tmp_path, subset_size, mode)
+
+    # Assertions to verify expected behavior
+    assert collect_spy.call_count == 1, "Statistics should be collected only once."
+    assert load_spy.call_count == load_count, f"Expected {load_count} load calls, found {load_spy.call_count}."
+    assert dump_spy.call_count == 1, "Statistics should be dumped only once."
