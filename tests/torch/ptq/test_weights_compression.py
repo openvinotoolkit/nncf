@@ -250,7 +250,6 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 @pytest.mark.parametrize(
     "params",
     (
-        {"ratio": 0.5},
         *({"sensitivity_metric": metric} for metric in ALL_SENSITIVITY_METRICS),
         {"gptq": True},
         {"awq": True},
