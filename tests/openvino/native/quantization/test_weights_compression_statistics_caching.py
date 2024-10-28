@@ -46,9 +46,9 @@ def create_transform_fn(model, tokenizer):
     return transform_fn
 
 
-def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
+def test_weight_compression_statistics_caching(tmp_path, mocker):
     """
-    Evaluates the weight compression process for the 'facebook/opt-125m' model,
+    Evaluates the weight compression process for the tiny model,
     specifically focusing on validating the statistics caching mechanism. The test ensures
     that the caching mechanism behaves correctly by:
 
@@ -83,11 +83,14 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
         nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
         nncf.SensitivityMetric.MAX_ACTIVATION_VARIANCE,
     ]
-    gptq_values = [True, False]
     ignored_scope_values = [
         IgnoredScope(),
         IgnoredScope(types=["MatMul"]),
     ]
+    # Advanced parameters
+    gptq_values = [True, False]
+    lora_correction_values = [True, False]
+    scale_estimation_values = [True, False]
 
     MODEL_ID = "hf-internal-testing/tiny-random-OPTForCausalLM"
 
@@ -126,8 +129,11 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
         load_statistics_number += 1
 
     # Test advanced configurations (GPTQ, scale estimation)
-    for gptq, scale_estimation in product(gptq_values, [True, False]):
-        print(f"Testing advanced config: awq={True}, gptq={gptq}, scale_estimation={scale_estimation}")
+    for gptq, scale_estimation in product(gptq_values, scale_estimation_values):
+        print(
+            f"Testing advanced config: awq={True}, gptq={gptq}, scale_estimation={scale_estimation}, \
+            lora_correction={False}"
+        )
 
         nncf.compress_weights(
             deepcopy(model.model),
@@ -141,6 +147,31 @@ def test_weight_compression_statistics_caching_opt_125m(tmp_path, mocker):
             subset_size=subset_size,
             sensitivity_metric=sensitivity_metric_values[0],  # Using the first sensitivity metric
             ignored_scope=ignored_scope_values[0],
+            lora_correction=False,  # LORA correction does not work with GPTQ
+            advanced_parameters=AdvancedCompressionParameters(statistics_path=tmp_path / "statistics"),
+        )
+        load_statistics_number += 1
+
+    # Test advanced configurations (lora_correction, scale estimation)
+    for scale_estimation, lora_correction in product(scale_estimation_values, lora_correction_values):
+        print(
+            f"Testing advanced config: awq={True}, gptq={False}, scale_estimation={scale_estimation}, \
+                lora_correction={lora_correction}"
+        )
+
+        nncf.compress_weights(
+            deepcopy(model.model),
+            mode=mode,
+            dataset=quantization_dataset,
+            ratio=ratio_values[0],
+            awq=True,  # AWQ enabled
+            gptq=False,  # GPTQ does not work with LORA correction
+            group_size=group_size_values[1],  # Using the first group size
+            scale_estimation=scale_estimation,
+            subset_size=subset_size,
+            sensitivity_metric=sensitivity_metric_values[0],  # Using the first sensitivity metric
+            ignored_scope=ignored_scope_values[0],
+            lora_correction=lora_correction,
             advanced_parameters=AdvancedCompressionParameters(statistics_path=tmp_path / "statistics"),
         )
         load_statistics_number += 1
