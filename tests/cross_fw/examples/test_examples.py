@@ -17,6 +17,7 @@ from typing import Any, Dict, List
 
 import pytest
 
+from nncf.common.utils.os import is_windows
 from tests.cross_fw.shared.case_collection import skip_if_backend_not_selected
 from tests.cross_fw.shared.command import Command
 from tests.cross_fw.shared.helpers import create_venv_with_nncf
@@ -57,10 +58,17 @@ def test_examples(
 ):
     print("\n" + "-" * 64)
     print(f"Example name: {example_name}")
+
+    # Skip by python version
     python_version = sys.version_info
     example_python_version = tuple(example_params.get("python_version", python_version))
     if python_version < example_python_version:
         pytest.skip(f"The test is skipped because python >= {example_python_version} is required.")
+
+    # Skip for windows
+    windows_skip = example_params.get("windows_skip")
+    if windows_skip and is_windows():
+        pytest.skip(f"Skip on windows: {windows_skip}")
 
     backend = example_params["backend"]
     skip_if_backend_not_selected(backend, backends_list)

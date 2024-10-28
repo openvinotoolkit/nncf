@@ -183,7 +183,8 @@
             "fp32_latency": 3.3447,
             "fp32_ov_latency": 1.401,
             "int8_latency": 0.6003
-        }
+        },
+        "windows_skip": "https://github.com/pytorch/pytorch/issues/135954"
     },
     "quantization_aware_training_torch_resnet18": {
         "backend": "torch",
