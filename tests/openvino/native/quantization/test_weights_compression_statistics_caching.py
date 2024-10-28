@@ -151,23 +151,20 @@ def test_weight_compression_statistics_caching(tmp_path, mocker):
     """
     from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 
-    model_id = MODEL_ID
-    subset_size = DEFAULT_SUBSET_SIZE
-    mode = DEFAULT_MODE
-
-    # Initialize model, dataset, and spies
-    model, quantization_dataset = _setup_model_and_dataset(model_id)
     collect_spy = mocker.spy(OVStatisticsAggregator, "collect_statistics")
     load_spy = mocker.spy(OVStatisticsAggregator, "load_statistics_from_dir")
     dump_spy = mocker.spy(OVStatisticsAggregator, "dump_statistics")
 
-    # Run tests and count load calls
+    model_id = MODEL_ID
+    subset_size = DEFAULT_SUBSET_SIZE
+    mode = DEFAULT_MODE
+    model, quantization_dataset = _setup_model_and_dataset(model_id)
+
     load_count = 0
     load_count += _test_basic_configurations(model, quantization_dataset, tmp_path, subset_size, mode)
     load_count += _test_advanced_gptq_scale_estimation(model, quantization_dataset, tmp_path, subset_size, mode)
     load_count += _test_advanced_lora_scale_estimation(model, quantization_dataset, tmp_path, subset_size, mode)
 
-    # Assertions to verify expected behavior
     assert collect_spy.call_count == 1, "Statistics should be collected only once."
     assert load_spy.call_count == load_count, f"Expected {load_count} load calls, found {load_spy.call_count}."
     assert dump_spy.call_count == 1, "Statistics should be dumped only once."
