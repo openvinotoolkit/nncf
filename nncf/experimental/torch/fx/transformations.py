@@ -938,6 +938,28 @@ def merge_linear_and_bias(model: torch.fx.GraphModule):
     _merge_node_and_bias(model, _is_linear)
 
 
+def _get_connected_nodes(graph: torch.fx.Graph) -> List[torch.fx.Node]:
+    """
+    Returns the List of nodes which are directly or indirectly connected
+    to the output node.
+
+    :param graph: The torch FX graph to get nodes from.
+    """
+    output_node = None
+    output_nodes = [node for node in graph.nodes if node.op == "output"]
+    assert len(output_nodes) == 1
+    output_node = output_nodes[0]
+    connected_nodes = set()  # Every node is unique in the graph
+    nodes_to_visit = [output_node]
+    while nodes_to_visit:
+        current_node = nodes_to_visit.pop()
+        if current_node in connected_nodes:
+            continue
+        connected_nodes.add(current_node)
+        nodes_to_visit.extend([node for node in current_node.all_input_nodes])
+    return connected_nodes
+
+
 def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[torch.fx.Node], bool]):
     """
     Merges two separate node and bias node to a one node: node+bias.
@@ -971,5 +993,8 @@ def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[
         for user in list(bias_node.users):
             user.replace_input_with(bias_node, conv_node)
 
-    model.graph.eliminate_dead_code()
+    # Remove nodes which are not connected to output. This removes dead nodes and dead subgraphs in the model graph.
+    nodes_connected_to_output = _get_connected_nodes(model.graph)
+    is_impure = lambda node: node in nodes_connected_to_output
+    model.graph.eliminate_dead_code(is_impure)
     model.recompile()
