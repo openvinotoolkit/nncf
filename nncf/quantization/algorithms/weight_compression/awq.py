@@ -31,11 +31,11 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_scale
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_dequantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
 from nncf.quantization.passes import transform_to_inference_graph
+from nncf.tensor import TensorDataType
 from nncf.tensor import functions as fns
 
 TModel = TypeVar("TModel")
@@ -241,7 +241,7 @@ class AWQ(Algorithm):
                 offset = gi * group_size
                 gscale = s[offset : offset + group_size]
 
-                a_min = fns.quantile(gscale, 0.1)
+                a_min = fns.astype(fns.quantile(gscale, 0.1), TensorDataType.float32)
                 a_max = 1e2
                 gscale = fns.clip(gscale, a_min=a_min, a_max=a_max)
 
@@ -261,11 +261,9 @@ class AWQ(Algorithm):
                         g_compressed_weighs = do_nf4_quantization(weights_to_fake_quantize, g_c_scale)
                         g_decompressed_weighs = do_nf4_dequantization(g_compressed_weighs, g_c_scale)
                     else:
-                        # TODO: Improve by replacing with quantize_dequantize
-                        g_compressed_weighs, g_c_scale, g_c_zp = do_int_quantization(
+                        g_decompressed_weighs = calculate_quantized_dequantized_weight(
                             weights_to_fake_quantize, awq_config, reduction_axis
                         )
-                        g_decompressed_weighs = do_int_dequantization(g_compressed_weighs, g_c_scale, g_c_zp)
                     sacts = gacts / fns.unsqueeze(cur_scale, 1)
 
                     cur_out = fns.matmul(g_decompressed_weighs, sacts)

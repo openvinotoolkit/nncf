@@ -297,8 +297,9 @@ class ScaleEstimation:
                 if config.mode == CompressWeightsMode.NF4:
                     out = do_nf4_quantization(original_weight, near_to_ideal_scale)
                 else:
-                    out, _, _ = do_int_quantization(original_weight, config, precomputed_scale=near_to_ideal_scale,
-                                                    precomputed_zero_point=zp)
+                    out, _, _ = do_int_quantization(
+                        original_weight, config, precomputed_scale=near_to_ideal_scale, precomputed_zero_point=zp
+                    )
                 compressed_weights = fns.zeros_like(original_weight) + out
                 target, zero_mask = get_target_zero_mask(compressed_weights, zp)
                 zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
@@ -311,8 +312,9 @@ class ScaleEstimation:
             if config.mode == CompressWeightsMode.NF4:
                 out = do_nf4_quantization(original_weight, scaled_scale)
             else:
-                out, _, _ = do_int_quantization(original_weight, config, precomputed_scale=scaled_scale,
-                                                precomputed_zero_point=zp)
+                out, _, _ = do_int_quantization(
+                    original_weight, config, precomputed_scale=scaled_scale, precomputed_zero_point=zp
+                )
             compressed_weights = fns.zeros_like(original_weight) + out
 
             target, zero_mask = get_target_zero_mask(compressed_weights, zp)

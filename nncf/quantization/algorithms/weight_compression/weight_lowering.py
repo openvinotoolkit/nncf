@@ -558,8 +558,9 @@ def do_int_quantization(
 def calculate_quantized_dequantized_weight(
     weight: Tensor,
     config: WeightCompressionConfig,
-    scale: Tensor,
-    zero_point: Optional[Tensor] = None,
+    reduction_axes: Optional[ReductionAxes] = None,
+    precomputed_scale: Optional[Tensor] = None,
+    precomputed_zero_point: Optional[Tensor] = None,
     invert_division: Optional[bool] = False,
     ov_model_params: Optional[OVModelParameters] = None,
 ) -> Tensor:
@@ -573,23 +574,32 @@ def calculate_quantized_dequantized_weight(
 
     if not accelerate_through_ov:
         # Reference implementation
-        compressed_weight = calculate_quantized_weight(weight, config, scale, zero_point, invert_division)
+        if precomputed_scale is None or (config.is_int_asym and precomputed_zero_point is None):
+            compressed_weight, scale, zero_point = do_int_quantization(
+                weight, config, reduction_axes, precomputed_scale, precomputed_zero_point, invert_division
+            )
+        else:
+            scale = precomputed_scale if precomputed_scale is not None else None
+            zero_point = precomputed_zero_point if precomputed_zero_point is not None else None
+            compressed_weight = calculate_quantized_weight(weight, config, scale, zero_point, invert_division)
         decompressed_weight = do_int_dequantization(compressed_weight, scale, zero_point)
         return decompressed_weight
 
     weight_shape = weight.shape
-    scale_shape = scale.shape
-    zero_point_shape = None if zero_point is None else zero_point.shape
+    scale_shape = precomputed_scale.shape if precomputed_scale is not None else None
+    zero_point_shape = precomputed_zero_point.shape if precomputed_zero_point is not None else None
 
     if ov_model_params is None:
         ov_model_params = OVModelParameters(weight.dtype)
-    if config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM]:
-        ov_model_params.dynamic = False
 
-    model = get_compress_decompress_weight_model(ov_model_params, config, weight_shape, scale_shape, zero_point_shape)
+    model = get_compress_decompress_weight_model(
+        ov_model_params, config, weight_shape, scale_shape, zero_point_shape, reduction_axes
+    )
 
-    inputs = [weight, scale]
-    if zero_point is not None:
-        inputs.append(zero_point)
+    inputs = [weight]
+    if precomputed_scale is not None:
+        inputs.append(precomputed_scale)
+    if precomputed_zero_point is not None:
+        inputs.append(precomputed_zero_point)
     decompressed_weight = model(inputs)[0]
     return decompressed_weight
