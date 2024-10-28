@@ -11,8 +11,11 @@
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import openvino as ov
+from openvino import Type
+from openvino.properties.hint import inference_precision
 from openvino.runtime import opset13 as opset
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -236,7 +239,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         elif compression_config.mode == CompressWeightsMode.INT8_ASYM:
             compression_dtype = ov.Type.u8
         else:
-            raise ValueError(f"{compression_config.mode.value} is not supported.")
+            raise nncf.ParameterNotSupportedError(f"{compression_config.mode.value} is not supported.")
 
         original_shape = weight.shape
         compressed_weight = compress_weight(weight, reduction_axes, compression_config, layer_scales, layer_zero_points)
@@ -345,7 +348,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         model = ov.Model([result], parameters)
 
-        compiled_model = ov.compile_model(model, device_name="CPU")
+        compiled_model = ov.compile_model(model, device_name="CPU", config={inference_precision: Type.f32})
 
         return lambda parameters: compiled_model(parameters)[0]
 
@@ -378,7 +381,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         model = ov.Model([result], parameters)
 
-        compiled_model = ov.compile_model(model, device_name="CPU")
+        compiled_model = ov.compile_model(model, device_name="CPU", config={inference_precision: Type.f32})
 
         return lambda parameters: compiled_model(parameters)[0]
 

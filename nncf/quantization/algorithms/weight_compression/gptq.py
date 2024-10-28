@@ -169,9 +169,9 @@ class GPTQ:
         nsamples = 0
 
         if node.metatype in self._backend_entity.convolution_metatypes:
-            raise RuntimeError("Convolution metatypes are not supported")
+            raise nncf.UnsupportedModelError("Convolution metatypes are not supported")
         if node.layer_attributes.input_attributes["transpose"]:
-            raise RuntimeError("Transpose is not supported")
+            raise nncf.UnsupportedModelError("Transposed input is not supported")
 
         hessian = fns.zeros(
             (inputs[0].shape[-1], inputs[0].shape[-1]), backend=inputs[0].backend, dtype=TensorDataType.float32
@@ -264,7 +264,7 @@ class GPTQ:
                         scales.append(scale)
                     else:
                         if self._scale_estimation and block_compression_config.num_bits == 4:
-                            activations = [inp.squeeze()[:, (i1 + i) : (i1 + i + group_size)] for inp in inputs]
+                            activations = [inp[..., (i1 + i) : (i1 + i + group_size)] for inp in inputs]
                             wc_statistics = ScaleEstimation.activations_to_wc_statistics(activations)
                             scale, zero_point = ScaleEstimation.calculate_quantization_params(
                                 self._backend_entity,

@@ -20,11 +20,11 @@ import pytest
 from attr import dataclass
 from openvino.runtime import opset13 as opset
 
+import nncf
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.common.utils.debug import nncf_debug
 from nncf.data.dataset import Dataset
-from nncf.errors import ValidationError
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.parameters import BackupMode
@@ -79,23 +79,29 @@ INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
 
 
 class LMLinearModel(OVReferenceModel):
-    HIDDEN_DIM = 16
     OUTPUT_DIM = 32
+    HIDDEN_DIM = 16
     INPUT_SHAPE = [1, 24, HIDDEN_DIM]  # [B, SeqLen, HiddenDim]
 
-    def _create_ov_model(self, transpose_b: bool = True):
-        input_1 = opset.parameter(self.INPUT_SHAPE, name="Input")
+    def _create_ov_model(self, transpose_b: bool = True, transpose_a=False, input_shape=None):
+        self._input_shape = self.INPUT_SHAPE if input_shape is None else input_shape
+        hdim_axis = -2 if transpose_a else -1
+        self._hidden_dim = self._input_shape[hdim_axis]
+        input_1 = opset.parameter(self._input_shape, name="Input")
         weight_shape = self.get_weight_shape(transpose_b)
         data = self._rng.random(weight_shape).astype(np.float32)
-        matmul = opset.matmul(input_1, data, transpose_a=False, transpose_b=transpose_b, name="MatMul")
+        matmul = opset.matmul(input_1, data, transpose_a=transpose_a, transpose_b=transpose_b, name="MatMul")
         result = opset.result(matmul, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
         return model
 
-    @classmethod
-    def get_weight_shape(cls, transpose_b: bool = True):
-        return [cls.OUTPUT_DIM, cls.HIDDEN_DIM] if transpose_b else [cls.HIDDEN_DIM, cls.OUTPUT_DIM]
+    @property
+    def hidden_dim(self):
+        return self._hidden_dim
+
+    def get_weight_shape(self, transpose_b: bool = True):
+        return [self.OUTPUT_DIM, self.hidden_dim] if transpose_b else [self.hidden_dim, self.OUTPUT_DIM]
 
 
 def get_next_node(node):
@@ -695,12 +701,12 @@ def test_calculate_scale_per_group(desc: CalculateScaleDesc):
 
 
 def test_raise_error_for_many_axes():
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.UnsupportedModelError):
         reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0, 1), group_size=1)
 
 
 def test_raise_error_channel_size_is_not_divisible_by_group_size():
-    with pytest.raises(ValidationError):
+    with pytest.raises(nncf.UnsupportedModelError):
         reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0,), group_size=3)
 
 
@@ -724,7 +730,7 @@ def test_raise_error_channel_size_is_not_divisible_by_group_size():
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):
-    with pytest.raises(AttributeError):
+    with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(ov.Model([], []), mode=mode, **params)
 
 
@@ -734,15 +740,44 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
     ({"dataset": "anything", "lora_correction": True, "gptq": True},),
 )
 def test_raise_error_with_unsupported_params_for_int4(mode, params):
-    with pytest.raises(AttributeError):
+    with pytest.raises(nncf.ValidationError):
         compress_weights(ov.Model([], []), mode=mode, **params)
+
+
+@pytest.mark.parametrize(
+    "algo",
+    (
+        "lora_correction",
+        "awq",
+        "scale_estimation",
+        "gptq",
+    ),
+)
+def test_raise_error_with_unsupported_params_for_e2m1(algo):
+    with pytest.raises(nncf.ParameterNotSupportedError):
+        compress_weights(ov.Model([], []), dataset="anything", mode=CompressWeightsMode.E2M1, **{algo: True})
+
+
+@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize(
+    "algo",
+    (
+        "lora_correction",
+        "awq",
+        "scale_estimation",
+        "gptq",
+    ),
+)
+def test_raise_error_with_unsupported_params_for_empty_dataset(mode, algo):
+    with pytest.raises(nncf.ParameterNotSupportedError):
+        compress_weights(ov.Model([], []), dataset=None, mode=mode, **{algo: True})
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 @pytest.mark.parametrize("metric", DATA_BASED_SENSITIVITY_METRICS)
 def test_raise_error_with_data_metric_and_without_dataset(mode, metric):
     model = IntegerModel().ov_model
-    with pytest.raises(AttributeError):
+    with pytest.raises(nncf.ValidationError):
         compress_weights(model, mode=mode, sensitivity_metric=metric, group_size=-1, ratio=0.8)
 
 
@@ -879,7 +914,7 @@ def test_default_subset_value():
 def test_invalid_subset_size(subset_size):
     model = IdentityMatmul().ov_model
     dataset = Dataset([ACTIVATION])
-    with pytest.raises(ValueError):
+    with pytest.raises(nncf.ValidationError):
         compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, dataset=dataset, subset_size=subset_size)
 
 
@@ -1100,11 +1135,12 @@ def get_shape_for_second_input(op_with_weights: ov.Node) -> List[int]:
 )
 def test_lora_adapters_in_the_graph(params, transpose_b):
     advanced_parameters = CompressionParams() if params is None else CompressionParams(lora_correction_params=params)
-    model = LMLinearModel(transpose_b=transpose_b).ov_model
-    dataset = Dataset(np.ones(inp.shape) for inp in model.inputs)
+    model = LMLinearModel(transpose_b=transpose_b)
+    ov_model = model.ov_model
+    dataset = Dataset(np.ones(inp.shape) for inp in ov_model.inputs)
 
     compressed_model = compress_weights(
-        model,
+        ov_model,
         mode=CompressWeightsMode.INT4_SYM,
         ratio=1.0,
         group_size=8,
@@ -1120,8 +1156,8 @@ def test_lora_adapters_in_the_graph(params, transpose_b):
         next_node = target_input.get_node()
         assert next_node.type_info.name == "MatMul"
         shape = get_shape_for_second_input(next_node)
-        if shape != LMLinearModel.get_weight_shape(transpose_b):
-            assert shape == [advanced_parameters.lora_correction_params.adapter_rank, LMLinearModel.HIDDEN_DIM]
+        if shape != model.get_weight_shape(transpose_b):
+            assert shape == [advanced_parameters.lora_correction_params.adapter_rank, model.hidden_dim]
             node = get_next_node(next_node)
             assert node.type_info.name == "MatMul"
             assert get_shape_for_second_input(node) == [
@@ -1148,9 +1184,9 @@ def test_lora_adapters_in_the_graph(params, transpose_b):
 def test_lora_adapters_reduce_noise(zero_seed, mode, apply_regularization, is_per_channel, mocker, tmp_path):
     mocker.patch("nncf.quantization.algorithms.weight_compression.lora_correction.DEBUG_LOG_DIR", str(tmp_path))
 
-    model_cls = LMLinearModel
-    group_size = -1 if is_per_channel else model_cls.HIDDEN_DIM // 2
-    model = model_cls().ov_model
+    model = LMLinearModel()
+    group_size = -1 if is_per_channel else model.hidden_dim // 2
+    model = model.ov_model
     n_iters = 1
     ie = ov.Core()
     input_data = [np.ones(inp.shape) for inp in model.inputs]
@@ -1167,7 +1203,7 @@ def test_lora_adapters_reduce_noise(zero_seed, mode, apply_regularization, is_pe
     int4_out = next(iter(int4_out.values()))
     noise_before = np.mean(np.abs(fp32_out - int4_out))
 
-    model = model_cls().ov_model
+    model = LMLinearModel().ov_model
 
     with nncf_debug():
         int4_model = compress_weights(
@@ -1245,8 +1281,9 @@ def test_compression_with_lora_for_different_dtypes(activation_dtype, weight_dty
 def test_compression_with_lora_with_subset_size(mocker):
     subset_size = 2
     dataset_size = 4
-    model = LMLinearModel().ov_model
-    input_data = [np.ones(inp.shape) for inp in model.inputs] * dataset_size
+    model = LMLinearModel()
+    ov_model = model.ov_model
+    input_data = [np.ones(inp.shape) for inp in ov_model.inputs] * dataset_size
     dataset = Dataset(input_data)
 
     from nncf.quantization.algorithms.weight_compression import lora_correction
@@ -1254,7 +1291,7 @@ def test_compression_with_lora_with_subset_size(mocker):
     get_stats_spy = mocker.spy(lora_correction, "process_stats")
 
     compress_weights(
-        model,
+        ov_model,
         mode=CompressWeightsMode.INT4_SYM,
         ratio=1.0,
         group_size=8,
@@ -1270,8 +1307,8 @@ def test_compression_with_lora_with_subset_size(mocker):
 
     get_stats_spy.assert_called_once()
     s, X = get_stats_spy.spy_return
-    assert X.shape == (LMLinearModel.HIDDEN_DIM, subset_size)
-    assert s.shape == (LMLinearModel.HIDDEN_DIM,)
+    assert X.shape == (model.hidden_dim, subset_size)
+    assert s.shape == (model.hidden_dim,)
 
 
 def test_lora_with_mixed_precision():
@@ -1384,6 +1421,14 @@ def test_data_aware_algo_with_different_activation_dimensions(n_extra_dims):
 
 
 @pytest.mark.parametrize(
+    "input_shape",
+    [
+        LMLinearModel.INPUT_SHAPE,
+        [3, 5, 16],
+        [1, 1, 16],
+    ],
+)
+@pytest.mark.parametrize(
     "kwargs",
     [
         dict(scale_estimation=True),
@@ -1401,9 +1446,9 @@ def test_data_aware_algo_with_different_activation_dimensions(n_extra_dims):
         ),
     ],
 )
-def test_compression_with_different_algo_combinations(kwargs):
+def test_compression_with_different_algo_combinations(input_shape, kwargs):
     dataset_size = 4
-    model = LMLinearModel().ov_model
+    model = LMLinearModel(input_shape=input_shape).ov_model
     input_data = [np.ones(inp.shape) for inp in model.inputs] * dataset_size
     dataset = Dataset(input_data)
 
@@ -1417,3 +1462,35 @@ def test_compression_with_different_algo_combinations(kwargs):
         all_layers=True,
         **kwargs,
     )
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        dict(scale_estimation=True),
+        dict(lora_correction=True),
+        dict(
+            gptq=True,
+            awq=True,
+            scale_estimation=True,
+            advanced_parameters=CompressionParams(gptq_params=GPTQParams(subset_size=2)),
+        ),
+    ],
+)
+def test_compression_with_transposed_activations(kwargs):
+    dataset_size = 4
+    model = LMLinearModel(transpose_a=True, transpose_b=False).ov_model
+    input_data = [np.ones(inp.shape) for inp in model.inputs] * dataset_size
+    dataset = Dataset(input_data)
+
+    with pytest.raises(nncf.UnsupportedModelError):
+        compress_weights(
+            model,
+            mode=CompressWeightsMode.INT4_SYM,
+            ratio=1.0,
+            group_size=8,
+            subset_size=2,
+            dataset=dataset,
+            all_layers=True,
+            **kwargs,
+        )
