@@ -288,8 +288,7 @@ class TensorCollector:
 
         :param input_: Tensor input to register.
         """
-        if self.enabled:
-            self.register_inputs({hash(reducer): [input_] for reducer in self._reducers})
+        self.register_inputs({hash(reducer): [input_] for reducer in self._reducers})
 
     def _aggregate(self) -> None:
         result = {}
@@ -317,7 +316,7 @@ class TensorCollector:
         :param config: Aggregated values.
         :return: TensorStatistic instance.
         """
-        if not self._stat_container:  # TODO: need to remove an ability to return a Dict.
+        if not self._stat_container:  # TODO(kshpv): need to remove an ability to return a Dict.
             return config
         return self._stat_container.from_config(config)
 
@@ -326,7 +325,6 @@ class TensorCollector:
         Clears the cached statistics and enables TensorCollector.
         """
         self._cached_statistics = None
-        self.enable()
 
     def get_statistics(self) -> TensorStatistic:
         """

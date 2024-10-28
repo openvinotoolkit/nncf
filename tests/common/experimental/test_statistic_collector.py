@@ -447,8 +447,8 @@ class TemplateTestStatisticCollector:
 
         # Test clearing cache
         collector.clear_cache()
+        collector.enable()
         assert collector._cached_statistics is None, "Cache should be cleared"
-        assert collector.enabled, "Collector should be enabled after clearing cache"
 
         # Test default behavior of get_statistics without cache
         collector.register_statistic_branch("container_key", DummyTensorReducer("A"), DummyTensorAggregator())
@@ -468,6 +468,7 @@ class TemplateTestStatisticCollector:
 
         # Clear cache and check behavior
         collector.clear_cache()
+        collector.enable()
         empty_stats = {"container_key": None}
         statistics = collector.get_statistics()
         assert statistics == empty_stats, "Statistics should be empty after clearing cache"
