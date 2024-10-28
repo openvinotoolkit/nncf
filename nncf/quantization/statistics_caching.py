@@ -126,19 +126,15 @@ def register_all_statistics(
     :param enable_mixed_precision: Whether to enable mixed precision statistics.
     """
     compression_algo.set_backend_entity(model)
+    nodes_to_compress = compression_algo.get_nodes_to_compress(graph)
+    matmul_nodes_to_compress = compression_algo.get_matmul_nodes(nodes_to_compress)
 
-    nodes_to_compress = [
-        node
-        for node in compression_algo.get_nodes_to_compress(graph)
-        if node.metatype in compression_algo._backend_entity.matmul_metatypes
-    ]
-
-    input_output_map = compression_algo.get_matmul_input_to_output_nodes_map(nodes_to_compress, graph)
+    input_output_map = compression_algo.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
 
     register_statistics_for_algorithm(aggregator, model, graph, subset_size, compression_algo)
 
     if enable_gptq:
-        _register_gptq(aggregator, model, graph, nodes_to_compress, subset_size)
+        _register_gptq(aggregator, model, graph, matmul_nodes_to_compress, subset_size)
 
     if enable_mixed_precision:
         _register_mixed_precision(aggregator, model, graph, input_output_map, subset_size)

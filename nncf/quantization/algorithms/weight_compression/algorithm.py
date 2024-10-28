@@ -324,6 +324,15 @@ class WeightCompression(Algorithm):
                 ordered_nodes_to_compress.append(node)
         return ordered_nodes_to_compress
 
+    def get_matmul_nodes(self, nodes: List[NNCFNode]) -> List[NNCFNode]:
+        """
+        Collects MatMul nodes from the list of nodes.
+
+        :param nodes: List of nodes.
+        :return: List of MatMul nodes.
+        """
+        return [node for node in nodes if node.metatype in self._backend_entity.matmul_metatypes]
+
     def _get_ratio_defining_params(
         self, all_weight_params: List[WeightCompressionParameters], is_last_layer_shared: bool
     ) -> List[WeightCompressionParameters]:
@@ -491,9 +500,7 @@ class WeightCompression(Algorithm):
         statistics = None
 
         if self._data_aware_mixed_precision or self._data_aware_compression:
-            matmul_nodes_to_compress = filter(
-                lambda node: node.metatype in self._backend_entity.matmul_metatypes, nodes_to_compress
-            )
+            matmul_nodes_to_compress = self.get_matmul_nodes(nodes_to_compress)
             matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(
                 matmul_nodes_to_compress, graph
             )
