@@ -261,8 +261,9 @@ class AWQ(Algorithm):
                         g_compressed_weighs = do_nf4_quantization(weights_to_fake_quantize, g_c_scale)
                         g_decompressed_weighs = do_nf4_dequantization(g_compressed_weighs, g_c_scale)
                     else:
+                        # TODO: Improve by replacing with quantize_dequantize
                         g_compressed_weighs, g_c_scale, g_c_zp = do_int_quantization(
-                            weights_to_fake_quantize, reduction_axis, awq_config
+                            weights_to_fake_quantize, awq_config, reduction_axis
                         )
                         g_decompressed_weighs = do_int_dequantization(g_compressed_weighs, g_c_scale, g_c_zp)
                     sacts = gacts / fns.unsqueeze(cur_scale, 1)

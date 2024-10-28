@@ -1031,7 +1031,7 @@ def test_np_ov_compression_decompression(mode):
 
     config = WeightCompressionConfig(mode)
 
-    compressed_weighs, scale, zp = do_int_quantization(w, -1, config, invert_scale=True)
+    compressed_weighs, scale, zp = do_int_quantization(w, config, -1, invert_division=True)
     decompressed_weighs = do_int_dequantization(compressed_weighs, scale, zp)
 
     compressed_weighs = compressed_weighs.data
@@ -1067,7 +1067,7 @@ def test_compressed_weighs_range(mode, data):
     w = Tensor(data)
 
     config = WeightCompressionConfig(mode=mode)
-    compressed_weighs, _, _ = do_int_quantization(w, -1, config)
+    compressed_weighs, _, _ = do_int_quantization(w, config, -1)
 
     assert np.allclose(np.abs(compressed_weighs.data), np.abs(w.data))
 

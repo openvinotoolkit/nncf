@@ -270,14 +270,13 @@ def calculate_integer_quantization_params(
     :param config: Weight compression configuration.
     :return: Scale and zero point tensors.
     """
-    mode = config.mode
-    assert config.is_integer(), "The function supports integer quantization only"
+    assert config.is_integer, "The function supports integer quantization only"
     num_bits = config.num_bits
 
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
-    if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:
+    if config.is_int_asym:
         level_low = 0
         level_high = 2**num_bits - 1
         min_values = fns.min(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
@@ -314,7 +313,7 @@ def calculate_quantized_weight(
         scale = scale.astype(TensorDataType.float32)
 
     num_bits = config.num_bits
-    asym_quant = config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]
+    asym_quant = config.is_int_asym
     dtype = TensorDataType.uint8 if asym_quant else TensorDataType.int8
     level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
     level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
@@ -349,7 +348,7 @@ def get_integer_quantization_error(
         weight = weight.astype(TensorDataType.float32)
 
     compressed_weights, scale, zero_point = do_int_quantization(
-        weight, reduction_axes, config, invert_division=invert_division
+        weight, config, reduction_axes, invert_division=invert_division
     )
     decompressed_weight = do_int_dequantization(compressed_weights, scale, zero_point)
 
@@ -378,7 +377,7 @@ def compress_weight(
     :param precomputed_zero_point: Precomputed zero point.
     :return: The compressed weight and decompression parameters as instance of CompressedWeight
     """
-    if not config.is_integer():
+    if not config.is_integer:
         if weight.backend == TensorBackend.ov:
             weight = weight.to_backend(TensorBackend.numpy)
 
@@ -387,7 +386,7 @@ def compress_weight(
         )
         return CompressedWeight(compressed_weight, scale)
     compressed_weight, scale, zero_point = do_int_quantization(
-        weight, reduction_axes, config, precomputed_scale, precomputed_zero_point, invert_division=invert_division
+        weight, config, reduction_axes, precomputed_scale, precomputed_zero_point, invert_division=invert_division
     )
 
     return CompressedWeight(compressed_weight, scale, zero_point)
@@ -436,14 +435,28 @@ def do_int_dequantization(
 
 def do_int_quantization(
     weight: Tensor,
-    reduction_axes: ReductionAxes,
     config: WeightCompressionConfig,
+    reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
     invert_division: Optional[bool] = False,
     ov_model_params: Optional[OVModelParameters] = None,
 ):
-    assert config.is_integer(), "The function supports integer quantization only"
+    """
+    Performs integer quantization on the given weight tensor.
+
+    :param weight: The weight tensor to quantize.
+    :param config: The weight compression configuration.
+    :param reduction_axes: Axes along which to reduce (collect) statistics (e.g., min, max). Not required if
+        precomputed scale (and zero point) are provided.
+    :param precomputed_scale: Optional precomputed scale tensor.
+    :param precomputed_zero_point: Optional precomputed zero point tensor.
+    :param invert_division: Whether to apply inversion for scale and then multiply by weights instead of division.
+        Defaults to False.
+    :param ov_model_params: OpenVINO model parameters for acceleration.
+    :return: A tuple containing the compressed weights, scale, and zero point tensors.
+    """
+    assert config.is_integer, "The function supports integer quantization only"
 
     accelerate_through_ov = (
         is_openvino_available()
@@ -453,7 +466,8 @@ def do_int_quantization(
     if not is_openvino_available() and weight.backend != TensorBackend.torch:
         log_once(logging.INFO, "Compression time may be improved after installing OpenVINO")
 
-    if config.group_size != -1:
+    # When reduction axes are not provided, assuming that the weights are already reshaped
+    if config.group_size != -1 and reduction_axes is not None:
         # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
 
@@ -467,7 +481,7 @@ def do_int_quantization(
             weight = weight.astype(TensorDataType.float32)
 
         scale, zero_point = None, None
-        if precomputed_zero_point is None or precomputed_zero_point is None:
+        if precomputed_scale is None or (config.is_int_asym and precomputed_zero_point is None):
             scale, zero_point = calculate_integer_quantization_params(weight, reduction_axes, config)
         if precomputed_scale is not None:
             scale = precomputed_scale
@@ -481,7 +495,6 @@ def do_int_quantization(
     scale_shape = None if precomputed_scale is None else precomputed_scale.shape
     zero_point_shape = None if precomputed_zero_point is None else precomputed_zero_point.shape
 
-    asym_mode = config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]
     if ov_model_params is None:
         output_dtype = None
         return_ov_tensors = False
@@ -489,7 +502,12 @@ def do_int_quantization(
             if weight.backend == TensorBackend.ov:
                 return_ov_tensors = weight.backend == TensorBackend.ov
             else:
-                output_dtype = TensorDataType.uint8 if asym_mode else TensorDataType.int8
+                output_dtype = TensorDataType.uint8 if config.is_int_asym else TensorDataType.int8
+        # ov_model_params = OVModelParameters(
+        #     input_dtype=weight.dtype,
+        #     output_dtype=output_dtype,
+        #     return_ov_tensors=return_ov_tensors,
+        # )
         ov_model_params = OVModelParameters(
             input_dtype=weight.dtype,
             output_dtype=output_dtype,
@@ -512,7 +530,7 @@ def do_int_quantization(
     if precomputed_scale is None:
         # weight -> compressed_weight, scale, (zero_point)
         results = model([weight])
-        if asym_mode:
+        if config.is_int_asym:
             compressed_weight, scale, zero_point = results
         else:
             compressed_weight, scale = results
@@ -521,7 +539,7 @@ def do_int_quantization(
         # Scale is always in fp32 so there is no need to store it in ov.Tensor
         if scale.backend == TensorBackend.ov:
             scale = scale.to_backend(TensorBackend.numpy)
-    elif precomputed_zero_point is None and asym_mode:
+    elif precomputed_zero_point is None and config.is_int_asym:
         # weight, scale -> compressed_weight, zero_point
         compressed_weight, zero_point = model([weight, precomputed_scale])
         scale = precomputed_scale

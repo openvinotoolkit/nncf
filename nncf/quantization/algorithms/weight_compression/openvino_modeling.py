@@ -148,11 +148,9 @@ def _build_compress_model(
     weight = opset.parameter(weight_shape, name="w", dtype=OV_DTYPE_MAP[ov_model_params.input_dtype])
     ov_parameters = [weight]
 
-    mode = config.mode
-    asym_mode = mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]
     num_bits = config.num_bits
     eps = np.finfo(np.float32).eps
-    if asym_mode:
+    if config.is_int_asym:
         level_low = 0
         level_high = 2**num_bits - 1
     else:
@@ -166,7 +164,7 @@ def _build_compress_model(
         ov_parameters.append(scale)
     else:
         # Compute scale
-        if asym_mode:
+        if config.is_int_asym:
             min_values = opset.reduce_min(
                 weight, reduction_axes=reduction_axes, keep_dims=True
             )  # [a1, r, a2] -> [a1, 1, a2]
@@ -193,7 +191,7 @@ def _build_compress_model(
         zero_point = opset.parameter(zero_point_shape, name="zp", dtype=ov.Type.i32)
         ov_parameters.append(zero_point)
         zero_point = opset.convert(zero_point, ov.Type.f32)
-    elif mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:
+    elif config.is_int_asym:
         # Compute zero point
         if min_values is None:
             min_values = opset.reduce_min(
@@ -210,7 +208,7 @@ def _build_compress_model(
         weight = opset.convert(weight, ov.Type.f32)
     compressed_w = weight / scale
 
-    if asym_mode:
+    if config.is_int_asym:
         if ov_model_params.output_dtype is not None:
             dtype = OV_DTYPE_MAP[ov_model_params.output_dtype]
         else:
@@ -257,7 +255,7 @@ def _build_compress_decompress_model(
         config, ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes=None, return_nodes=True
     )
 
-    if config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:
+    if config.is_int_asym:
         if len(ov_parameters) == 1:
             # weight -> compressed_weight, scale, zero_point
             compressed_w, scale, zero_point = ov_results
