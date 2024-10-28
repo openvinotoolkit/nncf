@@ -1,0 +1,18 @@
+digraph  {
+rankdir=TB;
+0 [label=x];
+1 [label="conv.weight"];
+2 [label="conv.bias"];
+3 [label="conv/conv2d/0"];
+4 [label="__nncf_hooks.post_hooks.conv/conv2d/0__0.0.w"];
+5 [label="conv/post_hook__conv-conv2d-0__0[0]/add/0"];
+6 [label="/relu/0"];
+7 [label=output];
+0 -> 3  [label="0 → 0"];
+1 -> 3  [label="0 → 1"];
+2 -> 3  [label="0 → 2"];
+3 -> 5  [label="0 → 0"];
+4 -> 5  [label="0 → 1"];
+5 -> 6  [label="0 → 0"];
+6 -> 7  [label="0 → 0"];
+}
