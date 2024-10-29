@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import nncf
@@ -40,7 +39,6 @@ from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipel
 from nncf.quantization.algorithms.weight_compression.algorithm import check_user_compression_configuration
 from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
 from nncf.quantization.algorithms.weight_compression.backend import WEIGHT_COMPRESSION_SUPPORTED_BACKENDS
-from nncf.quantization.statistics_caching import cache_weight_compression_statistics
 from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi
@@ -621,17 +619,6 @@ def compress_weights(
         backup_mode,
         advanced_parameters,
     )
-
-    if (
-        weight_compression_configuration["advanced_parameters"].statistics_path
-        and not Path(weight_compression_configuration["advanced_parameters"].statistics_path).exists()
-    ):
-        if backend == BackendType.OPENVINO:
-            from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
-
-            model = remove_friendly_name_duplicates(model)
-
-        cache_weight_compression_statistics(model, dataset, subset_size, advanced_parameters.statistics_path)
 
     return compression_weights_impl(
         model=model,

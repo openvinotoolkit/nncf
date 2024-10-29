@@ -16,7 +16,6 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Unio
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
-import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.logging import nncf_logger
@@ -52,6 +51,7 @@ from nncf.quantization.quantize_model import BATCHWISE_STATISTICS_WARNING
 from nncf.quantization.quantize_model import is_model_no_batchwise_support
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
+from nncf.quantization.statistics_caching import cache_weight_compression_statistics
 from nncf.quantization.statistics_caching import register_statistics_for_algorithm
 from nncf.scopes import IgnoredScope
 from nncf.scopes import validate_ignored_scope
@@ -382,8 +382,8 @@ def compress_weights_impl(
     """
     Implementation of the `compress_weights()` method for the OpenVINO backend.
     """
-
     model = remove_friendly_name_duplicates(model)
+    graph = NNCFGraphFactory.create(model)
     compression_algorithm = WeightCompression(
         mode,
         ratio,
@@ -399,12 +399,12 @@ def compress_weights_impl(
         backup_mode,
         advanced_parameters,
     )
-    graph = NNCFGraphFactory.create(model)
 
     statistics_points = None
     if advanced_parameters and advanced_parameters.statistics_path:
+        # If there is no such directory, then caches statistics
         if not Path(advanced_parameters.statistics_path).exists():
-            raise nncf.InternalError("Directory with cached statistics is not found.")
+            cache_weight_compression_statistics(model, graph, dataset, subset_size, advanced_parameters.statistics_path)
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         register_statistics_for_algorithm(statistics_aggregator, model, graph, subset_size, compression_algorithm)
         statistics_aggregator.load_statistics_from_dir(advanced_parameters.statistics_path)
