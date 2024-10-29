@@ -461,7 +461,7 @@ def do_int_quantization(
     accelerate_through_ov = (
         is_openvino_available()
         and weight.backend != TensorBackend.torch
-        and not bool(int(os.environ.get("NUMPY_COMPRESSION", "0")))
+        # and not bool(int(os.environ.get("NUMPY_COMPRESSION", "0")))
     )
     if not is_openvino_available() and weight.backend != TensorBackend.torch:
         log_once(logging.INFO, "Compression time may be improved after installing OpenVINO")
@@ -502,10 +502,10 @@ def do_int_quantization(
             ov_model_params.return_ov_tensors = weight.backend == TensorBackend.ov
         else:
             ov_model_params.output_dtype = TensorDataType.uint8 if config.is_int_asym else TensorDataType.int8
-    ov_model_params.dynamic_shapes = bool(int(os.environ.get("DYNAMIC_COMPRESSION", "0")))
-    ov_model_params.recompile = bool(int(os.environ.get("RECOMPILE", "0")))
-    ov_model_params.release_memory = bool(int(os.environ.get("RELEASE_MEMORY", "0")))
-    ov_model_params.share_outputs = bool(int(os.environ.get("SHARE_OUTPUTS", "0")))
+    # ov_model_params.dynamic_shapes = bool(int(os.environ.get("DYNAMIC_COMPRESSION", "0")))
+    # ov_model_params.recompile = bool(int(os.environ.get("RECOMPILE", "0")))
+    # ov_model_params.release_memory = bool(int(os.environ.get("RELEASE_MEMORY", "0")))
+    # ov_model_params.share_outputs = bool(int(os.environ.get("SHARE_OUTPUTS", "0")))
 
     model = get_compress_weight_model(
         ov_model_params,
@@ -557,7 +557,7 @@ def calculate_quantized_dequantized_weight(
     accelerate_through_ov = (
         is_openvino_available()
         and weight.backend != TensorBackend.torch
-        and not bool(int(os.environ.get("NUMPY_COMPRESSION", "0")))
+        # and not bool(int(os.environ.get("NUMPY_COMPRESSION", "0")))
     )
     if not is_openvino_available() and weight.backend != TensorBackend.torch:
         log_once(logging.INFO, "Compression time may be improved after installing OpenVINO")
