@@ -406,7 +406,16 @@ def compress_weights_impl(
         if not Path(advanced_parameters.statistics_path).exists():
             cache_weight_compression_statistics(model, graph, dataset, subset_size, advanced_parameters.statistics_path)
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
-        register_statistics_for_algorithm(statistics_aggregator, model, graph, subset_size, compression_algorithm)
+        compression_algorithm.set_backend_entity(model)
+        _, matmul_input_to_output_nodes_map = compression_algorithm.get_compression_nodes_info(graph)
+        register_statistics_for_algorithm(
+            statistics_aggregator,
+            model,
+            graph,
+            subset_size,
+            compression_algorithm,
+            matmul_input_to_output_nodes_map,
+        )
         statistics_aggregator.load_statistics_from_dir(advanced_parameters.statistics_path)
         statistics_points = statistics_aggregator.statistic_points
 

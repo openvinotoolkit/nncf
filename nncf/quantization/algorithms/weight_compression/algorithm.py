@@ -490,9 +490,10 @@ class WeightCompression(Algorithm):
         nodes_to_compress, matmul_input_to_output_nodes_map = self.get_compression_nodes_info(graph)
 
         statistics = None
-        if (self._data_aware_mixed_precision or self._data_aware_compression) and statistic_points is None:
-            statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
-            statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
+        if self._data_aware_mixed_precision or self._data_aware_compression:
+            if statistic_points is None:
+                statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
+                statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
             statistics = self._get_statistics_for_weights_compression(
                 matmul_input_to_output_nodes_map, statistic_points
             )
@@ -788,8 +789,8 @@ class WeightCompression(Algorithm):
                 model, graph, nodes_and_port_ids, self._subset_size
             )
             for points in mixed_precision_statistics.values():
-                for p in points:
-                    statistic_container.add_statistic_point(p)
+                for point in points:
+                    statistic_container.add_statistic_point(point)
 
         return statistic_container
 

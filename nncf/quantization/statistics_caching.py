@@ -41,8 +41,6 @@ def register_statistics_for_algorithm(
     :param matmul_input_to_output_nodes_map: A dictionary mapping from a tuple of (activation node, port ID)
     to a list of MatMul nodes that accept the activation as input.
     """
-    compression_algo.set_backend_entity(model)
-
     statistic_points = compression_algo.get_statistic_points(
         model, graph, matmul_input_to_output_nodes_map.keys(), subset_size
     )
@@ -100,7 +98,6 @@ def register_all_statistics(
     :param compression_algo: WeightCompression algorithm instance.
     :param enable_mixed_precision: Whether to enable mixed precision statistics.
     """
-    compression_algo.set_backend_entity(model)
     _, matmul_input_to_output_nodes_map = compression_algo.get_compression_nodes_info(graph)
 
     register_statistics_for_algorithm(
@@ -125,6 +122,7 @@ def cache_weight_compression_statistics(
     """
     config = get_weight_compression_configuration(awq=True, scale_estimation=True, lora_correction=True)
     compression_algo = WeightCompression(**config, subset_size=subset_size)
+    compression_algo.set_backend_entity(model)
     aggregator = StatisticsAggregatorFactory.create(model, dataset)
     register_all_statistics(aggregator, model, graph, subset_size, compression_algo)
     aggregator.collect_statistics(model, graph)
