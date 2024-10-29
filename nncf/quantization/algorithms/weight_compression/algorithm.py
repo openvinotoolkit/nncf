@@ -487,10 +487,16 @@ class WeightCompression(Algorithm):
     ) -> TModel:
         self.set_backend_entity(model)
 
-        nodes_to_compress, matmul_input_to_output_nodes_map = self.get_compression_nodes_info(graph)
+        nodes_to_compress = self.get_nodes_to_compress(graph)
 
         statistics = None
         if self._data_aware_mixed_precision or self._data_aware_compression:
+            matmul_nodes_to_compress = [
+                node for node in nodes_to_compress if node.metatype in self._backend_entity.matmul_metatypes
+            ]
+            matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(
+                matmul_nodes_to_compress, graph
+            )
             if statistic_points is None:
                 statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
                 statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
@@ -697,7 +703,7 @@ class WeightCompression(Algorithm):
         """
         matmul_input_to_output_nodes_map = defaultdict(list)
         for node in matmul_nodes:
-            if node.layer_attributes.input_attributes["transpose"]:
+            if node.layer_attributes.input_attributes["transpose"]:  # It works only for OV
                 raise nncf.UnsupportedModelError("Transposed input is not supported")
             act_node, output_port_id = self._get_activation_node_and_port(node, graph)
             matmul_input_to_output_nodes_map[(act_node, output_port_id)].append(node)
