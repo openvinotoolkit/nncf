@@ -11,7 +11,7 @@
 import logging
 import os
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import numpy as np
 
@@ -496,27 +496,16 @@ def do_int_quantization(
     zero_point_shape = None if precomputed_zero_point is None else precomputed_zero_point.shape
 
     if ov_model_params is None:
-        output_dtype = None
-        return_ov_tensors = False
-        if config.num_bits == 4:
-            if weight.backend == TensorBackend.ov:
-                return_ov_tensors = weight.backend == TensorBackend.ov
-            else:
-                output_dtype = TensorDataType.uint8 if config.is_int_asym else TensorDataType.int8
-        # ov_model_params = OVModelParameters(
-        #     input_dtype=weight.dtype,
-        #     output_dtype=output_dtype,
-        #     return_ov_tensors=return_ov_tensors,
-        # )
-        ov_model_params = OVModelParameters(
-            input_dtype=weight.dtype,
-            output_dtype=output_dtype,
-            dynamic_shapes=bool(int(os.environ.get("DYNAMIC_COMPRESSION", "0"))),
-            recompile=bool(int(os.environ.get("RECOMPILE", "0"))),
-            release_memory=bool(int(os.environ.get("RELEASE_MEMORY", "0"))),
-            share_outputs=bool(int(os.environ.get("SHARE_OUTPUTS", "0"))),
-            return_ov_tensors=return_ov_tensors,
-        )
+        ov_model_params = OVModelParameters(weight.dtype)
+    if config.num_bits == 4:
+        if weight.backend == TensorBackend.ov:
+            ov_model_params.return_ov_tensors = weight.backend == TensorBackend.ov
+        else:
+            ov_model_params.output_dtype = TensorDataType.uint8 if config.is_int_asym else TensorDataType.int8
+    ov_model_params.dynamic_shapes = bool(int(os.environ.get("DYNAMIC_COMPRESSION", "0")))
+    ov_model_params.recompile = bool(int(os.environ.get("RECOMPILE", "0")))
+    ov_model_params.release_memory = bool(int(os.environ.get("RELEASE_MEMORY", "0")))
+    ov_model_params.share_outputs = bool(int(os.environ.get("SHARE_OUTPUTS", "0")))
 
     model = get_compress_weight_model(
         ov_model_params,
@@ -562,8 +551,9 @@ def calculate_quantized_dequantized_weight(
     precomputed_scale: Optional[Tensor] = None,
     precomputed_zero_point: Optional[Tensor] = None,
     invert_division: Optional[bool] = False,
+    return_compressed_weight: Optional[bool] = False,
     ov_model_params: Optional[OVModelParameters] = None,
-) -> Tensor:
+) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor, Tensor]]:
     accelerate_through_ov = (
         is_openvino_available()
         and weight.backend != TensorBackend.torch
@@ -583,7 +573,15 @@ def calculate_quantized_dequantized_weight(
             zero_point = precomputed_zero_point if precomputed_zero_point is not None else None
             compressed_weight = calculate_quantized_weight(weight, config, scale, zero_point, invert_division)
         decompressed_weight = do_int_dequantization(compressed_weight, scale, zero_point)
-        return decompressed_weight
+        if return_compressed_weight:
+            return decompressed_weight, compressed_weight, scale, zero_point
+        else:
+            return decompressed_weight
+
+    # When reduction axes are not provided, assuming that the weights are already reshaped
+    if config.group_size != -1 and reduction_axes is not None:
+        # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
+        weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
 
     weight_shape = weight.shape
     scale_shape = precomputed_scale.shape if precomputed_scale is not None else None
@@ -591,9 +589,11 @@ def calculate_quantized_dequantized_weight(
 
     if ov_model_params is None:
         ov_model_params = OVModelParameters(weight.dtype)
+    if return_compressed_weight and config.num_bits == 4:
+        ov_model_params.output_dtype = TensorDataType.uint8 if config.is_int_asym else TensorDataType.int8
 
     model = get_compress_decompress_weight_model(
-        ov_model_params, config, weight_shape, scale_shape, zero_point_shape, reduction_axes
+        ov_model_params, config, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_compressed_weight
     )
 
     inputs = [weight]
@@ -601,5 +601,18 @@ def calculate_quantized_dequantized_weight(
         inputs.append(precomputed_scale)
     if precomputed_zero_point is not None:
         inputs.append(precomputed_zero_point)
-    decompressed_weight = model(inputs)[0]
-    return decompressed_weight
+
+    compressed_weight, scale, zero_point = None, None, None
+    results = model(inputs)
+    if len(results) == 1:
+        decompressed_weight = results[0]
+    elif len(results) == 2:
+        decompressed_weight, compressed_weight = results
+    elif len(results) == 3:
+        decompressed_weight, compressed_weight, scale = results
+    else:
+        decompressed_weight, compressed_weight, scale, zero_point = results
+    if return_compressed_weight:
+        return decompressed_weight, compressed_weight, scale, zero_point
+    else:
+        return decompressed_weight

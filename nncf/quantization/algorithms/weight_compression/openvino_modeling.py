@@ -47,6 +47,7 @@ class OVModelParameters:
         return hash(
             (
                 self.input_dtype,
+                self.output_dtype,
                 self.dynamic_shapes,
                 self.recompile,
                 self.release_memory,
@@ -119,6 +120,7 @@ def get_compress_decompress_weight_model(
     scale_shape: Optional[Tuple] = None,
     zero_point_shape: Optional[Tuple] = None,
     reduction_axes: Optional[Tuple] = None,
+    return_compressed_weight: Optional[bool] = False,
 ) -> ModelCallable:
     if ov_model_params.dynamic_shapes:
         weight_shape = (-1,) * len(weight_shape)
@@ -133,6 +135,7 @@ def get_compress_decompress_weight_model(
         scale_shape,
         zero_point_shape,
         reduction_axes,
+        return_compressed_weight,
         disable_caching=ov_model_params.recompile,
     )
 
@@ -253,6 +256,7 @@ def _build_compress_decompress_model(
     scale_shape: Optional[Tuple] = None,
     zero_point_shape: Optional[Tuple] = None,
     reduction_axes: Optional[Tuple] = None,
+    return_compressed_weight: Optional[bool] = False,
 ) -> ModelCallable:
     ov_parameters, ov_results = _build_compress_model(
         config, ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_nodes=True
@@ -284,7 +288,8 @@ def _build_compress_decompress_model(
             scale = ov_parameters[1]
         decompressed_w = opset.convert(compressed_w, ov.Type.f32) * scale
 
-    model = ov.Model([decompressed_w], ov_parameters)
+    ov_results = [decompressed_w] + ov_results if return_compressed_weight else [decompressed_w]
+    model = ov.Model(ov_results, ov_parameters)
     compiled_model = ov.compile_model(model, device_name="CPU")
 
     return partial(run_model, ov_model_params, compiled_model, ov_model_params.return_ov_tensors)
