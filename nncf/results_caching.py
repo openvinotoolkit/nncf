@@ -10,22 +10,27 @@
 # limitations under the License.
 
 import inspect
+from collections import defaultdict
 
 
 class ResultsCacheContainer:
     def __init__(self):
         self._cache = {}
+        self._access_count = {}
 
     def clear(self):
         self._cache.clear()
+        self._access_count.clear()
 
     def is_empty(self):
         return len(self._cache) == 0
 
     def __getitem__(self, item):
+        self._access_count[item] += 1
         return self._cache[item]
 
     def __setitem__(self, key, value):
+        self._access_count[key] = 0
         self._cache[key] = value
 
     def __contains__(self, item):
