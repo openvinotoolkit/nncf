@@ -24,6 +24,7 @@ from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.quantization import compress_weights
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from tests.torch.ptq.test_weights_compression import ALL_SENSITIVITY_METRICS
+from tests.torch.ptq.test_weights_compression import DATA_BASED_SENSITIVITY_METRICS
 from tests.torch.ptq.test_weights_compression import INT4_MODES
 from tests.torch.ptq.test_weights_compression import INT8_MODES
 from tests.torch.ptq.test_weights_compression import SUPPORTED_MODES
@@ -240,7 +241,7 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 @pytest.mark.parametrize(
     "params",
     (
-        *({"sensitivity_metric": metric} for metric in ALL_SENSITIVITY_METRICS),
+        *({"sensitivity_metric": metric} for metric in DATA_BASED_SENSITIVITY_METRICS),
         {"gptq": True},
         {"awq": True},
         {"scale_estimation": True},

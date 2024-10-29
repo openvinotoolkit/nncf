@@ -511,7 +511,6 @@ def compress_weights(
             )
 
         options = {
-            "sensitivity_metric": sensitivity_metric,
             "awq": awq,
             "scale_estimation": scale_estimation,
             "gptq": gptq,
@@ -521,6 +520,12 @@ def compress_weights(
         if unsupported_options:
             raise nncf.ParameterNotSupportedError(
                 f"Torch backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
+            )
+
+        if sensitivity_metric not in [None, SensitivityMetric.WEIGHT_QUANTIZATION_ERROR]:
+            raise nncf.ParameterNotSupportedError(
+                "Torch backend only supports data-free sensitivity metric. "
+                "Set None or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR."
             )
 
         if is_wrapped_model(model):
@@ -550,7 +555,6 @@ def compress_weights(
             )
 
         options = {
-            "sensitivity_metric": sensitivity_metric,
             "awq": awq,
             "scale_estimation": scale_estimation,
             "gptq": gptq,
@@ -560,6 +564,12 @@ def compress_weights(
         if unsupported_options:
             raise nncf.ParameterNotSupportedError(
                 f"TorchFX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
+            )
+
+        if sensitivity_metric not in [None, SensitivityMetric.WEIGHT_QUANTIZATION_ERROR]:
+            raise nncf.ParameterNotSupportedError(
+                "TorchFX backend only supports data-free sensitivity metric. "
+                "Set None or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR."
             )
 
         if dataset:
