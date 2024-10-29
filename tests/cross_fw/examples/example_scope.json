@@ -260,6 +260,7 @@
             "fp32_model_size": 21.37990665435791,
             "int8_model_size": 5.677968978881836,
             "model_compression_rate": 3.7654144877995197
-        }
+        },
+        "windows_skip": "Fail on training on windows (not NNCF issue)"
     }
 }
