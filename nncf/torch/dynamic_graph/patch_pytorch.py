@@ -306,8 +306,6 @@ def patch_torch_jit():
 
 
 def patch_namespace_opname(namespace, op_info: PatchedOperatorInfo):
-    import torchvision  # noqa
-
     op_name = op_info.name
     if hasattr(namespace, op_name):
         orig = getattr(namespace, op_name)

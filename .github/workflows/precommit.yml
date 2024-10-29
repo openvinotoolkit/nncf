@@ -147,8 +147,8 @@ jobs:
           python -c "import torch; print(torch.cuda.is_available())"
       - name: Run PyTorch precommit test scope
         run: |
-          export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}
-          export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+          export PATH=/usr/local/cuda-12.4/bin${PATH:+:${PATH}}
+          export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
           make test-torch-cuda
 
   tensorflow:
