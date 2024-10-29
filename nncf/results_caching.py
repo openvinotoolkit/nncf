@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import inspect
-from collections import defaultdict
 
 
 class ResultsCacheContainer:

@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-import os
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
@@ -19,9 +18,6 @@ import nncf
 from nncf.common.logging.logger import log_once
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_decompress_weight_model
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_weight_model
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -440,7 +436,7 @@ def do_int_quantization(
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
     invert_division: Optional[bool] = False,
-    ov_model_params: Optional[OVModelParameters] = None,
+    ov_model_params: Optional["OVModelParameters"] = None,
 ):
     """
     Performs integer quantization on the given weight tensor.
@@ -458,6 +454,7 @@ def do_int_quantization(
     """
     assert config.is_integer, "The function supports integer quantization only"
 
+    # import os
     accelerate_through_ov = (
         is_openvino_available()
         and weight.backend != TensorBackend.torch
@@ -471,7 +468,7 @@ def do_int_quantization(
         # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
 
-    if not accelerate_through_ov:
+    if not accelerate_through_ov or True:
         # Reference implementation
 
         if weight.backend == TensorBackend.ov:
@@ -490,6 +487,9 @@ def do_int_quantization(
 
         compressed_weights = calculate_quantized_weight(weight, config, scale, zero_point, invert_division)
         return compressed_weights, scale, zero_point
+
+    from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
+    from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_weight_model
 
     weight_shape = weight.shape
     scale_shape = None if precomputed_scale is None else precomputed_scale.shape
@@ -552,8 +552,9 @@ def calculate_quantized_dequantized_weight(
     precomputed_zero_point: Optional[Tensor] = None,
     invert_division: Optional[bool] = False,
     return_compressed_weight: Optional[bool] = False,
-    ov_model_params: Optional[OVModelParameters] = None,
+    ov_model_params: Optional["OVModelParameters"] = None,
 ) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor, Tensor]]:
+    # import os
     accelerate_through_ov = (
         is_openvino_available()
         and weight.backend != TensorBackend.torch
@@ -577,6 +578,9 @@ def calculate_quantized_dequantized_weight(
             return decompressed_weight, compressed_weight, scale, zero_point
         else:
             return decompressed_weight
+
+    from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
+    from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_decompress_weight_model
 
     # When reduction axes are not provided, assuming that the weights are already reshaped
     if config.group_size != -1 and reduction_axes is not None:

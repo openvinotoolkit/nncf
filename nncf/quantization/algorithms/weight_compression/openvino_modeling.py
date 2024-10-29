@@ -186,8 +186,8 @@ def _build_compress_model(
             w_max = opset.reduce_max(weight, reduction_axes=reduction_axes, keep_dims=True)
             w_abs_min, w_max = opset.convert(w_abs_min, ov.Type.f32), opset.convert(w_max, ov.Type.f32)
 
-            scale = opset.select(w_abs_min >= w_max, w_abs_min, opset.constant(0, ov.Type.f32) - w_max)
-            scale /= opset.constant(level_high, ov.Type.f32)
+            scale = opset.select(w_abs_min >= w_max, w_abs_min, opset.negative(w_max))
+            scale /= opset.constant(-level_low, ov.Type.f32)
             scale = opset.select(opset.abs(scale) < eps, eps, scale)
 
     zero_point = None
@@ -204,8 +204,6 @@ def _build_compress_model(
             )  # [a1, r, a2] -> [a1, 1, a2]
             min_values = opset.convert(min_values, ov.Type.f32)
 
-        level_low = 0
-        level_high = 2**num_bits - 1
         zero_point = opset.constant(level_low, ov.Type.f32) - opset.round(min_values / scale)
         zero_point = opset.clamp(zero_point, level_low, level_high)
 

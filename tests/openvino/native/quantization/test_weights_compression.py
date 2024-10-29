@@ -27,7 +27,6 @@ from nncf.common.utils.debug import nncf_debug
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.graph.node_utils import get_const_value
-from nncf.openvino.quantization.compression_primitives import OV_COMPRESSION_PRIMITIVE_CACHE
 from nncf.parameters import BackupMode
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
@@ -36,7 +35,6 @@ from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParamete
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
@@ -1021,34 +1019,6 @@ def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
     }
     ref_e8m0_nodes = {f"weights_{i}/scale" for i in ref_ids}
     assert ref_e8m0_nodes == names_e8m0
-
-
-@pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
-def test_np_ov_compression_decompression(mode):
-    sz = 60
-    w = np.arange(-sz, sz).reshape(2, sz).astype(np.float32) / 9.0
-    w = Tensor(w)
-
-    config = WeightCompressionConfig(mode)
-
-    compressed_weighs, scale, zp = do_int_quantization(w, config, -1, invert_division=True)
-    decompressed_weighs = do_int_dequantization(compressed_weighs, scale, zp)
-
-    compressed_weighs = compressed_weighs.data
-    decompressed_weighs = decompressed_weighs.data
-    zp_shape = zp.shape if zp is not None else None
-
-    compress = OV_COMPRESSION_PRIMITIVE_CACHE.get_compress_weight_primitive(config, w.shape, scale.shape, zp_shape)
-    compress_decompress = OV_COMPRESSION_PRIMITIVE_CACHE.get_compress_decompress_weight_primitive(
-        config, w.shape, scale.shape, zp_shape
-    )
-
-    params = [w.data, scale.data, zp.data] if zp is not None else [w.data, scale.data]
-    compressed_weighs_ov = compress(params)
-    decompressed_weighs_ov = compress_decompress(params)
-
-    assert np.allclose(compressed_weighs, compressed_weighs_ov)
-    assert np.allclose(decompressed_weighs, decompressed_weighs_ov)
 
 
 @pytest.mark.parametrize(

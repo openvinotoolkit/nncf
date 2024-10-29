@@ -64,6 +64,8 @@ jobs:
           cache: pip
       - name: Install NNCF and test requirements
         run: make install-openvino-test
+      - name: Install OpenVINO Nightly
+        run: pip install -U --pre openvino openvino-tokenizers --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly
       - name: Print installed modules
         run: pip list
       - name: Run OV precommit test scope

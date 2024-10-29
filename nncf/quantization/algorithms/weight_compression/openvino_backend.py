@@ -11,8 +11,6 @@
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import openvino as ov
-from openvino import Type
-from openvino.properties.hint import inference_precision
 from openvino.runtime import opset13 as opset
 from openvino.runtime.op import Constant
 
@@ -336,7 +334,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     weight = weight.to_backend(TensorBackend.numpy)
                 if compressed_weight.tensor.backend == TensorBackend.ov:
                     compressed_weight.tensor = compressed_weight.tensor.to_backend(TensorBackend.numpy)
-                if compressed_weight.zero_point.backend == TensorBackend.ov:
+                if (
+                    compressed_weight.zero_point is not None
+                    and compressed_weight.zero_point.backend == TensorBackend.ov
+                ):
                     compressed_weight.zero_point = compressed_weight.zero_point.to_backend(TensorBackend.numpy)
                 adapters = lora_correction_algo.calculate_adapters(weight, compressed_weight, wc_params)
                 self.insert_adapters(wc_params, *adapters, int8_lora=lora_correction_algo.use_int8_adapters)

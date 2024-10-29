@@ -217,6 +217,7 @@ class ScaleEstimation:
             )
             compressed_weights = do_nf4_quantization(norm_weight, scale, is_normalized_weight=True)
             q_weights = do_nf4_dequantization(compressed_weights, scale, reduction_axis)
+            q_weights, _ = reshape_weight_for_grouped_quantization(q_weights, reduction_axis, group_size)
             zp = None
         else:
             q_weights, compressed_weights, scale, zp = calculate_quantized_dequantized_weight(

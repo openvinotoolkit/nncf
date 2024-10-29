@@ -1,16 +1,18 @@
 import gc
 import time
+from unittest.mock import patch
 
 import numpy as np
-from unittest.mock import patch
 from tqdm import tqdm
 
+import nncf.utils
 from nncf import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters, OV_MODEL_CACHE
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization, calculate_quantized_dequantized_weight
+from nncf.quantization.algorithms.weight_compression.openvino_modeling import OV_MODEL_CACHE
+from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_dequantized_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.tensor import Tensor
-import nncf.utils
 
 
 def get_random_weights(size, amount, n_unique_shapes, dtype, is_sorted=True):
@@ -40,7 +42,7 @@ def measure_compression_time(weights, config, is_ov, verbose=True):
     start_time = time.perf_counter()
     for w in tqdm(weights, disable=not verbose):
         do_int_quantization(
-        # calculate_quantized_dequantized_weight(
+            # calculate_quantized_dequantized_weight(
             w,
             config,
             reduction_axes=(1,),
@@ -76,7 +78,7 @@ def bin_search(l, r, config, n, dtype):
             amount=n,
             # n_unique_shapes=int(np.sqrt(n)),
             n_unique_shapes=1,
-            dtype=dtype
+            dtype=dtype,
         )
         t_np = measure_compression_time(
             weights,
@@ -98,17 +100,14 @@ def bin_search(l, r, config, n, dtype):
 
 
 N = int(1e5)
-S = int(5e5)    # 5e5 for compression/decompression,
+S = int(5e5)  # 5e5 for compression/decompression,
 K = int(np.sqrt(N))
 DTYPE = np.float32
 
 bin_search(
     l=int(1e2),
     r=int(1e5),
-    config=WeightCompressionConfig(
-        CompressWeightsMode.INT4_ASYM,
-        group_size=-1
-    ),
+    config=WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, group_size=-1),
     n=N,
     dtype=DTYPE,
 )
