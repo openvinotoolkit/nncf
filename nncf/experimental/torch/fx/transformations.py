@@ -22,7 +22,6 @@ import nncf
 import nncf.torch
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -660,26 +659,37 @@ def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> Option
     return tuple(args)
 
 
+def _get_value(
+    arg: Optional[Union[torch.fx.Node, float, int]], model: torch.fx.GraphModule
+) -> Union[torch.nn.Parameter, float, int]:
+    """
+    Retrieves value from the given argument. It can be either torch.fx.Node or float/int value.
+
+    :param arg: Given arg to retrieve value.
+    :param model: torch.fx.GraphModule instance.
+    :return: value from the given argument.
+    """
+    if isinstance(arg, torch.fx.Node):
+        return get_tensor_constant_from_node(arg, model)
+    return arg
+
+
 def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) -> None:
     """
     Change the FP32 weight value to Int8 and also reshape the scale for per_channel_quantization.
 
     :param: model: Model to apply transformations to.
     """
+
     for match in matches:
         mul_node = match.replacements[0]
         sub_node = match.replacements[1]
         nodes_map = {node.name: match.nodes_map[node] for node in match.nodes_map}
 
-        def get_const(arg: Optional[Union[torch.fx.Node, float, int]]):
-            if isinstance(arg, torch.fx.Node):
-                return get_tensor_constant_from_node(arg, model)
-            return arg
-
-        weight_node = get_const(nodes_map["weight"])
-        scale_node = get_const(nodes_map["scale"])
-        zp_node = get_const(nodes_map["zero_point"])
-        axis = get_const(nodes_map.get("axis"))
+        weight_node = _get_value(nodes_map["weight"], model)
+        scale_node = _get_value(nodes_map["scale"], model)
+        zp_node = _get_value(nodes_map["zero_point"], model)
+        axis = _get_value(nodes_map.get("axis"), model)
         port_id = 0
         if axis is not None:
             result = torch.ops.quantized_decomposed.quantize_per_channel.default(
@@ -792,24 +802,10 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     # to make it easier for algorithms to work
     # with the target graph BatchNorm operations
     # are being fused
-    fold_constant_except_qdq(model)
     fuse_conv_bn(model)
     separate_conv_and_bias(model)
     separate_linear_and_bias(model)
     shared_constants_unification_transformation(model)
-
-
-def fold_constant_except_qdq(model: torch.fx.GraphModule):
-    """
-    Performs constant folding avoiding quantize-dequantize pattern.
-
-    :param model: Model to perform constant folding on.
-    """
-
-    def constraint_fn(node: torch.fx.Node):
-        return node.op != "call_function" or node.target not in QUANTIZE_NODE_TARGETS + DEQUANTIZE_NODE_TARGETS
-
-    constant_fold(model, constraint_fn=constraint_fn)
 
 
 def revert_quantization_transformations(model: torch.fx.GraphModule) -> None:
