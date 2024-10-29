@@ -324,15 +324,6 @@ class WeightCompression(Algorithm):
                 ordered_nodes_to_compress.append(node)
         return ordered_nodes_to_compress
 
-    def get_matmul_nodes(self, nodes: List[NNCFNode]) -> List[NNCFNode]:
-        """
-        Collects MatMul nodes from the list of nodes.
-
-        :param nodes: List of nodes.
-        :return: List of MatMul nodes.
-        """
-        return [node for node in nodes if node.metatype in self._backend_entity.matmul_metatypes]
-
     def _get_ratio_defining_params(
         self, all_weight_params: List[WeightCompressionParameters], is_last_layer_shared: bool
     ) -> List[WeightCompressionParameters]:
@@ -495,22 +486,16 @@ class WeightCompression(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self.set_backend_entity(model)
-        nodes_to_compress = self.get_nodes_to_compress(graph)
-        is_statistics_provided = statistic_points is not None
-        statistics = None
 
-        if self._data_aware_mixed_precision or self._data_aware_compression:
-            matmul_nodes_to_compress = self.get_matmul_nodes(nodes_to_compress)
-            matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(
-                matmul_nodes_to_compress, graph
+        nodes_to_compress, matmul_input_to_output_nodes_map = self.get_compression_nodes_info(graph)
+
+        statistics = None
+        if (self._data_aware_mixed_precision or self._data_aware_compression) and statistic_points is None:
+            statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
+            statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
+            statistics = self._get_statistics_for_weights_compression(
+                matmul_input_to_output_nodes_map, statistic_points
             )
-            if not is_statistics_provided:
-                statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
-                statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
-            if statistic_points is not None:
-                statistics = self._get_statistics_for_weights_compression(
-                    matmul_input_to_output_nodes_map, statistic_points
-                )
 
         all_weight_params: List[WeightCompressionParameters] = []
         weight_names = set()
@@ -696,15 +681,18 @@ class WeightCompression(Algorithm):
         self, matmul_nodes: List[NNCFNode], graph: NNCFGraph
     ) -> Dict[Tuple[NNCFNode, int], List[NNCFNode]]:
         """
-        Each weighted MatMul node has two input nodes: an activation and a weight.
-        A single activation may be an input to multiple MatMul nodes.
-        Returns a mapping from activation node and a port id to corresponding matmul nodes which accept this
-        activation as an input.
+        Maps activation nodes to their corresponding MatMul nodes in the graph.
 
-        :param matmul_nodes: Matmul nodes.
-        :param graph: NNCFGraph instance.
-        :return: A mapping from activation node and a port id to corresponding matmul nodes which accept this
-        activation as an input.
+        Each weighted MatMul node takes two inputs: an activation and a weight.
+        An activation node may serve as an input to multiple MatMul nodes.
+        This function returns a mapping where each key is a tuple consisting of an
+        activation node and its output port ID, and the value is a list of MatMul
+        nodes that use this activation as input.
+
+        :param matmul_nodes: A list of MatMul nodes from the computation graph.
+        :param graph: An instance of NNCFGraph representing the computation graph.
+        :return: A dictionary mapping from a tuple of (activation node, port ID)
+        to a list of corresponding MatMul nodes that accept the activation as input.
         """
         matmul_input_to_output_nodes_map = defaultdict(list)
         for node in matmul_nodes:
@@ -713,6 +701,32 @@ class WeightCompression(Algorithm):
             act_node, output_port_id = self._get_activation_node_and_port(node, graph)
             matmul_input_to_output_nodes_map[(act_node, output_port_id)].append(node)
         return matmul_input_to_output_nodes_map
+
+    def get_compression_nodes_info(
+        self, graph: NNCFGraph
+    ) -> Tuple[List[NNCFNode], Dict[Tuple[NNCFNode, int], List[NNCFNode]]]:
+        """
+        Retrieves the nodes to compress along with a mapping of activation nodes
+        to their corresponding MatMul nodes.
+
+        This function first identifies all nodes that can be compressed from the
+        provided graph. It then filters these nodes to find those that are of
+        MatMul type and generates a mapping of activation nodes to their
+        corresponding MatMul nodes using the
+        `get_matmul_input_to_output_nodes_map` function.
+
+        :param graph: An instance of NNCFGraph representing the computation graph.
+        :return: A tuple containing:
+        - Nodes for compression.
+        - A dictionary mapping from a tuple of (activation node, port ID)
+        to a list of MatMul nodes that accept the activation as input.
+        """
+        nodes_to_compress = self.get_nodes_to_compress(graph)
+        matmul_nodes_to_compress = [
+            node for node in nodes_to_compress if node.metatype in self._backend_entity.matmul_metatypes
+        ]
+        matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
+        return nodes_to_compress, matmul_input_to_output_nodes_map
 
     def _collect_statistics(
         self,
@@ -725,9 +739,9 @@ class WeightCompression(Algorithm):
         Creates statistics aggregator, registers all statistics specified for algorithm, and then collect them.
 
         :param dataset: Dataset to collect values.
-        :param matmul_input_to_output_nodes_map: Nodes, whose inputs are collected.
         :param graph: Model graph.
         :param model: Model for statistics collection.
+        :param statistic_points: Statistics points.
         """
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         statistics_aggregator.register_statistic_points(statistic_points)
@@ -780,7 +794,9 @@ class WeightCompression(Algorithm):
         return statistic_container
 
     def _get_statistics_for_weights_compression(
-        self, matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]], statistic_points
+        self,
+        matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
+        statistic_points: StatisticPointsContainer,
     ) -> Dict[str, WCTensorStatistic]:
         """
         Retrieve collected statistics only for WeightCompression algorithm and not for MixedPrecision.

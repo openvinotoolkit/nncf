@@ -28,6 +28,7 @@ def register_statistics_for_algorithm(
     graph: NNCFGraph,
     subset_size: int,
     compression_algo: WeightCompression,
+    matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
 ) -> None:
     """
     Registers the statistics required for the given compression algorithm.
@@ -37,14 +38,14 @@ def register_statistics_for_algorithm(
     :param graph: Model's computational graph.
     :param subset_size: Size of dataset subset for statistics.
     :param compression_algo: WeightCompression algorithm instance.
+    :param matmul_input_to_output_nodes_map: A dictionary mapping from a tuple of (activation node, port ID)
+    to a list of MatMul nodes that accept the activation as input.
     """
     compression_algo.set_backend_entity(model)
 
-    nodes_to_compress = compression_algo.get_nodes_to_compress(graph)
-    matmul_nodes_to_compress = compression_algo.get_matmul_nodes(nodes_to_compress)
-    input_output_map = compression_algo.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
-
-    statistic_points = compression_algo.get_statistic_points(model, graph, input_output_map.keys(), subset_size)
+    statistic_points = compression_algo.get_statistic_points(
+        model, graph, matmul_input_to_output_nodes_map.keys(), subset_size
+    )
     aggregator.register_statistic_points(statistic_points)
 
 
@@ -52,7 +53,7 @@ def _register_mixed_precision(
     aggregator: StatisticsAggregator,
     model: TModel,
     graph: NNCFGraph,
-    input_output_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
+    matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
     subset_size: int,
 ) -> None:
     """
@@ -61,7 +62,8 @@ def _register_mixed_precision(
     :param aggregator: Aggregator to register statistics.
     :param model: Model being analyzed.
     :param graph: Model's computational graph.
-    :param input_output_map: Map of input to output nodes for matmul operations.
+    :param matmul_input_to_output_nodes_map: A dictionary mapping from a tuple of (activation node, port ID)
+    to a list of MatMul nodes that accept the activation as input.
     :param subset_size: Size of dataset subset for statistics.
     """
     sensitivities = [
@@ -74,7 +76,9 @@ def _register_mixed_precision(
     for sensitivity in sensitivities:
         criterion_cls = MIXED_PRECISION_CRITERIA.get(sensitivity)
         mixed_prec_algo = criterion_cls(None, None)
-        statistic_points = mixed_prec_algo.get_statistic_points(model, graph, input_output_map.keys(), subset_size)
+        statistic_points = mixed_prec_algo.get_statistic_points(
+            model, graph, matmul_input_to_output_nodes_map.keys(), subset_size
+        )
         aggregator.register_statistic_points(statistic_points)
 
 
@@ -97,15 +101,14 @@ def register_all_statistics(
     :param enable_mixed_precision: Whether to enable mixed precision statistics.
     """
     compression_algo.set_backend_entity(model)
+    _, matmul_input_to_output_nodes_map = compression_algo.get_compression_nodes_info(graph)
 
-    nodes_to_compress = compression_algo.get_nodes_to_compress(graph)
-    matmul_nodes_to_compress = compression_algo.get_matmul_nodes(nodes_to_compress)
-    input_output_map = compression_algo.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
-
-    register_statistics_for_algorithm(aggregator, model, graph, subset_size, compression_algo)
+    register_statistics_for_algorithm(
+        aggregator, model, graph, subset_size, compression_algo, matmul_input_to_output_nodes_map
+    )
 
     if enable_mixed_precision:
-        _register_mixed_precision(aggregator, model, graph, input_output_map, subset_size)
+        _register_mixed_precision(aggregator, model, graph, matmul_input_to_output_nodes_map, subset_size)
 
 
 def cache_weight_compression_statistics(
