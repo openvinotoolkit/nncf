@@ -11,9 +11,9 @@
 
 import functools
 import inspect
-import sys
 from contextlib import contextmanager
 from typing import Callable, List, Union
+import sys
 
 import torch
 import torch.utils.cpp_extension
@@ -290,9 +290,11 @@ def patch_torch_jit():
 
     import torch
 
-    if "torchvision" in sys.modules:
+    try:
         import torchvision  # noqa
-
+    except:
+        pass
+    
     global _ORIG_JIT_SCRIPT
     _ORIG_JIT_SCRIPT = getattr(torch.jit, "script")
     setattr(torch.jit, "script", torch_jit_script_wrapper)
