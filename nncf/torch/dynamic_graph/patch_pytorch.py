@@ -11,9 +11,9 @@
 
 import functools
 import inspect
+import sys
 from contextlib import contextmanager
 from typing import Callable, List, Union
-import sys
 
 import torch
 import torch.utils.cpp_extension
@@ -289,8 +289,8 @@ def patch_torch_jit():
     # "RuntimeError: undefined value torch" inside the real torch.jit.script
 
     import torch
-    
-    if('torchvision' in sys.modules):
+
+    if "torchvision" in sys.modules:
         import torchvision  # noqa
 
     global _ORIG_JIT_SCRIPT
