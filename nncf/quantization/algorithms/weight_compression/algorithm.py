@@ -272,8 +272,8 @@ class WeightCompression(Algorithm):
         )
         self._data_aware_compression = self._awq or self._scale_estimation or self._lora_correction or self._gptq
 
-    @property
-    def available_backends(self) -> List[BackendType]:
+    @staticmethod
+    def get_available_backends() -> List[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
     def set_backend_entity(self, model: TModel) -> None:
@@ -612,7 +612,6 @@ class WeightCompression(Algorithm):
                 graph=graph,
                 dataset=dataset,
                 weight_compression_parameters=all_weight_params,
-                statistic_points=None,  # GPTQ does not support providing statistics
                 backend_entity=self._backend_entity,
             )
         else:

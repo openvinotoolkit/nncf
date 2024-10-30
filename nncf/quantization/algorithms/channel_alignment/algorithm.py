@@ -75,8 +75,8 @@ class ChannelAlignment(Algorithm):
         self._quantile = 1e-4
         self._algorithm_key = f"CA_{hash(self)}"
 
-    @property
-    def available_backends(self) -> List[BackendType]:
+    @staticmethod
+    def get_available_backends() -> List[BackendType]:
         return [BackendType.OPENVINO]
 
     def _set_backend_entity(self, model: TModel) -> None:

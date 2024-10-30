@@ -26,9 +26,9 @@ class Algorithm(ABC):
     Base class for all Post-Training algorithms.
     """
 
-    @property
+    @staticmethod
     @abstractmethod
-    def available_backends(self) -> List[BackendType]:
+    def get_available_backends() -> List[BackendType]:
         """
         Returns list of the available backends for the algorithm.
 
@@ -62,3 +62,13 @@ class Algorithm(ABC):
         :param graph: Model graph.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
+
+    # @abstractmethod
+    # def get_all_possible_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
+    #     """
+    #     Returns statistic points, for which StatisticsCollector should collect statistics.
+
+    #     :param model: Model for statistics collection.
+    #     :param graph: Model graph.
+    #     :return: Statistic points, for which StatisticsCollector should collect statistics.
+    #     """

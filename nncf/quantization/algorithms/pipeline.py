@@ -193,7 +193,7 @@ class Pipeline:
         for pipeline_step in self._pipeline_steps:
             step = []
             for algorithm in pipeline_step:
-                if backend not in algorithm.available_backends:
+                if backend not in algorithm.get_available_backends():
                     nncf_logger.debug(f"{backend.name} does not support {algorithm.__class__.__name__} algorithm yet.")
                     continue
                 step.append(algorithm)

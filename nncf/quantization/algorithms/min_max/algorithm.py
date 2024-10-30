@@ -330,8 +330,8 @@ class MinMaxQuantization(Algorithm):
         )
         self._unified_scale_groups = []
 
-    @property
-    def available_backends(self) -> List[BackendType]:
+    @staticmethod
+    def get_available_backends() -> List[BackendType]:
         return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
     def _get_quantizer_constraints(

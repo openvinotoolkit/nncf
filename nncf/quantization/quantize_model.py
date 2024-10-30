@@ -36,9 +36,9 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResult
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
 from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.algorithms.weight_compression.algorithm import check_user_compression_configuration
 from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
-from nncf.quantization.algorithms.weight_compression.backend import WEIGHT_COMPRESSION_SUPPORTED_BACKENDS
 from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi
@@ -495,7 +495,7 @@ def compress_weights(
     :return: The non-trainable model with compressed weights.
     """
     backend = get_backend(model)
-    if backend not in WEIGHT_COMPRESSION_SUPPORTED_BACKENDS:
+    if backend not in WeightCompression.get_available_backends():
         raise nncf.UnsupportedBackendError(f"Unsupported type of backend for weight compression: {backend}")
     if mode == CompressWeightsMode.INT8:
         warning_deprecated(

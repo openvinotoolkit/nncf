@@ -100,8 +100,8 @@ class AWQ(Algorithm):
 
         self._set_backend_entity(model)
 
-    @property
-    def available_backends(self) -> List[BackendType]:
+    @staticmethod
+    def get_available_backends() -> List[BackendType]:
         return [BackendType.OPENVINO]
 
     def _set_backend_entity(self, model: TModel) -> None:

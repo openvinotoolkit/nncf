@@ -103,8 +103,8 @@ class MixedPrecisionCriterion(Algorithm):
             weight_param.compression_config = self._primary_config
             num_weights_in_4bit += weight_param.num_weights
 
-    @property
-    def available_backends(self) -> List[BackendType]:
+    @staticmethod
+    def get_available_backends() -> List[BackendType]:
         return [BackendType.OPENVINO]
 
     def _set_backend_entity(self, model: TModel) -> None:

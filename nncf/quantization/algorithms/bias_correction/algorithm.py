@@ -103,8 +103,8 @@ class BiasCorrection(Algorithm):
         if self.apply_for_all_nodes:
             raise nncf.InternalError("BiasCorrection algorithm does not support apply_for_all_nodes=True yet")
 
-    @property
-    def available_backends(self) -> List[BackendType]:
+    @staticmethod
+    def get_available_backends() -> List[BackendType]:
         return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH_FX]
 
     def _set_backend_entity(self, model: TModel) -> None:
