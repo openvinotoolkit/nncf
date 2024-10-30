@@ -290,11 +290,6 @@ def patch_torch_jit():
 
     import torch
 
-    try:
-        import torchvision  # noqa
-    except:
-        pass
-    
     global _ORIG_JIT_SCRIPT
     _ORIG_JIT_SCRIPT = getattr(torch.jit, "script")
     setattr(torch.jit, "script", torch_jit_script_wrapper)
@@ -311,6 +306,16 @@ def patch_torch_jit():
 
 
 def patch_namespace_opname(namespace, op_info: PatchedOperatorInfo):
+    # This is required since torchvision changes a dictionary inside of pytorch mapping  
+    # different ops and their role in torch fx graph. Once the nncf mapping is done, it is
+    # represented as a different custom operation which is how it is changed in 
+    # the said mapping. refer to `unwrap_with_attr_name_if_wrapper()` in 
+    # torch/_dynamo/utils.py and torch/_dynamo/tracer_rules.py `lookup_inner()`
+    # function where this dictionary is referenced.
+    try:
+        import torchvision  # noqa
+    except:
+        pass
     op_name = op_info.name
     if hasattr(namespace, op_name):
         orig = getattr(namespace, op_name)
