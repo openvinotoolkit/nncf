@@ -436,7 +436,7 @@ def do_int_quantization(
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
     invert_division: Optional[bool] = False,
-    ov_model_params: Optional["OVModelParameters"] = None,
+    ov_model_params: Optional = None,
 ):
     """
     Performs integer quantization on the given weight tensor.
@@ -468,7 +468,7 @@ def do_int_quantization(
         # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
 
-    if not accelerate_through_ov or True:
+    if not accelerate_through_ov:
         # Reference implementation
 
         if weight.backend == TensorBackend.ov:
@@ -552,7 +552,7 @@ def calculate_quantized_dequantized_weight(
     precomputed_zero_point: Optional[Tensor] = None,
     invert_division: Optional[bool] = False,
     return_compressed_weight: Optional[bool] = False,
-    ov_model_params: Optional["OVModelParameters"] = None,
+    ov_model_params: Optional = None,
 ) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor, Tensor]]:
     # import os
     accelerate_through_ov = (

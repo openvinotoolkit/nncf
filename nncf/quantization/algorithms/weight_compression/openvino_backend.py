@@ -278,7 +278,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         if should_add_convert_node:
             mul = opset.convert(mul, const_dtype, name=f"{const_node_name}/fq_weights_{weight_port_id}/convert")
 
-        # TODO: convert tensors inside compressed_weight to numpy backend if they are in ov backend
         return mul, compressed_weight
 
     def transform_model(
