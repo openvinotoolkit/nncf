@@ -210,6 +210,7 @@ def main():
     model = YOLO(f"{ROOT}/{MODEL_NAME}.pt")
     args = get_cfg(cfg=DEFAULT_CFG)
     args.data = "coco128-seg.yaml"
+    args.workers = 0
 
     # Prepare validation dataset and helper
     validator, data_loader = prepare_validation(model, args)
