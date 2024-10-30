@@ -68,8 +68,8 @@ class SmoothQuant(Algorithm):
         self._cached_multiply_names = Counter()
         self._alpha_map = alpha_map
 
-    @staticmethod
-    def get_available_backends() -> List[BackendType]:
+    @property
+    def available_backends(self) -> List[BackendType]:
         return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
     def _set_backend_entity(self, model: TModel) -> None:

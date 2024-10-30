@@ -116,7 +116,7 @@ def get_quantization_param_grids(pipeline: Pipeline, backend: BackendType) -> Li
     for step in pipeline.pipeline_steps:
         param_grid = {}
         for algorithm in step:
-            if backend not in algorithm.get_available_backends():
+            if backend not in algorithm.available_backends:
                 continue
             param_grid.update(algorithm_cls_to_param_grid[algorithm.__class__])
         if param_grid:

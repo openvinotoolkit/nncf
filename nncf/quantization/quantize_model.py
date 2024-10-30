@@ -36,7 +36,6 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResult
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
 from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
-from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.algorithms.weight_compression.algorithm import check_user_compression_configuration
 from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
 from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
@@ -495,8 +494,6 @@ def compress_weights(
     :return: The non-trainable model with compressed weights.
     """
     backend = get_backend(model)
-    if backend not in WeightCompression.get_available_backends():
-        raise nncf.UnsupportedBackendError(f"Unsupported type of backend for weight compression: {backend}")
     if mode == CompressWeightsMode.INT8:
         warning_deprecated(
             "`CompressWeightsMode.INT8` is deprecated. Please, use `CompressWeightsMode.INT8_ASYM` as value instead."
@@ -636,6 +633,9 @@ def compress_weights(
         backup_mode,
         advanced_parameters,
     )
+
+    if compression_weights_impl is None:
+        raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
 
     return compression_weights_impl(
         model=model,

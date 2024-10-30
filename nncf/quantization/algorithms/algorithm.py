@@ -26,9 +26,8 @@ class Algorithm(ABC):
     Base class for all Post-Training algorithms.
     """
 
-    @staticmethod
-    @abstractmethod
-    def get_available_backends() -> List[BackendType]:
+    @property
+    def available_backends(self) -> List[BackendType]:
         """
         Returns list of the available backends for the algorithm.
 

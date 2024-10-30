@@ -111,8 +111,8 @@ class SparsifyActivationsAlgorithm:
         self._ignored_scope = ignored_scope
         self._backend_entity: SparsifyActivationsAlgoBackend = None
 
-    @staticmethod
-    def get_available_backends() -> List[BackendType]:
+    @property
+    def available_backends(self) -> List[BackendType]:
         """
         Supported backends for this algorithm.
         """
