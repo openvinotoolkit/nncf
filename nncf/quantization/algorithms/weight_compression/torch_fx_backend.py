@@ -45,8 +45,10 @@ from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
-from nncf.torch.quantization.layers import AsymmetricWeightsDecompressor
-from nncf.torch.quantization.layers import SymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 
 
 class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
@@ -176,10 +178,9 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
-            if compression_config.mode not in [
-                CompressWeightsMode.INT8_ASYM,
-                CompressWeightsMode.INT8_SYM,
-                CompressWeightsMode.INT8,
+            if compression_config.mode in [
+                CompressWeightsMode.NF4,
+                CompressWeightsMode.E2M1,
             ]:
                 raise nncf.ParameterNotSupportedError(f"{compression_config.mode.value} is not supported.")
             weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
@@ -196,35 +197,44 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 None if precomputed_scales is None else precomputed_scales.get(wc_params.weight_name),
                 None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name),
             )
-            compressed_weight.scale = compressed_weight.scale.astype(dtype=TensorDataType.float16)
 
-            # pack compressed tensor
-            if compression_config.mode == CompressWeightsMode.INT8_SYM:
-                dtype = TensorDataType.int8
-            else:
-                dtype = TensorDataType.uint8
-            packed_tensor = compressed_weight.tensor.astype(dtype)
-
-            self.set_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph, packed_tensor)
             # creates weight decompressor
             if compression_config.mode == CompressWeightsMode.INT8_SYM:
-                decompressor = SymmetricWeightsDecompressor(
+                decompressor = INT8SymmetricWeightsDecompressor(
                     compressed_weight.scale.data, result_dtype=weight.data.dtype
                 )
-                decompressor_type = "symmetric"
-            else:
-                packed_zero_point = compressed_weight.zero_point.astype(dtype)
-                decompressor = AsymmetricWeightsDecompressor(
-                    compressed_weight.scale.data, packed_zero_point.data, result_dtype=weight.data.dtype
+            elif compression_config.mode == CompressWeightsMode.INT8_ASYM:
+                decompressor = INT8AsymmetricWeightsDecompressor(
+                    compressed_weight.scale.data, compressed_weight.zero_point.data, result_dtype=weight.data.dtype
                 )
-                decompressor_type = "asymmetric"
+            elif compression_config.mode == CompressWeightsMode.INT4_SYM:
+                decompressor = INT4SymmetricWeightsDecompressor(
+                    scale=compressed_weight.scale.data,
+                    compressed_weight_shape=compressed_weight.tensor.shape,
+                    result_shape=weight.shape,
+                    result_dtype=weight.data.dtype,
+                )
+            elif compression_config.mode == CompressWeightsMode.INT4_ASYM:
+                decompressor = INT4AsymmetricWeightsDecompressor(
+                    scale=compressed_weight.scale.data,
+                    zero_point=compressed_weight.zero_point.data,
+                    compressed_weight_shape=compressed_weight.tensor.shape,
+                    result_shape=weight.shape,
+                    result_dtype=weight.data.dtype,
+                )
+
+            # pack tensor
+            packed_tensor = decompressor.pack_weight(compressed_weight.tensor.data)
+
+            # sets compressed tensor
+            self.set_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph, packed_tensor)
 
             # register weight decompression module in the model
             graph_weight_node = get_graph_node_by_name(model.graph, wc_params.node_with_weight.node_name)
             compressed_weight_name = graph_weight_node.all_input_nodes[wc_params.weight_port_id].name
 
             decompressor_suffix = "_".join(compressed_weight_name.replace(".", "_").split("_")[:-2])
-            decompressor_name = f"{decompressor_type}_weights_decompressor_{decompressor_suffix}"
+            decompressor_name = f"{decompressor.quantization_mode}_weights_decompressor_{decompressor_suffix}"
 
             # inserts the weight decompressor into the model as the post hook on the model weight
             transformation_layout.register(

@@ -88,7 +88,7 @@ class SimpleModel(nn.Module):
         return self.simple(self.conv1(x)) + 1, x
 
 
-def get_wrapped_simple_model_with_hook() -> nn.Module:
+def get_wrapped_simple_model_with_hook() -> ConvModel:
     model = ConvModel()
     wrapped = wrap_model(model)
     register_post_function_hook(wrapped, "conv/conv2d/0", 0, AddModule([2.0]))

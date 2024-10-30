@@ -36,6 +36,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import do_i
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
 from nncf.quantization.passes import transform_to_inference_graph
+from nncf.tensor import TensorDataType
 from nncf.tensor import functions as fns
 
 TModel = TypeVar("TModel")
@@ -241,7 +242,7 @@ class AWQ(Algorithm):
                 offset = gi * group_size
                 gscale = s[offset : offset + group_size]
 
-                a_min = fns.quantile(gscale, 0.1)
+                a_min = fns.astype(fns.quantile(gscale, 0.1), TensorDataType.float32)
                 a_max = 1e2
                 gscale = fns.clip(gscale, a_min=a_min, a_max=a_max)
 
