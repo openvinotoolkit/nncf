@@ -62,13 +62,3 @@ class Algorithm(ABC):
         :param graph: Model graph.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
-
-    # @abstractmethod
-    # def get_all_possible_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-    #     """
-    #     Returns statistic points, for which StatisticsCollector should collect statistics.
-
-    #     :param model: Model for statistics collection.
-    #     :param graph: Model graph.
-    #     :return: Statistic points, for which StatisticsCollector should collect statistics.
-    #     """
