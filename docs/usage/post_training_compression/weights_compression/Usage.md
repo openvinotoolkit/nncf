@@ -180,6 +180,20 @@ from nncf import compress_weights, CompressWeightsMode
 compressed_model = compress_weights(model, mode=CompressWeightsMode.E2M1, group_size=32, all_layers=True)
 ```
 
+#### Caching Statistics
+
+To optimize performance and reuse statistics data across multiple configurations, the `statistics_path` option can be used. This feature allows caching of computed statistics, so they can be loaded from a specified file path rather than being recalculated with each configuration. This can significantly reduce the setup time for models that require extensive statistical computations.
+
+To enable statistics caching, set the `statistics_path` parameter to the desired file path location.
+
+```python
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf import compress_weights
+compressed_model = compress_weights(model, advanced_parameters=AdvancedCompressionParameters(statistics_path="statistics"))
+```
+
+When `statistics_path` is provided, the system will first check the specified path for cached statistics. If found, it will use the existing data. Otherwise, it will compute the statistics and save them to the specified location for future use.
+
 ### Evaluation results
 
 #### Data-free Mixed-Precision on Lambada OpenAI dataset
