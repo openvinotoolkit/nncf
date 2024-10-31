@@ -996,5 +996,10 @@ def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[
     # Remove nodes which are not connected to output. This removes dead nodes and dead subgraphs in the model graph.
     nodes_connected_to_output = _get_connected_nodes(model.graph)
     is_impure = lambda node: node in nodes_connected_to_output
-    model.graph.eliminate_dead_code(is_impure)
+
+    for node in reversed(model.graph.nodes):
+        if not is_impure(node) and len(node.users) == 0:
+            model.graph.erase_node(node)
+
+    model.graph.eliminate_dead_code()
     model.recompile()
