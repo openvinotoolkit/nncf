@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from copy import copy
-from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import torch
@@ -660,22 +659,37 @@ def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> Option
     return tuple(args)
 
 
+def _get_value(
+    arg: Optional[Union[torch.fx.Node, float, int]], model: torch.fx.GraphModule
+) -> Union[torch.nn.Parameter, float, int]:
+    """
+    Retrieves value from the given argument. It can be either torch.fx.Node or float/int value.
+
+    :param arg: Given arg to retrieve value.
+    :param model: torch.fx.GraphModule instance.
+    :return: value from the given argument.
+    """
+    if isinstance(arg, torch.fx.Node):
+        return get_tensor_constant_from_node(arg, model)
+    return arg
+
+
 def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) -> None:
     """
     Change the FP32 weight value to Int8 and also reshape the scale for per_channel_quantization.
 
     :param: model: Model to apply transformations to.
     """
+
     for match in matches:
         mul_node = match.replacements[0]
         sub_node = match.replacements[1]
-        weight_node, scale_node, zp_node, axis = None, None, None, None
         nodes_map = {node.name: match.nodes_map[node] for node in match.nodes_map}
-        get_const = partial(get_tensor_constant_from_node, model=model)
-        weight_node = get_const(nodes_map["weight"])
-        scale_node = get_const(nodes_map["scale"])
-        zp_node = get_const(nodes_map["zero_point"])
-        axis = nodes_map["axis"]
+
+        weight_node = _get_value(nodes_map["weight"], model)
+        scale_node = _get_value(nodes_map["scale"], model)
+        zp_node = _get_value(nodes_map["zero_point"], model)
+        axis = _get_value(nodes_map.get("axis"), model)
         port_id = 0
         if axis is not None:
             result = torch.ops.quantized_decomposed.quantize_per_channel.default(

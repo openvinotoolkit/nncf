@@ -38,6 +38,7 @@ from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.transformations import _get_connected_nodes
 from nncf.experimental.torch.fx.transformations import _set_new_node_meta
 from nncf.experimental.torch.fx.transformations import bias_update_transformation_builder
+from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import leaf_module_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import module_insertion_transformation_builder
@@ -49,7 +50,6 @@ from nncf.torch import disable_patching
 from nncf.torch.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from tests.torch.fx.test_sanity import count_q_dq
 from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
 from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
@@ -409,56 +409,82 @@ def get_shared_constant_nodes(nncf_graph: NNCFGraph):
     return shared_const_node_consumer_node
 
 
-def insert_qdq_add_nodes(model: torch.fx.GraphModule):
-    const_node = get_graph_node_by_name(model.graph, "_param_constant0")
-    quantize_op = torch.ops.quantized_decomposed.quantize_per_channel.default
-    dequantize_op = torch.ops.quantized_decomposed.dequantize_per_channel.default
-    add_op = torch.add
-    conv_node = get_graph_node_by_name(model.graph, "conv2d")
-    with model.graph.inserting_before(conv_node):
-        scale_node = create_getattr_from_value(
-            model,
-            model.graph,
-            "scale_node",
-            torch.ones(
-                [
-                    3,
-                ]
-            ),
-        )
-        zp_node = create_getattr_from_value(
-            model,
-            model.graph,
-            "weight_node",
-            torch.ones(
-                [
-                    3,
-                ]
-            ),
-        )
+def insert_qdq_nodes(
+    model: torch.fx.GraphModule,
+    correct_pattern: bool,
+    per_channel: bool,
+    node_name: str = "conv2d",
+    w_const_node_name: str = "_param_constant0",
+):
+    const_node = get_graph_node_by_name(model.graph, w_const_node_name)
+    if per_channel:
+        quantize_op = torch.ops.quantized_decomposed.quantize_per_channel.default
+        dequantize_op = torch.ops.quantized_decomposed.dequantize_per_channel.default
+    else:
+        quantize_op = torch.ops.quantized_decomposed.quantize_per_tensor.default
+        dequantize_op = torch.ops.quantized_decomposed.dequantize_per_tensor.default
+
+    conv_node = get_graph_node_by_name(model.graph, node_name)
+    if per_channel:
+        with model.graph.inserting_before(conv_node):
+            scale_node = create_getattr_from_value(
+                model,
+                model.graph,
+                "scale_node",
+                torch.ones([3]),
+            )
+            zp_node = create_getattr_from_value(
+                model,
+                model.graph,
+                "weight_node",
+                torch.ones([3]),
+            )
         qdq_args = (scale_node, zp_node, 0, -128, 127, torch.int8)
+    else:
+        qdq_args = (1.0, 1, -128, 127, torch.int8)
+    with model.graph.inserting_before(conv_node):
         q_node = model.graph.create_node("call_function", quantize_op, (const_node,) + qdq_args, {})
-        add_node = model.graph.create_node("call_function", add_op, (q_node, 0), {})
-        dq_node = model.graph.create_node("call_function", dequantize_op, (add_node,) + qdq_args, {})
-    _set_new_node_meta(q_node, (const_node,) + qdq_args, quantize_op, model)
-    _set_new_node_meta(add_node, (q_node, 0), add_op, model)
-    _set_new_node_meta(dq_node, (add_node,) + qdq_args, dequantize_op, model)
+        if not correct_pattern:
+            add_op = torch.ops.aten.add.Tensor
+            add_node = model.graph.create_node("call_function", add_op, (q_node, 0), {})
+            dq_node = model.graph.create_node("call_function", dequantize_op, (add_node,) + qdq_args, {})
+            _set_new_node_meta(q_node, (const_node,) + qdq_args, quantize_op, model)
+            _set_new_node_meta(add_node, (q_node, 0), add_op, model)
+            _set_new_node_meta(dq_node, (add_node,) + qdq_args, dequantize_op, model)
+        else:
+            dq_node = model.graph.create_node("call_function", dequantize_op, (q_node,) + qdq_args, {})
+            _set_new_node_meta(q_node, (const_node,) + qdq_args, quantize_op, model)
+            _set_new_node_meta(dq_node, (q_node,) + qdq_args, dequantize_op, model)
     conv_node.replace_input_with(const_node, dq_node)
+    model.graph.eliminate_dead_code()
+    model.recompile()
 
 
-def test_different_qdq_pattern():
+def test_compress_post_quantize_transformation(is_per_channel: bool):
     model = MultiBranchesConnectedModel()
     ex_input = torch.ones(1, 3, 224, 224)
-    captured_model = _capture_model(model, ex_input)
-    quantized_before_insertion = nncf.quantize(captured_model, nncf.Dataset([ex_input]))
-    q_before, dq_before = count_q_dq(quantized_before_insertion)
-    insert_qdq_add_nodes(captured_model)
-    quantized_after_insertion = nncf.quantize(captured_model, nncf.Dataset([ex_input]))
-    q_after, dq_after = count_q_dq(quantized_after_insertion)
-    assert q_before == 5
-    assert dq_before == 6
-    assert q_after == 6
-    assert dq_after == 7
+
+    model_with_correct_pattern = _capture_model(model, ex_input)
+    insert_qdq_nodes(model_with_correct_pattern, correct_pattern=True, per_channel=is_per_channel)
+    compress_post_quantize_transformation(model_with_correct_pattern)
+    graph_name = f"compress_post_quantize_{'per_channel' if is_per_channel else 'per_tensor'}_valid.dot"
+    check_graph(
+        NNCFGraphFactory.create(model_with_correct_pattern),
+        graph_name,
+        TRANSFORMED_GRAPH_DIR_NAME,
+        extended=True,
+    )
+
+    model_with_incorrect_pattern = _capture_model(model, ex_input)
+    insert_qdq_nodes(model_with_incorrect_pattern, correct_pattern=False, per_channel=is_per_channel)
+    compress_post_quantize_transformation(model_with_incorrect_pattern)
+    graph_name = f"compress_post_quantize_{'per_channel' if is_per_channel else 'per_tensor'}_invalid.dot"
+    check_graph(
+        NNCFGraphFactory.create(model_with_incorrect_pattern),
+        graph_name,
+        TRANSFORMED_GRAPH_DIR_NAME,
+        extended=True,
+    )
 
 
 def test_update_shared_constant():

@@ -102,20 +102,13 @@ class MixedPrecisionCriterion(Algorithm):
             weight_param.compression_config = self._primary_config
             num_weights_in_4bit += weight_param.num_weights
 
-    @property
-    def available_backends(self) -> List[BackendType]:
-        return [BackendType.OPENVINO]
-
+    @abstractmethod
     def _set_backend_entity(self, model: TModel) -> None:
-        model_backend = get_backend(model)
-        if model_backend == BackendType.OPENVINO:
-            from nncf.quantization.algorithms.weight_compression.openvino_backend import OVMixedPrecisionAlgoBackend
+        """
+        Creates a helper class with a backed-specific logic of the algorithm.
 
-            self._backend_entity = OVMixedPrecisionAlgoBackend(model)
-        else:
-            raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
-            )
+        :param model: Backend-specific input model.
+        """
 
     @abstractmethod
     def get_statistic_points(
@@ -141,6 +134,29 @@ class DataFreeCriterion(MixedPrecisionCriterion):
     """
     A baseline mixed precision criterion that is based on quantization noise of weights only.
     """
+
+    @property
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
+
+    def _set_backend_entity(self, model: TModel) -> None:
+        model_backend = get_backend(model)
+        if model_backend == BackendType.OPENVINO:
+            from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
+
+            self._backend_entity = OVWeightCompressionAlgoBackend(model)
+        elif model_backend == BackendType.TORCH:
+            from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
+
+            self._backend_entity = PTWeightCompressionAlgoBackend()
+        elif model_backend == BackendType.TORCH_FX:
+            from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
+
+            self._backend_entity = FXWeightCompressionAlgoBackend()
+        else:
+            raise nncf.UnsupportedBackendError(
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
+            )
 
     def _calc_weight_sensitivity(
         self,
@@ -196,6 +212,21 @@ class DataBasedCriterion(DataFreeCriterion):
     """
 
     STAT_KEY = None
+
+    @property
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.OPENVINO]
+
+    def _set_backend_entity(self, model: TModel) -> None:
+        model_backend = get_backend(model)
+        if model_backend == BackendType.OPENVINO:
+            from nncf.quantization.algorithms.weight_compression.openvino_backend import OVMixedPrecisionAlgoBackend
+
+            self._backend_entity = OVMixedPrecisionAlgoBackend(model)
+        else:
+            raise nncf.UnsupportedBackendError(
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
+            )
 
     def _calc_activation_sensitivity(
         self,

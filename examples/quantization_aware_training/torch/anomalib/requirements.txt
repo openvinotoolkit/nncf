@@ -1,1 +1,2 @@
-anomalib[core,openvino]==1.0.0
+anomalib[core,openvino]==1.0.1
+setuptools<=72.1.0

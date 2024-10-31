@@ -446,8 +446,10 @@ WEIGHT_COMPRESSION_MODELS = [
         "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
         "pipeline_cls": LMWeightCompression,
         "compression_params": {
-            "mode": CompressWeightsMode.INT4_ASYM,
             "group_size": 64,
+            "ratio": 0.8,
+            "mode": CompressWeightsMode.INT4_SYM,
+            "sensitivity_metric": SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
         },
         "backends": [BackendType.TORCH],
     },
