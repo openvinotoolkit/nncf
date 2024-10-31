@@ -1079,7 +1079,7 @@ def test_compressed_weighs_range(mode, data):
 def test_compress_weights_with_precomputed_scale(mode):
     weight = ((np.arange(11) - 5) / 10).astype(np.float32)
     precomputed_scale = -((np.arange(11) - 5) / 100).astype(np.float32)
-    weight, precomputed_scale = Tensor(weight[None]), Tensor(precomputed_scale[None])
+    weight, precomputed_scale = Tensor(weight[:, None]), Tensor(precomputed_scale[:, None])
 
     config = WeightCompressionConfig(mode=mode)
     is_asym = config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT8_ASYM]
@@ -1091,15 +1091,23 @@ def test_compress_weights_with_precomputed_scale(mode):
             "nncf.quantization.algorithms.weight_compression.weight_lowering.calculate_zero_point",
             side_effect=calculate_zero_point,
         ) as mock_calc_zp:
-            _, scale, zp = do_int_quantization(weight, -1, config, precomputed_scale)
+            _, scale, zp_from_weight_and_scale = do_int_quantization(weight, -1, config, precomputed_scale)
             if is_asym:
+                # For asymmetric quantization we should calculate only the new zero point
                 mock_calc_params.assert_called_once()
                 mock_calc_zp.assert_called_once()
             else:
+                # For symmetric nothing needs to be computed
                 mock_calc_params.assert_not_called()
                 mock_calc_zp.assert_not_called()
 
-    assert (zp is not None) == is_asym
+    _, _, zp_from_weight = do_int_quantization(weight, -1, config)
+
+    if is_asym:
+        # Zero points obtained with pre-computed scale and without it must differ
+        assert not np.allclose(zp_from_weight_and_scale.data, zp_from_weight.data)
+    else:
+        assert zp_from_weight_and_scale is None and zp_from_weight is None
     assert np.allclose(scale.data, precomputed_scale.data)
 
 
