@@ -18,6 +18,7 @@ import nncf
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
+from nncf.quantization.fake_quantize import calculate_zero_point
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorDataType
@@ -249,7 +250,10 @@ def calculate_normalized_weight_and_fp4_scale(
 
 
 def calculate_integer_quantization_params(
-    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig
+    weight: Tensor,
+    reduction_axes: ReductionAxes,
+    config: WeightCompressionConfig,
+    precompute_scale: Optional[Tensor] = None,
 ) -> Tuple[Tensor, Tensor]:
     """
     Calculates the scale and zero point for uniform quantization (INT4, INT8), when the range of values is divided into
@@ -258,6 +262,7 @@ def calculate_integer_quantization_params(
     :param weight: Weight array to compress.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param config: Weight compression configuration.
+    :param precompute_scale: Optional precomputed scale.
     :return: Scale and zero point tensors.
     """
     mode = config.mode
@@ -271,10 +276,14 @@ def calculate_integer_quantization_params(
         level_low = 0
         level_high = 2**num_bits - 1
         min_values = fns.min(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
-        max_values = fns.max(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
-        scale, zero_point = calculate_scale_zero_point(
-            min_values, max_values, level_low, level_high, narrow_range=False
-        )
+        if precompute_scale is None:
+            max_values = fns.max(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
+            scale, zero_point = calculate_scale_zero_point(
+                min_values, max_values, level_low, level_high, narrow_range=False
+            )
+        else:
+            scale = precompute_scale
+            zero_point = calculate_zero_point(scale, min_values, level_low, level_high, narrow_range=False)
         return scale, zero_point
 
     scale = calculate_signed_scale(weight, reduction_axes, num_bits)
@@ -366,8 +375,9 @@ def do_int_quantization(
         # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, group_size)
 
-    if precomputed_zero_point is None or precomputed_zero_point is None:
-        scale, zero_point = calculate_integer_quantization_params(weight, reduction_axes, config)
+    is_asym = config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]
+    if precomputed_scale is None or (is_asym and precomputed_zero_point is None):
+        scale, zero_point = calculate_integer_quantization_params(weight, reduction_axes, config, precomputed_scale)
     if precomputed_scale is not None:
         scale = precomputed_scale
     if precomputed_zero_point is not None:

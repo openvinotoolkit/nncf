@@ -359,7 +359,27 @@ def calculate_scale_zero_point(
     eps = fns.finfo(scale).eps
     # NOTE: adding machine epsilon to avoid division by zero
     scale = fns.where(fns.abs(scale) < eps, eps, scale)
+    zero_point = calculate_zero_point(scale, input_low, level_low, level_high, narrow_range)
+    return scale, zero_point
+
+
+def calculate_zero_point(
+    scale: Tensor, input_low: Tensor, level_low: int, level_high: int, narrow_range: bool
+) -> Tensor:
+    """
+    Calculates zero_point values for the quantizer.
+
+    :param scale: Pre-calculated scale value.
+    :param input_low: The minimum limit for an input value based on collected statistics.
+    :param level_low: The minimum level in the integer range to quantize.
+        The default is "0" for an unsigned range, and "-2^(bit-1)" for a signed one .
+    :param level_high: The maximum level in the integer range to quantize.
+        The default is "2^bits-1" for an unsigned range, and "2^(bit-1)-1" for a signed one.
+    :param narrow_range: True if the range of quantized values is narrowed as compared to the
+        naive case, False otherwise.
+    :return: Zero point value.
+    """
     expected_level_low = level_low + 1 if narrow_range else level_low
     zero_point = expected_level_low - fns.round(input_low / scale)
     zero_point = fns.clip(zero_point.astype(TensorDataType.int32), level_low, level_high)
-    return scale, zero_point
+    return zero_point
