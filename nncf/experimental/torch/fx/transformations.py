@@ -959,7 +959,6 @@ def _get_connected_nodes(graph: torch.fx.Graph) -> List[torch.fx.Node]:
 
     :param graph: The torch FX graph to get nodes from.
     """
-    output_node = None
     output_nodes = [node for node in graph.nodes if node.op == "output"]
     assert len(output_nodes) == 1
     output_node = output_nodes[0]
@@ -971,7 +970,7 @@ def _get_connected_nodes(graph: torch.fx.Graph) -> List[torch.fx.Node]:
             continue
         connected_nodes.add(current_node)
         nodes_to_visit.extend(current_node.all_input_nodes)
-    return connected_nodes
+    return list(connected_nodes)
 
 
 def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[torch.fx.Node], bool]):
