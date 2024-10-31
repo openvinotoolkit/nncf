@@ -6,4 +6,3 @@ onnx==1.17.0
 onnxruntime==1.19.2
 openvino==2024.4
 numpy<2
-protobuf==5.27.5
