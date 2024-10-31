@@ -65,7 +65,7 @@ from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",
 # so this call is moved to package __init__ to ensure this.
 from nncf.torch.dynamic_graph.patch_pytorch import patch_torch_operators
-
+ 
 from nncf.torch.extensions import force_build_cpu_extensions, force_build_cuda_extensions
 
 # This is required since torchvision changes a dictionary inside of pytorch mapping
@@ -73,6 +73,7 @@ from nncf.torch.extensions import force_build_cpu_extensions, force_build_cuda_e
 # represented as a different custom operation which is how it is changed in
 # the said mapping. The polyfills loader is the specific file to be imported
 # before making wrapping changes
-from torch._dynamo.polyfills import loader
+if(torch.__version__ >= '2.5.0'):
+    from torch._dynamo.polyfills import loader
 
 patch_torch_operators()
