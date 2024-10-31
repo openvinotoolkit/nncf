@@ -493,13 +493,13 @@ def compress_weights(
     :type advanced_parameters: nncf.AdvancedCompressionParameters
     :return: The non-trainable model with compressed weights.
     """
-    backend = get_backend(model)
     if mode == CompressWeightsMode.INT8:
         warning_deprecated(
             "`CompressWeightsMode.INT8` is deprecated. Please, use `CompressWeightsMode.INT8_ASYM` as value instead."
         )
         mode = CompressWeightsMode.INT8_ASYM
 
+    backend = get_backend(model)
     compression_weights_impl = None
 
     if backend == BackendType.TORCH:

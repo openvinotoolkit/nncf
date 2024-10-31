@@ -27,6 +27,7 @@ class Algorithm(ABC):
     """
 
     @property
+    @abstractmethod
     def available_backends(self) -> List[BackendType]:
         """
         Returns list of the available backends for the algorithm.
