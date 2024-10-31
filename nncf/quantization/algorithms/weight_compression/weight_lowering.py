@@ -376,6 +376,7 @@ def do_int_quantization(
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, group_size)
 
     is_asym = config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]
+    zero_point = None
     if precomputed_scale is None or (is_asym and precomputed_zero_point is None):
         scale, zero_point = calculate_integer_quantization_params(weight, reduction_axes, config, precomputed_scale)
     if precomputed_scale is not None:
