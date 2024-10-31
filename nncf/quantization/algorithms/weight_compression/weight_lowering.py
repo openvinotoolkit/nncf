@@ -142,7 +142,9 @@ def calculate_e2m1_scale(weight: Tensor, reduction_axes: ReductionAxes, max_val=
     return scale
 
 
-def calculate_signed_scale(weight: Tensor, reduction_axes: ReductionAxes, num_bits=4, invert_division=False) -> Tensor:
+def calculate_signed_scale(
+    weight: Tensor, reduction_axes: ReductionAxes, num_bits=4, invert_division: Optional[bool] = True
+) -> Tensor:
     """
     Calculates the signed scale for symmetric quantization.
 
@@ -255,7 +257,10 @@ def calculate_normalized_weight_and_fp4_scale(
 
 
 def calculate_integer_quantization_params(
-    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig, invert_division=False
+    weight: Tensor,
+    reduction_axes: ReductionAxes,
+    config: WeightCompressionConfig,
+    invert_division: Optional[bool] = True,
 ) -> Tuple[Tensor, Tensor]:
     """
     Calculates the scale and zero point for uniform quantization (INT4, INT8), when the range of values is divided into
@@ -291,7 +296,7 @@ def calculate_quantized_weight(
     config: WeightCompressionConfig,
     scale: Tensor,
     zero_point: Optional[Tensor] = None,
-    invert_division=False,
+    invert_division: Optional[bool] = True,
 ) -> Tensor:
     """
     Quantizes the weight tensor using the provided scale and zero point.
@@ -327,7 +332,10 @@ def calculate_quantized_weight(
 
 
 def get_integer_quantization_error(
-    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig, invert_division=False
+    weight: Tensor,
+    reduction_axes: ReductionAxes,
+    config: WeightCompressionConfig,
+    invert_division: Optional[bool] = True,
 ) -> float:
     """
     Calculates a quantity characterizing the difference between floating point weights and fake quantized
@@ -361,7 +369,7 @@ def compress_weight(
     config: WeightCompressionConfig,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-    invert_division=False,
+    invert_division: Optional[bool] = True,
 ):
     """
     Compress weight using compression configuration.
@@ -435,7 +443,7 @@ def do_int_quantization(
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-    invert_division: Optional[bool] = False,
+    invert_division: Optional[bool] = True,
     ov_model_params: Optional = None,
 ):
     """
@@ -453,6 +461,11 @@ def do_int_quantization(
     :return: A tuple containing the compressed weights, scale, and zero point tensors.
     """
     assert config.is_integer, "The function supports integer quantization only"
+    if config.is_int_asym and (precomputed_scale is None) != (precomputed_zero_point is None):
+        raise ValueError(
+            "If precomputed quantization parameters are provided, both scale and zero point are required "
+            "for asymmetric quantization."
+        )
 
     # import os
     accelerate_through_ov = (
@@ -528,11 +541,8 @@ def do_int_quantization(
         # Scale is always in fp32 so there is no need to store it in ov.Tensor
         if scale.backend == TensorBackend.ov:
             scale = scale.to_backend(TensorBackend.numpy)
-    elif precomputed_zero_point is None and config.is_int_asym:
-        # weight, scale -> compressed_weight, zero_point
-        compressed_weight, zero_point = model([weight, precomputed_scale])
-        scale = precomputed_scale
     else:
+        # weight, scale, (zero_point) -> compressed_weight
         inputs = (
             [weight, precomputed_scale]
             if precomputed_zero_point is None
@@ -550,7 +560,7 @@ def calculate_quantized_dequantized_weight(
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Optional[Tensor] = None,
     precomputed_zero_point: Optional[Tensor] = None,
-    invert_division: Optional[bool] = False,
+    invert_division: Optional[bool] = True,
     return_compressed_weight: Optional[bool] = False,
     ov_model_params: Optional = None,
 ) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor, Tensor]]:
@@ -606,7 +616,7 @@ def calculate_quantized_dequantized_weight(
     if precomputed_zero_point is not None:
         inputs.append(precomputed_zero_point)
 
-    compressed_weight, scale, zero_point = None, None, None
+    compressed_weight, scale, zero_point = None, precomputed_scale, precomputed_zero_point
     results = model(inputs)
     if len(results) == 1:
         decompressed_weight = results[0]

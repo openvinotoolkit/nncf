@@ -344,7 +344,7 @@ def calculate_scale_zero_point(
     level_low: int,
     level_high: int,
     narrow_range: bool,
-    invert_division: Optional[bool] = False,
+    invert_division: Optional[bool] = True,
 ) -> Tuple[Tensor, Tensor]:
     """
     Calculates scale and zero_point values for the quantizer.

@@ -17,7 +17,8 @@ from nncf.tensor import TensorDataType
 from nncf.tensor.functions import numeric
 
 from ..definitions import TensorBackend
-from .numpy_numeric import DTYPE_MAP as NP_DTYPE_MAP
+from .numpy_numeric import DTYPE_MAP as DTYPE_MAP_NP
+from .numpy_numeric import DTYPE_MAP_REV as DTYPE_MAP_REV_NP
 
 DTYPE_MAP = {
     TensorDataType.float16: ov.Type.f16,
@@ -40,7 +41,6 @@ def _ov_astype(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
     from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_astype_model
 
     a_dtype = DTYPE_MAP_REV[a.get_element_type()]
-    assert a_dtype in [TensorDataType.bfloat16, TensorDataType.uint4, TensorDataType.int4]
 
     model = get_astype_model(
         OVModelParameters(
@@ -65,11 +65,13 @@ def _(a: ov.Tensor) -> TensorBackend:
 
 @numeric.astype.register(ov.Tensor)
 def _(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
-    a_dtype = DTYPE_MAP_REV[a.get_element_type()]
-    if a_dtype in [TensorDataType.bfloat16, TensorDataType.uint4, TensorDataType.int4]:
+    if a.get_element_type() in [ov.Type.bf16, ov.Type.i4, ov.Type.u4] or dtype in [
+        TensorDataType.bfloat16,
+        TensorDataType.int4,
+        TensorDataType.uint4,
+    ]:
         return _ov_astype(a, dtype)
-
-    return ov.Tensor(a.data.astype(NP_DTYPE_MAP[dtype]))
+    return ov.Tensor(a.data.astype(DTYPE_MAP_NP[dtype]))
 
 
 @numeric.dtype.register(ov.Tensor)
@@ -87,8 +89,19 @@ def _(a: ov.Tensor, shape: Union[int, Tuple[int, ...]]) -> ov.Tensor:
     return ov.Tensor(a.data.reshape(shape), shape, a.get_element_type())
 
 
+@numeric.to_backend.register(np.ndarray)
+def _(a: np.ndarray, b: TensorBackend) -> Union[np.ndarray, ov.Tensor]:
+    if b == TensorBackend.numpy:
+        return a
+    if b != TensorBackend.ov:
+        raise ValueError("Not supported backend")
+    return ov.Tensor(a, a.shape, DTYPE_MAP[DTYPE_MAP_REV_NP[a.dtype]])
+
+
 @numeric.to_backend.register(ov.Tensor)
-def _(a: ov.Tensor, b: TensorBackend) -> np.ndarray:
+def _(a: ov.Tensor, b: TensorBackend) -> Union[np.ndarray, ov.Tensor]:
+    if b == TensorBackend.ov:
+        return a
     if b != TensorBackend.numpy:
         raise ValueError("Not supported backend")
 

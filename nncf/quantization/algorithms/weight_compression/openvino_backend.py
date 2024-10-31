@@ -46,6 +46,7 @@ from nncf.quantization.algorithms.weight_compression.backend import WeightCompre
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
+from nncf.quantization.algorithms.weight_compression.openvino_modeling import OV_MODEL_CACHE
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorBackend
@@ -127,6 +128,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_weight_dtype(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: ov.Model, graph: NNCFGraph
     ) -> TensorDataType:
+        # TODO: use from nncf.tensor.functions.ov import DTYPE_MAP
         ov_type_name = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["dtype"]
         dtype_map = {
             "f16": TensorDataType.float16,
@@ -277,7 +279,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         if should_add_convert_node:
             mul = opset.convert(mul, const_dtype, name=f"{const_node_name}/fq_weights_{weight_port_id}/convert")
-
         return mul, compressed_weight
 
     def transform_model(
@@ -343,6 +344,8 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         # reset name_to_node_mapping
         self.name_to_node_mapping = None
+
+        OV_MODEL_CACHE.clear()
 
         return model
 

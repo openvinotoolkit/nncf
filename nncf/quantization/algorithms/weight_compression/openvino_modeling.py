@@ -36,7 +36,7 @@ OV_MODEL_CACHE = ResultsCacheContainer()
 class OVModelParameters:
     input_dtype: TensorDataType
     output_dtype: Optional[TensorDataType] = None
-    dynamic_shapes: bool = False
+    dynamic_shapes: bool = True  # TODO: set to False once 156511 is resolved
     recompile: bool = False
     release_memory: bool = True
     share_inputs: bool = True
@@ -124,7 +124,8 @@ def get_compress_decompress_weight_model(
 ) -> ModelCallable:
     if ov_model_params.dynamic_shapes:
         weight_shape = (-1,) * len(weight_shape)
-        scale_shape = (-1,) * (len(scale_shape) - 1) + (1,)
+        if scale_shape is not None:
+            scale_shape = (-1,) * (len(scale_shape) - 1) + (1,)
         if zero_point_shape is not None:
             zero_point_shape = (-1,) * (len(zero_point_shape) - 1) + (1,)
 
@@ -223,19 +224,18 @@ def _build_compress_model(
         else:
             dtype = ov.Type.i8 if config.mode == CompressWeightsMode.INT8_SYM else ov.Type.i4
 
+    compressed_w = opset.round(compressed_w)
     compressed_w = opset.clamp(opset.round(compressed_w), level_low, level_high)
     compressed_w = opset.convert(compressed_w, dtype, name="compressed_weights")
 
     ov_results = [compressed_w]
-    if len(ov_parameters) != 3:
-        # Two cases:
-        #   1. weight -> compressed_weight, scale, (zero_point)
-        #   2. weight, scale -> compressed_weight, (zero_point)
-        if len(ov_parameters) == 1:
-            ov_results.append(scale)
-
+    if len(ov_parameters) == 1:
+        ov_results.append(scale)
         if zero_point is not None:
-            ov_results.append(opset.convert(zero_point, compressed_w.get_element_type()))
+            zero_point_dtype = compressed_w.get_element_type() if ov_model_params.return_ov_tensors else ov.Type.i32
+            if zero_point.get_element_type() != zero_point_dtype:
+                zero_point = opset.convert(zero_point, zero_point_dtype)
+            ov_results.append(zero_point)
 
     if return_nodes:
         return ov_parameters, ov_results
@@ -264,18 +264,13 @@ def _build_compress_decompress_model(
         if len(ov_parameters) == 1:
             # weight -> compressed_weight, scale, zero_point
             compressed_w, scale, zero_point = ov_results
-        elif len(ov_parameters) == 2:
-            # weight, scale -> compressed_weight, zero_point
-            compressed_w, zero_point = ov_results
-            scale = ov_parameters[1]
         else:
             # weight, scale, zero_point -> compressed_weight
             compressed_w = ov_results[0]
             scale, zero_point = ov_parameters[1:]
 
-        decompressed_w = scale * opset.convert(
-            opset.convert(compressed_w, ov.Type.i32) - opset.convert(zero_point, ov.Type.i32), ov.Type.f32
-        )
+        subtrac_zero_point = opset.convert(compressed_w, ov.Type.i32) - opset.convert(zero_point, ov.Type.i32)
+        decompressed_w = scale * opset.convert(subtrac_zero_point, ov.Type.f32)
     else:
         if len(ov_parameters) == 1:
             # weight -> compressed_weight, scale
