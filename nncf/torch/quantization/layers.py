@@ -1049,7 +1049,7 @@ def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool,
     return get_per_channel_scale_shape(input_shape, is_weights, channel_idx)
 
 
-class BaseWeightsDecompressor(nn.Module, ABC):
+class BaseWeightsDecompressor(nn.Module, StatefullModuleInterface, ABC):
     """
     Base class for implementing weights decompression modules within NNCF.
 
@@ -1081,6 +1081,7 @@ class BaseWeightsDecompressor(nn.Module, ABC):
         """
 
 
+@COMPRESSION_MODULES.register()
 class INT8AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
     """
     Applies asymmetric decompression of compressed weights in the forward pass
@@ -1103,9 +1104,9 @@ class INT8AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
 
     def pack_weight(self, weight: torch.Tensor) -> torch.Tensor:
         if torch.is_floating_point(weight):
-            raise ValueError(f"Invalid weight dtype {weight.type}. Integer types are supported.")
+            raise nncf.ValidationError(f"Invalid weight dtype {weight.type}. Integer types are supported.")
         if torch.any((weight < 0) | (weight > 255)):
-            raise ValueError("Weight values are not in [0, 255].")
+            raise nncf.ValidationError("Weight values are not in [0, 255].")
         return weight.type(dtype=torch.uint8)
 
     def forward(self, x) -> torch.Tensor:
@@ -1113,7 +1114,22 @@ class INT8AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
         result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
         return result
 
+    def get_config(self) -> Dict[str, Any]:
+        return {
+            "scale_shape": self._scale.shape,
+            "zero_point_shape": self._zero_point.shape,
+            "result_dtype": self.result_dtype if self.result_dtype is not None else "",
+        }
 
+    @classmethod
+    def from_config(cls, state: Dict[str, Any]) -> object:
+        scale = torch.ones(state["scale_shape"], dtype=torch.float16)
+        zero_point = torch.zeros(state["zero_point_shape"], dtype=torch.uint8)
+        result_dtype = state["result_dtype"] if state["result_dtype"] else None
+        return cls(scale, zero_point, result_dtype)
+
+
+@COMPRESSION_MODULES.register()
 class INT8SymmetricWeightsDecompressor(BaseWeightsDecompressor):
     """
     Applies symmetric decompression of compressed weights in the forward pass
@@ -1134,9 +1150,9 @@ class INT8SymmetricWeightsDecompressor(BaseWeightsDecompressor):
 
     def pack_weight(self, weight: torch.Tensor) -> torch.Tensor:
         if torch.is_floating_point(weight):
-            raise ValueError(f"Invalid weight dtype {weight.type}. Integer types are supported.")
+            raise nncf.ValidationError(f"Invalid weight dtype {weight.type}. Integer types are supported.")
         if torch.any((weight < -128) | (weight > 127)):
-            raise ValueError("Weight values are not in [-128, 127].")
+            raise nncf.ValidationError("Weight values are not in [-128, 127].")
         return weight.type(dtype=torch.int8)
 
     def forward(self, x) -> torch.Tensor:
@@ -1144,7 +1160,20 @@ class INT8SymmetricWeightsDecompressor(BaseWeightsDecompressor):
         result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
         return result
 
+    def get_config(self) -> Dict[str, Any]:
+        return {
+            "scale_shape": self._scale.shape,
+            "result_dtype": self.result_dtype if self.result_dtype is not None else "",
+        }
 
+    @classmethod
+    def from_config(cls, state: Dict[str, Any]) -> object:
+        scale = torch.ones(state["scale_shape"], dtype=torch.float16)
+        result_dtype = state["result_dtype"] if state["result_dtype"] else None
+        return cls(scale, result_dtype)
+
+
+@COMPRESSION_MODULES.register()
 class INT4AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
     def __init__(
         self,
@@ -1177,9 +1206,9 @@ class INT4AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
 
     def pack_weight(self, weight: torch.Tensor) -> torch.Tensor:
         if torch.is_floating_point(weight):
-            raise ValueError(f"Invalid weight dtype {weight.type}. Integer types are supported.")
+            raise nncf.ValidationError(f"Invalid weight dtype {weight.type}. Integer types are supported.")
         if torch.any((weight < 0) | (weight > 15)):
-            raise ValueError("Weight values are not in [0, 15].")
+            raise nncf.ValidationError("Weight values are not in [0, 15].")
         return pack_uint4(weight.type(dtype=torch.uint8))
 
     def forward(self, x):
@@ -1194,7 +1223,26 @@ class INT4AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
         result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
         return result
 
+    def get_config(self) -> Dict[str, Any]:
+        return {
+            "scale_shape": self._scale.shape,
+            "zero_point_shape": self.zero_point_shape,
+            "compressed_weight_shape": self.compressed_weight_shape,
+            "result_shape": self.result_shape if self.result_shape is not None else "",
+            "result_dtype": self.result_dtype if self.result_dtype is not None else "",
+        }
 
+    @classmethod
+    def from_config(cls, state: Dict[str, Any]) -> object:
+        scale = torch.ones(state["scale_shape"], dtype=torch.float16)
+        zero_point = torch.zeros(state["zero_point_shape"], dtype=torch.uint8)
+        compressed_weight_shape = state["compressed_weight_shape"]
+        result_shape = state["result_shape"] if state["result_shape"] else None
+        result_dtype = state["result_dtype"] if state["result_dtype"] else None
+        return cls(scale, zero_point, compressed_weight_shape, result_shape, result_dtype)
+
+
+@COMPRESSION_MODULES.register()
 class INT4SymmetricWeightsDecompressor(BaseWeightsDecompressor):
     def __init__(
         self,
@@ -1222,9 +1270,9 @@ class INT4SymmetricWeightsDecompressor(BaseWeightsDecompressor):
 
     def pack_weight(self, weight: torch.Tensor) -> torch.Tensor:
         if torch.is_floating_point(weight):
-            raise ValueError(f"Invalid weight dtype {weight.type}. Integer types are supported.")
+            raise nncf.ValidationError(f"Invalid weight dtype {weight.type}. Integer types are supported.")
         if torch.any((weight < -8) | (weight > 7)):
-            raise ValueError("Tensor values are not in [-8, 7].")
+            raise nncf.ValidationError("Tensor values are not in [-8, 7].")
         return pack_int4(weight.type(dtype=torch.int8))
 
     def forward(self, x):
@@ -1235,3 +1283,19 @@ class INT4SymmetricWeightsDecompressor(BaseWeightsDecompressor):
         result = result.reshape(self.result_shape) if self.result_shape is not None else result
         result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
         return result
+
+    def get_config(self) -> Dict[str, Any]:
+        return {
+            "scale_shape": self._scale.shape,
+            "compressed_weight_shape": self.compressed_weight_shape,
+            "result_shape": self.result_shape if self.result_shape is not None else "",
+            "result_dtype": self.result_dtype if self.result_dtype is not None else "",
+        }
+
+    @classmethod
+    def from_config(cls, state: Dict[str, Any]) -> object:
+        scale = torch.ones(state["scale_shape"], dtype=torch.float16)
+        compressed_weight_shape = state["compressed_weight_shape"]
+        result_shape = state["result_shape"] if state["result_shape"] else None
+        result_dtype = state["result_dtype"] if state["result_dtype"] else None
+        return cls(scale, compressed_weight_shape, result_shape, result_dtype)

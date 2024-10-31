@@ -44,7 +44,8 @@ class StatefullModuleInterface(ABC):
         Returns the compression module config.
         """
 
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def from_config(cls, state: Dict[str, Any]) -> object:
         """
         Creates a compression module instance from the given config.

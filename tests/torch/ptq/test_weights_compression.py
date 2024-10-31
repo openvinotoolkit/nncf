@@ -333,3 +333,39 @@ def test_pack_int4():
     assert packed_w.numel() * 2 == w_int8.numel()
     unpacked_w = unpack_int4(packed_w).reshape(w_int8.shape)
     assert torch.all(unpacked_w == w_int8)
+
+
+@pytest.mark.parametrize("mode", SUPPORTED_MODES)
+def test_save_load(mode, tmp_path):
+    model = ShortTransformer(8, 16)
+    input_ids = torch.randint(0, 10, (8,))
+    wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
+
+    kwargs = {}
+    if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
+        kwargs["group_size"] = 4
+    compressed_model = compress_weights(wrapped_model, mode=mode, **kwargs)
+
+    state_dict = compressed_model.state_dict()
+    compression_config = compressed_model.nncf.get_config()
+
+    ckpt_path = tmp_path / f"{mode}_model.pt"
+    torch.save(
+        {
+            "model_state_dict": state_dict,
+            "compression_config": compression_config,
+        },
+        ckpt_path,
+    )
+
+    compressed_result = compressed_model(input_ids)
+
+    restored_model = ShortTransformer(8, 16)
+
+    ckpt = torch.load(ckpt_path)
+    restored_model = nncf.torch.load_from_config(restored_model, ckpt["compression_config"], input_ids)
+    restored_model.load_state_dict(ckpt["model_state_dict"])
+
+    restored_compressed_result = restored_model(input_ids)
+
+    assert torch.allclose(compressed_result, restored_compressed_result)
