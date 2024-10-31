@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.quantization.statistics_caching`
+==============================================
+
+.. py:module:: nncf.quantization.statistics_caching
+
+
