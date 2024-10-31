@@ -81,7 +81,7 @@ def test_examples(
     env["PYTHONPATH"] = str(PROJECT_ROOT)  # need this to be able to import from tests.* in run_example.py
     env["ONEDNN_MAX_CPU_ISA"] = "AVX2"  # Set ISA to AVX2 to get CPU independent results
     env["CUDA_VISIBLE_DEVICES"] = ""  # Disable GPU
-    env.environ['YOLO_VERBOSE'] = "False"  # Set ultralytics to quiet mode
+    env['YOLO_VERBOSE'] = "False"  # Set ultralytics to quiet mode
 
     metrics_file_path = tmp_path / "metrics.json"
     python_executable_with_venv = get_python_executable_with_venv(venv_path)
