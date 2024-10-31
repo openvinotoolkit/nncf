@@ -30,6 +30,12 @@ from nncf.experimental.common.tensor_statistics.statistics import RawTensorStati
 from nncf.tensor import Tensor
 
 
+class DummyStatContainer:
+    @staticmethod
+    def from_config(config):
+        return config
+
+
 class DummyTensorReducer(TensorReducerBase):
     def __init__(self, output_name: str, inplace: bool = False, inplace_mock=None):
         super().__init__(inplace=inplace)
@@ -302,17 +308,6 @@ def test_register_unnamed_statistics(mocker):
         assert all(v[0] == inputs_)
 
 
-def test_wrong_statistic_container_class():
-    class BadStatContainer:
-        pass
-
-    tensor_collector = TensorCollector(BadStatContainer)
-    tensor_collector.register_statistic_branch("A", DummyTensorReducer("A"), DummyTensorAggregator())
-    tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
-    with pytest.raises(nncf.InternalError):
-        tensor_collector.get_statistics()
-
-
 class TemplateTestStatisticCollector:
     @abstractmethod
     def get_nncf_tensor(self, value: np.ndarray) -> NNCFTensor:
@@ -347,13 +342,12 @@ class TemplateTestStatisticCollector:
             stats = collector.get_statistics()
             assert len(stats) == 1
             assert stats["A"] == self.get_nncf_tensor([100])
-            return
-
-        assert len(aggregator._container) == 0
-        assert aggregator._collected_samples == 0
-        stats = collector.get_statistics()
-        assert len(stats) == 1
-        assert stats["A"] is None
+        else:
+            assert len(aggregator._container) == 0
+            assert aggregator._collected_samples == 0
+            stats = collector.get_statistics()
+            assert len(stats) == 1
+            assert stats["A"] is None
 
     def test_min_max_stat_building(self):
         tensor_collector = TensorCollector(MinMaxTensorStatistic)
@@ -440,3 +434,48 @@ class TemplateTestStatisticCollector:
         statistic = tensor_collector.get_statistics()
         assert isinstance(statistic, RawTensorStatistic)
         assert statistic.values == 1
+
+    def test_tensor_collector_cache_and_statistics(self):
+        # Initialize a single instance of TensorCollector
+        collector = TensorCollector(DummyStatContainer)
+
+        # Test setting cache
+        cached_statistics = {"values": [1, 2]}
+        collector.set_cache(cached_statistics)
+        assert collector._cached_statistics == cached_statistics, "Cache should match the set value"
+        assert not collector.enabled, "Collector should be disabled after setting cache"
+
+        # Test clearing cache
+        collector.clear_cache()
+        collector.enable()
+        assert collector._cached_statistics is None, "Cache should be cleared"
+
+        # Test default behavior of get_statistics without cache
+        collector.register_statistic_branch("container_key", DummyTensorReducer("A"), DummyTensorAggregator())
+        collector.register_input_for_all_reducers(Tensor(np.array(1)))
+        statistics = collector.get_statistics()
+        assert statistics == {"container_key": Tensor(np.array(1))}, "Statistics should reflect registered input"
+
+        # Test get_statistics with cache
+        collector.set_cache({"container_key": Tensor(np.array(25))})
+        statistics = collector.get_statistics()
+        assert statistics == {"container_key": Tensor(np.array(25))}, "Statistics should return cached value"
+
+        # Attempt to register new input while cache is set
+        collector.register_input_for_all_reducers(Tensor(np.array(2)))
+        statistics = collector.get_statistics()
+        assert statistics == {"container_key": Tensor(np.array(25))}, "Statistics should still reflect cached value"
+
+        # Clear cache and check behavior
+        collector.clear_cache()
+        collector.enable()
+        empty_stats = {"container_key": None}
+        statistics = collector.get_statistics()
+        assert statistics == empty_stats, "Statistics should be empty after clearing cache"
+
+        # Register new input after clearing cache
+        collector.register_input_for_all_reducers(Tensor(np.array(8)))
+        statistics = collector.get_statistics()
+        assert statistics == {
+            "container_key": Tensor(np.array(8))
+        }, "Statistics should reflect the new input after clearing cache"

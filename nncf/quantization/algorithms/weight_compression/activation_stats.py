@@ -13,7 +13,7 @@ from functools import reduce
 from operator import mul
 from typing import Tuple
 
-from nncf.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
@@ -34,7 +34,7 @@ def process_stats(stats: WCTensorStatistic, subset_size: int) -> Tuple[Tensor, T
     # prevent high memory and time consumption
     if X_full.shape[1] > subset_size:
         # activations were reduced across all but the last dimension
-        lens = [reduce(mul, shape[:-1], 1) for shape in stats.shapes]
+        lens = [reduce(mul, shape[:-1], 1) for shape in stats.shape_values]
         step = X_full.shape[1] // subset_size
         idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
         X = X_full[:, idxs]  # [HiddenDim, ~SubsetSize]

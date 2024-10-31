@@ -21,10 +21,13 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_reduction_axes
-from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import MaxVarianceTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MeanMagnitudeTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.openvino.graph.model_transformer import OVModelTransformer
@@ -39,7 +42,6 @@ from nncf.openvino.statistics.collectors import OVMeanReducer
 from nncf.openvino.statistics.collectors import OVMeanVarianceReducer
 from nncf.openvino.statistics.collectors import OVShapeReducer
 from nncf.parameters import CompressWeightsMode
-from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
 from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
@@ -405,8 +407,8 @@ class OVMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, OVWeightCompression
     ) -> TensorCollector:
         reducer = OVMeanVarianceReducer(reduction_axes, inplace=True)
         aggregator = MeanAggregator(num_samples=subset_size)
-        collector = TensorCollector()
-        collector.register_statistic_branch(SensitivityMetric.MEAN_ACTIVATION_VARIANCE.value, reducer, aggregator)
+        collector = TensorCollector(MeanVarianceTensorStatistic)
+        collector.register_statistic_branch(MeanVarianceTensorStatistic.MEAN_VARIANCE_STAT, reducer, aggregator)
         return collector
 
     @staticmethod
@@ -415,8 +417,8 @@ class OVMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, OVWeightCompression
     ) -> TensorCollector:
         reducer = OVMaxVarianceReducer(reduction_axes, inplace=True)
         aggregator = MeanAggregator(num_samples=subset_size)
-        collector = TensorCollector()
-        collector.register_statistic_branch(SensitivityMetric.MAX_ACTIVATION_VARIANCE.value, reducer, aggregator)
+        collector = TensorCollector(MaxVarianceTensorStatistic)
+        collector.register_statistic_branch(MaxVarianceTensorStatistic.MAX_VARIANCE_STAT, reducer, aggregator)
         return collector
 
     @staticmethod
@@ -425,6 +427,6 @@ class OVMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, OVWeightCompression
     ) -> TensorCollector:
         reducer = OVMeanAbsMaxReducer(reduction_axes, inplace=True)
         aggregator = MeanAggregator(num_samples=subset_size)
-        collector = TensorCollector()
-        collector.register_statistic_branch(SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE.value, reducer, aggregator)
+        collector = TensorCollector(MeanMagnitudeTensorStatistic)
+        collector.register_statistic_branch(MeanMagnitudeTensorStatistic.MEAN_MAGNITUDE_STAT, reducer, aggregator)
         return collector
