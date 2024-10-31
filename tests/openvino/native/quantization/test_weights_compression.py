@@ -11,6 +11,7 @@
 
 import inspect
 import os
+import unittest.mock
 from typing import Callable, List
 
 import numpy as np
@@ -36,10 +37,12 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_integer_quantization_params
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
+from nncf.quantization.fake_quantize import calculate_zero_point
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
@@ -1070,6 +1073,34 @@ def test_compressed_weighs_range(mode, data):
     compressed_weighs, _, _ = do_int_quantization(w, -1, config)
 
     assert np.allclose(np.abs(compressed_weighs.data), np.abs(w.data))
+
+
+@pytest.mark.parametrize("mode", INT4_MODES + INT8_MODES)
+def test_compress_weights_with_precomputed_scale(mode):
+    weight = ((np.arange(11) - 5) / 10).astype(np.float32)
+    precomputed_scale = -((np.arange(11) - 5) / 100).astype(np.float32)
+    weight, precomputed_scale = Tensor(weight[None]), Tensor(precomputed_scale[None])
+
+    config = WeightCompressionConfig(mode=mode)
+    is_asym = config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT8_ASYM]
+    with unittest.mock.patch(
+        "nncf.quantization.algorithms.weight_compression.weight_lowering.calculate_integer_quantization_params",
+        side_effect=calculate_integer_quantization_params,
+    ) as mock_calc_params:
+        with unittest.mock.patch(
+            "nncf.quantization.algorithms.weight_compression.weight_lowering.calculate_zero_point",
+            side_effect=calculate_zero_point,
+        ) as mock_calc_zp:
+            _, scale, zp = do_int_quantization(weight, -1, config, precomputed_scale)
+            if is_asym:
+                mock_calc_params.assert_called_once()
+                mock_calc_zp.assert_called_once()
+            else:
+                mock_calc_params.assert_not_called()
+                mock_calc_zp.assert_not_called()
+
+    assert (zp is not None) == is_asym
+    assert np.allclose(scale.data, precomputed_scale.data)
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
