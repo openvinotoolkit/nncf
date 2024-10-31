@@ -12,7 +12,6 @@
 import functools
 import inspect
 from contextlib import contextmanager
-from contextlib import suppress
 from typing import Callable, List, Union
 
 import torch
