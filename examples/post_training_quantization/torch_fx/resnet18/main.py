@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 from time import time
 from typing import Tuple
+import openvino.torch
 
 import torch
 import torch.nn as nn
