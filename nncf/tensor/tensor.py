@@ -116,6 +116,12 @@ class Tensor:
         self._data **= unwrap_tensor_data(other)
         return self
 
+    # def __truediv__(self, other: Union[Tensor, float]) -> Tensor:
+    #     return self * _call_function("_binary_op_nowarn", 1.0, other, operator.truediv)
+    #
+    # def __rtruediv__(self, other: Union[Tensor, float]) -> Tensor:
+    #     return other * _call_function("_binary_reverse_op_nowarn", self, 1.0, operator.truediv)
+
     def __truediv__(self, other: Union[Tensor, float]) -> Tensor:
         return _call_function("_binary_op_nowarn", self, other, operator.truediv)
 
