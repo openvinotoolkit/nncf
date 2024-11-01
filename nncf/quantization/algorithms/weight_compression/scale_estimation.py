@@ -369,6 +369,8 @@ class ScaleEstimation:
 
         if config.group_size == -1:
             result_scale = fns.squeeze(result_scale, axis=1)
+        if zp is not None and config.group_size == -1:
+            zp = fns.squeeze(zp, axis=1)
 
         return result_scale, zp
 

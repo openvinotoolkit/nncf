@@ -1075,7 +1075,7 @@ def test_compressed_weighs_range(mode, data):
 
 
 @pytest.mark.parametrize(
-    "configuration",
+    ("config", "precompute_scale", "precompute_zero_point", "raises"),
     [
         (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), False, False, False),
         (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), True, True, False),
@@ -1091,8 +1091,7 @@ def test_compressed_weighs_range(mode, data):
         (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), False, False, False),
     ],
 )
-def test_int_quantization_with_precomputed_parameters(configuration):
-    config, precompute_scale, precompute_zero_point, raises = configuration
+def test_int_quantization_with_precomputed_parameters(config, precompute_scale, precompute_zero_point, raises):
     is_asym = config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT8_ASYM]
 
     precomputed_scale, precomputed_zero_point = None, None
