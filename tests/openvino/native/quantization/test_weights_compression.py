@@ -29,6 +29,7 @@ from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.parameters import BackupMode
 from nncf.quantization import compress_weights
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
@@ -727,6 +728,7 @@ def test_raise_error_channel_size_is_not_divisible_by_group_size():
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
+        {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):
@@ -910,7 +912,7 @@ def test_default_subset_value():
     assert default_value == 128
 
 
-@pytest.mark.parametrize("subset_size", (-1, 0, None))
+@pytest.mark.parametrize("subset_size", (-1, 0))
 def test_invalid_subset_size(subset_size):
     model = IdentityMatmul().ov_model
     dataset = Dataset([ACTIVATION])

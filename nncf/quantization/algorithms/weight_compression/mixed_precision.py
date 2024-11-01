@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABC
 from abc import abstractmethod
 from typing import Iterable, List, Optional, Tuple, TypeVar
 
@@ -205,7 +206,7 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         raise RuntimeError("No statistics collection intended for data-free mixed precision criterion")
 
 
-class DataBasedCriterion(DataFreeCriterion):
+class DataBasedCriterion(DataFreeCriterion, ABC):
     """
     Data-based mixed precision criterion that takes into account outliers in the input statistics.
     Expecting statistics of the following shape: [hidden_dim]
@@ -326,11 +327,12 @@ class DataBasedCriterion(DataFreeCriterion):
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             act_node.node_name, input_filter_func, self._algorithm_key
         ):
-            statistics = tensor_collector.get_statistics()[stat_key]
-            if isinstance(statistics, Tensor):
-                stats.append(statistics)
-            else:
-                stats.extend(statistics)
+            statistics = tensor_collector.get_statistics()
+            for data in statistics.get_data().values():
+                if isinstance(data, Tensor):
+                    stats.append(data)
+                else:
+                    stats.extend(data)
         return stats
 
 
