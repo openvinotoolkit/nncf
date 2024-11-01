@@ -24,6 +24,7 @@ from whowhatbench import Evaluator
 
 import nncf
 from nncf.common.logging import nncf_logger
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 
 DataItem = TypeVar("DataItem")
 ModelInput = TypeVar("ModelInput")
@@ -63,6 +64,7 @@ def compress_model(
         group_size=group_size,
         awq=awq,
         sensitivity_metric=nncf.parameters.SensitivityMetric.MAX_ACTIVATION_VARIANCE,
+        advanced_parameters=AdvancedCompressionParameters(statistics_path="statistics"),
     )
     return optimized_ov_model
 

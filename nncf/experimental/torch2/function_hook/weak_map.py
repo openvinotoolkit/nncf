@@ -30,14 +30,14 @@ class WeakUnhashableKeyMap(Generic[_K, _V]):
 
     def __init__(self) -> None:
         """Initialize an empty WeakUnhashableKeyMap."""
-        self._data: Dict[int, Tuple[weakref.ref[_K], _V]] = {}
+        self._data: Dict[int, Tuple[weakref.ReferenceType[_K], _V]] = {}
 
     def __getitem__(self, obj: Any) -> Any:
         """
         Get the value associated with the given object.
 
         :param obj (Any): The key object.
-        :returns: The value associated with the object.
+        :return: The value associated with the object.
         """
         ref_obj, val = self._data[id(obj)]
         if ref_obj() is not obj:
@@ -69,7 +69,7 @@ class WeakUnhashableKeyMap(Generic[_K, _V]):
 
         :param obj: The key object.
         :param default: The default value to return if the object is not found. Defaults to None.
-        :returns: The value associated with the object, or the default value if the object is not found.
+        :return: The value associated with the object, or the default value if the object is not found.
         """
         key = id(obj)
         try:

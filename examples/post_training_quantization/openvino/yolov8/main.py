@@ -36,7 +36,7 @@ def validate(
 ) -> Tuple[Dict, int, int]:
     validator.seen = 0
     validator.jdict = []
-    validator.stats = []
+    validator.stats = dict(tp=[], conf=[], pred_cls=[], target_cls=[], target_img=[])
     validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
     model.reshape({0: [1, 3, -1, -1]})
     compiled_model = ov.compile_model(model, device_name="CPU")
@@ -66,8 +66,9 @@ def print_statistics(stats: np.ndarray, total_images: int, total_objects: int) -
 
 
 def prepare_validation(model: YOLO, args: Any) -> Tuple[Validator, torch.utils.data.DataLoader]:
-    validator = model.smart_load("validator")(args)
+    validator = model.task_map[model.task]["validator"](args=args)
     validator.data = check_det_dataset(args.data)
+    validator.stride = 32
     dataset = validator.data["val"]
     print(f"{dataset}")
 

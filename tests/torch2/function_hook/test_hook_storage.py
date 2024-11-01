@@ -19,17 +19,6 @@ from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
 from tests.torch2.function_hook.helpers import CallCount
 
 
-class CheckPriority(nn.Module):
-    def __init__(self, storage: List, name: str):
-        super().__init__()
-        self.storage = storage
-        self.name = name
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        self.storage.append(self.name)
-        return x
-
-
 @pytest.fixture(params=["pre_hook", "post_hook"])
 def hook_type(request: pytest.FixtureRequest) -> str:
     return request.param
@@ -71,6 +60,17 @@ def test_remove_handle():
 
     handle2.remove()
     assert "foo__0" not in hook_storage.pre_hooks
+
+
+class CheckPriority(nn.Module):
+    def __init__(self, storage: List, name: str):
+        super().__init__()
+        self.storage = storage
+        self.name = name
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        self.storage.append(self.name)
+        return x
 
 
 def test_excitation_priority():
