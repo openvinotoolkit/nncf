@@ -167,17 +167,14 @@ class ConstantFolder(torch.fx.Interpreter):
         ):
             return self.unknown_value
 
-        # TODO - fix errors with this
         if node.op == "call_function" and node.target == aten._efficientzerotensor.default:
             return self.unknown_value
 
-        # TODO - constant folding triton kernel returns the inputs -- fix this
         if node.op == "call_function" and node.name == "triton_kernel_wrapper_functional_proxy":
             return self.unknown_value
 
         # skip constructors, since inductor generates optimal code for them already
         # and turning into tensor would result in an additional global memory read
-        # TODO - more complicated strategy
         if not _is_const_source(node) and not any(isinstance(e, torch.Tensor) for e in flattened_inputs):
             return self.unknown_value
 
