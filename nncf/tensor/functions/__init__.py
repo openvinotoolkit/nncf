@@ -24,12 +24,14 @@ from nncf.tensor.functions.numeric import concatenate as concatenate
 from nncf.tensor.functions.numeric import count_nonzero as count_nonzero
 from nncf.tensor.functions.numeric import device as device
 from nncf.tensor.functions.numeric import diag as diag
+from nncf.tensor.functions.numeric import divide as divide
 from nncf.tensor.functions.numeric import dtype as dtype
 from nncf.tensor.functions.numeric import expand_dims as expand_dims
 from nncf.tensor.functions.numeric import eye as eye
 from nncf.tensor.functions.numeric import finfo as finfo
 from nncf.tensor.functions.numeric import flatten as flatten
 from nncf.tensor.functions.numeric import from_numpy as from_numpy
+from nncf.tensor.functions.numeric import inplace_divide as inplace_divide
 from nncf.tensor.functions.numeric import isclose as isclose
 from nncf.tensor.functions.numeric import isempty as isempty
 from nncf.tensor.functions.numeric import item as item

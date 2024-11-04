@@ -154,7 +154,7 @@ def calculate_signed_scale(weight: Tensor, reduction_axes: ReductionAxes, num_bi
     w_max = fns.max(weight, axis=reduction_axes, keepdims=True)
 
     scale = fns.where(w_abs_min >= w_max, w_abs_min, -w_max)
-    scale /= level_high
+    fns.inplace_divide(scale, level_high)
 
     eps = fns.finfo(scale).eps
     scale = fns.where(fns.abs(scale) < eps, eps, scale)
@@ -286,7 +286,6 @@ def calculate_quantized_weight(
     config: WeightCompressionConfig,
     scale: Tensor,
     zero_point: Optional[Tensor] = None,
-    invert_scale=False,
 ) -> Tensor:
     """
     Quantizes the weight tensor using the provided scale and zero point.
@@ -295,7 +294,6 @@ def calculate_quantized_weight(
     :param config: Weight compression configuration.
     :param scale: Scale tensor used for quantization.
     :param zero_point: Zero point tensor used for quantization.
-    :param invert_scale: applies inversion for scale and then multiply by weights instead of division.
     :return: Quantized weight tensor of uint8 or int8 type.
     """
     if weight.dtype != TensorDataType.float32:
@@ -309,11 +307,7 @@ def calculate_quantized_weight(
     level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
     level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
 
-    if invert_scale:
-        scale = fns.power(scale, -1)
-        compressed_weights = weight * scale
-    else:
-        compressed_weights = weight / scale
+    compressed_weights = fns.divide(weight, scale)
     if zero_point is not None:
         compressed_weights += zero_point.astype(weight.dtype)
     compressed_weights = fns.round(compressed_weights)
@@ -328,7 +322,6 @@ def do_int_quantization(
     config: WeightCompressionConfig,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-    invert_scale=False,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
     The method quantizes the given weights to integer data type uniformly in accordance with the compression config.
@@ -351,8 +344,6 @@ def do_int_quantization(
     :param config: Information on how to compress (quantize) a specific weight.
     :param precomputed_scale: Precomputed scale.
     :param precomputed_zero_point: Precomputed zero point.
-    :param invert_scale: applies inversion for scale and then multiply by weights instead of division.
-        Need as reference implementation for OV.
     :return: The compressed weights tensor of uint8 (asymmetric mode) or int8 (symmetric mode) type,
         scale tensor of float32 type and zero point tensor of int32 type that was used for its quantization.
     """
@@ -380,7 +371,7 @@ def do_int_quantization(
     if precomputed_zero_point is not None:
         zero_point = precomputed_zero_point
 
-    compressed_weights = calculate_quantized_weight(weight, config, scale, zero_point, invert_scale)
+    compressed_weights = calculate_quantized_weight(weight, config, scale, zero_point)
     return compressed_weights, scale, zero_point
 
 

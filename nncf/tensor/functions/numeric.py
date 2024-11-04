@@ -905,3 +905,42 @@ def ceil(a: Tensor) -> Tensor:
     :return: An array of the same type as a, containing the ceiling values.
     """
     return Tensor(ceil(a.data))
+
+
+@functools.singledispatch
+@tensor_guard
+def divide(a: Union[Tensor, float], b: Union[Tensor, float], invert: Optional[bool] = True) -> Tensor:
+    """
+    Divide two tensors or a tensor and a float.
+
+    This function divides `a` by `b`. If `invert` is True, it performs the division as `a * (1.0 / b)`.
+    Otherwise, it performs the division as `a / b`.
+
+    :param a: The first input tensor or float.
+    :param b: The second input tensor or float.
+    :param invert: If True, the division is performed as `a * (1.0 / b)`. If False, it is performed as `a / b`.
+                   Defaults to True.
+    :return: A new tensor resulting from the division.
+    """
+    return Tensor(a * (1.0 / b) if invert else a / b)
+
+
+@functools.singledispatch
+@tensor_guard
+def inplace_divide(a: Union[Tensor, float], b: Union[Tensor, float], invert: Optional[bool] = True) -> None:
+    """
+    In-place division of two tensors or a tensor and a float.
+
+    This function divides `a` by `b` in place. If `invert` is True, it performs the division as `a *= (1.0 / b)`.
+    Otherwise, it performs the division as `a /= b`.
+
+    :param a: The first input tensor or float.
+    :param b: The second input tensor or float.
+    :param invert: If True, the division is performed as `a *= (1.0 / b)`. If False, the division it is as `a /= b`.
+                   Defaults to True.
+    :return: None. The operation is performed in place.
+    """
+    if invert:
+        a *= 1.0 / b
+    else:
+        a /= b
