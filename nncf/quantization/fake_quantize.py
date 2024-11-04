@@ -11,7 +11,7 @@
 
 import warnings
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Tuple
 
 import nncf
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
@@ -344,7 +344,6 @@ def calculate_scale_zero_point(
     level_low: int,
     level_high: int,
     narrow_range: bool,
-    invert_division: Optional[bool] = True,
 ) -> Tuple[Tensor, Tensor]:
     """
     Calculates scale and zero_point values for the quantizer.
@@ -360,17 +359,11 @@ def calculate_scale_zero_point(
     :return: Scale and Zero point values.
     """
     levels = level_high - level_low if narrow_range else level_high - level_low + 1
-    if invert_division:
-        scale = ((input_high - input_low) * (1.0 / (levels - 1))).astype(TensorDataType.float32)
-    else:
-        scale = ((input_high - input_low) / (levels - 1)).astype(TensorDataType.float32)
+    scale = fns.divide((input_high - input_low), (levels - 1)).astype(TensorDataType.float32)
     eps = fns.finfo(scale).eps
     # NOTE: adding machine epsilon to avoid division by zero
     scale = fns.where(fns.abs(scale) < eps, eps, scale)
     expected_level_low = level_low + 1 if narrow_range else level_low
-    if invert_division:
-        zero_point = expected_level_low - fns.round(input_low * (1.0 / scale))
-    else:
-        zero_point = expected_level_low - fns.round(input_low / scale)
+    zero_point = expected_level_low - fns.round(fns.divide(input_low, scale))
     zero_point = fns.clip(zero_point.astype(TensorDataType.int32), level_low, level_high)
     return scale, zero_point

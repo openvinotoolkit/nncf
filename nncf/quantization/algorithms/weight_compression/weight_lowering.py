@@ -142,9 +142,7 @@ def calculate_e2m1_scale(weight: Tensor, reduction_axes: ReductionAxes, max_val=
     return scale
 
 
-def calculate_signed_scale(
-    weight: Tensor, reduction_axes: ReductionAxes, num_bits=4, invert_division: Optional[bool] = True
-) -> Tensor:
+def calculate_signed_scale(weight: Tensor, reduction_axes: ReductionAxes, num_bits=4) -> Tensor:
     """
     Calculates the signed scale for symmetric quantization.
 
@@ -159,10 +157,7 @@ def calculate_signed_scale(
     w_max = fns.max(weight, axis=reduction_axes, keepdims=True)
 
     scale = fns.where(w_abs_min >= w_max, w_abs_min, -w_max)
-    if invert_division:
-        scale *= 1.0 / level_high
-    else:
-        scale /= level_high
+    fns.inplace_divide(scale, level_high)
 
     eps = fns.finfo(scale).eps
     scale = fns.where(fns.abs(scale) < eps, eps, scale)
@@ -183,7 +178,7 @@ def calculate_normalized_weight(weight: Tensor, scale: Tensor) -> Tensor:
     if scale.dtype != TensorDataType.float32:
         scale = scale.astype(TensorDataType.float32)
 
-    return weight / scale
+    return fns.divide(weight, scale)
 
 
 def do_nf4_quantization(weight: Tensor, scale: Tensor, is_normalized_weight: bool = False) -> Tensor:
@@ -260,7 +255,6 @@ def calculate_integer_quantization_params(
     weight: Tensor,
     reduction_axes: ReductionAxes,
     config: WeightCompressionConfig,
-    invert_division: Optional[bool] = True,
 ) -> Tuple[Tensor, Tensor]:
     """
     Calculates the scale and zero point for uniform quantization (INT4, INT8), when the range of values is divided into
@@ -283,7 +277,7 @@ def calculate_integer_quantization_params(
         min_values = fns.min(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
         max_values = fns.max(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
         scale, zero_point = calculate_scale_zero_point(
-            min_values, max_values, level_low, level_high, narrow_range=False, invert_division=invert_division
+            min_values, max_values, level_low, level_high, narrow_range=False
         )
         return scale, zero_point
 
@@ -296,7 +290,6 @@ def calculate_quantized_weight(
     config: WeightCompressionConfig,
     scale: Tensor,
     zero_point: Optional[Tensor] = None,
-    invert_division: Optional[bool] = True,
 ) -> Tensor:
     """
     Quantizes the weight tensor using the provided scale and zero point.
@@ -305,7 +298,6 @@ def calculate_quantized_weight(
     :param config: Weight compression configuration.
     :param scale: Scale tensor used for quantization.
     :param zero_point: Zero point tensor used for quantization.
-    :param invert_division: applies inversion for scale and then multiply by weights instead of division.
     :return: Quantized weight tensor of uint8 or int8 type.
     """
     if weight.dtype != TensorDataType.float32:
@@ -319,10 +311,7 @@ def calculate_quantized_weight(
     level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
     level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
 
-    if invert_division:
-        compressed_weights = weight * (1.0 / scale)
-    else:
-        compressed_weights = weight / scale
+    compressed_weights = fns.divide(weight, scale)
     if zero_point is not None:
         compressed_weights += zero_point.astype(weight.dtype)
     compressed_weights = fns.round(compressed_weights)
@@ -335,7 +324,6 @@ def get_integer_quantization_error(
     weight: Tensor,
     reduction_axes: ReductionAxes,
     config: WeightCompressionConfig,
-    invert_division: Optional[bool] = True,
 ) -> float:
     """
     Calculates a quantity characterizing the difference between floating point weights and fake quantized
@@ -351,9 +339,7 @@ def get_integer_quantization_error(
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
-    compressed_weights, scale, zero_point = do_int_quantization(
-        weight, config, reduction_axes, invert_division=invert_division
-    )
+    compressed_weights, scale, zero_point = do_int_quantization(weight, config, reduction_axes)
     decompressed_weight = do_int_dequantization(compressed_weights, scale, zero_point)
 
     decompressed_weight = decompressed_weight.reshape(orig_shape)
@@ -369,7 +355,6 @@ def compress_weight(
     config: WeightCompressionConfig,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-    invert_division: Optional[bool] = True,
 ):
     """
     Compress weight using compression configuration.
@@ -390,7 +375,7 @@ def compress_weight(
         )
         return CompressedWeight(compressed_weight, scale)
     compressed_weight, scale, zero_point = do_int_quantization(
-        weight, config, reduction_axes, precomputed_scale, precomputed_zero_point, invert_division=invert_division
+        weight, config, reduction_axes, precomputed_scale, precomputed_zero_point
     )
 
     return CompressedWeight(compressed_weight, scale, zero_point)
@@ -443,7 +428,6 @@ def do_int_quantization(
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-    invert_division: Optional[bool] = True,
     ov_model_params: Optional = None,
 ):
     """
@@ -455,8 +439,6 @@ def do_int_quantization(
         precomputed scale (and zero point) are provided.
     :param precomputed_scale: Optional precomputed scale tensor.
     :param precomputed_zero_point: Optional precomputed zero point tensor.
-    :param invert_division: Whether to apply inversion for scale and then multiply by weights instead of division.
-        Defaults to False.
     :param ov_model_params: OpenVINO model parameters for acceleration.
     :return: A tuple containing the compressed weights, scale, and zero point tensors.
     """
@@ -498,7 +480,7 @@ def do_int_quantization(
         if precomputed_zero_point is not None:
             zero_point = precomputed_zero_point
 
-        compressed_weights = calculate_quantized_weight(weight, config, scale, zero_point, invert_division)
+        compressed_weights = calculate_quantized_weight(weight, config, scale, zero_point)
         return compressed_weights, scale, zero_point
 
     from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
@@ -560,7 +542,6 @@ def calculate_quantized_dequantized_weight(
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Optional[Tensor] = None,
     precomputed_zero_point: Optional[Tensor] = None,
-    invert_division: Optional[bool] = True,
     return_compressed_weight: Optional[bool] = False,
     ov_model_params: Optional = None,
 ) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor, Tensor]]:
@@ -577,12 +558,12 @@ def calculate_quantized_dequantized_weight(
         # Reference implementation
         if precomputed_scale is None or (config.is_int_asym and precomputed_zero_point is None):
             compressed_weight, scale, zero_point = do_int_quantization(
-                weight, config, reduction_axes, precomputed_scale, precomputed_zero_point, invert_division
+                weight, config, reduction_axes, precomputed_scale, precomputed_zero_point
             )
         else:
             scale = precomputed_scale if precomputed_scale is not None else None
             zero_point = precomputed_zero_point if precomputed_zero_point is not None else None
-            compressed_weight = calculate_quantized_weight(weight, config, scale, zero_point, invert_division)
+            compressed_weight = calculate_quantized_weight(weight, config, scale, zero_point)
         decompressed_weight = do_int_dequantization(compressed_weight, scale, zero_point)
         if return_compressed_weight:
             return decompressed_weight, compressed_weight, scale, zero_point
