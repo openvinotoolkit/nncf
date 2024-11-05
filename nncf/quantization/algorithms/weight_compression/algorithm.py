@@ -498,7 +498,9 @@ class WeightCompression(Algorithm):
                 matmul_nodes_to_compress, graph
             )
             if statistic_points is None:
-                statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
+                statistic_points = self.get_statistic_points(
+                    model, graph, matmul_input_to_output_nodes_map.keys(), self._subset_size
+                )
                 statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
             statistics = self._get_statistics_for_weights_compression(
                 matmul_input_to_output_nodes_map, statistic_points
@@ -759,7 +761,6 @@ class WeightCompression(Algorithm):
         model: TModel,
         graph: NNCFGraph,
         nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
-        subset_size: Optional[int] = None,
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
@@ -767,7 +768,6 @@ class WeightCompression(Algorithm):
         :param model: Model for statistics collection.
         :param graph: Model graph.
         :param nodes_and_port_ids: Nodes and port ids for which statistics should be collected.
-        :param subset_size: Number of samples to collect.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
         statistic_container = StatisticPointsContainer()
@@ -781,7 +781,7 @@ class WeightCompression(Algorithm):
                 # size dimension.
                 n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
                 stat_collector = self._backend_entity.mean_statistic_collector(
-                    reduction_axes=tuple(range(n_dims - 1)), subset_size=subset_size
+                    reduction_axes=tuple(range(n_dims - 1)), subset_size=self._subset_size
                 )
                 statistic_container.add_statistic_point(
                     StatisticPoint(
