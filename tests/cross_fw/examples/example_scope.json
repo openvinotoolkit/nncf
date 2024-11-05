@@ -260,5 +260,13 @@
             "int8_model_size": 5.677968978881836,
             "model_compression_rate": 3.7654144877995197
         }
+    },
+    "fp8_llm_quantization": {
+        "backend": "openvino",
+        "requirements": "/home/nmali/work/nncf/examples/llm_compression/openvino/smollm_360m_fp8/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "word_count": 75
+        }
     }
 }
