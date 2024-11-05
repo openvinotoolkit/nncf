@@ -1023,7 +1023,7 @@ class AWQActMatmulModel(OVReferenceModel):
                 alpha = np.array([1.5], dtype=np.float32)
                 alpha = opset.constant(alpha, dtype=np.float32)
                 lambda_value = np.array([1.5], dtype=np.float32)
-                lambda_value = opset.constant(alpha, dtype=np.float32)
+                lambda_value = opset.constant(lambda_value, dtype=np.float32)
                 node2 = opset.selu(mm2, alpha, lambda_value, name=f"SeLU_{i}")
 
                 node_multiply = opset.multiply(node1, node2, name=f"Multiply_{i}")
@@ -1108,7 +1108,7 @@ class StatefulModel(OVReferenceModel):
             result.get_output_tensor(0).set_names(set(["Result"]))
             model = ov.Model(results=[result], sinks=[node], parameters=[input_data], name="TestModel")
         else:
-            bias = opset.constant(init_val, data_type)
+            bias = opset.constant(np.zeros(input_shape), data_type)
             add = opset.add(input_data, bias, name="Add")
             scale_val = opset.constant(np.ones(input_shape), data_type)
             scale = opset.multiply(add, scale_val, name="Scale")
