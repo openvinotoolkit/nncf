@@ -157,25 +157,3 @@ def create_se_block() -> GraphPattern:
                 multiply_node = node_id
         pattern.add_edge(non_pattern_node, multiply_node)
     return pattern
-
-
-@ONNX_IGNORED_PATTERNS.register(IgnoredPatternNames.ROPE)
-def create_rope() -> GraphPattern:
-    pattern = GraphPattern()
-    matmul_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.ONNXMatMulMetatype}
-    )
-    transpose_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: om.ONNXTransposeMetatype}
-    )
-    concat_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.ONNXConcatMetatype}
-    )
-    cos_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "COS", GraphPattern.METATYPE_ATTR: om.ONNXCosMetatype})
-    sin_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SIN", GraphPattern.METATYPE_ATTR: om.ONNXSinMetatype})
-
-    pattern.add_edge(matmul_node, transpose_node)
-    pattern.add_edge(transpose_node, concat_node)
-    pattern.add_edge(concat_node, cos_node)
-    pattern.add_edge(concat_node, sin_node)
-    return pattern

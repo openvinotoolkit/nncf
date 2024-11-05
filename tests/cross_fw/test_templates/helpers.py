@@ -466,22 +466,3 @@ class TransposeConvTestModel(nn.Module):
 
     def forward(self, x):
         return self.conv(x)
-
-
-class RoPEModel(nn.Module):
-    INPUT_SIZE = [1, 10]
-
-    def __init__(self):
-        super().__init__()
-        with set_torch_seed():
-            self.data = torch.randn([5])
-
-    def forward(self, x):
-        x = torch.unsqueeze(x, dim=0)
-        reshape = torch.reshape(self.data, [1, 5, 1])
-        x = torch.matmul(reshape, x)
-        x = torch.transpose(x, 2, 1)
-        x = torch.cat([x], dim=2)
-        x1 = x.sin()
-        x2 = x.cos()
-        return x1, x2

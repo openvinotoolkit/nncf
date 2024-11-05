@@ -677,18 +677,6 @@ class ONNXErfMetatype(ONNXOpMetatype):
     op_names = ["Erf"]
 
 
-@ONNX_OPERATION_METATYPES.register()
-class ONNXCosMetatype(ONNXOpMetatype):
-    name = "CosOp"
-    op_names = ["Cos"]
-
-
-@ONNX_OPERATION_METATYPES.register()
-class ONNXSinMetatype(ONNXOpMetatype):
-    name = "SinOp"
-    op_names = ["Sin"]
-
-
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.
