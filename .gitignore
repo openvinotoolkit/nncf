@@ -138,6 +138,3 @@ tests/**/runs/**
 tests/**/tmp*/**
 open_model_zoo/
 nncf-tests.xml
-env-migration/
-tests/post_training/data/
-runs/
