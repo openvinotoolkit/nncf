@@ -12,6 +12,6 @@ import sys
 
 import pytest
 
-# Remove after fixing ticket: CVS-156781
+# Remove after fixing ticket: 156781
 if sys.platform.startswith("win"):
     pytest.skip("capture_pre_autograd is not supported in windows", allow_module_level=True)
