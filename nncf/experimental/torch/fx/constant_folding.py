@@ -24,7 +24,7 @@ def _replace_node_with_constant(
     value: torch.Tensor,
 ) -> None:
     """
-    Replaces given note to a constant with given value.
+    Replaces given node to a constant with given value.
 
     :param gm: GraphModule instance.
     :param node: A node to replace with a constant.
