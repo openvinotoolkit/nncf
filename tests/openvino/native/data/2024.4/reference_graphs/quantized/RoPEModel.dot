@@ -1,0 +1,31 @@
+strict digraph  {
+"0 position_ids" [id=0, type=Parameter];
+"1 Unsqueeze_3697" [id=1, type=Unsqueeze];
+"2 convert" [id=2, type=Convert];
+"3 MatMul" [id=3, type=MatMul];
+"4 transpose" [id=4, type=Transpose];
+"5 concat" [id=5, type=Concat];
+"6 cos" [id=6, type=Cos];
+"7 sin" [id=7, type=Sin];
+"8 cos_result" [id=8, type=Result];
+"9 sin_result" [id=9, type=Result];
+"10 transpose/Constant_3703" [id=10, type=Constant];
+"11 unsqueeze/Constant_3696" [id=11, type=Constant];
+"12 broadcast" [id=12, type=Broadcast];
+"13 broadcast/Constant_3700" [id=13, type=Constant];
+"14 broadcast/Constant_3699" [id=14, type=Constant];
+"0 position_ids" -> "1 Unsqueeze_3697"  [label="[1, 10]", style=solid];
+"1 Unsqueeze_3697" -> "2 convert"  [label="[1, 1, 10]", style=solid];
+"2 convert" -> "3 MatMul"  [label="[1, 1, 10]", style=solid];
+"3 MatMul" -> "4 transpose"  [label="[1, 5, 10]", style=solid];
+"4 transpose" -> "5 concat"  [label="[1, 10, 5]", style=solid];
+"5 concat" -> "6 cos"  [label="[1, 10, 5]", style=solid];
+"5 concat" -> "7 sin"  [label="[1, 10, 5]", style=solid];
+"6 cos" -> "8 cos_result"  [label="[1, 10, 5]", style=solid];
+"7 sin" -> "9 sin_result"  [label="[1, 10, 5]", style=solid];
+"10 transpose/Constant_3703" -> "4 transpose"  [label="[3]", style=dashed];
+"11 unsqueeze/Constant_3696" -> "1 Unsqueeze_3697"  [label="[]", style=dashed];
+"12 broadcast" -> "3 MatMul"  [label="[1, 5, 1]", style=solid];
+"13 broadcast/Constant_3700" -> "12 broadcast"  [label="[3]", style=dashed];
+"14 broadcast/Constant_3699" -> "12 broadcast"  [label="[1, 5, 1]", style=solid];
+}
