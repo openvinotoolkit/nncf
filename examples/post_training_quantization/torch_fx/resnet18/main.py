@@ -14,6 +14,7 @@ from pathlib import Path
 from time import time
 from typing import Tuple
 
+# We need to import openvino.torch for torch.compile() with openvino backend to work.
 import openvino.torch  # noqa
 import torch
 import torch.nn as nn
