@@ -498,9 +498,7 @@ class WeightCompression(Algorithm):
                 matmul_nodes_to_compress, graph
             )
             if statistic_points is None:
-                statistic_points = self.get_statistic_points(
-                    model, graph, matmul_input_to_output_nodes_map.keys(), self._subset_size
-                )
+                statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
                 statistic_points = self._collect_statistics(dataset, graph, model, statistic_points)
             statistics = self._get_statistics_for_weights_compression(
                 matmul_input_to_output_nodes_map, statistic_points

@@ -906,7 +906,9 @@ DATASET_SIZE = 5
         (dict(mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, awq=True), 3),  # 2 - for AWQ + 1 - for Mixed Precision
     ),
 )
-def test_data_aware_all_layers(mocker, dataset_size, subset_size, ref_size, compression_args, multiplier_of_calls):
+def test_number_of_reduced_statistics_for_subset_size(
+    mocker, dataset_size, subset_size, ref_size, compression_args, multiplier_of_calls
+):
     model = IdentityMatmul().ov_model
     dataset = Dataset([ACTIVATION] * dataset_size)
     stats_spy = mocker.spy(AggregatorBase, "register_reduced_input")
