@@ -617,7 +617,7 @@ class WeightCompression(Algorithm):
         else:
             if self._scale_estimation:
                 scale_estimation_params = self._advanced_parameters.scale_estimation_params
-                scales = ScaleEstimation(
+                scales, zero_points = ScaleEstimation(
                     model,
                     self._backend_entity.name_to_node_mapping,
                     all_weight_params,
