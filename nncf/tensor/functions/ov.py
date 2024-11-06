@@ -52,7 +52,7 @@ def _ov_astype(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
             share_outputs=True,
             return_ov_tensors=True,
         ),
-        a.shape,
+        tuple(a.shape),
         dtype,
     )
     return model([a])[0].data

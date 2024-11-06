@@ -20,6 +20,7 @@ import pytest
 
 from nncf import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_decompress_weight_model
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_weight_model
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_dequantized_weight
@@ -29,6 +30,7 @@ from nncf.results_caching import ResultsCacheContainer
 from nncf.results_caching import cache_results
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
+from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP as DTYPE_MAP_NP
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP_REV as DTYPE_MAP_REV_NP
@@ -58,11 +60,21 @@ COMPRESSION_CONFIGS = [
 
 DATA_TYPES = [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16]
 
-WEIGHT_SHAPE = (1000, 4)
+WEIGHT_SHAPE = (10000, 4)
+
+MAX_MISALIGNMENT_FREQUENCY = {
+    TensorDataType.float32: 1e-2,  # tends to < 5e-6
+    TensorDataType.float16: 1e-2,  # tends to < 5e-5
+    TensorDataType.bfloat16: 1e-2,  # tends to < 5e-4
+}
+
+MAX_MISALIGNMENT_MAGNITUDE = 1
 
 TENSOR_BACKENDS = [TensorBackend.numpy, TensorBackend.ov]
 
-reduction_axes = (1,)
+EPS = np.finfo(np.float32).eps
+
+REDUCTION_AXES = (1,)
 
 
 RANDOM_TENSOR_CACHE_CONTAINER = ResultsCacheContainer()
@@ -103,12 +115,12 @@ def openvino_available(available: bool):
 
 
 @pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
-# @pytest.mark.parametrize("config", [WeightCompressionConfig(CompressWeightsMode.INT8_ASYM)])
 @pytest.mark.parametrize(
     ("quantization_task", "tensor_backend"),
     [
         (QuantizationTask.Q, TensorBackend.numpy),
         (QuantizationTask.Q, "auto"),
+        # Only for quantization task NumPy backend should support OV tensors as inputs
         (QuantizationTask.Q, TensorBackend.ov),
         (QuantizationTask.Q_DQ, TensorBackend.numpy),
         (QuantizationTask.Q_DQ, "auto"),
@@ -117,8 +129,9 @@ def openvino_available(available: bool):
     ],
 )
 @pytest.mark.parametrize("dtype", DATA_TYPES)
-@pytest.mark.parametrize("precompute", [False, True])
-def test_quantization_alignment(config, quantization_task, tensor_backend, dtype, precompute):
+@pytest.mark.parametrize("precompute_s_zp", [False, True], ids=["no-precompute", "precompute"])
+@pytest.mark.parametrize("static_shapes", [False, True], ids=["dynamic-shapes", "static-shapes"])
+def test_quantization_alignment(config, quantization_task, tensor_backend, dtype, precompute_s_zp, static_shapes):
     d1, d2 = WEIGHT_SHAPE
     group_size = config.group_size
     zero_point_shape = scale_shape = (d1, 1) if group_size == -1 else (d1, d2 // group_size, 1)
@@ -140,10 +153,10 @@ def test_quantization_alignment(config, quantization_task, tensor_backend, dtype
             # Generate input tensors
             weight = get_random_float_tensor(WEIGHT_SHAPE, dtype, weight_tensor_backend)
             precomputed_scale, precomputed_zero_point = None, None
-            if precompute:
-                # For precomputed mode, the weight is assumed to be already reshaped
+            if precompute_s_zp:
+                # When scale (and z.p) are precomputed, all inputs are assumed to be reshaped beforehand
                 if group_size != -1:
-                    weight, _ = reshape_weight_for_grouped_quantization(weight, reduction_axes, group_size)
+                    weight, _ = reshape_weight_for_grouped_quantization(weight, REDUCTION_AXES, group_size)
 
                 precomputed_scale = get_random_float_tensor(scale_shape, TensorDataType.float32, TensorBackend.numpy)
                 if config.is_int_asym:
@@ -159,16 +172,26 @@ def test_quantization_alignment(config, quantization_task, tensor_backend, dtype
                 fn_to_patch = get_compress_decompress_weight_model
             patch_path = f"{inspect.getmodule(fn_to_patch).__name__}.{fn_to_patch.__name__}"
             with patch(patch_path, side_effect=fn_to_patch) as mock:
-                # For precomputed mode, all inputs are assumed to be already reshaped
-                r_axes = None if precompute else reduction_axes
-                kwargs = {"return_compressed_weight": True} if quantization_task == QuantizationTask.Q_DQ_RQ else {}
-                outputs = fn_to_call(weight, config, r_axes, precomputed_scale, precomputed_zero_point, **kwargs)
+                # When scale (and z.p) are precomputed, all inputs are assumed to be already reshaped and reduction
+                # axes are not needed
+                reduction_axes = None if precompute_s_zp else REDUCTION_AXES
+
+                kwargs = {}
+                if cb == ComputationBackend.OV:
+                    ov_model_params = OVModelParameters(weight.dtype, dynamic_shapes=not static_shapes)
+                    kwargs["ov_model_params"] = ov_model_params
+                if quantization_task == QuantizationTask.Q_DQ_RQ:
+                    kwargs["return_compressed_weight"] = True
+
+                outputs = fn_to_call(
+                    weight, config, reduction_axes, precomputed_scale, precomputed_zero_point, **kwargs
+                )
 
                 decompressed_weight, compressed_weight, scale, zero_point = (None,) * 4
                 if quantization_task == QuantizationTask.Q:
                     compressed_weight, scale, zero_point = outputs
                 elif quantization_task == QuantizationTask.Q_DQ:
-                    decompressed_weight = outputs[0]
+                    decompressed_weight = outputs
                 else:
                     decompressed_weight, compressed_weight, scale, zero_point = outputs
 
@@ -181,7 +204,7 @@ def test_quantization_alignment(config, quantization_task, tensor_backend, dtype
             # Scale should always be float32 and numpy backend
             assert scale.dtype == TensorDataType.float32
             assert scale.backend == TensorBackend.numpy
-            if precompute:
+            if precompute_s_zp:
                 # In case of precomputed scale or zero point, the returned scale and z.p. should equal the given ones
                 np.testing.assert_allclose(precomputed_scale.data, scale.data)
                 if config.is_int_asym:
@@ -198,7 +221,7 @@ def test_quantization_alignment(config, quantization_task, tensor_backend, dtype
             # without re-packing
             assert compressed_weight.backend == TensorBackend.ov
             assert compressed_weight.dtype == (TensorDataType.uint4 if config.is_int_asym else TensorDataType.int4)
-            if config.is_int_asym and not precompute:
+            if config.is_int_asym and not precompute_s_zp:
                 assert zero_point.backend == TensorBackend.ov
                 assert zero_point.dtype == TensorDataType.uint4
         else:
@@ -207,7 +230,7 @@ def test_quantization_alignment(config, quantization_task, tensor_backend, dtype
                 # be of (u)int8 data type, zero point -- in int32
                 assert compressed_weight.backend == TensorBackend.numpy
                 assert compressed_weight.dtype == (TensorDataType.uint8 if config.is_int_asym else TensorDataType.int8)
-                if config.is_int_asym and not precompute:
+                if config.is_int_asym and not precompute_s_zp:
                     assert zero_point.backend == TensorBackend.numpy
                     assert zero_point.dtype == TensorDataType.int32
             if quantization_task != QuantizationTask.Q:
@@ -224,11 +247,60 @@ def test_quantization_alignment(config, quantization_task, tensor_backend, dtype
                 results[cb]["zero_point"] = zero_point.to_backend(TensorBackend.numpy)
 
     keys = set(results[ComputationBackend.OV]).union(set(results[ComputationBackend.NumPy]))
-    # Check that the computed tensors are equal between implementations
     for key in keys:
-        numpy_result = results[ComputationBackend.NumPy][key].data
-        ov_result = results[ComputationBackend.OV][key].data
-        np.testing.assert_allclose(numpy_result, ov_result, err_msg=f"Results do not align for {key}.")
+        numpy_result = results[ComputationBackend.NumPy][key]
+        ov_result = results[ComputationBackend.OV][key]
+
+        atol = 0
+        scale = None
+        # For static-shaped OV models doing asymmetric compression there maybe misalignments between OV and NumPy
+        # For more details see 156511
+        if static_shapes and config.is_int_asym:
+            if key == "compressed_weight":
+                atol = MAX_MISALIGNMENT_MAGNITUDE
+            elif key == "decompressed_weight":
+                if "scale" in results[ComputationBackend.NumPy]:
+                    scale = results[ComputationBackend.NumPy]["scale"]
+                else:
+                    if precompute_s_zp:
+                        scale = precomputed_scale
+                    else:
+                        weight = get_random_float_tensor(WEIGHT_SHAPE, dtype, TensorBackend.numpy)
+                        with openvino_available(False):
+                            _, _, scale, _ = calculate_quantized_dequantized_weight(
+                                weight, config, REDUCTION_AXES, return_compressed_weight=True
+                            )
+                # For decompressed weight the misalignment magnitude depends on the scale
+                atol = MAX_MISALIGNMENT_MAGNITUDE * fns.abs(scale).max().item() + EPS
+            max_misalignment_frequency = MAX_MISALIGNMENT_FREQUENCY[dtype]
+        else:
+            max_misalignment_frequency = None
+
+        # Check that the computed tensors are equal between implementations
+        np.testing.assert_allclose(
+            numpy_result.data, ov_result.data, atol=atol, err_msg=f"Results do not align for {key}."
+        )
+
+        if max_misalignment_frequency is not None:
+            if key == "compressed_weight":
+                diff = fns.abs(numpy_result.astype(TensorDataType.int32) - ov_result.astype(TensorDataType.int32))
+            else:
+                diff = fns.abs(numpy_result - ov_result)
+
+            if diff.max() > 0:
+                # Check that the proportion of misaligned values is small
+                n_not_equal = fns.sum(diff > 0)
+                assert n_not_equal / numpy_result.size < max_misalignment_frequency
+
+                # Check that the magnitude of misalignment is as small as expected
+                if key == "decompressed_weight":
+                    # Reshape scale to match the shape of decompressed weight
+                    scale = np.repeat(scale.data, diff.shape[-1], axis=-1)
+                    np.testing.assert_array_less(
+                        diff.data,
+                        MAX_MISALIGNMENT_MAGNITUDE * np.abs(scale) + EPS,
+                        err_msg=f"Too large misalignment for {key}.",
+                    )
 
 
 # @pytest.mark.parametrize("mode", COMPRESSION_MODES)
@@ -247,13 +319,13 @@ def test_quantization_alignment(config, quantization_task, tensor_backend, dtype
 #     # Patch is_openvino_available to control the implementation
 #     with patch("nncf.utils.is_openvino_available", return_value=False):
 #         # Reference implementation
-#         decompressed_weight_ref = calculate_quantized_dequantized_weight(weight, config, reduction_axes)
+#         decompressed_weight_ref = calculate_quantized_dequantized_weight(weight, config, REDUCTION_AXES)
 #
 #     with patch("nncf.utils.is_openvino_available", return_value=True):
 #         # OpenVINO implementation
 #         ov_model_params = OVModelParameters(weight.dtype)
 #         decompressed_weight_ov = calculate_quantized_dequantized_weight(
-#             weight, config, reduction_axes, ov_model_params=ov_model_params
+#             weight, config, REDUCTION_AXES, ov_model_params=ov_model_params
 #         )
 #
 #     # Compare decompressed weights
@@ -269,13 +341,13 @@ def test_quantization_alignment(config, quantization_task, tensor_backend, dtype
 #
 #         # Reference implementation
 #         with patch("nncf.utils.is_openvino_available", return_value=False):
-#             decompressed_weight_ref = calculate_quantized_dequantized_weight(weight, config, reduction_axes)
+#             decompressed_weight_ref = calculate_quantized_dequantized_weight(weight, config, REDUCTION_AXES)
 #
 #         # OpenVINO implementation
 #         with patch("nncf.utils.is_openvino_available", return_value=True):
 #             ov_model_params = OVModelParameters(weight.dtype)
 #             decompressed_weight_ov = calculate_quantized_dequantized_weight(
-#                 weight, config, reduction_axes, ov_model_params=ov_model_params
+#                 weight, config, REDUCTION_AXES, ov_model_params=ov_model_params
 #             )
 #
 #         # Compare decompressed weights
@@ -291,13 +363,13 @@ def test_quantization_alignment(config, quantization_task, tensor_backend, dtype
 #
 #     # Reference implementation with numpy backend
 #     with patch("nncf.utils.is_openvino_available", return_value=False):
-#         compressed_weight_ref, scale_ref = do_int_quantization(weight_numpy, config, reduction_axes)
+#         compressed_weight_ref, scale_ref = do_int_quantization(weight_numpy, config, REDUCTION_AXES)
 #
 #     # OpenVINO implementation with OV backend
 #     with patch("nncf.utils.is_openvino_available", return_value=True):
 #         ov_model_params = OVModelParameters(weight_ov.dtype)
 #         compressed_weight_ov, scale_ov = do_int_quantization(
-#             weight_ov, config, reduction_axes, ov_model_params=ov_model_params
+#             weight_ov, config, REDUCTION_AXES, ov_model_params=ov_model_params
 #         )
 #
 #     # Compare compressed weights

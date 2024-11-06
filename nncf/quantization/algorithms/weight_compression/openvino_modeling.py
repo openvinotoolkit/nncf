@@ -36,7 +36,7 @@ OV_MODEL_CACHE = ResultsCacheContainer()
 class OVModelParameters:
     input_dtype: TensorDataType
     output_dtype: Optional[TensorDataType] = None
-    dynamic_shapes: bool = True  # TODO: set to False once 156511 is resolved
+    dynamic_shapes: bool = False
     recompile: bool = False
     release_memory: bool = True
     share_inputs: bool = True
@@ -269,8 +269,8 @@ def _build_compress_decompress_model(
             compressed_w = ov_results[0]
             scale, zero_point = ov_parameters[1:]
 
-        subtrac_zero_point = opset.convert(compressed_w, ov.Type.i32) - opset.convert(zero_point, ov.Type.i32)
-        decompressed_w = scale * opset.convert(subtrac_zero_point, ov.Type.f32)
+        compressed_w_ = opset.convert(compressed_w, ov.Type.i32) - opset.convert(zero_point, ov.Type.i32)
+        decompressed_w = scale * opset.convert(compressed_w_, ov.Type.f32)
     else:
         if len(ov_parameters) == 1:
             # weight -> compressed_weight, scale
