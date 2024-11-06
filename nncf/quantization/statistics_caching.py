@@ -26,7 +26,6 @@ def register_statistics_for_algorithm(
     aggregator: StatisticsAggregator,
     model: TModel,
     graph: NNCFGraph,
-    subset_size: int,
     compression_algo: WeightCompression,
     matmul_input_to_output_nodes_map: Dict[Tuple[NNCFNode, int], List[NNCFNode]],
 ) -> None:
@@ -36,14 +35,11 @@ def register_statistics_for_algorithm(
     :param aggregator: Aggregator to register statistics.
     :param model: Model being analyzed.
     :param graph: Model's computational graph.
-    :param subset_size: Size of dataset subset for statistics.
     :param compression_algo: WeightCompression algorithm instance.
     :param matmul_input_to_output_nodes_map: A dictionary mapping from a tuple of (activation node, port ID)
     to a list of MatMul nodes that accept the activation as input.
     """
-    statistic_points = compression_algo.get_statistic_points(
-        model, graph, matmul_input_to_output_nodes_map.keys(), subset_size
-    )
+    statistic_points = compression_algo.get_statistic_points(model, graph, matmul_input_to_output_nodes_map.keys())
     aggregator.register_statistic_points(statistic_points)
 
 
@@ -94,15 +90,12 @@ def register_all_statistics(
     :param aggregator: Aggregator to register statistics.
     :param model: Model being analyzed.
     :param graph: Model's computational graph.
-    :param subset_size: Size of dataset subset for statistics.
     :param compression_algo: WeightCompression algorithm instance.
     :param enable_mixed_precision: Whether to enable mixed precision statistics.
     """
     _, matmul_input_to_output_nodes_map = compression_algo.get_compression_nodes_info(graph)
 
-    register_statistics_for_algorithm(
-        aggregator, model, graph, subset_size, compression_algo, matmul_input_to_output_nodes_map
-    )
+    register_statistics_for_algorithm(aggregator, model, graph, compression_algo, matmul_input_to_output_nodes_map)
 
     if enable_mixed_precision:
         _register_mixed_precision(aggregator, model, graph, matmul_input_to_output_nodes_map, subset_size)
