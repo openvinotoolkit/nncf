@@ -76,7 +76,7 @@ def main():
     model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"})
     input_ids = tokenizer("What is Python?", return_tensors="pt").to(device=model.device)
 
-    output = model.generate(**input_ids, max_new_tokens=100)
+    output = model.generate(**input_ids, max_new_tokens=100, do_sample=False)
     output_text = tokenizer.decode(output[0])
     print(f"Optimized model output: {output_text}\n")
     return output_text
