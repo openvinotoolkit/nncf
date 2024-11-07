@@ -1,0 +1,16 @@
+:orphan:
+
+:py:mod:`nncf.experimental.torch2.function_hook.handle_inner_functions`
+=======================================================================
+
+.. py:module:: nncf.experimental.torch2.function_hook.handle_inner_functions
+
+.. autoapi-nested-parse::
+
+   This module implements selected functions from the `torch` module, excluding the `hand_function` mechanism.
+
+   It processes inner functions to handle exception hooks and graph analysis. The implementation is designed
+   to support custom handling of inner function exceptions for specific functions.
+
+
+
