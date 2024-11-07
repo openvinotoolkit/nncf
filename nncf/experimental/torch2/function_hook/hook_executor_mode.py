@@ -30,6 +30,7 @@ from torch import nn
 from torch.overrides import TorchFunctionMode
 
 from nncf.common.logging import nncf_logger as logger
+from nncf.experimental.torch2.function_hook.handle_inner_functions import get_handle_inner_function
 from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
 from nncf.experimental.torch2.function_hook.weak_map import WeakUnhashableKeyMap
 
@@ -216,6 +217,13 @@ class FunctionHookMode(TorchFunctionMode):
         kwargs = kwargs or {}
 
         fn_name = func.__name__
+
+        # WA: to catch nested calls for some functions
+        # https://github.com/pytorch/pytorch/issues/55093
+        fn_for_nested_call = get_handle_inner_function(func)
+        if fn_for_nested_call is not None:
+            with self:
+                return fn_for_nested_call(*args, **kwargs)
 
         if not self.enabled or fn_name in IGNORED_FN_NAMES:
             return func(*args, **kwargs)

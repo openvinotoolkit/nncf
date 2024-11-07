@@ -162,7 +162,7 @@ TEST_MODELS_QUANIZED = (
         torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [
-            (298, 298),
+            (250, 250),
             (149, 149),
         ],
     ),
