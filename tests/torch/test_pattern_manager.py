@@ -74,7 +74,6 @@ IGNORING_HW_PATTERN_REASONS = {
 IGNORING_IGNORED_PATTERN_REASONS = {
     IgnoredPatternNames.FC_BN_HSWISH_ACTIVATION: "Not relevant for Torch.",
     IgnoredPatternNames.EQUAL_LOGICALNOT: "Not relevant for Torch.",
-    IgnoredPatternNames.ROPE: "Not relevant for Torch.",
 }
 
 
