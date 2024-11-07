@@ -93,7 +93,7 @@ def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> NNCFGraph:
         nncf_node = nncf_graph.add_nncf_node(
             node_name=get_name_of_node(meta),
             node_type=node_type,
-            node_metatype=node_metatype,
+            node_metatype=node_metatype,  # type: ignore[arg-type]
         )
         map_nx_node_to_nncf_node[node] = nncf_node
 
