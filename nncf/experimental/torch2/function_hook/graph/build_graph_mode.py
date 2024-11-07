@@ -227,8 +227,6 @@ class GraphBuilderMode(FunctionHookMode):
         :param value: The tensor to which the post-hook will be applied.
         :return: The processed tensor with the applied post-hook, if applicable.
         """
-        if not isinstance(value, torch.nn.Parameter):
-            return value
         tensor_info = self.tensor_info.get(value)
         if (
             tensor_info is not None
