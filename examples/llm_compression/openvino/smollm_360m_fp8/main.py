@@ -13,10 +13,13 @@ from functools import partial
 import datasets
 import numpy as np
 import openvino as ov
+import torch
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 
 import nncf
+
+SEED = 0
 
 
 def main():
@@ -76,6 +79,8 @@ def main():
     model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"})
     input_ids = tokenizer("What is Python?", return_tensors="pt").to(device=model.device)
 
+    torch.manual_seed(SEED)
+    model.request = None
     output = model.generate(**input_ids, max_new_tokens=100, do_sample=False)
     output_text = tokenizer.decode(output[0])
     print(f"Optimized model output: {output_text}\n")
