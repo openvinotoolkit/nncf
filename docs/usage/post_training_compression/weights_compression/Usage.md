@@ -1,8 +1,20 @@
-## Weights Compression
 
-[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run Weights Compression with. PyTorch and Torch FX are also supported.
+- [The algorithm description](#the-algorithm-description)
+- [Supported modes](#supported-modes)
+- [User guide](#user-guide)
+  - [Data-aware methods](#data-aware-methods)
+  - [Caching Statistics](#caching-statistics)
+- [Evaluation results](#evaluation-results)
+  - [Data-free Mixed-Precision on Lambada OpenAI dataset](#data-free-mixed-precision-on-lambada-openai-dataset)
+  - [Data-aware Mixed-Precision and AWQ methods on Wikitext dataset](#data-aware-mixed-precision-and-awq-methods-on-wikitext-dataset)
+  - [Scale Estimation and GPTQ methods on Lambada OpenAI dataset](#scale-estimation-and-gptq-methods-on-lambada-openai-dataset)
+  - [Accuracy/Footprint trade-off](#accuracyfootprint-trade-off)
+- [Limitations](#limitations)
+- [Additional resources](#additional-resources)
 
 ### The algorithm description
+
+[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run Weights Compression with. PyTorch and Torch FX are also supported.
 
 The Weights Compression algorithm is aimed at compressing the weights of the models and can be used to optimize the model footprint and performance of large models where the size of weights is relatively larger than the size of activations, for example, Large Language Models (LLM). The algorithm compresses weights for Linear, Convolution and Embedding layers.
 
@@ -56,6 +68,8 @@ from nncf import compress_weights, CompressWeightsMode
 compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, group_size=64, ratio=0.9) # model is openvino.Model object
 ```
 
+#### Data-aware methods
+
 - Accuracy of the 4-bit compressed models can be improved by using data-aware mixed-precision algorithm. It is capable to find outliers in the input activations and assign different quantization precision to minimize accuracy degradation.
 Below is the example how to compress 80% of layers to 4-bit integer with a default data-aware mixed precision algorithm.
 It requires just one extra parameter - a NNCF wrapper of the dataset. Refer to the [full example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/llm_compression/openvino) of data-aware weight compression for more details. If dataset is not specified, data-free mixed precision algorithm works based on weights only.
@@ -80,7 +94,8 @@ nncf_dataset = nncf.Dataset(synthetic_data, transform_fn)
 - Accuracy of the 4-bit compressed models also can be improved by using AWQ, Scale Estimation, GPTQ or Lora Correction algorithms over data-based mixed-precision algorithm. These algorithms work by equalizing a subset of weights to minimize the difference between the original precision and the 4-bit precision.
 Unlike all others, the Lora Correction algorithm inserts an additional Linear layers for reducing quantization noise and further accuracy improvement. Inevitably, this approach introduces a memory and a runtime overheads, but they are negligible, since the inserted weight much smaller and can be quantized to 8-bit. The AWQ, Scale Estimation (SE) and Lora Correction (LC) algo can be used in any combination together: AWQ + SE, AWQ + LC, SE + LC, AWQ + SE + LC. The GPTQ algorithm can be combined with AWQ and Scale Estimation in any combination: AWQ + GPTQ, GPTQ + SE, AWQ + GPTQ + SE. Below are examples demonstrating how to enable the AWQ, Scale Estimation, GPTQ or Lora Correction algorithms:
 
-  Prepare the calibration dataset for data-based algorithms:
+<details>
+<summary>Prepare the calibration dataset for data-based algorithms</summary>
 
 ```python
 from datasets import load_dataset
@@ -130,6 +145,8 @@ input_shapes = get_input_shapes(model)
 nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer,
                                                         input_shapes=input_shapes))
 ```
+
+</details>
 
 - How to compress 80% of layers to 4-bit integer with a default data-based mixed precision algorithm and AWQ with Scale Estimation. It requires to set `awq` to `True` and `scale_estimation` to `True` additionally to data-based mixed-precision algorithm.
 
@@ -182,7 +199,7 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.E2M1, group_
 
 #### Caching Statistics
 
-To optimize performance and reuse statistics data across multiple configurations, the `statistics_path` option can be used. This feature allows caching of computed statistics, so they can be loaded from a specified file path rather than being recalculated with each configuration. This can significantly reduce the setup time for models that require extensive statistical computations.
+To optimize compression time and reuse statistics data across multiple configurations, the `statistics_path` option can be used. This feature allows caching of computed statistics, so they can be loaded from a specified path rather than being recalculated with each configuration. This can significantly reduce the setup time for models that require extensive statistical computations.
 
 To enable statistics caching, set the `statistics_path` parameter to the desired file path location.
 
