@@ -14,9 +14,9 @@
 
 ### The algorithm description
 
-[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run Weights Compression with. PyTorch and Torch FX are also supported.
-
 The Weights Compression algorithm is aimed at compressing the weights of the models and can be used to optimize the model footprint and performance of large models where the size of weights is relatively larger than the size of activations, for example, Large Language Models (LLM). The algorithm compresses weights for Linear, Convolution and Embedding layers.
+
+[OpenVINO](https://github.com/openvinotoolkit/openvino) is the preferred backend to run Weights Compression with. PyTorch and Torch FX are also supported.
 
 ### Supported modes
 
@@ -199,17 +199,21 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.E2M1, group_
 
 #### Caching Statistics
 
-To optimize compression time and reuse statistics data across multiple configurations, the `statistics_path` option can be used. This feature allows caching of computed statistics, so they can be loaded from a specified path rather than being recalculated with each configuration. This can significantly reduce the setup time for models that require extensive statistical computations.
+To optimize compression time and reuse statistics across multiple configurations, you can use the `statistics_path` option. This feature enables caching of calculated statistics, allowing them to be loaded from a specified path rather than recalculated for each configuration. This approach can significantly reduce compression time during repeated model compression iterations, making it ideal when searching for optimal compression parameters.
 
-To enable statistics caching, set the `statistics_path` parameter to the desired file path location.
+To enable statistics caching, set the `statistics_path` parameter to your chosen path.
 
 ```python
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf import compress_weights
-compressed_model = compress_weights(model, advanced_parameters=AdvancedCompressionParameters(statistics_path="statistics"))
+
+compressed_model = compress_weights(
+    model,
+    advanced_parameters=AdvancedCompressionParameters(statistics_path="statistics")
+)
 ```
 
-When `statistics_path` is provided, the system will first check the specified path for cached statistics. If found, it will use the existing data. Otherwise, it will compute the statistics and save them to the specified location for future use.
+When `statistics_path` is provided, the specified path is checked first for existing cached statistics. If they are found, they are loaded from this path. If not, the statistics are computed and saved to this path for future use.
 
 ### Evaluation results
 
