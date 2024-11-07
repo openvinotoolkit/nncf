@@ -162,7 +162,7 @@ class WeightCompressionAlgoBackend(ABC):
     def insert_adapters(
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
     ) -> None:
-        """
+        r"""
         Expands a model's execution graph following the Low-Rank Adaptation (LoRA) concept.
 
         It inserts two additional Linear layers with weight matrices of low rank that are executed in parallel to the
