@@ -46,18 +46,16 @@ class MixedPrecisionCriterion(Algorithm):
     for weights based on some criteria.
     """
 
-    def __init__(
-        self,
-        primary_config: WeightCompressionConfig,
-        ratio: float,
-    ):
+    def __init__(self, primary_config: WeightCompressionConfig, ratio: float, subset_size: Optional[int] = None):
         """
         :param primary_config: Configuration on how to compress (quantize) weights to primary precision.
         :param ratio: The ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to INT8_ASYM).
+        :param subset_size: Size of dataset subset for statistics.
         """
         self._primary_config = primary_config
         self._ratio = ratio
+        self._subset_size = subset_size
         self._algorithm_key = f"MPC_{hash(self)}"
         self._backend_entity = None
 
@@ -117,7 +115,6 @@ class MixedPrecisionCriterion(Algorithm):
         model: TModel,
         graph: NNCFGraph,
         nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
-        subset_size: Optional[int] = None,
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
@@ -125,7 +122,6 @@ class MixedPrecisionCriterion(Algorithm):
         :param model: Model for statistics collection.
         :param graph: Model graph.
         :param nodes_and_port_ids: Nodes and port ids for which statistics should be collected.
-        :param subset_size: Number of samples to collect.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
 
@@ -201,7 +197,6 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         model: TModel,
         graph: NNCFGraph,
         nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
-        subset_size: Optional[int] = None,
     ) -> StatisticPointsContainer:
         raise RuntimeError("No statistics collection intended for data-free mixed precision criterion")
 
@@ -262,7 +257,6 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
         model: TModel,
         graph: NNCFGraph,
         nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
-        subset_size: Optional[int] = None,
     ) -> StatisticPointsContainer:
         self._set_backend_entity(model)
 
@@ -277,7 +271,7 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, act_node.node_name, port_id=output_port_id
             )
-            stat_collector = self._get_statistic_collector(subset_size=subset_size)
+            stat_collector = self._get_statistic_collector()
             statistic_container.add_statistic_point(
                 StatisticPoint(
                     target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
@@ -287,11 +281,9 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
         return statistic_container
 
     @abstractmethod
-    def _get_statistic_collector(self, subset_size=None):
+    def _get_statistic_collector():
         """
         Get statistic collector
-
-        :param subset_size: Number of samples to collect
         """
 
     def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[NNCFNode, int]:
@@ -367,8 +359,8 @@ class HAWQCriterion(DataBasedCriterion):
         decompressed_weight = decompressed_weight.reshape(orig_shape)
         return fns.linalg.norm(decompressed_weight - weight, ord="fro").item()
 
-    def _get_statistic_collector(self, subset_size=None):
-        return self._backend_entity.hawq_statistic_collector(subset_size)
+    def _get_statistic_collector(self):
+        return self._backend_entity.hawq_statistic_collector()
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_VARIANCE)
@@ -379,9 +371,11 @@ class MeanVarianceCriterion(DataBasedCriterion):
 
     STAT_KEY = SensitivityMetric.MEAN_ACTIVATION_VARIANCE.value
 
-    def _get_statistic_collector(self, subset_size=None):
+    def _get_statistic_collector(self):
         # Reducing across the second-last dimension, assuming it is the sequence length dimension
-        return self._backend_entity.mean_variance_statistic_collector(reduction_axes=(-2,), subset_size=subset_size)
+        return self._backend_entity.mean_variance_statistic_collector(
+            reduction_axes=(-2,), subset_size=self._subset_size
+        )
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
@@ -392,9 +386,11 @@ class MaxVarianceCriterion(DataBasedCriterion):
 
     STAT_KEY = SensitivityMetric.MAX_ACTIVATION_VARIANCE.value
 
-    def _get_statistic_collector(self, subset_size=None):
+    def _get_statistic_collector(self):
         # Reducing across the second-last dimension, assuming it is the sequence length dimension
-        return self._backend_entity.max_variance_statistic_collector(reduction_axes=(-2,), subset_size=subset_size)
+        return self._backend_entity.max_variance_statistic_collector(
+            reduction_axes=(-2,), subset_size=self._subset_size
+        )
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE)
@@ -405,6 +401,8 @@ class MeanMaxCriterion(DataBasedCriterion):
 
     STAT_KEY = SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE.value
 
-    def _get_statistic_collector(self, subset_size=None):
+    def _get_statistic_collector(self):
         # Reducing across the second-last dimension, assuming it is the sequence length dimension
-        return self._backend_entity.mean_abs_max_statistic_collector(reduction_axes=(-2,), subset_size=subset_size)
+        return self._backend_entity.mean_abs_max_statistic_collector(
+            reduction_axes=(-2,), subset_size=self._subset_size
+        )
