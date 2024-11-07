@@ -4,4 +4,5 @@ numpy>=1.23.5
 openvino==2024.4
 optimum-intel[openvino]>=1.13.0
 transformers>=4.35.2
+onnx==1.17.0
 numpy<2
