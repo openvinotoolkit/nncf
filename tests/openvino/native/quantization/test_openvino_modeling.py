@@ -120,7 +120,7 @@ def openvino_available(available: bool):
     [
         (QuantizationTask.Q, TensorBackend.numpy),
         (QuantizationTask.Q, "auto"),
-        # Only for quantization task NumPy backend should support OV tensors as inputs
+        # NumPy backend should support OV tensors as inputs only for quantization task
         (QuantizationTask.Q, TensorBackend.ov),
         (QuantizationTask.Q_DQ, TensorBackend.numpy),
         (QuantizationTask.Q_DQ, "auto"),

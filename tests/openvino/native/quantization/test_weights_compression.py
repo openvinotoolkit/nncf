@@ -1062,8 +1062,6 @@ def test_compressed_weighs_range(mode, data):
     ],
 )
 def test_int_quantization_with_precomputed_parameters(config, precompute_scale, precompute_zero_point, raises):
-    is_asym = config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT8_ASYM]
-
     precomputed_scale, precomputed_zero_point = None, None
     weight = Tensor(((np.arange(11) - 5) / 10).astype(np.float32)[:, None])
     if precompute_scale:
@@ -1073,18 +1071,18 @@ def test_int_quantization_with_precomputed_parameters(config, precompute_scale, 
 
     if raises:
         with pytest.raises(ValueError) as exc_info:
-            _, scale, zero_point = do_int_quantization(weight, -1, config, precomputed_scale, precomputed_zero_point)
+            _, scale, zero_point = do_int_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
             assert exc_info.value == (
                 "If precomputed quantization parameters are provided, both scale and zero point "
                 "are required for asymmetric quantization."
             )
         return
     else:
-        _, scale, zero_point = do_int_quantization(weight, -1, config, precomputed_scale, precomputed_zero_point)
+        _, scale, zero_point = do_int_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
 
     if precompute_scale:
         assert np.allclose(scale.data, precomputed_scale.data)
-    if is_asym:
+    if config.is_int_asym:
         if precompute_zero_point:
             assert np.allclose(zero_point.data, precomputed_zero_point.data)
     else:
