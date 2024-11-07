@@ -527,6 +527,7 @@ def test_get_connected_nodes():
     connected_nodes_list = _get_connected_nodes(captured_model.graph)
     assert len(connected_nodes_list) == 15
 
+
 def test_constant_folding():
     model = ConstantFoldingTestModel()
     captured_model = _capture_model(model, torch.ones(model.INPUT_SIZE))
@@ -555,4 +556,3 @@ def test_constant_folding_with_constraints(is_per_channel):
     nncf_graph = GraphConverter.create_nncf_graph(model_with_correct_pattern)
     dot_file_name = f"folded_model_with_constraints_{'per_channel' if is_per_channel else 'per_tensor'}.dot"
     check_graph(nncf_graph, dot_file_name, TRANSFORMED_GRAPH_DIR_NAME, extended=True)
-
