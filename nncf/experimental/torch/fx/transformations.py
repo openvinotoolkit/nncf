@@ -22,6 +22,7 @@ import nncf
 import nncf.torch
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -802,10 +803,24 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     # to make it easier for algorithms to work
     # with the target graph BatchNorm operations
     # are being fused
+    fold_constant_except_qdq(model)
     fuse_conv_bn(model)
     separate_conv_and_bias(model)
     separate_linear_and_bias(model)
     shared_constants_unification_transformation(model)
+
+
+def fold_constant_except_qdq(model: torch.fx.GraphModule):
+    """
+    Performs constant folding avoiding quantize-dequantize pattern.
+
+    :param model: Model to perform constant folding on.
+    """
+
+    def constraint_fn(node: torch.fx.Node):
+        return node.op != "call_function" or node.target not in QUANTIZE_NODE_TARGETS + DEQUANTIZE_NODE_TARGETS
+
+    constant_fold(model, constraint_fn=constraint_fn)
 
 
 def revert_quantization_transformations(model: torch.fx.GraphModule) -> None:
