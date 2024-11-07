@@ -886,25 +886,36 @@ def test_compression_for_different_dtypes(activation_dtype, weight_dtype):
     check_compressed_matmul_subgraph(scale_multiply_node, activation_dtype, weight_dtype)
 
 
-DATASET_SIZE = 129
+DATASET_SIZE = 5
 
 
 @pytest.mark.parametrize(
-    ("subset_size", "ref_size"),
+    ("dataset_size", "subset_size", "ref_size"),
     (
-        (1, 1),
-        (5, 5),
-        (130, DATASET_SIZE),
+        (DATASET_SIZE, 1, 1),
+        (DATASET_SIZE, DATASET_SIZE, DATASET_SIZE),
+        (DATASET_SIZE, DATASET_SIZE + 1, DATASET_SIZE),
     ),
 )
-def test_valid_subset_size(mocker, subset_size, ref_size):
+@pytest.mark.parametrize(
+    ("compression_args", "multiplier_of_calls"),
+    (
+        (dict(mode=CompressWeightsMode.INT4_ASYM, ratio=1), 0),  # data-free, no reducers
+        (dict(mode=CompressWeightsMode.INT4_ASYM, ratio=0.5), 1),  # 1 reducer for mixed precision
+        (dict(mode=CompressWeightsMode.INT4_ASYM, ratio=1, awq=True), 2),  # mean & shape reducer for AWQ
+        (dict(mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, awq=True), 3),  # 2 - for AWQ + 1 - for Mixed Precision
+    ),
+)
+def test_number_of_reduced_statistics_for_subset_size(
+    mocker, dataset_size, subset_size, ref_size, compression_args, multiplier_of_calls
+):
     model = IdentityMatmul().ov_model
-    dataset = Dataset([ACTIVATION] * DATASET_SIZE)
+    dataset = Dataset([ACTIVATION] * dataset_size)
     stats_spy = mocker.spy(AggregatorBase, "register_reduced_input")
 
-    compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, dataset=dataset, subset_size=subset_size)
+    compress_weights(model, dataset=dataset, subset_size=subset_size, **compression_args)
 
-    assert stats_spy.call_count == ref_size
+    assert stats_spy.call_count == ref_size * multiplier_of_calls
 
 
 def test_default_subset_value():
