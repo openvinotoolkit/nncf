@@ -412,7 +412,6 @@ def compress_weights_impl(
             statistics_aggregator,
             model,
             graph,
-            subset_size,
             compression_algorithm,
             matmul_input_to_output_nodes_map,
         )
