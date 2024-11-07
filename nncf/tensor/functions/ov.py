@@ -13,6 +13,7 @@ from typing import Tuple, Union
 import numpy as np
 import openvino as ov
 
+from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor.functions import numeric
 
@@ -55,7 +56,7 @@ def _ov_astype(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
         tuple(a.shape),
         dtype,
     )
-    return model([a])[0].data
+    return model([Tensor(a)])[0].data
 
 
 @numeric.backend.register(ov.Tensor)

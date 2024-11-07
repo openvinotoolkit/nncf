@@ -23,7 +23,7 @@ from nncf.results_caching import ResultsCacheContainer
 from nncf.results_caching import cache_results
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
-from nncf.tensor.functions.ov import DTYPE_MAP as OV_DTYPE_MAP
+from nncf.tensor.functions.ov import DTYPE_MAP as DTYPE_MAP_OV
 
 TensorList = List[Tensor]
 ModelCallable = Callable[[TensorList], TensorList]
@@ -61,9 +61,7 @@ class OVModelParameters:
 def run_model(
     ov_model_params: OVModelParameters, compiled_model: ov.CompiledModel, return_ov_tensors: bool, inputs: TensorList
 ) -> TensorList:
-    if any(isinstance(it, Tensor) for it in inputs):
-        inputs = [inp.data for inp in inputs]
-
+    inputs = [inp.data for inp in inputs]
     if return_ov_tensors:
         infer_request = compiled_model.create_infer_request()
         infer_request.infer(
@@ -151,7 +149,7 @@ def _build_compress_model(
     reduction_axes: Optional[Tuple] = None,
     return_nodes: bool = False,
 ) -> Union[ModelCallable, Tuple[List[ov._pyopenvino.Node], List[ov._pyopenvino.Node]]]:
-    weight = opset.parameter(weight_shape, name="w", dtype=OV_DTYPE_MAP[ov_model_params.input_dtype])
+    weight = opset.parameter(weight_shape, name="w", dtype=DTYPE_MAP_OV[ov_model_params.input_dtype])
     ov_parameters = [weight]
 
     num_bits = config.num_bits
@@ -214,13 +212,13 @@ def _build_compress_model(
 
     if config.is_int_asym:
         if ov_model_params.output_dtype is not None:
-            dtype = OV_DTYPE_MAP[ov_model_params.output_dtype]
+            dtype = DTYPE_MAP_OV[ov_model_params.output_dtype]
         else:
             dtype = ov.Type.u8 if config.mode == CompressWeightsMode.INT8_ASYM else ov.Type.u4
         compressed_w += zero_point
     else:
         if ov_model_params.output_dtype is not None:
-            dtype = OV_DTYPE_MAP[ov_model_params.output_dtype]
+            dtype = DTYPE_MAP_OV[ov_model_params.output_dtype]
         else:
             dtype = ov.Type.i8 if config.mode == CompressWeightsMode.INT8_SYM else ov.Type.i4
 
@@ -296,8 +294,8 @@ def get_astype_model(ov_model_params: OVModelParameters, arg_shape: Tuple, dtype
 
 @cache_results(OV_MODEL_CACHE)
 def _build_astype_model(ov_model_params: OVModelParameters, arg_shape: Tuple, dtype: TensorDataType) -> ModelCallable:
-    arg = opset.parameter(arg_shape, dtype=OV_DTYPE_MAP[ov_model_params.input_dtype])
-    res = opset.convert(arg, OV_DTYPE_MAP[dtype])
+    arg = opset.parameter(arg_shape, dtype=DTYPE_MAP_OV[ov_model_params.input_dtype])
+    res = opset.convert(arg, DTYPE_MAP_OV[dtype])
     model = ov.Model([res], [arg])
     compiled_model = ov.compile_model(model, device_name="CPU")
 
