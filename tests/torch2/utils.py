@@ -34,6 +34,6 @@ def compare_with_reference_file(text_data: str, ref_path: Path, regen_ref_data: 
     ref = ref_text_data.splitlines(keepends=False)
 
     assert act == ref, (
-        f"Data mismatch between actual data and reference file: {ref_path}.\n"
+        f"Data mismatch between actual data and reference file: {ref_path}\n"
         f"Actual data and reference data differ. Please review the file contents."
     )
