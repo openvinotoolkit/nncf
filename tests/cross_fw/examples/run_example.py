@@ -247,12 +247,11 @@ def quantization_aware_training_torch_anomalib(data: Union[str, None]):
     from examples.quantization_aware_training.torch.anomalib.main import DATASET_PATH as dataset_path
     from examples.quantization_aware_training.torch.anomalib.main import main as anomalib_main
 
-    if data is not None:
+    if data is not None and not dataset_path.exists():
         dataset_path.mkdir(parents=True, exist_ok=True)
         tar_file_path = Path(data) / mvtec.DOWNLOAD_INFO.url.split("/")[-1]
-        if not tar_file_path.exists():
-            with tarfile.open(tar_file_path) as tar_file:
-                tar_file.extractall(dataset_path)
+        with tarfile.open(tar_file_path) as tar_file:
+            tar_file.extractall(dataset_path)
 
     # Set manual seed and determenistic cuda mode to make the test determenistic
     set_torch_cuda_seed()
