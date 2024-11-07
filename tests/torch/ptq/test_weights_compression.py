@@ -18,6 +18,7 @@ from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.quantization import compress_weights
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.torch import wrap_model
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
@@ -236,6 +237,7 @@ class EmptyModel(torch.nn.Module):
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
+        {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):
@@ -250,8 +252,7 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 @pytest.mark.parametrize(
     "params",
     (
-        {"ratio": 0.5},
-        *({"sensitivity_metric": metric} for metric in ALL_SENSITIVITY_METRICS),
+        *({"sensitivity_metric": metric} for metric in DATA_BASED_SENSITIVITY_METRICS),
         {"gptq": True},
         {"awq": True},
         {"scale_estimation": True},
@@ -273,6 +274,14 @@ def test_raise_error_with_not_int8(mode):
     wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
     with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(wrapped_model, mode=mode)
+
+
+def test_raise_error_for_statistics_caching():
+    dummy_torch_model = EmptyModel()
+    dummy_input = torch.Tensor()
+    wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
+    with pytest.raises(nncf.ParameterNotSupportedError):
+        compress_weights(wrapped_model, advanced_parameters=AdvancedCompressionParameters(statistics_path="anything"))
 
 
 class DTypeModel(torch.nn.Module):

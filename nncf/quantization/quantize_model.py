@@ -36,6 +36,8 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResult
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
 from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
+from nncf.quantization.algorithms.weight_compression.algorithm import check_user_compression_configuration
+from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
 from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi
@@ -425,7 +427,7 @@ def compress_weights(
     dataset: Optional[Dataset] = None,
     sensitivity_metric: Optional[SensitivityMetric] = None,
     *,
-    subset_size: Optional[int] = 128,
+    subset_size: int = 128,
     awq: Optional[bool] = None,
     scale_estimation: Optional[bool] = None,
     gptq: Optional[bool] = None,
@@ -511,7 +513,6 @@ def compress_weights(
             )
 
         options = {
-            "sensitivity_metric": sensitivity_metric,
             "awq": awq,
             "scale_estimation": scale_estimation,
             "gptq": gptq,
@@ -523,8 +524,14 @@ def compress_weights(
                 f"Torch backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
             )
 
-        if ratio is not None and ratio != 1:
-            raise nncf.ParameterNotSupportedError("Torch backend does not support ratio != 1.")
+        if sensitivity_metric not in [None, SensitivityMetric.WEIGHT_QUANTIZATION_ERROR]:
+            raise nncf.ParameterNotSupportedError(
+                "Torch backend only supports data-free sensitivity metric. "
+                "Set None or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR."
+            )
+
+        if advanced_parameters and advanced_parameters.statistics_path:
+            raise nncf.ParameterNotSupportedError("Torch does not support statistics caching.")
 
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
@@ -553,7 +560,6 @@ def compress_weights(
             )
 
         options = {
-            "sensitivity_metric": sensitivity_metric,
             "awq": awq,
             "scale_estimation": scale_estimation,
             "gptq": gptq,
@@ -565,13 +571,18 @@ def compress_weights(
                 f"TorchFX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
             )
 
-        if ratio is not None and ratio != 1:
-            raise nncf.ParameterNotSupportedError("TorchFX backend does not support ratio != 1.")
+        if sensitivity_metric not in [None, SensitivityMetric.WEIGHT_QUANTIZATION_ERROR]:
+            raise nncf.ParameterNotSupportedError(
+                "TorchFX backend only supports data-free sensitivity metric. "
+                "Set None or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR."
+            )
 
         if dataset:
             raise nncf.ParameterNotSupportedError(
                 "TorchFX only supports data-free weights compression," "Set the 'dataset' option to None"
             )
+        if advanced_parameters and advanced_parameters.statistics_path:
+            raise nncf.ParameterNotSupportedError("TorchFX does not supports statistics caching.")
         compression_weights_impl = fx_compression_weights_impl
 
     if backend == BackendType.OPENVINO:
@@ -591,89 +602,46 @@ def compress_weights(
             )
 
         compression_weights_impl = ov_compress_weights_impl
-
-    if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
-        if ratio is None:
-            ratio = 1
-        if group_size is None:
-            group_size = -1
-        if ratio != 1 or group_size != -1:
-            raise nncf.ParameterNotSupportedError(
-                "INT8 modes assume per-channel quantization of all layers in 8 bit. "
-                "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
-            )
-
-        if backup_mode is not None:
-            raise nncf.ParameterNotSupportedError("INT8 modes do not support the `backup_mode` option")
-
-        options = {
-            "all_layers": all_layers,
-            "sensitivity_metric": sensitivity_metric,
-            "dataset": dataset,
-            "awq": awq,
-            "scale_estimation": scale_estimation,
-            "gptq": gptq,
-            "lora_correction": lora_correction,
-        }
-        unsupported_for_int8 = [name for name, value in options.items() if value is not None]
-        if unsupported_for_int8:
-            raise nncf.ParameterNotSupportedError(
-                f"INT8 modes do not support {', '.join(unsupported_for_int8)} option(s). Set them to None."
-            )
-
-    if ratio is None:
-        ratio = 1
-    if group_size is None:
-        group_size = 128
-    if all_layers is None:
-        all_layers = False
-    if awq is None:
-        awq = False
-    if scale_estimation is None:
-        scale_estimation = False
-    if gptq is None:
-        gptq = False
-    if lora_correction is None:
-        lora_correction = False
-    if ignored_scope is None:
-        ignored_scope = IgnoredScope()
-    if sensitivity_metric is None:
-        sensitivity_metric = (
-            SensitivityMetric.WEIGHT_QUANTIZATION_ERROR
-            if dataset is None
-            else SensitivityMetric.MAX_ACTIVATION_VARIANCE
-        )
-    if backup_mode is None:
-        backup_mode = BackupMode.INT8_ASYM
-    if ratio != 1 and dataset is None and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
-        raise nncf.ValidationError(
-            f"Mixed precision selection based on the given sensitivity metric={sensitivity_metric.value} requires "
-            "a dataset, but it's not provided."
-        )
-    if ratio < 0 or ratio > 1:
-        raise nncf.ValidationError(f"The ratio should be between 0 and 1, but ratio={ratio} is specified.")
-    if subset_size is None or subset_size <= 0:
-        raise nncf.ValidationError(f"The subset_size value should be positive, but subset_size={subset_size} is given.")
+    check_user_compression_configuration(
+        mode,
+        subset_size,
+        dataset,
+        ratio,
+        group_size,
+        all_layers,
+        awq,
+        scale_estimation,
+        gptq,
+        lora_correction,
+        ignored_scope,
+        sensitivity_metric,
+        backup_mode,
+        advanced_parameters,
+    )
+    weight_compression_configuration = get_weight_compression_configuration(
+        mode,
+        dataset,
+        ratio,
+        group_size,
+        all_layers,
+        awq,
+        scale_estimation,
+        gptq,
+        lora_correction,
+        ignored_scope,
+        sensitivity_metric,
+        backup_mode,
+        advanced_parameters,
+    )
 
     if compression_weights_impl is None:
         raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
 
     return compression_weights_impl(
-        model,
-        dataset,
-        mode,
-        ratio,
-        group_size,
-        ignored_scope,
-        all_layers,
-        sensitivity_metric,
-        awq,
-        subset_size,
-        scale_estimation,
-        gptq,
-        lora_correction,
-        backup_mode,
-        advanced_parameters,
+        model=model,
+        dataset=dataset,
+        subset_size=subset_size,
+        **weight_compression_configuration,
     )
 
 
