@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Tuple
@@ -31,6 +32,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
@@ -40,6 +42,7 @@ from nncf.experimental.torch.fx.transformations import _set_new_node_meta
 from nncf.experimental.torch.fx.transformations import bias_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
+from nncf.experimental.torch.fx.transformations import fold_constant_except_qdq
 from nncf.experimental.torch.fx.transformations import leaf_module_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import module_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import node_removal_transformation_builder
@@ -51,6 +54,7 @@ from nncf.torch.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from tests.torch.test_compressed_graph import check_graph
+from tests.torch.test_models.synthetic import ConstantFoldingTestModel
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
 from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
@@ -522,3 +526,33 @@ def test_get_connected_nodes():
     add_node.replace_input_with(conv_2_node, conv_1_node)
     connected_nodes_list = _get_connected_nodes(captured_model.graph)
     assert len(connected_nodes_list) == 15
+
+def test_constant_folding():
+    model = ConstantFoldingTestModel()
+    captured_model = _capture_model(model, torch.ones(model.INPUT_SIZE))
+    folded_model = deepcopy(captured_model)
+    constant_fold(folded_model)
+    ex_input = torch.ones(model.INPUT_SIZE)
+    assert torch.allclose(captured_model(ex_input), folded_model(ex_input))
+
+    nncf_graph = GraphConverter.create_nncf_graph(folded_model)
+    check_graph(nncf_graph, "folded_model.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
+
+
+def test_constant_folding_with_constraints(is_per_channel):
+    model = ConstantFoldingTestModel()
+    model_with_correct_pattern = _capture_model(model, torch.ones(model.INPUT_SIZE))
+
+    insert_qdq_nodes(
+        model_with_correct_pattern,
+        correct_pattern=True,
+        per_channel=is_per_channel,
+        node_name="linear_1",
+        w_const_node_name="_param_constant3",
+    )
+    fold_constant_except_qdq(model_with_correct_pattern)
+
+    nncf_graph = GraphConverter.create_nncf_graph(model_with_correct_pattern)
+    dot_file_name = f"folded_model_with_constraints_{'per_channel' if is_per_channel else 'per_tensor'}.dot"
+    check_graph(nncf_graph, dot_file_name, TRANSFORMED_GRAPH_DIR_NAME, extended=True)
+

@@ -1074,6 +1074,53 @@ def test_compressed_weighs_range(mode, data):
     assert np.allclose(np.abs(compressed_weighs.data), np.abs(w.data))
 
 
+@pytest.mark.parametrize(
+    ("config", "precompute_scale", "precompute_zero_point", "raises"),
+    [
+        (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), True, True, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), True, False, True),
+        (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), False, True, True),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), True, True, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), True, False, True),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), False, True, True),
+        (WeightCompressionConfig(CompressWeightsMode.INT8_SYM), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT8_SYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), False, False, False),
+    ],
+)
+def test_int_quantization_with_precomputed_parameters(config, precompute_scale, precompute_zero_point, raises):
+    is_asym = config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT8_ASYM]
+
+    precomputed_scale, precomputed_zero_point = None, None
+    weight = Tensor(((np.arange(11) - 5) / 10).astype(np.float32)[:, None])
+    if precompute_scale:
+        precomputed_scale = Tensor(-((np.arange(11) - 5) / 100).astype(np.float32)[:, None])
+    if precompute_zero_point:
+        precomputed_zero_point = Tensor(np.arange(11).astype(np.int32)[:, None])
+
+    if raises:
+        with pytest.raises(ValueError) as exc_info:
+            _, scale, zero_point = do_int_quantization(weight, -1, config, precomputed_scale, precomputed_zero_point)
+            assert exc_info.value == (
+                "If precomputed quantization parameters are provided, both scale and zero point "
+                "are required for asymmetric quantization."
+            )
+        return
+    else:
+        _, scale, zero_point = do_int_quantization(weight, -1, config, precomputed_scale, precomputed_zero_point)
+
+    if precompute_scale:
+        assert np.allclose(scale.data, precomputed_scale.data)
+    if is_asym:
+        if precompute_zero_point:
+            assert np.allclose(zero_point.data, precomputed_zero_point.data)
+    else:
+        assert zero_point is None
+
+
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_gptq_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
