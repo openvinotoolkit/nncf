@@ -213,7 +213,7 @@ compressed_model = compress_weights(
 )
 ```
 
-When `statistics_path` is provided, the specified path is checked first for existing cached statistics. If they are found, they are loaded from this path. If not, the statistics are computed and saved to this path for future use.
+When `statistics_path` is provided, the system first checks if the specified path exists. If it does, the statistics are loaded from this path. If the path does not exist, the statistics are computed and saved to this path for future use.
 
 ### Evaluation results
 
