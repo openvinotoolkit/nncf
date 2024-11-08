@@ -15,6 +15,8 @@ import numpy as np
 import openvino as ov
 
 # isort: off
+# issue on optimum-intel
+# https://github.com/huggingface/optimum-intel/issues/993
 import datasets
 
 # isort: on
