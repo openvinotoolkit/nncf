@@ -1,3 +1,5 @@
+:orphan:
+
 :py:mod:`nncf.torch.sparsity.magnitude`
 =======================================
 
@@ -7,14 +9,5 @@
 
    Backend-specific implementation of magnitude sparsity algorithm.
 
-
-
-Submodules
-----------
-.. toctree::
-   :titlesonly:
-   :maxdepth: 1
-
-   algo/index.rst
 
 

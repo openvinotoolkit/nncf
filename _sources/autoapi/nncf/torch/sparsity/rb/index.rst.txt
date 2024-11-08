@@ -1,3 +1,5 @@
+:orphan:
+
 :py:mod:`nncf.torch.sparsity.rb`
 ================================
 
@@ -7,14 +9,5 @@
 
    Backend-specific implementations of regularization-based (RB) sparsity.
 
-
-
-Submodules
-----------
-.. toctree::
-   :titlesonly:
-   :maxdepth: 1
-
-   algo/index.rst
 
 

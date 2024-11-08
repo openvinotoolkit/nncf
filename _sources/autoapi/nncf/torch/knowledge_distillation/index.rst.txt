@@ -1,3 +1,5 @@
+:orphan:
+
 :py:mod:`nncf.torch.knowledge_distillation`
 ===========================================
 
@@ -7,14 +9,5 @@
 
    Backend-specific implementations of knowledge distillation algorithms.
 
-
-
-Submodules
-----------
-.. toctree::
-   :titlesonly:
-   :maxdepth: 1
-
-   algo/index.rst
 
 

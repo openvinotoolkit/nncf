@@ -1,3 +1,5 @@
+:orphan:
+
 :py:mod:`nncf.torch.pruning`
 ============================
 
@@ -7,14 +9,5 @@
 
    Backend-specific implementations of pruning algorithms.
 
-
-
-Subpackages
------------
-.. toctree::
-   :titlesonly:
-   :maxdepth: 3
-
-   filter_pruning/index.rst
 
 
