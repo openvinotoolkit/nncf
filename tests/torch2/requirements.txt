@@ -8,4 +8,4 @@ pytest-dependency
 pytest-mock
 pytest-xdist
 torch
-
+torchvision

@@ -249,17 +249,8 @@ def test_remove_get_node_with_no_tensor_output():
     assert get_op_nodes[0][1]["meta"].op_name == "/__get__/1"
 
 
-class ModelMultiEdge(nn.Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = x + x
-        return x
-
-
 def test_multi_edges():
-    model = ModelMultiEdge()
+    model = helpers.ModelMultiEdge()
     model = wrap_model(model)
     graph = build_graph(model, torch.ones(1, 1))
 
