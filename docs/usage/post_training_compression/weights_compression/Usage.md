@@ -2,6 +2,7 @@
 - [The algorithm description](#the-algorithm-description)
 - [Supported modes](#supported-modes)
 - [User guide](#user-guide)
+  - [Data-free methods](#data-free-methods)
   - [Data-aware methods](#data-aware-methods)
   - [Caching Statistics](#caching-statistics)
 - [Evaluation results](#evaluation-results)
@@ -27,6 +28,8 @@ All embeddings, convolutions and last linear layers are always compressed to a b
 Percent of the rest layers compressed to 4-bit can be configured by "ratio" parameter. E.g. ratio=0.9 means 90% of layers compressed to the corresponding 4-bit data type and the rest to a backup mode. OpenVINO backend supports 3 backup modes: INT8_SYM, INT8_ASYM, and NONE, which retains the original floating-point precision of the model weights. Backup mode is supported only for mixed-precision weight quantization.
 
 ### User guide
+
+#### Data-free methods
 
 - Compress weights asymmetrically to 8-bit integer data type.
 
@@ -94,59 +97,59 @@ nncf_dataset = nncf.Dataset(synthetic_data, transform_fn)
 - Accuracy of the 4-bit compressed models also can be improved by using AWQ, Scale Estimation, GPTQ or Lora Correction algorithms over data-based mixed-precision algorithm. These algorithms work by equalizing a subset of weights to minimize the difference between the original precision and the 4-bit precision.
 Unlike all others, the Lora Correction algorithm inserts an additional Linear layers for reducing quantization noise and further accuracy improvement. Inevitably, this approach introduces a memory and a runtime overheads, but they are negligible, since the inserted weight much smaller and can be quantized to 8-bit. The AWQ, Scale Estimation (SE) and Lora Correction (LC) algo can be used in any combination together: AWQ + SE, AWQ + LC, SE + LC, AWQ + SE + LC. The GPTQ algorithm can be combined with AWQ and Scale Estimation in any combination: AWQ + GPTQ, GPTQ + SE, AWQ + GPTQ + SE. Below are examples demonstrating how to enable the AWQ, Scale Estimation, GPTQ or Lora Correction algorithms:
 
-<details>
-<summary>Prepare the calibration dataset for data-based algorithms</summary>
+  <details>
+  <summary>Prepare the calibration dataset for data-based algorithms</summary>
 
-```python
-from datasets import load_dataset
-from functools import partial
-from nncf import compress_weights, CompressWeightsMode, Dataset
-from optimum.intel.openvino import OVModelForCausalLM
-from transformers import AutoTokenizer
+  ```python
+  from datasets import load_dataset
+  from functools import partial
+  from nncf import compress_weights, CompressWeightsMode, Dataset
+  from optimum.intel.openvino import OVModelForCausalLM
+  from transformers import AutoTokenizer
 
-def transform_func(item, tokenizer, input_shapes):
-    text = item['text']
-    tokens = tokenizer(text)
+  def transform_func(item, tokenizer, input_shapes):
+      text = item['text']
+      tokens = tokenizer(text)
 
-    res = {'input_ids': np.expand_dims(np.array(tokens['input_ids']), 0),
-           'attention_mask': np.expand_dims(np.array(tokens['attention_mask']), 0)}
+      res = {'input_ids': np.expand_dims(np.array(tokens['input_ids']), 0),
+            'attention_mask': np.expand_dims(np.array(tokens['attention_mask']), 0)}
 
-    if 'position_ids' in input_shapes:
-        position_ids = np.cumsum(res['attention_mask'], axis=1) - 1
-        position_ids[res['attention_mask'] == 0] = 1
-        res['position_ids'] = position_ids
+      if 'position_ids' in input_shapes:
+          position_ids = np.cumsum(res['attention_mask'], axis=1) - 1
+          position_ids[res['attention_mask'] == 0] = 1
+          res['position_ids'] = position_ids
 
-    for name, shape in input_shapes.items():
-        if name in res:
-            continue
-        res[name] = np.zeros(shape)
+      for name, shape in input_shapes.items():
+          if name in res:
+              continue
+          res[name] = np.zeros(shape)
 
-    return res
+      return res
 
-def get_input_shapes(model, batch_size = 1):
-    inputs = {}
+  def get_input_shapes(model, batch_size = 1):
+      inputs = {}
 
-    for val in model.model.inputs:
-        name = val.any_name
-        shape = list(val.partial_shape.get_min_shape())
-        shape[0] = batch_size
-        inputs[name] = shape
+      for val in model.model.inputs:
+          name = val.any_name
+          shape = list(val.partial_shape.get_min_shape())
+          shape[0] = batch_size
+          inputs[name] = shape
 
-    return inputs
+      return inputs
 
-# load your model and tokenizer
-model = OVModelForCausalLM.from_pretrained(...)
-tokenizer = AutoTokenizer.from_pretrained(...)
+  # load your model and tokenizer
+  model = OVModelForCausalLM.from_pretrained(...)
+  tokenizer = AutoTokenizer.from_pretrained(...)
 
-# prepare dataset for compression
-dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train')
-dataset = dataset.filter(lambda example: len(example["text"]) > 80)
-input_shapes = get_input_shapes(model)
-nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer,
-                                                        input_shapes=input_shapes))
-```
+  # prepare dataset for compression
+  dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train')
+  dataset = dataset.filter(lambda example: len(example["text"]) > 80)
+  input_shapes = get_input_shapes(model)
+  nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer,
+                                                          input_shapes=input_shapes))
+  ```
 
-</details>
+  </details>
 
 - How to compress 80% of layers to 4-bit integer with a default data-based mixed precision algorithm and AWQ with Scale Estimation. It requires to set `awq` to `True` and `scale_estimation` to `True` additionally to data-based mixed-precision algorithm.
 
