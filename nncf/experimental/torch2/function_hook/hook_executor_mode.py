@@ -108,7 +108,7 @@ class FunctionHookMode(TorchFunctionMode):
         :param model: The PyTorch model to which the hooks will be applied.
         :param hook_storage: Storage for hooks to be executed.
         """
-        super().__init__()  # type: ignore
+        super().__init__()
         self.hook_storage: HookStorage = hook_storage
         self.model: nn.Module = model
         self.module_call_stack: List[nn.Module] = []
