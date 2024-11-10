@@ -13,13 +13,7 @@ from functools import partial
 
 import numpy as np
 import openvino as ov
-
-# isort: off
-# issue on optimum-intel
-# https://github.com/huggingface/optimum-intel/issues/993
-import datasets
-
-# isort: on
+from datasets import load_dataset
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 
@@ -30,7 +24,7 @@ def main():
     MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
     OUTPUT_DIR = "tinyllama_compressed"
 
-    dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+    dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
     model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False, stateful=False)
