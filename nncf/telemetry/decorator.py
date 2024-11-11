@@ -12,7 +12,9 @@ import functools
 import inspect
 from typing import Callable, List, Union
 
+from nncf.telemetry.events import MODEL_BASED_CATEGORY
 from nncf.telemetry.events import get_current_category
+from nncf.telemetry.events import get_model_based_category
 from nncf.telemetry.events import telemetry_category
 from nncf.telemetry.extractors import CollectedEvent
 from nncf.telemetry.extractors import TelemetryExtractor
@@ -49,6 +51,11 @@ class tracked_function:
         def wrapped(*args, **kwargs):
             bound_args = fn_signature.bind(*args, **kwargs)
             bound_args.apply_defaults()
+
+            if self._category == MODEL_BASED_CATEGORY:
+                model_argument = bound_args.arguments.get("model", None)
+                self._category = get_model_based_category(model_argument)
+
             events: List[CollectedEvent] = []
             for collector in self._collectors:
                 argname = collector.argname

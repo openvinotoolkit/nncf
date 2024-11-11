@@ -12,14 +12,15 @@
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
+import nncf
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
-from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
@@ -101,7 +102,7 @@ class ScaleEstimation:
 
             self._backend_entity = OVWeightCompressionAlgoBackend(model, self.name_to_node_mapping)
         else:
-            raise RuntimeError(
+            raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific AWQ entity because {} is not supported!".format(model_backend.value)
             )
 
@@ -111,7 +112,7 @@ class ScaleEstimation:
         graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-    ) -> Dict[str, Tensor]:
+    ) -> Tuple[Dict[str, Tensor], Dict[str, Tensor]]:
         """
         Estimates better scale for the int4 nodes in the model.
         Minimizes per-group difference between floating point MatMul and
@@ -123,10 +124,10 @@ class ScaleEstimation:
         :param graph: Model graph.
         :param statistic_points: Statistic points with collected statistics values.
         :param dataset: A representative dataset for the calibration process.
-        :return: Dict with pairs (weight name, estimated scale).
+        :return: Two dictionaries for estimated scales and zero points for each weight name.
         """
 
-        scales = dict()
+        scales, zero_points = dict(), dict()
 
         for wp in track(self._all_weight_params, description="Applying Scale Estimation"):
             weight_name = wp.weight_name
@@ -146,7 +147,7 @@ class ScaleEstimation:
 
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
-            scales[weight_name], _ = self.calculate_quantization_params(
+            scales[weight_name], zero_points[weight_name] = self.calculate_quantization_params(
                 self._backend_entity,
                 stats,
                 weight,
@@ -158,7 +159,7 @@ class ScaleEstimation:
                 self._weight_penalty,
             )
 
-        return scales
+        return scales, zero_points
 
     @staticmethod
     def calculate_quantization_params(
@@ -368,6 +369,8 @@ class ScaleEstimation:
 
         if config.group_size == -1:
             result_scale = fns.squeeze(result_scale, axis=1)
+        if zp is not None and config.group_size == -1:
+            zp = fns.squeeze(zp, axis=1)
 
         return result_scale, zp
 

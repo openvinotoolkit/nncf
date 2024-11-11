@@ -40,6 +40,7 @@ from tests.openvino.native.models import GRUSequenceModel
 from tests.openvino.native.models import IfModel
 from tests.openvino.native.models import IfModel_2
 from tests.openvino.native.models import MatmulSoftmaxMatmulBlock
+from tests.openvino.native.models import RoPEModel
 from tests.openvino.native.models import ScaledDotProductAttentionModel
 from tests.openvino.native.models import get_torch_model_info
 from tests.openvino.native.quantization.test_fq_params_calculation import quantize_model
@@ -96,7 +97,7 @@ def test_real_models_fq_placement(model_name_params, tmp_path):
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
-@pytest.mark.parametrize("model_creator_func", [MatmulSoftmaxMatmulBlock])
+@pytest.mark.parametrize("model_creator_func", [MatmulSoftmaxMatmulBlock, RoPEModel])
 def test_transformer_models_fq_placement(model_creator_func, tmp_path):
     model = model_creator_func()
     quantized_model = quantize_model(

@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from copy import copy
-from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import torch
@@ -23,6 +22,7 @@ import nncf
 import nncf.torch
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -660,22 +660,37 @@ def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> Option
     return tuple(args)
 
 
+def _get_value(
+    arg: Optional[Union[torch.fx.Node, float, int]], model: torch.fx.GraphModule
+) -> Union[torch.nn.Parameter, float, int]:
+    """
+    Retrieves value from the given argument. It can be either torch.fx.Node or float/int value.
+
+    :param arg: Given arg to retrieve value.
+    :param model: torch.fx.GraphModule instance.
+    :return: value from the given argument.
+    """
+    if isinstance(arg, torch.fx.Node):
+        return get_tensor_constant_from_node(arg, model)
+    return arg
+
+
 def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) -> None:
     """
     Change the FP32 weight value to Int8 and also reshape the scale for per_channel_quantization.
 
     :param: model: Model to apply transformations to.
     """
+
     for match in matches:
         mul_node = match.replacements[0]
         sub_node = match.replacements[1]
-        weight_node, scale_node, zp_node, axis = None, None, None, None
         nodes_map = {node.name: match.nodes_map[node] for node in match.nodes_map}
-        get_const = partial(get_tensor_constant_from_node, model=model)
-        weight_node = get_const(nodes_map["weight"])
-        scale_node = get_const(nodes_map["scale"])
-        zp_node = get_const(nodes_map["zero_point"])
-        axis = nodes_map["axis"]
+
+        weight_node = _get_value(nodes_map["weight"], model)
+        scale_node = _get_value(nodes_map["scale"], model)
+        zp_node = _get_value(nodes_map["zero_point"], model)
+        axis = _get_value(nodes_map.get("axis"), model)
         port_id = 0
         if axis is not None:
             result = torch.ops.quantized_decomposed.quantize_per_channel.default(
@@ -788,10 +803,24 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     # to make it easier for algorithms to work
     # with the target graph BatchNorm operations
     # are being fused
+    fold_constant_except_qdq(model)
     fuse_conv_bn(model)
     separate_conv_and_bias(model)
     separate_linear_and_bias(model)
     shared_constants_unification_transformation(model)
+
+
+def fold_constant_except_qdq(model: torch.fx.GraphModule):
+    """
+    Performs constant folding avoiding quantize-dequantize pattern.
+
+    :param model: Model to perform constant folding on.
+    """
+
+    def constraint_fn(node: torch.fx.Node):
+        return node.op != "call_function" or node.target not in QUANTIZE_NODE_TARGETS + DEQUANTIZE_NODE_TARGETS
+
+    constant_fold(model, constraint_fn=constraint_fn)
 
 
 def revert_quantization_transformations(model: torch.fx.GraphModule) -> None:
@@ -938,6 +967,27 @@ def merge_linear_and_bias(model: torch.fx.GraphModule):
     _merge_node_and_bias(model, _is_linear)
 
 
+def _get_connected_nodes(graph: torch.fx.Graph) -> List[torch.fx.Node]:
+    """
+    Returns the List of nodes which are directly or indirectly connected
+    to the output node.
+
+    :param graph: The torch FX graph to get nodes from.
+    """
+    output_nodes = [node for node in graph.nodes if node.op == "output"]
+    assert len(output_nodes) == 1
+    output_node = output_nodes[0]
+    connected_nodes = set()  # Every node is unique in the graph
+    nodes_to_visit = [output_node]
+    while nodes_to_visit:
+        current_node = nodes_to_visit.pop()
+        if current_node in connected_nodes:
+            continue
+        connected_nodes.add(current_node)
+        nodes_to_visit.extend(current_node.all_input_nodes)
+    return list(connected_nodes)
+
+
 def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[torch.fx.Node], bool]):
     """
     Merges two separate node and bias node to a one node: node+bias.
@@ -970,6 +1020,14 @@ def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[
         conv_node.args = tuple(args)
         for user in list(bias_node.users):
             user.replace_input_with(bias_node, conv_node)
+
+    # Remove nodes which are not connected to output. This removes dead nodes and dead subgraphs in the model graph.
+    nodes_connected_to_output = _get_connected_nodes(model.graph)
+    is_impure = lambda node: node in nodes_connected_to_output
+
+    for node in reversed(model.graph.nodes):
+        if not is_impure(node) and len(node.users) == 0:
+            model.graph.erase_node(node)
 
     model.graph.eliminate_dead_code()
     model.recompile()

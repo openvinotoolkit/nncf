@@ -16,10 +16,10 @@ from abc import abstractmethod
 from typing import Callable, Optional
 from unittest.mock import MagicMock
 
-from nncf import __version__
 from nncf.common.logging import nncf_logger
 from nncf.definitions import NNCF_CI_ENV_VAR_NAME
 from nncf.definitions import NNCF_DEV_ENV_VAR_NAME
+from nncf.version import __version__ as __version__
 
 NNCFTelemetryStub = MagicMock
 
