@@ -20,7 +20,8 @@ import pytest
 
 from nncf import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
+from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters, OV_MODEL_CACHE
+from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_astype_model
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_decompress_weight_model
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_weight_model
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_dequantized_weight
@@ -300,3 +301,89 @@ def test_quantization_alignment(
                         MAX_MISALIGNMENT_MAGNITUDE * np.abs(scale) + EPS,
                         err_msg=f"Too large misalignment for {key}.",
                     )
+
+
+@pytest.mark.parametrize("get_ov_model_fn,input_shapes,ref_cache_size", [
+    (
+        lambda dynamic_shapes, input_shapes: get_compress_weight_model(
+            OVModelParameters(
+                input_dtypes={
+                    "weight": TensorDataType.float32,
+                    "scale": TensorDataType.float32,
+                    "zero_point": TensorDataType.int32
+                },
+                output_dtypes={
+                    "compressed_weight": TensorDataType.uint8
+                },
+                dynamic_shapes=dynamic_shapes,
+            ),
+            WeightCompressionConfig(CompressWeightsMode.INT8_ASYM),
+            *input_shapes,
+            reduction_axes=REDUCTION_AXES,
+        ),
+        [
+            [(10, 4), (10, 1), (10, 1)],
+            [(20, 6), (20, 1), (20, 1)],
+            [(20, 8), (20, 1), (20, 1)],
+            [(10, 4, 4), (10, 4, 1), (10, 4, 1),],
+            [(10, 8, 4), (10, 8, 1), (10, 8, 1),],
+        ],
+        {False: 5, True: 2}
+    ),
+    (
+        lambda dynamic_shapes, input_shapes: get_compress_decompress_weight_model(
+            OVModelParameters(
+                input_dtypes={
+                    "weight": TensorDataType.float32,
+                    "scale": TensorDataType.float32,
+                    "zero_point": TensorDataType.int32
+                },
+                output_dtypes={
+                    "compressed_weight": TensorDataType.int32,
+                    "decompressed_weight": TensorDataType.float32,
+                },
+                dynamic_shapes=dynamic_shapes,
+            ),
+            WeightCompressionConfig(CompressWeightsMode.INT8_ASYM),
+            *input_shapes,
+            reduction_axes=REDUCTION_AXES,
+        ),
+        [
+            [(10, 4), (10, 1), (10, 1)],
+            [(20, 6), (20, 1), (20, 1)],
+            [(20, 8), (20, 1), (20, 1)],
+            [(10, 4, 4), (10, 4, 1), (10, 4, 1),],
+            [(10, 8, 4), (10, 8, 1), (10, 8, 1),],
+        ],
+        {False: 10, True: 4}
+    ),
+    (
+        lambda dynamic_shapes, input_shape: get_astype_model(
+            OVModelParameters(
+                input_dtypes={
+                    "input": TensorDataType.float32,
+                },
+                output_dtypes={
+                    "output": TensorDataType.int32,
+                },
+                dynamic_shapes=dynamic_shapes,
+            ),
+            input_shape,
+        ),
+        [
+            (10, 4),
+            (20, 6),
+            (20, 8),
+            (10, 4, 4),
+            (10, 8, 4),
+        ],
+        {False: 5, True: 2}
+    ),
+])
+@pytest.mark.parametrize("dynamic_shapes", [False, True])
+def test_dynamic_shapes(get_ov_model_fn, input_shapes, ref_cache_size, dynamic_shapes):
+    # Check that model cache contains fewer elements with dynamic shapes included
+    OV_MODEL_CACHE.clear()
+    for shape in input_shapes:
+        get_ov_model_fn(dynamic_shapes, shape)
+    assert len(OV_MODEL_CACHE._cache) == ref_cache_size[dynamic_shapes]
