@@ -15,9 +15,6 @@ Post-training Quantization:
 - Improvements:
   - The `ultralytics` version has been updated to 8.3.22.
   - ...
-- Deprecations/Removals:
-  - The `tensorflow_addons` has been removed from the dependencies.
-  - ...
 - Tutorials:
   - ...
 - Known issues:
@@ -35,8 +32,6 @@ Compression-aware training:
   - ...
 - Improvements:
   - ...
-- Deprecations/Removals:
-  - ...
 - Tutorials:
   - ...
 - Known issues:
@@ -44,6 +39,9 @@ Compression-aware training:
 
 Deprecations/Removals:
 
+- nncf.torch.create_compressed_model() function has been deprecated for PyTorch backend.
+- Removed support for python 3.8.
+- The `tensorflow_addons` has been removed from the dependencies.
 - ...
 
 Requirements:
