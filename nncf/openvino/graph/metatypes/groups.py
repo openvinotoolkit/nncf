@@ -192,7 +192,11 @@ OPERATIONS_WITH_BIAS_REDUCED = [
     ov_metatypes.OVMatMulMetatype,
 ]
 
-OPERATIONS_WITH_BIAS = [*OPERATIONS_WITH_BIAS_REDUCED, ov_metatypes.OVDepthwiseConvolutionMetatype]
+OPERATIONS_WITH_BIAS = [
+    *OPERATIONS_WITH_BIAS_REDUCED,
+    ov_metatypes.OVDepthwiseConvolutionMetatype,
+    ov_metatypes.OVConvolutionBackpropDataMetatype,
+]
 
 CONV_OPERATIONS = [
     ov_metatypes.OVConvolutionMetatype,

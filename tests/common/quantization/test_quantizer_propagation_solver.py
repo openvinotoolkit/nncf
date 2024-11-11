@@ -29,7 +29,7 @@ from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph as QPSG
-from nncf.common.quantization.quantizer_propagation.solver import PropagationStrategy
+from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationRule
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_propagation.solver import TransitionStatus
 from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
@@ -322,24 +322,24 @@ class TestQuantizerPropagationSolver:
                 [QuantizerConfig(num_bits=8), ]
             ],
             strategy_vs_solution_dict={
-                PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
+                QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=8), ],
                         [QuantizerConfig(num_bits=8), ],
                         [QuantizerConfig(num_bits=8), ]
                     ], ),
-                PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME : MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=8)],
                     branch_qconfig_lists_after_merge=[None,
                                                       None,
                                                       None]),
-                PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=8)],
                     branch_qconfig_lists_after_merge=[None,
                                                       None,
                                                       None]),
-                PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_ALL_IN_ONE: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=8)],
                     branch_qconfig_lists_after_merge=[None,
                                                       None,
@@ -356,7 +356,7 @@ class TestQuantizerPropagationSolver:
             ],
 
             strategy_vs_solution_dict={
-                PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
+                QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC), ],
@@ -364,20 +364,20 @@ class TestQuantizerPropagationSolver:
                         [QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC), ],
                         [QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC), ]
                     ]),
-                PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME : MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC), ],
                     branch_qconfig_lists_after_merge=[None,
                                                       None,
                                                       None,
                                                       None]
                 ),
-                PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC)],
                     branch_qconfig_lists_after_merge=[None,
                                                       None,
                                                       None,
                                                       None]),
-                PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_ALL_IN_ONE: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC)],
                     branch_qconfig_lists_after_merge=[None,
                                                       None,
@@ -394,28 +394,28 @@ class TestQuantizerPropagationSolver:
             ],
 
             strategy_vs_solution_dict={
-                PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
+                QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC), QuantizerConfig(num_bits=8)],
                         [QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC), QuantizerConfig(num_bits=8)],
                         [QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC), QuantizerConfig(num_bits=8)],
                     ]),
-                PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME : MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC),
                                         QuantizerConfig(num_bits=8)],
                     branch_qconfig_lists_after_merge=[None,
                                                       None,
                                                       None]
                 ),
-                PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC),
                                         QuantizerConfig(num_bits=8)],
                     branch_qconfig_lists_after_merge=[None,
                                                       None,
                                                       None]),
 
-                PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_ALL_IN_ONE: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC),
                                         QuantizerConfig(num_bits=8)],
                     branch_qconfig_lists_after_merge=[None,
@@ -432,23 +432,23 @@ class TestQuantizerPropagationSolver:
                 [QuantizerConfig(num_bits=5), ]
             ],
             strategy_vs_solution_dict={
-                PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
+                QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[[QuantizerConfig(num_bits=6), ],
                                                       [QuantizerConfig(num_bits=4), ],
                                                       [QuantizerConfig(num_bits=5), ]]),
-                PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME : MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[[QuantizerConfig(num_bits=6), ],
                                                       [QuantizerConfig(num_bits=4), ],
                                                       [QuantizerConfig(num_bits=5), ]]),
-                PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=6)],
                     branch_qconfig_lists_after_merge=[None,
                                                       [QuantizerConfig(num_bits=4), ],
                                                       [QuantizerConfig(num_bits=5), ]]),
 
-                PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_ALL_IN_ONE: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[[QuantizerConfig(num_bits=6), ],
                                                       [QuantizerConfig(num_bits=4), ],
@@ -463,24 +463,24 @@ class TestQuantizerPropagationSolver:
                 [QuantizerConfig(num_bits=5), ]
             ],
             strategy_vs_solution_dict={
-                PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
+                QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC), ],
                         [QuantizerConfig(num_bits=4), ],
                         [QuantizerConfig(num_bits=5), ]]),
-                PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME : MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC), ],
                         [QuantizerConfig(num_bits=4), ],
                         [QuantizerConfig(num_bits=5), ]]),
-                PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC), ],
                     branch_qconfig_lists_after_merge=[None,
                                                       [QuantizerConfig(num_bits=4), ],
                                                       [QuantizerConfig(num_bits=5), ]]),
-                PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_ALL_IN_ONE: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC), ],
@@ -499,21 +499,21 @@ class TestQuantizerPropagationSolver:
                 [QuantizerConfig(num_bits=7), ]
             ],
             strategy_vs_solution_dict={
-                PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
+                QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=6)],
                         [QuantizerConfig(num_bits=7), ],
                         [QuantizerConfig(num_bits=8), ],
                         [QuantizerConfig(num_bits=7), ]]),
-                PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME : MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=6)],
                         [QuantizerConfig(num_bits=7), ],
                         [QuantizerConfig(num_bits=8), ],
                         [QuantizerConfig(num_bits=7), ]]),
-                PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=8), ],
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=6)],
@@ -521,7 +521,7 @@ class TestQuantizerPropagationSolver:
                         None,
                         [QuantizerConfig(num_bits=7), ]
                     ]),
-                PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_ALL_IN_ONE: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=6)],
@@ -539,26 +539,26 @@ class TestQuantizerPropagationSolver:
                 [QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)]
             ],
             strategy_vs_solution_dict={
-                PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
+                QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)]]),
-                PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME : MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)]]),
-                PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)],
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)],
                         None,
                         None
                     ]),
-                PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_ALL_IN_ONE: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)],
                     branch_qconfig_lists_after_merge=[
                         None,
@@ -575,26 +575,26 @@ class TestQuantizerPropagationSolver:
                 [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5)],
             ],
             strategy_vs_solution_dict={
-                PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
+                QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=6), ],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=6)],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5)], ]),
-                PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME : MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=6), ],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=6)],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5)], ]),
-                PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=8), ],
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=6), ],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=6)],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5)],
                     ]),
-                PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_ALL_IN_ONE: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=6), ],
@@ -613,7 +613,7 @@ class TestQuantizerPropagationSolver:
                  QuantizerConfig(num_bits=4, mode=QuantizationMode.ASYMMETRIC)]
             ],
             strategy_vs_solution_dict={
-                PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
+                QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=6), ],
@@ -621,7 +621,7 @@ class TestQuantizerPropagationSolver:
                          QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5),
                          QuantizerConfig(num_bits=4, mode=QuantizationMode.ASYMMETRIC)]]),
-                PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME : MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=6), ],
@@ -629,7 +629,7 @@ class TestQuantizerPropagationSolver:
                          QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5),
                          QuantizerConfig(num_bits=4, mode=QuantizationMode.ASYMMETRIC)]]),
-                PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=6), ],
@@ -638,7 +638,7 @@ class TestQuantizerPropagationSolver:
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5),
                          QuantizerConfig(num_bits=4, mode=QuantizationMode.ASYMMETRIC)],
                     ]),
-                PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_ALL_IN_ONE: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=6), ],
@@ -663,7 +663,7 @@ class TestQuantizerPropagationSolver:
                                  mode=QuantizationMode.ASYMMETRIC)]
             ],
             strategy_vs_solution_dict={
-                PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
+                QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=3)],
@@ -671,7 +671,7 @@ class TestQuantizerPropagationSolver:
                          QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5),
                          QuantizerConfig(num_bits=4, mode=QuantizationMode.ASYMMETRIC)]]),
-                PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME : MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=3)],
@@ -679,7 +679,7 @@ class TestQuantizerPropagationSolver:
                          QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5),
                          QuantizerConfig(num_bits=4, mode=QuantizationMode.ASYMMETRIC)]]),
-                PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=3), ],
@@ -688,7 +688,7 @@ class TestQuantizerPropagationSolver:
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5),
                          QuantizerConfig(num_bits=4, mode=QuantizationMode.ASYMMETRIC)],
                     ]),
-                PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_ALL_IN_ONE: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=3), ],
@@ -708,21 +708,21 @@ class TestQuantizerPropagationSolver:
                 [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5)]
             ],
             strategy_vs_solution_dict={
-                PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
+                QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC),
                          QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5)]]),
-                PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME : MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC),
                          QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5)]]),
-                PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4, mode=QuantizationMode.ASYMMETRIC)],
@@ -730,7 +730,7 @@ class TestQuantizerPropagationSolver:
                          QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5)]
                     ]),
-                PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_ALL_IN_ONE: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4, mode=QuantizationMode.ASYMMETRIC)],
@@ -752,7 +752,7 @@ class TestQuantizerPropagationSolver:
                  QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)]
             ],
             strategy_vs_solution_dict={
-                PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
+                QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=True),
@@ -761,7 +761,7 @@ class TestQuantizerPropagationSolver:
                          QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)],
                         [QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
                          QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)]]),
-                PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME : MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=True),
@@ -770,7 +770,7 @@ class TestQuantizerPropagationSolver:
                          QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)],
                         [QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
                          QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)]]),
-                PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=[
                         QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
                         QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False),
@@ -783,7 +783,7 @@ class TestQuantizerPropagationSolver:
                         [QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
                          QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)]
                     ]),
-                PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_ALL_IN_ONE: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
                          QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)],
                     branch_qconfig_lists_after_merge=[
@@ -802,7 +802,7 @@ class TestQuantizerPropagationSolver:
                  QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC)]
             ],
             strategy_vs_solution_dict={
-                PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
+                QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=4, mode=QuantizationMode.SYMMETRIC),
@@ -811,7 +811,7 @@ class TestQuantizerPropagationSolver:
                          QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
                          QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC)]]),
-                PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME : MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=4, mode=QuantizationMode.SYMMETRIC),
@@ -820,7 +820,7 @@ class TestQuantizerPropagationSolver:
                          QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
                          QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC)]]),
-                PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC)],
                     branch_qconfig_lists_after_merge=[
                         [QuantizerConfig(num_bits=4, mode=QuantizationMode.SYMMETRIC),
@@ -830,7 +830,7 @@ class TestQuantizerPropagationSolver:
                         [QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
                          QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC)]
                     ]),
-                PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
+                QuantizerPropagationRule.MERGE_ALL_IN_ONE: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC)],
                     branch_qconfig_lists_after_merge=[
                         None,
@@ -846,7 +846,7 @@ class TestQuantizerPropagationSolver:
         return request.param
 
     def test_get_merged_qconfigs(self, qconfig_merge_test_struct: MergeQConfigTestStruct):
-        for strategy in PropagationStrategy:
+        for strategy in QuantizerPropagationRule:
             quant_prop_solver = QuantizerPropagationSolver(propagation_strategy=strategy, run_consistency_checks=True)
             solution_for_strategy = qconfig_merge_test_struct.strategy_vs_solution_dict[strategy]
             ref_merge_qconfig_list = solution_for_strategy.merge_qconfig_list
@@ -866,7 +866,7 @@ class TestQuantizerPropagationSolver:
         self, qconfig_merge_test_struct: MergeQConfigTestStruct
     ):
         quant_prop_solver = QuantizerPropagationSolver(
-            propagation_strategy=PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION
+            propagation_strategy=QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION
         )
         branch_qconfig_lists_before_merge = qconfig_merge_test_struct.branch_qconfig_lists_before_merge
         ref_merge_qconfig_list, _ = quant_prop_solver.get_merged_qconfigs_for_downward_branching_case(

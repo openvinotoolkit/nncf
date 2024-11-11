@@ -32,17 +32,23 @@ from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.utils.os import safe_open
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
+from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.experimental.torch.fx.quantization.backend_parameters import FXBackendParameters
+from nncf.experimental.torch.fx.transformations import DEQUANTIZE_NODE_TARGETS
+from nncf.experimental.torch.fx.transformations import _get_node_inputs
 from nncf.experimental.torch.fx.transformations import shared_constants_unification_transformation
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch import test_models
+from tests.torch.fx.test_sanity import count_q_dq
 from tests.torch.ptq.test_weights_compression import ShortTransformer
 from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 
 FX_DIR_NAME = Path("fx")
 FX_QUANTIZED_DIR_NAME = Path("fx") / "quantized"
+FX_QUANTIZED_COMPRESSED_DIR_NAME = Path("fx") / "post_quantization_compressed"
 
 
 @dataclass
@@ -132,22 +138,49 @@ def test_model(test_case: ModelCase):
 
 
 TEST_MODELS_QUANIZED = (
-    (ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]), {}),
-    (torchvision_model_case("resnet18", (1, 3, 224, 224)), {}),
-    (torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)), {}),
-    (torchvision_model_case("vit_b_16", (1, 3, 224, 224)), {"model_type": nncf.ModelType.TRANSFORMER}),
-    (torchvision_model_case("swin_v2_s", (1, 3, 224, 224)), {"model_type": nncf.ModelType.TRANSFORMER}),
+    (
+        ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
+        {},
+        [(46, 50), (23, 27)],
+    ),
+    (
+        torchvision_model_case("resnet18", (1, 3, 224, 224)),
+        {},
+        [(51, 58), (30, 37)],
+    ),
+    (
+        torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)),
+        {},
+        [(97, 112), (61, 76)],
+    ),
+    (
+        torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
+        {"model_type": nncf.ModelType.TRANSFORMER},
+        [(124, 124), (74, 74)],
+    ),
+    (
+        torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
+        {"model_type": nncf.ModelType.TRANSFORMER},
+        [
+            (298, 298),
+            (149, 149),
+        ],
+    ),
     (
         ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
         {"model_type": nncf.ModelType.TRANSFORMER},
+        [(4, 4), (2, 2)],
     ),
 )
 
 
+@pytest.mark.parametrize("compress_weights", [True, False])
 @pytest.mark.parametrize(
-    ("model_case", "quantization_parameters"), TEST_MODELS_QUANIZED, ids=[m[0].model_id for m in TEST_MODELS_QUANIZED]
+    ("model_case", "quantization_parameters", "compress_n_qdq"),
+    TEST_MODELS_QUANIZED,
+    ids=[m[0].model_id for m in TEST_MODELS_QUANIZED],
 )
-def test_quantized_model(model_case: ModelCase, quantization_parameters):
+def test_quantized_model(model_case: ModelCase, quantization_parameters, compress_weights: bool, compress_n_qdq: int):
     model = model_case.model_builder()
     dtype = torch.int32 if model_case.model_id == "synthetic_transformer" else torch.float32
     example_input = torch.ones(model_case.input_shape, dtype=dtype)
@@ -161,16 +194,50 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters):
 
     calibration_dataset = nncf.Dataset([example_input], transform_fn)
 
-    quantization_parameters["advanced_parameters"] = AdvancedQuantizationParameters(disable_bias_correction=True)
+    quantization_parameters["advanced_parameters"] = AdvancedQuantizationParameters(
+        disable_bias_correction=True, backend_params={FXBackendParameters.COMPRESS_WEIGHTS: compress_weights}
+    )
     quantization_parameters["subset_size"] = 1
 
     quantized_model = nncf.quantize(fx_model, calibration_dataset, **quantization_parameters)
     # Uncomment to visualize torch fx graph
     # from tests.torch.fx.helpers import visualize_fx_model
     # visualize_fx_model(quantized_model, f"{model_case.model_id}_int8.svg")
-
+    save_dir = FX_QUANTIZED_COMPRESSED_DIR_NAME if compress_weights else FX_QUANTIZED_DIR_NAME
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
-    check_graph(nncf_graph, get_dot_filename(model_case.model_id), FX_QUANTIZED_DIR_NAME, extended=True)
+    check_graph(nncf_graph, get_dot_filename(model_case.model_id), save_dir, extended=True)
+    q_nodes, dq_nodes = count_q_dq(quantized_model)
+    assert q_nodes == compress_n_qdq[compress_weights][0]
+    assert dq_nodes == compress_n_qdq[compress_weights][1]
+    check_fq_values(quantized_model)
+    check_compressed_post_quantized(quantized_model)
+
+
+def check_fq_values(quantized_model):
+    for node in quantized_model.graph.nodes:
+        if node.target not in DEQUANTIZE_NODE_TARGETS:
+            continue
+        args = []
+        quantize_node = node.args[0]
+        args = _get_node_inputs(quantize_node, quantized_model)
+        if not args:
+            continue
+        result = node.target(quantize_node.target(*args), *args[1:])
+        fp_value = get_tensor_constant_from_node(quantize_node.args[0], quantized_model)
+        assert torch.all(result == fp_value)
+
+
+def check_compressed_post_quantized(quantized_model):
+    for node in quantized_model.graph.nodes:
+        if node.name[:3] != "mul":
+            continue
+        args = []
+        args = _get_node_inputs(node, quantized_model)
+        if not args:
+            continue
+        assert args[0].dtype == torch.int8
+        result = node.target(*args)
+        assert result.dtype == torch.float32
 
 
 @pytest.mark.parametrize("unification", [False, True])

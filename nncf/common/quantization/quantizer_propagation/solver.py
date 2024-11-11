@@ -34,6 +34,7 @@ from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
 from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
 from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
@@ -57,25 +58,6 @@ class TransitionStatus(Enum):
     SHOULD_MERGE = 1
     SHOULD_NOT_TRANSITION = 2
     SHOULD_WAIT_FOR_MERGE = 3
-
-
-class PropagationStrategy(Enum):
-    # While propagating up through a downward-branching node:
-    # ... do not merge at all
-    DO_NOT_MERGE_BRANCH_FQS = 0
-
-    # ... only merge for exact configuration space matches
-    MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME = 1
-
-    # ... merge common parts, and if a branch quantizer has options for
-    # narrowing (bitwidth/mode/per-channel/etc.) in addition to
-    # the common part, keep the quantizer on branch
-    MERGE_WITH_POTENTIAL_REQUANTIZATION = 2
-
-    # ... merge common config options into a single config space for the global FQ,
-    # do not merge if this is impossible for the current branching situation and given
-    # HW config file
-    MERGE_WITH_SINGLE_FQ_RESULT = 3
 
 
 class FinalizedQuantizationProposal:
@@ -317,7 +299,7 @@ class QuantizerPropagationSolver:
         QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None, per_channel=False)
     ]
 
-    DEFAULT_PROPAGATION_STRATEGY = PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT
+    DEFAULT_PROPAGATION_STRATEGY = QuantizerPropagationRule.MERGE_ALL_IN_ONE
 
     def __init__(
         self,
@@ -327,7 +309,7 @@ class QuantizerPropagationSolver:
         weight_target_scopes: List[str] = None,
         hw_config: HWConfig = None,
         default_trait_to_metatype_map: Dict[QuantizationTrait, List[OperatorMetatype]] = None,
-        propagation_strategy: PropagationStrategy = None,
+        propagation_strategy: QuantizerPropagationRule = None,
         default_qconfig_list: List[QuantizerConfig] = None,
         quantizable_layer_nodes: List[QuantizableWeightedLayerNode] = None,
         scope_overrides: Dict = None,
@@ -632,10 +614,7 @@ class QuantizerPropagationSolver:
             qconfs_list = [pq.potential_quant_configs for pq in waiting_pqs_list]
             merged_qconf_list, branch_qconf_lists = self.get_merged_qconfigs_for_downward_branching_case(qconfs_list)
 
-            if (
-                merged_qconf_list is None
-                and self._propagation_strategy == PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT
-            ):
+            if merged_qconf_list is None and self._propagation_strategy == QuantizerPropagationRule.MERGE_ALL_IN_ONE:
                 all_confs = "\n".join(", ".join([f"[{str(qconf)}]" for qconf in qconfs]) for qconfs in qconfs_list)
                 nncf_logger.debug(
                     f"Could not merge the quantizers at branching point {branching_node_key} - "
@@ -1405,10 +1384,10 @@ class QuantizerPropagationSolver:
           that would have to remain on the branches (if any).
         """
 
-        if self._propagation_strategy == PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS:
+        if self._propagation_strategy == QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES:
             # Do not merge at all
             return None, potential_qconfigs_for_each_branch
-        if self._propagation_strategy == PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME:
+        if self._propagation_strategy == QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME:
             # Only merge for exact matches of the qconfig lists
             first_pq_list = potential_qconfigs_for_each_branch[0]
             first_pq_list_counter = Counter(first_pq_list)
@@ -1440,9 +1419,9 @@ class QuantizerPropagationSolver:
                 return True
             return False
 
-        if self._propagation_strategy == PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION:
+        if self._propagation_strategy == QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION:
             compatible_fn = compatible_with_requant
-        elif self._propagation_strategy == PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT:
+        elif self._propagation_strategy == QuantizerPropagationRule.MERGE_ALL_IN_ONE:
             compatible_fn = compatible_wo_requant
         else:
             raise nncf.ValidationError(f"Unknown propagation strategy: {self._propagation_strategy}")
@@ -1474,7 +1453,7 @@ class QuantizerPropagationSolver:
         merged_qconfig_list_counter = Counter(merged_qconfig_list)
         resulting_branch_qconfig_lists = [None for _ in potential_qconfigs_for_each_branch]
 
-        if self._propagation_strategy == PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION:
+        if self._propagation_strategy == QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION:
             for idx, branch_qconfig_list in enumerate(potential_qconfigs_for_each_branch):
                 if Counter(branch_qconfig_list) == merged_qconfig_list_counter:
                     continue  # This branch will have the branch quantizer removed

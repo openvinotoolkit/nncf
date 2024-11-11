@@ -17,6 +17,7 @@ import nncf
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -68,9 +69,8 @@ class StatisticsAggregator(ABC):
         transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
         model_with_outputs: TModel = model_transformer.transform(transformation_layout)
         engine = factory.EngineFactory.create(model_with_outputs)
-
         iterations_number = self._get_iterations_number()
-        empty_statistics = True
+        processed_samples = 0
         for input_data in track(  # type: ignore
             islice(self.dataset.get_inference_data(), iterations_number),
             total=iterations_number,
@@ -79,9 +79,14 @@ class StatisticsAggregator(ABC):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
             self._register_statistics(processed_outputs, merged_statistics)
-            empty_statistics = False
-        if empty_statistics:
+            processed_samples += 1
+        if processed_samples == 0:
             raise nncf.ValidationError(EMPTY_DATASET_ERROR)
+        if self.stat_subset_size is not None and self.stat_subset_size > processed_samples:
+            nncf_logger.warning(
+                f"Dataset contains only {processed_samples} samples, "
+                f"smaller than the requested subset size {self.stat_subset_size}."
+            )
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from functools import partial
-from typing import List, Optional, Tuple, Type
+from typing import Optional, Tuple, Type
 
 import numpy as np
 
@@ -40,47 +40,6 @@ from nncf.experimental.common.tensor_statistics.statistics import PercentileTens
 from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.tensor import Tensor
-
-
-class PTReducerMixIn:
-
-    def get_inplace_fn(self):
-        return None
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return []
-
-
-class PTMinReducer(PTReducerMixIn, MinReducer):
-    pass
-
-
-class PTMaxReducer(PTReducerMixIn, MaxReducer):
-    pass
-
-
-class PTAbsMaxReducer(PTReducerMixIn, AbsMaxReducer):
-    pass
-
-
-class PTMeanReducer(PTReducerMixIn, MeanReducer):
-    pass
-
-
-class PTQuantileReducer(PTReducerMixIn, QuantileReducer):
-    pass
-
-
-class PTAbsQuantileReducer(PTReducerMixIn, AbsQuantileReducer):
-    pass
-
-
-class PTBatchMeanReducer(PTReducerMixIn, BatchMeanReducer):
-    pass
-
-
-class PTMeanPerChanelReducer(PTReducerMixIn, MeanPerChReducer):
-    pass
 
 
 def _reshape_all(targets: Tuple[Tensor, ...], target_shape: Tuple[int, ...]):
@@ -145,11 +104,11 @@ def get_min_max_statistic_collector(
         "num_samples": num_samples,
         "aggregation_axes": aggregation_axes,
     }
-    min_reducer = PTMinReducer(reduction_axes)
+    min_reducer = MinReducer(reduction_axes)
     min_aggregator = MinAggregator(**aggregator_kwargs)
     tensor_collector.register_statistic_branch(MinMaxTensorStatistic.MIN_STAT, min_reducer, min_aggregator)
 
-    max_reducer_cls = PTAbsMaxReducer if use_abs_max else PTMaxReducer
+    max_reducer_cls = AbsMaxReducer if use_abs_max else MaxReducer
     max_reducer = max_reducer_cls(reduction_axes)
     max_aggregator = MaxAggregator(**aggregator_kwargs)
     tensor_collector.register_statistic_branch(MinMaxTensorStatistic.MAX_STAT, max_reducer, max_aggregator)
@@ -181,7 +140,7 @@ def get_mixed_min_max_statistic_collector(
     :return: Mixed min max statistic collector.
     """
     tensor_collector = TensorCollector(_get_wrapped_min_max_tensor_statistic(target_shape=scale_shape))
-    min_reducer = PTMinReducer(reduction_axes)
+    min_reducer = MinReducer(reduction_axes)
 
     kwargs = {
         "num_samples": num_samples,
@@ -192,7 +151,7 @@ def get_mixed_min_max_statistic_collector(
     min_aggregator = min_aggregator_cls(**kwargs)
     tensor_collector.register_statistic_branch(MinMaxTensorStatistic.MIN_STAT, min_reducer, min_aggregator)
 
-    max_reducer_cls = PTAbsMaxReducer if use_abs_max else PTMaxReducer
+    max_reducer_cls = AbsMaxReducer if use_abs_max else MaxReducer
     max_reducer = max_reducer_cls(reduction_axes)
     max_aggregator_cls = MeanAggregator if use_means_of_maxs else MaxAggregator
     max_aggregator = max_aggregator_cls(**kwargs)
@@ -323,7 +282,7 @@ def get_mean_percentile_statistic_collector(
     """
     tensor_collector = TensorCollector(_get_wrapped_percentile_tensor_statistic(target_shape=scale_shape))
     quantiles_to_collect = np.true_divide(percentiles_to_collect, 100)
-    reducer = PTQuantileReducer(reduction_axes=reduction_axes, quantile=quantiles_to_collect)
+    reducer = QuantileReducer(reduction_axes=reduction_axes, quantile=quantiles_to_collect)
     for output_port_id, p in enumerate(percentiles_to_collect):
         aggregator = MeanAggregator(
             aggregation_axes=aggregation_axes,
@@ -349,9 +308,9 @@ def get_mean_statistic_collector(
     :return: Mean statistic collector.
     """
     if channel_axis == 0:
-        reducer = PTBatchMeanReducer()
+        reducer = BatchMeanReducer()
     else:
-        reducer = PTMeanPerChanelReducer(channel_axis=channel_axis)
+        reducer = MeanPerChReducer(channel_axis=channel_axis)
     noop_reducer = NoopReducer()
 
     kwargs = {
@@ -383,10 +342,10 @@ def get_raw_stat_collector(num_samples: Optional[int] = None) -> TensorCollector
 
 
 PT_REDUCERS_MAP = {
-    StatisticsType.MIN: PTMinReducer,
-    StatisticsType.MAX: PTMaxReducer,
-    StatisticsType.ABS_MAX: PTAbsMaxReducer,
-    StatisticsType.MEAN: PTMeanReducer,
-    StatisticsType.QUANTILE: PTQuantileReducer,
-    StatisticsType.ABS_QUANTILE: PTAbsQuantileReducer,
+    StatisticsType.MIN: MinReducer,
+    StatisticsType.MAX: MaxReducer,
+    StatisticsType.ABS_MAX: AbsMaxReducer,
+    StatisticsType.MEAN: MeanReducer,
+    StatisticsType.QUANTILE: QuantileReducer,
+    StatisticsType.ABS_QUANTILE: AbsQuantileReducer,
 }

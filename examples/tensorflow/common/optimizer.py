@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import tensorflow as tf
-import tensorflow_addons as tfa
 
 from examples.tensorflow.common.logger import logger
 
@@ -33,7 +32,7 @@ def build_optimizer(config, scheduler):
         weight_decay = optimizer_config.get("weight_decay", None)
         common_params = {"learning_rate": scheduler, "nesterov": nesterov, "momentum": momentum}
         if weight_decay:
-            optimizer = tfa.optimizers.SGDW(**common_params, weight_decay=weight_decay)
+            optimizer = tf.keras.optimizers.SGD(**common_params, weight_decay=weight_decay)
         else:
             optimizer = tf.keras.optimizers.SGD(**common_params)
     elif optimizer_type == "rmsprop":
@@ -59,18 +58,10 @@ def build_optimizer(config, scheduler):
             "amsgrad": amsgrad,
         }
         if weight_decay:
-            optimizer = tfa.optimizers.AdamW(**common_params, weight_decay=weight_decay)
+            optimizer = tf.keras.optimizers.AdamW(**common_params, weight_decay=weight_decay)
         else:
             optimizer = tf.keras.optimizers.Adam(**common_params)
     else:
         raise ValueError("Unknown optimizer %s" % optimizer_type)
-
-    moving_average_decay = optimizer_params.get("moving_average_decay", 0.0)
-    if moving_average_decay > 0.0:
-        logger.info("Including moving average decay.")
-        optimizer = tfa.optimizers.MovingAverage(optimizer, average_decay=moving_average_decay, num_updates=None)
-    if optimizer_params.get("lookahead", None):
-        logger.info("Using lookahead optimizer.")
-        optimizer = tfa.optimizers.Lookahead(optimizer)
 
     return optimizer
