@@ -9,8 +9,10 @@ Post-training Quantization:
 - General:
   - ...
 - Features:
+  - (OpenVINO) Extended support of data-free and data-aware weights compression methods ([nncf.compress_weights()](docs/usage/post_training_compression/weights_compression/Usage.md#user-guide) API) with NF4 per-channel quantization, which makes compressed LLMs more accurate and faster on NPU.
   - ...
 - Fixes:
+  - (OpenVINO) Fixed GPTQ weight compression method for Stable Diffusion models.
   - ...
 - Improvements:
   - The `ultralytics` version has been updated to 8.3.22.
