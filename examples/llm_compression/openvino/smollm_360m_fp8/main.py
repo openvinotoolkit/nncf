@@ -24,7 +24,7 @@ SEED = 0
 
 def main():
     MODEL_ID = "HuggingFaceTB/SmolLM-360M"
-    OUTPUT_DIR = "smollm_360m_copmressed"
+    OUTPUT_DIR = "smollm_360m_compressed"
 
     dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
     # Filtering to remove empty samples from the dataset
