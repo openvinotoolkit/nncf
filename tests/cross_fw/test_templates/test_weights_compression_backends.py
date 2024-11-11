@@ -20,23 +20,29 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 
 class TemplateTestMixedPrecisionAlgoBackend:
     @abstractmethod
-    def get_hawq_with_backend(self, subset_size):
+    def get_hawq_with_backend(self, subset_size: int):
         """
-        :param _type_ subset_size:
+        Returns an instance of the algorithm with the specified subset size.
+
+        :param subset_size: The size of the subset to be used by the algorithm.
+        :return: An instance of the algorithm.
         """
 
     @pytest.mark.parametrize("subset_size", (10, 1, None))
-    def test_hawq_statistic_collector(self, subset_size):
+    def test_hawq_statistic_collector(self, subset_size: int):
         algo = self.get_hawq_with_backend(subset_size)
         collector = algo._get_statistic_collector()
 
+        # Check if the collector is an instance of TensorCollector
         assert isinstance(collector, TensorCollector)
-        # test aggregator
+
+        # Test the aggregator
         assert len(collector.aggregators) == 1
         _, aggregator = collector.aggregators.popitem()
         assert isinstance(aggregator, HAWQAggregator)
         assert aggregator.num_samples == subset_size
-        # test reducer
+
+        # Test the reducer
         assert len(collector.reducers) == 1
         reducer = collector.reducers.pop()
         assert isinstance(reducer, NoopReducer)
