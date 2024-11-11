@@ -11,10 +11,11 @@
 from nncf.quantization.algorithms.weight_compression.mixed_precision import HAWQCriterion
 from nncf.quantization.algorithms.weight_compression.openvino_backend import OVMixedPrecisionAlgoBackend
 from tests.cross_fw.test_templates.test_weights_compression_backends import TemplateTestMixedPrecisionAlgoBackend
+from tests.openvino.native.models import IdentityMatmul
 
 
 class TestOVMixedPrecisionAlgoBackend(TemplateTestMixedPrecisionAlgoBackend):
     def get_hawq_with_backend(self, subset_size):
         hawq = HAWQCriterion(None, None, subset_size=subset_size)
-        hawq._backend_entity = OVMixedPrecisionAlgoBackend()
+        hawq._backend_entity = OVMixedPrecisionAlgoBackend(IdentityMatmul().ov_model)
         return hawq
