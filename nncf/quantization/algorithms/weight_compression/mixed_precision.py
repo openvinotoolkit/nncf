@@ -360,7 +360,7 @@ class HAWQCriterion(DataBasedCriterion):
         return fns.linalg.norm(decompressed_weight - weight, ord="fro").item()
 
     def _get_statistic_collector(self):
-        return self._backend_entity.hawq_statistic_collector()
+        return self._backend_entity.hawq_statistic_collector(self._subset_size)
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_VARIANCE)
