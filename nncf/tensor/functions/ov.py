@@ -45,7 +45,8 @@ def _ov_astype(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
 
     model = get_astype_model(
         OVModelParameters(
-            input_dtype=a_dtype,
+            input_dtypes={"input": a_dtype},
+            output_dtypes={"output": dtype},
             dynamic_shapes=True,
             recompile=False,
             release_memory=True,
@@ -54,7 +55,6 @@ def _ov_astype(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
             return_ov_tensors=True,
         ),
         tuple(a.shape),
-        dtype,
     )
     return model([Tensor(a)])[0].data
 

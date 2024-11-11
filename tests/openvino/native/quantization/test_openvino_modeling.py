@@ -57,7 +57,6 @@ COMPRESSION_CONFIGS = [
     WeightCompressionConfig(CompressWeightsMode.INT4_SYM, group_size=2),
 ]
 
-
 DATA_TYPES = [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16]
 
 MAX_MISALIGNMENT_FREQUENCY = {
@@ -73,7 +72,6 @@ TENSOR_BACKENDS = [TensorBackend.numpy, TensorBackend.ov]
 EPS = np.finfo(np.float32).eps
 
 REDUCTION_AXES = (1,)
-
 
 RANDOM_TENSOR_CACHE_CONTAINER = ResultsCacheContainer()
 
@@ -179,7 +177,7 @@ def test_quantization_alignment(
 
                 kwargs = {}
                 if cb == ComputationBackend.OV:
-                    ov_model_params = OVModelParameters(weight.dtype, dynamic_shapes=not static_shapes)
+                    ov_model_params = OVModelParameters(dynamic_shapes=not static_shapes)
                     kwargs["ov_model_params"] = ov_model_params
                 if quantization_task == QuantizationTask.Q_DQ_RQ:
                     kwargs["return_compressed_weight"] = True

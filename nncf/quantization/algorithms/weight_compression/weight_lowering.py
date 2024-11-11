@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import copy
 import logging
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
@@ -490,13 +491,25 @@ def do_int_quantization(
     scale_shape = None if precomputed_scale is None else precomputed_scale.shape
     zero_point_shape = None if precomputed_zero_point is None else precomputed_zero_point.shape
 
-    if ov_model_params is None:
-        ov_model_params = OVModelParameters(weight.dtype)
-    if config.num_bits == 4:
-        if weight.backend == TensorBackend.ov:
-            ov_model_params.return_ov_tensors = weight.backend == TensorBackend.ov
-        else:
-            ov_model_params.output_dtype = TensorDataType.uint8 if config.is_int_asym else TensorDataType.int8
+    ov_model_params = OVModelParameters() if ov_model_params is None else copy.deepcopy(ov_model_params)
+    ov_model_params.input_dtypes = ov_model_params.input_dtypes or {
+        "weight": weight.dtype,
+        "scale": TensorDataType.float32,
+        "zero_point": TensorDataType.int32,
+    }
+    ov_model_params.output_dtypes = ov_model_params.output_dtypes or {
+        "compressed_weight": TensorDataType.uint8 if config.is_int_asym else TensorDataType.int8,
+        "scale": TensorDataType.float32,
+        "zero_point": TensorDataType.int32,
+    }
+    if config.num_bits == 4 and weight.backend == TensorBackend.ov:
+        # Return ov tensors in target precision to seamlessly insert them into openvino model later
+        ov_model_params.return_ov_tensors = weight.backend == TensorBackend.ov
+        compressed_weight_dtype = TensorDataType.uint4 if config.is_int_asym else TensorDataType.int4
+        ov_model_params.output_dtypes.update(
+            {"compressed_weight": compressed_weight_dtype, "zero_point": compressed_weight_dtype}
+        )
+
     # ov_model_params.dynamic_shapes = bool(int(os.environ.get("DYNAMIC_COMPRESSION", "0")))
     # ov_model_params.recompile = bool(int(os.environ.get("RECOMPILE", "0")))
     # ov_model_params.release_memory = bool(int(os.environ.get("RELEASE_MEMORY", "0")))
@@ -582,10 +595,18 @@ def calculate_quantized_dequantized_weight(
     scale_shape = precomputed_scale.shape if precomputed_scale is not None else None
     zero_point_shape = precomputed_zero_point.shape if precomputed_zero_point is not None else None
 
-    if ov_model_params is None:
-        ov_model_params = OVModelParameters(weight.dtype)
-    if return_compressed_weight and config.num_bits == 4:
-        ov_model_params.output_dtype = TensorDataType.uint8 if config.is_int_asym else TensorDataType.int8
+    ov_model_params = OVModelParameters() if ov_model_params is None else copy.deepcopy(ov_model_params)
+    ov_model_params.input_dtypes = ov_model_params.input_dtypes or {
+        "weight": weight.dtype,
+        "scale": TensorDataType.float32,
+        "zero_point": TensorDataType.int32,
+    }
+    ov_model_params.output_dtypes = ov_model_params.output_dtypes or {
+        "decompressed_weight": TensorDataType.float32,
+        "compressed_weight": TensorDataType.uint8 if config.is_int_asym else TensorDataType.int8,
+        "scale": TensorDataType.float32,
+        "zero_point": TensorDataType.int32,
+    }
 
     model = get_compress_decompress_weight_model(
         ov_model_params, config, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_compressed_weight
