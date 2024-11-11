@@ -15,10 +15,8 @@ import numpy as np
 import openvino.runtime as ov
 import pytest
 import torch
-from torch._export import capture_pre_autograd_graph
 
 from nncf import IgnoredScope
-from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
@@ -26,13 +24,13 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.smooth_quant.torch_fx_backend import FXSmoothQuantAlgoBackend
 from nncf.quantization.algorithms.smooth_quant.torch_fx_backend import FXSQMultiply
-from nncf.torch import disable_patching
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import LinearMultiShapeModel
 from tests.cross_fw.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
 from tests.cross_fw.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
+from tests.torch.fx.helpers import get_torch_fx_model_q_transformed
 
 PT_LINEAR_MODEL_MM_MAP = {"Linear1": "linear_3", "Linear2": "linear_2", "Linear3": "linear", "Linear4": "linear_1"}
 
@@ -97,10 +95,7 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> ov.Model:
-        with disable_patching():
-            captured_model = capture_pre_autograd_graph(model.eval(), (torch.rand(model.INPUT_SIZE),))
-            apply_quantization_transformations(captured_model)
-            return captured_model
+        return get_torch_fx_model_q_transformed(model, torch.ones(model.INPUT_SIZE))
 
     @staticmethod
     def check_scales(model: torch.nn.Module, reference_values: Dict[str, np.ndarray], model_cls) -> None:

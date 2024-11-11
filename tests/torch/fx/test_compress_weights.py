@@ -13,7 +13,6 @@ from typing import Dict
 
 import pytest
 import torch
-from torch._export import capture_pre_autograd_graph
 
 import nncf
 from nncf import BackupMode
@@ -24,6 +23,7 @@ from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
+from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.ptq.test_weights_compression import ALL_SENSITIVITY_METRICS
 from tests.torch.ptq.test_weights_compression import DATA_BASED_SENSITIVITY_METRICS
 from tests.torch.ptq.test_weights_compression import INT4_MODES
@@ -73,17 +73,11 @@ def get_compressed_modules_weights(
     return n_target_modules, n_compressed_weights
 
 
-def _capture_model(model, inputs):
-    with torch.no_grad():
-        with disable_patching():
-            return capture_pre_autograd_graph(model, (inputs,))
-
-
 @pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_weights(mode):
     model = ShortTransformer(8, 16)
     input_ids = torch.randint(0, 10, (8,))
-    exported_model = _capture_model(model, input_ids)
+    exported_model = get_torch_fx_model(model, input_ids)
     kwargs = {}
     if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
         kwargs["group_size"] = 4
@@ -103,7 +97,7 @@ def test_compress_weights(mode):
 def test_compress_weights_graph_edge(mode):
     model = ShortTransformer(5, 10)
     input_ids = torch.randint(0, 10, (5,))
-    exported_model = _capture_model(model, input_ids)
+    exported_model = get_torch_fx_model(model, input_ids)
     compressed_model = compress_weights(exported_model, mode=mode)
     nncf_graph = NNCFGraphFactory.create(compressed_model)
     for node in nncf_graph.get_all_nodes():
@@ -118,7 +112,7 @@ def test_compress_weights_shared_weights(mocker, mode):
     with disable_patching():
         model = ShortTransformer(8, 16, share_weights=True)
         input_ids = torch.randint(0, 10, (8,))
-        exported_model = _capture_model(model, input_ids)
+        exported_model = get_torch_fx_model(model, input_ids)
         kwargs = {}
         if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
             kwargs["group_size"] = 4
@@ -154,7 +148,7 @@ def test_compressed_model_inference(mode):
     torch.manual_seed(42)
     model = ShortTransformer(8, 16, share_weights=True)
     input_ids = torch.randint(0, 10, (8,))
-    exported_model = _capture_model(model, input_ids)
+    exported_model = get_torch_fx_model(model, input_ids)
     exported_model_output = exported_model(input_ids)
     kwargs = {}
     if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
@@ -174,7 +168,7 @@ def test_compress_weights_model_size_conv(mode):
     model = ConvolutionModel()
 
     input_ids = torch.randint(0, 10, [1, 3, 256, 256])
-    exported_model = _capture_model(model, input_ids)
+    exported_model = get_torch_fx_model(model, input_ids)
     model_size = get_model_size(exported_model)
     compressed_model = compress_weights(exported_model, mode=mode)
     compressed_model_size = get_model_size(compressed_model)
@@ -199,7 +193,7 @@ def test_compress_weights_functional_model(mode):
     )
 
     input_ids = torch.randint(0, 10, [1, 3, 256, 256])
-    exported_model = _capture_model(model, input_ids)
+    exported_model = get_torch_fx_model(model, input_ids)
     compressed_model = compress_weights(exported_model, mode=mode)
 
     n_compressed_weights = 0
@@ -233,7 +227,7 @@ def test_compress_weights_functional_model(mode):
 def test_raise_error_with_unsupported_params_for_int8(mode, params):
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
-    exported_model = _capture_model(dummy_torch_model, dummy_input)
+    exported_model = get_torch_fx_model(dummy_torch_model, dummy_input)
     with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(exported_model, mode=mode, **params)
 
@@ -253,7 +247,7 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 def test_raise_error_with_unsupported_params_for_int4(mode, params):
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
-    exported_model = _capture_model(dummy_torch_model, dummy_input)
+    exported_model = get_torch_fx_model(dummy_torch_model, dummy_input)
     with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(exported_model, mode=mode, **params)
 
@@ -262,7 +256,7 @@ def test_raise_error_with_unsupported_params_for_int4(mode, params):
 def test_raise_error_with_not_int8(mode):
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
-    exported_model = _capture_model(dummy_torch_model, dummy_input)
+    exported_model = get_torch_fx_model(dummy_torch_model, dummy_input)
     with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(exported_model, mode=mode)
 
@@ -270,7 +264,7 @@ def test_raise_error_with_not_int8(mode):
 def test_raise_error_for_statistics_caching():
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
-    exported_model = _capture_model(dummy_torch_model, dummy_input)
+    exported_model = get_torch_fx_model(dummy_torch_model, dummy_input)
     with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(exported_model, advanced_parameters=AdvancedCompressionParameters(statistics_path="anything"))
 
@@ -278,7 +272,7 @@ def test_raise_error_for_statistics_caching():
 def test_get_dtype_attribute_of_parameter():
     model = DTypeModel()
     dummy_input = torch.randint(0, 10, [3, 3])
-    exported_model = _capture_model(model, dummy_input)
+    exported_model = get_torch_fx_model(model, dummy_input)
     compressed_model = compress_weights(exported_model)
     assert compressed_model.matmul_updated_constant0.dtype == torch.uint8
     compressed_model(dummy_input)
@@ -296,7 +290,7 @@ def test_model_devices_and_precisions(use_cuda, dtype):
     if dtype == torch.float16:
         model.half()
     dummy_input = torch.rand((1, 256), dtype=dtype, device=device)
-    exported_model = _capture_model(model, dummy_input)
+    exported_model = get_torch_fx_model(model, dummy_input)
     compressed_model = compress_weights(exported_model)
     result = compressed_model(dummy_input)
 

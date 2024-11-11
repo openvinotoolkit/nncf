@@ -199,9 +199,12 @@ def shared_constants_unification_transformation(model: torch.fx.GraphModule):
     prev_targets = {}
 
     for source_node in model.graph.nodes:
-        dist_node = list(source_node.users)
-        if source_node.target in prev_targets and source_node.op in ("get_attr",):
-            dist_node[0].replace_input_with(source_node, prev_targets[source_node.target])
+        if source_node.op != "get_attr" or not source_node.users:
+            continue
+
+        if source_node.target in prev_targets:
+            for user in list(source_node.users):
+                user.replace_input_with(source_node, prev_targets[source_node.target])
         else:
             prev_targets[source_node.target] = source_node
 
@@ -541,6 +544,7 @@ def _is_supported_batch_norm_for_training(node: torch.fx.Node):
     Return True if the given node refers to an aten batch norm op QAT supports.
     """
     supported_ops = [
+        torch.ops.aten.batch_norm.default,
         torch.ops.aten._native_batch_norm_legit.default,
         torch.ops.aten.cudnn_batch_norm.default,
         torch.ops.aten.miopen_batch_norm.default,

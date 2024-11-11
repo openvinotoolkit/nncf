@@ -55,6 +55,14 @@ def pytest_addoption(parser: Parser):
         "using the current state of the repository.",
     )
     parser.addoption(
+        "--regen-json",
+        action="store_true",
+        default=False,
+        help="If specified, the "
+        "reference .json files will be regenerated "
+        "using the current state of the repository.",
+    )
+    parser.addoption(
         "--torch-home", type=str, default=None, help="Path to cached test models, downloaded by torchvision"
     )
     parser.addoption("--weekly-models", type=str, default=None, help="Path to models' weights for weekly tests")
@@ -119,6 +127,10 @@ def pytest_configure(config: Config):
     regen_dot = config.getoption("--regen-dot", False)
     if regen_dot:
         os.environ["NNCF_TEST_REGEN_DOT"] = "1"
+
+    regen_json = config.getoption("--regen-json", False)
+    if regen_json:
+        os.environ["NNCF_TEST_REGEN_JSON"] = "1"
 
 
 @pytest.fixture(scope="module")
