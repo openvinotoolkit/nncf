@@ -31,7 +31,14 @@ def main():
     dataset = dataset.filter(lambda example: len(example["text"]) > 1)
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False, stateful=False)
+    model = OVModelForCausalLM.from_pretrained(
+        MODEL_ID,
+        export=True,
+        load_in_8bit=False,
+        compile=False,
+        stateful=False,
+        ov_config={"INFERENCE_PRECISION_HINT": "f32"},
+    )
 
     def transform_fn(data, model, tokenizer):
         tokenized_text = tokenizer(data["text"], return_tensors="np")
