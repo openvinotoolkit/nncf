@@ -11,9 +11,11 @@ Post-training Quantization:
 - Features:
   - (OpenVINO) Extended support of data-free and data-aware weights compression methods ([nncf.compress_weights()](docs/usage/post_training_compression/weights_compression/Usage.md#user-guide) API) with NF4 per-channel quantization, which makes compressed LLMs more accurate and faster on NPU.
   - Introduced `backup_mode` optional parameter in `nncf.compress_weights()` to specify the data type for embeddings, convolutions and last linear layers during 4-bit weights compression. Available options are INT8_ASYM by default, INT8_SYM, and NONE which retains the original floating-point precision of the model weights.
+  - Added preview support for the optimization of models in [Torch FX](https://pytorch.org/docs/stable/fx.html) format, nncf.quantize() and nncf.compress_weights() methods. After the optimization such models can be directly executed via [torch.compile()](https://docs.openvino.ai/2024/openvino-workflow/torch-compile.html). See [int8 quantization example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/torch_fx/resnet18) for more details.
   - ...
 - Fixes:
   - (OpenVINO) Fixed GPTQ weight compression method for Stable Diffusion models.
+  - (Torch, ONNX) Scaled dot product attention pattern quantization setup is aligned with OpenVINO.
   - ...
 - Improvements:
   - The `ultralytics` version has been updated to 8.3.22.
