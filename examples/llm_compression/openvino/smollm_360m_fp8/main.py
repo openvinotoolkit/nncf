@@ -76,7 +76,9 @@ def main():
     model.save_pretrained(OUTPUT_DIR)
     tokenizer.save_pretrained(OUTPUT_DIR)
 
-    model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"})
+    model = OVModelForCausalLM.from_pretrained(
+        OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "INFERENCE_PRECISION_HINT": "f32"}
+    )
     input_ids = tokenizer("What is Python?", return_tensors="pt").to(device=model.device)
 
     torch.manual_seed(SEED)
