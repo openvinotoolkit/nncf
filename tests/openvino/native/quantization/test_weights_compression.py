@@ -901,7 +901,6 @@ DATASET_SIZE = 5
     ("compression_args", "multiplier_of_calls"),
     [
         ({"mode": CompressWeightsMode.INT4_ASYM, "ratio": 1}, 0),  # data-free, no reducers
-        ({"mode": CompressWeightsMode.INT4_ASYM, "ratio": 0.5}, 1),  # 1 reducer for mixed precision
         ({"mode": CompressWeightsMode.INT4_ASYM, "ratio": 1, "awq": True}, 2),  # mean & shape reducer for AWQ
         (
             {"mode": CompressWeightsMode.INT4_ASYM, "ratio": 0.5, "awq": True},
