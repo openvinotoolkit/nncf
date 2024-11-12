@@ -13,13 +13,38 @@ from functools import partial
 import datasets
 import numpy as np
 import openvino as ov
-import torch
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
+from whowhatbench import Evaluator
 
 import nncf
 
-SEED = 0
+
+def transform_fn(data, model, tokenizer):
+    tokenized_text = tokenizer(data["text"], return_tensors="np")
+    input_ids = tokenized_text["input_ids"]
+    attention_mask = tokenized_text["attention_mask"]
+
+    inputs = {}
+    inputs["input_ids"] = input_ids
+    inputs["attention_mask"] = tokenized_text["attention_mask"]
+    position_ids = np.cumsum(attention_mask, axis=1) - 1
+    position_ids[attention_mask == 0] = 1
+
+    # The magic forms KV cache as model inputs
+    batch_size = input_ids.shape[0]
+    for input_name in model.key_value_input_names:
+        model_inputs = model.model.input(input_name)
+        shape = model_inputs.get_partial_shape()
+        shape[0] = batch_size
+        if shape[2].is_dynamic:
+            shape[2] = 0
+        else:
+            shape[1] = 0
+        inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
+
+    inputs["position_ids"] = position_ids
+    return inputs
 
 
 def main():
@@ -30,8 +55,8 @@ def main():
     # Filtering to remove empty samples from the dataset
     dataset = dataset.filter(lambda example: len(example["text"]) > 1)
 
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    model = OVModelForCausalLM.from_pretrained(
+    hf_tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+    hf_model = OVModelForCausalLM.from_pretrained(
         MODEL_ID,
         export=True,
         load_in_8bit=False,
@@ -39,37 +64,14 @@ def main():
         stateful=False,
         ov_config={"INFERENCE_PRECISION_HINT": "f32"},
     )
+    original_ov_model = hf_model.model.clone()
 
-    def transform_fn(data, model, tokenizer):
-        tokenized_text = tokenizer(data["text"], return_tensors="np")
-        input_ids = tokenized_text["input_ids"]
-        attention_mask = tokenized_text["attention_mask"]
+    evaluator = Evaluator(hf_model, hf_tokenizer, metrics=("similarity",))
 
-        inputs = {}
-        inputs["input_ids"] = input_ids
-        inputs["attention_mask"] = tokenized_text["attention_mask"]
-        position_ids = np.cumsum(attention_mask, axis=1) - 1
-        position_ids[attention_mask == 0] = 1
+    quantization_dataset = nncf.Dataset(dataset, partial(transform_fn, model=hf_model, tokenizer=hf_tokenizer))
 
-        # The magic forms KV cache as model inputs
-        batch_size = input_ids.shape[0]
-        for input_name in model.key_value_input_names:
-            model_inputs = model.model.input(input_name)
-            shape = model_inputs.get_partial_shape()
-            shape[0] = batch_size
-            if shape[2].is_dynamic:
-                shape[2] = 0
-            else:
-                shape[1] = 0
-            inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
-
-        inputs["position_ids"] = position_ids
-        return inputs
-
-    quantization_dataset = nncf.Dataset(dataset, partial(transform_fn, model=model, tokenizer=tokenizer))
-
-    model.model = nncf.quantize(
-        model.model,
+    hf_model.model = nncf.quantize(
+        hf_model.model,
         calibration_dataset=quantization_dataset,
         # Only PERFORMANCE preset supports in combination with FP8 quantization mode
         preset=nncf.QuantizationPreset.PERFORMANCE,
@@ -80,20 +82,19 @@ def main():
             smooth_quant_alphas=nncf.AdvancedSmoothQuantParameters(matmul=-1)
         ),
     )
-    model.save_pretrained(OUTPUT_DIR)
-    tokenizer.save_pretrained(OUTPUT_DIR)
+    hf_model.save_pretrained(OUTPUT_DIR)
+    hf_tokenizer.save_pretrained(OUTPUT_DIR)
 
-    model = OVModelForCausalLM.from_pretrained(
+    hf_model.model = original_ov_model
+
+    optimized_hf_model = OVModelForCausalLM.from_pretrained(
         OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "INFERENCE_PRECISION_HINT": "f32"}
     )
-    input_ids = tokenizer("What is Python?", return_tensors="pt").to(device=model.device)
 
-    torch.manual_seed(SEED)
-    model.request = None
-    output = model.generate(**input_ids, max_new_tokens=100, do_sample=False)
-    output_text = tokenizer.decode(output[0])
-    print(f"Optimized model output: {output_text}\n")
-    return output_text
+    _, all_metrics = evaluator.score(optimized_hf_model)
+    similarity = all_metrics["similarity"][0]
+    print(f"Similarity: {similarity}")
+    return similarity
 
 
 if __name__ == "__main__":

@@ -189,7 +189,7 @@ def fp8_llm_quantization() -> Dict[str, float]:
 
     result = fp8_llm_quantization_main()
 
-    return {"word_count": len(result.split())}
+    return {"similarity": float(result)}
 
 
 def post_training_quantization_torch_fx_resnet18():

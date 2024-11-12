@@ -266,7 +266,7 @@
         "requirements": "examples/llm_compression/openvino/smollm_360m_fp8/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "word_count": 75
+            "similarity": 0.7899276713530222
         }
     }
 }
