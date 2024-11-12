@@ -210,7 +210,7 @@ def register_pre_function_hook(model: nn.Module, op_name: str, port_id: int, hoo
     :param port_id: The port ID associated with the hook.
     :param hook: The pre-function hook module to be executed.
 
-    :returns: A handle that can be used to remove the hook later.
+    :return: A handle that can be used to remove the hook later.
     """
     hook_storage = get_hook_storage(model)
     return hook_storage.register_pre_function_hook(op_name, port_id, hook)
@@ -224,7 +224,7 @@ def register_post_function_hook(model: nn.Module, op_name: str, port_id: int, ho
     :param op_name: The name of the operation associated with the hook.
     :param port_id: The port ID associated with the hook.
     :param hook: The pre-function hook module to be executed.
-    :returns: A handle that can be used to remove the hook later.
+    :return: A handle that can be used to remove the hook later.
     """
     hook_storage = get_hook_storage(model)
     return hook_storage.register_post_function_hook(op_name, port_id, hook)

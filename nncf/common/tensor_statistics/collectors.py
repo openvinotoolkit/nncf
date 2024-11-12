@@ -59,14 +59,14 @@ class TensorStatisticCollectorBase(ABC):
     def _register_input(self, x: TensorType) -> None:
         pass
 
-    def get_statistics(self) -> None:
+    def get_statistics(self) -> Any:
         """Returns collected statistics, if present."""
         if self._collected_samples == 0:
             raise StatisticsNotCollectedError()
         return self._get_statistics()
 
     @abstractmethod
-    def _get_statistics(self) -> None:
+    def _get_statistics(self) -> Any:
         pass
 
     def enable(self) -> None:

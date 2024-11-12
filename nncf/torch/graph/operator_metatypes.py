@@ -1110,6 +1110,18 @@ class PTScaledDotProductAttentionMetatype(PTOperatorMetatype):
     target_input_ports = [0, 1]
 
 
+@PT_OPERATOR_METATYPES.register()
+class PTCosMetatype(PTOperatorMetatype):
+    name = "CosOp"
+    module_to_function_names = {NamespaceTarget.TORCH: ["cos"]}
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTSinMetatype(PTOperatorMetatype):
+    name = "SinOp"
+    module_to_function_names = {NamespaceTarget.TORCH: ["sin"]}
+
+
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.

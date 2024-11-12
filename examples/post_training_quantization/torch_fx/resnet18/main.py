@@ -14,6 +14,8 @@ from pathlib import Path
 from time import time
 from typing import Tuple
 
+# We need to import openvino.torch for torch.compile() with openvino backend to work.
+import openvino.torch  # noqa
 import torch
 import torch.nn as nn
 import torch.nn.parallel
@@ -24,11 +26,13 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
+from torch._dynamo.exc import BackendCompilerFailed
 
 import nncf
 import nncf.torch
 from nncf.common.logging.track_progress import track
 from nncf.common.utils.helpers import create_table
+from nncf.common.utils.os import is_windows
 from nncf.torch import disable_patching
 
 IMAGE_SIZE = 64
@@ -205,7 +209,16 @@ def main():
     print("Benchmark FP32 model compiled with default backend ...")
     with disable_patching():
         compiled_model = torch.compile(model)
-        fp32_latency = measure_latency(compiled_model, example_inputs=example_input)
+        try:
+            fp32_latency = measure_latency(compiled_model, example_inputs=example_input)
+        except BackendCompilerFailed as exp:
+            if not is_windows():
+                raise exp
+            print(
+                "WARNING: Torch Inductor is currently unavailable on Windows. "
+                "For more information, visit https://github.com/pytorch/pytorch/issues/135954"
+            )
+            fp32_latency = float("nan")
     print(f"{fp32_latency:.3f} ms")
 
     print("Benchmark FP32 model compiled with openvino backend ...")

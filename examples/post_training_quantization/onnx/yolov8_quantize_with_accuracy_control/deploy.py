@@ -42,7 +42,7 @@ def validate_ov_model(
 ) -> Tuple[Dict, int, int]:
     validator.seen = 0
     validator.jdict = []
-    validator.stats = []
+    validator.stats = dict(tp_m=[], tp=[], conf=[], pred_cls=[], target_cls=[], target_img=[])
     validator.batch_i = 1
     validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
     compiled_model = ov.compile_model(ov_model, device_name="CPU")

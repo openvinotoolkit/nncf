@@ -72,7 +72,7 @@ class HookStorage(nn.Module):
 
         :param op_name: The operation name the hook is associated with.
         :param port_id: The port ID the hook is associated with.
-        :returns: Generate key for module dict.
+        :return: Generate key for module dict.
         """
         return f"{op_name}__{port_id}"
 
@@ -82,7 +82,7 @@ class HookStorage(nn.Module):
         Determines the next available hook ID by finding the highest existing hook ID and incrementing it.
 
         :param hooks_dict: A dictionary containing existing hooks.
-        :returns: The next available hook ID as a string. Starts from '0' if no hooks exist.
+        :return: The next available hook ID as a string. Starts from '0' if no hooks exist.
         """
 
         if not hooks_dict:
@@ -100,7 +100,7 @@ class HookStorage(nn.Module):
         :param op_name: The operation name the hook is associated with.
         :param port_id: The port ID the hook is associated with.
         :param hook: The hook module to be stored.
-        :returns: A handle that can be used to remove the hook later.
+        :return: A handle that can be used to remove the hook later.
         """
 
         hook_key = cls._generate_key(op_name, port_id)
@@ -119,7 +119,7 @@ class HookStorage(nn.Module):
         :param op_name: The operation name the hook is associated with.
         :param port_id: The port ID the hook is associated with.
         :param hook: The pre-function hook to be stored.
-        :returns: A handle for removing the registered hook.
+        :return: A handle for removing the registered hook.
         """
         return self._insert_hook(self.pre_hooks, op_name, port_id, hook)
 
@@ -130,7 +130,7 @@ class HookStorage(nn.Module):
         :param op_name: The operation name the hook is associated with.
         :param port_id: The port ID the hook is associated with.
         :param hook: The pre-function hook to be stored.
-        :returns: A handle for removing the registered hook.
+        :return: A handle for removing the registered hook.
         """
         return self._insert_hook(self.post_hooks, op_name, port_id, hook)
 
@@ -144,7 +144,7 @@ class HookStorage(nn.Module):
         :param op_name: The operation name the hooks are associated with.
         :param port_id: The port ID the hooks are associated with.
         :param value: The input value to be passed through the hooks.
-        :returns: The modified value after all hooks have been applied.
+        :return: The modified value after all hooks have been applied.
         """
         hook_key = cls._generate_key(op_name, port_id)
         if hook_key not in storage_dict:
@@ -160,7 +160,7 @@ class HookStorage(nn.Module):
         :param op_name: The operation name the hooks are associated with.
         :param port_id: The port ID the hooks are associated with.
         :param value: The input value to be passed through the pre-function hooks.
-        :returns: The value after all pre-function hooks have been executed.
+        :return: The value after all pre-function hooks have been executed.
         """
         return self._execute_hooks(self.pre_hooks, op_name, port_id, value)
 
@@ -171,6 +171,6 @@ class HookStorage(nn.Module):
         :param op_name: The operation name the hooks are associated with.
         :param port_id: The port ID the hooks are associated with.
         :param value: The input value to be passed through the pre-function hooks.
-        :returns: The value after all post-function hooks have been executed.
+        :return: The value after all post-function hooks have been executed.
         """
         return self._execute_hooks(self.post_hooks, op_name, port_id, value)

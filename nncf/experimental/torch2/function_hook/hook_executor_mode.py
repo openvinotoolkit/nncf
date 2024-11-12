@@ -14,12 +14,13 @@ from __future__ import annotations
 import inspect
 import types
 from collections import defaultdict
+from contextlib import contextmanager
 from dataclasses import dataclass
 from dataclasses import field
 from itertools import chain
 from types import MethodType
 from types import TracebackType
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type
 from weakref import ReferenceType
 from weakref import ref
 
@@ -29,6 +30,7 @@ from torch import nn
 from torch.overrides import TorchFunctionMode
 
 from nncf.common.logging import nncf_logger as logger
+from nncf.experimental.torch2.function_hook.handle_inner_functions import get_handle_inner_function
 from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
 from nncf.experimental.torch2.function_hook.weak_map import WeakUnhashableKeyMap
 
@@ -64,7 +66,7 @@ def _get_full_fn_name(fn: Callable[..., Any]) -> str:
     Get the full name of a function, including its module if applicable.
 
     :param fn: The function for which to get the full name.
-    :returns: The full name of the function.
+    :return: The full name of the function.
     """
     if inspect.ismethoddescriptor(fn) or inspect.ismethod(fn):
         return fn.__qualname__
@@ -106,12 +108,13 @@ class FunctionHookMode(TorchFunctionMode):
         :param model: The PyTorch model to which the hooks will be applied.
         :param hook_storage: Storage for hooks to be executed.
         """
-        super().__init__()  # type: ignore
+        super().__init__()
         self.hook_storage: HookStorage = hook_storage
         self.model: nn.Module = model
         self.module_call_stack: List[nn.Module] = []
         self.nested_enter_count = 0
         self.op_calls: Dict[str, int] = defaultdict(int)
+        self.enabled: bool = True
 
         # Variables for hooks after constant nodes
         self.const_name_map: WeakUnhashableKeyMap[torch.Tensor, str] = WeakUnhashableKeyMap()
@@ -147,7 +150,7 @@ class FunctionHookMode(TorchFunctionMode):
         Wrap a function call to include pushing to and popping from the module call stack.
 
         :param fn_call: The original function call to wrap.
-        :returns: The wrapped function call.
+        :return: The wrapped function call.
         """
 
         def wrapped_call(self_: nn.Module, *args: Tuple[Any, ...], **kwargs: Dict[str, Any]) -> Any:
@@ -163,7 +166,7 @@ class FunctionHookMode(TorchFunctionMode):
         Enter the context manager.
         Wrapping the _call_impl function of each module on first nested enter.
 
-        :returns: The instance of FunctionHookMode.
+        :return: The instance of FunctionHookMode.
         """
         super().__enter__()  # type: ignore
         if self.nested_enter_count == 0:
@@ -209,12 +212,20 @@ class FunctionHookMode(TorchFunctionMode):
         :param types: List of types.
         :param args: The arguments to the function.
         :param kwargs: The keyword arguments to the function.
-        :returns: The output of the function call after hooks have been executed.
+        :return: The output of the function call after hooks have been executed.
         """
         kwargs = kwargs or {}
 
         fn_name = func.__name__
-        if fn_name in IGNORED_FN_NAMES:
+
+        # WA: to catch nested calls for some functions
+        # https://github.com/pytorch/pytorch/issues/55093
+        fn_for_nested_call = get_handle_inner_function(func)
+        if fn_for_nested_call is not None:
+            with self:
+                return fn_for_nested_call(*args, **kwargs)
+
+        if not self.enabled or fn_name in IGNORED_FN_NAMES:
             return func(*args, **kwargs)
 
         op_name = self.get_current_executed_op_name(fn_name)
@@ -250,7 +261,7 @@ class FunctionHookMode(TorchFunctionMode):
         """
         Get the name of the current module being executed.
 
-        :returns: The name of the current module.
+        :return: The name of the current module.
         """
         relative_module_names = []
         prev_module = self.module_call_stack[0]
@@ -273,7 +284,7 @@ class FunctionHookMode(TorchFunctionMode):
         Get the name of the current operation being executed.
 
         :param fn_name: The function name of the operation.
-        :returns: The name of the operation.
+        :return: The name of the operation.
         """
         module_name = self.get_current_relative_name()
         op_name = generate_normalized_op_name(module_name, fn_name)
@@ -296,7 +307,7 @@ class FunctionHookMode(TorchFunctionMode):
         If the input is not a `torch.nn.Parameter`, or if no hook is defined, the original tensor is returned unchanged.
 
         :param value: The tensor to which the post-hook will be applied..
-        :returns: The processed tensor with the applied post-hook, if applicable.
+        :return: The processed tensor with the applied post-hook, if applicable.
         """
         if not isinstance(value, torch.nn.Parameter):
             return value
@@ -314,7 +325,7 @@ class FunctionHookMode(TorchFunctionMode):
 
         :param args: The arguments to the function.
         :param kwargs: The keyword arguments to the function.
-        :returns: The modified arguments and keyword arguments after pre-hooks.
+        :return: The modified arguments and keyword arguments after pre-hooks.
         """
         for idx, value in enumerate(args):
             args[idx] = self.execute_hooks_for_parameter(value)
@@ -331,7 +342,7 @@ class FunctionHookMode(TorchFunctionMode):
         :param args: The arguments to the function.
         :param kwargs: The keyword arguments to the function.
         :param op_meta: Metadata for the operation.
-        :returns: The modified arguments and keyword arguments after pre-hooks.
+        :return: The modified arguments and keyword arguments after pre-hooks.
         """
         _args: List[Any] = list(args)
         with self:
@@ -346,13 +357,24 @@ class FunctionHookMode(TorchFunctionMode):
                 )
         return tuple(_args), kwargs
 
+    def process_post_function_hooks_for_value(self, value: Any, op_meta: OpMeta, port_id: int) -> Any:
+        """
+        Executes post-hooks on a value after an operation.
+
+        :param value: The output value.
+        :param op_meta: Metadata about the operation.
+        :param port_id: The id of output port.
+        :return: The modified output after post-hooks.
+        """
+        return self.hook_storage.execute_post_function_hooks(op_meta.op_name, port_id, value)
+
     def execute_post_hooks(self, output: Any, op_meta: OpMeta) -> Any:
         """
         Execute post-hooks for the operation.
 
         :param output: The output of the function.
         :param op_meta: Metadata for the operation.
-        :returns: The modified output after post-hooks.
+        :return: The modified output after post-hooks.
         """
         with self:
             cls_tuple = None
@@ -363,11 +385,11 @@ class FunctionHookMode(TorchFunctionMode):
 
             if isinstance(output, list):
                 for idx, value in enumerate(output):
-                    output[idx] = self.hook_storage.execute_post_function_hooks(op_meta.op_name, idx, value)
+                    output[idx] = self.process_post_function_hooks_for_value(value, op_meta, idx)
                 if cls_tuple is not None:
                     output = cls_tuple(output)
             else:
-                output = self.hook_storage.execute_post_function_hooks(op_meta.op_name, 0, output)
+                output = self.process_post_function_hooks_for_value(output, op_meta, 0)
         return output
 
     def process_model_inputs(self, args: Tuple[Any], kwargs: Dict[str, Any]) -> Tuple[Tuple[Any], Dict[str, Any]]:
@@ -376,7 +398,7 @@ class FunctionHookMode(TorchFunctionMode):
 
         :param args: Positional arguments passed to the model's forward method.
         :param kwargs: Keyword arguments passed to the model's forward method.
-        :returns: The processed arguments, with hooks applied to any tensor inputs.
+        :return: The processed arguments, with hooks applied to any tensor inputs.
         """
         forward_signature = inspect.signature(self.model.forward)
         bound_arguments = forward_signature.bind(*args, **kwargs)
@@ -384,17 +406,17 @@ class FunctionHookMode(TorchFunctionMode):
         # Hooks available only for named arguments
         for name, value in bound_arguments.arguments.items():
             if isinstance(value, Tensor):
-                bound_arguments.arguments[name] = self.execute_hooks_for_input(name, value)
+                bound_arguments.arguments[name] = self.execute_hooks_for_model_input(name, value)
 
         return bound_arguments.args, bound_arguments.kwargs
 
-    def execute_hooks_for_input(self, name: str, value: Any) -> Any:
+    def execute_hooks_for_model_input(self, name: str, value: Any) -> Any:
         """
-        Executes the post-hook for an input tensor.
+        Executes the post-hooks for an input tensor.
 
         :param name: The name of the input argument.
         :param value: The value of the input argument.
-        :returns: The processed value after the hook is executed.
+        :return: The processed value after the hook is executed.
         """
         return self.hook_storage.execute_post_function_hooks(name, 0, value)
 
@@ -403,10 +425,10 @@ class FunctionHookMode(TorchFunctionMode):
         Processes the outputs from the model, applying pre-hooks to any tensors found in the output.
 
         :param outputs: The outputs returned by the model's forward method.
-        :returns: The processed outputs with hooks applied.
+        :return: The processed outputs with hooks applied.
         """
         if isinstance(outputs, Tensor):
-            return self.hook_storage.execute_pre_function_hooks("output", 0, outputs)
+            return self.execute_hooks_for_model_output("output", outputs)
 
         cls_tuple = None
         if isinstance(outputs, tuple):
@@ -416,7 +438,29 @@ class FunctionHookMode(TorchFunctionMode):
             outputs = list(outputs)
             for idx, val in enumerate(outputs):
                 if isinstance(val, Tensor):
-                    outputs[idx] = self.hook_storage.execute_pre_function_hooks(f"output_{idx}", 0, val)
+                    outputs[idx] = self.execute_hooks_for_model_output(f"output_{idx}", val)
         if cls_tuple is not None:
             outputs = cls_tuple(outputs)
         return outputs
+
+    def execute_hooks_for_model_output(self, name: str, value: Any) -> Any:
+        """
+        Executes the pre-hooks for an input tensor.
+
+        :param name: The name of the input argument.
+        :param value: The value of the input argument.
+        :return: The processed value after the hook is executed.
+        """
+        return self.hook_storage.execute_pre_function_hooks(name, 0, value)
+
+    @contextmanager
+    def disable(self) -> Iterator[None]:
+        """
+        Temporarily disables the function tracing and execution hooks within a context.
+
+        :return: A context manager which temporary disables the function tracing and execution hooks within a context.
+        """
+        ret = self.enabled
+        self.enabled = False
+        yield
+        self.enabled = ret

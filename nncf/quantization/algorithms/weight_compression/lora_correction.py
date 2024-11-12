@@ -14,10 +14,11 @@ from typing import Dict, List, Optional, Tuple
 import matplotlib.pyplot as plt
 import pandas as pd
 
+import nncf
 from nncf.common.logging import nncf_logger
-from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
+from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
@@ -178,7 +179,7 @@ class LoraCorrectionAlgorithm:
             indexes = do_nf4_quantization(compressed_weight.tensor, compressed_weight.scale, is_normalized_weight=True)
             fq_weights = do_nf4_dequantization(indexes, compressed_weight.scale, reduction_axis)
         else:
-            raise ValueError(
+            raise nncf.InternalError(
                 f"{mode.value} mode is invalid for Lora Correction algorithm. Supported modes: INT4_SYM, INT4_ASYM, NF4"
             )
         # fq_w + residual = w   =>  residual = w - fq_w
