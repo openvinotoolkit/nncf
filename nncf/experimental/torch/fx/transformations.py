@@ -1026,7 +1026,7 @@ def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[
     is_impure = lambda node: node in nodes_connected_to_output
 
     for node in reversed(model.graph.nodes):
-        if not (is_impure(node) or node.op == 'placeholder') and len(node.users) == 0:
+        if not (is_impure(node) or node.op == "placeholder") and len(node.users) == 0:
             model.graph.erase_node(node)
 
     model.graph.eliminate_dead_code()
