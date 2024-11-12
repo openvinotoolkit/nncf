@@ -899,12 +899,55 @@ DATASET_SIZE = 5
 )
 @pytest.mark.parametrize(
     ("compression_args", "multiplier_of_calls"),
-    (
-        (dict(mode=CompressWeightsMode.INT4_ASYM, ratio=1), 0),  # data-free, no reducers
-        (dict(mode=CompressWeightsMode.INT4_ASYM, ratio=0.5), 1),  # 1 reducer for mixed precision
-        (dict(mode=CompressWeightsMode.INT4_ASYM, ratio=1, awq=True), 2),  # mean & shape reducer for AWQ
-        (dict(mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, awq=True), 3),  # 2 - for AWQ + 1 - for Mixed Precision
-    ),
+    [
+        ({"mode": CompressWeightsMode.INT4_ASYM, "ratio": 1}, 0),  # data-free, no reducers
+        ({"mode": CompressWeightsMode.INT4_ASYM, "ratio": 0.5}, 1),  # 1 reducer for mixed precision
+        ({"mode": CompressWeightsMode.INT4_ASYM, "ratio": 1, "awq": True}, 2),  # mean & shape reducer for AWQ
+        (
+            {"mode": CompressWeightsMode.INT4_ASYM, "ratio": 0.5, "awq": True},
+            3,
+        ),  # 2 - for AWQ + 1 - for Mixed Precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
+            },
+            1,
+        ),  # 1 reducer for mixed precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.MEAN_ACTIVATION_VARIANCE,
+            },
+            1,
+        ),  # 1 reducer for mixed precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.MAX_ACTIVATION_VARIANCE,
+            },
+            1,
+        ),  # 1 reducer for mixed precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
+            },
+            1,
+        ),  # 1 reducer for mixed precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
+            },
+            0,
+        ),  # 0 - data-free method
+    ],
 )
 def test_number_of_reduced_statistics_for_subset_size(
     mocker, dataset_size, subset_size, ref_size, compression_args, multiplier_of_calls
