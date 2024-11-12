@@ -35,7 +35,7 @@ from tests.torch.ptq.test_weights_compression import DTypeModel
 from tests.torch.ptq.test_weights_compression import EmptyModel
 from tests.torch.ptq.test_weights_compression import FunctionalModel
 from tests.torch.ptq.test_weights_compression import MatMulModel
-from tests.torch.ptq.test_weights_compression import ShortTransformer
+from tests.torch.test_models.synthetic import ShortTransformer
 
 
 def get_model_size(model):

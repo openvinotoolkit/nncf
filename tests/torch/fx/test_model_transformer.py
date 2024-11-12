@@ -59,6 +59,7 @@ from tests.torch.test_models.synthetic import ConstantFoldingTestModel
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
 from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
+from tests.torch.test_models.synthetic import ShortTransformer
 
 
 @dataclass
@@ -394,6 +395,32 @@ def test_create_shared_constant_transformation():
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
     check_graph(
         nncf_graph, "shared_constants_unification_transformation_test.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True
+    )
+
+
+def test_shared_constants_unification_not_connected_const():
+    """
+    Check a model with a constant which does not connected to any node
+    does not affected by the shared_constants_unification_transformation.
+    """
+    model = ShortTransformer(8, 16, share_weights=True)
+    input_ids = torch.ones((8,), dtype=torch.int)
+    fx_model = get_torch_fx_model(model, input_ids)
+
+    # Confirm test graph is correct
+    not_connected_const = get_graph_node_by_name(fx_model.graph, "lm_head_weight")
+    assert not not_connected_const.users
+    assert not_connected_const.target
+
+    shared_const = get_graph_node_by_name(fx_model.graph, "lm_head_weight_1")
+    assert shared_const.users
+    assert shared_const.target == not_connected_const.target
+
+    shared_constants_unification_transformation(fx_model)
+
+    nncf_graph = GraphConverter.create_nncf_graph(fx_model)
+    check_graph(
+        nncf_graph, "shared_constants_unification_not_connected_const.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True
     )
 
 

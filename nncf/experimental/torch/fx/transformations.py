@@ -196,17 +196,17 @@ def shared_constants_unification_transformation(model: torch.fx.GraphModule):
 
     :param model: Target Torch FX GraphModule
     """
-    prev_targets = {}
+    target_vs_constant = {}
 
     for source_node in model.graph.nodes:
         if source_node.op != "get_attr" or not source_node.users:
             continue
 
-        if source_node.target in prev_targets:
+        if source_node.target in target_vs_constant:
             for user in list(source_node.users):
-                user.replace_input_with(source_node, prev_targets[source_node.target])
+                user.replace_input_with(source_node, target_vs_constant[source_node.target])
         else:
-            prev_targets[source_node.target] = source_node
+            target_vs_constant[source_node.target] = source_node
 
     model.graph.eliminate_dead_code()
     model.recompile()
