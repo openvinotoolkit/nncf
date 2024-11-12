@@ -281,7 +281,7 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
         return statistic_container
 
     @abstractmethod
-    def _get_statistic_collector():
+    def _get_statistic_collector(self):
         """
         Get statistic collector
         """
