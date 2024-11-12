@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,7 +19,6 @@ import pytest
 import torch
 import torch.ao.quantization
 import torch.fx
-from torch._export import capture_pre_autograd_graph
 from torch.ao.quantization.fx.utils import create_getattr_from_value
 from torch.ao.quantization.observer import MinMaxObserver
 from torch.ao.quantization.observer import PerChannelMinMaxObserver
@@ -380,11 +380,14 @@ def count_constants(model: torch.fx.GraphModule) -> int:
     return num_constant_nodes
 
 
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="capture_pre_autograd_graph is not supported on Windows")
 def test_create_shared_constant_transformation():
     model = MultiBranchesConnectedModel()
     ex_inputs = torch.ones((1, 3, 3, 3))
     # Use capture_pre_autograd_graph as torch.export.export_for_training
     # does this automatically.
+    from torch._export import capture_pre_autograd_graph
+
     with torch.no_grad():
         with disable_patching():
             captured_model = capture_pre_autograd_graph(
@@ -520,12 +523,15 @@ def test_compress_post_quantize_transformation(is_per_channel: bool):
     )
 
 
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="capture_pre_autograd_graph is not supported on Windows")
 def test_update_shared_constant():
     model = MultiBranchesConnectedModel()
     ex_inputs = torch.ones((1, 3, 3, 3))
 
     # Use capture_pre_autograd_graph as torch.export.export_for_training
     # does not have different nodes with one constant value.
+    from torch._export import capture_pre_autograd_graph
+
     with torch.no_grad():
         with disable_patching():
             captured_model = capture_pre_autograd_graph(model, (ex_inputs,))

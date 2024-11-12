@@ -11,6 +11,7 @@
 
 import json
 import os
+import sys
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
@@ -25,7 +26,6 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
-from torch._export import capture_pre_autograd_graph
 
 import nncf
 from nncf.common.graph.graph import NNCFNodeName
@@ -231,12 +231,15 @@ def check_compressed_post_quantized(quantized_model):
         assert result.dtype == torch.float32
 
 
+@pytest.mark.skipif(sys.platform.startswith("win"), reason="capture_pre_autograd is not supported on Windows")
 @pytest.mark.parametrize("unification", [False, True])
 def test_is_shared_attribute_capture_preautograd(unification):
     model = MultiBranchesConnectedModel()
     ex_inputs = torch.ones((1, 3, 3, 3))
     # Use capture_pre_autograd_graph as torch.export.export_for_training
     # does this automatically.
+    from torch._export import capture_pre_autograd_graph
+
     with torch.no_grad():
         with disable_patching():
             captured_model = capture_pre_autograd_graph(model, ex_inputs)
