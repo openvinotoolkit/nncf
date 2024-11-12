@@ -10,6 +10,7 @@ Post-training Quantization:
   - ...
 - Features:
   - (OpenVINO) Extended support of data-free and data-aware weights compression methods ([nncf.compress_weights()](docs/usage/post_training_compression/weights_compression/Usage.md#user-guide) API) with NF4 per-channel quantization, which makes compressed LLMs more accurate and faster on NPU.
+  - Introduced `backup_mode` optional parameter in `nncf.compress_weights()` to specify the data type for embeddings, convolutions and last linear layers during 4-bit weights compression. Available options are INT8_ASYM by default, INT8_SYM, and NONE which retains the original floating-point precision of the model weights.
   - ...
 - Fixes:
   - (OpenVINO) Fixed GPTQ weight compression method for Stable Diffusion models.
@@ -18,7 +19,11 @@ Post-training Quantization:
   - The `ultralytics` version has been updated to 8.3.22.
   - ...
 - Tutorials:
-  - ...
+  - [Post-Training Optimization of Llama-3.2-11B-Vision Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/mllama-3.2/mllama-3.2.ipynb)
+  - [Post-Training Optimization of YOLOv11 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov11-optimization/yolov11-object-detection.ipynb)
+  - [Post-Training Optimization of Whisper Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/whisper-asr-genai/whisper-asr-genai.ipynb)
+  - [Post-Training Optimization of Pixtral Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/pixtral/pixtral.ipynb)
+  - [Post-Training Optimization of LLM ReAct Agent Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-agent-react/llm-agent-react.ipynb)
 - Known issues:
   - ...
 
