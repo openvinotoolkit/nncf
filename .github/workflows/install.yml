@@ -2,6 +2,7 @@ name: Test install
 permissions: read-all
 
 on:
+  pull_request: # remove
   workflow_dispatch:
   push:
     branches:
@@ -14,7 +15,7 @@ on:
 jobs:
   install-cpu:
     name: Test install [${{ matrix.backend }}]
-    runs-on: ubuntu-22.04-8-cores
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -38,7 +39,7 @@ jobs:
       - name: Print installed modules
         run: pip list
       - name: Run examples test scope
-        run: pytest tests/cross_fw/install -s --host-configuration cpu --backend ${{ matrix.backend }} -k "not virtualenv"
+        run: pytest tests/cross_fw/install -s --host-configuration cpu --backend ${{ matrix.backend }}
 
   install-torch-gpu:
     name: Test install [torch-gpu]
@@ -82,4 +83,4 @@ jobs:
         run: |
           export PATH=/usr/local/cuda-12.4/bin${PATH:+:${PATH}}
           export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-          pytest tests/cross_fw/install -s --host-configuration gpu --backend torch -k "not virtualenv"
+          pytest tests/cross_fw/install -s --host-configuration gpu --backend torch

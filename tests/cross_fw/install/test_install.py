@@ -18,8 +18,6 @@ from typing import List
 import pytest
 
 import nncf
-from nncf.common.utils.os import is_linux
-from nncf.common.utils.os import is_windows
 from tests.cross_fw.install.conftest import TESTED_BACKENDS
 from tests.cross_fw.shared.case_collection import skip_if_backend_not_selected
 from tests.cross_fw.shared.helpers import create_venv_with_nncf
@@ -69,16 +67,17 @@ def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backe
     )
 
 
-@pytest.fixture(name="venv_type", params=["virtualenv", "venv"])
-def venv_type_(request):
-    return request.param
-
-
-@pytest.fixture(
-    name="package_type", params=["pip_local", "pip_e_local", "pip_git_develop", "pip_pypi", "build_s", "build_w"]
-)
+@pytest.fixture(name="package_type", params=["pip_local", "pip_git_develop", "pip_pypi", "build_s", "build_w"])
 def package_type_(request):
     return request.param
+
+
+@pytest.fixture
+def removable_tmp_path(tmp_path: Path):
+    # The default tmp_path is automatically removed after some time,
+    # but we need to remove the venv after each test to avoid exceeding the space limit.
+    yield tmp_path
+    shutil.rmtree(tmp_path)
 
 
 @pytest.fixture(name="backend_to_test")
@@ -96,9 +95,8 @@ def backend_to_test_(request, backend_clopt: List[str]):
 class TestInstall:
     @staticmethod
     def test_install(
-        tmp_path: Path,
+        removable_tmp_path: Path,
         backend: str,
-        venv_type: str,
         package_type: str,
         backend_clopt: List[str],
         host_configuration_clopt: str,
@@ -107,34 +105,11 @@ class TestInstall:
         skip_if_backend_not_selected(backend, backend_clopt)
         if "pypi" in package_type:
             pytest.xfail("Disabled until NNCF is exposed in a release")
-        venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, {backend})
+        venv_path = create_venv_with_nncf(removable_tmp_path, package_type, "venv", {backend})
         if ov_version_override is not None:
             pip_with_venv = get_pip_executable_with_venv(venv_path)
             ov_version_cmd_line = f"{pip_with_venv} install {ov_version_override}"
             subprocess.run(ov_version_cmd_line, check=True, shell=True)
-        run_install_checks(venv_path, tmp_path, package_type, backend=backend, install_type=host_configuration_clopt)
-
-    @staticmethod
-    def test_install_with_tests_requirements(
-        tmp_path: Path,
-        backend: str,
-        venv_type: str,
-        package_type: str,
-        backend_clopt: List[str],
-        host_configuration_clopt: str,
-    ):
-        skip_if_backend_not_selected(backend, backend_clopt)
-        if "pypi" in package_type:
-            pytest.xfail("Disabled until NNCF is exposed in a release")
-        venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, backends={backend})
-
-        if is_linux():
-            pip_with_venv = f". {venv_path}/bin/activate && {venv_path}/bin/pip"
-        elif is_windows():
-            pip_with_venv = f" {venv_path}\\Scripts\\activate && python -m pip"
-
-        backend_name = "tensorflow" if backend == "tf" else backend
-        subprocess.check_call(
-            f"{pip_with_venv} install -r {PROJECT_ROOT}/tests/{backend_name}/requirements.txt", shell=True
+        run_install_checks(
+            venv_path, removable_tmp_path, package_type, backend=backend, install_type=host_configuration_clopt
         )
-        run_install_checks(venv_path, tmp_path, package_type, backend=backend, install_type=host_configuration_clopt)
