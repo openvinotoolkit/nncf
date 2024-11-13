@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 from dataclasses import dataclass
 from functools import partial
 from typing import Callable, Dict, List, Optional, Tuple, Union
@@ -96,6 +97,7 @@ def get_compress_weight_model(
     scale_shape: Optional[Tuple] = None,
     zero_point_shape: Optional[Tuple] = None,
     reduction_axes: Optional[Tuple] = None,
+    return_nodes: Optional[bool] = False,
 ) -> ModelCallable:
     if scale_shape is None and zero_point_shape is not None:
         raise Exception("Zero point shape can only be provided if scale shape is provided.")
@@ -114,7 +116,7 @@ def get_compress_weight_model(
         scale_shape,
         zero_point_shape,
         reduction_axes,
-        return_nodes=False,
+        return_nodes=return_nodes,
         disable_caching=ov_model_params.recompile,
     )
 
@@ -165,11 +167,11 @@ def _build_compress_model(
         raise ValueError("Output dtypes must be provided.")
 
     weight_dtype = input_dtypes.get("weight")
-    input_scale_dtype = input_dtypes.get("scale", None)
-    input_zero_point_dtype = input_dtypes.get("zero_point", None)
+    input_scale_dtype = input_dtypes.get("scale", TensorDataType.float32)
+    input_zero_point_dtype = input_dtypes.get("zero_point", TensorDataType.int32)
     compressed_weight_dtype = output_dtypes.get("compressed_weight")
-    output_scale_dtype = output_dtypes.get("scale", None)
-    output_zero_point_dtype = output_dtypes.get("zero_point", None)
+    output_scale_dtype = output_dtypes.get("scale", TensorDataType.float32)
+    output_zero_point_dtype = output_dtypes.get("zero_point", TensorDataType.int32)
 
     # Validate input dtypes
     valid_weight_dtypes = [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16]
@@ -190,7 +192,7 @@ def _build_compress_model(
         TensorDataType.int4,
         TensorDataType.uint4,
     ]
-    if compressed_weight_dtype not in valid_compressed_weight_dtypes:
+    if compressed_weight_dtype not in valid_compressed_weight_dtypes + [TensorDataType.float32]:
         raise ValueError(
             f"Compressed weight must be one of the following data types: {valid_compressed_weight_dtypes}. "
             f"But found: {compressed_weight_dtype}."
@@ -271,7 +273,8 @@ def _build_compress_model(
 
     compressed_weight = opset.round(compressed_weight)
     compressed_weight = opset.clamp(opset.round(compressed_weight), level_low, level_high)
-    compressed_weight = opset.convert(compressed_weight, DTYPE_MAP_OV[compressed_weight_dtype])
+    if compressed_weight_dtype != TensorDataType.float32:
+        compressed_weight = opset.convert(compressed_weight, DTYPE_MAP_OV[compressed_weight_dtype])
 
     ov_results = [compressed_weight]
     if len(ov_parameters) == 1:
@@ -310,8 +313,12 @@ def _build_compress_decompress_model(
     if decompressed_weight_dtype != TensorDataType.float32:
         raise ValueError(f"Decompressed weight must be of float32 data type. But found: {decompressed_weight_dtype}.")
 
-    ov_parameters, ov_results = _build_compress_model(
-        config, ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_nodes=True
+    if "compressed_weight" not in output_dtypes:
+        ov_model_params = copy.deepcopy(ov_model_params)
+        ov_model_params.output_dtypes["compressed_weight"] = TensorDataType.float32
+
+    ov_parameters, ov_results = get_compress_weight_model(
+        ov_model_params, config, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_nodes=True
     )
 
     if config.is_int_asym:
@@ -344,10 +351,10 @@ def _build_compress_decompress_model(
     return partial(run_model, ov_model_params, compiled_model, ov_model_params.return_ov_tensors)
 
 
-def get_astype_model(ov_model_params: OVModelParameters, arg_shape: Tuple) -> ModelCallable:
+def get_astype_model(ov_model_params: OVModelParameters, input_shape: Tuple) -> ModelCallable:
     if ov_model_params.dynamic_shapes:
-        arg_shape = (-1,) * len(arg_shape)
-    return _build_astype_model(ov_model_params, arg_shape)
+        input_shape = (-1,) * len(input_shape)
+    return _build_astype_model(ov_model_params, input_shape, disable_caching=ov_model_params.recompile)
 
 
 @cache_results(OV_MODEL_CACHE)
