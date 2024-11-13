@@ -121,10 +121,10 @@ def tune_range(
         fval = -left_border * s
         qval = fns.round(fval)
 
-    ra = fns.where(qval < level_high, qval / (qval - level_high) * right_border, left_border)
     tensor_dtype = fns.finfo(left_border)
-    rb_then_result = (qval - level_high) / (qval + tensor_dtype.eps) * left_border
-    rb = fns.where(qval > 0.0, rb_then_result, right_border)
+
+    ra = fns.where(qval < level_high, qval / (qval - level_high + tensor_dtype.eps) * right_border, left_border)
+    rb = fns.where(qval > 0.0, (qval - level_high) / (qval + tensor_dtype.eps) * left_border, right_border)
 
     range_a = right_border - ra
     range_b = rb - left_border
