@@ -2,7 +2,14 @@ name: Test install
 permissions: read-all
 
 on:
-  pull_request:  ## TODO: remove
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+      - release_v*
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**/*'
 
 jobs:
   install-cpu:
