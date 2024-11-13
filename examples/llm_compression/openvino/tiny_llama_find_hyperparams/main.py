@@ -246,8 +246,8 @@ def main():
     ov_config = {
         "PERFORMANCE_HINT": "LATENCY",
         "NUM_STREAMS": "1",
+        "KV_CACHE_PRECISION": "u8",
         "CACHE_DIR": "",
-        "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0",
     }
     model = OVModelForCausalLM.from_pretrained(
         model_id,

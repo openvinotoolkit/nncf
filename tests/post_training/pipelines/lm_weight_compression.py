@@ -290,7 +290,7 @@ class LMWeightCompression(BaseTestPipeline):
                 load_in_8bit=False,
                 compile=False,
                 stateful=is_stateful,
-                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
+                ov_config={"KV_CACHE_PRECISION": "u8"},
             )
         print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)
