@@ -28,6 +28,7 @@ Post-training Quantization:
   - [Post-Training Optimization of Whisper Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/whisper-asr-genai/whisper-asr-genai.ipynb)
   - [Post-Training Optimization of Pixtral Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/pixtral/pixtral.ipynb)
   - [Post-Training Optimization of LLM ReAct Agent Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-agent-react/llm-agent-react.ipynb)
+  - [Post-Training Optimization of CatVTON Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/catvton/catvton.ipynb)
 - Known issues:
   - ...
 
