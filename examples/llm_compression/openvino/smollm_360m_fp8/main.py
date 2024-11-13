@@ -13,13 +13,47 @@ from functools import partial
 import datasets
 import numpy as np
 import openvino as ov
-import torch
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 
 import nncf
 
-SEED = 0
+
+def transform_fn(data, model, tokenizer):
+    tokenized_text = tokenizer(data["text"], return_tensors="np")
+    input_ids = tokenized_text["input_ids"]
+    attention_mask = tokenized_text["attention_mask"]
+
+    inputs = {}
+    inputs["input_ids"] = input_ids
+    inputs["attention_mask"] = tokenized_text["attention_mask"]
+    position_ids = np.cumsum(attention_mask, axis=1) - 1
+    position_ids[attention_mask == 0] = 1
+
+    # The magic forms KV cache as model inputs
+    batch_size = input_ids.shape[0]
+    for input_name in model.key_value_input_names:
+        model_inputs = model.model.input(input_name)
+        shape = model_inputs.get_partial_shape()
+        shape[0] = batch_size
+        if shape[2].is_dynamic:
+            shape[2] = 0
+        else:
+            shape[1] = 0
+        inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
+
+    inputs["position_ids"] = position_ids
+    return inputs
+
+
+def generate_answer(question, model, tokenizer, max_new_tokens=50):
+    input_ids = tokenizer(question, return_tensors="pt").to(device=model.device)
+
+    model.request = None
+    output = model.generate(**input_ids, max_new_tokens=max_new_tokens, do_sample=False)
+    model.request = None
+
+    return tokenizer.decode(output[0])
 
 
 def main():
@@ -40,31 +74,10 @@ def main():
         ov_config={"INFERENCE_PRECISION_HINT": "f32"},
     )
 
-    def transform_fn(data, model, tokenizer):
-        tokenized_text = tokenizer(data["text"], return_tensors="np")
-        input_ids = tokenized_text["input_ids"]
-        attention_mask = tokenized_text["attention_mask"]
+    control_question = "What is Python?"
 
-        inputs = {}
-        inputs["input_ids"] = input_ids
-        inputs["attention_mask"] = tokenized_text["attention_mask"]
-        position_ids = np.cumsum(attention_mask, axis=1) - 1
-        position_ids[attention_mask == 0] = 1
-
-        # The magic forms KV cache as model inputs
-        batch_size = input_ids.shape[0]
-        for input_name in model.key_value_input_names:
-            model_inputs = model.model.input(input_name)
-            shape = model_inputs.get_partial_shape()
-            shape[0] = batch_size
-            if shape[2].is_dynamic:
-                shape[2] = 0
-            else:
-                shape[1] = 0
-            inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
-
-        inputs["position_ids"] = position_ids
-        return inputs
+    output_text = generate_answer(control_question, model, tokenizer)
+    print(f"Non-optimized model output:\n{output_text}\n")
 
     quantization_dataset = nncf.Dataset(dataset, partial(transform_fn, model=model, tokenizer=tokenizer))
 
@@ -86,13 +99,8 @@ def main():
     model = OVModelForCausalLM.from_pretrained(
         OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "INFERENCE_PRECISION_HINT": "f32"}
     )
-    input_ids = tokenizer("What is Python?", return_tensors="pt").to(device=model.device)
-
-    torch.manual_seed(SEED)
-    model.request = None
-    output = model.generate(**input_ids, max_new_tokens=100, do_sample=False)
-    output_text = tokenizer.decode(output[0])
-    print(f"Optimized model output: {output_text}\n")
+    output_text = generate_answer(control_question, model, tokenizer)
+    print(f"Optimized model output:\n{output_text}\n")
     return output_text
 
 
