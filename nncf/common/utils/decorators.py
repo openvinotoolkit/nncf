@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from importlib import import_module
+import inspect
 from typing import Any, Callable, Dict, List
 
 from nncf.common.logging import nncf_logger
@@ -51,3 +52,46 @@ def skip_if_dependency_unavailable(dependencies: List[str]) -> Callable[[Callabl
         return wrapped_f
 
     return wrap
+
+
+class ResultsCacheContainer:
+    def __init__(self):
+        self._cache = {}
+        self._access_count = {}
+
+    def clear(self):
+        self._cache.clear()
+        self._access_count.clear()
+
+    def is_empty(self):
+        return len(self._cache) == 0
+
+    def __getitem__(self, item):
+        self._access_count[item] += 1
+        return self._cache[item]
+
+    def __setitem__(self, key, value):
+        self._access_count[key] = 0
+        self._cache[key] = value
+
+    def __contains__(self, item):
+        return item in self._cache
+
+
+def cache_results(cache: ResultsCacheContainer):
+    def decorator(func):
+        def wrapper(*args, disable_caching=False, **kwargs):
+            sig = inspect.signature(func)
+            new_kwargs = {name: arg for name, arg in zip(sig.parameters, args)}
+            new_kwargs.update(kwargs)
+            cache_key = (func.__name__, frozenset(new_kwargs.items()))
+            if cache_key in cache:
+                return cache[cache_key]
+            result = func(*args, **kwargs)
+            if not disable_caching:
+                cache[cache_key] = result
+            return result
+
+        return wrapper
+
+    return decorator
