@@ -19,6 +19,8 @@ Post-training Quantization:
   - ...
 - Improvements:
   - The `ultralytics` version has been updated to 8.3.22.
+  - Reduction in peak memory by 30-50% for data-aware weight compression with AWQ, SE, LoRA and mixed precision algorithms.
+  - Reduction in compression time by 10-20% for weight compression with AWQ algorithm.
   - ...
 - Tutorials:
   - [Post-Training Optimization of Llama-3.2-11B-Vision Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/mllama-3.2/mllama-3.2.ipynb)
