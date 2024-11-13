@@ -11,7 +11,6 @@
 
 import json
 import os
-import sys
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
@@ -36,9 +35,7 @@ from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.quantization.backend_parameters import FXBackendParameters
 from nncf.experimental.torch.fx.transformations import DEQUANTIZE_NODE_TARGETS
 from nncf.experimental.torch.fx.transformations import _get_node_inputs
-from nncf.experimental.torch.fx.transformations import shared_constants_unification_transformation
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.torch import disable_patching
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch import test_models
 from tests.torch.fx.helpers import get_torch_fx_model
@@ -231,28 +228,6 @@ def check_compressed_post_quantized(quantized_model):
         assert result.dtype == torch.float32
 
 
-@pytest.mark.skipif(sys.platform.startswith("win"), reason="capture_pre_autograd is not supported on Windows")
-@pytest.mark.parametrize("unification", [False, True])
-def test_is_shared_attribute_capture_preautograd(unification):
-    model = MultiBranchesConnectedModel()
-    ex_inputs = torch.ones((1, 3, 3, 3))
-    # Use capture_pre_autograd_graph as torch.export.export_for_training
-    # does this automatically.
-    from torch._export import capture_pre_autograd_graph
-
-    with torch.no_grad():
-        with disable_patching():
-            captured_model = capture_pre_autograd_graph(model, ex_inputs)
-    file_prefix = "not_unified"
-    if unification:
-        file_prefix = "unified"
-        shared_constants_unification_transformation(captured_model)
-    nncf_graph = GraphConverter.create_nncf_graph(captured_model)
-    shared_attributes = {n.node_name: n.is_shared() for n in nncf_graph.get_all_nodes()}
-    ref_attributes = get_ref_from_json(f"{file_prefix}_shared_attribute_test_model", shared_attributes, attributes=True)
-    assert shared_attributes == ref_attributes
-
-
 def test_is_shared_attribute_default():
     model = MultiBranchesConnectedModel()
     ex_inputs = torch.ones((1, 3, 3, 3))
@@ -261,9 +236,4 @@ def test_is_shared_attribute_default():
 
     shared_attributes = {n.node_name: n.is_shared() for n in nncf_graph.get_all_nodes()}
     ref_attributes = get_ref_from_json("default_shared_attribute_test_model", shared_attributes, attributes=True)
-    assert shared_attributes == ref_attributes
-
-    # Check shared_constants_unification_transformation does not break default unification.
-    shared_constants_unification_transformation(fx_model)
-    shared_attributes = {n.node_name: n.is_shared() for n in nncf_graph.get_all_nodes()}
     assert shared_attributes == ref_attributes

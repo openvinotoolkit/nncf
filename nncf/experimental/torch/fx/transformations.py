@@ -187,31 +187,6 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor, inpu
     return bias_update_transformation
 
 
-def shared_constants_unification_transformation(model: torch.fx.GraphModule):
-    """
-    checks FX graph for shared constants and eliminates redundant
-    shared constant while keeping only the first instance of the constant node.
-    This unification transformation is cruicial since the current algorithms(min_max, solver, BC, etc.)
-    for torch fx do not utilize the is_shared attribute of nodes for shared constants.
-
-    :param model: Target Torch FX GraphModule
-    """
-    target_vs_constant = {}
-
-    for source_node in model.graph.nodes:
-        if source_node.op != "get_attr" or not source_node.users:
-            continue
-
-        if source_node.target in target_vs_constant:
-            for user in list(source_node.users):
-                user.replace_input_with(source_node, target_vs_constant[source_node.target])
-        else:
-            target_vs_constant[source_node.target] = source_node
-
-    model.graph.eliminate_dead_code()
-    model.recompile()
-
-
 def constant_update_transformation_builder(
     node: NNCFNode, value: torch.Tensor, input_port_id: int = 1
 ) -> TransformationFNType:
@@ -811,7 +786,6 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     fuse_conv_bn(model)
     separate_conv_and_bias(model)
     separate_linear_and_bias(model)
-    shared_constants_unification_transformation(model)
 
 
 def fold_constant_except_qdq(model: torch.fx.GraphModule):

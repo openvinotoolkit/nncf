@@ -84,9 +84,7 @@ class FXModelTransformer(ModelTransformer):
                 continue
 
             visited.add(in_node.name)
-            # Do not traverse through constant users
-            # as a constant could be shared and
-            # some shared ops users could be redundant.
+            # Any constant is a stop op during the traversing procedure.
             if in_node.op == "get_attr":
                 continue
             input_nodes.extend(in_node.all_input_nodes)
