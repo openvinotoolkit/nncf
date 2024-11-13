@@ -9,8 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from importlib import import_module
 import inspect
+from importlib import import_module
 from typing import Any, Callable, Dict, List
 
 from nncf.common.logging import nncf_logger
@@ -81,6 +81,8 @@ class ResultsCacheContainer:
 def cache_results(cache: ResultsCacheContainer):
     def decorator(func):
         def wrapper(*args, disable_caching=False, **kwargs):
+            if disable_caching:
+                return func(*args, **kwargs)
             sig = inspect.signature(func)
             new_kwargs = {name: arg for name, arg in zip(sig.parameters, args)}
             new_kwargs.update(kwargs)
@@ -88,8 +90,7 @@ def cache_results(cache: ResultsCacheContainer):
             if cache_key in cache:
                 return cache[cache_key]
             result = func(*args, **kwargs)
-            if not disable_caching:
-                cache[cache_key] = result
+            cache[cache_key] = result
             return result
 
         return wrapper

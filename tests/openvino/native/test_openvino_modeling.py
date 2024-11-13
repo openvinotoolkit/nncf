@@ -18,9 +18,9 @@ from nncf.quantization.algorithms.weight_compression.openvino_modeling import OV
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_astype_model
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_decompress_weight_model
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_weight_model
-from nncf.tensor import TensorDataType, Tensor
+from nncf.tensor import Tensor
+from nncf.tensor import TensorDataType
 from nncf.tensor.definitions import TensorBackend
-
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP as DTYPE_MAP_NP
 
 

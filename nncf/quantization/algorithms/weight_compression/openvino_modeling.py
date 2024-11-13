@@ -18,7 +18,8 @@ import numpy as np
 import openvino as ov
 from openvino.runtime import opset13 as opset
 
-from nncf.common.utils.decorators import ResultsCacheContainer, cache_results
+from nncf.common.utils.decorators import ResultsCacheContainer
+from nncf.common.utils.decorators import cache_results
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType

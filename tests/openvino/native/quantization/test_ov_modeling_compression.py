@@ -20,7 +20,8 @@ import openvino as ov
 import pytest
 
 from nncf import CompressWeightsMode
-from nncf.common.utils.decorators import cache_results, ResultsCacheContainer
+from nncf.common.utils.decorators import ResultsCacheContainer
+from nncf.common.utils.decorators import cache_results
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_decompress_weight_model
