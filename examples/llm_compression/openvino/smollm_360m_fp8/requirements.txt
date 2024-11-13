@@ -1,5 +1,5 @@
 datasets
-whowhatbench @ git+https://github.com/andreyanufr/who_what_benchmark.git
 openvino==2024.4
 optimum-intel[openvino]>=1.13.0
-transformers>=4.35.2
+transformers
+torch==2.4.0
