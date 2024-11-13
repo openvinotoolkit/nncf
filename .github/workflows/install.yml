@@ -38,8 +38,8 @@ jobs:
           pip install -r tests/cross_fw/examples/requirements.txt
       - name: Print installed modules
         run: pip list
-      - name: Run examples test scope
-        run: pytest tests/cross_fw/install -s --host-configuration cpu --backend ${{ matrix.backend }}
+      - name: Run install test scope
+        run: pytest tests/cross_fw/install -rA -s --host-configuration cpu --backend ${{ matrix.backend }}
 
   install-torch-gpu:
     name: Test install [torch-gpu]
@@ -79,8 +79,8 @@ jobs:
           pip install -r tests/cross_fw/examples/requirements.txt
       - name: Print installed modules
         run: pip list
-      - name: Run PyTorch precommit test scope
+      - name: Run install test scope
         run: |
           export PATH=/usr/local/cuda-12.4/bin${PATH:+:${PATH}}
           export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-          pytest tests/cross_fw/install -s --host-configuration gpu --backend torch
+          pytest tests/cross_fw/install -rA -s --host-configuration gpu --backend torch
