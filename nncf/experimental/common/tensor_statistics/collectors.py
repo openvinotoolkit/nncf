@@ -419,8 +419,11 @@ class NoopReducer(TensorReducerBase):
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
         return None
 
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
-        return deepcopy(x)
+    def _reduce_out_of_place(self, x: List[Tensor]) -> List[Tensor]:
+        output = []
+        for tensor in x:
+            output.append(tensor.clone())
+        return output
 
 
 class RawReducer(NoopReducer):
