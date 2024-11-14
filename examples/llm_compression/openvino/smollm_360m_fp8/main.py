@@ -47,17 +47,20 @@ def transform_fn(data, model, tokenizer):
 
 
 def generate_answer(question, model, tokenizer, max_new_tokens=50):
-    input_ids = tokenizer(question, return_tensors="pt").to(device=model.device)
+    messages = [{"role": "user", "content": question}]
+    input_ids = tokenizer.apply_chat_template(
+        messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
+    ).to(device=model.device)
 
     model.request = None
-    output = model.generate(**input_ids, max_new_tokens=max_new_tokens, do_sample=False)
+    output = model.generate(input_ids, max_new_tokens=max_new_tokens, do_sample=False)
     model.request = None
 
-    return tokenizer.decode(output[0])
+    return tokenizer.decode(output[0][len(input_ids[0]) :])
 
 
 def main():
-    MODEL_ID = "HuggingFaceTB/SmolLM-360M"
+    MODEL_ID = "HuggingFaceTB/SmolLM-360M-Instruct"
     OUTPUT_DIR = "smollm_360m_compressed"
 
     dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
