@@ -1,34 +1,46 @@
 tinyllama_NF4_scale_estimation_stateful_per_channel_backend_OV:
-  metric_value: 0.88663
+  metric_value: 0.86466
   num_int4: 11
   num_int8: 290
   metrics_xfail_reason: "Issue-148819"
-tinyllama_int4_data_free_backend_TORCH:
-  metric_value: 0.73873
-  num_int4: 114
-  num_int8: 84
 tinyllama_awq_backup_mode_none_backend_OV:
-  metric_value: 0.84783
+  metric_value: 0.84809
   num_int4: 208
   num_int8: 0
+tinyllama_data_aware_backend_OV:
+  metric_value: 0.85273
+  num_int4: 94
+  num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_backend_OV:
-  metric_value: 0.85502
+  metric_value: 0.85473
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
-  metric_value: 0.85502
+  metric_value: 0.85882
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_stateful_backend_OV:
-  metric_value: 0.85616
+  metric_value: 0.8433
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_gptq_scale_estimation_stateful_backend_OV:
-  metric_value: 0.86503
+  metric_value: 0.83747
   num_int4: 94
   num_int8: 124
   metrics_xfail_reason: "Issue-148819"
+tinyllama_data_aware_lora_stateful_backend_OV:
+  metric_value: 0.83219
+  num_int4: 94
+  num_int8: 500
+tinyllama_data_free_backend_OV:
+  metric_value: 0.70809
+  num_int4: 114
+  num_int8: 84
+tinyllama_int8_data_free_backend_TORCH:
+  metric_value: 0.94589
+  num_int4: 0
+  num_int8: 312
 tinyllama_scale_estimation_per_channel_backend_OV:
-  metric_value: 0.81389
+  metric_value: 0.81748
   num_int4: 188
   num_int8: 124

@@ -1,46 +1,46 @@
-tinyllama_data_free_backend_OV:
-  metric_value: 0.73873
-  num_int4: 114
-  num_int8: 84
-tinyllama_data_aware_backend_OV:
-  metric_value: 0.85767
-  num_int4: 94
-  num_int8: 124
-tinyllama_data_aware_awq_stateful_backend_OV:
-  metric_value: 0.85571
-  num_int4: 94
-  num_int8: 124
-tinyllama_data_aware_awq_scale_estimation_backend_OV:
-  metric_value: 0.86355
-  num_int4: 94
-  num_int8: 124
-tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
-  metric_value: 0.86355
-  num_int4: 94
-  num_int8: 124
-tinyllama_int8_data_free_backend_TORCH:
-  metric_value: 0.95624
-  num_int4: 0
-  num_int8: 312
-tinyllama_data_aware_gptq_scale_estimation_stateful_backend_OV:
-  metric_value: 0.86697
-  num_int4: 94
-  num_int8: 124
-  metrics_xfail_reason: "Issue-148819"
-tinyllama_scale_estimation_per_channel_backend_OV:
-  metric_value: 0.80798
-  num_int4: 188
-  num_int8: 124
-tinyllama_data_aware_lora_stateful_backend_OV:
-  metric_value: 0.83446
-  num_int4: 94
-  num_int8: 500
 tinyllama_NF4_scale_estimation_stateful_per_channel_backend_OV:
-  metric_value: 0.87132
+  metric_value: 0.88264
   num_int4: 11
   num_int8: 290
   metrics_xfail_reason: "Issue-148819"
 tinyllama_awq_backup_mode_none_backend_OV:
-  metric_value: 0.85679
+  metric_value: 0.84781
   num_int4: 208
   num_int8: 0
+tinyllama_data_aware_backend_OV:
+  metric_value: 0.86141
+  num_int4: 94
+  num_int8: 124
+tinyllama_data_aware_awq_scale_estimation_backend_OV:
+  metric_value: 0.87054
+  num_int4: 94
+  num_int8: 124
+tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
+  metric_value: 0.85467
+  num_int4: 94
+  num_int8: 124
+tinyllama_data_aware_awq_stateful_backend_OV:
+  metric_value: 0.84118
+  num_int4: 94
+  num_int8: 124
+tinyllama_data_aware_gptq_scale_estimation_stateful_backend_OV:
+  metric_value: 0.85716
+  num_int4: 94
+  num_int8: 124
+  metrics_xfail_reason: "Issue-148819"
+tinyllama_data_aware_lora_stateful_backend_OV:
+  metric_value: 0.82979
+  num_int4: 94
+  num_int8: 500
+tinyllama_data_free_backend_OV:
+  metric_value: 0.73795
+  num_int4: 114
+  num_int8: 84
+tinyllama_int8_data_free_backend_TORCH:
+  metric_value: 0.94014
+  num_int4: 0
+  num_int8: 312
+tinyllama_scale_estimation_per_channel_backend_OV:
+  metric_value: 0.82413
+  num_int4: 188
+  num_int8: 124
