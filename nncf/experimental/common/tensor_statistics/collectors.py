@@ -412,7 +412,7 @@ class MergedTensorCollector(TensorCollector):
 ##################################################
 
 
-class NoopReducer(TensorReducerBase):
+class RawReducer(TensorReducerBase):
     def __init__(self):
         super().__init__(inplace=False)
 
@@ -424,14 +424,6 @@ class NoopReducer(TensorReducerBase):
         for tensor in x:
             output.append(tensor.clone())
         return output
-
-
-class RawReducer(NoopReducer):
-    def __init__(self):
-        super().__init__()
-
-    def __call__(self, x: List[Tensor]):
-        return self._reduce_out_of_place(x)
 
 
 class ShapeReducer(TensorReducerBase):

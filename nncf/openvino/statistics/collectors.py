@@ -22,7 +22,6 @@ from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReduc
 from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
@@ -136,7 +135,7 @@ def get_mean_statistic_collector(
         reducer = OVBatchMeanReducer(inplace)
     else:
         reducer = OVMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
-    noop_reducer = NoopReducer()
+    raw_reducer = RawReducer()
 
     kwargs = {
         "num_samples": num_samples,
@@ -147,7 +146,7 @@ def get_mean_statistic_collector(
 
     collector = TensorCollector(MeanTensorStatistic)
     collector.register_statistic_branch(MeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
-    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
+    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, raw_reducer, aggregate_shape)
     return collector
 
 
