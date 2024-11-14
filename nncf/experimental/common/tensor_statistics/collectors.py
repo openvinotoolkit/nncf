@@ -420,7 +420,7 @@ class NoopReducer(TensorReducerBase):
         return None
 
     def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
-        return x
+        return deepcopy(x)
 
 
 class RawReducer(NoopReducer):
@@ -543,7 +543,7 @@ class NoopAggregator(AggregatorBase):
         super().__init__(None, num_samples=num_samples)
 
     def _register_reduced_input_impl(self, x: TensorType) -> None:
-        self._container.append(deepcopy(x))
+        self._container.append(x)
 
     def _aggregate_impl(self):
         return self._container
