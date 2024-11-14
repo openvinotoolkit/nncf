@@ -165,6 +165,8 @@ calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
 input_shape = (1, 3, 224, 224)
 with nncf.torch.disable_patching():
     fx_model = torch.export.export_for_training(model, args=(ex_input,)).module()
+    # or
+    # fx_model = torch.export.export(model, args=(ex_input,)).module()
 
     # Step 4: Run the quantization pipeline
     quantized_fx_model = nncf.quantize(fx_model, calibration_dataset)
