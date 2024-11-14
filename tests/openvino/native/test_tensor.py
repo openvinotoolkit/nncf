@@ -11,13 +11,14 @@
 
 import numpy as np
 import openvino as ov
+import openvino.runtime.opset13 as opset
 import pytest
 
-import openvino.runtime.opset13 as opset
-from nncf.tensor import TensorDataType, Tensor
+import nncf.tensor.functions as fns
+from nncf.tensor import Tensor
+from nncf.tensor import TensorDataType
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDeviceType
-import nncf.tensor.functions as fns
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP as DTYPE_MAP_NP
 from nncf.tensor.functions.ov import DTYPE_MAP as DTYPE_MAP_OV
 

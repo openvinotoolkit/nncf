@@ -17,6 +17,7 @@ import numpy as np
 
 import nncf
 from nncf.common.logging.logger import log_once
+from nncf.import_utils import is_openvino_available
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
@@ -24,7 +25,6 @@ from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
-from nncf.utils import is_openvino_available
 
 ReductionAxes = Tuple[int, ...]
 

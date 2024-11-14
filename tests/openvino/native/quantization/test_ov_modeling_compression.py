@@ -58,8 +58,6 @@ COMPRESSION_CONFIGS = [
     WeightCompressionConfig(CompressWeightsMode.INT4_SYM, group_size=2),
 ]
 
-DATA_TYPES = [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16]
-
 MAX_MISALIGNMENT_FREQUENCY = {
     TensorDataType.float32: 1e-2,  # tends to < 5e-6
     TensorDataType.float16: 1e-2,  # tends to < 5e-5
@@ -67,8 +65,6 @@ MAX_MISALIGNMENT_FREQUENCY = {
 }
 
 MAX_MISALIGNMENT_MAGNITUDE = 1
-
-TENSOR_BACKENDS = [TensorBackend.numpy, TensorBackend.ov]
 
 EPS = np.finfo(np.float32).eps
 
@@ -126,7 +122,7 @@ def openvino_available(available: bool):
         (QuantizationTask.Q_DQ_RQ, "auto"),
     ],
 )
-@pytest.mark.parametrize("dtype", DATA_TYPES)
+@pytest.mark.parametrize("dtype", [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16])
 @pytest.mark.parametrize("precompute_s_zp", [False, True], ids=["no-precompute", "precompute"])
 @pytest.mark.parametrize("static_shapes", [False, True], ids=["dynamic-shapes", "static-shapes"])
 def test_quantization_alignment(
