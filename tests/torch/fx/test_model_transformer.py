@@ -18,7 +18,6 @@ import pytest
 import torch
 import torch.ao.quantization
 import torch.fx
-from torch._export import capture_pre_autograd_graph
 from torch.ao.quantization.fx.utils import create_getattr_from_value
 from torch.ao.quantization.observer import MinMaxObserver
 from torch.ao.quantization.observer import PerChannelMinMaxObserver
@@ -27,7 +26,6 @@ from torch.quantization.fake_quantize import FakeQuantize
 import nncf
 import nncf.common
 import nncf.common.factory
-from nncf.common.factory import NNCFGraph
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -48,11 +46,9 @@ from nncf.experimental.torch.fx.transformations import module_insertion_transfor
 from nncf.experimental.torch.fx.transformations import node_removal_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
-from nncf.experimental.torch.fx.transformations import shared_constants_unification_transformation
-from nncf.torch import disable_patching
-from nncf.torch.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import ConstantFoldingTestModel
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
@@ -111,15 +107,9 @@ def _target_point_to_str(target_point: PTTargetPoint) -> str:
     )
 
 
-def _capture_model(model: torch.nn.Module, inputs: torch.Tensor) -> torch.fx.GraphModule:
-    with torch.no_grad():
-        with disable_patching():
-            return capture_pre_autograd_graph(model, (inputs,))
-
-
 @pytest.mark.parametrize("test_case", MODEL_EXTRACTION_CASES, ids=idfn)
 def test_model_extraction(test_case: ModelExtractionTestCase):
-    captured_model = _capture_model(test_case.model(), torch.ones(test_case.input_shape))
+    captured_model = get_torch_fx_model(test_case.model(), torch.ones(test_case.input_shape))
 
     layout = TransformationLayout()
     layout.register(test_case.command)
@@ -149,7 +139,7 @@ def test_model_insertion_transformation(leaf: bool):
     transformation = builder(test_module_instance, target_points, target_node_name)
 
     model = MultiBranchesConnectedModel()
-    captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
+    captured_model = get_torch_fx_model(model, torch.ones((1, 3, 3, 3)))
     transformation(captured_model)
 
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
@@ -160,7 +150,7 @@ def test_model_insertion_transformation(leaf: bool):
 @pytest.mark.parametrize("bias", [True, False], ids=["bias", "constant"])
 def test_constant_update_transformation(bias: bool):
     model = MultiBranchesConnectedModel()
-    captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
+    captured_model = get_torch_fx_model(model, torch.ones((1, 3, 3, 3)))
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
     target_node = nncf_graph.get_node_by_name("conv2d" if bias else "add_")
 
@@ -179,7 +169,7 @@ def test_constant_update_transformation(bias: bool):
 @pytest.mark.parametrize("bias", [True, False], ids=["bias", "constant"])
 def test_constant_update_transformation_no_constant(bias: bool):
     model = MultiBranchesConnectedModel()
-    captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
+    captured_model = get_torch_fx_model(model, torch.ones((1, 3, 3, 3)))
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
     target_node = nncf_graph.get_node_by_name("add")
 
@@ -265,7 +255,7 @@ class TestQDQInsertion:
         transformation = qdq_insertion_transformation_builder(quantizer, [target_point])
 
         model = MultiBranchesConnectedModel()
-        captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
+        captured_model = get_torch_fx_model(model, torch.ones((1, 3, 3, 3)))
         transformation(captured_model)
 
         self._check_qdq_params(captured_model, target_point, dtype, is_per_channel)
@@ -317,7 +307,7 @@ class TestQDQInsertion:
         transformation = qdq_insertion_transformation_builder(quantizer, target_points)
 
         model = MultiBranchesConnectedModel()
-        captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
+        captured_model = get_torch_fx_model(model, torch.ones((1, 3, 3, 3)))
         if not weights:
             with pytest.raises(nncf.InternalError):
                 transformation(captured_model)
@@ -343,7 +333,7 @@ class TestQDQInsertion:
 
 def test_node_removal_transformation():
     model = MultiBranchesConnectedModel()
-    captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
+    captured_model = get_torch_fx_model(model, torch.ones((1, 3, 3, 3)))
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
     node = nncf_graph.get_node_by_name("conv2d")
     transformation = node_removal_transformation_builder(node, input_port_id=0)
@@ -356,7 +346,7 @@ def test_node_removal_transformation():
 @pytest.mark.parametrize("target_point", MultiBranchesConnectedModel_TARGET_POINTS)
 def test_output_insertion_transformation(tuple_output: bool, target_point: PTTargetPoint):
     model = MultiBranchesConnectedModel()
-    captured_model = _capture_model(model, torch.ones((1, 3, 3, 3)))
+    captured_model = get_torch_fx_model(model, torch.ones((1, 3, 3, 3)))
 
     if not tuple_output:
         output_node = [node for node in captured_model.graph.nodes if node.op == "output"][0]
@@ -384,41 +374,12 @@ def count_constants(model: torch.fx.GraphModule) -> int:
     return num_constant_nodes
 
 
-def test_create_shared_constant_transformation():
-    model = MultiBranchesConnectedModel()
-    ex_inputs = torch.ones((1, 3, 3, 3))
-    captured_model = _capture_model(model, ex_inputs)
-    shared_constants_unification_transformation(captured_model)
-    nncf_graph = GraphConverter.create_nncf_graph(captured_model)
-    check_graph(
-        nncf_graph, "shared_constants_unification_transformation_test.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True
-    )
-
-
-def get_shared_constant_nodes(nncf_graph: NNCFGraph):
-    """
-    Gets a dict of constant nodes as key and consumer nodes as values which are shared in the model.
-    eg:
-          const
-          /   \
-    node1     node2
-
-    returns ({const:[node1, node2]})
-    """
-    shared_const_node_consumer_node = {}
-    for node in nncf_graph.get_all_nodes():
-        consumer_nodes = nncf_graph.get_next_nodes(node)
-        if node.metatype in CONST_NOOP_METATYPES and len(consumer_nodes) > 1:
-            shared_const_node_consumer_node[node] = consumer_nodes
-    return shared_const_node_consumer_node
-
-
 def insert_qdq_nodes(
     model: torch.fx.GraphModule,
     correct_pattern: bool,
     per_channel: bool,
     node_name: str = "conv2d",
-    w_const_node_name: str = "_param_constant0",
+    w_const_node_name: str = "conv_a_weight",
 ):
     const_node = get_graph_node_by_name(model.graph, w_const_node_name)
     if per_channel:
@@ -468,7 +429,7 @@ def test_compress_post_quantize_transformation(is_per_channel: bool):
     model = MultiBranchesConnectedModel()
     ex_input = torch.ones(1, 3, 224, 224)
 
-    model_with_correct_pattern = _capture_model(model, ex_input)
+    model_with_correct_pattern = get_torch_fx_model(model, ex_input)
     insert_qdq_nodes(model_with_correct_pattern, correct_pattern=True, per_channel=is_per_channel)
     compress_post_quantize_transformation(model_with_correct_pattern)
     graph_name = f"compress_post_quantize_{'per_channel' if is_per_channel else 'per_tensor'}_valid.dot"
@@ -479,7 +440,7 @@ def test_compress_post_quantize_transformation(is_per_channel: bool):
         extended=True,
     )
 
-    model_with_incorrect_pattern = _capture_model(model, ex_input)
+    model_with_incorrect_pattern = get_torch_fx_model(model, ex_input)
     insert_qdq_nodes(model_with_incorrect_pattern, correct_pattern=False, per_channel=is_per_channel)
     compress_post_quantize_transformation(model_with_incorrect_pattern)
     graph_name = f"compress_post_quantize_{'per_channel' if is_per_channel else 'per_tensor'}_invalid.dot"
@@ -491,46 +452,24 @@ def test_compress_post_quantize_transformation(is_per_channel: bool):
     )
 
 
-def test_update_shared_constant():
-    model = MultiBranchesConnectedModel()
-    ex_inputs = torch.ones((1, 3, 3, 3))
-    captured_model = _capture_model(model, ex_inputs)
-
-    shared_constants_unification_transformation(captured_model)
-    nncf_graph = NNCFGraphFactory.create(captured_model)
-    shared_constants_consumers_dict = get_shared_constant_nodes(nncf_graph)
-
-    # This returns all the constant nodes as keys and list of consumer as values
-    consumer_nodes = list(shared_constants_consumers_dict.values())[0]
-
-    constant_update_transformation_builder(consumer_nodes[0], torch.tensor([100]))(captured_model)
-
-    nncf_graph_updated_constant = NNCFGraphFactory.create(captured_model)
-    updated_const_node = nncf_graph_updated_constant.get_previous_nodes(consumer_nodes[0])[1]
-    fx_node_to_check_const = get_graph_node_by_name(captured_model.graph, updated_const_node.node_name)
-    fx_node_to_check_const_value = get_tensor_constant_from_node(fx_node_to_check_const, captured_model)
-
-    assert fx_node_to_check_const_value == torch.tensor([100])
-
-
 def test_get_connected_nodes():
     model = MultiBranchesConnectedModel()
     ex_inputs = torch.ones((1, 3, 3, 3))
-    captured_model = _capture_model(model, ex_inputs)
+    captured_model = get_torch_fx_model(model, ex_inputs)
     connected_nodes_list = _get_connected_nodes(captured_model.graph)
-    assert len(connected_nodes_list) == 18
+    assert len(connected_nodes_list) == 16
 
     add_node = get_graph_node_by_name(captured_model.graph, "add__1")
     conv_1_node = get_graph_node_by_name(captured_model.graph, "conv2d")
     conv_2_node = get_graph_node_by_name(captured_model.graph, "conv2d_1")
     add_node.replace_input_with(conv_2_node, conv_1_node)
     connected_nodes_list = _get_connected_nodes(captured_model.graph)
-    assert len(connected_nodes_list) == 15
+    assert len(connected_nodes_list) == 13
 
 
 def test_constant_folding():
     model = ConstantFoldingTestModel()
-    captured_model = _capture_model(model, torch.ones(model.INPUT_SIZE))
+    captured_model = get_torch_fx_model(model, torch.ones(model.INPUT_SIZE))
     folded_model = deepcopy(captured_model)
     constant_fold(folded_model)
     ex_input = torch.ones(model.INPUT_SIZE)
@@ -542,14 +481,14 @@ def test_constant_folding():
 
 def test_constant_folding_with_constraints(is_per_channel):
     model = ConstantFoldingTestModel()
-    model_with_correct_pattern = _capture_model(model, torch.ones(model.INPUT_SIZE))
+    model_with_correct_pattern = get_torch_fx_model(model, torch.ones(model.INPUT_SIZE))
 
     insert_qdq_nodes(
         model_with_correct_pattern,
         correct_pattern=True,
         per_channel=is_per_channel,
         node_name="linear_1",
-        w_const_node_name="_param_constant3",
+        w_const_node_name="linear_act_weight",
     )
     fold_constant_except_qdq(model_with_correct_pattern)
 

@@ -1,12 +1,12 @@
 {
-    "arg0_1": "PTInputNoopMetatype",
-    "_param_constant0": "PTConstNoopMetatype",
+    "wte_weight": "PTConstNoopMetatype",
+    "linear_weight": "PTConstNoopMetatype",
+    "linear_bias": "PTConstNoopMetatype",
+    "lm_head_weight": "PTConstNoopMetatype",
+    "lm_head_bias": "PTConstNoopMetatype",
+    "input_ids": "PTInputNoopMetatype",
     "embedding": "PTAtenEmbeddingMetatype",
-    "_param_constant1": "PTConstNoopMetatype",
-    "_param_constant2": "PTConstNoopMetatype",
     "linear": "PTLinearMetatype",
-    "_param_constant3": "PTConstNoopMetatype",
-    "_param_constant4": "PTConstNoopMetatype",
     "linear_1": "PTLinearMetatype",
-    "output": "PTOutputNoopMetatype"
+    "output_1": "PTOutputNoopMetatype"
 }
