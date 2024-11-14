@@ -543,7 +543,7 @@ class NoopAggregator(AggregatorBase):
         super().__init__(None, num_samples=num_samples)
 
     def _register_reduced_input_impl(self, x: TensorType) -> None:
-        self._container.append(x)
+        self._container.append(deepcopy(x))
 
     def _aggregate_impl(self):
         return self._container
