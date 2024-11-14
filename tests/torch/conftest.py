@@ -124,13 +124,9 @@ def pytest_addoption(parser: Parser):
 
 
 def pytest_configure(config: Config):
-    regen_dot = config.getoption("--regen-dot", False)
-    if regen_dot:
-        os.environ["NNCF_TEST_REGEN_DOT"] = "1"
-
-    regen_json = config.getoption("--regen-json", False)
-    if regen_json:
-        os.environ["NNCF_TEST_REGEN_JSON"] = "1"
+    for regen_option in ["dot", "json"]:
+        if config.getoption(f"--regen-{regen_option}", False):
+            os.environ[f"NNCF_TEST_REGEN_{regen_option.upper()}"] = "1"
 
 
 @pytest.fixture(scope="module")
