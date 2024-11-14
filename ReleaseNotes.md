@@ -12,8 +12,11 @@ Post-training Quantization:
   - (OpenVINO) Extended support of data-free and data-aware weights compression methods ([nncf.compress_weights()](docs/usage/post_training_compression/weights_compression/Usage.md#user-guide) API) with NF4 per-channel quantization, which makes compressed LLMs more accurate and faster on NPU.
   - Introduced `backup_mode` optional parameter in `nncf.compress_weights()` to specify the data type for embeddings, convolutions and last linear layers during 4-bit weights compression. Available options are INT8_ASYM by default, INT8_SYM, and NONE which retains the original floating-point precision of the model weights.
   - Added preview support for the optimization of models in [Torch FX](https://pytorch.org/docs/stable/fx.html) format, nncf.quantize() and nncf.compress_weights() methods. After the optimization such models can be directly executed via [torch.compile()](https://docs.openvino.ai/2024/openvino-workflow/torch-compile.html). See [int8 quantization example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/torch_fx/resnet18) for more details.
+  - (OpenVINO) Introduced a new option to cache and reuse statistics for the Weight Compression algorithm, reducing the time required to find optimal compression configurations. The [TinyLlama example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/llm_compression/openvino/tiny_llama_find_hyperparams) has been updated to showcase this feature.
+  - Added the `quantizer_propagation_rule` parameter, providing fine-grained control over quantizer propagation. This advanced option is designed to improve accuracy for models where quantizers with different granularity could be merged to per-tensor, potentially affecting model accuracy.
   - ...
 - Fixes:
+  - Resolved an issue with redundant quantizer insertion before elementwise operations, reducing noise introduced by quantization.
   - (OpenVINO) Fixed GPTQ weight compression method for Stable Diffusion models.
   - (Torch, ONNX) Scaled dot product attention pattern quantization setup is aligned with OpenVINO.
   - ...
@@ -21,6 +24,7 @@ Post-training Quantization:
   - The `ultralytics` version has been updated to 8.3.22.
   - Reduction in peak memory by 30-50% for data-aware weight compression with AWQ, SE, LoRA and mixed precision algorithms.
   - Reduction in compression time by 10-20% for weight compression with AWQ algorithm.
+  - (ONNX) SE-block ignored pattern variant for `torchvision` mobilenet_v3 has been extended.
   - ...
 - Tutorials:
   - [Post-Training Optimization of Llama-3.2-11B-Vision Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/mllama-3.2/mllama-3.2.ipynb)
@@ -58,7 +62,7 @@ Deprecations/Removals:
 
 Requirements:
 
-- ...
+- ONNX, ONNXRuntime versions were updated
 
 ## New in Release 2.13.0
 
