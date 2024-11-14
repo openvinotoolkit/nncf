@@ -18,6 +18,7 @@ from nncf.tensor import TensorDataType
 from nncf.tensor.functions import numeric
 
 from ..definitions import TensorBackend
+from ..definitions import TensorDeviceType
 from .numpy_numeric import DTYPE_MAP as DTYPE_MAP_NP
 from .numpy_numeric import DTYPE_MAP_REV as DTYPE_MAP_REV_NP
 
@@ -37,26 +38,9 @@ DTYPE_MAP = {
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
 
-def _ov_astype(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
-    from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
-    from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_astype_model
-
-    a_dtype = DTYPE_MAP_REV[a.get_element_type()]
-
-    model = get_astype_model(
-        OVModelParameters(
-            input_dtypes={"input": a_dtype},
-            output_dtypes={"output": dtype},
-            dynamic_shapes=True,
-            recompile=False,
-            release_memory=True,
-            share_inputs=True,
-            share_outputs=True,
-            return_ov_tensors=True,
-        ),
-        tuple(a.shape),
-    )
-    return model([Tensor(a)])[0].data
+@numeric.device.register(ov.Tensor)
+def _(a: ov.Tensor) -> TensorDeviceType:
+    return TensorDeviceType.CPU
 
 
 @numeric.backend.register(ov.Tensor)
@@ -71,7 +55,7 @@ def _(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
         TensorDataType.int4,
         TensorDataType.uint4,
     ]:
-        return _ov_astype(a, dtype)
+        return _astype_ov(a, dtype)
     return ov.Tensor(a.data.astype(DTYPE_MAP_NP[dtype]))
 
 
@@ -114,6 +98,28 @@ def _(a: ov.Tensor, b: TensorBackend) -> Union[np.ndarray, ov.Tensor]:
             dtype = TensorDataType.uint8
         elif a_dtype == TensorDataType.int4:
             dtype = TensorDataType.int8
-        a = _ov_astype(a, dtype)
+        a = _astype_ov(a, dtype)
 
     return a.data
+
+
+def _astype_ov(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
+    from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
+    from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_astype_model
+
+    a_dtype = DTYPE_MAP_REV[a.get_element_type()]
+
+    model = get_astype_model(
+        OVModelParameters(
+            input_dtypes={"input": a_dtype},
+            output_dtypes={"output": dtype},
+            dynamic_shapes=False,
+            recompile=True,
+            release_memory=True,
+            share_inputs=True,
+            share_outputs=True,
+            return_ov_tensors=True,
+        ),
+        tuple(a.shape),
+    )
+    return model([Tensor(a)])[0].data
