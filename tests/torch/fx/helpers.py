@@ -19,7 +19,6 @@ import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
-from torch._export import capture_pre_autograd_graph
 from torch.fx.passes.graph_drawer import FxGraphDrawer
 
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
@@ -123,15 +122,37 @@ def visualize_fx_model(model: torch.fx.GraphModule, output_svg_path: str):
     g.get_dot_graph().write_svg(output_svg_path)
 
 
-def get_torch_fx_model(model: torch.nn.Module) -> torch.fx.GraphModule:
-    device = next(model.named_parameters())[1].device
-    input_shape = model.INPUT_SIZE
-    if input_shape is None:
-        input_shape = [1, 3, 32, 32]
-    ex_input = torch.ones(input_shape).to(device)
+def get_torch_fx_model(model: torch.nn.Module, ex_input: torch.Tensor) -> torch.fx.GraphModule:
+    """
+    Converts given module to GraphModule.
+
+    :param model: Given torch Module.
+    :return: Exported GraphModule.
+    """
+    try:
+        named_param = next(model.named_parameters())
+    except StopIteration:
+        named_param = None
+    if named_param is None:
+        device = torch.device("cpu")
+    else:
+        device = named_param[1].device
+
+    ex_input = ex_input.to(device)
     model.eval()
-    with disable_patching():
-        fx_model = capture_pre_autograd_graph(model, args=(ex_input,))
+    with torch.no_grad():
+        with disable_patching():
+            return torch.export.export_for_training(model, args=(ex_input,)).module()
+
+
+def get_torch_fx_model_q_transformed(model: torch.nn.Module, ex_input: torch.Tensor) -> torch.fx.GraphModule:
+    """
+    Converts given module to GraphModule and applies required quantization transformations to it.
+
+    :param model: Given torch Module.
+    :return: Exported GraphModule.
+    """
+    fx_model = get_torch_fx_model(model, ex_input)
     apply_quantization_transformations(fx_model)
     return fx_model
 
