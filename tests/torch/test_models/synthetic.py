@@ -592,3 +592,20 @@ class ConstantFoldingTestModel(nn.Module):
         y += 10
         x = self.linear_act(x)
         return x + y
+
+
+class ShortTransformer(torch.nn.Module):
+    def __init__(self, in_features, num_embeddings, share_weights=False):
+        super().__init__()
+        self.wte = torch.nn.Embedding(num_embeddings, in_features)
+        self.linear = torch.nn.Linear(in_features, in_features)
+        self.lm_head = torch.nn.Linear(in_features, num_embeddings)
+
+        if share_weights:
+            self.lm_head.weight = self.wte.weight
+
+    def forward(self, input_ids):
+        x = self.wte(input_ids)
+        x = self.linear(x)
+        res = self.lm_head(x)
+        return res
