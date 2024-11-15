@@ -18,6 +18,7 @@ from nncf.quantization.algorithms.weight_compression.openvino_modeling import OV
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_astype_model
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_decompress_weight_model
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_weight_model
+from nncf.quantization.algorithms.weight_compression.openvino_modeling import run_model
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor.definitions import TensorBackend
@@ -222,3 +223,75 @@ def test_return_ov_tensors(model_getter, return_ov_tensors):
     outputs = model_run_fn(inputs)
 
     assert all([out.backend == (TensorBackend.ov if return_ov_tensors else TensorBackend.numpy) for out in outputs])
+
+
+@pytest.mark.parametrize("release_memory", [True, False])
+def test_release_memory(mocker, release_memory):
+    compiled_model = mocker.Mock()
+    compiled_model.release_memory = mocker.Mock()
+
+    input_mock = mocker.Mock()
+    input_mock.any_name = "input"
+    compiled_model.inputs = [input_mock]
+
+    output_mock = mocker.Mock()
+    compiled_model.return_value = [output_mock]
+
+    ov_model_params = OVModelParameters(input_dtypes={"input": TensorDataType.float32}, release_memory=release_memory)
+    input_tensor = mocker.Mock()
+    input_tensor.dtype = TensorDataType.float32
+    input_tensor.data = [1, 2, 3]
+    inputs = [input_tensor]
+
+    run_model(ov_model_params, compiled_model, return_ov_tensors=False, inputs=inputs)
+    if release_memory:
+        compiled_model.release_memory.assert_called_once()
+    else:
+        compiled_model.release_memory.assert_not_called()
+
+
+@pytest.mark.parametrize("share_inputs", [True, False])
+@pytest.mark.parametrize("share_outputs", [True, False])
+@pytest.mark.parametrize("return_ov_tensors", [True, False])
+def test_share_inputs_outputs(mocker, share_inputs, share_outputs, return_ov_tensors):
+    compiled_model = mocker.Mock()
+
+    input_mock = mocker.Mock()
+    input_mock.any_name = "input"
+    compiled_model.inputs = [input_mock]
+
+    output_mock = mocker.Mock()
+
+    if return_ov_tensors:
+        infer_request = mocker.Mock()
+        compiled_model.create_infer_request.return_value = infer_request
+
+        infer_request.infer = mocker.Mock()
+        infer_request.results = [output_mock]
+
+        infer_request.get_output_tensor.return_value = output_mock
+    else:
+        compiled_model.return_value = [output_mock]
+
+    ov_model_params = OVModelParameters(
+        input_dtypes={"input": TensorDataType.float32},
+        return_ov_tensors=return_ov_tensors,
+        share_inputs=share_inputs,
+        share_outputs=share_outputs,
+    )
+
+    input_tensor = mocker.Mock()
+    input_tensor.dtype = TensorDataType.float32
+    input_tensor.data = [1, 2, 3]
+    inputs = [input_tensor]
+
+    run_model(ov_model_params, compiled_model, return_ov_tensors=return_ov_tensors, inputs=inputs)
+
+    if return_ov_tensors:
+        infer_request.infer.assert_called_once_with(
+            [input_tensor.data], share_inputs=share_inputs, share_outputs=share_outputs
+        )
+    else:
+        compiled_model.assert_called_once_with(
+            [input_tensor.data], share_inputs=share_inputs, share_outputs=share_outputs
+        )
