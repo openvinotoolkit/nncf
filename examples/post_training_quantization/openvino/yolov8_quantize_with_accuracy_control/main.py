@@ -115,7 +115,7 @@ def prepare_validation(model: YOLO, args: Any) -> Tuple[SegmentationValidator, t
 
 
 def benchmark_performance(model_path, config) -> float:
-    command = f"benchmark_app -m {model_path} -d CPU -api async -t 30 -shape '[1,3,{config.imgsz},{config.imgsz}]"
+    command = f"benchmark_app -m {model_path} -d CPU -api async -t 30 -shape '[1,3,{config.imgsz},{config.imgsz}]'"
     cmd_output = subprocess.check_output(command, shell=True)  # nosec
     match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))
     return float(match.group(1))
