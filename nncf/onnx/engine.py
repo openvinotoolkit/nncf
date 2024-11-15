@@ -41,4 +41,4 @@ class ONNXEngine(Engine):
         output_tensors = self.sess.run([], {k: v for k, v in input_data.items() if k in self.input_names})
         model_outputs = self.sess.get_outputs()
 
-        return {output.name: tensor for tensor, output in zip(output_tensors, model_outputs)}
+        return {output.name: np.copy(tensor) for tensor, output in zip(output_tensors, model_outputs)}

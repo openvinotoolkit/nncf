@@ -420,7 +420,7 @@ class RawReducer(TensorReducerBase):
         return None
 
     def _reduce_out_of_place(self, x: List[Tensor]) -> List[Tensor]:
-        return [tensor.clone() for tensor in x]
+        return x
 
 
 class ShapeReducer(TensorReducerBase):
