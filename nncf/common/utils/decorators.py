@@ -55,32 +55,32 @@ def skip_if_dependency_unavailable(dependencies: List[str]) -> Callable[[Callabl
 
 
 class ResultsCacheContainer:
-    def __init__(self):
-        self._cache = {}
-        self._access_count = {}
+    def __init__(self) -> None:
+        self._cache: Dict[Any, Any] = {}
+        self._access_count: Dict[Any, int] = {}
 
-    def clear(self):
+    def clear(self) -> None:
         self._cache.clear()
         self._access_count.clear()
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
         return len(self._cache) == 0
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Any) -> Any:
         self._access_count[item] += 1
         return self._cache[item]
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: Any, value: Any) -> None:
         self._access_count[key] = 0
         self._cache[key] = value
 
-    def __contains__(self, item):
+    def __contains__(self, item: Any) -> bool:
         return item in self._cache
 
 
-def cache_results(cache: ResultsCacheContainer):
-    def decorator(func):
-        def wrapper(*args, disable_caching=False, **kwargs):
+def cache_results(cache: ResultsCacheContainer) -> Callable:
+    def decorator(func: Callable) -> Callable:
+        def wrapper(*args, disable_caching: bool = False, **kwargs) -> Any:
             if disable_caching:
                 return func(*args, **kwargs)
             sig = inspect.signature(func)
