@@ -78,9 +78,9 @@ class ResultsCacheContainer:
         return item in self._cache
 
 
-def cache_results(cache: ResultsCacheContainer) -> Callable:
-    def decorator(func: Callable) -> Callable:
-        def wrapper(*args, disable_caching: bool = False, **kwargs) -> Any:
+def cache_results(cache: ResultsCacheContainer) -> Callable:  # type: ignore
+    def decorator(func: Callable) -> Callable:  # type: ignore
+        def wrapper(*args, disable_caching: bool = False, **kwargs) -> Any:  # type: ignore
             if disable_caching:
                 return func(*args, **kwargs)
             sig = inspect.signature(func)
