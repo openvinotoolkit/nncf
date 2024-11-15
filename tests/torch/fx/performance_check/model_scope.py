@@ -29,7 +29,8 @@ from tests.torch.fx.performance_check.model_builders.ultralytics import Ultralyt
 class ModelConfig:
     model_builder: BaseModelBuilder
     quantization_params: Dict[str, Any]
-    num_iters: int = 1000
+    num_iters: int = 2000
+    torch_export_strict: bool = True
 
 
 MODEL_SCOPE = {
@@ -45,8 +46,15 @@ MODEL_SCOPE = {
             "model_type": ModelType.TRANSFORMER,
         },
     ),
-    "resnet18": ModelConfig(TorchvisionModelBuilder(models.resnet18, models.ResNet18_Weights.DEFAULT), {}, 2000),
-    "resnet50": ModelConfig(TorchvisionModelBuilder(models.resnet50, models.ResNet50_Weights.DEFAULT), {}),
+    "resnet18": ModelConfig(
+        TorchvisionModelBuilder(models.resnet18, models.ResNet18_Weights.DEFAULT),
+        {"preset": nncf.QuantizationPreset.MIXED},
+        2000,
+    ),
+    "resnet50": ModelConfig(
+        TorchvisionModelBuilder(models.resnet50, models.ResNet50_Weights.DEFAULT),
+        {"preset": nncf.QuantizationPreset.MIXED},
+    ),
     "mobilenet_v2": ModelConfig(
         TorchvisionModelBuilder(models.mobilenet_v2, models.MobileNet_V2_Weights.DEFAULT),
         {
@@ -87,6 +95,7 @@ MODEL_SCOPE = {
                 ],
             )
         },
-        num_iters=10,
+        num_iters=100,
+        torch_export_strict=False,
     ),
 }

@@ -23,7 +23,8 @@ class UltralyticsModelBuilder(BaseModelBuilder):
 
     def build(self):
         pt_model = YOLO(self._model_id).model
-        return torch.export.export(pt_model, self.get_example_inputs(), strict=False).module()
+        pt_model(*self.get_example_inputs())
+        return pt_model
 
     def get_example_inputs(self) -> torch.Tensor:
         return (torch.ones(self.INPUT_SHAPE),)
