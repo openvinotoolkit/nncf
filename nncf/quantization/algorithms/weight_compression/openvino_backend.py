@@ -53,6 +53,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import comp
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
+from nncf.tensor.functions.ov import DTYPE_MAP_REV
 
 
 class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
@@ -130,19 +131,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_weight_dtype(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: ov.Model, graph: NNCFGraph
     ) -> TensorDataType:
-        # TODO: use from nncf.tensor.functions.ov import DTYPE_MAP
         ov_type_name = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["dtype"]
-        dtype_map = {
-            "f16": TensorDataType.float16,
-            "bf16": TensorDataType.bfloat16,
-            "f32": TensorDataType.float32,
-            "f64": TensorDataType.float64,
-            "i8": TensorDataType.int8,
-            "i32": TensorDataType.int32,
-            "i64": TensorDataType.int64,
-            "u8": TensorDataType.uint8,
-        }
-        return dtype_map.get(ov_type_name)
+        ov_type = getattr(ov.Type, ov_type_name)
+        return DTYPE_MAP_REV[ov_type]
 
     @staticmethod
     def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Tuple:
