@@ -30,11 +30,11 @@ from anomalib.models import Stfpm
 import nncf
 
 HOME_PATH = Path.home()
-DATASET_PATH = HOME_PATH / ".cache/nncf/datasets/mvtec"
-CHECKPOINT_PATH = HOME_PATH / ".cache/nncf/models/anomalib"
+DATASET_PATH = HOME_PATH / ".cache" / "nncf" / "datasets" / "mvtec"
+CHECKPOINT_PATH = HOME_PATH / ".cache" / "nncf" / "models" / "anomalib"
 ROOT = Path(__file__).parent.resolve()
-FP32_RESULTS_ROOT = ROOT / "fp32"
-INT8_RESULTS_ROOT = ROOT / "int8"
+FP32_RESULTS_ROOT = ROOT / "results" / "fp32"
+INT8_RESULTS_ROOT = ROOT / "results" / "int8"
 CHECKPOINT_URL = "https://storage.openvinotoolkit.org/repositories/nncf/examples/torch/anomalib/stfpm_mvtec.ckpt"
 USE_PRETRAINED = True
 
@@ -61,8 +61,7 @@ def create_dataset(root: Path) -> MVTec:
 
 
 def run_benchmark(model_path: Path, shape: List[int]) -> float:
-    command = f"benchmark_app -m {model_path} -d CPU -api async -t 15"
-    command += f' -shape "[{",".join(str(x) for x in shape)}]"'
+    command = f"benchmark_app -m {model_path} -d CPU -api async -t 15 -shape '[{','.join(str(x) for x in shape)}]'"
     cmd_output = subprocess.check_output(command, shell=True)  # nosec
     print(*str(cmd_output).split("\\n")[-9:-1], sep="\n")
     match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))

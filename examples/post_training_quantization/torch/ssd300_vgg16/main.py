@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import re
 import subprocess
 from pathlib import Path
@@ -33,37 +32,33 @@ from functools import partial
 
 ROOT = Path(__file__).parent.resolve()
 DATASET_URL = "https://ultralytics.com/assets/coco128.zip"
-DATASET_PATH = "~/.cache/nncf/datasets"
+DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
 
 
 def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH, archive="downloaded", data="extracted")
+    downloader = FastDownload(base=DATASET_PATH.resolve(), archive="downloaded", data="extracted")
     return downloader.get(DATASET_URL)
 
 
-def get_model_size(ir_path: str, m_type: str = "Mb", verbose: bool = True) -> float:
-    xml_size = os.path.getsize(ir_path)
-    bin_size = os.path.getsize(os.path.splitext(ir_path)[0] + ".bin")
+def get_model_size(ir_path: Path, m_type: str = "Mb") -> float:
+    xml_size = ir_path.stat().st_size
+    bin_size = ir_path.with_suffix(".bin").stat().st_size
     for t in ["bytes", "Kb", "Mb"]:
         if m_type == t:
             break
         xml_size /= 1024
         bin_size /= 1024
     model_size = xml_size + bin_size
-    if verbose:
-        print(f"Model graph (xml):   {xml_size:.3f} {m_type}")
-        print(f"Model weights (bin): {bin_size:.3f} {m_type}")
-        print(f"Model size:          {model_size:.3f} {m_type}")
+    print(f"Model graph (xml):   {xml_size:.3f} {m_type}")
+    print(f"Model weights (bin): {bin_size:.3f} {m_type}")
+    print(f"Model size:          {model_size:.3f} {m_type}")
     return model_size
 
 
-def run_benchmark(model_path: str, shape=None, verbose: bool = True) -> float:
+def run_benchmark(model_path: Path) -> float:
     command = f"benchmark_app -m {model_path} -d CPU -api async -t 15"
-    if shape is not None:
-        command += f' -shape [{",".join(str(x) for x in shape)}]'
     cmd_output = subprocess.check_output(command, shell=True)  # nosec
-    if verbose:
-        print(*str(cmd_output).split("\\n")[-9:-1], sep="\n")
+    print(*str(cmd_output).split("\\n")[-9:-1], sep="\n")
     match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))
     return float(match.group(1))
 
@@ -157,28 +152,28 @@ def main():
     # Convert to OpenVINO
     dummy_input = torch.randn(1, 3, 480, 480)
 
-    fp32_onnx_path = f"{ROOT}/ssd300_vgg16_fp32.onnx"
+    fp32_onnx_path = ROOT / "ssd300_vgg16_fp32.onnx"
     torch.onnx.export(model.cpu(), dummy_input, fp32_onnx_path)
     ov_model = ov.convert_model(fp32_onnx_path)
 
-    int8_onnx_path = f"{ROOT}/ssd300_vgg16_int8.onnx"
+    int8_onnx_path = ROOT / "ssd300_vgg16_int8.onnx"
     torch.onnx.export(quantized_model.cpu(), dummy_input, int8_onnx_path)
     ov_quantized_model = ov.convert_model(int8_onnx_path)
 
-    fp32_ir_path = f"{ROOT}/ssd300_vgg16_fp32.xml"
+    fp32_ir_path = ROOT / "ssd300_vgg16_fp32.xml"
     ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
     print(f"[1/7] Save FP32 model: {fp32_ir_path}")
-    fp32_model_size = get_model_size(fp32_ir_path, verbose=True)
+    fp32_model_size = get_model_size(fp32_ir_path)
 
-    int8_ir_path = f"{ROOT}/ssd300_vgg16_int8.xml"
+    int8_ir_path = ROOT / "ssd300_vgg16_int8.xml"
     ov.save_model(ov_quantized_model, int8_ir_path)
     print(f"[2/7] Save INT8 model: {int8_ir_path}")
-    int8_model_size = get_model_size(int8_ir_path, verbose=True)
+    int8_model_size = get_model_size(int8_ir_path)
 
     print("[3/7] Benchmark FP32 model:")
-    fp32_fps = run_benchmark(fp32_ir_path, verbose=True)
+    fp32_fps = run_benchmark(fp32_ir_path)
     print("[4/7] Benchmark INT8 model:")
-    int8_fps = run_benchmark(int8_ir_path, verbose=True)
+    int8_fps = run_benchmark(int8_ir_path)
 
     print("[5/7] Validate FP32 model:")
     torch.backends.cudnn.deterministic = True

@@ -13,28 +13,36 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
-import numpy as np
 import onnx
 import onnxruntime
 import torch
-from tqdm import tqdm
+import ultralytics.utils as ul_utils
 from ultralytics.cfg import get_cfg
 from ultralytics.data.converter import coco80_to_coco91_class
 from ultralytics.data.utils import check_det_dataset
-from ultralytics.engine.validator import BaseValidator as Validator
 from ultralytics.models.yolo import YOLO
-from ultralytics.utils import DATASETS_DIR
+from ultralytics.models.yolo.segment.val import SegmentationValidator
 from ultralytics.utils import DEFAULT_CFG
+from ultralytics.utils import SETTINGS
 from ultralytics.utils import ops
 from ultralytics.utils.metrics import ConfusionMatrix
 
 import nncf
+from nncf.common.logging.track_progress import track
 
 ROOT = Path(__file__).parent.resolve()
+DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
+
+# Overwrite dataset path to avoid downloading COCO dataset to NNCF git root directory
+SETTINGS.update(datasets_dir=DATASET_PATH.as_posix())
+ul_utils.DATASETS_DIR = DATASET_PATH
 
 
 def validate(
-    model: onnx.ModelProto, data_loader: torch.utils.data.DataLoader, validator: Validator, num_samples: int = None
+    model: onnx.ModelProto,
+    data_loader: torch.utils.data.DataLoader,
+    validator: SegmentationValidator,
+    num_samples: int = None,
 ) -> Tuple[Dict, int, int]:
     validator.seen = 0
     validator.jdict = []
@@ -49,7 +57,7 @@ def validate(
     output_names = [output.name for output in session.get_outputs()]
     num_outputs = len(output_names)
 
-    for batch_i, batch in enumerate(data_loader):
+    for batch_i, batch in enumerate(track(data_loader, description="Validating")):
         if num_samples is not None and batch_i == num_samples:
             break
         batch = validator.preprocess(batch)
@@ -71,7 +79,7 @@ def validate(
     return stats, validator.seen, validator.nt_per_class.sum()
 
 
-def print_statistics(stats: np.ndarray, total_images: int, total_objects: int) -> None:
+def print_statistics(stats: Dict[str, float], total_images: int, total_objects: int) -> None:
     print("Metrics(Box):")
     mp, mr, map50, mean_ap = (
         stats["metrics/precision(B)"],
@@ -84,37 +92,34 @@ def print_statistics(stats: np.ndarray, total_images: int, total_objects: int) -
     pf = "%20s" + "%12i" * 2 + "%12.3g" * 4  # print format
     print(pf % ("all", total_images, total_objects, mp, mr, map50, mean_ap))
 
-    # print the mask metrics for segmentation
-    if "metrics/precision(M)" in stats:
-        print("Metrics(Mask):")
-        s_mp, s_mr, s_map50, s_mean_ap = (
-            stats["metrics/precision(M)"],
-            stats["metrics/recall(M)"],
-            stats["metrics/mAP50(M)"],
-            stats["metrics/mAP50-95(M)"],
-        )
-        # Print results
-        s = ("%20s" + "%12s" * 6) % ("Class", "Images", "Labels", "Precision", "Recall", "mAP@.5", "mAP@.5:.95")
-        print(s)
-        pf = "%20s" + "%12i" * 2 + "%12.3g" * 4  # print format
-        print(pf % ("all", total_images, total_objects, s_mp, s_mr, s_map50, s_mean_ap))
+    print("Metrics(Mask):")
+    s_mp, s_mr, s_map50, s_mean_ap = (
+        stats["metrics/precision(M)"],
+        stats["metrics/recall(M)"],
+        stats["metrics/mAP50(M)"],
+        stats["metrics/mAP50-95(M)"],
+    )
+    # Print results
+    s = ("%20s" + "%12s" * 6) % ("Class", "Images", "Labels", "Precision", "Recall", "mAP@.5", "mAP@.5:.95")
+    print(s)
+    pf = "%20s" + "%12i" * 2 + "%12.3g" * 4  # print format
+    print(pf % ("all", total_images, total_objects, s_mp, s_mr, s_map50, s_mean_ap))
 
 
-def prepare_validation(model: YOLO, args: Any) -> Tuple[Validator, torch.utils.data.DataLoader]:
-    validator = model.task_map[model.task]["validator"](args=args)
+def prepare_validation(model: YOLO, args: Any) -> Tuple[SegmentationValidator, torch.utils.data.DataLoader]:
+    validator: SegmentationValidator = model.task_map[model.task]["validator"](args=args)
     validator.data = check_det_dataset(args.data)
     validator.stride = 32
-
-    data_loader = validator.get_dataloader(f"{DATASETS_DIR}/coco128-seg", 1)
-
     validator.is_coco = True
     validator.class_map = coco80_to_coco91_class()
     validator.names = model.model.names
     validator.metrics.names = validator.names
     validator.nc = model.model.model[-1].nc
-    validator.nm = 32
     validator.process = ops.process_mask
     validator.plot_masks = []
+
+    coco_data_path = DATASET_PATH / "coco128-seg"
+    data_loader = validator.get_dataloader(coco_data_path.as_posix(), 1)
 
     return validator, data_loader
 
@@ -129,7 +134,7 @@ def prepare_onnx_model(model: YOLO, model_name: str) -> Tuple[onnx.ModelProto, P
 
 
 def quantize_ac(
-    model: onnx.ModelProto, data_loader: torch.utils.data.DataLoader, validator_ac: Validator
+    model: onnx.ModelProto, data_loader: torch.utils.data.DataLoader, validator_ac: SegmentationValidator
 ) -> onnx.ModelProto:
     input_name = model.graph.input[0].name
 
@@ -140,7 +145,7 @@ def quantize_ac(
     def validation_ac(
         val_model: onnx.ModelProto,
         validation_loader: torch.utils.data.DataLoader,
-        validator: Validator,
+        validator: SegmentationValidator,
         num_samples: int = None,
     ) -> float:
         validator.seen = 0
@@ -231,11 +236,11 @@ def run_example():
     print(f"[2/5] Save INT8 model: {int8_model_path}")
 
     print("[3/5] Validate ONNX FP32 model:")
-    fp_stats, total_images, total_objects = validate(fp32_model, tqdm(data_loader), validator)
+    fp_stats, total_images, total_objects = validate(fp32_model, data_loader, validator)
     print_statistics(fp_stats, total_images, total_objects)
 
     print("[4/5] Validate ONNX INT8 model:")
-    q_stats, total_images, total_objects = validate(int8_model, tqdm(data_loader), validator)
+    q_stats, total_images, total_objects = validate(int8_model, data_loader, validator)
     print_statistics(q_stats, total_images, total_objects)
 
     print("[5/5] Report:")

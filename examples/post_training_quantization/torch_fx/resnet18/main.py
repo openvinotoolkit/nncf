@@ -44,11 +44,11 @@ CHECKPOINT_URL = (
     "https://storage.openvinotoolkit.org/repositories/nncf/openvino_notebook_ckpts/302_resnet18_fp32_v1.pth"
 )
 DATASET_URL = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
-DATASET_PATH = "~/.cache/nncf/datasets"
+DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
 
 
 def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH, archive="downloaded", data="extracted")
+    downloader = FastDownload(base=DATASET_PATH.resolve(), archive="downloaded", data="extracted")
     return downloader.get(DATASET_URL)
 
 
