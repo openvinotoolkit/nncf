@@ -16,14 +16,13 @@ from typing import Any, Dict, Tuple
 
 import openvino as ov
 import torch
-import ultralytics.utils as ul_utils
 from ultralytics.cfg import get_cfg
 from ultralytics.data.converter import coco80_to_coco91_class
 from ultralytics.data.utils import check_det_dataset
 from ultralytics.models.yolo import YOLO
 from ultralytics.models.yolo.segment.val import SegmentationValidator
+from ultralytics.utils import DATASETS_DIR
 from ultralytics.utils import DEFAULT_CFG
-from ultralytics.utils import SETTINGS
 from ultralytics.utils import ops
 from ultralytics.utils.metrics import ConfusionMatrix
 
@@ -33,11 +32,6 @@ from nncf.common.logging.track_progress import track
 MODEL_NAME = "yolov8n-seg"
 
 ROOT = Path(__file__).parent.resolve()
-DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
-
-# Overwrite dataset path to avoid downloading COCO dataset to NNCF git root directory
-SETTINGS.update(datasets_dir=DATASET_PATH.as_posix())
-ul_utils.DATASETS_DIR = DATASET_PATH
 
 
 def validate(
@@ -108,7 +102,7 @@ def prepare_validation(model: YOLO, args: Any) -> Tuple[SegmentationValidator, t
     validator.process = ops.process_mask
     validator.plot_masks = []
 
-    coco_data_path = DATASET_PATH / "coco128-seg"
+    coco_data_path = DATASETS_DIR / "coco128-seg"
     data_loader = validator.get_dataloader(coco_data_path.as_posix(), 1)
 
     return validator, data_loader
