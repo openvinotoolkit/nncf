@@ -187,28 +187,6 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor, inpu
     return bias_update_transformation
 
 
-def shared_constants_unification_transformation(model: torch.fx.GraphModule):
-    """
-    checks FX graph for shared constants and eliminates redundant
-    shared constant while keeping only the first instance of the constant node.
-    This unification transformation is cruicial since the current algorithms(min_max, solver, BC, etc.)
-    for torch fx do not utilize the is_shared attribute of nodes for shared constants.
-
-    :param model: Target Torch FX GraphModule
-    """
-    prev_targets = {}
-
-    for source_node in model.graph.nodes:
-        dist_node = list(source_node.users)
-        if source_node.target in prev_targets and source_node.op in ("get_attr",):
-            dist_node[0].replace_input_with(source_node, prev_targets[source_node.target])
-        else:
-            prev_targets[source_node.target] = source_node
-
-    model.graph.eliminate_dead_code()
-    model.recompile()
-
-
 def constant_update_transformation_builder(
     node: NNCFNode, value: torch.Tensor, input_port_id: int = 1
 ) -> TransformationFNType:
@@ -541,6 +519,7 @@ def _is_supported_batch_norm_for_training(node: torch.fx.Node):
     Return True if the given node refers to an aten batch norm op QAT supports.
     """
     supported_ops = [
+        torch.ops.aten.batch_norm.default,
         torch.ops.aten._native_batch_norm_legit.default,
         torch.ops.aten.cudnn_batch_norm.default,
         torch.ops.aten.miopen_batch_norm.default,
@@ -807,7 +786,6 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     fuse_conv_bn(model)
     separate_conv_and_bias(model)
     separate_linear_and_bias(model)
-    shared_constants_unification_transformation(model)
 
 
 def fold_constant_except_qdq(model: torch.fx.GraphModule):

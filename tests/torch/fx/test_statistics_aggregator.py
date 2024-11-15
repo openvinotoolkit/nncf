@@ -15,7 +15,6 @@ import numpy as np
 import pytest
 import torch
 from torch import nn
-from torch._export import capture_pre_autograd_graph
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
@@ -23,9 +22,9 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorReducerB
 from nncf.experimental.torch.fx.statistics.aggregator import FXStatisticsAggregator
 from nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend import FXFastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
-from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from nncf.torch.graph.graph import PTTargetPoint
 from tests.common.test_statistics_aggregator import TemplateTestStatisticsAggregator
+from tests.torch.fx.helpers import get_torch_fx_model
 
 IDENTITY_NODE_NAME = "add"
 CONV_NODE_NAME = "conv2d"
@@ -60,9 +59,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def get_backend_model(self, dataset_samples):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
         conv_w = self.dataset_samples_to_conv_w(np.array(sample))
-        with disable_patching():
-            model = capture_pre_autograd_graph(IdentityConv(conv_w), args=(torch.ones(INPUT_SHAPE),))
-            return model
+        return get_torch_fx_model(IdentityConv(conv_w), torch.ones(INPUT_SHAPE))
 
     def get_statistics_aggregator(self, dataset):
         return FXStatisticsAggregator(dataset)
