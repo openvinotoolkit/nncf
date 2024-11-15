@@ -909,7 +909,7 @@ def ceil(a: Tensor) -> Tensor:
 
 @functools.singledispatch
 @tensor_guard
-def divide(a: Union[Tensor, float], b: Union[Tensor, float], invert: Optional[bool] = True) -> Tensor:
+def inverted_divide(a: Union[Tensor, float], b: Union[Tensor, float], invert: Optional[bool] = True) -> Tensor:
     """
     Divide two tensors or a tensor and a float.
 
@@ -927,7 +927,7 @@ def divide(a: Union[Tensor, float], b: Union[Tensor, float], invert: Optional[bo
 
 @functools.singledispatch
 @tensor_guard
-def inplace_divide(a: Union[Tensor, float], b: Union[Tensor, float], invert: Optional[bool] = True) -> None:
+def inplace_inverted_divide(a: Union[Tensor, float], b: Union[Tensor, float], invert: Optional[bool] = True) -> None:
     """
     In-place division of two tensors or a tensor and a float.
 

@@ -1695,3 +1695,17 @@ class TemplateTestNNCFTensorOperators:
         for act, abs_ref in zip(res, abs_res_ref):
             assert isinstance(act, Tensor)
             assert fns.allclose(fns.abs(act), abs_ref, atol=1e-7)
+
+    def test_inverted_divide(self):
+        a = Tensor(self.to_tensor([1e8])).astype(TensorDataType.float32)
+        b = Tensor(self.to_tensor([7])).astype(TensorDataType.float32)
+        result = a / b
+        result_inverted_divide = fns.inverted_divide(a, b)
+        assert fns.allclose(result, Tensor(self.to_tensor([14285714])), atol=0, rtol=0)
+        assert fns.allclose(result_inverted_divide, Tensor(self.to_tensor([14285715])), atol=0, rtol=0)
+
+        a /= b
+        a_copy = Tensor(self.to_tensor([1e8])).astype(TensorDataType.float32)
+        fns.inplace_inverted_divide(a_copy, b)
+        assert fns.allclose(a, result, atol=0, rtol=0)
+        assert fns.allclose(a_copy, result_inverted_divide, atol=0, rtol=0)
