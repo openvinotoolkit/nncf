@@ -7,13 +7,14 @@ Post-training Quantization:
 - Breaking changes:
   - ...
 - General:
-  - ...
+  - Switching from setup.py to pyproject.toml for project configuration.
 - Features:
   - (OpenVINO) Extended support of data-free and data-aware weights compression methods ([nncf.compress_weights()](docs/usage/post_training_compression/weights_compression/Usage.md#user-guide) API) with NF4 per-channel quantization, which makes compressed LLMs more accurate and faster on NPU.
   - Introduced `backup_mode` optional parameter in `nncf.compress_weights()` to specify the data type for embeddings, convolutions and last linear layers during 4-bit weights compression. Available options are INT8_ASYM by default, INT8_SYM, and NONE which retains the original floating-point precision of the model weights.
   - Added preview support for the optimization of models in [Torch FX](https://pytorch.org/docs/stable/fx.html) format, nncf.quantize() and nncf.compress_weights() methods. After the optimization such models can be directly executed via [torch.compile()](https://docs.openvino.ai/2024/openvino-workflow/torch-compile.html). See [int8 quantization example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/torch_fx/resnet18) for more details.
   - (OpenVINO) Introduced a new option to cache and reuse statistics for the Weight Compression algorithm, reducing the time required to find optimal compression configurations. The [TinyLlama example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/llm_compression/openvino/tiny_llama_find_hyperparams) has been updated to showcase this feature.
   - Added the `quantizer_propagation_rule` parameter, providing fine-grained control over quantizer propagation. This advanced option is designed to improve accuracy for models where quantizers with different granularity could be merged to per-tensor, potentially affecting model accuracy.
+  - (Experimental: Torch) Added experimental model tracing and execution pre-post hooks based on TorchFunctionMode.
   - ...
 - Fixes:
   - Resolved an issue with redundant quantizer insertion before elementwise operations, reducing noise introduced by quantization.
@@ -63,6 +64,7 @@ Deprecations/Removals:
 Requirements:
 
 - ONNX, ONNXRuntime versions were updated
+- Updated PyTorch (2.5.1) and Torchvision (0.20.1) versions.
 
 ## New in Release 2.13.0
 
