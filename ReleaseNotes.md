@@ -4,32 +4,32 @@
 
 Post-training Quantization:
 
-- Breaking changes:
-  - ...
 - General:
-  - Switching from setup.py to pyproject.toml for project configuration.
+  - The main installation method was changed from `setup.py` to `pyproject.toml` approach.
 - Features:
-  - (OpenVINO) Extended support of data-free and data-aware weights compression methods ([nncf.compress_weights()](docs/usage/post_training_compression/weights_compression/Usage.md#user-guide) API) with NF4 per-channel quantization, which makes compressed LLMs more accurate and faster on NPU.
   - Introduced `backup_mode` optional parameter in `nncf.compress_weights()` to specify the data type for embeddings, convolutions and last linear layers during 4-bit weights compression. Available options are INT8_ASYM by default, INT8_SYM, and NONE which retains the original floating-point precision of the model weights.
- (Experimental: Torch FX) Added experimental support for quantization and weights compression of [Torch FX](https://pytorch.org/docs/stable/fx.html) models. The compressed models can be directly executed via [torch.compile(compressed_model, backend="openvino")](https://docs.openvino.ai/2024/openvino-workflow/torch-compile.html), see [int8 quantization example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/torch_fx/resnet18). The list of supported features:
-    - INT8 quantization with SmoothQuant, MinMax, Fast Bias Correction and Bias Correction algorithms via nncf.quantize().
-    - Data free INT8 and INT4 weights compression with nncf.compress_weights().
-    - Data free mixed-precision data weights compression with nncf.compress_weights(). "ratio" parameter is specified the percent of the rest layers compressed to 4-bit, e.g. ratio=0.9 means 90% of layers compressed to the corresponding 4-bit data type and the rest to a `backup_mode`.
-  - (OpenVINO) Introduced a new option to cache and reuse statistics for the Weight Compression algorithm, reducing the time required to find optimal compression configurations. The [TinyLlama example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/llm_compression/openvino/tiny_llama_find_hyperparams) has been updated to showcase this feature.
   - Added the `quantizer_propagation_rule` parameter, providing fine-grained control over quantizer propagation. This advanced option is designed to improve accuracy for models where quantizers with different granularity could be merged to per-tensor, potentially affecting model accuracy.
-  - (Experimental: Torch) Added experimental model tracing and execution pre-post hooks based on TorchFunctionMode.
-  - ...
+  - Introduced `nncf.data.generate_text_data` API method that utilizes LLM to generate data for further data-aware optimization. See the [example](examples/llm_compression/openvino/tiny_llama_synthetic_data/) for details.
+  - (OpenVINO) Extended support of data-free and data-aware for `nncf.compress_weights()` with NF4 per-channel quantization, which makes compressed LLMs more accurate and faster on NPU.
+  - (OpenVINO) Introduced a new option to cache and reuse statistics for the Weight Compression algorithm, reducing the time required to find optimal compression configurations. See the [TinyLlama example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/llm_compression/openvino/tiny_llama_find_hyperparams) for details.
+  - (TorchFX, Experimental) Added support for quantization and weight compression of [Torch FX](https://pytorch.org/docs/stable/fx.html) models. The compressed models can be directly executed via `torch.compile(compressed_model, backend="openvino")` (see details [here](https://docs.openvino.ai/2024/openvino-workflow/torch-compile.html)). Also, the [INT8 quantization example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/torch_fx/resnet18) was added. The list of supported features:
+    - INT8 quantization with SmoothQuant, MinMax, FastBiasCorrection and BiasCorrection algorithms via `nncf.quantize()`.
+    - Data free INT8, INT4 and mixed-precision weights compression with `nncf.compress_weights()`.
+  - (Torch2, Experimental) Added model tracing and execution pre-post hooks based on TorchFunctionMode.
 - Fixes:
   - Resolved an issue with redundant quantizer insertion before elementwise operations, reducing noise introduced by quantization.
+  - Fixed type mismatch issue for `nncf.quantize_with_accuracy_control()`.
+  - Fixed BiasCorrection algorithm for specific branching cases.
   - (OpenVINO) Fixed GPTQ weight compression method for Stable Diffusion models.
-  - (Torch, ONNX) Scaled dot product attention pattern quantization setup is aligned with OpenVINO.
-  - ...
+  - (OpenVINO) Fixed issue with the variational statistics processing for `nncf.compress_weights()`.
+  - (PyTorch, ONNX) Scaled dot product attention pattern quantization setup is aligned with OpenVINO.
 - Improvements:
-  - The `ultralytics` version has been updated to 8.3.22.
-  - Reduction in peak memory by 30-50% for data-aware weight compression with AWQ, SE, LoRA and mixed precision algorithms.
-  - Reduction in compression time by 10-20% for weight compression with AWQ algorithm.
+  - Reduction in peak memory by 30-50% for data-aware `nncf.compress_weights()` with AWQ, ScaleEstimation, LoRA and mixed-precision algorithms.
+  - Reduction in compression time by 10-20% for `nncf.compress_weights()` with AWQ algorithm.
+  - Aligned behavior for ignored subgraph between different `networkx` versions.
+  - Extended ignored patterns with RoPE block for `nncf.ModelType.TRANSFORMER` scheme.
+  - (OpenVINO) Extended to the ignored scope for `nncf.ModelType.TRANSFORMER` scheme with GroupNorm metatype.
   - (ONNX) SE-block ignored pattern variant for `torchvision` mobilenet_v3 has been extended.
-  - ...
 - Tutorials:
   - [Post-Training Optimization of Llama-3.2-11B-Vision Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/mllama-3.2/mllama-3.2.ipynb)
   - [Post-Training Optimization of YOLOv11 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov11-optimization/yolov11-object-detection.ipynb)
@@ -38,36 +38,20 @@ Post-training Quantization:
   - [Post-Training Optimization of LLM ReAct Agent Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-agent-react/llm-agent-react.ipynb)
   - [Post-Training Optimization of CatVTON Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/catvton/catvton.ipynb)
 - Known issues:
-  - ...
-
-Compression-aware training:
-
-- Breaking changes:
-  - ...
-- General:
-  - ...
-- Features:
-  - ...
-- Fixes:
-  - ...
-- Improvements:
-  - ...
-- Tutorials:
-  - ...
-- Known issues:
-  - ...
+  - (ONNX) `nncf.quantize()` method can generate inaccurate INT8 results for models with the BiasCorrection algorithm.
 
 Deprecations/Removals:
 
-- nncf.torch.create_compressed_model() function has been deprecated for PyTorch backend.
-- Removed support for python 3.8.
-- The `tensorflow_addons` has been removed from the dependencies.
-- ...
+- (PyTorch) `nncf.torch.create_compressed_model()` function has been deprecated.
+- Removed support for Python 3.8.
+- Removed `tensorflow_addons` from the dependencies.
 
 Requirements:
 
-- ONNX, ONNXRuntime versions were updated
+- Updated ONNX (1.17.0) and ONNXRuntime (1.19.2) versions.
 - Updated PyTorch (2.5.1) and Torchvision (0.20.1) versions.
+- Updated NumPy version (<2.2.0).
+- Updated Ultralytics (8.3.22).
 
 ## New in Release 2.13.0
 
