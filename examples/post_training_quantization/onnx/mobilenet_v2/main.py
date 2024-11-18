@@ -63,9 +63,16 @@ def validate(path_to_model: Path, validation_loader: torch.utils.data.DataLoader
 
 
 def run_benchmark(path_to_model: Path, shape: List[int]) -> float:
-    command = f"benchmark_app -m {path_to_model} -d CPU -api async -t 15 -shape '[{','.join(str(x) for x in shape)}]'"
-    cmd_output = subprocess.check_output(command, shell=True)  # nosec
-    print(*str(cmd_output).split("\\n")[-9:-1], sep="\n")
+    command = [
+        "benchmark_app",
+        "-m", path_to_model.as_posix(),
+        "-d", "CPU",
+        "-api", "async",
+        "-t", "15",
+        "-shape", str(shape),
+    ]  # fmt: skip
+    cmd_output = subprocess.check_output(command, text=True)
+    print(*cmd_output.splitlines[-8:], sep="\n")
     match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))
     return float(match.group(1))
 

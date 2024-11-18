@@ -82,11 +82,17 @@ def prepare_validation(model: YOLO, args: Any) -> Tuple[DetectionValidator, torc
     return validator, data_loader
 
 
-def benchmark_performance(model_path, config) -> float:
-    command = f"benchmark_app -m {model_path} -d CPU -api async -t 30 -shape '[1,3,{config.imgsz},{config.imgsz}]'"
-    cmd_output = subprocess.check_output(command, shell=True)  # nosec
-
-    match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))
+def benchmark_performance(model_path: Path, config) -> float:
+    command = [
+        "benchmark_app",
+        "-m", model_path.as_posix(),
+        "-d", "CPU",
+        "-api", "async",
+        "-t", "30",
+        "-shape", str([1, 3, config.imgsz, config.imgsz]),
+    ]  # fmt: skip
+    cmd_output = subprocess.check_output(command, text=True)
+    match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
     return float(match.group(1))
 
 

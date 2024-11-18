@@ -19,13 +19,18 @@ from typing import Callable, Dict, List, Set, TypeVar, Union
 
 import numpy as np
 
-import nncf
-from nncf.common.utils.os import is_linux
-from nncf.common.utils.os import is_windows
 from tests.cross_fw.shared.paths import GITHUB_REPO_URL
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 
 TensorType = TypeVar("TensorType")
+
+
+def is_windows() -> bool:
+    return "win32" in sys.platform
+
+
+def is_linux() -> bool:
+    return "linux" in sys.platform
 
 
 def get_cli_dict_args(args):
@@ -83,7 +88,7 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
     elif package_type == "build_w":
         run_cmd_line = f"{python_executable_with_venv} -m build -w"
     else:
-        raise nncf.ValidationError(f"Invalid package type: {package_type}")
+        raise ValueError(f"Invalid package type: {package_type}")
 
     subprocess.run(run_cmd_line, check=True, shell=True, cwd=PROJECT_ROOT)
     if backends:

@@ -209,9 +209,16 @@ def prepare_tiny_imagenet_200(dataset_dir: Path):
 
 
 def run_benchmark(model_path: Path, shape: List[int]) -> float:
-    command = f"benchmark_app -m {model_path} -d CPU -api async -t 15 -shape '[{','.join(str(x) for x in shape)}]'"
-    cmd_output = subprocess.check_output(command, shell=True)  # nosec
-    match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))
+    command = [
+        "benchmark_app",
+        "-m", model_path.as_posix(),
+        "-d", "CPU",
+        "-api", "async",
+        "-t", "15",
+        "-shape", str(shape),
+    ]  # fmt: skip
+    cmd_output = subprocess.check_output(command, text=True)
+    match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
     return float(match.group(1))
 
 
