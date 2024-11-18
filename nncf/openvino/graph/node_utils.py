@@ -113,6 +113,8 @@ def get_const_value(const_node: ov.Node, cast_bf16_to_fp32: Optional[bool] = Tru
     This method is applicable only for the floating-point constant data.
 
     :param const_node: OpenVINO node.
+    :param cast_bf16_to_fp32: Whether to cast bf16 node data to fp32 or not. If False and the node contains bf16 data,
+        the resulting bf16 value will be returned encoded inside a numpy.float16 array.
     :return: The constant value.
     """
     if const_node.get_element_type() == ov.Type.bf16 and cast_bf16_to_fp32:

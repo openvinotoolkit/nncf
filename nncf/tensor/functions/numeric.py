@@ -910,12 +910,18 @@ def ceil(a: Tensor) -> Tensor:
 @functools.singledispatch
 @tensor_guard
 def to_backend(a: Tensor, b: TensorBackend) -> Tensor:
+    """
+    Change backend of the tensor to the given one.
+    :param a: Tensor to change backend for.
+    :param b: Target backend to change to.
+    :return: Tensor in the target backend.
+    """
     return Tensor(to_backend(a.data, b))
 
 
 @functools.singledispatch
 @tensor_guard
-def divide(a: Union[Tensor, float], b: Union[Tensor, float], invert: Optional[bool] = True) -> Tensor:
+def inverted_divide(a: Union[Tensor, float], b: Union[Tensor, float], invert: Optional[bool] = True) -> Tensor:
     """
     Divide two tensors or a tensor and a float.
     This function divides `a` by `b`. If `invert` is True, it performs the division as `a * (1.0 / b)`.
@@ -931,7 +937,7 @@ def divide(a: Union[Tensor, float], b: Union[Tensor, float], invert: Optional[bo
 
 @functools.singledispatch
 @tensor_guard
-def inplace_divide(a: Union[Tensor, float], b: Union[Tensor, float], invert: Optional[bool] = True) -> None:
+def inplace_inverted_divide(a: Union[Tensor, float], b: Union[Tensor, float], invert: Optional[bool] = True) -> None:
     """
     In-place division of two tensors or a tensor and a float.
     This function divides `a` by `b` in place. If `invert` is True, it performs the division as `a *= (1.0 / b)`.

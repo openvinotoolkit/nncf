@@ -16,6 +16,8 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import openvino as ov
+from openvino._pyopenvino.op import Parameter
+from openvino.runtime import Node
 from openvino.runtime import opset13 as opset
 
 from nncf.common.utils.decorators import ResultsCacheContainer
@@ -35,6 +37,10 @@ OV_MODEL_CACHE = ResultsCacheContainer()
 
 @dataclass(init=False)
 class OVModelParameters:
+    """
+    A class to hold parameters for building and inferring an OpenVINO model.
+    """
+
     def __init__(
         self,
         input_dtypes: Optional[Dict[str, TensorDataType]] = None,
@@ -46,6 +52,18 @@ class OVModelParameters:
         share_outputs: bool = True,
         return_ov_tensors: bool = False,
     ):
+        """
+        :param input_dtypes: Optional dictionary mapping input names to their data types.
+        :param output_dtypes: Optional dictionary mapping output names to their data types.
+        :param dynamic_shapes: Whether to use dynamic shapes for the model. When dynamic shapes are used and
+            recompile is False, it allows to save on the number of models stored in a model cache.
+        :param recompile: Whether to recompile the model before every inference. Otherwise, compiled models are cached.
+        :param release_memory: Whether to release memory after every inference. If memory is released, it will be
+            reallocated during every inference, reducing performance to some extent.
+        :param share_inputs: Whether to share input tensors. Avoids cloning inputs for inference.
+        :param share_outputs: Whether to share output tensors. Avoids cloning outputs after the inference.
+        :param return_ov_tensors: Whether to return results as OpenVINO tensors or NumPy arrays.
+        """
         self.input_dtypes = input_dtypes or {}
         self.output_dtypes = output_dtypes or {}
         self.dynamic_shapes = dynamic_shapes
@@ -94,9 +112,19 @@ class OVModelParameters:
         )
 
 
-def run_model(
-    ov_model_params: OVModelParameters, compiled_model: ov.CompiledModel, return_ov_tensors: bool, inputs: TensorList
+ModelAsNodes = Tuple[List[Parameter], List[Node], OVModelParameters]
+
+
+def _infer_ov_model(
+    ov_model_params: OVModelParameters, compiled_model: ov.CompiledModel, inputs: TensorList
 ) -> TensorList:
+    """
+    Run compiled OpenVINO model inference on the given inputs.
+    :param ov_model_params: OV model related parameters.
+    :param compiled_model: Compiled OpenVINO model.
+    :param inputs: Input tensors.
+    :return: List of output tensors. Tensor backend is OV if return_ov_tensors is True, else NumPy.
+    """
     # Check that input dtypes match the expected dtypes
     for i, inp in enumerate(compiled_model.inputs):
         input_name = inp.any_name
@@ -107,7 +135,7 @@ def run_model(
 
     # Infer the model
     inputs = [inp.data for inp in inputs]
-    if return_ov_tensors:
+    if ov_model_params.return_ov_tensors:
         infer_request = compiled_model.create_infer_request()
         infer_request.infer(
             inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs
@@ -134,10 +162,28 @@ def get_compress_weight_model(
     zero_point_shape: Optional[Tuple] = None,
     reduction_axes: Optional[Tuple] = None,
     return_nodes: Optional[bool] = False,
-) -> ModelCallable:
+) -> Union[ModelCallable, ModelAsNodes]:
+    """
+    Get a model that compresses weights using the given configuration.
+    :param ov_model_params: OV model parameters.
+    :param config: Compression configuration.
+    :param weight_shape: Shape of the weight to compress. Weight is assumed to be already reshaped as needed.
+    :param scale_shape: Optional shape of the scale. If not provided, scale will be computed by the OV model.
+        Otherwise, it is expected that the scale tensor is given as an input to the model.
+    :param zero_point_shape: Optional shape of the zero point tensor. If not provided and the mode is asymmetric,
+        zero point will be computed by the OV model. Otherwise, it is expected that the zero point tensor is provided
+        as an input.
+    :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale (and z.p.) are provided as
+        inputs.
+    :param return_nodes: Whether to return the OV model inputs parameters and results nodes instead of the model
+        callable.
+    :return: A model callable that compresses weights using the given configuration. Or a model as nodes, if
+        `return_nodes` is True.
+    """
     if scale_shape is None and zero_point_shape is not None:
         raise Exception("Zero point shape can only be provided if scale shape is provided.")
 
+    # Set dynamic shapes if needed
     if ov_model_params.dynamic_shapes:
         weight_shape = (-1,) * len(weight_shape)
         if scale_shape is not None:
@@ -166,6 +212,25 @@ def get_compress_decompress_weight_model(
     reduction_axes: Optional[Tuple] = None,
     return_compressed_weight: Optional[bool] = False,
 ) -> ModelCallable:
+    """
+    Get a model that performs compression and decompression of the given weight.
+    :param ov_model_params: OV model parameters.
+    :param config: Compression configuration.
+    :param weight_shape: Shape of the weight. Weight is assumed to be already reshaped as needed.
+    :param scale_shape: Optional shape of the scale. If not provided, scale will be computed by the OV model.
+        Otherwise, it is expected that the scale tensor is given as an input to the model.
+    :param zero_point_shape: Optional shape of the zero point tensor. If not provided and the mode is asymmetric,
+        zero point will be computed by the OV model. Otherwise, it is expected that the zero point is provided as an
+        input.
+    :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale (and z.p.) are provided as
+        inputs.
+    :param return_compressed_weight: Whether to also return compressed weight, scale, (and zero point) besides the
+        decompressed weight.
+    :return: A model callable that returns a decompressed weight, and optionally compressed weight, scale,
+        (and zero point) if `return_compressed_weight` is True.
+    """
+
+    # Set dynamic shapes if needed
     if ov_model_params.dynamic_shapes:
         weight_shape = (-1,) * len(weight_shape)
         if scale_shape is not None:
@@ -194,8 +259,9 @@ def _build_compress_model(
     zero_point_shape: Optional[Tuple] = None,
     reduction_axes: Optional[Tuple] = None,
     return_nodes: bool = False,
-) -> Union[ModelCallable, Tuple[OVModelParameters, List[ov._pyopenvino.Node], List[ov._pyopenvino.Node]]]:
+) -> Union[ModelCallable, ModelAsNodes]:
     is_int_asym = config.is_int_asym
+
     default_input_dtypes = {
         "scale": TensorDataType.float32,
         "zero_point": TensorDataType.int32,
@@ -205,9 +271,14 @@ def _build_compress_model(
         "scale": TensorDataType.float32,
         "zero_point": TensorDataType.int32,
     }
+
+    # Update input and output dtypes with the default values
     ov_model_params = copy.deepcopy(ov_model_params)
     ov_model_params.input_dtypes = {**default_input_dtypes, **ov_model_params.input_dtypes}
     ov_model_params.output_dtypes = {**default_output_dtypes, **ov_model_params.output_dtypes}
+
+    if "weight" not in ov_model_params.input_dtypes:
+        raise ValueError("Input weight dtype is required!")
 
     weight_dtype = ov_model_params.input_dtypes["weight"]
     input_scale_dtype = ov_model_params.input_dtypes["scale"]
@@ -255,12 +326,8 @@ def _build_compress_model(
 
     num_bits = config.num_bits
     eps = np.finfo(np.float32).eps
-    if is_int_asym:
-        level_low = 0
-        level_high = 2**num_bits - 1
-    else:
-        level_low = -(2 ** (num_bits - 1))
-        level_high = 2 ** (num_bits - 1) - 1
+    level_low = 0 if is_int_asym else -(2 ** (num_bits - 1))
+    level_high = 2**num_bits - 1 if is_int_asym else 2 ** (num_bits - 1) - 1
 
     min_values = None
     if scale_shape is not None:
@@ -270,12 +337,9 @@ def _build_compress_model(
     else:
         # Compute scale
         if is_int_asym:
-            min_values = opset.reduce_min(
-                weight, reduction_axes=reduction_axes, keep_dims=True
-            )  # [a1, r, a2] -> [a1, 1, a2]
-            max_values = opset.reduce_max(
-                weight, reduction_axes=reduction_axes, keep_dims=True
-            )  # [a1, r, a2] -> [a1, 1, a2]
+            # [a1, r, a2] -> [a1, 1, a2]
+            min_values = opset.reduce_min(weight, reduction_axes=reduction_axes, keep_dims=True)
+            max_values = opset.reduce_max(weight, reduction_axes=reduction_axes, keep_dims=True)
             min_values, max_values = opset.convert(min_values, ov.Type.f32), opset.convert(max_values, ov.Type.f32)
 
             levels = level_high - level_low + 1
@@ -300,9 +364,8 @@ def _build_compress_model(
     elif is_int_asym:
         # Compute zero point
         if min_values is None:
-            min_values = opset.reduce_min(
-                weight, reduction_axes=reduction_axes, keep_dims=True
-            )  # [a1, r, a2] -> [a1, 1, a2]
+            # [a1, r, a2] -> [a1, 1, a2]
+            min_values = opset.reduce_min(weight, reduction_axes=reduction_axes, keep_dims=True)
             min_values = opset.convert(min_values, ov.Type.f32)
         zero_point = opset.constant(level_low, ov.Type.f32) - opset.round(min_values / scale)
         zero_point = opset.clamp(zero_point, level_low, level_high)
@@ -325,12 +388,12 @@ def _build_compress_model(
             ov_results.append(zero_point)
 
     if return_nodes:
-        return ov_model_params, ov_parameters, ov_results
+        return ov_parameters, ov_results, ov_model_params
 
     model = ov.Model(ov_results, ov_parameters)
     compiled_model = ov.compile_model(model, device_name="CPU")
 
-    return partial(run_model, ov_model_params, compiled_model, ov_model_params.return_ov_tensors)
+    return partial(_infer_ov_model, ov_model_params, compiled_model)
 
 
 @cache_results(OV_MODEL_CACHE)
@@ -345,6 +408,7 @@ def _build_compress_decompress_model(
 ) -> ModelCallable:
     default_output_dtypes = {"decompressed_weight": TensorDataType.float32}
     if not return_compressed_weight:
+        # If compressed weight is not returned to a user, we can keep it in float32 to avoid additional conversion
         default_output_dtypes["compressed_weight"] = TensorDataType.float32
     ov_model_params = copy.deepcopy(ov_model_params)
     ov_model_params.output_dtypes = {**default_output_dtypes, **ov_model_params.output_dtypes}
@@ -353,7 +417,8 @@ def _build_compress_decompress_model(
     if decompressed_weight_dtype != TensorDataType.float32:
         raise ValueError(f"Decompressed weight must be of float32 data type. But found: {decompressed_weight_dtype}.")
 
-    ov_model_params, ov_parameters, ov_results = get_compress_weight_model(
+    # Get compression model as input/result nodes and potentially modified ov model parameters
+    ov_parameters, ov_results, ov_model_params = get_compress_weight_model(
         ov_model_params, config, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_nodes=True
     )
 
@@ -384,10 +449,21 @@ def _build_compress_decompress_model(
     model = ov.Model(ov_results, ov_parameters)
     compiled_model = ov.compile_model(model, device_name="CPU")
 
-    return partial(run_model, ov_model_params, compiled_model, ov_model_params.return_ov_tensors)
+    return partial(_infer_ov_model, ov_model_params, compiled_model)
 
 
 def get_astype_model(ov_model_params: OVModelParameters, input_shape: Tuple) -> ModelCallable:
+    """
+    Return a model that cast the input of the given shape to the given data type. Especially useful for
+    casting from/to data types not supported by NumPy such as bfloat16, uint4 and int4.
+    These data types are represented as the following data types in numpy:
+        - bfloat16 -> np.float16,
+        - uint4 -> uint8,
+        - int4 -> int8.
+    :param ov_model_params: OV model related parameters.
+    :param input_shape: Shape of the tensor to cast.
+    :return: A model callable that casts the input tensor to the given data type.
+    """
     if ov_model_params.dynamic_shapes:
         input_shape = (-1,) * len(input_shape)
     return _build_astype_model(ov_model_params, input_shape, disable_caching=ov_model_params.recompile)
@@ -411,4 +487,4 @@ def _build_astype_model(ov_model_params: OVModelParameters, arg_shape: Tuple) ->
     model = ov.Model([res], [arg])
     compiled_model = ov.compile_model(model, device_name="CPU")
 
-    return partial(run_model, ov_model_params, compiled_model, ov_model_params.return_ov_tensors)
+    return partial(_infer_ov_model, ov_model_params, compiled_model)

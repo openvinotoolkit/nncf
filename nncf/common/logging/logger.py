@@ -90,5 +90,10 @@ def warn_bkc_version_mismatch(backend: str, bkc_version: str, current_version: s
 
 
 @lru_cache(None)
-def log_once(level, message):
+def log_once(level: int, message: str) -> None:
+    """
+    Logs a message only once.
+    :param level: Logging level, e.g. logging.WARNING.
+    :param message: The message to log.
+    """
     nncf_logger.log(level, message)

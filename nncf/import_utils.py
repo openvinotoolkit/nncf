@@ -29,4 +29,8 @@ if _openvino_available:
 
 
 def is_openvino_available():
+    """
+    Check if OpenVINO is available.
+    :return: True if openvino package is installed, False otherwise.
+    """
     return _openvino_available

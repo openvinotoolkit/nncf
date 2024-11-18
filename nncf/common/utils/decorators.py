@@ -55,8 +55,14 @@ def skip_if_dependency_unavailable(dependencies: List[str]) -> Callable[[Callabl
 
 
 class ResultsCacheContainer:
+    """
+    A container for results decorated with @cache_results decorator.
+    """
+
     def __init__(self) -> None:
+        # Stores the results of the decorated function
         self._cache: Dict[Any, Any] = {}
+        # Stores the number of times the cached result was accessed
         self._access_count: Dict[Any, int] = {}
 
     def clear(self) -> None:
@@ -79,6 +85,15 @@ class ResultsCacheContainer:
 
 
 def cache_results(cache: ResultsCacheContainer) -> Callable:  # type: ignore
+    """
+    Decorator to cache the results of a function.
+
+    Decorated function additionally accepts a `disable_caching` argument do disable caching if needed. If it is True,
+    the result will not be stored saved to a cache. Also, if there is a corresponding result in the cache, it will be
+    recomputed.
+    :param cache: A cache container where results will be stored.
+    """
+
     def decorator(func: Callable) -> Callable:  # type: ignore
         def wrapper(*args, disable_caching: bool = False, **kwargs) -> Any:  # type: ignore
             if disable_caching:

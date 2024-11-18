@@ -30,6 +30,7 @@ from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatis
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.openvino.graph.model_transformer import OVModelTransformer
+from nncf.openvino.graph.node_utils import convert_if_needed
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
@@ -242,8 +243,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         compressed_const = self._create_ov_const_from_tensor(
             compressed_weight.tensor, compression_dtype, name=const_node_name
         )
-        if compressed_const.get_element_type() != compression_dtype:
-            compressed_const = opset.convert(compressed_const, compression_dtype)
+        compressed_const = convert_if_needed(compressed_const, compression_dtype)
         converted_const = opset.convert(compressed_const, ov.Type.f16)
 
         if compressed_weight.zero_point is not None:
@@ -258,8 +258,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         scale_const = self._create_ov_const_from_tensor(
             compressed_weight.scale, scale_dtype, name=f"{const_node_name}/scale"
         )
-        if scale_const.get_element_type() != ov.Type.f16:
-            scale_const = opset.convert(scale_const, ov.Type.f16)
+        scale_const = convert_if_needed(scale_const, ov.Type.f16)
 
         mul = opset.multiply(
             converted_const,
@@ -338,6 +337,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         # reset name_to_node_mapping
         self.name_to_node_mapping = None
 
+        # clear openvino model cache
         OV_MODEL_CACHE.clear()
 
         return model
@@ -350,6 +350,14 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def _create_ov_const_from_tensor(x: Tensor, dtype: ov.Type, name: Optional[str] = None) -> Constant:
+        """
+        Create an OpenVINO Constant node from the given tensor.
+        :param x: Data tensor. Supports NumPy and OV tensor backends. If x backend is OV, the constant node is created
+            directly from underlying OV tensor.
+        :param dtype: Data type of the constant.
+        :param name: Optional name of the constant.
+        :return: OpenVINO Constant node.
+        """
         if x.backend == TensorBackend.ov:
             assert x.data.get_element_type() == dtype
             return opset.constant(x.data, name=name)

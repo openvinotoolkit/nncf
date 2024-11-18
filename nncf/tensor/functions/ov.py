@@ -55,6 +55,7 @@ def _(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
         TensorDataType.int4,
         TensorDataType.uint4,
     ]:
+        # Cannot cast to/from bfloat16, uint4, int4 directly
         return _astype_ov(a, dtype)
     return ov.Tensor(a.data.astype(DTYPE_MAP_NP[dtype]))
 
@@ -104,6 +105,12 @@ def _(a: ov.Tensor, b: TensorBackend) -> Union[np.ndarray, ov.Tensor]:
 
 
 def _astype_ov(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
+    """
+    Cast to a different data type using an OpenVINO model.
+    :param a: Tensor to cast.
+    :param dtype: Data type to cast to.
+    :return: Casted openvino tensor.
+    """
     from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
     from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_astype_model
 

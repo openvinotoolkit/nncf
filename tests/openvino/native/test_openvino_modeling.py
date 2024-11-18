@@ -15,10 +15,10 @@ from nncf import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import OV_MODEL_CACHE
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
+from nncf.quantization.algorithms.weight_compression.openvino_modeling import _infer_ov_model
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_astype_model
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_decompress_weight_model
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_weight_model
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import run_model
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor.definitions import TensorBackend
@@ -243,7 +243,7 @@ def test_release_memory(mocker, release_memory):
     input_tensor.data = [1, 2, 3]
     inputs = [input_tensor]
 
-    run_model(ov_model_params, compiled_model, return_ov_tensors=False, inputs=inputs)
+    _infer_ov_model(ov_model_params, compiled_model, inputs=inputs)
     if release_memory:
         compiled_model.release_memory.assert_called_once()
     else:
@@ -285,7 +285,7 @@ def test_share_inputs_outputs(mocker, share_inputs, share_outputs, return_ov_ten
     input_tensor.data = [1, 2, 3]
     inputs = [input_tensor]
 
-    run_model(ov_model_params, compiled_model, return_ov_tensors=return_ov_tensors, inputs=inputs)
+    _infer_ov_model(ov_model_params, compiled_model, inputs=inputs)
 
     if return_ov_tensors:
         infer_request.infer.assert_called_once_with(
