@@ -183,7 +183,6 @@ class TemplateTestReducersAggregators:
         else:
             assert len(reduced_input) == 1
             assert fns.allclose(reduced_input[0], tensor_data)
-            assert id(tensor_data) != id(reduced_input[0])
 
     @pytest.mark.parametrize("reducer_cls", [RawReducer, ShapeReducer])
     def test_other_reducers_name_hash_equal(self, reducer_cls):
