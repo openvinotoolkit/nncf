@@ -68,7 +68,6 @@ def validate(
 
     output = model.outputs[0]
 
-    counter = 0
     for batch in val_loader:
         anomaly_maps = model(batch["image"])[output]
         pred_scores = np.max(anomaly_maps, axis=(1, 2, 3))
@@ -78,10 +77,8 @@ def validate(
         per_sample_metric = 1.0 if pred_label == groundtruth_label else 0.0
         per_sample_metric_values.append(per_sample_metric)
         metric.update(torch.from_numpy(pred_scores), groundtruth_label)
-        counter += 1
 
     metric_value = metric.compute()
-    print(f"Validate: dataset length = {counter}, metric value = {metric_value:.3f}")
     return metric_value, per_sample_metric_values
 
 

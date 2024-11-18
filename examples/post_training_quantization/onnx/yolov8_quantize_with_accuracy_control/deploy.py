@@ -74,7 +74,6 @@ def run_benchmark(model_path: Path, config) -> float:
         "-t", "30",
         "-shape", str([1, 3, config.imgsz, config.imgsz]),
     ]  # fmt: skip
-
     cmd_output = subprocess.check_output(command, text=True)
     match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
     return float(match.group(1))

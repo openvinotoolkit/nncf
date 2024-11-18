@@ -15,7 +15,7 @@ import subprocess
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Tuple
+from typing import Tuple
 
 import openvino as ov
 import torch
@@ -208,14 +208,14 @@ def prepare_tiny_imagenet_200(dataset_dir: Path):
     val_images_dir.rmdir()
 
 
-def run_benchmark(model_path: Path, shape: List[int]) -> float:
+def run_benchmark(model_path: Path, shape: Tuple[int, ...]) -> float:
     command = [
         "benchmark_app",
         "-m", model_path.as_posix(),
         "-d", "CPU",
         "-api", "async",
         "-t", "15",
-        "-shape", str(shape),
+        "-shape", str(list(shape)),
     ]  # fmt: skip
     cmd_output = subprocess.check_output(command, text=True)
     match = re.search(r"Throughput\: (.+?) FPS", cmd_output)

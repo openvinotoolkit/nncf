@@ -156,7 +156,6 @@ def quantize_ac(
         output_names = [output.name for output in session.get_outputs()]
         num_outputs = len(output_names)
 
-        counter = 0
         for batch_i, batch in enumerate(validation_loader):
             if num_samples is not None and batch_i == num_samples:
                 break
@@ -173,13 +172,12 @@ def quantize_ac(
                 ]
             preds = validator.postprocess(preds)
             validator.update_metrics(preds, batch)
-            counter += 1
+
         stats = validator.get_stats()
         if num_outputs == 1:
             stats_metrics = stats["metrics/mAP50-95(B)"]
         else:
             stats_metrics = stats["metrics/mAP50-95(M)"]
-        print(f"Validate: dataset length = {counter}, metric value = {stats_metrics:.3f}")
         return stats_metrics, None
 
     quantization_dataset = nncf.Dataset(data_loader, transform_fn)

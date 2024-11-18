@@ -72,7 +72,7 @@ def run_benchmark(path_to_model: Path, shape: List[int]) -> float:
         "-shape", str(shape),
     ]  # fmt: skip
     cmd_output = subprocess.check_output(command, text=True)
-    print(*cmd_output.splitlines[-8:], sep="\n")
+    print(*cmd_output.splitlines()[-8:], sep="\n")
     match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))
     return float(match.group(1))
 
