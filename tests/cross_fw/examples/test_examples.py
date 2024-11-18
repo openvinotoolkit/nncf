@@ -54,6 +54,7 @@ def test_examples(
     is_check_performance: bool,
     ov_version_override: str,
     data: str,
+    reuse_venv: bool,
 ):
     print("\n" + "-" * 64)
     print(f"Example name: {example_name}")
@@ -64,6 +65,9 @@ def test_examples(
 
     backend = example_params["backend"]
     skip_if_backend_not_selected(backend, backends_list)
+    if reuse_venv:
+        # Use example directory as tmp_path
+        tmp_path = Path(example_params["requirements"]).parent
     venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {backend})
     pip_with_venv = get_pip_executable_with_venv(venv_path)
     if "requirements" in example_params:

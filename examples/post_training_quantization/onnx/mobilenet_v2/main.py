@@ -41,6 +41,7 @@ def download_dataset() -> Path:
 
 
 def download_model() -> Path:
+    MODEL_PATH.mkdir(exist_ok=True, parents=True)
     return download_url(MODEL_URL, MODEL_PATH.resolve())
 
 
