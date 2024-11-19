@@ -104,6 +104,7 @@ def dump_to_dir(
         mapping[sanitized_name] = original_name
 
         try:
+            fail_if_symlink(file_path)
             with gzip.open(file_path, "wb") as f:
                 pickle.dump(statistics_value, f)
         except (IOError, pickle.PicklingError) as e:
