@@ -35,6 +35,7 @@ Post-training Quantization:
   - [Post-Training Optimization of Pixtral Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/pixtral/pixtral.ipynb)
   - [Post-Training Optimization of LLM ReAct Agent Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-agent-react/llm-agent-react.ipynb)
   - [Post-Training Optimization of CatVTON Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/catvton/catvton.ipynb)
+  - [Post-Training Optimization of Stable Diffusion v3 Model in Torch FX Representation](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/stable-diffusion-v3/stable-diffusion-v3-torch-fx.ipynb)
 - Known issues:
   - (ONNX) `nncf.quantize()` method can generate inaccurate INT8 results for MobileNet models with the BiasCorrection algorithm.  
 
