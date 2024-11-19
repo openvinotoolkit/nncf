@@ -12,14 +12,28 @@ import gzip
 import json
 import pickle
 import re
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, cast
+from typing import IO, Any, BinaryIO, Dict, Iterator, Optional, TextIO, Tuple, Union, cast
 
 import nncf
 from nncf.common.utils.os import fail_if_symlink
 from nncf.common.utils.os import safe_open
 
 METADATA_FILE = "statistics_metadata.json"
+
+
+@contextmanager
+def gzip_safe_open(file: Path, *args, **kwargs) -> Iterator[Union[TextIO, BinaryIO, IO[Any]]]:  # type: ignore
+    """
+    Safe function to open file with gzip and return a stream.
+
+    :param file: The path to the file.
+    :return: A file object.
+    """
+    fail_if_symlink(file)
+    with gzip.open(str(file), *args, **kwargs) as f:
+        yield f
 
 
 def sanitize_filename(filename: str) -> str:
@@ -72,8 +86,7 @@ def load_from_dir(dir_path: str) -> Tuple[Dict[str, Any], Dict[str, str]]:
             continue  # Skip the metadata file
 
         try:
-            fail_if_symlink(statistics_file)
-            with gzip.open(statistics_file, "rb") as f:
+            with gzip_safe_open(statistics_file, "rb") as f:
                 sanitized_name = statistics_file.name
                 original_name = mapping.get(sanitized_name, sanitized_name)
                 statistics[original_name] = pickle.load(f)
@@ -104,7 +117,7 @@ def dump_to_dir(
         mapping[sanitized_name] = original_name
 
         try:
-            with gzip.open(file_path, "wb") as f:
+            with gzip_safe_open(file_path, "rb") as f:
                 pickle.dump(statistics_value, f)
         except (IOError, pickle.PicklingError) as e:
             raise nncf.InternalError(f"Failed to write data to file {file_path}: {e}")
