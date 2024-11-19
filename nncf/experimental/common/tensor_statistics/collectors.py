@@ -470,6 +470,21 @@ class MeanReducer(TensorReducerBase):
         return [fns.mean(x, reduction_axes, keepdims=self._keepdims)]
 
 
+class MeanVarianceReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
+
+
+class MaxVarianceReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
+
+
+class MeanAbsMaxReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
+
+
 class QuantileReducerBase(TensorReducerBase):
     def __init__(
         self,
