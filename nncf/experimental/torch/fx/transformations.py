@@ -428,9 +428,7 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
             dq_node = graph.call_function(dequantize_op, tuple(dq_inputs), {})
             dq_node.meta["val"] = copy(meta_val)
 
-        args = list(target_node.args)
-        args[target_point.input_port_id] = dq_node
-        target_node.args = tuple(args)
+        target_node.replace_input_with(input_node, dq_node)
     else:
         raise nncf.InternalError(f"Unexpected target type: {target_point.target_type}")
 
@@ -471,7 +469,14 @@ def get_input_node(target_point: PTTargetPoint, target_node: torch.fx.Node) -> t
         raise nncf.InternalError(f"Unexpected target type: {target_type}")
     if target_type == TargetType.OPERATOR_POST_HOOK:
         return target_node
-    return target_node.args[target_point.input_port_id]
+
+    return _get_node_by_input_port_id(target_node, target_point.input_port_id)
+
+
+def _get_node_by_input_port_id(node: torch.fx.Node, input_port_id: int) -> torch.fx.Node:
+    if node.target == torch.ops.aten.cat.default:
+        return node.args[0][input_port_id]
+    return node.args[input_port_id]
 
 
 def get_ctx_manager(graph: torch.fx.Graph, target_point: PTTargetPoint) -> Callable:
