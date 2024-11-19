@@ -41,7 +41,7 @@ Post-training Quantization:
 
 Deprecations/Removals:
 
-- The main installation method was changed from `setup.py` to `pyproject.toml` approach. The installation through `setup.py` does not work anymore. No impact on the installation from PyPI and Conda.
+- Migrated from using `setup.py` to `pyproject.toml` for the build and package configuration. The installation through `setup.py` does not work anymore. No impact on the installation from PyPI and Conda.
 - Removed support for Python 3.8.
 - (PyTorch) `nncf.torch.create_compressed_model()` function has been deprecated.
 
