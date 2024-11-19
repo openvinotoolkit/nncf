@@ -49,8 +49,8 @@ Requirements:
 
 - Updated ONNX (1.17.0) and ONNXRuntime (1.19.2) versions.
 - Updated PyTorch (2.5.1) and Torchvision (0.20.1) versions.
-- Updated NumPy version (<2.2.0).
-- Updated Ultralytics (8.3.22).
+- Updated NumPy (<2.2.0) version support.
+- Updated Ultralytics (8.3.22) version.
 
 ## New in Release 2.13.0
 
@@ -78,7 +78,6 @@ Post-training Quantization:
   - [Post-Training Optimization of Qwen2Audio Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen2-audio/qwen2-audio.ipynb)
   - [Post-Training Optimization of NuExtract Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/nuextract-structure-extraction/nuextract-structure-extraction.ipynb)
   - [Post-Training Optimization of MiniCPM-V2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/minicpm-v-multimodal-chatbot/minicpm-v-multimodal-chatbot.ipynb)
-  - [Post-Training Optimization of Stable Diffusion v3 Model in Torch FX format](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/stable-diffusion-v3/stable-diffusion-v3-torch-fx.ipynb)
 
 Compression-aware training:
 
