@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, cast
 
 import nncf
+from nncf.common.utils.os import safe_open
 
 METADATA_FILE = "statistics_metadata.json"
 
@@ -35,7 +36,7 @@ def load_metadata(dir_path: Path) -> Dict[str, Any]:
     """
     metadata_file = dir_path / METADATA_FILE
     if metadata_file.exists():
-        with open(metadata_file, "r") as f:
+        with safe_open(metadata_file, "r") as f:
             return cast(Dict[str, Any], json.load(f))
     return {"mapping": {}, "metadata": {}}
 
@@ -47,7 +48,7 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
     :param dir_path: The directory where the metadata file will be stored.
     """
     metadata_file = dir_path / METADATA_FILE
-    with open(metadata_file, "w") as f:
+    with safe_open(metadata_file, "w") as f:
         json.dump(metadata, f, indent=4)
 
 
