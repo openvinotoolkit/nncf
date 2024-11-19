@@ -43,8 +43,7 @@ class ONNXEngine(Engine):
 
         outputs_safe = {}
         for tensor, output in zip(output_tensors, model_outputs):
-            # Some outputs overlap with inputs and may share memory
-            # To avoid modifications to the input tensors, make a copy
+            # Workaround for https://github.com/microsoft/onnxruntime/issues/21922
             outputs_safe[output.name] = tensor.copy() if output.name in self.input_names else tensor
 
         return outputs_safe
