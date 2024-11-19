@@ -22,7 +22,7 @@ Post-training Quantization:
   - (OpenVINO) Fixed issue with the variational statistics processing for `nncf.compress_weights()`.
   - (PyTorch, ONNX) Scaled dot product attention pattern quantization setup is aligned with OpenVINO.
 - Improvements:
-  - Reduction in peak memory by 30-50% for data-aware `nncf.compress_weights()` with AWQ, ScaleEstimation, LoRA and mixed-precision algorithms.
+  - Reduction in peak memory by 30-50% for data-aware `nncf.compress_weights()` with AWQ, Scale Estimation, LoRA and mixed-precision algorithms.
   - Reduction in compression time by 10-20% for `nncf.compress_weights()` with AWQ algorithm.
   - Aligned behavior for ignored subgraph between different `networkx` versions.
   - Extended ignored patterns with RoPE block for `nncf.ModelType.TRANSFORMER` scheme.
