@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, cast
 
 import nncf
+from nncf.common.utils.os import fail_if_symlink
 from nncf.common.utils.os import safe_open
 
 METADATA_FILE = "statistics_metadata.json"
@@ -71,6 +72,7 @@ def load_from_dir(dir_path: str) -> Tuple[Dict[str, Any], Dict[str, str]]:
             continue  # Skip the metadata file
 
         try:
+            fail_if_symlink(statistics_file)
             with gzip.open(statistics_file, "rb") as f:
                 sanitized_name = statistics_file.name
                 original_name = mapping.get(sanitized_name, sanitized_name)
