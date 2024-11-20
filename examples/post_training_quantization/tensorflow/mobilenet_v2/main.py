@@ -17,9 +17,9 @@ from typing import List
 import openvino as ov
 import tensorflow as tf
 import tensorflow_datasets as tfds
-from tqdm import tqdm
 
 import nncf
+from nncf.common.logging.track_progress import track
 
 ROOT = Path(__file__).parent.resolve()
 WEIGHTS_URL = "https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/tf_model.h5"
@@ -31,7 +31,7 @@ def validate(model: ov.Model, val_loader: tf.data.Dataset) -> tf.Tensor:
     output = compiled_model.outputs[0]
 
     metric = tf.keras.metrics.CategoricalAccuracy(name="acc@1")
-    for images, labels in tqdm(val_loader):
+    for images, labels in track(val_loader):
         pred = compiled_model(images.numpy())[output]
         metric.update_state(labels, pred)
 
