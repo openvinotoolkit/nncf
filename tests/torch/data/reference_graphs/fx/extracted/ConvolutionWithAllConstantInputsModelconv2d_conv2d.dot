@@ -1,0 +1,11 @@
+strict digraph  {
+"0 _conv_w" [id=0, type=get_attr];
+"1 add" [id=1, type=add];
+"2 conv2d_input" [id=2, type=input];
+"3 conv2d" [id=3, type=conv2d];
+"4 output" [id=4, type=output];
+"0 _conv_w" -> "1 add"  [label="(1, 1, 1, 1)", style=solid];
+"1 add" -> "3 conv2d"  [label="(1, 1, 1, 1)", style=solid];
+"2 conv2d_input" -> "3 conv2d"  [label=None, style=solid];
+"3 conv2d" -> "4 output"  [label="(1, 1, 1, 1)", style=solid];
+}

@@ -23,12 +23,12 @@ import yaml
 from packaging import version
 
 import nncf
+from tests.cross_fw.shared.openvino_version import get_openvino_version
 from tests.post_training.model_scope import PTQ_TEST_CASES
 from tests.post_training.model_scope import WC_TEST_CASES
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import RunInfo
-from tests.shared.openvino_version import get_openvino_version
 
 DATA_ROOT = Path(__file__).parent / "data"
 
@@ -106,7 +106,10 @@ def ref_data_correction(data: Dict, file_name: str):
         with file_path.open() as f:
             correction_data = yaml.safe_load(f)
         for m_name, c_data in correction_data.items():
-            data[m_name].update(c_data)
+            if m_name in data:
+                data[m_name].update(c_data)
+            else:
+                data[m_name] = c_data
         print(f"Applied correction file {file_path}")
 
     return data
@@ -125,17 +128,18 @@ def fixture_wc_reference_data():
     path_reference = DATA_ROOT / "wc_reference_data.yaml"
     with path_reference.open() as f:
         data = yaml.safe_load(f)
-        fp32_test_cases = defaultdict(dict)
-        for test_case_name in data:
-            if "atol" not in data[test_case_name]:
-                data[test_case_name]["atol"] = 1e-5
-            reported_name = test_case_name.split("_backend_")[0]
-            fp32_case_name = f"{reported_name}_backend_FP32"
-            fp32_test_cases[fp32_case_name]["metric_value"] = 1
-            if "atol" not in fp32_test_cases[fp32_case_name]:
-                fp32_test_cases[fp32_case_name]["atol"] = 1e-10
-        data.update(fp32_test_cases)
-    return ref_data_correction(data, "wc_reference_data")
+    data = ref_data_correction(data, "wc_reference_data")
+    fp32_test_cases = defaultdict(dict)
+    for test_case_name in data:
+        if "atol" not in data[test_case_name]:
+            data[test_case_name]["atol"] = 1e-5
+        reported_name = test_case_name.split("_backend_")[0]
+        fp32_case_name = f"{reported_name}_backend_FP32"
+        fp32_test_cases[fp32_case_name]["metric_value"] = 1
+        if "atol" not in fp32_test_cases[fp32_case_name]:
+            fp32_test_cases[fp32_case_name]["atol"] = 1e-10
+    data.update(fp32_test_cases)
+    return data
 
 
 @pytest.fixture(scope="session", name="ptq_result_data")
@@ -343,7 +347,7 @@ def test_weight_compression(
     start_time = time.perf_counter()
     try:
         if test_case_name not in wc_reference_data:
-            raise RuntimeError(f"{test_case_name} is not defined in `wc_reference_data` fixture")
+            pytest.skip(f"{test_case_name} is not defined in `wc_reference_data` fixture")
         test_model_param = WC_TEST_CASES[test_case_name]
         maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
         pipeline_cls = test_model_param["pipeline_cls"]

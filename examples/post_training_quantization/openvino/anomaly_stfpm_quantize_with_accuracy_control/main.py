@@ -125,7 +125,7 @@ def run_example():
         image_size=(256, 256),
         train_batch_size=1,
         eval_batch_size=1,
-        num_workers=1,
+        num_workers=0,
     )
     datamodule.setup()
     test_loader = datamodule.test_dataloader()
@@ -159,6 +159,7 @@ def run_example():
     ov_quantized_model = nncf.quantize_with_accuracy_control(
         model=ov_model,
         calibration_dataset=calibration_dataset,
+        subset_size=len(anomaly_images),
         validation_dataset=validation_dataset,
         validation_fn=validation_fn,
         max_drop=max_accuracy_drop,

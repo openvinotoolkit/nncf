@@ -13,6 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
 from collections import deque
+from copy import deepcopy
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import nncf
@@ -20,11 +21,7 @@ import nncf.tensor.functions as fns
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
-from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import PercentileTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.tensor import Tensor
@@ -73,13 +70,13 @@ class TensorReducerBase(ABC):
         :param x: Tensor to register.
         """
 
-    @abstractmethod
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
         """
         Returns correspondent inplace operation builder if inplace operations are available in backend.
 
         :return: Inplace operation builder if possible else None.
         """
+        return None
 
     def __call__(self, x: List[Tensor]):
         if any(t.isempty() for t in x):
@@ -193,12 +190,13 @@ class TensorCollector:
     a dict could be collected by `get_statistics` call.
     """
 
-    def __init__(self, statistic_container: Optional[TensorStatistic] = None) -> None:
+    def __init__(self, statistic_container: Optional[Type[TensorStatistic]] = None) -> None:
         self._reducers: Set[TensorReducerBase] = set()
         self._aggregators: Dict[Tuple[int, int, int], AggregatorBase] = {}
         self._stat_container_kwargs_map: Dict[str, Tuple[int, int, int]] = {}
         self._stat_container = statistic_container
-        self._enabled = True
+        self.enable()
+        self.clear_cache()
 
     @property
     def num_samples(self) -> Optional[int]:
@@ -260,19 +258,6 @@ class TensorCollector:
             self._aggregators[key] = aggregator
         self._stat_container_kwargs_map[container_key] = key
 
-    def get_output_info(self, target_node_name: str, port_id: int) -> List[Tuple[int, List[str]]]:
-        """
-        Returns list of pairs of reducers names and correspondent output names.
-
-        :param target_node_name: Target node name to assemble output name.
-        :param port_id: Target node specific port id to assemble output name.
-        :returns: List of pairs of reducers hashes and correspondent output names.
-        """
-        retval = []
-        for reducer in self._reducers:
-            retval.append((hash(reducer), reducer.get_output_names(target_node_name, port_id)))
-        return retval
-
     def register_inputs(self, inputs: Dict[int, List[Tensor]]) -> None:
         """
         Registers given input in TensorCollector.
@@ -280,9 +265,8 @@ class TensorCollector:
         :param inputs: Tensor inputs in format of dict where keys
             are reducer names and values are correspondent input tensors
         """
-        if not self._enabled:
+        if not self.enabled:
             return
-
         reduced_inputs = {}
         for reducer in self._reducers:
             reducer_hash = hash(reducer)
@@ -316,43 +300,47 @@ class TensorCollector:
             result[key] = val
         return result
 
-    def get_statistics(self) -> Union[TensorStatistic, Dict[str, Any]]:
+    def set_cache(self, statistics: TensorStatistic) -> None:
+        """
+        Sets cached statistics from given config and disable TensorCollector.
+        :param statistics: TensorStatistic.
+        """
+        self._cached_statistics = statistics
+        self.reset()
+        self.disable()
+
+    def create_statistics_container(self, config: Dict[str, Any]) -> TensorStatistic:
+        """
+        Returns a TensorStatistic instance with aggregated values.
+
+        :param config: Aggregated values.
+        :return: TensorStatistic instance.
+        """
+        if not self._stat_container:  # TODO(kshpv): need to remove an ability to return a Dict.
+            return config
+        return self._stat_container.from_config(config)
+
+    def clear_cache(self) -> None:
+        """
+        Clears the cached statistics and enables TensorCollector.
+        """
+        self._cached_statistics = None
+
+    def get_statistics(self) -> TensorStatistic:
         """
         Returns aggregated values in format of a TensorStatistic instance or
         a dict.
 
-        :returns: Aggregated values.
+        :return: Aggregated values.
         """
+        if self._cached_statistics is not None:
+            return deepcopy(self._cached_statistics)
 
         aggregated_values = self._aggregate()
-        kwargs = {}
+        statistics_config = {}
         for container_key, branch_key in self._stat_container_kwargs_map.items():
-            kwargs[container_key] = aggregated_values[branch_key]
-
-        if not self._stat_container:
-            return kwargs
-        return self._build_statistic_container(self._stat_container, kwargs)
-
-    def get_inplace_fn_info(self) -> List[Tuple[Any, int]]:
-        """
-        Returns necessary information to insert inplace operation into graph.
-
-        :returns: necessary information to insert inplace operation into graph
-            in format of pair of reducer builder and correspondent reducer output port id.
-        """
-        retval = []
-        for reducer in self._reducers:
-            if reducer.inplace:
-                retval.append((reducer.get_inplace_fn(), reducer.output_port_id))
-        return retval
-
-    def any_stat_out_of_place(self) -> bool:
-        """
-        Returns True if any reducer is calculated out of place.
-
-        :returns: True if any reducer is calculated out of place.
-        """
-        return any(not reducer.inplace for reducer in self._reducers)
+            statistics_config[container_key] = aggregated_values[branch_key]
+        return self.create_statistics_container(statistics_config)
 
     def replace_aggregator(self, key: Tuple[int, int, int], aggregator: AggregatorBase) -> None:
         """
@@ -388,39 +376,6 @@ class TensorCollector:
         for reducer, names in output_info:
             target_inputs[reducer] = [outputs[name] for name in names]
         return target_inputs
-
-    @staticmethod
-    def _build_statistic_container(statistic_container_cls: Type[TensorStatistic], kwargs: Dict[Any, Any]):
-        if issubclass(statistic_container_cls, MinMaxTensorStatistic):
-            return statistic_container_cls(
-                min_values=kwargs[MinMaxTensorStatistic.MIN_STAT], max_values=kwargs[MinMaxTensorStatistic.MAX_STAT]
-            )
-        if issubclass(statistic_container_cls, MeanTensorStatistic):
-            return statistic_container_cls(
-                mean_values=kwargs[MeanTensorStatistic.MEAN_STAT], shape=kwargs[MeanTensorStatistic.SHAPE_STAT]
-            )
-        if issubclass(statistic_container_cls, RawTensorStatistic):
-            return statistic_container_cls(values=kwargs[RawTensorStatistic.VALUES_STATS])
-        if issubclass(statistic_container_cls, MedianMADTensorStatistic):
-            return statistic_container_cls(
-                median_values=kwargs[MedianMADTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY][
-                    MedianMADTensorStatistic.MEDIAN_VALUES_STAT
-                ],
-                mad_values=kwargs[MedianMADTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY][
-                    MedianMADTensorStatistic.MAD_VALUES_STAT
-                ],
-            )
-        if issubclass(statistic_container_cls, PercentileTensorStatistic):
-            if PercentileTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY in kwargs:
-                percentile_vs_values_dict = kwargs[PercentileTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY]
-            else:
-                percentile_vs_values_dict = {}
-                for (_, percentile), value in kwargs.items():
-                    percentile_vs_values_dict[percentile] = value
-            return statistic_container_cls(percentile_vs_values_dict=percentile_vs_values_dict)
-        raise nncf.InternalError(
-            f"Statistic collector class {statistic_container_cls} is not supported by the TensorCollector class."
-        )
 
 
 class MergedTensorCollector(TensorCollector):
@@ -476,6 +431,17 @@ class RawReducer(NoopReducer):
         return self._reduce_out_of_place(x)
 
 
+class ShapeReducer(TensorReducerBase):
+    def __init__(self, inplace: bool = False):
+        super().__init__(inplace=inplace)
+
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        return [Tensor(x[0].shape)]
+
+    def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
+        return None
+
+
 class MinReducer(TensorReducerBase):
     def _reduce_out_of_place(self, x: List[Tensor]) -> List[Tensor]:
         x = x[0]
@@ -502,6 +468,21 @@ class MeanReducer(TensorReducerBase):
         x = x[0]
         reduction_axes = self._get_reduction_axes(x)
         return [fns.mean(x, reduction_axes, keepdims=self._keepdims)]
+
+
+class MeanVarianceReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
+
+
+class MaxVarianceReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
+
+
+class MeanAbsMaxReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
 
 
 class QuantileReducerBase(TensorReducerBase):
@@ -812,6 +793,21 @@ class PercentileAggregator(AggregatorBase):
                 value = fns.reshape(value, shape_after_aggregation)
             retval[percentile] = value
         return retval
+
+
+class HAWQAggregator(AggregatorBase):
+    def __init__(self, num_samples: Optional[int] = None):
+        super().__init__(num_samples=num_samples)
+        self._container = Tensor(0.0)
+
+    def _register_reduced_input_impl(self, x: TensorType) -> None:
+        trace = fns.sum(fns.multiply(x, x))
+        # NOTE: average trace?? divide by number of diagonal elements
+        # TODO: revise this formula as possibly it is with an error; adopted from previous HAWQ implementation
+        self._container = (self._container + trace) / x.size
+
+    def _aggregate_impl(self) -> List[TensorType]:
+        return [self._container * 2 / self._collected_samples]
 
 
 def _move_axes_flatten_cat(

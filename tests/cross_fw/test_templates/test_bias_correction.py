@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import Dict, List, Tuple, TypeVar
+from typing import Any, Dict, List, Tuple, TypeVar
 
 import pytest
 
@@ -22,9 +22,11 @@ from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrectio
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
 from tests.cross_fw.test_templates.helpers import SplittedModel
 from tests.cross_fw.test_templates.helpers import StaticDatasetMock
+from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -85,7 +87,7 @@ class TemplateTestBCAlgorithm:
         """
 
     @staticmethod
-    def map_references(ref_biases: Dict) -> Dict[str, List]:
+    def map_references(ref_biases: Dict, model_cls: Any) -> Dict[str, List]:
         """
         Returns backend-specific reference.
         """
@@ -110,20 +112,6 @@ class TemplateTestBCAlgorithm:
     def remove_fq_from_inputs(model: TModel) -> TModel:
         """
         Removes quantizer nodes from inputs.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_ref_path(suffix: str) -> str:
-        """
-        Returns backend-specific reference graph paths.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def compare_nncf_graphs(model: TModel, ref_path: str) -> None:
-        """
-        Compares backend-specific model with reference graph.
         """
 
     @pytest.fixture()
@@ -153,6 +141,8 @@ class TemplateTestBCAlgorithm:
                 },
             ),
             (ConvTestModel, {"/conv/Conv": [0.11085186, 1.0017344]}),
+            (DepthwiseConvTestModel, {"/conv/Conv": [-1.1229, -0.1863]}),
+            (TransposeConvTestModel, {"/conv/ConvTranspose": [0.66797173, -0.7070703]}),
         ),
     )
     def test_update_bias(self, model_cls, ref_biases, tmpdir):
@@ -163,7 +153,7 @@ class TemplateTestBCAlgorithm:
         graph = NNCFGraphFactory.create(model)
         quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
 
-        mapped_ref_biases = self.map_references(ref_biases)
+        mapped_ref_biases = self.map_references(ref_biases, model_cls)
         self.check_bias(quantized_model, mapped_ref_biases)
 
     def test__get_subgraph_data_for_node(self, quantized_test_model, layer_name, ref_data):

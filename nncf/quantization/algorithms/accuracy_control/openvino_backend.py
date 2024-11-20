@@ -13,6 +13,8 @@ from typing import List, Optional
 
 import numpy as np
 import openvino.runtime as ov
+from openvino import Type
+from openvino.properties.hint import inference_precision
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -40,9 +42,12 @@ class OVPreparedModel(PreparedModel):
     Implementation of the `PreparedModel` for OpenVINO backend.
     """
 
-    def __init__(self, model: ov.Model):
+    def __init__(self, model: ov.Model, use_fp32_precision: bool = True):
         self._stateful = model_has_state(model)
-        self._compiled_model = ov.compile_model(model, device_name="CPU")
+        config = None
+        if use_fp32_precision:
+            config = {inference_precision: Type.f32}
+        self._compiled_model = ov.compile_model(model, device_name="CPU", config=config)
         self._engine = None
 
     @property

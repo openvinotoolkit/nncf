@@ -9,9 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import nncf
+from tests.cross_fw.shared.datasets import MockDataset
+from tests.cross_fw.shared.helpers import telemetry_send_event_test_driver
 from tests.onnx.models import LinearModel
-from tests.shared.datasets import MockDataset
-from tests.shared.helpers import telemetry_send_event_test_driver
 
 
 def test_telemetry_is_sent_via_quantize(mocker):

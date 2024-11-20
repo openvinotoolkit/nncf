@@ -34,12 +34,11 @@ from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
 from tests.cross_fw.test_templates.test_ptq_params import TemplateTestPTQParams
-from tests.torch.helpers import create_bn
-from tests.torch.helpers import create_conv
 from tests.torch.helpers import create_depthwise_conv
 from tests.torch.ptq.helpers import get_nncf_network
 from tests.torch.ptq.helpers import get_single_conv_nncf_graph
 from tests.torch.ptq.helpers import get_single_no_weight_matmul_nncf_graph
+from tests.torch.test_models.synthetic import LinearPTQParamsTestModel
 
 
 def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
@@ -55,24 +54,8 @@ class ToNNCFNetworkInterface:
         return get_nncf_network(self)
 
 
-class LinearTestModel(nn.Module, ToNNCFNetworkInterface):
-    def __init__(self):
-        super().__init__()
-        self.conv1 = create_conv(3, 3, 1)
-        self.bn1 = create_bn(3)
-        self.relu = nn.ReLU()
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.conv2 = create_conv(3, 1, 1)
-        self.bn2 = create_bn(1)
-
-    def forward(self, x):
-        # input_shape = [1, 3, 32, 32]
-        x = self.relu(self.conv1(x))
-        x = self.bn1(x)
-        x = self.avg_pool(x)
-        x = self.relu(self.conv2(x))
-        x = self.bn2(x)
-        return x
+class PTLinearTestModel(LinearPTQParamsTestModel, ToNNCFNetworkInterface):
+    pass
 
 
 class OneDepthwiseConvModel(nn.Module, ToNNCFNetworkInterface):
@@ -133,7 +116,7 @@ class TestPTQParams(TemplateTestPTQParams):
 
     @pytest.fixture(scope="session")
     def test_params(self):
-        linear_model = LinearTestModel().get_nncf_network()
+        linear_model = PTLinearTestModel().get_nncf_network()
         depthwise_model = OneDepthwiseConvModel().get_nncf_network()
 
         return {

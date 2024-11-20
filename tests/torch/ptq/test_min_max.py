@@ -13,9 +13,7 @@ from typing import Tuple
 import pytest
 
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.layer_attributes import ConstantLayerAttributes
-from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
@@ -48,23 +46,8 @@ class TestTorchMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
 
 class TestTorchGetTargetPointShape(TemplateTestGetTargetPointShape, TestTorchMinMaxAlgorithm):
     def get_nncf_graph(self, weight_port_id: int, weight_shape: Tuple[int]) -> NNCFGraph:
-        conv_layer_attrs = ConvolutionLayerAttributes(
-            weight_requires_grad=True,
-            in_channels=weight_shape[1],
-            out_channels=weight_shape[0],
-            kernel_size=weight_shape[2:],
-            stride=1,
-            dilations=1,
-            groups=1,
-            transpose=False,
-            padding_values=[],
-        )
         return NNCFGraphToTest(
-            PTConv2dMetatype,
-            conv_layer_attrs,
-            PTNNCFGraph,
-            const_metatype=PTConstNoopMetatype,
-            const_layer_attrs=ConstantLayerAttributes("w", shape=weight_shape),
+            conv_metatype=PTConv2dMetatype, nncf_graph_cls=PTNNCFGraph, const_metatype=PTConstNoopMetatype
         ).nncf_graph
 
 
@@ -78,36 +61,21 @@ class TestTorchGetChannelAxes(TemplateTestGetChannelAxes, TestTorchMinMaxAlgorit
         return PTLinearMetatype
 
     @staticmethod
-    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> ConvolutionLayerAttributes:
-        return ConvolutionLayerAttributes(
-            weight_requires_grad=False,
-            in_channels=weight_shape[0],
-            out_channels=weight_shape[1],
-            kernel_size=weight_shape[2:],
-            stride=1,
-            dilations=1,
-            groups=1,
-            transpose=False,
-            padding_values=[],
-        )
+    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> BaseLayerAttributes:
+        # This method isn't needed for Torch backend
+        return None
 
     @staticmethod
-    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> ConvolutionLayerAttributes:
-        return ConvolutionLayerAttributes(
-            weight_requires_grad=False,
-            in_channels=weight_shape[1],
-            out_channels=weight_shape[2],
-            kernel_size=weight_shape[3:],
-            stride=1,
-            dilations=1,
-            groups=weight_shape[0],
-            transpose=False,
-            padding_values=[],
-        )
+    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> BaseLayerAttributes:
+        # This method isn't needed for Torch backend
+        return None
 
     @staticmethod
-    def get_matmul_node_attrs(weight_port_id: int, transpose_weight: Tuple[int], weight_shape: Tuple[int]):
-        return LinearLayerAttributes(False, in_features=weight_shape[0], out_features=weight_shape[1])
+    def get_matmul_node_attrs(
+        weight_port_id: int, transpose_weight: Tuple[int], weight_shape: Tuple[int]
+    ) -> BaseLayerAttributes:
+        # This method isn't needed for Torch backend
+        return None
 
     def test_get_channel_axes_matmul_node_ov_onnx(self):
         pytest.skip("Test is not applied for Torch backend.")

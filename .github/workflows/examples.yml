@@ -1,0 +1,66 @@
+name: Test examples
+permissions: read-all
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: 'The pull request number'
+        default: ''
+      pytest_args:
+        description: 'Pytest arguments'
+        default: ''
+
+jobs:
+  examples-cpu:
+    name: Test exmaples CPU [${{ matrix.group }}/4]
+    runs-on: ubuntu-22.04-16-cores
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1, 2, 3, 4]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        with:
+            lfs: true
+            fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
+      - name: Fetch and Checkout the Pull Request Branch
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
+        run: |
+          git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
+          git checkout pr-${{ github.event.inputs.pull_request_number }}
+      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+        with:
+          python-version: 3.10.14
+          cache: pip
+      - name: cpuinfo
+        run: cat /proc/cpuinfo
+      - name: Install NNCF and test requirements
+        run: |
+          pip install -e .
+          pip install -r tests/cross_fw/examples/requirements.txt
+      - name: Print installed modules
+        run: pip list
+      - name: Run examples test scope
+        run: |
+          python -m pytest -ras tests/cross_fw/examples \
+            --junit-xml=pytest-results-${{ matrix.group }}.xml \
+            --durations-path=tests/cross_fw/examples/.test_durations \
+            --splitting-algorithm=least_duration \
+            --splits 4 \
+            --group ${{ matrix.group }} \
+            ${{ github.event.inputs.pytest_args || '' }}
+        env:
+          TQDM_DISABLE: 1
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: pytest-results-${{ matrix.group }}
+          path: pytest-results-${{ matrix.group }}.xml
+          overwrite: True

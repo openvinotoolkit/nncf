@@ -22,11 +22,12 @@ from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
 from tests.cross_fw.test_templates.helpers import ConvTestModel
+from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
 from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
 from tests.cross_fw.test_templates.helpers import SplittedModel
+from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
 from tests.cross_fw.test_templates.test_bias_correction import TemplateTestBCAlgorithm
 from tests.onnx.quantization.common import compare_nncf_graph
-from tests.shared.paths import TEST_ROOT
 
 
 def get_data_from_node(model: onnx.ModelProto, node_name: str):
@@ -68,10 +69,6 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
     def remove_fq_from_inputs(model: onnx.ModelProto) -> onnx.ModelProto:
         graph = GraphConverter.create_nncf_graph(model)
         return remove_fq_from_inputs(model, graph)
-
-    @staticmethod
-    def get_ref_path(suffix: str) -> str:
-        return TEST_ROOT / "onnx" / "data" / "reference_graphs" / "quantization" / "subgraphs" / f"{suffix}.dot"
 
     @staticmethod
     def compare_nncf_graphs(model: onnx.ModelProto, ref_path: str) -> None:
@@ -216,6 +213,8 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                 },
             ),
             (ConvTestModel, {("/conv/Conv", 0): ("nncf_model_input_0", 0)}),
+            (DepthwiseConvTestModel, {("/conv/Conv", 0): ("nncf_model_input_0", 0)}),
+            (TransposeConvTestModel, {("/conv/ConvTranspose", 0): ("nncf_model_input_0", 0)}),
         ),
     )
     def test_verify_collected_stat_inputs_map(self, model_cls, ref_stat_inputs_map, tmpdir):

@@ -21,7 +21,11 @@ from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
+from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
@@ -39,9 +43,10 @@ from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.quantization.layers import AsymmetricWeightsDecompressor
-from nncf.torch.quantization.layers import SymmetricWeightsDecompressor
-from nncf.torch.tensor_statistics.collectors import get_raw_stat_collector
+from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 
 
 class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
@@ -50,7 +55,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
     }
     MATMUL_METATYPES = [om.PTLinearMetatype, om.PTMatMulMetatype, om.PTAddmmMetatype]
-    EMBEDDING_METATYPES = [om.PTEmbeddingMetatype]
+    EMBEDDING_METATYPES = [om.PTEmbeddingMetatype, om.PTAtenEmbeddingMetatype]
     CONVOLUTION_METATYPES = [
         om.PTConv1dMetatype,
         om.PTConv2dMetatype,
@@ -142,9 +147,15 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             target_type = PTWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]
         return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
 
-    @staticmethod
-    def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorCollector:
-        return get_raw_stat_collector(num_samples)
+    def mean_statistic_collector(
+        self, reduction_axes: Tuple[int], subset_size: Optional[int] = None
+    ) -> TensorCollector:
+        mean_reducer = MeanReducer(reduction_axes)
+        shape_reducer = ShapeReducer()
+        collector = TensorCollector(WCTensorStatistic)
+        collector.register_statistic_branch(WCTensorStatistic.MEAN_STAT, mean_reducer, NoopAggregator(subset_size))
+        collector.register_statistic_branch(WCTensorStatistic.SHAPE_STAT, shape_reducer, NoopAggregator(subset_size))
+        return collector
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, graph: NNCFGraph) -> int:
@@ -170,6 +181,16 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         return Tensor(weight)
 
+    def get_weight_dtype(
+        self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph
+    ) -> TensorDataType:
+        return self.get_weight(node_with_weight, weight_port_id, model, graph).dtype
+
+    @staticmethod
+    def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Tuple:
+        weight_node = get_const_node(node_with_weight, weight_port_id, graph)
+        return tuple(weight_node.layer_attributes.shape)
+
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph, weight: Tensor
     ):
@@ -193,12 +214,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
-            if compression_config.mode not in [
-                CompressWeightsMode.INT8_ASYM,
-                CompressWeightsMode.INT8_SYM,
-                CompressWeightsMode.INT8,
+            if compression_config.mode in [
+                CompressWeightsMode.NF4,
+                CompressWeightsMode.E2M1,
             ]:
-                raise ValueError(f"{compression_config.mode.value} is not supported.")
+                raise nncf.ParameterNotSupportedError(f"{compression_config.mode.value} is not supported.")
 
             weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
             weight_name = weight_node.layer_attributes.name
@@ -216,17 +236,35 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 None if precomputed_scales is None else precomputed_scales.get(wc_params.weight_name),
                 None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name),
             )
-            compressed_weight.scale = compressed_weight.scale.astype(dtype=TensorDataType.float16)
 
-            # pack compressed tensor
+            # creates weight decompressor
             if compression_config.mode == CompressWeightsMode.INT8_SYM:
-                dtype = TensorDataType.int8
-            else:
-                dtype = TensorDataType.uint8
-            packed_tensor = compressed_weight.tensor.astype(dtype)
+                decompressor = INT8SymmetricWeightsDecompressor(compressed_weight.scale.data, result_dtype=weight.dtype)
+            elif compression_config.mode == CompressWeightsMode.INT8_ASYM:
+                decompressor = INT8AsymmetricWeightsDecompressor(
+                    compressed_weight.scale.data, compressed_weight.zero_point.data, result_dtype=weight.dtype
+                )
+            elif compression_config.mode == CompressWeightsMode.INT4_SYM:
+                decompressor = INT4SymmetricWeightsDecompressor(
+                    scale=compressed_weight.scale.data,
+                    compressed_weight_shape=compressed_weight.tensor.shape,
+                    result_shape=weight.shape,
+                    result_dtype=weight.dtype,
+                )
+            elif compression_config.mode == CompressWeightsMode.INT4_ASYM:
+                decompressor = INT4AsymmetricWeightsDecompressor(
+                    scale=compressed_weight.scale.data,
+                    zero_point=compressed_weight.zero_point.data,
+                    compressed_weight_shape=compressed_weight.tensor.shape,
+                    result_shape=weight.shape,
+                    result_dtype=weight.dtype,
+                )
+
+            # pack tensor
+            packed_tensor = decompressor.pack_weight(compressed_weight.tensor.data)
 
             # sets compressed tensor
-            compressed_parameter = torch.nn.Parameter(packed_tensor.data, requires_grad=False)
+            compressed_parameter = torch.nn.Parameter(packed_tensor, requires_grad=False)
             setattr(module, weight_attr_name, compressed_parameter)
 
             consumer_nodes = graph.get_next_nodes(weight_node)
@@ -236,15 +274,6 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     for name, param in c_module.named_parameters(recurse=False, remove_duplicate=False):
                         if id(param) == id(weight):
                             setattr(c_module, name, compressed_parameter)
-
-            # creates weight decompressor
-            if compression_config.mode == CompressWeightsMode.INT8_SYM:
-                decompressor = SymmetricWeightsDecompressor(compressed_weight.scale.data, result_dtype=weight.dtype)
-            else:
-                packed_zero_point = compressed_weight.zero_point.astype(dtype)
-                decompressor = AsymmetricWeightsDecompressor(
-                    compressed_weight.scale.data, packed_zero_point.data, result_dtype=weight.dtype
-                )
 
             # registry weight decompression module in the model
             decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"

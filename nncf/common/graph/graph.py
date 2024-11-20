@@ -11,7 +11,7 @@
 import pathlib
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Callable, Dict, Generator, KeysView, List, Optional, Tuple, Type, ValuesView, cast
+from typing import Any, Callable, Dict, Generator, KeysView, List, Optional, Tuple, Type, Union, ValuesView, cast
 
 import networkx as nx  # type:ignore
 import networkx.algorithms.isomorphism as iso  # type:ignore
@@ -278,7 +278,7 @@ class NNCFGraph:
 
     def get_all_simple_paths(
         self, start_node_name: NNCFNodeName, end_node_name: NNCFNodeName
-    ) -> Generator[List[NNCFNodeName], None, None]:
+    ) -> Generator[List[str], None, None]:
         """
         Generates all simple paths in the NNCFGraph from start node to end node.
         A simple path is a path with no repeated nodes.
@@ -292,9 +292,7 @@ class NNCFGraph:
         end_node = self.get_node_by_name(end_node_name)
         start_node_key = self.get_node_key_by_id(start_node.node_id)
         end_node_key = self.get_node_key_by_id(end_node.node_id)
-        return cast(
-            Generator[List[NNCFNodeName], None, None], nx.all_simple_paths(self._nx_graph, start_node_key, end_node_key)
-        )
+        return cast(Generator[List[str], None, None], nx.all_simple_paths(self._nx_graph, start_node_key, end_node_key))
 
     @staticmethod
     def _get_edge_boundaries(
@@ -541,7 +539,7 @@ class NNCFGraph:
         self,
         from_node_id: int,
         to_node_id: int,
-        tensor_shape: List[int],
+        tensor_shape: Union[Tuple[int, ...], List[int]],
         input_port_id: int,
         output_port_id: int,
         dtype: Dtype,
@@ -640,7 +638,7 @@ class NNCFGraph:
                 if "shape" in label and len(label) == 1:
                     attrs_edge["label"] = label["shape"]
                 else:
-                    attrs_edge["label"] = ", ".join((f"{k}:{v}" for k, v in label.items()))
+                    attrs_edge["label"] = ", ".join((f"{k} {v}" for k, v in label.items()))
             out_graph.add_edge(u, v, **attrs_edge)
         return out_graph
 

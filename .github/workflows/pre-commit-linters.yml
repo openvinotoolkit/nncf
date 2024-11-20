@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
-          python-version: 3.8.18
+          python-version: 3.10.14
       - name: Install pre-commit package
         run: make install-pre-commit
       - name: Run pre-commit linter suite
@@ -25,5 +25,4 @@ jobs:
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - uses: AlexanderDokuchaev/md-dead-link-check@cc3ed55268899a1a6d5fd7068abbc4591eab1f74 # v0.9
-        with:
-          config: md_dead_link_check.toml
+

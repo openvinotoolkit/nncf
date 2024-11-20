@@ -28,6 +28,7 @@ from nncf.torch.dynamic_graph.structs import NamespaceTarget
 ModuleAttributes = TypeVar("ModuleAttributes", bound=BaseLayerAttributes)
 
 PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
+FX_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 
 
 class PTOperatorMetatype(OperatorMetatype):
@@ -801,7 +802,7 @@ class PTPadMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTCatMetatype(PTOperatorMetatype):
     name = "CatOp"
-    module_to_function_names = {NamespaceTarget.TORCH: ["cat", "stack"]}
+    module_to_function_names = {NamespaceTarget.TORCH: ["cat", "stack", "concat"]}
     hw_config_names = [HWConfigOpName.CONCAT]
 
 
@@ -916,6 +917,14 @@ class PTEmbeddingMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.EMBEDDING]
     subtypes = [PTModuleEmbeddingMetatype]
     weight_port_ids = [1]
+
+
+@FX_OPERATOR_METATYPES.register()
+class PTAtenEmbeddingMetatype(OperatorMetatype):
+    name = "EmbeddingOp"
+    module_to_function_names = {NamespaceTarget.ATEN: ["embedding"]}
+    hw_config_names = [HWConfigOpName.EMBEDDING]
+    weight_port_ids = [0]
 
 
 @PT_OPERATOR_METATYPES.register(is_subtype=True)
@@ -1101,6 +1110,18 @@ class PTScaledDotProductAttentionMetatype(PTOperatorMetatype):
     target_input_ports = [0, 1]
 
 
+@PT_OPERATOR_METATYPES.register()
+class PTCosMetatype(PTOperatorMetatype):
+    name = "CosOp"
+    module_to_function_names = {NamespaceTarget.TORCH: ["cos"]}
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTSinMetatype(PTOperatorMetatype):
+    name = "SinOp"
+    module_to_function_names = {NamespaceTarget.TORCH: ["sin"]}
+
+
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.
@@ -1141,9 +1162,35 @@ UNIFICATION_PRODUCING_METATYPES = [
     PTModuleLinearMetatype,
 ]
 
+ELEMENTWISE_OPERATIONS = [
+    PTAddMetatype,
+    PTMulMetatype,
+    PTSubMetatype,
+    PTDivMetatype,
+    PTLessMetatype,
+    PTLessEqualMetatype,
+    PTGreaterMetatype,
+    PTGreaterEqualMetatype,
+    PTEqualsMetatype,
+    PTNotEqualMetatype,
+    PTModMetatype,
+    PTLogicalOrMetatype,
+    PTLogicalXorMetatype,
+    PTLogicalAndMetatype,
+    PTMaxMetatype,
+    PTMinMetatype,
+]
+
 OP_NAMES_WITH_WEIGHTS = [x for meta in OPERATORS_WITH_WEIGHTS_METATYPES for x in meta.get_all_aliases()]
 
-QUANTIZE_NODE_TYPES = ["symmetric_quantize", "asymmetric_quantize"]
+QUANTIZE_NODE_TYPES = [
+    "symmetric_quantize",
+    "asymmetric_quantize",
+    "quantize_per_tensor",
+    "dequantize_per_tensor",
+    "quantize_per_channel",
+    "dequantize_per_channel",
+]
 
 # These metatypes mix outputs for different samples into one axis.
 # If reducers and aggregators collect statistics at the output of the following operations,

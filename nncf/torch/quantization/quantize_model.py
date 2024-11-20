@@ -18,6 +18,7 @@ import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
+from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
@@ -94,6 +95,7 @@ def compress_weights_impl(
     scale_estimation: bool,
     gptq: bool,
     lora_correction: bool,
+    backup_mode: BackupMode,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> torch.nn.Module:
     """
@@ -112,6 +114,7 @@ def compress_weights_impl(
         scale_estimation,
         gptq,
         lora_correction,
+        backup_mode,
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)

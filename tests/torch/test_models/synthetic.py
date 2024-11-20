@@ -21,6 +21,7 @@ from torchvision.transforms.functional import normalize
 from nncf.torch import nncf_model_input
 from nncf.torch import register_module
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
+from tests.torch.helpers import create_bn
 from tests.torch.helpers import create_conv
 
 
@@ -522,3 +523,89 @@ class ConvolutionWithAllConstantInputsModel(torch.nn.Module):
     def forward(self, x):
         w = self._conv_w + 10
         return x + nn.functional.conv2d(self._conv_i, w)
+
+
+class ConvolutionWithMinModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self._conv_w = nn.Parameter(torch.ones((1, 1, 1, 1)))
+
+    def forward(self, x):
+        w = self._conv_w + 10
+        t = nn.functional.conv2d(x, w)
+        return torch.minimum(t, torch.ones_like(t))
+
+
+class MultiBranchesConnectedModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_a = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+        self.conv_b = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+        self.conv_c = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+        self.bias = torch.tensor([1])
+
+    def forward(self, x):
+        a = self.conv_a(x)
+        b = self.conv_b(a)
+        a += self.bias
+        b += self.bias
+        y = a + b
+        return self.conv_c(y) + self.bias
+
+
+class LinearPTQParamsTestModel(nn.Module):
+    INPUT_SIZE = None
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(3, 3, 1)
+        self.bn1 = create_bn(3)
+        self.relu = nn.ReLU()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.conv2 = create_conv(3, 1, 1)
+        self.bn2 = create_bn(1)
+
+    def forward(self, x):
+        x = self.relu(self.conv1(x))
+        x = self.bn1(x)
+        x = self.avg_pool(x)
+        x = self.relu(self.conv2(x))
+        x = self.bn2(x)
+        return x
+
+
+class ConstantFoldingTestModel(nn.Module):
+    INPUT_SIZE = (1, 3, 3, 3)
+
+    def __init__(self):
+        super().__init__()
+        self.linear_act = nn.Linear(3, 3)
+        self.linear_act.weight.data = 2 * torch.ones((3, 3))
+
+        self.linear_w = nn.Linear(3, 3)
+        self.linear_w.weight.data = 3 * torch.ones((3, 3))
+
+        self.param = nn.Parameter(4 * torch.ones((3, 3)))
+
+    def forward(self, x):
+        y = self.linear_w(self.param)
+        y += 10
+        x = self.linear_act(x)
+        return x + y
+
+
+class ShortTransformer(torch.nn.Module):
+    def __init__(self, in_features, num_embeddings, share_weights=False):
+        super().__init__()
+        self.wte = torch.nn.Embedding(num_embeddings, in_features)
+        self.linear = torch.nn.Linear(in_features, in_features)
+        self.lm_head = torch.nn.Linear(in_features, num_embeddings)
+
+        if share_weights:
+            self.lm_head.weight = self.wte.weight
+
+    def forward(self, input_ids):
+        x = self.wte(input_ids)
+        x = self.linear(x)
+        res = self.lm_head(x)
+        return res

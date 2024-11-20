@@ -26,9 +26,9 @@ from yattag import Doc
 from yattag import indent
 
 from nncf.common.logging.logger import nncf_logger
+from tests.cross_fw.shared.paths import DATASET_DEFINITIONS_PATH
+from tests.cross_fw.shared.paths import PROJECT_ROOT
 from tests.onnx.conftest import ONNX_TEST_ROOT
-from tests.shared.paths import DATASET_DEFINITIONS_PATH
-from tests.shared.paths import PROJECT_ROOT
 
 BG_COLOR_GREEN_HEX = "ccffcc"
 BG_COLOR_YELLOW_HEX = "ffffcc"

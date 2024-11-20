@@ -9,7 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Optional
+from copy import copy
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.fx
@@ -18,16 +19,59 @@ from torch.ao.quantization.pt2e.utils import fold_bn_weights_into_conv_node
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
+import nncf.torch
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 TransformationFNType = Callable[[torch.fx.GraphModule], None]
 
+# Copied from torch.fx.Node
+BaseArgumentTypes = Union[
+    str,
+    int,
+    float,
+    bool,
+    complex,
+    torch.dtype,
+    torch.Tensor,
+    torch.device,
+    torch.memory_format,
+    torch.layout,
+    torch._ops.OpOverload,
+]
+Argument = Optional[Union[Tuple[Any, ...], List[Any], Dict[str, Any], slice, range, torch.fx.Node, BaseArgumentTypes]]
 
-def _set_new_node_meta(new_node: torch.fx.Node, prev_node: torch.fx.Node, target_module: torch.nn.Module):
+QUANTIZE_NODE_TARGETS = [
+    torch.ops.quantized_decomposed.quantize_per_tensor.default,
+    torch.ops.quantized_decomposed.quantize_per_channel.default,
+]
+DEQUANTIZE_NODE_TARGETS = [
+    torch.ops.quantized_decomposed.dequantize_per_tensor.default,
+    torch.ops.quantized_decomposed.dequantize_per_channel.default,
+]
+# Map quantize_per_tensor to dequantize_per_tensor, the same for per_channel and vice-versa
+QDQ_PAIR = {
+    **{
+        quantize_node: dequantize_node
+        for quantize_node, dequantize_node in zip(QUANTIZE_NODE_TARGETS, DEQUANTIZE_NODE_TARGETS)
+    },
+    **{
+        dequantize_node: quantize_node
+        for quantize_node, dequantize_node in zip(QUANTIZE_NODE_TARGETS, DEQUANTIZE_NODE_TARGETS)
+    },
+}
+
+
+def _set_new_node_meta(
+    new_node: torch.fx.Node,
+    prev_nodes: Tuple[Argument, ...],
+    target_module: torch.nn.Module,
+    model: torch.fx.GraphModule,
+):
     """
     Sets correct meta \"val\" value to the new node.
 
@@ -36,14 +80,21 @@ def _set_new_node_meta(new_node: torch.fx.Node, prev_node: torch.fx.Node, target
         New node expected to have only one input node.
     :param target_module: Module which is being called by the new node.
     """
-    val = prev_node.meta["val"]
-    val = val if isinstance(val, tuple) else (val,)
-    retval = []
-    for t in val:
-        retval.append(torch.ones(t.shape))
-
+    vals = []
+    for prev_node in prev_nodes:
+        val = prev_node
+        if isinstance(prev_node, torch.fx.Node):
+            val = (
+                prev_node.meta["val"]
+                if prev_node.op not in ["get_attr"]
+                else get_tensor_constant_from_node(prev_node, model).data
+            )
+            # TODO(anzr299): Support output port id here.
+            # Output port 0 is used by default
+            val = val[0] if isinstance(val, tuple) else val
+        vals.append(val)
     with torch.no_grad():
-        new_node.meta["val"] = target_module(*val)
+        new_node.meta["val"] = target_module(*tuple(vals))
 
 
 def module_insertion_transformation_builder(
@@ -70,16 +121,16 @@ def module_insertion_transformation_builder(
             target_node = get_graph_node_by_name(graph, target_point.target_node_name)
 
             if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
-                _set_new_node_meta(new_node, target_node, module_to_insert)
+                _set_new_node_meta(new_node, [target_node], module_to_insert, model)
                 with graph.inserting_after(target_node):
-                    for user in target_node.users:
+                    for user in list(target_node.users):
                         if user is new_node:
                             continue
                         user.replace_input_with(target_node, new_node)
 
             else:
                 prev_node = target_node.args[target_point.input_port_id]
-                _set_new_node_meta(new_node, prev_node, module_to_insert)
+                _set_new_node_meta(new_node, [prev_node], module_to_insert, model)
                 target_node.replace_input_with(prev_node, new_node)
 
     return module_insertion_transformation
@@ -109,12 +160,13 @@ def leaf_module_insertion_transformation_builder(
     return leaf_module_insertion_transformation
 
 
-def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> TransformationFNType:
+def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor, input_port_id: int) -> TransformationFNType:
     """
     Return transformation which updates constant of the given node with bias to the given value.
 
     :param node: Node with bias which requires bias constant update.
     :param value: New value to use as the bias constant.
+    :param input_port_id: Input port id to get constant node from.
     :return: Transformation which updates constant of the given node with bias to the given value.
     """
 
@@ -122,31 +174,44 @@ def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> T
         graph = model.graph
         target_node_name = node.node_name
         graph_node = get_graph_node_by_name(graph, target_node_name)
-        if len(graph_node.users) != 1:
-            raise nncf.InternalError(f"Node with bias have {len(graph_node.users)} users, 1 expected.")
+        add_nodes = []
+        for user in graph_node.users:
+            if _is_add(user):
+                add_nodes.append(user)
+        if len(add_nodes) != 1:
+            raise nncf.InternalError(f"Node {graph_node.name} has {len(add_nodes)} outputs with adds, 1 expected")
 
-        bias_node = next(iter(graph_node.users))
-        constant_update_fn(model, bias_node, value, input_port_id=1)
+        bias_node = add_nodes[0]
+        constant_update_fn(model, bias_node, value, input_port_id=input_port_id)
 
     return bias_update_transformation
 
 
-def constant_update_transformation_builder(node: NNCFNode, value: torch.Tensor) -> TransformationFNType:
+def constant_update_transformation_builder(
+    node: NNCFNode, value: torch.Tensor, input_port_id: int = 1
+) -> TransformationFNType:
     """
     Return transformation which updates constant of the given node to the given value.
 
     :param node: Node which requires bias constant update.
     :param value: New value to use as the node constant.
+    :param input_port_id: Port Id of the constant.
     :return: Transformation which updates constant of the given node to the given value.
     """
 
     def constant_update_transformation(model: torch.fx.GraphModule):
-        constant_update_fn(model, get_graph_node_by_name(model.graph, node.node_name), value, input_port_id=1)
+        constant_update_fn(model, get_graph_node_by_name(model.graph, node.node_name), value, input_port_id)
 
     return constant_update_transformation
 
 
-def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: torch.Tensor, input_port_id: int = 1):
+def constant_update_fn(
+    model: torch.fx.GraphModule,
+    node: torch.fx.Node,
+    value: torch.Tensor,
+    input_port_id: int = 1,
+    updated_node_name: Optional[str] = None,
+):
     """
     Updates constant of given node on the given input port id with given value.
 
@@ -154,11 +219,10 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
     :param node: Given graph node.
     :param value: New value to use as the node constant.
     :param input_port_id: Target constant input port id.
+    :param updated_node_name: Name of the constant node after updating. Default is `nodename` + `_updated_constant`.
     """
     graph = model.graph
-    with graph.inserting_before(node):
-        new_constant = create_getattr_from_value(model, graph, node.name + "_updated_constant", value)
-
+    node_name = updated_node_name if updated_node_name else node.name + "_updated_constant"
     args = list(node.args)
     # A bias node suppose to have constant on the second input port.
     if args[input_port_id].op != "get_attr":
@@ -166,8 +230,19 @@ def constant_update_fn(model: torch.fx.GraphModule, node: torch.fx.Node, value: 
             f"Constant on input port {input_port_id} for {node} is expected,"
             f" but node {args[input_port_id]} is present."
         )
-    args[input_port_id] = new_constant
-    node.args = tuple(args)
+
+    # Update metadata of the new constant node.
+    previous_const = args[input_port_id]
+    consumer_nodes = list(previous_const.users)
+    # This list of consumer nodes is topologically sorted
+    # To ensure the updated node has the right order,
+    # we insert constant node before the node placed at the highest order in topological order.
+    sorted_consumer_nodes = [node for node in graph.nodes if node in consumer_nodes]
+
+    with graph.inserting_before(sorted_consumer_nodes[0]):
+        new_constant = create_getattr_from_value(model, graph, node_name, value)
+
+    previous_const.replace_all_uses_with(new_constant, propagate_meta=True)
     graph.eliminate_dead_code()
 
 
@@ -186,7 +261,7 @@ def qdq_insertion_transformation_builder(
 
     def qdq_insertion_transformation(model: torch.fx.GraphModule):
         if any(tp.target_type != TargetType.OPERATION_WITH_WEIGHTS for tp in target_points) and len(target_points) > 1:
-            raise RuntimeError(
+            raise nncf.InternalError(
                 "Insertion of shared qdq pair for the weights is not supported."
                 " Please use non shared qdq pairs for the weights quantization."
             )
@@ -194,6 +269,69 @@ def qdq_insertion_transformation_builder(
             insert_one_qdq(model, target_point, quantizer)
 
     return qdq_insertion_transformation
+
+
+def node_removal_transformation_builder(node: NNCFNode, input_port_id: int) -> TransformationFNType:
+    """
+    Returns transformation which removes target node from the model and connects
+    target node previous node on the given input port id with all target node outputs.
+
+    :param node: Target node to remove.
+    :param input_port_id: Input port id which points to input node which should be connected
+        to the target node outputs.
+    :return: Transformation which removes target node from the model and connects
+        target node previous node on the given input port id with all target node outputs.
+    """
+
+    def node_removal_transformation(model: torch.fx.GraphModule):
+        target_node = get_graph_node_by_name(model.graph, node.node_name)
+        input_node = target_node.all_input_nodes[input_port_id]
+        for user in list(target_node.users):
+            user.replace_input_with(target_node, input_node)
+        model.graph.eliminate_dead_code()
+
+    return node_removal_transformation
+
+
+def output_insertion_transformation_builder(target_point: PTTargetPoint) -> TransformationFNType:
+    """
+    Returns transformation which inserts clone operation on the given target point
+    and extend the model outputs with the inserted cloned value.
+
+    :param target_point: Target point to insert clone and extend the model outputs.
+    :return: Transformation which inserts clone operation on the given target point
+        and extend the model outputs with the inserted cloned value.
+    """
+
+    def output_insertion_transformation(model: torch.fx.GraphModule):
+        graph = model.graph
+        target_node = get_graph_node_by_name(graph, target_point.target_node_name)
+        input_node = get_input_node(target_point, target_node)
+
+        # Clone node output to safe it from inplace operations affects
+        with graph.inserting_after(input_node):
+            cloned_input = graph.create_node(
+                "call_function",
+                torch.ops.aten.clone.default,
+                (input_node,),
+                name=input_node.name + "_cloned",
+            )
+        cloned_input.meta["val"] = copy(input_node.meta.get("val"))
+
+        # Update args of the output node as one output could be present in the model
+        # TODO(dlaykhov) Support case when there are no outputs in the input model.
+        output_nodes = [node for node in model.graph.nodes if node.op == "output"]
+        assert len(output_nodes) == 1
+        output_node = output_nodes[0]
+
+        args = output_node.args
+        assert len(args) == 1
+        if isinstance(args[0], torch.fx.Node):
+            args = (args,)
+        args = tuple(args[0]) + (cloned_input,)
+        output_node.args = (args,)
+
+    return output_insertion_transformation
 
 
 def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, quantizer: FakeQuantize):
@@ -264,10 +402,12 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
 
     input_node = get_input_node(target_point, target_node)
     quantize_op_inputs[0] = input_node
+    meta_val = input_node.meta.get("val")
 
     ctx_manager = get_ctx_manager(graph, target_point)
     with ctx_manager(target_node):
         quantized_node = graph.create_node(node_type, quantize_op, tuple(quantize_op_inputs), {})
+    quantized_node.meta["val"] = copy(meta_val)
 
     # use the same qparams from quantize op
     dq_inputs = [quantized_node] + quantize_op_inputs[1:]
@@ -277,13 +417,16 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
             for user in target_node.users:
                 if user is quantized_node:
                     continue
-                user_dq_nodes.append((user, graph.call_function(dequantize_op, tuple(dq_inputs), {})))
+                dq_node = graph.call_function(dequantize_op, tuple(dq_inputs), {})
+                dq_node.meta["val"] = copy(meta_val)
+                user_dq_nodes.append((user, dq_node))
 
         for user, dq_node in user_dq_nodes:
             user.replace_input_with(target_node, dq_node)
     elif target_point.target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
         with graph.inserting_after(quantized_node):
             dq_node = graph.call_function(dequantize_op, tuple(dq_inputs), {})
+            dq_node.meta["val"] = copy(meta_val)
 
         args = list(target_node.args)
         args[target_point.input_port_id] = dq_node
@@ -296,10 +439,10 @@ def _insert_call_module(
     graph: torch.fx.Graph, target_point: PTTargetPoint, module_attr_name: str, graph_node_name: str
 ):
     """
-    Inserts module call node to the graph after the target node.
+    Inserts module call node to the graph after/before the target node using the ctx_manager.
 
     :param graph: Graph to insert module call node.
-    :param target_node: Target node, module call node is being iserted just after the target node.
+    :param target_node: Target node, module call node is being inserted just after the target node.
     :param module_attr_name: The name of the graph attribute which keeps the target module.
     :param graph_node_name: Target name for module call node.
     :return: Inserted module call node.
@@ -376,6 +519,7 @@ def _is_supported_batch_norm_for_training(node: torch.fx.Node):
     Return True if the given node refers to an aten batch norm op QAT supports.
     """
     supported_ops = [
+        torch.ops.aten.batch_norm.default,
         torch.ops.aten._native_batch_norm_legit.default,
         torch.ops.aten.cudnn_batch_norm.default,
         torch.ops.aten.miopen_batch_norm.default,
@@ -418,23 +562,249 @@ def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
     model.recompile()
 
 
+def _get_pattern_replacement_per_channel() -> (
+    Tuple[Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, int, torch.dtype], torch.Tensor]]
+):
+    """
+    Returns the patter and replacement function for the subgraph rewriter to
+    match and replace for per_tensor quantization
+    """
+
+    def pattern_per_channel(weight, scale, zero_point, axis, low, high, dtype):
+        quantized = torch.ops.quantized_decomposed.quantize_per_channel.default(
+            weight, scale, zero_point, axis, low, high, dtype
+        )
+        dequantized = torch.ops.quantized_decomposed.dequantize_per_channel.default(
+            quantized, scale, zero_point, axis, low, high, dtype
+        )
+        return dequantized
+
+    def replacement_graph_per_channel(weight, scale, zero_point, axis, low, high, dtype):
+        return torch.ops.aten.sub.Tensor(torch.ops.aten.mul.Tensor(weight, scale), zero_point)
+
+    return pattern_per_channel, replacement_graph_per_channel
+
+
+def _get_pattern_replacement_per_tensor() -> (
+    Tuple[Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, torch.dtype], torch.Tensor]]
+):
+    """
+    Returns the patter and replacement function for the subgraph rewriter to
+    match and replace for per_tensor quantization
+    """
+
+    def pattern_per_tensor(weight, scale, zero_point, low, high, dtype):
+        quantized = torch.ops.quantized_decomposed.quantize_per_tensor.default(
+            weight, scale, zero_point, low, high, dtype
+        )
+        dequantized = torch.ops.quantized_decomposed.dequantize_per_tensor.default(
+            quantized, scale, zero_point, low, high, dtype
+        )
+        return dequantized
+
+    def replacement_graph_per_tensor(weight, scale, zero_point, low, high, dtype):
+        return torch.ops.aten.sub.Tensor(torch.ops.aten.mul.Tensor(weight, scale), zero_point)
+
+    return pattern_per_tensor, replacement_graph_per_tensor
+
+
+def _set_meta_for_matches(model: torch.fx.GraphModule, matches: torch.fx.subgraph_rewriter.ReplacedPatterns) -> None:
+    """
+    Sets the meta for the nodes which were matched by the subgraph_rewriter pattern.
+
+    :param model: Model whose nodes' meta are to be set.
+    :param matches: matches returned by the subgraph_rewriter
+    """
+    for match in matches:
+        mul_node = match.replacements[0]
+        sub_node = match.replacements[1]
+        _set_new_node_meta(mul_node, mul_node.args, torch.mul, model)
+        _set_new_node_meta(sub_node, sub_node.args, torch.sub, model)
+
+
+def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> Optional[Tuple[Union[torch.Tensor, int]]]:
+    """
+    Gets the inputs for the Quantize node which quantize the weights. Otherwise returns None.
+
+    :param node: Node to get the inputs from
+    :param model: Model to which the node belongs
+    """
+    args = []
+    for arg in node.args:
+        if isinstance(arg, torch.fx.Node):
+            if arg.op != "get_attr":
+                return None
+            arg = get_tensor_constant_from_node(arg, model)
+        args.append(arg)
+    return tuple(args)
+
+
+def _get_value(
+    arg: Optional[Union[torch.fx.Node, float, int]], model: torch.fx.GraphModule
+) -> Union[torch.nn.Parameter, float, int]:
+    """
+    Retrieves value from the given argument. It can be either torch.fx.Node or float/int value.
+
+    :param arg: Given arg to retrieve value.
+    :param model: torch.fx.GraphModule instance.
+    :return: value from the given argument.
+    """
+    if isinstance(arg, torch.fx.Node):
+        return get_tensor_constant_from_node(arg, model)
+    return arg
+
+
+def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) -> None:
+    """
+    Change the FP32 weight value to Int8 and also reshape the scale for per_channel_quantization.
+
+    :param: model: Model to apply transformations to.
+    """
+
+    for match in matches:
+        mul_node = match.replacements[0]
+        sub_node = match.replacements[1]
+        nodes_map = {node.name: match.nodes_map[node] for node in match.nodes_map}
+
+        weight_node = _get_value(nodes_map["weight"], model)
+        scale_node = _get_value(nodes_map["scale"], model)
+        zp_node = _get_value(nodes_map["zero_point"], model)
+        axis = _get_value(nodes_map.get("axis"), model)
+        port_id = 0
+        if axis is not None:
+            result = torch.ops.quantized_decomposed.quantize_per_channel.default(
+                weight_node, scale_node, zp_node, axis, -128, 127, torch.int8
+            )
+            _reshape_scale_zp(model, sub_node, mul_node, weight_node, scale_node, zp_node, axis)
+        else:
+            result = torch.ops.quantized_decomposed.quantize_per_tensor.default(
+                weight_node, scale_node, zp_node, -128, 127, torch.int8
+            )
+        constant_update_fn(model, mul_node, result, port_id, updated_node_name="compressed_weight_updated_constant")
+
+
+def _reshape_scale_zp(
+    model: torch.fx.GraphModule,
+    sub_node: torch.fx.Node,
+    mul_node: torch.fx.Node,
+    weight: torch.Tensor,
+    scale: Union[torch.Tensor, float],
+    zp: Union[torch.Tensor, float, int],
+    axis: int,
+) -> None:
+    """
+    Reshape scale and zero point so that it can be multiplied elementwise with the weight for per channel quantization.
+
+    :param model: Model to apply transformations to.
+    :param node: quantize node whose scale has to be reshaped
+    """
+    new_shape = [1] * weight.dim()
+    new_shape[axis] = scale.shape[0]
+    scale = scale.reshape(new_shape)
+    zp = zp.reshape(new_shape)
+    constant_update_fn(model, sub_node, zp, 1, updated_node_name="zero_point_updated_constant")
+    constant_update_fn(model, mul_node, scale, 1, updated_node_name="scale_updated_constant")
+
+
+def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
+    """
+    This function applies a transformation to replace the FP32 weights with Fake Quantized
+    FP values to avoid the rounding error when converting to OpenVino model.
+
+    :param model: Model to apply transformations to.
+    """
+    for node in model.graph.nodes:
+        if node.target not in DEQUANTIZE_NODE_TARGETS:
+            continue
+        port_id = 0
+        quantize_node = node.all_input_nodes[0]
+        # Case where Quantize Dequantize nodes are not consecutive
+        if quantize_node.target != QDQ_PAIR[node.target]:
+            continue
+        args = _get_node_inputs(quantize_node, model)
+        if not args:
+            continue
+        result = node.target(quantize_node.target(*args), *args[1:])
+        constant_update_fn(
+            model,
+            quantize_node,
+            result,
+            port_id,
+            updated_node_name="compressed_weight_updated_constant",
+        )
+
+
+def compress_post_quantize_transformation(model: torch.fx.GraphModule) -> None:
+    """
+    Applies transformation to compress the weights to Int8 after the quantization step.
+    Starts by removing the Quantize/De-Quantize nodes for weight nodes by matching the pattern
+    to be like follows:
+
+    weight scale zp
+        \   |    /
+         Quantize
+            |
+        Dequantize
+
+    and replace with the following:
+     weight scale
+       \     /
+       Multiply  Zero Point
+          |     /
+        Subtract
+
+    and then also updates the weights to int8 values and reshape the scale and zero point.
+
+    :param model: Model to apply transformations to.
+    """
+
+    def match_filters(match, original_graph, graph):
+        for node in match.nodes_map:
+            if node.name == "weight" and match.nodes_map[node].op == "get_attr":
+                return True
+        return False
+
+    patterns = [_get_pattern_replacement_per_channel(), _get_pattern_replacement_per_tensor()]
+
+    for pattern, replacement in patterns:
+        matches = torch.fx.subgraph_rewriter.replace_pattern_with_filters(model, pattern, replacement, [match_filters])
+        _compress_qdq_constant_transformation(model, matches)
+        _set_meta_for_matches(model, matches)
+
+
 def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     """
     Applies quantization transformations to the model.
+
     :param model: Model to apply transformations to.
     """
     # BatchNorm operations have 3 output ports,
     # to make it easier for algorithms to work
     # with the target graph BatchNorm operations
     # are being fused
+    fold_constant_except_qdq(model)
     fuse_conv_bn(model)
     separate_conv_and_bias(model)
     separate_linear_and_bias(model)
 
 
+def fold_constant_except_qdq(model: torch.fx.GraphModule):
+    """
+    Performs constant folding avoiding quantize-dequantize pattern.
+
+    :param model: Model to perform constant folding on.
+    """
+
+    def constraint_fn(node: torch.fx.Node):
+        return node.op != "call_function" or node.target not in QUANTIZE_NODE_TARGETS + DEQUANTIZE_NODE_TARGETS
+
+    constant_fold(model, constraint_fn=constraint_fn)
+
+
 def revert_quantization_transformations(model: torch.fx.GraphModule) -> None:
     """
     Reverts quantization transformations from the model.
+
     :param model: Model to revert transformations from.
     """
     merge_conv_and_bias(model)
@@ -458,6 +828,17 @@ def _is_conv(n: torch.fx.Node):
     return n.op == "call_function" and n.target in (
         torch.ops.aten.conv1d.default,
         torch.ops.aten.conv2d.default,
+        torch.ops.aten.conv_transpose2d.input,
+    )
+
+
+def _is_add(n: torch.fx.Node):
+    """
+    Return whether the node refers to an aten add op.
+    """
+    return n.op == "call_function" and n.target in (
+        torch.ops.aten.add_.Tensor,
+        torch.ops.aten.add.Tensor,
     )
 
 
@@ -468,11 +849,13 @@ def separate_linear_and_bias(model: torch.fx.GraphModule):
 
     :param model: Target model.
     """
-    add_node_target = torch.ops.aten.add_.Tensor
+    add_node_target = torch.ops.aten.add.Tensor
     for n in model.graph.nodes:
         if not _is_linear(n):
             continue
-        if len(n.args) < 3 or n.args[2] is None:
+        # This check also makes sure to ignore linear nodes which might already
+        # have quantization applied to the weights.
+        if len(n.args) < 3 or n.args[2] is None or n.args[1].op != "get_attr":
             continue
         linear_node = n
         linear_bias_node = linear_node.args[2]
@@ -515,7 +898,9 @@ def separate_conv_and_bias(model: torch.fx.GraphModule):
     for n in model.graph.nodes:
         if not _is_conv(n):
             continue
-        if len(n.args) < 3 or n.args[2] is None:
+        # This check also makes sure to ignore convolution nodes which might
+        # already have quantization applied to the weights.
+        if len(n.args) < 3 or n.args[2] is None or n.args[1].op != "get_attr":
             continue
         conv_node = n
         dims = len(get_tensor_constant_from_node(conv_node.args[1], model).shape)
@@ -560,6 +945,27 @@ def merge_linear_and_bias(model: torch.fx.GraphModule):
     _merge_node_and_bias(model, _is_linear)
 
 
+def _get_connected_nodes(graph: torch.fx.Graph) -> List[torch.fx.Node]:
+    """
+    Returns the List of nodes which are directly or indirectly connected
+    to the output node.
+
+    :param graph: The torch FX graph to get nodes from.
+    """
+    output_nodes = [node for node in graph.nodes if node.op == "output"]
+    assert len(output_nodes) == 1
+    output_node = output_nodes[0]
+    connected_nodes = set()  # Every node is unique in the graph
+    nodes_to_visit = [output_node]
+    while nodes_to_visit:
+        current_node = nodes_to_visit.pop()
+        if current_node in connected_nodes:
+            continue
+        connected_nodes.add(current_node)
+        nodes_to_visit.extend(current_node.all_input_nodes)
+    return list(connected_nodes)
+
+
 def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[torch.fx.Node], bool]):
     """
     Merges two separate node and bias node to a one node: node+bias.
@@ -568,7 +974,7 @@ def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[
     :param model: Target model.
     :param is_target_node: Predicate to specify nodes which should be merged with the bias
     """
-    add_node_targets = (torch.ops.aten.add_.Tensor,)
+    add_node_targets = (torch.ops.aten.add.Tensor, torch.ops.aten.add_.Tensor)
     for n in model.graph.nodes:
         if not is_target_node(n):
             continue
@@ -592,6 +998,14 @@ def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[
         conv_node.args = tuple(args)
         for user in list(bias_node.users):
             user.replace_input_with(bias_node, conv_node)
+
+    # Remove nodes which are not connected to output. This removes dead nodes and dead subgraphs in the model graph.
+    nodes_connected_to_output = _get_connected_nodes(model.graph)
+    is_impure = lambda node: node in nodes_connected_to_output
+
+    for node in reversed(model.graph.nodes):
+        if not is_impure(node) and len(node.users) == 0:
+            model.graph.erase_node(node)
 
     model.graph.eliminate_dead_code()
     model.recompile()
