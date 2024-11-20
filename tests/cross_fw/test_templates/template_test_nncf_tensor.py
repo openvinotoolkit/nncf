@@ -1696,16 +1696,17 @@ class TemplateTestNNCFTensorOperators:
             assert isinstance(act, Tensor)
             assert fns.allclose(fns.abs(act), abs_ref, atol=1e-7)
 
-    def test_inverted_divide(self):
-        a = Tensor(self.to_tensor([1e8])).astype(TensorDataType.float32)
-        b = Tensor(self.to_tensor([7])).astype(TensorDataType.float32)
-        result = a / b
-        result_inverted_divide = fns.inverted_divide(a, b)
-        assert fns.allclose(result, Tensor(self.to_tensor([14285714])), atol=0, rtol=0)
-        assert fns.allclose(result_inverted_divide, Tensor(self.to_tensor([14285715])), atol=0, rtol=0)
+    @pytest.mark.parametrize("a,b,ref_div,ref_inv_div", [(1e8, 7, 14285714, 14285715)])
+    def test_inverted_divide(self, a, b, ref_div, ref_inv_div):
+        a_tensor = Tensor(self.to_tensor([a])).astype(TensorDataType.float32)
+        b_tensor = Tensor(self.to_tensor([b])).astype(TensorDataType.float32)
+        div = a_tensor / b_tensor
+        inv_div = fns.inverted_divide(a_tensor, b_tensor)
+        assert fns.allclose(div, Tensor(self.to_tensor([ref_div])), atol=0, rtol=0)
+        assert fns.allclose(inv_div, Tensor(self.to_tensor([ref_inv_div])), atol=0, rtol=0)
 
-        a /= b
-        a_copy = Tensor(self.to_tensor([1e8])).astype(TensorDataType.float32)
-        fns.inplace_inverted_divide(a_copy, b)
-        assert fns.allclose(a, result, atol=0, rtol=0)
-        assert fns.allclose(a_copy, result_inverted_divide, atol=0, rtol=0)
+        a_tensor /= b_tensor
+        a_tensor_copy = Tensor(self.to_tensor([a])).astype(TensorDataType.float32)
+        fns.inplace_inverted_divide(a_tensor_copy, b)
+        assert fns.allclose(a_tensor, div, atol=0, rtol=0)
+        assert fns.allclose(a_tensor_copy, inv_div, atol=0, rtol=0)
