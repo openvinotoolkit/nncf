@@ -431,3 +431,8 @@ def _(a: Union[np.ndarray, np.generic]) -> Union[np.ndarray, np.generic]:
 @register_numpy_types(numeric.ceil)
 def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
     return np.ceil(a)
+
+
+@register_numpy_types(numeric.reciprocal)
+def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+    return np.reciprocal(a)

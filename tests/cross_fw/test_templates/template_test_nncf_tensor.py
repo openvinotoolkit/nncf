@@ -44,7 +44,6 @@ OPERATOR_MAP = {
     "ipow": operator.ipow,
     "itruediv": operator.itruediv,
     "ifloordiv": operator.ifloordiv,
-    "reciprocal": lambda a, _: 1.0 / a,
 }
 BINARY_OPERATORS = ["add", "sub", "pow", "mul", "truediv", "floordiv"]
 
@@ -1696,3 +1695,9 @@ class TemplateTestNNCFTensorOperators:
         for act, abs_ref in zip(res, abs_res_ref):
             assert isinstance(act, Tensor)
             assert fns.allclose(fns.abs(act), abs_ref, atol=1e-7)
+
+    @pytest.mark.parametrize("a,ref", [([1], [1.0]), ([2, 4], [0.5, 0.25])])
+    def test_reciprocal(self, a, ref):
+        t_a = Tensor(self.to_tensor(a)).astype(TensorDataType.float32)
+        res = fns.reciprocal(t_a)
+        assert fns.allclose(res, Tensor(self.to_tensor(ref)).astype(TensorDataType.float32))

@@ -909,7 +909,7 @@ def ceil(a: Tensor) -> Tensor:
 
 @functools.singledispatch
 @tensor_guard
-def reciprocal(a: Union[Tensor, float]) -> Tensor:
+def reciprocal(a: Tensor) -> Tensor:
     """
     Compute the reciprocal of a tensor or a float.
 
@@ -918,4 +918,4 @@ def reciprocal(a: Union[Tensor, float]) -> Tensor:
     :param a: The input tensor or float.
     :return: A tensor containing the reciprocal of each element in `a`.
     """
-    return Tensor(1.0 / a)
+    return Tensor(reciprocal(a.data))

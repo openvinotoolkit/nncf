@@ -465,3 +465,8 @@ def _(a: torch.Tensor) -> torch.Tensor:
 @numeric.ceil.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.ceil(a)
+
+
+@numeric.reciprocal.register(torch.Tensor)
+def _(a: torch.Tensor) -> torch.Tensor:
+    return torch.reciprocal(a)
