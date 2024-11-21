@@ -44,6 +44,7 @@ OPERATOR_MAP = {
     "ipow": operator.ipow,
     "itruediv": operator.itruediv,
     "ifloordiv": operator.ifloordiv,
+    "reciprocal": lambda a, _: 1.0 / a,
 }
 BINARY_OPERATORS = ["add", "sub", "pow", "mul", "truediv", "floordiv"]
 
@@ -1695,18 +1696,3 @@ class TemplateTestNNCFTensorOperators:
         for act, abs_ref in zip(res, abs_res_ref):
             assert isinstance(act, Tensor)
             assert fns.allclose(fns.abs(act), abs_ref, atol=1e-7)
-
-    @pytest.mark.parametrize("a,b,ref_div,ref_inv_div", [(1e8, 7, 14285714, 14285715)])
-    def test_inverted_divide(self, a, b, ref_div, ref_inv_div):
-        a_tensor = Tensor(self.to_tensor([a])).astype(TensorDataType.float32)
-        b_tensor = Tensor(self.to_tensor([b])).astype(TensorDataType.float32)
-        div = a_tensor / b_tensor
-        inv_div = fns.inverted_divide(a_tensor, b_tensor)
-        assert fns.allclose(div, Tensor(self.to_tensor([ref_div])), atol=0, rtol=0)
-        assert fns.allclose(inv_div, Tensor(self.to_tensor([ref_inv_div])), atol=0, rtol=0)
-
-        a_tensor /= b_tensor
-        a_tensor_copy = Tensor(self.to_tensor([a])).astype(TensorDataType.float32)
-        fns.inplace_inverted_divide(a_tensor_copy, b)
-        assert fns.allclose(a_tensor, div, atol=0, rtol=0)
-        assert fns.allclose(a_tensor_copy, inv_div, atol=0, rtol=0)

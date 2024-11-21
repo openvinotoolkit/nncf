@@ -30,8 +30,6 @@ from nncf.tensor.functions.numeric import eye as eye
 from nncf.tensor.functions.numeric import finfo as finfo
 from nncf.tensor.functions.numeric import flatten as flatten
 from nncf.tensor.functions.numeric import from_numpy as from_numpy
-from nncf.tensor.functions.numeric import inplace_inverted_divide as inplace_inverted_divide
-from nncf.tensor.functions.numeric import inverted_divide as inverted_divide
 from nncf.tensor.functions.numeric import isclose as isclose
 from nncf.tensor.functions.numeric import isempty as isempty
 from nncf.tensor.functions.numeric import item as item
@@ -52,6 +50,7 @@ from nncf.tensor.functions.numeric import ones_like as ones_like
 from nncf.tensor.functions.numeric import percentile as percentile
 from nncf.tensor.functions.numeric import power as power
 from nncf.tensor.functions.numeric import quantile as quantile
+from nncf.tensor.functions.numeric import reciprocal as reciprocal
 from nncf.tensor.functions.numeric import reshape as reshape
 from nncf.tensor.functions.numeric import round as round
 from nncf.tensor.functions.numeric import searchsorted as searchsorted
