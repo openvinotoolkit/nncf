@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import warnings
 from dataclasses import dataclass
 from typing import Tuple
 
@@ -121,13 +122,12 @@ def tune_range(
         fval = -left_border * s
         qval = fns.round(fval)
 
-    # Avoid division by zero
-    qval_nonzero = fns.where(qval == 0, fns.ones_like(qval), qval)
-    qval_not_high = fns.where(qval - level_high == 0, fns.ones_like(qval), qval - level_high)
-
-    ra_then_result = qval / qval_not_high * right_border
-    rb_then_result = (qval - level_high) / qval_nonzero * left_border
-
+    with warnings.catch_warnings():
+        # If `qval` is 0 `rb` will equal `right_border`, and we don't want to show an unnecessary division by 0 warning
+        # The same for (qval - level_high)
+        warnings.simplefilter("ignore")
+        ra_then_result = qval / (qval - level_high) * right_border
+        rb_then_result = (qval - level_high) / qval * left_border
     ra = fns.where(qval < level_high, ra_then_result, left_border)
     rb = fns.where(qval > 0.0, rb_then_result, right_border)
 
