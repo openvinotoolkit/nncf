@@ -36,6 +36,7 @@ from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.transformations import _get_connected_nodes
+from nncf.experimental.torch.fx.transformations import _get_node_by_input_port_id
 from nncf.experimental.torch.fx.transformations import _set_new_node_meta
 from nncf.experimental.torch.fx.transformations import bias_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
@@ -54,6 +55,7 @@ from tests.torch.test_models.synthetic import ConstantFoldingTestModel
 from tests.torch.test_models.synthetic import ConvolutionWithAllConstantInputsModel
 from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
+from tests.torch.test_models.synthetic import MultiBranchesConnectedModelWithConcat
 
 
 @dataclass
@@ -118,11 +120,13 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
     check_graph(nncf_graph, f"{get_test_id(test_case)}.dot", EXTRACTED_GRAPHS_DIR_NAME, extended=True)
 
 
-MultiBranchesConnectedModel_TARGET_POINTS = (
+MultiBranchesConnectedModelWithConcat_TARGET_POINTS = (
     PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, "conv2d", input_port_id=0),
     PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, "conv2d", input_port_id=1),
     PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, "conv2d_1", input_port_id=1),
     PTTargetPoint(TargetType.OPERATOR_POST_HOOK, "conv2d"),
+    PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, "cat", input_port_id=1),
+    PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, "cat", input_port_id=2),
 )
 
 
@@ -132,14 +136,14 @@ def test_model_insertion_transformation(leaf: bool):
         def forward(self, x):
             return x + 1
 
-    target_points = list(MultiBranchesConnectedModel_TARGET_POINTS)
+    target_points = list(MultiBranchesConnectedModelWithConcat_TARGET_POINTS)
     target_node_name = "TEST_MODULE"
     test_module_instance = TestInsertModule()
     builder = leaf_module_insertion_transformation_builder if leaf else module_insertion_transformation_builder
     transformation = builder(test_module_instance, target_points, target_node_name)
 
-    model = MultiBranchesConnectedModel()
-    captured_model = get_torch_fx_model(model, torch.ones((1, 3, 3, 3)))
+    model = MultiBranchesConnectedModelWithConcat()
+    captured_model = get_torch_fx_model(model, torch.ones(MultiBranchesConnectedModelWithConcat.INPUT_SIZE))
     transformation(captured_model)
 
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
@@ -147,14 +151,40 @@ def test_model_insertion_transformation(leaf: bool):
     check_graph(nncf_graph, f"model_insertion{'_leaf' if leaf else ''}.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
 
 
-@pytest.mark.parametrize("bias", [True, False], ids=["bias", "constant"])
-def test_constant_update_transformation(bias: bool):
-    model = MultiBranchesConnectedModel()
-    captured_model = get_torch_fx_model(model, torch.ones((1, 3, 3, 3)))
+@pytest.mark.parametrize("concat", [False, True])
+def test_constant_update_transformation(concat: bool):
+    model = MultiBranchesConnectedModelWithConcat()
+    captured_model = get_torch_fx_model(model, torch.ones(MultiBranchesConnectedModelWithConcat.INPUT_SIZE))
     nncf_graph = GraphConverter.create_nncf_graph(captured_model)
-    target_node = nncf_graph.get_node_by_name("conv2d" if bias else "add_")
+    target_node_name = "cat" if concat else "add_"
+    target_node = nncf_graph.get_node_by_name(target_node_name)
+    input_port_id = 2 if concat else 1
 
-    builder = bias_update_transformation_builder if bias else constant_update_transformation_builder
+    builder = constant_update_transformation_builder
+    new_value = torch.tensor((42.0,))
+    transformation = builder(target_node, value=new_value, input_port_id=input_port_id)
+    transformation(captured_model)
+
+    target_graph_node = get_graph_node_by_name(captured_model.graph, target_node_name)
+    new_const_node = _get_node_by_input_port_id(target_graph_node, input_port_id)
+    assert get_tensor_constant_from_node(new_const_node, captured_model) == new_value
+
+    transformed_nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+    check_graph(
+        transformed_nncf_graph,
+        f"{'cat_' if concat else ''}constant_update.dot",
+        TRANSFORMED_GRAPH_DIR_NAME,
+        extended=True,
+    )
+
+
+def test_bias_update_transformation():
+    model = MultiBranchesConnectedModelWithConcat()
+    captured_model = get_torch_fx_model(model, torch.ones(MultiBranchesConnectedModelWithConcat.INPUT_SIZE))
+    nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+    target_node = nncf_graph.get_node_by_name("conv2d")
+
+    builder = bias_update_transformation_builder
     new_value = torch.tensor((42.0,))
     transformation = builder(target_node, value=new_value, input_port_id=1)
     transformation(captured_model)
@@ -216,7 +246,7 @@ class TestQDQInsertion:
     ):
         target_node = get_graph_node_by_name(captured_model.graph, target_point.target_node_name)
         if target_point.target_type in [TargetType.OPERATION_WITH_WEIGHTS, TargetType.OPERATOR_PRE_HOOK]:
-            dq_node = target_node.args[target_point.input_port_id]
+            dq_node = _get_node_by_input_port_id(target_node, target_point.input_port_id)
             q_node = dq_node.args[0]
         else:
             q_node = list(target_node.users)[0]
@@ -240,7 +270,7 @@ class TestQDQInsertion:
             assert get_value(dq_node.args[2]) == self.REF_ZERO_POINT
             assert dq_node.args[-1] == ref_dtype
 
-    @pytest.mark.parametrize("target_point", MultiBranchesConnectedModel_TARGET_POINTS)
+    @pytest.mark.parametrize("target_point", MultiBranchesConnectedModelWithConcat_TARGET_POINTS)
     def test_one_target_point(
         self,
         is_per_channel: bool,
@@ -254,8 +284,8 @@ class TestQDQInsertion:
         quantizer = self._get_quantizer(is_per_channel, symmetric, q_min, q_max, dtype)
         transformation = qdq_insertion_transformation_builder(quantizer, [target_point])
 
-        model = MultiBranchesConnectedModel()
-        captured_model = get_torch_fx_model(model, torch.ones((1, 3, 3, 3)))
+        model = MultiBranchesConnectedModelWithConcat()
+        captured_model = get_torch_fx_model(model, torch.ones(MultiBranchesConnectedModelWithConcat.INPUT_SIZE))
         transformation(captured_model)
 
         self._check_qdq_params(captured_model, target_point, dtype, is_per_channel)
@@ -306,8 +336,8 @@ class TestQDQInsertion:
         quantizer = self._get_quantizer(is_per_channel, symmetric, q_min, q_max, dtype)
         transformation = qdq_insertion_transformation_builder(quantizer, target_points)
 
-        model = MultiBranchesConnectedModel()
-        captured_model = get_torch_fx_model(model, torch.ones((1, 3, 3, 3)))
+        model = MultiBranchesConnectedModelWithConcat()
+        captured_model = get_torch_fx_model(model, torch.ones(MultiBranchesConnectedModelWithConcat.INPUT_SIZE))
         if not weights:
             with pytest.raises(nncf.InternalError):
                 transformation(captured_model)
@@ -343,10 +373,10 @@ def test_node_removal_transformation():
 
 
 @pytest.mark.parametrize("tuple_output", [False, True], ids=["node_out", "tuple_out"])
-@pytest.mark.parametrize("target_point", MultiBranchesConnectedModel_TARGET_POINTS)
+@pytest.mark.parametrize("target_point", MultiBranchesConnectedModelWithConcat_TARGET_POINTS)
 def test_output_insertion_transformation(tuple_output: bool, target_point: PTTargetPoint):
-    model = MultiBranchesConnectedModel()
-    captured_model = get_torch_fx_model(model, torch.ones((1, 3, 3, 3)))
+    model = MultiBranchesConnectedModelWithConcat()
+    captured_model = get_torch_fx_model(model, torch.ones(MultiBranchesConnectedModelWithConcat.INPUT_SIZE))
 
     if not tuple_output:
         output_node = [node for node in captured_model.graph.nodes if node.op == "output"][0]

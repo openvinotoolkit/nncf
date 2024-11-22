@@ -553,6 +553,26 @@ class MultiBranchesConnectedModel(torch.nn.Module):
         return self.conv_c(y) + self.bias
 
 
+class MultiBranchesConnectedModelWithConcat(torch.nn.Module):
+    INPUT_SIZE = (1, 3, 3, 3)
+
+    def __init__(self):
+        super().__init__()
+        self.conv_a = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+        self.conv_b = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+        self.conv_c = nn.Conv2d(in_channels=9, out_channels=3, kernel_size=1)
+        self.const = nn.Parameter(torch.ones(self.INPUT_SIZE))
+        self.bias = torch.tensor([1])
+
+    def forward(self, x):
+        a = self.conv_a(x)
+        b = self.conv_b(a)
+        a += self.bias
+        b += self.bias
+        y = torch.cat([a, b, self.const], dim=1)
+        return self.conv_c(y) + self.bias
+
+
 class LinearPTQParamsTestModel(nn.Module):
     INPUT_SIZE = None
 

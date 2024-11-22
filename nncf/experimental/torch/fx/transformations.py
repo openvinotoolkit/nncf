@@ -129,7 +129,7 @@ def module_insertion_transformation_builder(
                         user.replace_input_with(target_node, new_node)
 
             else:
-                prev_node = target_node.args[target_point.input_port_id]
+                prev_node = _get_node_by_input_port_id(target_node, target_point.input_port_id)
                 _set_new_node_meta(new_node, [prev_node], module_to_insert, model)
                 target_node.replace_input_with(prev_node, new_node)
 
@@ -222,27 +222,25 @@ def constant_update_fn(
     :param updated_node_name: Name of the constant node after updating. Default is `nodename` + `_updated_constant`.
     """
     graph = model.graph
-    node_name = updated_node_name if updated_node_name else node.name + "_updated_constant"
-    args = list(node.args)
-    # A bias node suppose to have constant on the second input port.
-    if args[input_port_id].op != "get_attr":
+    old_const = _get_node_by_input_port_id(node, input_port_id)
+
+    if old_const.op != "get_attr":
         raise nncf.InternalError(
-            f"Constant on input port {input_port_id} for {node} is expected,"
-            f" but node {args[input_port_id]} is present."
+            f"Constant on input port {input_port_id} for {node} is expected," f" but node {old_const} is present."
         )
 
+    node_name = updated_node_name if updated_node_name else old_const.name + "_updated_constant"
     # Update metadata of the new constant node.
-    previous_const = args[input_port_id]
-    consumer_nodes = list(previous_const.users)
+    consumer_nodes = list(old_const.users)
     # This list of consumer nodes is topologically sorted
     # To ensure the updated node has the right order,
     # we insert constant node before the node placed at the highest order in topological order.
     sorted_consumer_nodes = [node for node in graph.nodes if node in consumer_nodes]
 
     with graph.inserting_before(sorted_consumer_nodes[0]):
-        new_constant = create_getattr_from_value(model, graph, node_name, value)
+        new_const = create_getattr_from_value(model, graph, node_name, value)
 
-    previous_const.replace_all_uses_with(new_constant, propagate_meta=True)
+    old_const.replace_all_uses_with(new_const, propagate_meta=True)
     graph.eliminate_dead_code()
 
 
