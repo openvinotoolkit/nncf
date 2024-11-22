@@ -629,3 +629,22 @@ class ShortTransformer(torch.nn.Module):
         x = self.linear(x)
         res = self.lm_head(x)
         return res
+
+
+class YOLO11N_SDPABlock(torch.nn.Module):
+    INPUT_SIZE = (1, 2, 4)
+
+    def __init__(self):
+        super().__init__()
+        self.kqv = nn.Linear(4, 12, bias=False)
+        self.fc = nn.Linear
+
+    def forward(self, x):
+        x = self.kqv(x)
+        k = x[:, :, :4]
+        q = x[:, :, 4:8]
+        v = x[:, :, 8:]
+        kq = torch.matmul(k, torch.transpose(q, 1, 2))
+        kq /= 2**-2
+        kq = torch.softmax(kq, -1)
+        return torch.matmul(torch.transpose(kq, 1, 2), v)
