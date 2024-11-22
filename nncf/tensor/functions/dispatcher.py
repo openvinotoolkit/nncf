@@ -285,6 +285,10 @@ def get_numeric_backend_fn(fn_name: str, backend: TensorBackend) -> Callable[...
         from nncf.tensor.functions import torch_numeric
 
         return getattr(torch_numeric, fn_name)
+    if backend == TensorBackend.tf:
+        from nncf.tensor.functions import tf_numeric
+
+        return getattr(tf_numeric, fn_name)
     msg = f"Unsupported backend type: {backend}"
     raise ValueError(msg)
 
