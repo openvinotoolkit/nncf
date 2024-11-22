@@ -16,6 +16,7 @@ from typing import Dict, Optional, Tuple
 
 import openvino as ov
 import torch
+from rich.progress import track
 from ultralytics.cfg import get_cfg
 from ultralytics.models.yolo import YOLO
 from ultralytics.models.yolo.segment.val import SegmentationValidator
@@ -24,7 +25,6 @@ from ultralytics.utils.metrics import ConfusionMatrix
 
 from examples.post_training_quantization.onnx.yolov8_quantize_with_accuracy_control.main import prepare_validation
 from examples.post_training_quantization.onnx.yolov8_quantize_with_accuracy_control.main import print_statistics
-from nncf.common.logging.track_progress import track
 
 ROOT = Path(__file__).parent.resolve()
 MODEL_NAME = "yolov8n-seg"

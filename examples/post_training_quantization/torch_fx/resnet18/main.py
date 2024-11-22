@@ -26,11 +26,11 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
+from rich.progress import track
 from torch._dynamo.exc import BackendCompilerFailed
 
 import nncf
 import nncf.torch
-from nncf.common.logging.track_progress import track
 from nncf.common.utils.helpers import create_table
 from nncf.common.utils.os import is_windows
 from nncf.torch import disable_patching

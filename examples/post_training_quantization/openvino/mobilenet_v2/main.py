@@ -18,12 +18,12 @@ import numpy as np
 import openvino as ov
 import torch
 from fastdownload import FastDownload
+from rich.progress import track
 from sklearn.metrics import accuracy_score
 from torchvision import datasets
 from torchvision import transforms
 
 import nncf
-from nncf.common.logging.track_progress import track
 
 ROOT = Path(__file__).parent.resolve()
 DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"

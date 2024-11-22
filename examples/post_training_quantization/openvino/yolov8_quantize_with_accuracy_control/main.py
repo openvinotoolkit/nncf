@@ -16,6 +16,7 @@ from typing import Any, Dict, Tuple
 
 import openvino as ov
 import torch
+from rich.progress import track
 from ultralytics.cfg import get_cfg
 from ultralytics.data.converter import coco80_to_coco91_class
 from ultralytics.data.utils import check_det_dataset
@@ -27,7 +28,6 @@ from ultralytics.utils import ops
 from ultralytics.utils.metrics import ConfusionMatrix
 
 import nncf
-from nncf.common.logging.track_progress import track
 
 MODEL_NAME = "yolov8n-seg"
 

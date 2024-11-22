@@ -17,9 +17,9 @@ from typing import List
 import openvino as ov
 import tensorflow as tf
 import tensorflow_datasets as tfds
+from rich.progress import track
 
 import nncf
-from nncf.common.logging.track_progress import track
 
 ROOT = Path(__file__).parent.resolve()
 WEIGHTS_URL = "https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/tf_model.h5"

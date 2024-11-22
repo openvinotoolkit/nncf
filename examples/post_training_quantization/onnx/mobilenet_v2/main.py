@@ -20,12 +20,12 @@ import openvino as ov
 import torch
 from fastdownload import FastDownload
 from fastdownload import download_url
+from rich.progress import track
 from sklearn.metrics import accuracy_score
 from torchvision import datasets
 from torchvision import transforms
 
 import nncf
-from nncf.common.logging.track_progress import track
 
 ROOT = Path(__file__).parent.resolve()
 MODEL_URL = "https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/mobilenet_v2_imagenette.onnx"

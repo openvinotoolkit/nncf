@@ -27,7 +27,7 @@ from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchvision.models.detection.ssd import SSD
 from torchvision.models.detection.ssd import GeneralizedRCNNTransform
 from torchvision.models.detection.anchor_utils import DefaultBoxGenerator
-from nncf.common.logging.track_progress import track
+from rich.progress import track
 from functools import partial
 
 ROOT = Path(__file__).parent.resolve()
