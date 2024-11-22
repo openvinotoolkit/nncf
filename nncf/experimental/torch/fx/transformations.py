@@ -472,6 +472,13 @@ def get_input_node(target_point: PTTargetPoint, target_node: torch.fx.Node) -> t
 
 
 def _get_node_by_input_port_id(node: torch.fx.Node, input_port_id: int) -> torch.fx.Node:
+    """
+    Retrieves an input node from the given node and the input port id.
+
+    :param node: Given input node.
+    :param input_port_id: Given input port id.
+    :return: An input node from the given node and the input port id.
+    """
     if node.target == torch.ops.aten.cat.default:
         return node.args[0][input_port_id]
     return node.args[input_port_id]
