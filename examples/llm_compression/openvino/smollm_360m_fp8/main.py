@@ -49,6 +49,8 @@ def transform_fn(data, model, tokenizer):
 def generate_answers(questions, model, tokenizer, max_new_tokens=50):
     messages = [
         {"role": "system", "content": "You are a chatbot who always responds as short as possible."},
+        {"role": "user", "content": "What is the capital of Spain?"},
+        {"role": "assistant", "content": "Madrid."},
     ]
     answers_by_questions = {}
     model.request = None
