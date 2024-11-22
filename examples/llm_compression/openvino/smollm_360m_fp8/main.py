@@ -46,21 +46,31 @@ def transform_fn(data, model, tokenizer):
     return inputs
 
 
-def generate_answer(question, model, tokenizer, max_new_tokens=50):
-    messages = [{"role": "user", "content": question}]
-    input_ids = tokenizer.apply_chat_template(
-        messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
-    ).to(device=model.device)
-
-    model.request = None
-    output = model.generate(input_ids, max_new_tokens=max_new_tokens, do_sample=False)
+def generate_answers(questions, model, tokenizer, max_new_tokens=50):
+    messages = [
+        {"role": "system", "content": "You are a chatbot who always responds as short as possible."},
+    ]
+    answers_by_questions = {}
     model.request = None
 
-    return tokenizer.decode(output[0][len(input_ids[0]) :])
+    for question in questions:
+        messages.append({"role": "user", "content": question})
+        input_ids = tokenizer.apply_chat_template(
+            messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
+        ).to(device=model.device)
+        input_len = len(input_ids[0])
+
+        output = model.generate(input_ids, max_new_tokens=max_new_tokens, do_sample=False)[0]
+        answer = tokenizer.decode(output[input_len:], skip_special_tokens=True)
+        answers_by_questions[question] = answer
+        messages.append({"role": "assistant", "content": answer})
+
+    model.request = None
+    return answers_by_questions
 
 
 def main():
-    MODEL_ID = "HuggingFaceTB/SmolLM-360M-Instruct"
+    MODEL_ID = "HuggingFaceTB/SmolLM2-360M-Instruct"
     OUTPUT_DIR = "smollm_360m_compressed"
 
     dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
@@ -77,10 +87,16 @@ def main():
         ov_config={"INFERENCE_PRECISION_HINT": "f32"},
     )
 
-    control_question = "What is Python?"
+    questions = [
+        "What is the capital of France?",
+        "What is the highest mountain in the Alps?",
+        "What is the largest city in Canada?",
+        "What is the longest river in the Africa?",
+        "What is the most visited city in Japan?",
+    ]
 
-    output_text = generate_answer(control_question, model, tokenizer)
-    print(f"Non-optimized model output:\n{output_text}\n")
+    answers_by_questions = generate_answers(questions, model, tokenizer)
+    print(f"Non-optimized model outputs:\n{answers_by_questions}\n")
 
     quantization_dataset = nncf.Dataset(dataset, partial(transform_fn, model=model, tokenizer=tokenizer))
 
@@ -102,9 +118,9 @@ def main():
     model = OVModelForCausalLM.from_pretrained(
         OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "INFERENCE_PRECISION_HINT": "f32"}
     )
-    output_text = generate_answer(control_question, model, tokenizer)
-    print(f"Optimized model output:\n{output_text}\n")
-    return output_text
+    answers_by_questions = generate_answers(questions, model, tokenizer)
+    print(f"Optimized model outputs:\n{answers_by_questions}\n")
+    return answers_by_questions
 
 
 if __name__ == "__main__":
