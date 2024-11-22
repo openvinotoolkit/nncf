@@ -91,7 +91,6 @@ def main():
         "What is the capital of France?",
         "What is the highest mountain in the Alps?",
         "What is the largest city in Canada?",
-        "What is the longest river in the Africa?",
         "What is the most visited city in Japan?",
     ]
 

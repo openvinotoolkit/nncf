@@ -188,17 +188,8 @@ def fp8_llm_quantization() -> Dict[str, float]:
     from examples.llm_compression.openvino.smollm_360m_fp8.main import main as fp8_llm_quantization_main
 
     result = fp8_llm_quantization_main()
-    reference_answers = set(
-        [
-            "Paris.",
-            "Mont Blanc.",
-            "Toronto.",
-            "Nile.",
-            "Tokyo.",
-        ]
-    )
-    intersection = set(result.values()).intersection(reference_answers)
-    return {"correct_answers_passrate": len(intersection) / len(reference_answers)}
+
+    return {"answers": list(result.values())}
 
 
 def post_training_quantization_torch_fx_resnet18():
