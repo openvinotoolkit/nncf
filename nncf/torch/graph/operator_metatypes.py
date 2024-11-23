@@ -148,6 +148,13 @@ class PTDepthwiseConvOperatorSubtype(PTOperatorSubtype):
     def matches(
         cls, layer_attributes: Optional[BaseLayerAttributes] = None, function_args=None, functions_kwargs=None
     ) -> bool:
+        if layer_attributes is None and function_args is not None and functions_kwargs is not None:
+            # Used for torch2
+            weight_meta = functions_kwargs.get("weight", function_args[0])
+            in_channels = weight_meta.shape[1]
+            groups = functions_kwargs.get("groups", function_args[6] if len(function_args) > 6 else 1)
+            return in_channels > 1 and groups == in_channels
+
         if _is_called_inside_nncf_module(functions_kwargs):
             return False
         if not isinstance(layer_attributes, ConvolutionLayerAttributes):
