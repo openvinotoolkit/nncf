@@ -22,7 +22,7 @@ from tests.cross_fw.shared.command import Command
 from tests.cross_fw.shared.helpers import create_venv_with_nncf
 from tests.cross_fw.shared.helpers import get_pip_executable_with_venv
 from tests.cross_fw.shared.helpers import get_python_executable_with_venv
-from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.json import load_json
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 from tests.cross_fw.shared.paths import TEST_ROOT
 

@@ -18,8 +18,8 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
-from tests.cross_fw.shared.helpers import compare_stats
-from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.comparator import compare_stats
+from tests.cross_fw.shared.json import load_json
 from tests.onnx.conftest import ONNX_TEST_ROOT
 from tests.onnx.models import EmbeddingModel
 from tests.onnx.models import GEMMTransposeWeightModel

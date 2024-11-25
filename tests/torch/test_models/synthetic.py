@@ -553,6 +553,26 @@ class MultiBranchesConnectedModel(torch.nn.Module):
         return self.conv_c(y) + self.bias
 
 
+class MultiBranchesConnectedModelWithConcat(torch.nn.Module):
+    INPUT_SIZE = (1, 3, 3, 3)
+
+    def __init__(self):
+        super().__init__()
+        self.conv_a = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+        self.conv_b = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=1)
+        self.conv_c = nn.Conv2d(in_channels=9, out_channels=3, kernel_size=1)
+        self.const = nn.Parameter(torch.ones(self.INPUT_SIZE))
+        self.bias = torch.tensor([1])
+
+    def forward(self, x):
+        a = self.conv_a(x)
+        b = self.conv_b(a)
+        a += self.bias
+        b += self.bias
+        y = torch.cat([a, b, self.const], dim=1)
+        return self.conv_c(y) + self.bias
+
+
 class LinearPTQParamsTestModel(nn.Module):
     INPUT_SIZE = None
 
@@ -609,3 +629,22 @@ class ShortTransformer(torch.nn.Module):
         x = self.linear(x)
         res = self.lm_head(x)
         return res
+
+
+class YOLO11N_SDPABlock(torch.nn.Module):
+    INPUT_SIZE = (1, 2, 4)
+
+    def __init__(self):
+        super().__init__()
+        self.kqv = nn.Linear(4, 12, bias=False)
+        self.fc = nn.Linear
+
+    def forward(self, x):
+        x = self.kqv(x)
+        k = x[:, :, :4]
+        q = x[:, :, 4:8]
+        v = x[:, :, 8:]
+        kq = torch.matmul(k, torch.transpose(q, 1, 2))
+        kq /= 2**-2
+        kq = torch.softmax(kq, -1)
+        return torch.matmul(torch.transpose(kq, 1, 2), v)
