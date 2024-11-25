@@ -163,14 +163,18 @@ class FXModelTransformer(ModelTransformer):
         for idx, node in enumerate(nodes_with_output):
             if isinstance(node, torch.fx.Node):
                 continue
+            # Current node is the original graph output.
+            # Should be replaced by its arguments.
             output_node = get_graph_node_by_name(model.graph, node)
             args = output_node.args[0]
             if isinstance(args, torch.fx.Node):
+                # Case of non tuple output.
                 args = value_remap[args]
             else:
+                # Case of tuple output.
                 args = [value_remap[n] for n in args]
                 # Unpack target output args in case
-                # only one arg is presented.
+                # the only one arg is presented.
                 if len(args) == 1:
                     args = args[0]
             nodes_with_output[idx] = args
