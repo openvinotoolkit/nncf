@@ -1,0 +1,18 @@
+{
+    "conv_a_weight": false,
+    "conv_a_bias": false,
+    "conv_b_weight": false,
+    "conv_b_bias": false,
+    "conv_c_weight": false,
+    "conv_c_bias": false,
+    "bias": true,
+    "x": false,
+    "conv2d": false,
+    "conv2d_1": false,
+    "add_": false,
+    "add__1": false,
+    "add": false,
+    "conv2d_2": false,
+    "add_1": false,
+    "output_1": false
+}

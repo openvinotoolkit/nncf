@@ -23,7 +23,6 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
-from torch._export import capture_pre_autograd_graph
 
 import nncf
 from nncf.common.logging.track_progress import track
@@ -133,7 +132,7 @@ def test_sanity(test_case: SanitySampleCase, tiny_imagenet_dataset):
         with torch.no_grad():
             ex_input = next(iter(calibration_dataset.get_inference_data()))
             model.eval()
-            exported_model = capture_pre_autograd_graph(model, args=(ex_input,))
+            exported_model = torch.export.export_for_training(model, args=(ex_input,)).module()
             quantized_model = nncf.quantize(exported_model, calibration_dataset)
             quantized_model = torch.compile(quantized_model, backend="openvino")
 

@@ -84,6 +84,9 @@ class FXModelTransformer(ModelTransformer):
                 continue
 
             visited.add(in_node.name)
+            # Any constant is a stop op during the traversing procedure.
+            if in_node.op == "get_attr":
+                continue
             input_nodes.extend(in_node.all_input_nodes)
             input_nodes.extend(list(in_node.users))
 

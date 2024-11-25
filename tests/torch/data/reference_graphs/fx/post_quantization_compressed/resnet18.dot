@@ -1,5 +1,5 @@
 strict digraph  {
-"0 arg0_1" [id=0, type=input];
+"0 x" [id=0, type=input];
 "1 quantize_per_tensor_default" [id=1, type=quantize_per_tensor];
 "2 dequantize_per_tensor_default" [id=2, type=dequantize_per_tensor];
 "3 conv1_weight_bias_0_0" [id=3, type=get_attr];
@@ -235,7 +235,7 @@ strict digraph  {
 "233 quantize_per_tensor_default_29" [id=233, type=quantize_per_tensor];
 "234 dequantize_per_tensor_default_36" [id=234, type=dequantize_per_tensor];
 "235 flatten" [id=235, type=flatten];
-"236 _param_constant61_0_0" [id=236, type=get_attr];
+"236 fc_bias_0_0" [id=236, type=get_attr];
 "237 scale_updated_constant20" [id=237, type=get_attr];
 "238 compressed_weight_updated_constant20" [id=238, type=get_attr];
 "239 mul_tensor_20" [id=239, type=mul];
@@ -243,7 +243,7 @@ strict digraph  {
 "241 sub_tensor_20" [id=241, type=sub];
 "242 linear" [id=242, type=linear];
 "243 output" [id=243, type=output];
-"0 arg0_1" -> "1 quantize_per_tensor_default"  [label="(1, 3, 224, 224)", style=solid];
+"0 x" -> "1 quantize_per_tensor_default"  [label="(1, 3, 224, 224)", style=solid];
 "1 quantize_per_tensor_default" -> "2 dequantize_per_tensor_default"  [label="(1, 3, 224, 224)", style=solid];
 "2 dequantize_per_tensor_default" -> "9 conv2d"  [label="(1, 3, 224, 224)", style=solid];
 "3 conv1_weight_bias_0_0" -> "9 conv2d"  [label="(64,)", style=solid];
@@ -487,7 +487,7 @@ strict digraph  {
 "233 quantize_per_tensor_default_29" -> "234 dequantize_per_tensor_default_36"  [label="(1, 512, 1, 1)", style=solid];
 "234 dequantize_per_tensor_default_36" -> "235 flatten"  [label="(1, 512, 1, 1)", style=solid];
 "235 flatten" -> "242 linear"  [label="(1, 512)", style=solid];
-"236 _param_constant61_0_0" -> "242 linear"  [label="(1000,)", style=solid];
+"236 fc_bias_0_0" -> "242 linear"  [label="(1000,)", style=solid];
 "237 scale_updated_constant20" -> "239 mul_tensor_20"  [label="(1000, 1)", style=solid];
 "238 compressed_weight_updated_constant20" -> "239 mul_tensor_20"  [label="(1000, 512)", style=solid];
 "239 mul_tensor_20" -> "241 sub_tensor_20"  [label="(1000, 512)", style=solid];
