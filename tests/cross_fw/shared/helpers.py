@@ -8,21 +8,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
 import subprocess
 import sys
-from abc import ABC
-from abc import abstractmethod
-from copy import deepcopy
 from pathlib import Path
-from typing import Callable, Dict, List, Set, TypeVar, Union
-
-import numpy as np
+from typing import Callable, Set
 
 from tests.cross_fw.shared.paths import GITHUB_REPO_URL
 from tests.cross_fw.shared.paths import PROJECT_ROOT
-
-TensorType = TypeVar("TensorType")
 
 
 def is_windows() -> bool:
@@ -125,109 +117,12 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
     return venv_path
 
 
-class BaseTensorListComparator(ABC):
-    @classmethod
-    @abstractmethod
-    def _to_numpy(cls, tensor: TensorType) -> np.ndarray:
-        pass
-
-    @classmethod
-    def _check_assertion(
-        cls,
-        test: Union[TensorType, List[TensorType]],
-        reference: Union[TensorType, List[TensorType]],
-        assert_fn: Callable[[np.ndarray, np.ndarray], bool],
-    ):
-        if not isinstance(test, list):
-            test = [test]
-        if not isinstance(reference, list):
-            reference = [reference]
-        assert len(test) == len(reference)
-
-        for x, y in zip(test, reference):
-            x = cls._to_numpy(x)
-            y = cls._to_numpy(y)
-            assert_fn(x, y)
-
-    @classmethod
-    def check_equal(
-        cls,
-        test: Union[TensorType, List[TensorType]],
-        reference: Union[TensorType, List[TensorType]],
-        rtol: float = 1e-1,
-        atol=0,
-    ):
-        cls._check_assertion(test, reference, lambda x, y: np.testing.assert_allclose(x, y, rtol=rtol, atol=atol))
-
-    @classmethod
-    def check_not_equal(
-        cls,
-        test: Union[TensorType, List[TensorType]],
-        reference: Union[TensorType, List[TensorType]],
-        rtol: float = 1e-4,
-    ):
-        cls._check_assertion(
-            test,
-            reference,
-            lambda x, y: np.testing.assert_raises(AssertionError, np.testing.assert_allclose, x, y, rtol=rtol),
-        )
-
-    @classmethod
-    def check_less(
-        cls, test: Union[TensorType, List[TensorType]], reference: Union[TensorType, List[TensorType]], rtol=1e-4
-    ):
-        cls.check_not_equal(test, reference, rtol=rtol)
-        cls._check_assertion(test, reference, np.testing.assert_array_less)
-
-    @classmethod
-    def check_greater(
-        cls, test: Union[TensorType, List[TensorType]], reference: Union[TensorType, List[TensorType]], rtol=1e-4
-    ):
-        cls.check_not_equal(test, reference, rtol=rtol)
-        cls._check_assertion(
-            test, reference, lambda x, y: np.testing.assert_raises(AssertionError, np.testing.assert_array_less, x, y)
-        )
-
-
 def telemetry_send_event_test_driver(mocker, use_nncf_fn: Callable):
     from nncf.telemetry import telemetry
 
     telemetry_send_event_spy = mocker.spy(telemetry, "send_event")
     use_nncf_fn()
     telemetry_send_event_spy.assert_called()
-
-
-def load_json(stats_path: Path):
-    with open(stats_path, "r", encoding="utf8") as json_file:
-        return json.load(json_file)
-
-
-class NumpyEncoder(json.JSONEncoder):
-    """Special json encoder for numpy types"""
-
-    def default(self, o):
-        if isinstance(o, np.integer):
-            return int(o)
-        if isinstance(o, np.floating):
-            return float(o)
-        if isinstance(o, np.ndarray):
-            return o.tolist()
-        return json.JSONEncoder.default(self, o)
-
-
-def dump_to_json(local_path: Path, data: Dict[str, np.ndarray]):
-    with open(local_path, "w", encoding="utf8") as file:
-        json.dump(deepcopy(data), file, indent=4, cls=NumpyEncoder)
-
-
-def compare_stats(expected: Dict[str, np.ndarray], actual: Dict[str, np.ndarray]):
-    assert len(expected) == len(actual)
-    for ref_node_name, ref_stats in expected.items():
-        actual_stats = actual[ref_node_name]
-        for param_name, ref_param in ref_stats.items():
-            actual_param = actual_stats.get(param_name)
-            assert np.array(ref_param).shape == np.array(actual_param).shape
-            assert np.allclose(ref_param, actual_param, atol=1e-5)
 
 
 def get_python_executable_with_venv(venv_path: Path) -> str:
