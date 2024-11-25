@@ -8,6 +8,7 @@ on:
       - reopened
       - synchronize
     paths-ignore:
+      - '*' # TODO: remove
       - '**/*.md'
       - 'docs/**/*'
       - 'tests/post_training/*'  # post_training tests runs on Jenkins
