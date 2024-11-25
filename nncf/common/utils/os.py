@@ -47,6 +47,10 @@ def is_linux() -> bool:
     return "linux" in sys.platform
 
 
+def is_macos() -> bool:
+    return "darwin" in sys.platform
+
+
 def get_available_cpu_count(logical: bool = True) -> int:
     """
     Return the number of CPUs in the system.

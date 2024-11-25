@@ -13,7 +13,7 @@ on:
 
 jobs:
   precommit-common:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
@@ -38,7 +38,7 @@ jobs:
         run: pytest -n 2 -ra tests/common
 
   precommit-openvino:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
@@ -60,6 +60,6 @@ jobs:
       - name: Print installed modules
         run: pip list
       - name: Run pre-commit
-        run: pytest -n 2 -ra tests/openvino --dist loadscope
+        run: pytest -n 3 -ra tests/openvino --dist loadscope
         env:
           ONEDNN_MAX_CPU_ISA: AVX2
