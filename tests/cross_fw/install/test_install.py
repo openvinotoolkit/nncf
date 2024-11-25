@@ -17,7 +17,6 @@ from typing import List
 
 import pytest
 
-import nncf
 from tests.cross_fw.install.conftest import TESTED_BACKENDS
 from tests.cross_fw.shared.case_collection import skip_if_backend_not_selected
 from tests.cross_fw.shared.helpers import create_venv_with_nncf
@@ -29,27 +28,9 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 
 def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backend: str, install_type: str):
     if install_type.lower() not in ["cpu", "gpu"]:
-        raise nncf.ValidationError("Unknown installation mode - must be either 'cpu' or 'gpu'")
+        raise ValueError("Unknown installation mode - must be either 'cpu' or 'gpu'")
 
     python_executable_with_venv = get_python_executable_with_venv(venv_path)
-    pip_with_venv = get_pip_executable_with_venv(venv_path)
-
-    if package_type in ["build_s", "build_w"]:
-        # Do additional install step for sdist/bdist packages
-        def find_file_by_extension(directory: Path, extension: str) -> str:
-            for file_path in directory.iterdir():
-                file_path_str = str(file_path)
-                if file_path_str.endswith(extension):
-                    return file_path_str
-            raise FileNotFoundError("NNCF package not found")
-
-        if package_type == "build_s":
-            package_path = find_file_by_extension(PROJECT_ROOT / "dist", ".tar.gz")
-        elif package_type == "build_w":
-            package_path = find_file_by_extension(PROJECT_ROOT / "dist", ".whl")
-
-        run_cmd_line = f"{pip_with_venv} install {package_path}"
-        subprocess.run(run_cmd_line, check=True, shell=True)
 
     run_path = tmp_path / "run"
     install_checks_py_name = f"install_checks_{backend}.py"

@@ -19,13 +19,18 @@ from typing import Callable, Dict, List, Set, TypeVar, Union
 
 import numpy as np
 
-import nncf
-from nncf.common.utils.os import is_linux
-from nncf.common.utils.os import is_windows
 from tests.cross_fw.shared.paths import GITHUB_REPO_URL
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 
 TensorType = TypeVar("TensorType")
+
+
+def is_windows() -> bool:
+    return "win32" in sys.platform
+
+
+def is_linux() -> bool:
+    return "linux" in sys.platform
 
 
 def get_cli_dict_args(args):
@@ -44,6 +49,14 @@ MAP_BACKEND_PACKAGES = {
     "onnx": ["onnx", "onnxruntime"],
     "tf": ["tensorflow"],
 }
+
+
+def find_file_by_extension(directory: Path, extension: str) -> str:
+    for file_path in directory.iterdir():
+        file_path_str = str(file_path)
+        if file_path_str.endswith(extension):
+            return file_path_str
+    raise FileNotFoundError("NNCF package not found")
 
 
 def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, backends: Set[str] = None):
@@ -70,6 +83,12 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
     run_path = tmp_path / "run"
     run_path.mkdir()
 
+    if package_type in ["build_s", "build_w"]:
+        dist_path = tmp_path / "dist"
+        dist_path.mkdir(exist_ok=True)
+        build_path = tmp_path / "build"
+        build_path.mkdir(exist_ok=True)
+
     if package_type == "pip_pypi":
         run_cmd_line = f"{pip_with_venv} install nncf"
     elif package_type == "pip_local":
@@ -79,13 +98,19 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
     elif package_type == "pip_git_develop":
         run_cmd_line = f"{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf"
     elif package_type == "build_s":
-        run_cmd_line = f"{python_executable_with_venv} -m build -s"
+        run_cmd_line = f"{python_executable_with_venv} -m build -s --outdir {dist_path}"
     elif package_type == "build_w":
-        run_cmd_line = f"{python_executable_with_venv} -m build -w"
+        run_cmd_line = f"{python_executable_with_venv} -m build -w --outdir {dist_path}"
     else:
-        raise nncf.ValidationError(f"Invalid package type: {package_type}")
+        raise ValueError(f"Invalid package type: {package_type}")
 
     subprocess.run(run_cmd_line, check=True, shell=True, cwd=PROJECT_ROOT)
+
+    if package_type in ["build_s", "build_w"]:
+        package_path = find_file_by_extension(dist_path, ".tar.gz" if package_type == "build_s" else ".whl")
+        cmd_install_package = f"{pip_with_venv} install {package_path}"
+        subprocess.run(cmd_install_package, check=True, shell=True)
+
     if backends:
         # Install backend specific packages with according version from constraints.txt
         packages = [item for b in backends for item in MAP_BACKEND_PACKAGES[b]]
