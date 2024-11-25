@@ -9,7 +9,6 @@ on:
         default: ''
   schedule:
     - cron: '0 0 * * *'
-  pull_request:  # TODO: remove
 
 jobs:
   install-cpu:
@@ -46,7 +45,7 @@ jobs:
         run: pytest tests/cross_fw/install -rA -s --host-configuration cpu --backend ${{ matrix.backend }}
 
   install-torch-gpu:
-    name: Test install [torch-gpu]
+    name: Test install [torch - ubuntu-gpu]
     defaults:
       run:
         shell: bash
