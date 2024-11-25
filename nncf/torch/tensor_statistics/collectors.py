@@ -27,7 +27,6 @@ from nncf.experimental.common.tensor_statistics.collectors import MedianAbsolute
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
@@ -246,7 +245,7 @@ def _get_collection_without_reduction(
     :return: Target statistic collector.
     """
     tensor_collector = TensorCollector(statistic_cls)
-    reducer = NoopReducer()
+    reducer = RawReducer()
     aggregation_axes = list(set(list(aggregation_axes) + [dim + 1 for dim in reduction_axes]))
     aggregator = aggregator_cls(
         aggregation_axes=aggregation_axes,
@@ -311,7 +310,7 @@ def get_mean_statistic_collector(
         reducer = BatchMeanReducer()
     else:
         reducer = MeanPerChReducer(channel_axis=channel_axis)
-    noop_reducer = NoopReducer()
+    raw_reducer = RawReducer()
 
     kwargs = {
         "num_samples": num_samples,
@@ -322,7 +321,7 @@ def get_mean_statistic_collector(
 
     collector = TensorCollector(MeanTensorStatistic)
     collector.register_statistic_branch(MeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
-    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
+    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, raw_reducer, aggregate_shape)
     return collector
 
 
