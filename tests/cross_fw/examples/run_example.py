@@ -185,7 +185,7 @@ def llm_compression_synthetic() -> Dict[str, float]:
 
 
 def fp8_llm_quantization() -> Dict[str, float]:
-    from examples.llm_compression.openvino.smollm_360m_fp8.main import main as fp8_llm_quantization_main
+    from examples.llm_compression.openvino.smollm2_360m_fp8.main import main as fp8_llm_quantization_main
 
     result = fp8_llm_quantization_main()
 
