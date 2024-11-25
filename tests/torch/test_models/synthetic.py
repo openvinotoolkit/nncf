@@ -617,7 +617,7 @@ class ConstantFoldingTestModel(nn.Module):
 
         self.param = nn.Parameter(4 * torch.ones((3, 3)))
 
-    def forward(self, x):
+    def forward(self, x, dummy_disconnected_input):
         y = self.linear_w(self.param)
         # Inplace relu to check
         # that inplace operations are

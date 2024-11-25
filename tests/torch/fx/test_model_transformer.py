@@ -533,11 +533,11 @@ def test_compress_post_quantize_transformation(is_per_channel: bool):
 
 def test_constant_folding():
     model = ConstantFoldingTestModel()
-    captured_model = get_torch_fx_model(model, torch.ones(model.INPUT_SIZE))
+    ex_inputs = (torch.ones(model.INPUT_SIZE), torch.ones((1,)))
+    captured_model = get_torch_fx_model(model, ex_inputs)
     folded_model = deepcopy(captured_model)
     constant_fold(folded_model)
-    ex_input = torch.ones(model.INPUT_SIZE)
-    assert torch.allclose(captured_model(ex_input), folded_model(ex_input))
+    assert torch.allclose(captured_model(*ex_inputs), folded_model(*ex_inputs))
 
     nncf_graph = GraphConverter.create_nncf_graph(folded_model)
     check_graph(nncf_graph, "folded_model.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
@@ -545,7 +545,8 @@ def test_constant_folding():
 
 def test_constant_folding_with_constraints(is_per_channel):
     model = ConstantFoldingTestModel()
-    model_with_correct_pattern = get_torch_fx_model(model, torch.ones(model.INPUT_SIZE))
+    ex_inputs = (torch.ones(model.INPUT_SIZE), torch.ones((1,)))
+    model_with_correct_pattern = get_torch_fx_model(model, ex_inputs)
 
     insert_qdq_nodes(
         model_with_correct_pattern,
