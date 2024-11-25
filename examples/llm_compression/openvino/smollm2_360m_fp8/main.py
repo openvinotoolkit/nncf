@@ -73,7 +73,7 @@ def generate_answers(questions, model, tokenizer, max_new_tokens=50):
 
 def main():
     MODEL_ID = "HuggingFaceTB/SmolLM2-360M-Instruct"
-    OUTPUT_DIR = "smollm_360m_compressed"
+    OUTPUT_DIR = "smollm2_360m_compressed"
 
     dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
     # Filtering to remove empty samples from the dataset
