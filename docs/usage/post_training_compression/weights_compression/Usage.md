@@ -686,5 +686,4 @@ Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
 List of notebooks demonstrating OpenVINO conversion and inference together with NNCF weight compression for models from various domains:
 
 - [LLM Instruction Following](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-question-answering)
-- [Dolly 2.0](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/dolly-2-instruction-following)
 - [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-chatbot)
