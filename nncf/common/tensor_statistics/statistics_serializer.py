@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, cast
 
 import nncf
+from nncf.common.utils.os import fail_if_symlink
+from nncf.common.utils.os import safe_open
 
 METADATA_FILE = "statistics_metadata.json"
 
@@ -35,7 +37,7 @@ def load_metadata(dir_path: Path) -> Dict[str, Any]:
     """
     metadata_file = dir_path / METADATA_FILE
     if metadata_file.exists():
-        with open(metadata_file, "r") as f:
+        with safe_open(metadata_file, "r") as f:
             return cast(Dict[str, Any], json.load(f))
     return {"mapping": {}, "metadata": {}}
 
@@ -47,7 +49,7 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
     :param dir_path: The directory where the metadata file will be stored.
     """
     metadata_file = dir_path / METADATA_FILE
-    with open(metadata_file, "w") as f:
+    with safe_open(metadata_file, "w") as f:
         json.dump(metadata, f, indent=4)
 
 
@@ -70,6 +72,7 @@ def load_from_dir(dir_path: str) -> Tuple[Dict[str, Any], Dict[str, str]]:
             continue  # Skip the metadata file
 
         try:
+            fail_if_symlink(statistics_file)
             with gzip.open(statistics_file, "rb") as f:
                 sanitized_name = statistics_file.name
                 original_name = mapping.get(sanitized_name, sanitized_name)
@@ -101,6 +104,7 @@ def dump_to_dir(
         mapping[sanitized_name] = original_name
 
         try:
+            fail_if_symlink(file_path)
             with gzip.open(file_path, "wb") as f:
                 pickle.dump(statistics_value, f)
         except (IOError, pickle.PicklingError) as e:
