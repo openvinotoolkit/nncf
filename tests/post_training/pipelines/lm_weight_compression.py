@@ -84,7 +84,9 @@ class LMWeightCompression(BaseTestPipeline):
             if is_stateful:
                 raise RuntimeError(f"is_stateful={is_stateful} is not supported for PyTorch backend.")
 
-            self.model_hf = AutoModelForCausalLM.from_pretrained(self.model_id, device_map="cpu")
+            self.model_hf = AutoModelForCausalLM.from_pretrained(
+                self.model_id, torch_dtype=torch.float32, device_map="cpu"	
+            )
             self.model = self.model_hf
         elif self.backend == BackendType.OV:
             if is_stateful:
@@ -92,20 +94,12 @@ class LMWeightCompression(BaseTestPipeline):
             if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
                 # export by model_id
                 self.model_hf = OVModelForCausalLM.from_pretrained(
-                    self.model_id,
-                    export=True,
-                    load_in_8bit=False,
-                    compile=False,
-                    stateful=is_stateful,
+                    self.model_id, export=True, load_in_8bit=False, compile=False, stateful=is_stateful,
                 )
             else:
                 # no export, load from IR. Applicable for sequential run of test cases in local environment.
                 self.model_hf = OVModelForCausalLM.from_pretrained(
-                    self.fp32_model_dir,
-                    trust_remote_code=True,
-                    load_in_8bit=False,
-                    compile=False,
-                    stateful=is_stateful,
+                    self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful,
                 )
             self.model = self.model_hf.model
         else:

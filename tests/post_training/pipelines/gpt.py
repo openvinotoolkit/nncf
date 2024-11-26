@@ -76,7 +76,7 @@ class GPT(PTQTestPipeline):
         return transform_func
 
     def prepare_calibration_dataset(self):
-        quantizer = OVQuantizer.from_pretrained(self.model_hf, torch_dtype=self.torch_dtype)
+        quantizer = OVQuantizer.from_pretrained(self.model_hf)
 
         def preprocess_function(examples):
             return self.preprocessor(examples["sentence"], padding="max_length", truncation=True, max_length=128)
