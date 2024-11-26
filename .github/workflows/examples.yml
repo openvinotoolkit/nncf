@@ -112,15 +112,13 @@ jobs:
           export LIB="${LIB};$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")"
           export LIB="${LIB};$(python -c "import sys; print(sys.prefix + '/libs')")"
           export INCLUDE="${INCLUDE};$(python -c "import sysconfig; print(sysconfig.get_path('include'))")"
-          echo $LIB
-          echo $INCLUDE
           python -m pytest -s -ra tests/cross_fw/examples \
             --junit-xml=pytest-results.xml \
             --durations-path=tests/cross_fw/examples/.test_durations \
             --splitting-algorithm=least_duration \
             --splits 4 \
             --group ${{ matrix.group }} \
-            ${{ github.event.inputs.pytest_args || '-k anomalib' }}
+            ${{ github.event.inputs.pytest_args || '' }}
           ret=$?
           [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
         env:
