@@ -58,6 +58,18 @@ torchvision/swin_v2_s_backend_OV:
   metric_value: 0.83638
 torchvision/swin_v2_s_backend_FX_TORCH:
   metric_value: 0.8360
+ultralytics/yolov8n_backend_FP32:
+  metric_value: 0.6056
+ultralytics/yolov8n_backend_FX_TORCH:
+  metric_value: 0.61417
+ultralytics/yolov8n_backend_OV:
+  metric_value: 0.6188
+ultralytics/yolo11n_backend_FP32:
+  metric_value: 0.6770
+ultralytics/yolo11n_backend_FX_TORCH:
+  metric_value: 0.6735
+ultralytics/yolo11n_backend_OV:
+  metric_value: 0.6752
 timm/crossvit_9_240_backend_CUDA_TORCH:
   metric_value: 0.7275
 timm/crossvit_9_240_backend_FP32:
