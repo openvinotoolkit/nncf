@@ -5,7 +5,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * *'
-  pull_request: # TODO:
 
 jobs:
   md-dead-link-check:
@@ -15,10 +14,11 @@ jobs:
       - uses: AlexanderDokuchaev/md-dead-link-check@cc3ed55268899a1a6d5fd7068abbc4591eab1f74 # v0.9
 
   tensorflow:
+    runs-on: ubuntu-20.04-8-cores
+    timeout-minutes: 60
     defaults:
       run:
         shell: bash
-    runs-on: ubuntu-20.04-8-cores
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -36,5 +36,5 @@ jobs:
       - name: Print installed modules
         run: pip list
       - name: Run TensorFlow precommit
-        run:  pytest  tests/tensorflow -m 'nightly'
+        run:  pytest tests/tensorflow -m 'nightly'
 
