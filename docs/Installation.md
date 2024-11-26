@@ -6,10 +6,10 @@ NNCF supports multiple backends: OpenVINO&trade;, ONNX, PyTorch, and TensorFlow.
 Ensure that your system meets the specific requirements for the backend you plan to use.
 Below are the details for each backend and links to their installation guides:
 
+- [OpenVINO&trade;](https://docs.openvino.ai/2024/get-started/install-openvino.html)
+- [ONNX](https://onnxruntime.ai/docs/install/)
 - [PyTorch](https://pytorch.org/get-started/locally/#start-locally)
 - [TensorFlow](https://www.tensorflow.org/install/)
-- [ONNX](https://onnxruntime.ai/docs/install/)
-- [OpenVINO](https://docs.openvino.ai/2024/get-started/install-openvino.html)
 
 ## As a PyPI package
 
