@@ -12,6 +12,7 @@
 from typing import Dict, List, Optional, Set, Tuple
 
 import torch
+from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
 import nncf.torch.graph.operator_metatypes as om
@@ -240,7 +241,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         scale_shape: Tuple,
         parameters: FakeQuantizeParameters,
         target_type: TargetType,
-    ) -> BaseQuantizer:
+    ) -> FakeQuantize:
         mode = quantizer_config.mode
         quantizer_cls = QUANTIZATION_MODULES.get(mode)
         narrow_range = target_type == TargetType.OPERATION_WITH_WEIGHTS and mode == QuantizationMode.SYMMETRIC

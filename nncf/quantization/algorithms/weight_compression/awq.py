@@ -13,6 +13,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, TypeVar
 
+import nncf
 from nncf import Dataset
 from nncf import nncf_logger
 from nncf.common.factory import ModelTransformerFactory
@@ -24,6 +25,7 @@ from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
@@ -34,6 +36,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import do_i
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
 from nncf.quantization.passes import transform_to_inference_graph
+from nncf.tensor import TensorDataType
 from nncf.tensor import functions as fns
 
 TModel = TypeVar("TModel")
@@ -63,7 +66,7 @@ class AWQ(Algorithm):
         name_to_node_mapping: Dict[str, Any],
         all_weight_params: List[WeightCompressionParameters],
         nodes_to_compress: List[NNCFNode],
-        activations: Optional[Dict[str, TTensor]] = None,
+        statistics: Dict[str, WCTensorStatistic],
         subset_size: int = 32,
         percent_to_apply=0.002,
         alpha_min=0.0,
@@ -75,7 +78,7 @@ class AWQ(Algorithm):
         :param name_to_node_mapping: Name to node mapping for updating node weights.
         :param all_weight_params: List of all weight parameters.
         :param nodes_to_compress: List of nodes for processing.
-        :param activations: The input activations of the layers considered for compression.
+        :param statistics: Input activation statistics for each node.
         :param subset_size: The number of samples for AWQ.
         :param percent_to_apply: The percent of outliers for correction.
         :param alpha_min: Minimum value of smoothness parameter for grid search.
@@ -86,7 +89,7 @@ class AWQ(Algorithm):
         self.name_to_node_mapping = name_to_node_mapping
         self._all_weight_params = all_weight_params
         self._nodes_to_compress = nodes_to_compress
-        self._activations = activations
+        self._statistics = statistics
         self._subset_size = subset_size
         self._percent_to_apply = percent_to_apply
         self._alpha_min = alpha_min
@@ -94,6 +97,7 @@ class AWQ(Algorithm):
         self._steps = steps
         self._backend_entity = None
         self._patterns = None
+        self._scale_per_target_node = {}
 
         self._set_backend_entity(model)
 
@@ -115,7 +119,7 @@ class AWQ(Algorithm):
             self._backend_entity = OVAWQAlgoAlgoBackend(model, self.name_to_node_mapping)
             self._patterns = self._backend_entity.get_awq_patterns()
         else:
-            raise RuntimeError(
+            raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific AWQ entity because {} is not supported!".format(model_backend.value)
             )
 
@@ -203,7 +207,7 @@ class AWQ(Algorithm):
 
             config = wp.compression_config
 
-            s, X = process_stats(self._activations[k], self._subset_size)
+            s, X = process_stats(self._statistics[k], self._subset_size)
 
             top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
             topk_idxs = fns.argsort(-s)[:top_k]
@@ -238,7 +242,7 @@ class AWQ(Algorithm):
                 offset = gi * group_size
                 gscale = s[offset : offset + group_size]
 
-                a_min = fns.quantile(gscale, 0.1)
+                a_min = fns.astype(fns.quantile(gscale, 0.1), TensorDataType.float32)
                 a_max = 1e2
                 gscale = fns.clip(gscale, a_min=a_min, a_max=a_max)
 
@@ -303,14 +307,18 @@ class AWQ(Algorithm):
                 )
                 transformation_layout.register(scale_insertion_command)
 
-            # update activations for next usage
-            for i, stat in enumerate(self._activations[k]):
-                stat = stat * a_scale
-                self._activations[k][i] = stat
+            self._scale_per_target_node[k] = a_scale
 
         transformed_model = model_transformer.transform(transformation_layout)
 
         return transformed_model
+
+    def update_statistics(self, statistics):
+        # Multiply activations by the computed scales
+        for node_name, scale in self._scale_per_target_node.items():
+            for mean_stat in statistics[node_name].mean_values:
+                mean_stat *= fns.squeeze(scale)
+        return statistics
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         """

@@ -20,7 +20,8 @@ GITHUB_REPO_URL = "https://github.com/openvinotoolkit/nncf/"
 
 DATASET_DEFINITIONS_PATH = TEST_ROOT / "cross_fw" / "shared" / "data" / "dataset_definitions.yml"
 
-ROOT_PYTHONPATH_ENV = os.environ.copy().update({"PYTHONPATH": str(PROJECT_ROOT)})
+ROOT_PYTHONPATH_ENV = os.environ.copy()
+ROOT_PYTHONPATH_ENV["PYTHONPATH"] = f"{PROJECT_ROOT}:{ROOT_PYTHONPATH_ENV.get('PYTHONPATH', '')}".strip(":")
 
 
 def get_accuracy_aware_checkpoint_dir_path(model_specific_run_dir: Path) -> Path:

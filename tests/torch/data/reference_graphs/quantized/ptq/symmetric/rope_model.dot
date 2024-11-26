@@ -1,0 +1,21 @@
+strict digraph  {
+"0 /nncf_model_input_0" [id=0, type=nncf_model_input];
+"1 RoPEModel/unsqueeze_0" [id=1, type=unsqueeze];
+"2 RoPEModel/reshape_0" [id=2, type=reshape];
+"3 RoPEModel/matmul_0" [id=3, type=matmul];
+"4 RoPEModel/transpose_0" [id=4, type=transpose];
+"5 RoPEModel/cat_0" [id=5, type=cat];
+"6 RoPEModel/sin_0" [id=6, type=sin];
+"7 RoPEModel/cos_0" [id=7, type=cos];
+"8 /nncf_model_output_0" [id=8, type=nncf_model_output];
+"9 /nncf_model_output_1" [id=9, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "1 RoPEModel/unsqueeze_0";
+"1 RoPEModel/unsqueeze_0" -> "3 RoPEModel/matmul_0";
+"2 RoPEModel/reshape_0" -> "3 RoPEModel/matmul_0";
+"3 RoPEModel/matmul_0" -> "4 RoPEModel/transpose_0";
+"4 RoPEModel/transpose_0" -> "5 RoPEModel/cat_0";
+"5 RoPEModel/cat_0" -> "6 RoPEModel/sin_0";
+"5 RoPEModel/cat_0" -> "7 RoPEModel/cos_0";
+"6 RoPEModel/sin_0" -> "8 /nncf_model_output_0";
+"7 RoPEModel/cos_0" -> "9 /nncf_model_output_1";
+}

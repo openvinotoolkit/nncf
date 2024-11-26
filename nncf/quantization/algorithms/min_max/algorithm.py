@@ -33,6 +33,7 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
+from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationRule
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
@@ -148,6 +149,7 @@ class MinMaxQuantization(Algorithm):
         weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
         activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
         weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
+        quantizer_propagation_rule: Optional[QuantizerPropagationRule] = None,
         backend_params: Optional[Dict[str, Any]] = None,
     ):
         """
@@ -183,6 +185,7 @@ class MinMaxQuantization(Algorithm):
             parameters for activation.
         :param weights_range_estimator_params: Quantization range estimation parameters
             for weights.
+        :param quantizer_propagation_rule: The strategy to be used while propagating and merging quantizers.
         :param backend_params: Backend specific parameters.
         """
         self._target_device = target_device
@@ -200,6 +203,7 @@ class MinMaxQuantization(Algorithm):
         self._weights_range_estimator_params = weights_range_estimator_params
         self._preset = preset
         self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
+        self.quantizer_propagation_rule = quantizer_propagation_rule
 
         # preset definition
         if self._preset is None:
@@ -611,6 +615,7 @@ class MinMaxQuantization(Algorithm):
             weight_ignored_scopes=list(ignored_names.keys()),
             hw_config=hw_config,
             default_trait_to_metatype_map=self._backend_entity.quant_trait_op_dict,
+            propagation_strategy=self.quantizer_propagation_rule,
             default_qconfig_list=[
                 self._get_default_qconfig(self._global_quantizer_constraints[QuantizerGroup.ACTIVATIONS])
             ],

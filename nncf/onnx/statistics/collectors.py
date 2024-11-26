@@ -20,52 +20,13 @@ from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReduc
 from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.quantization.advanced_parameters import StatisticsType
-
-
-class ONNXBasicReducer(TensorReducerBase):
-    def get_inplace_fn(self):
-        raise NotImplementedError("ONNX backend has no support of inplace statistics yet.")
-
-
-class ONNXMinReducer(ONNXBasicReducer, MinReducer):
-    pass
-
-
-class ONNXMaxReducer(ONNXBasicReducer, MaxReducer):
-    pass
-
-
-class ONNXAbsMaxReducer(ONNXBasicReducer, AbsMaxReducer):
-    pass
-
-
-class ONNXMeanReducer(ONNXBasicReducer, MeanReducer):
-    pass
-
-
-class ONNXQuantileReducer(ONNXBasicReducer, QuantileReducer):
-    pass
-
-
-class ONNXAbsQuantileReducer(ONNXBasicReducer, AbsQuantileReducer):
-    pass
-
-
-class ONNXBatchMeanReducer(ONNXBasicReducer, BatchMeanReducer):
-    pass
-
-
-class ONNXMeanPerChanelReducer(ONNXBasicReducer, MeanPerChReducer):
-    pass
 
 
 def get_mean_statistic_collector(
@@ -83,10 +44,10 @@ def get_mean_statistic_collector(
     """
     inplace = False
     if channel_axis == 0:
-        reducer = ONNXBatchMeanReducer(inplace)
+        reducer = BatchMeanReducer(inplace)
     else:
-        reducer = ONNXMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
-    noop_reducer = NoopReducer()
+        reducer = MeanPerChReducer(channel_axis=channel_axis, inplace=inplace)
+    raw_reducer = RawReducer()
 
     kwargs = {
         "num_samples": num_samples,
@@ -98,7 +59,7 @@ def get_mean_statistic_collector(
 
     collector = TensorCollector(MeanTensorStatistic)
     collector.register_statistic_branch(MeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
-    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
+    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, raw_reducer, aggregate_shape)
     return collector
 
 
@@ -118,10 +79,10 @@ def get_raw_stat_collector(num_samples: int) -> TensorCollector:
 
 
 ONNX_REDUCERS_MAP = {
-    StatisticsType.MIN: ONNXMinReducer,
-    StatisticsType.MAX: ONNXMaxReducer,
-    StatisticsType.ABS_MAX: ONNXAbsMaxReducer,
-    StatisticsType.MEAN: ONNXMeanReducer,
-    StatisticsType.QUANTILE: ONNXQuantileReducer,
-    StatisticsType.ABS_QUANTILE: ONNXAbsQuantileReducer,
+    StatisticsType.MIN: MinReducer,
+    StatisticsType.MAX: MaxReducer,
+    StatisticsType.ABS_MAX: AbsMaxReducer,
+    StatisticsType.MEAN: MeanReducer,
+    StatisticsType.QUANTILE: QuantileReducer,
+    StatisticsType.ABS_QUANTILE: AbsQuantileReducer,
 }

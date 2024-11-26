@@ -1,0 +1,23 @@
+strict digraph  {
+"0 unsqueeze" [id=0, type=Unsqueeze];
+"1 cast" [id=1, type=Cast];
+"2 reshape" [id=2, type=Reshape];
+"3 matmul" [id=3, type=MatMul];
+"4 transpose" [id=4, type=Transpose];
+"5 concat" [id=5, type=Concat];
+"6 sin" [id=6, type=Sin];
+"7 cos" [id=7, type=Cos];
+"8 nncf_model_input_0" [id=8, type=nncf_model_input];
+"9 nncf_model_output_0" [id=9, type=nncf_model_output];
+"10 nncf_model_output_1" [id=10, type=nncf_model_output];
+"0 unsqueeze" -> "1 cast"  [label="[1, 10, 1]", style=dashed];
+"1 cast" -> "3 matmul"  [label="[1, 10, 1]", style=solid];
+"2 reshape" -> "3 matmul"  [label="[1, 5]", style=solid];
+"3 matmul" -> "4 transpose"  [label="[1, 10, 5]", style=solid];
+"4 transpose" -> "5 concat"  [label="[1, 5, 10]", style=solid];
+"5 concat" -> "6 sin"  [label="[1, 5, 10]", style=solid];
+"5 concat" -> "7 cos"  [label="[1, 5, 10]", style=solid];
+"6 sin" -> "9 nncf_model_output_0"  [label="[1, 5, 10]", style=solid];
+"7 cos" -> "10 nncf_model_output_1"  [label="[1, 5, 10]", style=solid];
+"8 nncf_model_input_0" -> "0 unsqueeze"  [label="[1, 10]", style=dashed];
+}

@@ -19,6 +19,8 @@ from torch.nn import functional as F
 from nncf import Dataset
 from tests.torch.helpers import create_bn
 from tests.torch.helpers import create_conv
+from tests.torch.helpers import create_depthwise_conv
+from tests.torch.helpers import create_transpose_conv
 from tests.torch.helpers import set_torch_seed
 
 TTensor = TypeVar("TTensor")
@@ -436,3 +438,50 @@ class ScaledDotProductAttentionModel(nn.Module):
 
     def forward(self, query, key, value):
         return nn.functional.scaled_dot_product_attention(query, key, value)
+
+
+class DepthwiseConvTestModel(nn.Module):
+    INPUT_SIZE = [1, 2, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        with set_torch_seed():
+            self.conv = create_depthwise_conv(2, 1, 1, 1)
+            self.conv.weight.data = torch.randn([2, 1, 1, 1])
+            self.conv.bias.data = torch.randn([2])
+
+    def forward(self, x):
+        return self.conv(x)
+
+
+class TransposeConvTestModel(nn.Module):
+    INPUT_SIZE = [1, 1, 3, 3]
+
+    def __init__(self):
+        super().__init__()
+        with set_torch_seed():
+            self.conv = create_transpose_conv(1, 2, 2, 1, 1, 2)
+            self.conv.weight.data = torch.randn([1, 2, 2, 2])
+            self.conv.bias.data = torch.randn([2])
+
+    def forward(self, x):
+        return self.conv(x)
+
+
+class RoPEModel(nn.Module):
+    INPUT_SIZE = [1, 10]
+
+    def __init__(self):
+        super().__init__()
+        with set_torch_seed():
+            self.data = torch.randn([5])
+
+    def forward(self, x):
+        x = torch.unsqueeze(x, dim=0)
+        reshape = torch.reshape(self.data, [1, 5, 1])
+        x = torch.matmul(reshape, x)
+        x = torch.transpose(x, 2, 1)
+        x = torch.cat([x], dim=2)
+        x1 = x.sin()
+        x2 = x.cos()
+        return x1, x2

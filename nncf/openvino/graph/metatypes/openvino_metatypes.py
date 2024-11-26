@@ -726,6 +726,18 @@ class OVScaledDotProductAttentionMetatype(OVOpMetatype):
     target_input_ports = [0, 1]
 
 
+@OV_OPERATOR_METATYPES.register()
+class OVCosMetatype(OVOpMetatype):
+    name = "CosOp"
+    op_names = ["Cos"]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVSinMetatype(OVOpMetatype):
+    name = "SinOp"
+    op_names = ["Sin"]
+
+
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.

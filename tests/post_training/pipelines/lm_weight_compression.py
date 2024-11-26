@@ -287,6 +287,7 @@ class LMWeightCompression(BaseTestPipeline):
                 compile=False,
                 stateful=is_stateful,
                 torch_dtype=self.torch_dtype,
+                ov_config={"KV_CACHE_PRECISION": "f16"},
             )
             evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
             evaluator.dump_gt(str(gt_data_path))
@@ -305,8 +306,8 @@ class LMWeightCompression(BaseTestPipeline):
                 load_in_8bit=False,
                 compile=False,
                 stateful=is_stateful,
-                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
                 torch_dtype=self.torch_dtype,
+                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
             )
         print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)

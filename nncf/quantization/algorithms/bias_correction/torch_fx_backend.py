@@ -45,7 +45,7 @@ class FXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def create_bias_correction_command(
         node: NNCFNode, bias_value: Tensor, nncf_graph: NNCFGraph
     ) -> FXApplyTransformationCommand:
-        return FXApplyTransformationCommand(bias_update_transformation_builder(node, bias_value.data))
+        return FXApplyTransformationCommand(bias_update_transformation_builder(node, bias_value.data, input_port_id=1))
 
     @staticmethod
     def model_extraction_command(

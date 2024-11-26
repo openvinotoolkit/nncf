@@ -9,34 +9,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Tuple
+from functools import reduce
+from operator import mul
+from typing import Tuple
 
+from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
 
-def process_stats(stats: List[Tensor], subset_size: int) -> Tuple[Tensor, Tensor]:
+def process_stats(stats: WCTensorStatistic, subset_size: int) -> Tuple[Tensor, Tensor]:
     """
-    It's a processing of activations shared between AWQ, Scale Estimation and LoRA Correction algorithms.
+    A function for processing activations. Shared between AWQ, Scale Estimation and LoRA Correction algorithms.
 
-    :param stats: list of activation statistics for a layer that contains N tensors with shape [SeqLen, HiddenDim]
-    :type stats: List[TTensor]
+    :param stats: An object containing statistics for the layer.
     :param subset_size: The number of samples for AWQ.
-    :type subset_size: int
     :return: tuple of the following tensors:
         s - maximum channel magnitude across samples [HiddenDim]
-        X - average channel magnitude across tokens in the sequence [HiddenDim, SampleSize]
-    :rtype: Tuple[TTensor, TTensor]
+        X - average channel magnitude across tokens in the sequence [HiddenDim, min(SampleSize, ~subset_size)]
     """
-    X = fns.stack([fns.mean(stat, axis=0) for stat in stats])  # [Batch, HiddenDim]
-    X_full = fns.transpose(X)  # [HiddenDim, Batch]
+    X = fns.stack(stats.mean_values)  # [SampleSize, HiddenDim]
+    X_full = fns.transpose(X)  # [HiddenDim, SampleSize]
 
     # prevent high memory and time consumption
     if X_full.shape[1] > subset_size:
-        lens = [stat.shape[0] for stat in stats]
+        # activations were reduced across all but the last dimension
+        lens = [reduce(mul, shape[:-1], 1) for shape in stats.shape_values]
         step = X_full.shape[1] // subset_size
         idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
-        X = X_full[:, idxs]  # [HiddenDim, SampleSize]
+        X = X_full[:, idxs]  # [HiddenDim, ~SubsetSize]
     else:
         X = X_full
     s = fns.max(fns.abs(X_full), axis=1)  # [HiddenDim]

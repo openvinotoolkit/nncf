@@ -82,12 +82,14 @@ def reshape_weight_for_grouped_quantization(
     if isinstance(reduction_axes, tuple) and len(reduction_axes) == 1:
         reduction_axes = reduction_axes[0]
     if not isinstance(reduction_axes, int):
-        raise NotImplementedError(
+        raise nncf.UnsupportedModelError(
             f"Group-wise quantization expects a single reduction axis, but given: {reduction_axes}."
         )
     channel_size = weight.shape[reduction_axes]
     if channel_size % group_size != 0:
-        raise nncf.ValidationError(f"Channel size {channel_size} should be divisible by size of group {group_size}")
+        raise nncf.UnsupportedModelError(
+            f"Channel size {channel_size} should be divisible by size of group {group_size}"
+        )
 
     num_groups_per_channel = channel_size // group_size
     shape = list(weight.shape)  # [a1, r, a2] - "r" refers to number of channels along reduction axis
@@ -356,6 +358,12 @@ def do_int_quantization(
     """
     assert config.is_integer(), "The function supports integer quantization only"
     group_size = config.group_size
+    is_asym = config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]
+    if is_asym and (precomputed_scale is None) != (precomputed_zero_point is None):
+        raise ValueError(
+            "If precomputed quantization parameters are provided, both scale and zero point are required "
+            "for asymmetric quantization."
+        )
 
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
@@ -364,7 +372,8 @@ def do_int_quantization(
         # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, group_size)
 
-    if precomputed_zero_point is None or precomputed_zero_point is None:
+    scale, zero_point = None, None
+    if precomputed_scale is None or (is_asym and precomputed_zero_point is None):
         scale, zero_point = calculate_integer_quantization_params(weight, reduction_axes, config)
     if precomputed_scale is not None:
         scale = precomputed_scale

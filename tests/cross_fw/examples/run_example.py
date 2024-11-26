@@ -184,6 +184,21 @@ def llm_compression_synthetic() -> Dict[str, float]:
     return {"word_count": len(result.split())}
 
 
+def post_training_quantization_torch_fx_resnet18():
+    from examples.post_training_quantization.torch_fx.resnet18.main import main as resnet18_main
+
+    # Set manual seed and determenistic cuda mode to make the test determenistic
+    results = resnet18_main()
+
+    return {
+        "fp32_top1": float(results[0]),
+        "int8_top1": float(results[1]),
+        "fp32_latency": float(results[2]),
+        "fp32_ov_latency": float(results[3]),
+        "int8_latency": float(results[4]),
+    }
+
+
 def quantization_aware_training_torch_resnet18():
     from examples.quantization_aware_training.torch.resnet18.main import main as resnet18_main
 
@@ -232,7 +247,7 @@ def quantization_aware_training_torch_anomalib(data: Union[str, None]):
     from examples.quantization_aware_training.torch.anomalib.main import DATASET_PATH as dataset_path
     from examples.quantization_aware_training.torch.anomalib.main import main as anomalib_main
 
-    if data is not None:
+    if data is not None and not dataset_path.exists():
         dataset_path.mkdir(parents=True, exist_ok=True)
         tar_file_path = Path(data) / mvtec.DOWNLOAD_INFO.url.split("/")[-1]
         with tarfile.open(tar_file_path) as tar_file:
