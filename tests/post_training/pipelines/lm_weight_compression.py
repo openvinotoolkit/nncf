@@ -84,9 +84,7 @@ class LMWeightCompression(BaseTestPipeline):
             if is_stateful:
                 raise RuntimeError(f"is_stateful={is_stateful} is not supported for PyTorch backend.")
 
-            self.model_hf = AutoModelForCausalLM.from_pretrained(
-                self.model_id, torch_dtype=self.torch_dtype, device_map="cpu"
-            )
+            self.model_hf = AutoModelForCausalLM.from_pretrained(self.model_id, device_map="cpu")
             self.model = self.model_hf
         elif self.backend == BackendType.OV:
             if is_stateful:
@@ -99,7 +97,6 @@ class LMWeightCompression(BaseTestPipeline):
                     load_in_8bit=False,
                     compile=False,
                     stateful=is_stateful,
-                    torch_dtype=self.torch_dtype,
                 )
             else:
                 # no export, load from IR. Applicable for sequential run of test cases in local environment.
@@ -109,7 +106,6 @@ class LMWeightCompression(BaseTestPipeline):
                     load_in_8bit=False,
                     compile=False,
                     stateful=is_stateful,
-                    torch_dtype=self.torch_dtype,
                 )
             self.model = self.model_hf.model
         else:
@@ -120,7 +116,7 @@ class LMWeightCompression(BaseTestPipeline):
             self._dump_model_fp32()
 
     def prepare_preprocessor(self) -> None:
-        self.preprocessor = AutoTokenizer.from_pretrained(self.model_id, torch_dtype=self.torch_dtype)
+        self.preprocessor = AutoTokenizer.from_pretrained(self.model_id)
 
     def get_transform_calibration_fn(self):
         def transform_fn(data, max_tokens=128, filter_bad_tokens=True):
@@ -286,7 +282,6 @@ class LMWeightCompression(BaseTestPipeline):
                 load_in_8bit=False,
                 compile=False,
                 stateful=is_stateful,
-                torch_dtype=self.torch_dtype,
                 ov_config={"KV_CACHE_PRECISION": "f16"},
             )
             evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
@@ -306,7 +301,6 @@ class LMWeightCompression(BaseTestPipeline):
                 load_in_8bit=False,
                 compile=False,
                 stateful=is_stateful,
-                torch_dtype=self.torch_dtype,
                 ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
             )
         print("Evaluation of the target model")
