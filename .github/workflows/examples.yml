@@ -120,7 +120,7 @@ jobs:
             --splitting-algorithm=least_duration \
             --splits 4 \
             --group ${{ matrix.group }} \
-            ${{ github.event.inputs.pytest_args || 'anomalib' }}
+            ${{ github.event.inputs.pytest_args || '-k anomalib' }}
           ret=$?
           [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
         env:
