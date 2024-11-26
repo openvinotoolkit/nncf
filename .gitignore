@@ -127,6 +127,7 @@ examples/**/statistics
 examples/**/runs
 examples/**/results
 examples/**/metrics.json
+datasets/**
 
 # Tests
 tests/**/runs/**
