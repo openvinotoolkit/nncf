@@ -1,6 +1,6 @@
 # Large Language Models FP8 Compression Example
 
-This example demonstrates how to optimize Large Language Models (LLMs) using NNCF quantize API. The example applies FP8 quantization to [HuggingFaceTB/SmolLM2-360M-Instruct](https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct) model. This leads to a significant decrease in model footprint and performance improvement with OpenVINO.
+This example demonstrates how to apply static FP8 quantization to [HuggingFaceTB/SmolLM2-360M-Instruct](https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct) model. It can be useful for evaluation and early HW enablement purposes.
 
 ## Prerequisites
 
