@@ -26,7 +26,10 @@ class TensorStatistic:
 
     TENSOR_STATISTIC_OUTPUT_KEY = "tensor_statistic_output"
 
-    def get_data(self) -> Dict[str, np.array]:
+    def get_data(self) -> Dict[str, Any]:
+        return {key: getattr(self, key) for key in self.keys()}
+
+    def get_data_to_dump(self) -> Dict[str, np.array]:
         """ """
         serialized_data = {}
         for key in self.keys():
@@ -102,7 +105,7 @@ class MeanTensorStatistic(TensorStatistic):
             return self.shape == other.shape and fns.allclose(self.mean_values, other.mean_values)
         return False
 
-    def get_data(self):
+    def get_data_to_dump(self):
         data = {}
         shape = []
         for dim in self.shape:
@@ -178,7 +181,7 @@ class PercentileTensorStatistic(TensorStatistic):
                 percentile_vs_values_dict[percentile] = value
         return cls(percentile_vs_values_dict=percentile_vs_values_dict)
 
-    def get_data(self):
+    def get_data_to_dump(self):
         data = {}
         for percentile, tensor in self.PERCENTILE_VS_VALUE_DICT.items():
             data[percentile] = tensor.data
@@ -298,7 +301,7 @@ class WCTensorStatistic(TensorStatistic):
         )
         return mean_values_equal
 
-    def get_data(self):
+    def get_data_to_dump(self):
         data = {self.MEAN_STAT: [], self.SHAPE_STAT: []}
         for shape_tensor in self.shape_values:
             shape = []

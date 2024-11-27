@@ -143,7 +143,7 @@ class StatisticsAggregator(ABC):
         for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
             statistics = tensor_collector.get_statistics()
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
-            data = statistics.get_data()
+            data = statistics.get_data_to_dump()
             data_to_dump[statistics_key] = data
         return data_to_dump
 
