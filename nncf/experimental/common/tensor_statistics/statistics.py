@@ -27,20 +27,18 @@ class TensorStatistic:
     TENSOR_STATISTIC_OUTPUT_KEY = "tensor_statistic_output"
 
     def get_data(self) -> Dict[str, np.array]:
-        """
-        Prepares the data for serialization into .npz format.
-        """
+        """ """
         serialized_data = {}
         for key in self.keys():
             value = getattr(self, key)
-            if isinstance(value, Tensor):
-                serialized_data[key] = value.data  # Use NumPy array ?????
+            # for t in value:
+            serialized_data[key] = value.data  # Use NumPy array ?????
         return serialized_data
 
     def get_config_from_loaded_data(self, loaded_data):
         config = {}
         for key in self.keys():
-            config[key] = [Tensor(data=loaded_data[key])]
+            config[key] = Tensor(data=loaded_data[key])
         return config
 
     @classmethod
@@ -223,6 +221,12 @@ class HessianTensorStatistic(TensorStatistic):
         if isinstance(other, HessianTensorStatistic):
             return fns.allclose(self.hessian, other.hessian)
         return False
+
+    def get_config_from_loaded_data(self, loaded_data):
+        config = {}
+        for key in self.keys():
+            config[key] = Tensor(data=loaded_data[key])
+        return config
 
 
 @dataclass
