@@ -15,6 +15,8 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any, ClassVar, Dict, List, Tuple
 
+import numpy as np
+
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
@@ -24,12 +26,22 @@ class TensorStatistic:
 
     TENSOR_STATISTIC_OUTPUT_KEY = "tensor_statistic_output"
 
-    def get_data(self) -> Dict[str, Any]:
-        return {key: getattr(self, key) for key in self.keys()}
-
-    def load_data(self, data: Dict[str, Any]):
+    def get_data(self) -> Dict[str, np.array]:
+        """
+        Prepares the data for serialization into .npz format.
+        """
+        serialized_data = {}
         for key in self.keys():
-            setattr(self, key, data.get(key))
+            value = getattr(self, key)
+            if isinstance(value, Tensor):
+                serialized_data[key] = value.data  # Use NumPy array ?????
+        return serialized_data
+
+    def get_config_from_loaded_data(self, loaded_data):
+        config = {}
+        for key in self.keys():
+            config[key] = [Tensor(data=loaded_data[key])]
+        return config
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
@@ -92,6 +104,24 @@ class MeanTensorStatistic(TensorStatistic):
             return self.shape == other.shape and fns.allclose(self.mean_values, other.mean_values)
         return False
 
+    def get_data(self):
+        data = {}
+        shape = []
+        for dim in self.shape:
+            shape.append(dim)
+        data[self.SHAPE_STAT] = np.array(shape)
+        data[self.MEAN_STAT] = self.mean_values.data
+        return data
+
+    def get_config_from_loaded_data(self, loaded_data):
+        config = {}
+        for key, tensor in loaded_data.items():
+            if key == self.MEAN_STAT:
+                config[key] = Tensor(data=tensor)
+            else:
+                config[key] = tuple(tensor.tolist())
+        return config
+
 
 @dataclass
 class MedianMADTensorStatistic(TensorStatistic):
@@ -149,6 +179,18 @@ class PercentileTensorStatistic(TensorStatistic):
             for (_, percentile), value in config.items():
                 percentile_vs_values_dict[percentile] = value
         return cls(percentile_vs_values_dict=percentile_vs_values_dict)
+
+    def get_data(self):
+        data = {}
+        for percentile, tensor in self.PERCENTILE_VS_VALUE_DICT.items():
+            data[percentile] = tensor.data
+        return data
+
+    def get_config_from_loaded_data(self, loaded_data):
+        config = {}
+        for percentile, tensor in loaded_data.items():
+            config[percentile] = Tensor(data=tensor)
+        return config
 
 
 @dataclass
@@ -251,6 +293,25 @@ class WCTensorStatistic(TensorStatistic):
             self.tensor_eq(self.mean_values[i], other.mean_values[i]) for i in range(len(self.mean_values))
         )
         return mean_values_equal
+
+    def get_data(self):
+        data = {self.MEAN_STAT: [], self.SHAPE_STAT: []}
+        for shape_tensor in self.shape_values:
+            shape = []
+            for dim in shape_tensor:
+                shape.append(dim.data)
+            data[self.SHAPE_STAT].append(np.array(shape))
+        data[self.SHAPE_STAT] = np.array(data[self.SHAPE_STAT])
+        for mean_value in self.mean_values:
+            data[self.MEAN_STAT].append(mean_value.data)
+        data[self.MEAN_STAT] = np.array(data[self.MEAN_STAT])
+        return data
+
+    def get_config_from_loaded_data(self, loaded_data):
+        config = {self.MEAN_STAT: [], self.SHAPE_STAT: []}
+        config[self.SHAPE_STAT] = [tuple(shape.tolist()) for shape in loaded_data[self.SHAPE_STAT]]
+        config[self.MEAN_STAT] = [Tensor(data=it) for it in loaded_data[self.MEAN_STAT]]
+        return config
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:

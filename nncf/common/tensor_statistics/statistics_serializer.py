@@ -8,15 +8,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import gzip
 import json
-import pickle
 import re
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, cast
 
+import numpy as np
+from safetensors.numpy import load_file
+from safetensors.numpy import save_file
+
 import nncf
-from nncf.common.utils.os import fail_if_symlink
 from nncf.common.utils.os import safe_open
 
 METADATA_FILE = "statistics_metadata.json"
@@ -53,13 +54,14 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
         json.dump(metadata, f, indent=4)
 
 
-def load_from_dir(dir_path: str) -> Tuple[Dict[str, Any], Dict[str, str]]:
+def load_from_dir(dir_path: str) -> Tuple[Dict[str, np.array], Dict[str, Any]]:
     """
     Loads statistics from gzip-compressed files in the given directory.
     :param dir_path: The path to the directory from which to load the statistics.
     :return: 1) A dictionary with the original statistic names as keys and the loaded statistics as values.
     2) Metadata dictionary.
     """
+    # TODO: docstring
     statistics = {}
     path = Path(dir_path)
     if not path.exists():
@@ -72,18 +74,16 @@ def load_from_dir(dir_path: str) -> Tuple[Dict[str, Any], Dict[str, str]]:
             continue  # Skip the metadata file
 
         try:
-            fail_if_symlink(statistics_file)
-            with gzip.open(statistics_file, "rb") as f:
-                sanitized_name = statistics_file.name
-                original_name = mapping.get(sanitized_name, sanitized_name)
-                statistics[original_name] = pickle.load(f)
-        except (pickle.UnpicklingError, IOError) as e:
-            raise nncf.InternalError(f"Error loading statistics from {statistics_file.name}: {e}")
+            sanitized_name = statistics_file.name
+            original_name = mapping.get(sanitized_name, sanitized_name)
+            statistics[original_name] = load_file(statistics_file)
+        except Exception as e:
+            raise RuntimeError(f"Error loading statistics from {statistics_file.name}: {e}")
     return statistics, metadata.get("metadata", {})
 
 
 def dump_to_dir(
-    statistics: Dict[str, Any], dir_path: str, additional_metadata: Optional[Dict[str, Any]] = None
+    statistics: Dict[str, np.array], dir_path: str, additional_metadata: Optional[Dict[str, Any]] = None
 ) -> None:
     """
     Dumps statistics to gzip-compressed files in the specified directory, while maintaining a mapping file.
@@ -91,6 +91,7 @@ def dump_to_dir(
     :param dir_path: The path to the directory where the statistics will be dumped.
     :param additional_metadata: A dictionary containing any additional metadata to be saved with the mapping.
     """
+    # TODO: docstring
     path = Path(dir_path)
     path.mkdir(parents=True, exist_ok=True)
 
@@ -104,11 +105,9 @@ def dump_to_dir(
         mapping[sanitized_name] = original_name
 
         try:
-            fail_if_symlink(file_path)
-            with gzip.open(file_path, "wb") as f:
-                pickle.dump(statistics_value, f)
-        except (IOError, pickle.PicklingError) as e:
-            raise nncf.InternalError(f"Failed to write data to file {file_path}: {e}")
+            save_file(statistics_value, file_path)
+        except Exception as e:
+            raise RuntimeError(f"Failed to write data to file {file_path}: {e}")
 
     # Add additional metadata if provided
     if additional_metadata:
