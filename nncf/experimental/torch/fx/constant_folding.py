@@ -235,6 +235,20 @@ def _is_impure(node: torch.fx.Node) -> bool:
     return node.op in {"placeholder", "output"}
 
 
+def get_model_device(model: torch.fx.GraphModule) -> torch.device:
+    """
+    Returns device of the first model parameter of torch.device("cpu").
+
+    :param model: GraphModule instance.
+    :return: Device of the first model parameter of torch.device("cpu").
+    """
+    try:
+        device = next(model.parameters()).device
+    except StopIteration:
+        return torch.device("cpu")
+    return device
+
+
 def constant_fold(
     gm: torch.fx.GraphModule,
     constraint_fn: Optional[Callable[[torch.fx.Node], bool]] = None,
@@ -251,9 +265,11 @@ def constant_fold(
             cf = ConstantFolder(gm)
             cf.run()
 
+            device = get_model_device(gm)
             for node, constant in cf.node_replacements.items():
                 if constraint_fn is not None and not constraint_fn(node):
                     continue
+                constant = constant.to(device)
                 _replace_node_with_constant(gm, node, constant)
 
             erased_params = []

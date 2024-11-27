@@ -55,6 +55,7 @@ from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
 from tests.torch.test_models.synthetic import ConvolutionWithSeveralOutputs
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModelWithConcat
+from tests.torch.test_models.synthetic import ScalarCloneTestModel
 
 
 @dataclass
@@ -545,6 +546,21 @@ def test_constant_folding():
 
     nncf_graph = GraphConverter.create_nncf_graph(folded_model)
     check_graph(nncf_graph, "folded_model.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="Cuda is not available")
+def test_constant_folding_scalar_clone():
+    model = ScalarCloneTestModel().cuda()
+    captured_model = get_torch_fx_model(model, torch.ones(model.INPUT_SIZE))
+    assert captured_model.lifted_tensor_0.device == torch.device("cpu")
+
+    folded_model = deepcopy(captured_model)
+    constant_fold(folded_model)
+    ex_input = torch.ones(model.INPUT_SIZE).cuda()
+    assert torch.allclose(captured_model(ex_input), folded_model(ex_input))
+
+    nncf_graph = GraphConverter.create_nncf_graph(folded_model)
+    check_graph(nncf_graph, "folded_scalar_clone_model.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
 
 
 def test_constant_folding_with_constraints(is_per_channel):

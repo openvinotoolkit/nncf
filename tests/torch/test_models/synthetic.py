@@ -628,6 +628,18 @@ class ConstantFoldingTestModel(nn.Module):
         return x + y
 
 
+class ScalarCloneTestModel(nn.Module):
+    INPUT_SIZE = (1, 3, 3, 3)
+
+    def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(3, 3)
+
+    def forward(self, x):
+        y = torch.clone(torch.tensor(1).cpu())
+        return self.linear(x) + y
+
+
 class ShortTransformer(torch.nn.Module):
     def __init__(self, in_features, num_embeddings, share_weights=False):
         super().__init__()
