@@ -77,7 +77,7 @@ class MaskedLanguageModelingHF(PTQTestPipeline):
             ov.serialize(self.model, self.fp32_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:
-        self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id, torch_dtype=self.torch_dtype)
+        self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id)
 
     def get_transform_calibration_fn(self):
         if self.backend in PT_BACKENDS:
@@ -95,7 +95,7 @@ class MaskedLanguageModelingHF(PTQTestPipeline):
         return transform_func
 
     def prepare_calibration_dataset(self):
-        quantizer = OVQuantizer.from_pretrained(self.model_hf, torch_dtype=self.torch_dtype)
+        quantizer = OVQuantizer.from_pretrained(self.model_hf)
 
         num_samples = self.compression_params.get("subset_size", 300)
 
