@@ -22,6 +22,7 @@ import nncf
 from tests.post_training.pipelines.base import OV_BACKENDS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
+from tests.post_training.pipelines.base import PrecisionType
 from tests.post_training.pipelines.base import PTQTestPipeline
 
 
@@ -37,10 +38,17 @@ class MaskedLanguageModelingHF(PTQTestPipeline):
             self.model.config.torchscript = True  # Set to export by convert_model via torch.jit.trace
             self.dummy_tensor = self.model_hf.dummy_inputs["input_ids"]
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
-            self.model_hf = OVModelForSequenceClassification.from_pretrained(
-                self.model_id, export=True, compile=False, torch_dtype=self.torch_dtype
-            )
-            self.model = self.model_hf.model
+            if self.torch_dtype != PrecisionType.FP32:
+                # Since optimum-intel does not produce custom-type models, this workaround handles it.
+                self.model_hf = transformers.AutoModelForSequenceClassification.from_pretrained(
+                    self.model_id, torch_dtype=self.torch_dtype
+                )
+                self.model = ov.convert_model(self.model_hf, example_input=self.model_hf.dummy_inputs)
+            else:
+                self.model_hf = OVModelForSequenceClassification.from_pretrained(
+                    self.model_id, export=True, compile=False
+                )
+                self.model = self.model_hf.model
 
         if self.backend == BackendType.ONNX:
             self.model_hf = ORTModelForSequenceClassification.from_pretrained(self.model_id, export=True)
@@ -79,13 +87,10 @@ class MaskedLanguageModelingHF(PTQTestPipeline):
                 return torch.tensor([data["input_ids"]]).type(dtype=torch.LongTensor).to(device)
 
         else:
+            input_names = [p.get_friendly_name() for p in self.model.get_parameters()]
 
             def transform_func(data):
-                return {
-                    "input_ids": np.expand_dims(data["input_ids"], axis=0),
-                    "token_type_ids": np.expand_dims(data["token_type_ids"], axis=0),
-                    "attention_mask": np.expand_dims(data["attention_mask"], axis=0),
-                }
+                return {n: np.expand_dims(data[n], axis=0) for n in input_names}
 
         return transform_func
 
