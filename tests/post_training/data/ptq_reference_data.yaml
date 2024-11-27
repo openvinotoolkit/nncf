@@ -49,7 +49,7 @@ torchvision/mobilenet_v3_small_BC_backend_ONNX:
 torchvision/mobilenet_v3_small_BC_backend_FX_TORCH:
   metric_value: 0.6679
 torchvision/mobilenet_v3_small_BC_backend_CUDA_FX_TORCH:
-  metric_value: 0.6679
+  metric_value: 0.6664
 torchvision/vit_b_16_backend_FP32:
   metric_value: 0.8107
 torchvision/vit_b_16_backend_OV:
