@@ -107,16 +107,17 @@ def get_number_if_op(model: ov.Model) -> int:
     return cnt_if_op(model, 0)
 
 
-def get_const_value(const_node: ov.Node) -> np.ndarray:
+def get_const_value(const_node: ov.Node, cast_bf16_to_fp32: Optional[bool] = True) -> np.ndarray:
     """
     Returns the constant tensor for the node.
     This method is applicable only for the floating-point constant data.
 
     :param const_node: OpenVINO node.
+    :param cast_bf16_to_fp32: Whether to cast bf16 node data to fp32 or not. If False and the node contains bf16 data,
+        the resulting bf16 value will be returned encoded inside a numpy.float16 array.
     :return: The constant value.
     """
-    if const_node.get_element_type() == ov.Type.bf16:
-        # Fixed FP32 data type as the result for BF16 constant
+    if const_node.get_element_type() == ov.Type.bf16 and cast_bf16_to_fp32:
         return const_node.get_data(dtype=np.float32)
     return const_node.data
 
@@ -631,3 +632,16 @@ def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple
         channel_axis = activations_layout.index(OVLayoutElem.C_IN)
 
     return channel_axis
+
+
+def convert_if_needed(node: ov.Node, target_dtype: ov.Type) -> ov.Node:
+    """
+    Converts the input node to the target data type if it is not already in the target data type.
+
+    :param node: The input node to convert.
+    :param target_dtype: The target data type to convert the input node to.
+    :return: The converted node.
+    """
+    if node.get_element_type() == target_dtype:
+        return node
+    return opset.convert(node, target_dtype)

@@ -29,30 +29,63 @@ from tests.openvino.native.models import MatMul2DNotBiasModel
 
 
 @pytest.mark.parametrize(
-    "precisions",
+    "precisions,cast_bf16_to_fp32",
     [
         # base FP32 precision
-        {
-            "type_for_const": ov.Type.f32,
-            "ref_type": np.float32,
-        },
+        (
+            {
+                "type_for_const": ov.Type.f32,
+                "ref_type": np.float32,
+            },
+            True,
+        ),
         # base FP16 precision
-        {
-            "type_for_const": ov.Type.f16,
-            "ref_type": np.float16,
-        },
+        (
+            {
+                "type_for_const": ov.Type.f16,
+                "ref_type": np.float16,
+            },
+            True,
+        ),
         # base BF16 precision should be casted to FP32
-        {
-            "type_for_const": ov.Type.bf16,
-            "ref_type": np.float32,
-        },
+        (
+            {
+                "type_for_const": ov.Type.bf16,
+                "ref_type": np.float32,
+            },
+            True,
+        ),
+        # base FP32 precision, cast_bf16_to_fp32=False has no effect
+        (
+            {
+                "type_for_const": ov.Type.f32,
+                "ref_type": np.float32,
+            },
+            False,
+        ),
+        # base FP16 precision, cast_bf16_to_fp32=False has no effect
+        (
+            {
+                "type_for_const": ov.Type.f16,
+                "ref_type": np.float16,
+            },
+            False,
+        ),
+        # with cast_bf16_to_fp32=False BF16 constant is retrieved as FP16
+        (
+            {
+                "type_for_const": ov.Type.bf16,
+                "ref_type": np.float16,
+            },
+            False,
+        ),
     ],
 )
-def test_get_const_value(precisions):
+def test_get_const_value(precisions, cast_bf16_to_fp32):
     const_data = np.ones((1, 2, 3), dtype=np.float32)
     weight_const = opset.constant(const_data, dtype=precisions["type_for_const"])
 
-    const_value = get_const_value(weight_const)
+    const_value = get_const_value(weight_const, cast_bf16_to_fp32=cast_bf16_to_fp32)
     assert const_value.dtype == precisions["ref_type"]
 
 
