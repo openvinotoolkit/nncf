@@ -12,6 +12,8 @@
 import copy
 from typing import Dict, List
 
+import torch
+
 import nncf
 from nncf import ModelType
 from nncf import QuantizationPreset
@@ -80,6 +82,30 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
         },
         "backends": [BackendType.TORCH, BackendType.OV, BackendType.OPTIMUM],
+    },
+    {
+        "reported_name": "hf/bert-base-uncased_fp16",
+        "model_id": "bert-base-uncased",
+        "pipeline_cls": MaskedLanguageModelingHF,
+        "compression_params": {
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "subset_size": 2,
+        },
+        "backends": [BackendType.OV],
+        "params": {"base_precision": torch.float16},
+    },
+    {
+        "reported_name": "hf/bert-base-uncased_bf16",
+        "model_id": "bert-base-uncased",
+        "pipeline_cls": MaskedLanguageModelingHF,
+        "compression_params": {
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "subset_size": 2,
+        },
+        "backends": [BackendType.OV],
+        "params": {"base_precision": torch.bfloat16},
     },
     # Torchvision models
     {
