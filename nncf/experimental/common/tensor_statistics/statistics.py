@@ -13,13 +13,33 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, ClassVar, Dict, List, Tuple
+from typing import Any, Callable, ClassVar, Dict, List, Tuple
 
-import numpy as np
-
+import nncf
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
+from nncf.tensor.definitions import TensorBackendType
 from nncf.tensor.tensor import TTensor
+
+
+def return_tensor_method(tensor_backend: TensorBackendType) -> Callable:
+    """
+    Returns the appropriate tensor creation function based on the backend.
+
+    :param tensor_backend: Tensor backend type.
+    :return: Function to create a tensor.
+    """
+    try:
+        if tensor_backend == TensorBackendType.NUMPY:
+            import numpy as np
+
+            return np.array
+        if tensor_backend == TensorBackendType.TORCH:
+            import torch
+
+            return torch.tensor
+    except ImportError as e:
+        raise RuntimeError(f"Failed to import the required module: {e}")
 
 
 class TensorStatistic:
@@ -28,22 +48,32 @@ class TensorStatistic:
     TENSOR_STATISTIC_OUTPUT_KEY = "tensor_statistic_output"
 
     def get_data(self) -> Dict[str, Any]:
+        """
+        Retrieve the data of the tensor statistics.
+
+        :return: Dictionary with keys and their associated data.
+        """
         return {key: getattr(self, key) for key in self.keys()}
 
     def get_data_to_dump(self) -> Dict[str, TTensor]:
         """
-        Returns in original framework.
+        Prepare the data for serialization in the original tensor framework.
+        :return: Dictionary with data for serialization.
         """
         serialized_data = {}
         for key in self.keys():
             value = getattr(self, key)
             if isinstance(value, Tensor):
-                serialized_data[key] = value.data  # Original Framework
+                serialized_data[key] = value.data
             else:
-                raise RuntimeError(f"Unsupported type of value: {type(value)}")
+                raise nncf.InternalError(f"Unsupported type of value: {type(value)}")
         return serialized_data
 
     def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
+        """
+        Load the data from the serialized data.
+        :param: Data to load.
+        """
         for key in self.keys():
             setattr(self, key, Tensor(loaded_data[key]))
 
@@ -108,17 +138,11 @@ class MeanTensorStatistic(TensorStatistic):
             return self.shape == other.shape and fns.allclose(self.mean_values, other.mean_values)
         return False
 
-    def get_data_to_dump(self):
-        data = {}
-        shape = []
-        for dim in self.shape:
-            shape.append(dim)
-        data[self.SHAPE_STAT] = np.array(shape)
-        data[self.MEAN_STAT] = self.mean_values.data
-        return data
+    def get_data_to_dump(self) -> Dict[str, TTensor]:
+        tensor_method = return_tensor_method(self.mean_values.backend)
+        return {self.MEAN_STAT: self.mean_values.data, self.SHAPE_STAT: tensor_method(self.shape)}
 
     def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
-        # TO TEST
         self.mean_values = Tensor(loaded_data[self.MEAN_STAT])
         self.shape_values = tuple(loaded_data[self.SHAPE_STAT].tolist())
 
@@ -180,14 +204,13 @@ class PercentileTensorStatistic(TensorStatistic):
                 percentile_vs_values_dict[percentile] = value
         return cls(percentile_vs_values_dict=percentile_vs_values_dict)
 
-    def get_data_to_dump(self):
+    def get_data_to_dump(self) -> Dict[str, TTensor]:
         data = {}
         for percentile, tensor in self.PERCENTILE_VS_VALUE_DICT.items():
             data[percentile] = tensor.data
         return data
 
     def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
-        # TO TEST
         self.percentile_vs_values_dict = {k: Tensor(v) for k, v in loaded_data.items()}
 
 
@@ -293,19 +316,12 @@ class WCTensorStatistic(TensorStatistic):
         return mean_values_equal
 
     def get_data_to_dump(self):
-        data = {self.MEAN_STAT: [], self.SHAPE_STAT: []}
-        for shape_tensor in self.shape_values:
-            shape = []
-            for dim in shape_tensor:
-                shape.append(dim.data)
-            data[self.SHAPE_STAT].append(np.array(shape))
-        data[self.SHAPE_STAT] = np.array(data[self.SHAPE_STAT])
-        for mean_value in self.mean_values:
-            data[self.MEAN_STAT].append(mean_value.data)
-        data[self.MEAN_STAT] = np.array(data[self.MEAN_STAT])
-        return data
+        tensor_method = return_tensor_method(self.mean_values[0].backend)
+        return {
+            self.MEAN_STAT: tensor_method([mean_value.data for mean_value in self.mean_values]),
+            self.SHAPE_STAT: tensor_method([shape for shape in self.shape_values]),
+        }
 
-    # REIMPLEMENT FOR SOME CLASSSES
     def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
         self.shape_values = [tuple(shape.tolist()) for shape in loaded_data[self.SHAPE_STAT]]
         self.mean_values = [Tensor(data=it) for it in loaded_data[self.MEAN_STAT]]
