@@ -28,6 +28,7 @@ from nncf.torch.quantization.quantize_functions import pack_int4
 from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
+from tests.torch.test_models.synthetic import ShortTransformer
 
 DATA_BASED_SENSITIVITY_METRICS = (
     SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
@@ -42,23 +43,6 @@ INT8_MODES = (CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM)
 INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
 SUPPORTED_MODES = INT8_MODES + INT4_MODES
 UNSUPPORTED_MODES = (CompressWeightsMode.NF4, CompressWeightsMode.E2M1)
-
-
-class ShortTransformer(torch.nn.Module):
-    def __init__(self, in_features, num_embeddings, share_weights=False):
-        super().__init__()
-        self.wte = torch.nn.Embedding(num_embeddings, in_features)
-        self.linear = torch.nn.Linear(in_features, in_features)
-        self.lm_head = torch.nn.Linear(in_features, num_embeddings)
-
-        if share_weights:
-            self.lm_head.weight = self.wte.weight
-
-    def forward(self, input_ids):
-        x = self.wte(input_ids)
-        x = self.linear(x)
-        res = self.lm_head(x)
-        return res
 
 
 class MatMulModel(torch.nn.Module):

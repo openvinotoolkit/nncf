@@ -13,6 +13,10 @@ on:
         description: 'Pytest arguments'
         default: ''
 
+concurrency:
+  group: test-examples-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.pytest_args || '' }}-${{github.event.inputs.pull_request_number || ''}}
+  cancel-in-progress: false
+
 jobs:
   examples-cpu:
     name: Test exmaples CPU [${{ matrix.group }}/4]
@@ -48,19 +52,19 @@ jobs:
         run: pip list
       - name: Run examples test scope
         run: |
-          python -m pytest -ras tests/cross_fw/examples \
-            --junit-xml=pytest-results-${{ matrix.group }}.xml \
+          set +e
+          python -m pytest -s -ra tests/cross_fw/examples \
+            --junit-xml=pytest-results.xml \
             --durations-path=tests/cross_fw/examples/.test_durations \
             --splitting-algorithm=least_duration \
             --splits 4 \
             --group ${{ matrix.group }} \
             ${{ github.event.inputs.pytest_args || '' }}
+          ret=$?
+          [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Test Summary
         if: ${{ !cancelled() }}
-        with:
-          name: pytest-results-${{ matrix.group }}
-          path: pytest-results-${{ matrix.group }}.xml
-          overwrite: True
+        run: |
+            python .github/scripts/pytest_md_summary.py pytest-results.xml >> $GITHUB_STEP_SUMMARY

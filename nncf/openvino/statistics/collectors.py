@@ -9,26 +9,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+from typing import Optional
 
-from nncf.common.tensor import TensorType
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import InplaceInsertionFNType
 from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
@@ -67,26 +67,17 @@ class OVMeanReducer(MeanReducer):
         return get_inplace_mean_op(self._reduction_axes)
 
 
-class OVMeanVarianceReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
-        raise NotImplementedError()
-
+class OVMeanVarianceReducer(MeanVarianceReducer):
     def get_inplace_fn(self):
         return get_inplace_mean_var_op(self._reduction_axes)
 
 
-class OVMaxVarianceReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
-        raise NotImplementedError()
-
+class OVMaxVarianceReducer(MaxVarianceReducer):
     def get_inplace_fn(self):
         return get_inplace_max_var_op(self._reduction_axes)
 
 
-class OVMeanAbsMaxReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
-        raise NotImplementedError()
-
+class OVMeanAbsMaxReducer(MeanAbsMaxReducer):
     def get_inplace_fn(self):
         return get_inplace_mean_max_op(self._reduction_axes, True)
 
@@ -136,7 +127,7 @@ def get_mean_statistic_collector(
         reducer = OVBatchMeanReducer(inplace)
     else:
         reducer = OVMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
-    noop_reducer = NoopReducer()
+    raw_reducer = RawReducer()
 
     kwargs = {
         "num_samples": num_samples,
@@ -147,7 +138,7 @@ def get_mean_statistic_collector(
 
     collector = TensorCollector(MeanTensorStatistic)
     collector.register_statistic_branch(MeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
-    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
+    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, raw_reducer, aggregate_shape)
     return collector
 
 

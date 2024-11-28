@@ -22,6 +22,10 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.tensor.tensor import Tensor
 
+# Modification Notes:
+# This unit test is adapted from:
+# https://github.com/AutoGPTQ/AutoGPTQ/blob/main/auto_gptq/quantization/quantizer.py
+
 
 def quantize(x, scale, zero, minq, maxq):
     if maxq < 0:

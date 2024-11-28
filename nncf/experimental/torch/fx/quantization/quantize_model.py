@@ -31,7 +31,6 @@ from nncf.experimental.torch.fx.transformations import apply_quantization_transf
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.experimental.torch.fx.transformations import fq_weights_transformation
 from nncf.experimental.torch.fx.transformations import revert_quantization_transformations
-from nncf.experimental.torch.fx.transformations import shared_constants_unification_transformation
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
@@ -158,7 +157,6 @@ def compress_weights_impl(
         backup_mode,
         advanced_parameters,
     )
-    shared_constants_unification_transformation(model)
     graph = NNCFGraphFactory.create(model)
     compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
     compressed_model = GraphModule(compressed_model, compressed_model.graph)

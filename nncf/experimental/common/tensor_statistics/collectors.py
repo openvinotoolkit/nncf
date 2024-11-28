@@ -412,23 +412,15 @@ class MergedTensorCollector(TensorCollector):
 ##################################################
 
 
-class NoopReducer(TensorReducerBase):
+class RawReducer(TensorReducerBase):
     def __init__(self):
         super().__init__(inplace=False)
 
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
         return None
 
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+    def _reduce_out_of_place(self, x: List[Tensor]) -> List[Tensor]:
         return x
-
-
-class RawReducer(NoopReducer):
-    def __init__(self):
-        super().__init__()
-
-    def __call__(self, x: List[Tensor]):
-        return self._reduce_out_of_place(x)
 
 
 class ShapeReducer(TensorReducerBase):
@@ -468,6 +460,21 @@ class MeanReducer(TensorReducerBase):
         x = x[0]
         reduction_axes = self._get_reduction_axes(x)
         return [fns.mean(x, reduction_axes, keepdims=self._keepdims)]
+
+
+class MeanVarianceReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
+
+
+class MaxVarianceReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
+
+
+class MeanAbsMaxReducer(TensorReducerBase):
+    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+        raise NotImplementedError()
 
 
 class QuantileReducerBase(TensorReducerBase):

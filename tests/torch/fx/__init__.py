@@ -8,10 +8,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import sys
-
-import pytest
-
-# Remove after fixing ticket: 156781
-if sys.platform.startswith("win"):
-    pytest.skip("capture_pre_autograd is not supported in windows", allow_module_level=True)
