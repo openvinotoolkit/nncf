@@ -2,14 +2,13 @@
 
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
 
-NNCF supports multiple backends: OpenVINO&trade;, ONNX, PyTorch, and TensorFlow.
-Ensure that your system meets the specific requirements for the backend you plan to use.
-Below are the details for each backend and links to their installation guides:
+NNCF supports multiple backends. Follow the corresponding installation guides and ensure your system meets
+the required specifications for your chosen backend:
 
-- [OpenVINO&trade;](https://docs.openvino.ai/2024/get-started/install-openvino.html)
-- [ONNX](https://onnxruntime.ai/docs/install/)
-- [PyTorch](https://pytorch.org/get-started/locally/#start-locally)
-- [TensorFlow](https://www.tensorflow.org/install/)
+- OpenVINO&trade;: [Install Guide](https://docs.openvino.ai/2024/get-started/install-openvino.html), [System Requirements](https://docs.openvino.ai/2024/about-openvino/release-notes-openvino/system-requirements.html)
+- ONNX: [Install Guide](https://onnxruntime.ai/docs/install/)
+- PyTorch: [Install Guide](https://pytorch.org/get-started/locally/#start-locally)
+- TensorFlow: [Install Guide](https://www.tensorflow.org/install/)
 
 ## As a PyPI package
 
@@ -65,3 +64,5 @@ as well as the supported versions of Python:
 | `2.4.0`   | `2022.1.0` | `1.12.1` | `1.12.0` | `2.8.2`    | `3.8`  |
 
 > (*) Python 3.9 or higher is required for TensorFlow 2.15.1
+
+This repository is tested on Python* 3.10.14, PyTorch* 2.5.0 (NVidia CUDA\* Toolkit 12.4) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).

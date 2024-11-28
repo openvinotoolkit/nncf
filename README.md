@@ -471,6 +471,9 @@ NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
 conda install -c conda-forge nncf
 ```
 
+System requirements of NNCF corresponds with used backend, matrix of corresponding versions of backend in
+[installation.md](./docs/Installation.md#corresponding-versions)
+
 ## NNCF Compressed NNCF Model Zoo
 
 List of models and compression results for them can be found at our [NNCF Model Zoo page](./docs/ModelZoo.md).
