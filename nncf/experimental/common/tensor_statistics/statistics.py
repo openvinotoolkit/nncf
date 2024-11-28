@@ -19,6 +19,7 @@ import numpy as np
 
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
+from nncf.tensor.tensor import TTensor
 
 
 class TensorStatistic:
@@ -29,20 +30,22 @@ class TensorStatistic:
     def get_data(self) -> Dict[str, Any]:
         return {key: getattr(self, key) for key in self.keys()}
 
-    def get_data_to_dump(self) -> Dict[str, np.array]:
-        """ """
+    def get_data_to_dump(self) -> Dict[str, TTensor]:
+        """
+        Returns in original framework.
+        """
         serialized_data = {}
         for key in self.keys():
             value = getattr(self, key)
-            # for t in value:
-            serialized_data[key] = value.data  # Use NumPy array ?????
+            if isinstance(value, Tensor):
+                serialized_data[key] = value.data  # Original Framework
+            else:
+                raise RuntimeError(f"Unsupported type of value: {type(value)}")
         return serialized_data
 
-    def get_config_from_loaded_data(self, loaded_data):
-        config = {}
+    def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
         for key in self.keys():
-            config[key] = Tensor(data=loaded_data[key])
-        return config
+            setattr(self, key, Tensor(loaded_data[key]))
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
@@ -114,14 +117,10 @@ class MeanTensorStatistic(TensorStatistic):
         data[self.MEAN_STAT] = self.mean_values.data
         return data
 
-    def get_config_from_loaded_data(self, loaded_data):
-        config = {}
-        for key, tensor in loaded_data.items():
-            if key == self.MEAN_STAT:
-                config[key] = Tensor(data=tensor)
-            else:
-                config[key] = tuple(tensor.tolist())
-        return config
+    def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
+        # TO TEST
+        self.mean_values = Tensor(loaded_data[self.MEAN_STAT])
+        self.shape_values = tuple(loaded_data[self.SHAPE_STAT].tolist())
 
 
 @dataclass
@@ -187,11 +186,9 @@ class PercentileTensorStatistic(TensorStatistic):
             data[percentile] = tensor.data
         return data
 
-    def get_config_from_loaded_data(self, loaded_data):
-        config = {}
-        for percentile, tensor in loaded_data.items():
-            config[percentile] = Tensor(data=tensor)
-        return config
+    def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
+        # TO TEST
+        self.percentile_vs_values_dict = {k: Tensor(v) for k, v in loaded_data.items()}
 
 
 @dataclass
@@ -224,12 +221,6 @@ class HessianTensorStatistic(TensorStatistic):
         if isinstance(other, HessianTensorStatistic):
             return fns.allclose(self.hessian, other.hessian)
         return False
-
-    def get_config_from_loaded_data(self, loaded_data):
-        config = {}
-        for key in self.keys():
-            config[key] = Tensor(data=loaded_data[key])
-        return config
 
 
 @dataclass
@@ -314,11 +305,10 @@ class WCTensorStatistic(TensorStatistic):
         data[self.MEAN_STAT] = np.array(data[self.MEAN_STAT])
         return data
 
-    def get_config_from_loaded_data(self, loaded_data):
-        config = {self.MEAN_STAT: [], self.SHAPE_STAT: []}
-        config[self.SHAPE_STAT] = [tuple(shape.tolist()) for shape in loaded_data[self.SHAPE_STAT]]
-        config[self.MEAN_STAT] = [Tensor(data=it) for it in loaded_data[self.MEAN_STAT]]
-        return config
+    # REIMPLEMENT FOR SOME CLASSSES
+    def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
+        self.shape_values = [tuple(shape.tolist()) for shape in loaded_data[self.SHAPE_STAT]]
+        self.mean_values = [Tensor(data=it) for it in loaded_data[self.MEAN_STAT]]
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:

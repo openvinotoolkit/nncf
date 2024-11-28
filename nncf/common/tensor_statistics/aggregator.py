@@ -102,7 +102,8 @@ class StatisticsAggregator(ABC):
 
         :param dir_path: The name of the directory from which to load the statistics.
         """
-        loaded_data, metadata = statistics_serializer.load_from_dir(dir_path)
+        tensor_backend = statistics_serializer.get_tensor_backend(self.BACKEND)
+        loaded_data, metadata = statistics_serializer.load_from_dir(dir_path, tensor_backend)
         statistics_validator.validate_backend(metadata, self.BACKEND)
         self._load_statistics(loaded_data)
         nncf_logger.info(f"Statistics were successfully loaded from a directory {dir_path}.")
@@ -118,9 +119,8 @@ class StatisticsAggregator(ABC):
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
             if statistics_key not in data:
                 raise nncf.ValidationError(f"Not found statistics for {statistics_key}")
-            config = statistics.get_config_from_loaded_data(data[statistics_key])
-            statistics_container = tensor_collector.create_statistics_container(config)
-            tensor_collector.set_cache(statistics_container)
+            statistics.load_data(data[statistics_key])
+            tensor_collector.set_cache(statistics)
 
     def dump_statistics(self, dir_path: str) -> None:
         """
@@ -130,7 +130,8 @@ class StatisticsAggregator(ABC):
         """
         data_to_dump = self._prepare_statistics()
         metadata = {"backend": self.BACKEND.value, "subset_size": self.stat_subset_size}
-        statistics_serializer.dump_to_dir(data_to_dump, dir_path, metadata)
+        tensor_backend = statistics_serializer.get_tensor_backend(self.BACKEND)
+        statistics_serializer.dump_to_dir(data_to_dump, dir_path, tensor_backend, metadata)
         nncf_logger.info(f"Statistics were successfully saved to a directory {dir_path}.")
 
     def _prepare_statistics(self) -> Dict[str, Any]:

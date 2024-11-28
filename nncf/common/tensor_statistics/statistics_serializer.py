@@ -13,12 +13,11 @@ import re
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, cast
 
-import numpy as np
-from safetensors.numpy import load_file
-from safetensors.numpy import save_file
-
 import nncf
+from nncf.common.utils.backend import BackendType
 from nncf.common.utils.os import safe_open
+from nncf.tensor.definitions import TensorBackendType
+from nncf.tensor.tensor import TTensor
 
 METADATA_FILE = "statistics_metadata.json"
 
@@ -54,7 +53,7 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
         json.dump(metadata, f, indent=4)
 
 
-def load_from_dir(dir_path: str) -> Tuple[Dict[str, np.array], Dict[str, Any]]:
+def load_from_dir(dir_path: str, backend: TensorBackendType) -> Tuple[Dict[str, Dict[str, TTensor]], Dict[str, Any]]:
     """
     Loads statistics from gzip-compressed files in the given directory.
     :param dir_path: The path to the directory from which to load the statistics.
@@ -76,14 +75,18 @@ def load_from_dir(dir_path: str) -> Tuple[Dict[str, np.array], Dict[str, Any]]:
         try:
             sanitized_name = statistics_file.name
             original_name = mapping.get(sanitized_name, sanitized_name)
-            statistics[original_name] = load_file(statistics_file)
+            load_file_func = return_load_file_method(backend)
+            statistics[original_name] = load_file_func(statistics_file)
         except Exception as e:
-            raise RuntimeError(f"Error loading statistics from {statistics_file.name}: {e}")
+            raise nncf.InternalError(f"Error loading statistics from {statistics_file.name}: {e}")
     return statistics, metadata.get("metadata", {})
 
 
 def dump_to_dir(
-    statistics: Dict[str, np.array], dir_path: str, additional_metadata: Optional[Dict[str, Any]] = None
+    statistics: Dict[str, Dict[str, TTensor]],
+    dir_path: str,
+    backend: TensorBackendType,
+    additional_metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
     Dumps statistics to gzip-compressed files in the specified directory, while maintaining a mapping file.
@@ -105,7 +108,8 @@ def dump_to_dir(
         mapping[sanitized_name] = original_name
 
         try:
-            save_file(statistics_value, file_path)
+            save_file_func = return_save_file_method(backend)
+            save_file_func(statistics_value, file_path)
         except Exception as e:
             raise RuntimeError(f"Failed to write data to file {file_path}: {e}")
 
@@ -116,3 +120,44 @@ def dump_to_dir(
     # Update the mapping in the metadata file
     metadata["mapping"] = mapping
     save_metadata(metadata, path)
+
+
+def return_save_file_method(tensor_backend: TensorBackendType) -> None:
+    try:
+        if tensor_backend == TensorBackendType.NUMPY:
+            from safetensors.numpy import save_file
+
+            return save_file
+        if tensor_backend == TensorBackendType.TORCH:
+            from safetensors.torch import save_file
+
+            return save_file
+    except ImportError as e:
+        RuntimeError(f"Failed to import the required module: {e}")
+
+
+def return_load_file_method(tensor_backend: BackendType) -> None:
+    try:
+        if tensor_backend == TensorBackendType.NUMPY:
+            from safetensors.numpy import load_file
+
+            return load_file
+        if tensor_backend == TensorBackendType.TORCH:
+            from safetensors.torch import load_file
+
+            return load_file
+    except ImportError as e:
+        RuntimeError(f"Failed to import the required module: {e}")
+
+
+def get_tensor_backend(backend: BackendType) -> TensorBackendType:
+    BACKEND_TO_TENSOR_BACKEND = {
+        BackendType.OPENVINO: TensorBackendType.NUMPY,
+        BackendType.ONNX: TensorBackendType.NUMPY,
+        BackendType.TORCH_FX: TensorBackendType.TORCH,
+        BackendType.TORCH: TensorBackendType.TORCH,
+    }
+    if backend not in BACKEND_TO_TENSOR_BACKEND:
+        raise nncf.ValidationError("Unsupported backend type")
+
+    return BACKEND_TO_TENSOR_BACKEND[backend]

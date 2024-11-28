@@ -10,26 +10,26 @@
 # limitations under the License.
 from typing import Dict
 
-import numpy as np
+import torch
 
 from nncf.tensor.definitions import TensorBackendType
 from tests.cross_fw.test_templates.test_statistics_serializer import TemplateTestStatisticsSerializer
 
 
-class TestNPStatisticsSerializer(TemplateTestStatisticsSerializer):
-    def _get_backend_statistics(self) -> Dict[str, Dict[str, np.ndarray]]:
+class TestTorchStatisticsSerializer(TemplateTestStatisticsSerializer):
+    def _get_backend_statistics(self) -> Dict[str, Dict[str, torch.tensor]]:
         return {
-            "layer/1/activation": {"mean": np.array([0.1, 0.2, 0.3])},
-            "layer/2/activation": {"variance": np.array([0.05, 0.06, 0.07])},
+            "layer/1/activation": {"mean": torch.tensor([0.1, 0.2, 0.3])},
+            "layer/2/activation": {"variance": torch.tensor([0.05, 0.06, 0.07])},
         }
 
     def _get_tensor_backend(self) -> TensorBackendType:
-        return TensorBackendType.NUMPY
+        return TensorBackendType.TORCH
 
-    def is_equal(self, a1: Dict[str, np.ndarray], a2: Dict[str, np.ndarray]) -> bool:
+    def is_equal(self, a1: Dict[str, torch.tensor], a2: Dict[str, torch.tensor]) -> bool:
         for key in a1:
             if key not in a2:
                 return False
-            if not np.array_equal(a1[key], a2[key]):
+            if not torch.allclose(a1[key], a2[key]):
                 return False
         return True
