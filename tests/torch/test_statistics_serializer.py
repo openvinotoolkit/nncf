@@ -12,7 +12,7 @@ from typing import Dict
 
 import torch
 
-from nncf.tensor.definitions import TensorBackendType
+from nncf.tensor.definitions import TensorBackend
 from tests.cross_fw.test_templates.test_statistics_serializer import TemplateTestStatisticsSerializer
 
 
@@ -23,8 +23,8 @@ class TestTorchStatisticsSerializer(TemplateTestStatisticsSerializer):
             "layer/2/activation": {"variance": torch.tensor([0.05, 0.06, 0.07])},
         }
 
-    def _get_tensor_backend(self) -> TensorBackendType:
-        return TensorBackendType.TORCH
+    def _get_tensor_backend(self) -> TensorBackend:
+        return TensorBackend.torch
 
     def is_equal(self, a1: Dict[str, torch.tensor], a2: Dict[str, torch.tensor]) -> bool:
         for key in a1:

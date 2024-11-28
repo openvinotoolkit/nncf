@@ -14,15 +14,6 @@ from enum import Enum
 from enum import auto
 
 
-class TensorBackendType(Enum):
-    """
-    Enum representing the different tensor backends.
-    """
-
-    NUMPY = auto()
-    TORCH = auto()
-
-
 class TensorDataType(Enum):
     """
     Enum representing the different tensor data types.

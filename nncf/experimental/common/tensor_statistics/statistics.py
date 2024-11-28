@@ -18,11 +18,11 @@ from typing import Any, Callable, ClassVar, Dict, List, Tuple
 import nncf
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
-from nncf.tensor.definitions import TensorBackendType
+from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.tensor import TTensor
 
 
-def return_tensor_method(tensor_backend: TensorBackendType) -> Callable:
+def return_tensor_method(tensor_backend: TensorBackend) -> Callable:
     """
     Returns the appropriate tensor creation function based on the backend.
 
@@ -30,11 +30,11 @@ def return_tensor_method(tensor_backend: TensorBackendType) -> Callable:
     :return: Function to create a tensor.
     """
     try:
-        if tensor_backend == TensorBackendType.NUMPY:
+        if tensor_backend == TensorBackend.numpy:
             import numpy as np
 
             return np.array
-        if tensor_backend == TensorBackendType.TORCH:
+        if tensor_backend == TensorBackend.torch:
             import torch
 
             return torch.tensor
@@ -300,7 +300,7 @@ class WCTensorStatistic(TensorStatistic):
     SHAPE_STAT = "shape_values"
 
     mean_values: List[Tensor]
-    shape_values: List[Tuple[int, ...]]
+    shape_values: List[Tuple[Tensor]]
 
     @classmethod
     def keys(cls):
@@ -319,7 +319,7 @@ class WCTensorStatistic(TensorStatistic):
         tensor_method = return_tensor_method(self.mean_values[0].backend)
         return {
             self.MEAN_STAT: tensor_method([mean_value.data for mean_value in self.mean_values]),
-            self.SHAPE_STAT: tensor_method([shape for shape in self.shape_values]),
+            self.SHAPE_STAT: tensor_method([[dim.data for dim in shape] for shape in self.shape_values]),
         }
 
     def load_data(self, loaded_data: Dict[str, TTensor]) -> None:

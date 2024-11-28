@@ -21,7 +21,7 @@ from nncf.common.tensor_statistics.statistics_serializer import load_from_dir
 from nncf.common.tensor_statistics.statistics_serializer import load_metadata
 from nncf.common.tensor_statistics.statistics_serializer import sanitize_filename
 from nncf.common.tensor_statistics.statistics_serializer import save_metadata
-from nncf.tensor.definitions import TensorBackendType
+from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.tensor import TTensor
 
 
@@ -31,7 +31,7 @@ class TemplateTestStatisticsSerializer:
         """Returns a dictionary of statistics for testing purposes."""
 
     @abstractmethod
-    def _get_tensor_backend(self) -> TensorBackendType:
+    def _get_tensor_backend(self) -> TensorBackend:
         """Returns the backend used for testing."""
 
     @abstractmethod
@@ -88,7 +88,7 @@ class TemplateTestStatisticsSerializer:
             assert self.is_equal(loaded_statistics[layer_name], stat)
         assert loaded_metadata["model"] == "facebook/opt-125m", "Metadata not loaded correctly"
 
-    @pytest.mark.parametrize("tensor_backend", list(TensorBackendType))
+    @pytest.mark.parametrize("tensor_backend", list(TensorBackend))
     def test_invalid_statistics_file(self, tmp_path, tensor_backend):
         # Create a corrupt gzip file in the directory
         invalid_file = tmp_path / "invalid_file"

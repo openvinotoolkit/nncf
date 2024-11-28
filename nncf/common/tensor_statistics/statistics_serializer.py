@@ -17,7 +17,7 @@ from typing import Any, Callable, Dict, Optional, Tuple, cast
 import nncf
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.os import safe_open
-from nncf.tensor.definitions import TensorBackendType
+from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.tensor import TTensor
 
 METADATA_FILE = "statistics_metadata.json"
@@ -59,7 +59,7 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
         json.dump(metadata, f, indent=4)
 
 
-def load_from_dir(dir_path: str, backend: TensorBackendType) -> Tuple[Dict[str, Dict[str, TTensor]], Dict[str, Any]]:
+def load_from_dir(dir_path: str, backend: TensorBackend) -> Tuple[Dict[str, Dict[str, TTensor]], Dict[str, Any]]:
     """
     Loads statistics and metadata from a directory.
 
@@ -95,7 +95,7 @@ def load_from_dir(dir_path: str, backend: TensorBackendType) -> Tuple[Dict[str, 
 def dump_to_dir(
     statistics: Dict[str, Dict[str, TTensor]],
     dir_path: str,
-    backend: TensorBackendType,
+    backend: TensorBackend,
     additional_metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
@@ -130,7 +130,7 @@ def dump_to_dir(
     save_metadata(metadata, path)
 
 
-def return_save_file_method(tensor_backend: TensorBackendType) -> Callable:
+def return_save_file_method(tensor_backend: TensorBackend) -> Callable:
     """
     Returns the appropriate save_file function based on the backend.
 
@@ -139,11 +139,11 @@ def return_save_file_method(tensor_backend: TensorBackendType) -> Callable:
     :raises RuntimeError: If the required module cannot be imported.
     """
     try:
-        if tensor_backend == TensorBackendType.NUMPY:
+        if tensor_backend == TensorBackend.numpy:
             from safetensors.numpy import save_file
 
             return save_file
-        if tensor_backend == TensorBackendType.TORCH:
+        if tensor_backend == TensorBackend.torch:
             from safetensors.torch import save_file
 
             return save_file
@@ -151,7 +151,7 @@ def return_save_file_method(tensor_backend: TensorBackendType) -> Callable:
         raise RuntimeError(f"Failed to import the required module: {e}")
 
 
-def return_load_file_method(tensor_backend: TensorBackendType) -> Callable:
+def return_load_file_method(tensor_backend: TensorBackend) -> Callable:
     """
     Returns the appropriate load_file function based on the backend.
 
@@ -160,11 +160,11 @@ def return_load_file_method(tensor_backend: TensorBackendType) -> Callable:
     :raises RuntimeError: If the required module cannot be imported.
     """
     try:
-        if tensor_backend == TensorBackendType.NUMPY:
+        if tensor_backend == TensorBackend.numpy:
             from safetensors.numpy import load_file
 
             return load_file
-        if tensor_backend == TensorBackendType.TORCH:
+        if tensor_backend == TensorBackend.torch:
             from safetensors.torch import load_file
 
             return load_file
@@ -172,7 +172,7 @@ def return_load_file_method(tensor_backend: TensorBackendType) -> Callable:
         raise RuntimeError(f"Failed to import the required module: {e}")
 
 
-def get_tensor_backend(backend: BackendType) -> TensorBackendType:
+def get_tensor_backend(backend: BackendType) -> TensorBackend:
     """
     Maps a backend type to a tensor backend type.
 
@@ -181,10 +181,10 @@ def get_tensor_backend(backend: BackendType) -> TensorBackendType:
     :raises nncf.ValidationError: If the backend type is unsupported.
     """
     BACKEND_TO_TENSOR_BACKEND = {
-        BackendType.OPENVINO: TensorBackendType.NUMPY,
-        BackendType.ONNX: TensorBackendType.NUMPY,
-        BackendType.TORCH_FX: TensorBackendType.TORCH,
-        BackendType.TORCH: TensorBackendType.TORCH,
+        BackendType.OPENVINO: TensorBackend.numpy,
+        BackendType.ONNX: TensorBackend.numpy,
+        BackendType.TORCH_FX: TensorBackend.torch,
+        BackendType.TORCH: TensorBackend.torch,
     }
     if backend not in BACKEND_TO_TENSOR_BACKEND:
         raise nncf.ValidationError(f"Unsupported backend type: {backend}")
