@@ -39,12 +39,6 @@ DEFAULT_VAL_THREADS = 4
 METRICS_XFAIL_REASON = "metrics_xfail_reason"
 
 
-class PrecisionType(Enum):
-    FP32 = torch.float32
-    FP16 = torch.float16
-    BF16 = torch.bfloat16
-
-
 class BackendType(Enum):
     FP32 = "FP32"
     TORCH = "TORCH"
@@ -220,7 +214,6 @@ class BaseTestPipeline(ABC):
         params: dict = None,
         batch_size: int = 1,
         memory_monitor: bool = False,
-        base_precision: PrecisionType = PrecisionType.FP32,
     ) -> None:
         self.reported_name = reported_name
         self.model_id = model_id
@@ -240,7 +233,6 @@ class BaseTestPipeline(ABC):
         self.fp32_model_name = self.model_id.replace("/", "__")
         self.fp32_model_dir: Path = self.output_dir / "fp32_models" / self.fp32_model_name
         self.fp32_model_dir.mkdir(parents=True, exist_ok=True)
-        self.torch_dtype = base_precision.value
 
         self.model = None
         self.model_hf = None

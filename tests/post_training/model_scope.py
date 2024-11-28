@@ -12,6 +12,8 @@
 import copy
 from typing import Dict, List
 
+import torch
+
 import nncf
 from nncf import ModelType
 from nncf import QuantizationPreset
@@ -26,7 +28,6 @@ from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
 from tests.post_training.pipelines.base import NNCF_PTQ_BACKENDS
 from tests.post_training.pipelines.base import BackendType
-from tests.post_training.pipelines.base import PrecisionType
 from tests.post_training.pipelines.causal_language_model import CausalLMHF
 from tests.post_training.pipelines.gpt import GPT
 from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
@@ -92,7 +93,7 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
         },
         "backends": [BackendType.OV],
-        "base_precision": PrecisionType.FP16,
+        "params": {"base_precision": torch.float16},
     },
     {
         "reported_name": "hf/bert-base-uncased_bf16",
@@ -104,7 +105,7 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
         },
         "backends": [BackendType.OV],
-        "base_precision": PrecisionType.BF16,
+        "params": {"base_precision": torch.bfloat16},
     },
     # Torchvision models
     {

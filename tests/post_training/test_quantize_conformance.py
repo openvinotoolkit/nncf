@@ -28,7 +28,6 @@ from tests.post_training.model_scope import PTQ_TEST_CASES
 from tests.post_training.model_scope import WC_TEST_CASES
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
-from tests.post_training.pipelines.base import PrecisionType
 from tests.post_training.pipelines.base import RunInfo
 
 DATA_ROOT = Path(__file__).parent / "data"
@@ -281,7 +280,6 @@ def test_ptq_quantization(
         test_model_param = PTQ_TEST_CASES[test_case_name]
         maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
         pipeline_cls = test_model_param["pipeline_cls"]
-        base_precision = test_model_param.get("base_precision", PrecisionType.FP32)
         # Recalculates subset_size when subset_size is None
         if batch_size is None:
             batch_size = test_model_param.get("batch_size", 1)
@@ -297,7 +295,6 @@ def test_ptq_quantization(
                 "run_benchmark_app": run_benchmark_app,
                 "batch_size": batch_size,
                 "memory_monitor": memory_monitor,
-                "base_precision": base_precision,
             }
         )
         pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)

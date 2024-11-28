@@ -22,7 +22,6 @@ import nncf
 from tests.post_training.pipelines.base import OV_BACKENDS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
-from tests.post_training.pipelines.base import PrecisionType
 from tests.post_training.pipelines.base import PTQTestPipeline
 
 
@@ -30,18 +29,19 @@ class MaskedLanguageModelingHF(PTQTestPipeline):
     """Pipeline for masked language models from Hugging Face repository"""
 
     def prepare_model(self) -> None:
+        torch_dtype = self.params.get("base_precision", torch.float32)
         if self.backend in PT_BACKENDS:
             self.model_hf = transformers.AutoModelForSequenceClassification.from_pretrained(
-                self.model_id, torch_dtype=self.torch_dtype
+                self.model_id, torch_dtype=torch_dtype
             )
             self.model = self.model_hf
             self.model.config.torchscript = True  # Set to export by convert_model via torch.jit.trace
             self.dummy_tensor = self.model_hf.dummy_inputs["input_ids"]
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
-            if self.torch_dtype != PrecisionType.FP32:
+            if torch_dtype != torch.float32:
                 # Since optimum-intel does not produce custom-type models, this workaround handles it.
                 self.model_hf = transformers.AutoModelForSequenceClassification.from_pretrained(
-                    self.model_id, torch_dtype=self.torch_dtype
+                    self.model_id, torch_dtype=torch_dtype
                 )
                 self.model = ov.convert_model(self.model_hf, example_input=self.model_hf.dummy_inputs)
             else:
