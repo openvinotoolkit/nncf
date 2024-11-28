@@ -25,13 +25,16 @@ from torch.fx.passes.infra.pass_manager import PassManager
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.data import Dataset
-from nncf.experimental.common.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.experimental.common.quantization.algorithms.post_training.algorithm import (
+    ExperimentalPostTrainingQuantization,
+)
 from nncf.experimental.common.quantization.algorithms.quantizer.fx_quantizer import NNCFFXQuantizer
+from nncf.experimental.torch.fx.constant_folding import constant_fold
+from nncf.experimental.torch.fx.transformations import QUANTIZE_NODE_TARGETS
 from nncf.experimental.torch.fx.transformations import fuse_conv_bn
-from nncf.parameters import ModelType
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-
-DEFAULT_RANGE_TYPE = "mean_min_max"
+from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
+from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
+from nncf.quantization.advanced_parameters import RangeEstimatorParameters
 
 
 def quantize_pt2e(
@@ -40,8 +43,12 @@ def quantize_pt2e(
     calibration_dataset: Dataset,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    model_type: Optional[ModelType] = None,
-    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+    smooth_quant: bool = False,
+    bias_correction_params: Optional[AdvancedBiasCorrectionParameters] = None,
+    smooth_quant_params: Optional[AdvancedSmoothQuantParameters] = None,
+    activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
+    weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
+    fold_quantize: Optional[bool] = False,
 ) -> torch.fx.GraphModule:
     """
     Implementation of the `quantize()` method for the Torch FX backend.
@@ -56,12 +63,15 @@ def quantize_pt2e(
 
     copied_model = deepcopy(model)
 
-    quantization_algorithm = PostTrainingQuantization(
+    quantization_algorithm = ExperimentalPostTrainingQuantization(
         quantizer=NNCFFXQuantizer(quantizer),
         subset_size=subset_size,
         fast_bias_correction=fast_bias_correction,
-        model_type=model_type,
-        advanced_parameters=advanced_parameters,
+        smooth_quant=smooth_quant,
+        bias_correction_params=bias_correction_params,
+        smooth_quant_params=smooth_quant_params,
+        activations_range_estimator_params=activations_range_estimator_params,
+        weights_range_estimator_params=weights_range_estimator_params,
     )
 
     # To make it easier for bias correction algorithms,
@@ -76,6 +86,9 @@ def quantize_pt2e(
     quantized_model = GraphModule(quantized_model, quantized_model.graph)
 
     quantized_model = _fold_conv_bn_qat(quantized_model)
+    if fold_quantize:
+        constant_fold(quantized_model, _quant_node_constraint)
+
     pm = PassManager([DuplicateDQPass()])
 
     quantized_model = pm(quantized_model).graph_module
@@ -89,3 +102,14 @@ def quantize_pt2e(
     quantized_model = GraphModule(quantized_model, quantized_model.graph)
 
     return quantized_model
+
+
+def _quant_node_constraint(n: torch.fx.Node) -> bool:
+    """If there is any pure ops between get_attr and quantize op they will be const propagated
+    e.g. get_attr(weight) -> transpose -> quantize -> dequantize*
+    (Note: dequantize op is not going to be constant propagated)
+
+    This filter is added because we don't want to constant fold the things that are not
+    related to quantization
+    """
+    return n.op == "call_function" and n.target in QUANTIZE_NODE_TARGETS

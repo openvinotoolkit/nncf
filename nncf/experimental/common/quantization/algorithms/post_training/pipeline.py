@@ -11,14 +11,13 @@
 
 from typing import Optional, TypeVar
 
-from nncf.common.deprecation import warning_deprecated
 from nncf.experimental.common.quantization.algorithms.quantizer.quantizer import NNCFQuantizer
 from nncf.experimental.common.quantization.algorithms.range_estimator.range_estimator import MinMaxRangeEstimator
-from nncf.parameters import ModelType
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
+from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
+from nncf.quantization.advanced_parameters import RangeEstimatorParameters
 from nncf.quantization.algorithms.bias_correction.algorithm import BIAS_CORRECTION_THRESHOLD
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
-from nncf.quantization.algorithms.channel_alignment.algorithm import ChannelAlignment
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FAST_BIAS_CORRECTION_THRESHOLD
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.pipeline import Pipeline
@@ -27,73 +26,49 @@ from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 TModel = TypeVar("TModel")
 
 
-def create_ptq_pipeline(
+def experimental_create_ptq_pipeline(
     quantizer: NNCFQuantizer,
     subset_size: int = 300,
-    fast_bias_correction: bool = True,
-    model_type: Optional[ModelType] = None,
-    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+    fast_bias_correction: Optional[bool] = True,
+    smooth_quant: bool = False,
+    bias_correction_params: Optional[AdvancedBiasCorrectionParameters] = None,
+    smooth_quant_params: Optional[AdvancedSmoothQuantParameters] = None,
+    activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
+    weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
 ) -> Pipeline:
     """
-    Creates a post-training quantization pipeline.
+    Creates an experimental post-training quantization pipeline.
 
-    The post-training quantization pipeline includes the following steps:
+    The experimental post-training quantization pipeline includes the following steps:
         1) SmoothQuant
-        2) ChannelAlignment
-        3) MinMaxQuantization
-        4) FastBiasCorrection or BiasCorrection
+        2) MinMaxRangeInit
+        3) FastBiasCorrection or BiasCorrection
 
-    :param mode: Special quantization mode that specify different ways of the optimization.
-    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
-        It can take the following values:
-        - `performance`: Symmetric quantization of weights and activations.
-        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
-        Default value is None. In this case, `mixed` preset is used for `transformer`
-        model type otherwise `performace`.
-    :param target_device: A target device the specificity of which will be taken
-        into account while compressing in order to obtain the best performance
-        for this type of device.
+    :param quantizer: NNCFQuantizer to use in MiMaxRageInit algorithm.
     :param subset_size: Size of a subset to calculate activations
         statistics used for quantization.
     :param fast_bias_correction: Setting this option to `False` enables a different
         bias correction method which is more accurate, in general, and takes
-        more time but requires less memory.
-    :param model_type: Model type is needed to specify additional patterns
-        in the model. Supported only `transformer` now.
-    :param advanced_parameters: Advanced quantization parameters for
-        fine-tuning the quantization algorithm
-    :return: A post-training quantization pipeline.
+        more time but requires less memory. None disables the bias correction algorithm.
+    :param smooth_quant: Setting this option to `True` enables the SmoothQuant algorithm.
+    :param bias_correction_params: Contains advanced parameters for fine-tuning bias correction algorithm.
+    :param smooth_quant_params: Contains advanced alpha parameters for SmoothQuant algorithm.
+    :param activations_range_estimator_params: Contains parameters for estimating the range
+        of activations of the model.
+    :param weights_range_estimator_params: Contains parameters for estimating the range
+        of weights of the model.
+    :return: An experimental post-training quantization pipeline.
     """
-
-    if advanced_parameters is None:
-        advanced_parameters = AdvancedQuantizationParameters()
 
     # Build the post-training quantization pipeline.
     pipeline_steps = []
 
-    # Add the `SmoothQuant` algorithm as the first step of the pipeline.
-    # It is added only for `ModelType.TRANSFORMER`.
-    sq_params = advanced_parameters.smooth_quant_alphas
-    sq_alpha = advanced_parameters.smooth_quant_alpha
-    if sq_alpha is not None:
-        warning_deprecated(
-            "`AdvancedQuantizationParameters(smooth_quant_alpha=..)` is deprecated."
-            "Please, use `AdvancedQuantizationParameters(smooth_quant_alphas)` option "
-            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..) as value instead."
-        )
-        if sq_alpha < 0:
-            sq_params.convolution = -1
-            sq_params.matmul = -1
-        else:
-            sq_params.matmul = sq_alpha
+    if smooth_quant_params is None:
+        smooth_quant_params = AdvancedSmoothQuantParameters()
 
-    if model_type == ModelType.TRANSFORMER and (sq_params.convolution >= 0 or sq_params.matmul >= 0):
-        alpha_map = {"convolution": sq_params.convolution, "matmul": sq_params.matmul}
-        pipeline_steps.append([SmoothQuant(subset_size, advanced_parameters.inplace_statistics, alpha_map=alpha_map)])
-
-    # Add the `ChannelAlignment` algorithm as the second step of the pipeline.
-    if not advanced_parameters.disable_channel_alignment:
-        pipeline_steps.append([ChannelAlignment(subset_size, advanced_parameters.inplace_statistics)])
+    if smooth_quant and smooth_quant_params.convolution >= 0 or smooth_quant_params.matmul >= 0:
+        alpha_map = {"convolution": smooth_quant_params.convolution, "matmul": smooth_quant_params.matmul}
+        pipeline_steps.append([SmoothQuant(subset_size, False, alpha_map=alpha_map)])
 
     # Add the `MinMaxQuantization` algorithm as the third step of the pipeline.
     pipeline_steps.append(
@@ -101,19 +76,17 @@ def create_ptq_pipeline(
             MinMaxRangeEstimator(
                 quantizer=quantizer,
                 subset_size=subset_size,
-                inplace_statistics=advanced_parameters.inplace_statistics,
-                batchwise_statistics=advanced_parameters.batchwise_statistics,
-                activations_range_estimator_params=advanced_parameters.activations_range_estimator_params,
-                weights_range_estimator_params=advanced_parameters.weights_range_estimator_params,
+                inplace_statistics=False,
+                activations_range_estimator_params=activations_range_estimator_params,
+                weights_range_estimator_params=weights_range_estimator_params,
             )
         ]
     )
 
-    if not advanced_parameters.disable_bias_correction:
+    if fast_bias_correction is not None:
         # Add the `FastBiasCorrection` or `BiasCorrection` as additional algorithm
         # inside the third step of the pipeline. It is added after `MinMaxQuantization`
         # algorithm.
-        bias_correction_params = advanced_parameters.bias_correction_params
         if fast_bias_correction:
             threshold = FAST_BIAS_CORRECTION_THRESHOLD
             bias_correction_subset_size = subset_size
@@ -123,6 +96,9 @@ def create_ptq_pipeline(
             bias_correction_subset_size = max(int(subset_size * 0.2), 1)
             bias_correction_cls = BiasCorrection
 
+        if bias_correction_params is None:
+            bias_correction_params = AdvancedBiasCorrectionParameters()
+
         if bias_correction_params.threshold is not None:
             threshold = bias_correction_params.threshold
 
@@ -131,8 +107,6 @@ def create_ptq_pipeline(
                 bias_correction_subset_size,
                 threshold,
                 bias_correction_params.apply_for_all_nodes,
-                advanced_parameters.inplace_statistics,
-                advanced_parameters.backend_params,
             )
         )
 
