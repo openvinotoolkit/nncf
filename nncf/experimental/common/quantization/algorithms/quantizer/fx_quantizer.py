@@ -12,14 +12,13 @@
 
 from collections import defaultdict
 from copy import deepcopy
+from typing import Dict, Tuple, Union
 
 import torch
 import torch.fx
-from torch.ao.quantization.pt2e.prepare import _get_edge_or_node_to_group_id
-from torch.ao.quantization.pt2e.prepare import _get_edge_or_node_to_qspec
-from torch.ao.quantization.pt2e.prepare import _get_obs_or_fq_map
 from torch.ao.quantization.quantizer import Quantizer
 from torch.ao.quantization.quantizer.quantizer import QuantizationSpec
+from torch.ao.quantization.quantizer.quantizer import QuantizationSpecBase
 from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec
 
 import nncf
@@ -31,6 +30,8 @@ from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertion
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.quantization.algorithms.quantizer.quantizer import NNCFQuantizer
+
+EdgeOrNode = Union[Tuple[torch.fx.Node, torch.fx.Node]]
 
 
 class NNCFFXQuantizer(NNCFQuantizer):
@@ -47,12 +48,7 @@ class NNCFFXQuantizer(NNCFQuantizer):
 
     @staticmethod
     def get_quantizer_config_from_anotated_model(anotated_model: torch.fx.GraphModule) -> SingleConfigQuantizerSetup:
-        is_qat = False
         edge_or_node_to_qspec = _get_edge_or_node_to_qspec(anotated_model)
-        edge_or_node_to_group_id = _get_edge_or_node_to_group_id(edge_or_node_to_qspec)
-        obs_or_fq_map = _get_obs_or_fq_map(edge_or_node_to_group_id, edge_or_node_to_qspec, is_qat)
-        if obs_or_fq_map:
-            pass
 
         q_map = defaultdict(list)
         for edge, qspec in edge_or_node_to_qspec.items():
@@ -108,3 +104,26 @@ class NNCFFXQuantizer(NNCFQuantizer):
                 raise nncf.InternalError(f"Unknown torch.ao quantization spec: {qspec}")
 
         return q_setup
+
+
+def _get_edge_or_node_to_qspec(
+    model: torch.fx.GraphModule,
+) -> Dict[EdgeOrNode, QuantizationSpecBase]:
+    """
+    Get a map from EdgeOrNode to quantization spec based on annotations on the nodes.
+
+    :param model: torch.fx.GraphModule instance.
+    :return: A map from EdgeOrNode to quantization spec based on annotations on the nodes.
+    """
+    edge_or_node_to_qspec: Dict[EdgeOrNode, QuantizationSpecBase] = {}
+    for n in model.graph.nodes:
+        if hasattr(n, "meta") and "quantization_annotation" in n.meta:
+            qa = n.meta["quantization_annotation"]
+            for input_to_n, qspec in qa.input_qspec_map.items():
+                input_edge = (input_to_n, n)
+                edge_or_node_to_qspec[input_edge] = qspec
+            if qa.output_qspec is not None:
+                output_node = n
+                qspec = qa.output_qspec
+                edge_or_node_to_qspec[output_node] = qspec
+    return edge_or_node_to_qspec

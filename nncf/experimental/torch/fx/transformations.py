@@ -47,10 +47,12 @@ Argument = Optional[Union[Tuple[Any, ...], List[Any], Dict[str, Any], slice, ran
 
 QUANTIZE_NODE_TARGETS = [
     torch.ops.quantized_decomposed.quantize_per_tensor.default,
+    torch.ops.quantized_decomposed.quantize_per_tensor.tensor,
     torch.ops.quantized_decomposed.quantize_per_channel.default,
 ]
 DEQUANTIZE_NODE_TARGETS = [
     torch.ops.quantized_decomposed.dequantize_per_tensor.default,
+    torch.ops.quantized_decomposed.dequantize_per_tensor.tensor,
     torch.ops.quantized_decomposed.dequantize_per_channel.default,
 ]
 # Map quantize_per_tensor to dequantize_per_tensor, the same for per_channel and vice-versa

@@ -16,21 +16,22 @@ from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.common.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
+from nncf.experimental.common.quantization.algorithms.post_training.pipeline import experimental_create_ptq_pipeline
 from nncf.experimental.common.quantization.algorithms.quantizer.quantizer import NNCFQuantizer
-from nncf.parameters import ModelType
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
+from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
+from nncf.quantization.advanced_parameters import RangeEstimatorParameters
 from nncf.quantization.algorithms.algorithm import Algorithm
 
 TModel = TypeVar("TModel")
 TPass = Callable[[TModel], TModel]
 
 
-class PostTrainingQuantization(Algorithm):
+class ExperimentalPostTrainingQuantization(Algorithm):
     """
-    Implements Post-Training Quantization algorithm, which basically includes:
+    Implements Experimental Post-Training Quantization algorithm, which basically includes:
     1) ChannelAlignment
-    2) MinMaxQuantization
+    2) MinMaxRangeInit
     3) FastBiasCorrection or BiasCorrection
     """
 
@@ -38,39 +39,37 @@ class PostTrainingQuantization(Algorithm):
         self,
         quantizer: NNCFQuantizer,
         subset_size: int = 300,
-        fast_bias_correction: bool = True,
-        model_type: Optional[ModelType] = None,
-        advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+        fast_bias_correction: Optional[bool] = True,
+        smooth_quant: bool = False,
+        bias_correction_params: Optional[AdvancedBiasCorrectionParameters] = None,
+        smooth_quant_params: Optional[AdvancedSmoothQuantParameters] = None,
+        activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
+        weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
     ):
         """
-        :param mode: Special quantization mode that specify different ways of the optimization.
-        :param preset: A preset controls the quantization mode (symmetric and asymmetric).
-            It can take the following values:
-            - `performance`: Symmetric quantization of weights and activations.
-            - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
-            Default value is None. In this case, `mixed` preset is used for `transformer`
-            model type otherwise `performace`.
-        :param target_device: A target device the specificity of which will be taken
-            into account while compressing in order to obtain the best performance
-            for this type of device.
+        :param quantizer: NNCFQuantizer to use in MiMaxRageInit algorithm.
         :param subset_size: Size of a subset to calculate activations
             statistics used for quantization.
         :param fast_bias_correction: Setting this option to `False` enables a different
             bias correction method which is more accurate, in general, and takes
-            more time but requires less memory.
-        :param model_type: Model type is needed to specify additional patterns
-            in the model. Supported only `transformer` now.
-        :param ignored_scope: An ignored scope that defined the list of model control
-            flow graph nodes to be ignored during quantization.
-        :param advanced_parameters: Advanced quantization parameters for
-            fine-tuning the quantization algorithm
+            more time but requires less memory. None disables the bias correction algorithm.
+        :param smooth_quant: Setting this option to `True` enables the SmoothQuant algorithm.
+        :param bias_correction_params: Contains advanced parameters for fine-tuning bias correction algorithm.
+        :param smooth_quant_params: Contains advanced alpha parameters for SmoothQuant algorithm.
+        :param activations_range_estimator_params: Contains parameters for estimating the range
+            of activations of the model.
+        :param weights_range_estimator_params: Contains parameters for estimating the range
+            of weights of the model.
         """
-        self._pipeline = create_ptq_pipeline(
+        self._pipeline = experimental_create_ptq_pipeline(
             quantizer=quantizer,
             subset_size=subset_size,
             fast_bias_correction=fast_bias_correction,
-            model_type=model_type,
-            advanced_parameters=advanced_parameters,
+            smooth_quant=smooth_quant,
+            bias_correction_params=bias_correction_params,
+            smooth_quant_params=smooth_quant_params,
+            activations_range_estimator_params=activations_range_estimator_params,
+            weights_range_estimator_params=weights_range_estimator_params,
         )
 
     @property
