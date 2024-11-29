@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nncf.tensor.definitions import TensorBackend as TensorBackend
 from nncf.tensor.definitions import TensorDataType as TensorDataType
 from nncf.tensor.definitions import TensorDeviceType as TensorDeviceType
 from nncf.tensor.tensor import Tensor as Tensor

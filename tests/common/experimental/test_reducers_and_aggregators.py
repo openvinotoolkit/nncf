@@ -31,7 +31,6 @@ from nncf.experimental.common.tensor_statistics.collectors import MedianAggregat
 from nncf.experimental.common.tensor_statistics.collectors import MedianNoOutliersAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
@@ -173,19 +172,19 @@ class TemplateTestReducersAggregators:
     def cast_tensor(self, tensor, dtype: Dtype):
         pass
 
-    @pytest.mark.parametrize("reducer_cls", [NoopReducer, RawReducer])
+    @pytest.mark.parametrize("reducer_cls", [RawReducer])
     @pytest.mark.parametrize("input_data", [np.arange(24).reshape((1, 2, 3, 4)), np.array([])])
     def test_other_reducers(self, reducer_cls, input_data):
         reducer = reducer_cls()
         tensor_data = self.get_nncf_tensor(input_data)
         reduced_input = reducer([tensor_data])
-        if reducer_cls == NoopReducer and tensor_data.isempty():
+        if tensor_data.isempty():
             assert reduced_input is None
         else:
             assert len(reduced_input) == 1
             assert fns.allclose(reduced_input[0], tensor_data)
 
-    @pytest.mark.parametrize("reducer_cls", [NoopReducer, RawReducer, ShapeReducer])
+    @pytest.mark.parametrize("reducer_cls", [RawReducer, ShapeReducer])
     def test_other_reducers_name_hash_equal(self, reducer_cls):
         reducers_instances = [reducer_cls() for _ in range(2)]
         assert hash(reducers_instances[0]) == hash(reducers_instances[1])

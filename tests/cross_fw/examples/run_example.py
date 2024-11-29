@@ -184,6 +184,14 @@ def llm_compression_synthetic() -> Dict[str, float]:
     return {"word_count": len(result.split())}
 
 
+def fp8_llm_quantization() -> Dict[str, float]:
+    from examples.llm_compression.openvino.smollm2_360m_fp8.main import main as fp8_llm_quantization_main
+
+    result = fp8_llm_quantization_main()
+
+    return {"answers": list(result.values())}
+
+
 def post_training_quantization_torch_fx_resnet18():
     from examples.post_training_quantization.torch_fx.resnet18.main import main as resnet18_main
 
