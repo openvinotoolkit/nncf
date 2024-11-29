@@ -725,12 +725,11 @@ class MinMaxQuantization(Algorithm):
 
     def find_quantization_setup(self, model: TModel, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         """
-        Initializes a cache, finds quantization target points and them puts in the cache.
+        Builds SingleConfigQuantizerSetup for the given model.
 
         :param model: Backend-specific model, for which Quantization Target Points are being seek.
         :param nncf_graph: NNCFGraph instance.
-        :return: Mapping of quantization target points with associated quantization configuration,
-        along with target points for scale unification.
+        :return: SingleConfigQuantizerSetup for the given model.
         """
         backend = get_backend(model)
         device = self._target_device
