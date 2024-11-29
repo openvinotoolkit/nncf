@@ -472,7 +472,7 @@ conda install -c conda-forge nncf
 ```
 
 System requirements of NNCF correspond to the used backend. System requirements for each backend and
-the matrix of corresponding versions can be found in [installation.md](./docs/Installation.md#corresponding-versions).
+the matrix of corresponding versions can be found in [installation.md](./docs/Installation.md).
 
 ## NNCF Compressed NNCF Model Zoo
 
