@@ -79,7 +79,7 @@ class TemplateTestStatisticsSerializer:
         with open(metadata_file, "r") as f:
             metadata = json.load(f)
             assert "mapping" in metadata, "Mapping is missing in metadata"
-            assert metadata["metadata"]["model"] == "facebook/opt-125m"
+            assert metadata["model"] == "facebook/opt-125m"
 
         # Load the statistics and ensure it was loaded correctly
         loaded_statistics, loaded_metadata = load_from_dir(tmp_path, tensor_backend)
@@ -88,8 +88,7 @@ class TemplateTestStatisticsSerializer:
             assert self.is_equal(loaded_statistics[layer_name], stat)
         assert loaded_metadata["model"] == "facebook/opt-125m", "Metadata not loaded correctly"
 
-    @pytest.mark.parametrize("tensor_backend", list(TensorBackend))
-    def test_invalid_statistics_file(self, tmp_path, tensor_backend):
+    def test_invalid_statistics_file(self, tmp_path):
         # Create a corrupt gzip file in the directory
         invalid_file = tmp_path / "invalid_file"
         with open(invalid_file, "w") as f:
@@ -97,4 +96,4 @@ class TemplateTestStatisticsSerializer:
 
         # Expect the load_from_dir to raise an error when trying to load the invalid file
         with pytest.raises(nncf.InternalError, match="Error loading statistics"):
-            load_from_dir(tmp_path, tensor_backend)
+            load_from_dir(tmp_path, self._get_tensor_backend())

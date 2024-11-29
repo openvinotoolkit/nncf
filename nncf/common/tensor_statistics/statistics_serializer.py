@@ -12,7 +12,7 @@
 import json
 import re
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple, cast
+from typing import Any, Callable, Dict, Optional, TextIO, Tuple, cast
 
 import nncf
 from nncf.common.utils.backend import BackendType
@@ -44,7 +44,7 @@ def load_metadata(dir_path: Path) -> Dict[str, Any]:
     if metadata_file.exists():
         with safe_open(metadata_file, "r") as f:
             return cast(Dict[str, Any], json.load(f))
-    return {"mapping": {}, "metadata": {}}
+    return {"mapping": {}}
 
 
 def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
@@ -56,7 +56,7 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
     """
     metadata_file = dir_path / METADATA_FILE
     with safe_open(metadata_file, "w") as f:
-        json.dump(metadata, f, indent=4)
+        json.dump(metadata, cast(TextIO, f), indent=4)
 
 
 def load_from_dir(dir_path: str, backend: TensorBackend) -> Tuple[Dict[str, Dict[str, TTensor]], Dict[str, Any]]:
@@ -65,11 +65,9 @@ def load_from_dir(dir_path: str, backend: TensorBackend) -> Tuple[Dict[str, Dict
 
     :param dir_path: Path to the directory containing the data files.
     :param backend: Backend type to determine the loading function.
-    :return: Tuple containing statistics and additional metadata.
-    :raises nncf.ValidationError: If the directory does not exist.
-    :raises nncf.InternalError: If an error occurs while loading a file.
+    :return: Tuple containing statistics and metadata.
     """
-    statistics = {}
+    statistics: Dict[str, Dict[str, TTensor]] = {}
     path = Path(dir_path)
     if not path.exists():
         raise nncf.ValidationError("The provided directory path does not exist.")
@@ -89,7 +87,7 @@ def load_from_dir(dir_path: str, backend: TensorBackend) -> Tuple[Dict[str, Dict
         except Exception as e:
             raise nncf.InternalError(f"Error loading statistics from {statistics_file.name}: {e}")
 
-    return statistics, metadata.get("metadata", {})
+    return statistics, {key: value for key, value in metadata.items() if key != "mapping"}
 
 
 def dump_to_dir(
@@ -105,12 +103,11 @@ def dump_to_dir(
     :param dir_path: Path to the directory where files will be saved.
     :param backend: Backend type to determine the saving function.
     :param additional_metadata: Additional metadata to include in the metadata file.
-    :raises RuntimeError: If an error occurs while saving a file.
     """
     path = Path(dir_path)
     path.mkdir(parents=True, exist_ok=True)
 
-    metadata = {"mapping": {}}
+    metadata: Dict[str, Any] = {"mapping": {}}
 
     save_file_func = return_save_file_method(backend)
     for original_name, statistics_value in statistics.items():
@@ -125,49 +122,47 @@ def dump_to_dir(
             raise RuntimeError(f"Failed to write data to file {file_path}: {e}")
 
     if additional_metadata:
-        metadata["metadata"] = additional_metadata
+        metadata |= additional_metadata
 
     save_metadata(metadata, path)
 
 
-def return_save_file_method(tensor_backend: TensorBackend) -> Callable:
+def return_save_file_method(tensor_backend: TensorBackend) -> Callable[..., Any]:
     """
     Returns the appropriate save_file function based on the backend.
 
     :param tensor_backend: Tensor backend type.
     :return: Function to save tensors.
-    :raises RuntimeError: If the required module cannot be imported.
     """
     try:
         if tensor_backend == TensorBackend.numpy:
-            from safetensors.numpy import save_file
+            from safetensors.numpy import save_file as np_save_file
 
-            return save_file
+            return np_save_file
         if tensor_backend == TensorBackend.torch:
-            from safetensors.torch import save_file
+            from safetensors.torch import save_file as torch_save_file
 
-            return save_file
+            return torch_save_file
     except ImportError as e:
         raise RuntimeError(f"Failed to import the required module: {e}")
 
 
-def return_load_file_method(tensor_backend: TensorBackend) -> Callable:
+def return_load_file_method(tensor_backend: TensorBackend) -> Callable[..., Any]:
     """
     Returns the appropriate load_file function based on the backend.
 
     :param tensor_backend: Tensor backend type.
     :return: Function to load tensors.
-    :raises RuntimeError: If the required module cannot be imported.
     """
     try:
         if tensor_backend == TensorBackend.numpy:
-            from safetensors.numpy import load_file
+            from safetensors.numpy import load_file as np_load_file
 
-            return load_file
+            return np_load_file
         if tensor_backend == TensorBackend.torch:
-            from safetensors.torch import load_file
+            from safetensors.torch import load_file as torch_load_file
 
-            return load_file
+            return torch_load_file
     except ImportError as e:
         raise RuntimeError(f"Failed to import the required module: {e}")
 
@@ -178,9 +173,8 @@ def get_tensor_backend(backend: BackendType) -> TensorBackend:
 
     :param backend: Backend type.
     :return: Corresponding tensor backend type.
-    :raises nncf.ValidationError: If the backend type is unsupported.
     """
-    BACKEND_TO_TENSOR_BACKEND = {
+    BACKEND_TO_TENSOR_BACKEND: Dict[BackendType, TensorBackend] = {
         BackendType.OPENVINO: TensorBackend.numpy,
         BackendType.ONNX: TensorBackend.numpy,
         BackendType.TORCH_FX: TensorBackend.torch,
