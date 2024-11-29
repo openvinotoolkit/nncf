@@ -114,12 +114,13 @@ def dump_to_dir(
         sanitized_name = sanitize_filename(original_name)
         file_path = path / sanitized_name
 
+        # Update the mapping
         metadata["mapping"][sanitized_name] = original_name
 
         try:
             save_file_func(statistics_value, file_path)
         except Exception as e:
-            raise RuntimeError(f"Failed to write data to file {file_path}: {e}")
+            raise nncf.InternalError(f"Failed to write data to file {file_path}: {e}")
 
     if additional_metadata:
         metadata |= additional_metadata
@@ -144,7 +145,7 @@ def return_save_file_method(tensor_backend: TensorBackend) -> Callable[..., Any]
 
             return torch_save_file
     except ImportError as e:
-        raise RuntimeError(f"Failed to import the required module: {e}")
+        raise nncf.ValidationError(f"Failed to import the required module: {e}")
 
 
 def return_load_file_method(tensor_backend: TensorBackend) -> Callable[..., Any]:
@@ -164,7 +165,7 @@ def return_load_file_method(tensor_backend: TensorBackend) -> Callable[..., Any]
 
             return torch_load_file
     except ImportError as e:
-        raise RuntimeError(f"Failed to import the required module: {e}")
+        raise nncf.ValidationError(f"Failed to import the required module: {e}")
 
 
 def get_tensor_backend(backend: BackendType) -> TensorBackend:
