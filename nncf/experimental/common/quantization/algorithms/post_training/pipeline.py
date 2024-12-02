@@ -11,7 +11,7 @@
 
 from typing import Optional, TypeVar
 
-from nncf.experimental.common.quantization.algorithms.quantizer.quantizer import NNCFQuantizer
+from nncf.experimental.common.quantization.algorithms.quantizer.base_quantizer import NNCFQuantizer
 from nncf.experimental.common.quantization.algorithms.range_estimator.range_estimator import MinMaxRangeEstimator
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters

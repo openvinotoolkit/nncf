@@ -22,5 +22,9 @@ class NNCFQuantizer:
     @abstractmethod
     def get_quantization_setup(self, model: TModel, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         """
-        Return quantization setup.
+        Builds SingleConfigQuantizerSetup for the given model.
+
+        :param model: Backend-specific model, for which Quantization Target Points are being seek.
+        :param nncf_graph: NNCFGraph instance.
+        :return: SingleConfigQuantizerSetup for the given model.
         """
