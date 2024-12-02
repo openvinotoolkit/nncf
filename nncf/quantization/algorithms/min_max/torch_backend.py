@@ -156,7 +156,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def create_convert_insertion_command(
         target_point: PTTargetPoint,
         parameters: FakeConvertParameters,
-        extra_params: dict[str, Any],
     ) -> TransformationCommand:
         msg = "FakeConvert insertion not implemented in PyTorch backend!"
         raise nncf.InternalError(msg)
@@ -268,6 +267,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
+        extra_params: dict[str, Any],
     ) -> Union[PTInsertionCommand, PTSharedFnInsertionCommand]:
         scale_shape = PTMinMaxAlgoBackend._get_input_scale_shape(nncf_graph, target_point, quantizer_config.per_channel)
 

@@ -127,6 +127,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: OVTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
+        extra_params: dict[str, Any],
     ) -> OVQuantizerInsertionCommand:
         return OVQuantizerInsertionCommand(target_point, parameters)
 
@@ -144,7 +145,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def create_convert_insertion_command(
         target_point: OVTargetPoint,
         parameters: FakeConvertParameters,
-        extra_params: dict[str, Any],
     ) -> OVQuantizerInsertionCommand:
         return OVConvertInsertionCommand(target_point, parameters)
 
