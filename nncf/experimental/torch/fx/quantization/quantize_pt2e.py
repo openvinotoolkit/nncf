@@ -28,6 +28,7 @@ from nncf.data import Dataset
 from nncf.experimental.common.quantization.algorithms.post_training.algorithm import (
     ExperimentalPostTrainingQuantization,
 )
+from nncf.experimental.common.quantization.algorithms.quantizer.base_quantizer import NNCFQuantizer
 from nncf.experimental.common.quantization.algorithms.quantizer.fx_quantizer import NNCFFXQuantizer
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.transformations import QUANTIZE_NODE_TARGETS
@@ -63,8 +64,18 @@ def quantize_pt2e(
 
     copied_model = deepcopy(model)
 
+    # To make it easier for bias correction algorithms,
+    # biases are being separated by the followng calls.
+    fuse_conv_bn(copied_model)
+    # Call ao quantizer transform_for_annotation
+    # before the NNCFGraph creation
+    quantizer.transform_for_annotation(copied_model)
+
+    if not isinstance(quantizer, NNCFQuantizer):
+        quantizer = NNCFFXQuantizer(quantizer)
+
     quantization_algorithm = ExperimentalPostTrainingQuantization(
-        quantizer=NNCFFXQuantizer(quantizer),
+        quantizer=quantizer,
         subset_size=subset_size,
         fast_bias_correction=fast_bias_correction,
         smooth_quant=smooth_quant,
@@ -73,10 +84,6 @@ def quantize_pt2e(
         activations_range_estimator_params=activations_range_estimator_params,
         weights_range_estimator_params=weights_range_estimator_params,
     )
-
-    # To make it easier for bias correction algorithms,
-    # biases are being separated by the followng calls.
-    fuse_conv_bn(copied_model)
 
     nncf_graph = NNCFGraphFactory.create(copied_model)
     quantized_model = quantization_algorithm.apply(copied_model, nncf_graph, dataset=calibration_dataset)
