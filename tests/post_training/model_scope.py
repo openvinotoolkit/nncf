@@ -24,6 +24,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedScaleEstimationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
+from tests.post_training.pipelines.base import FX_BACKENDS
 from tests.post_training.pipelines.base import NNCF_PTQ_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.causal_language_model import CausalLMHF
@@ -108,7 +109,7 @@ QUANTIZATION_MODELS = [
             "fast_bias_correction": False,
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH, BackendType.OV, BackendType.ONNX],
+        "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
         "batch_size": 128,
     },
     {
@@ -119,7 +120,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.15),
         },
-        "backends": [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH, BackendType.OV],
+        "backends": FX_BACKENDS + [BackendType.OV],
         "batch_size": 1,
     },
     {
@@ -130,7 +131,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.5),
         },
-        "backends": [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH, BackendType.OV],
+        "backends": FX_BACKENDS + [BackendType.OV],
         "batch_size": 1,
     },
     # Timm models

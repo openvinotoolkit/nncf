@@ -174,6 +174,7 @@ class MinMaxAlgoBackend(ABC):
         :param target_point: Target location for the quantizer insertion.
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
+        :param extra_params: Additional backend-specific parameters to initiate a quantizer insertion command.
         :return: Backend-specific Command for the quantizer insertion operation.
         """
 
@@ -193,6 +194,7 @@ class MinMaxAlgoBackend(ABC):
         :param target_points: List of target locations for the quantizers insertion.
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
+        :param extra_params: Additional backend-specific parameters to initiate a quantizer insertion command.
         :return: List of backend-specific Commands
             for the quantizers with unified scales insertion operations.
         """
