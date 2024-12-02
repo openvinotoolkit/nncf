@@ -22,10 +22,9 @@ from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.tensor import TTensor
 
 
-def return_tensor_method(tensor_backend: TensorBackend) -> Callable:
+def get_tensor_method(tensor_backend: TensorBackend) -> Callable:
     """
     Returns the appropriate tensor creation function based on the backend.
-
     :param tensor_backend: Tensor backend type.
     :return: Function to create a tensor.
     """
@@ -139,7 +138,7 @@ class MeanTensorStatistic(TensorStatistic):
         return False
 
     def get_data_to_dump(self) -> Dict[str, TTensor]:
-        tensor_method = return_tensor_method(self.mean_values.backend)
+        tensor_method = get_tensor_method(self.mean_values.backend)
         return {self.MEAN_STAT: self.mean_values.data, self.SHAPE_STAT: tensor_method(self.shape)}
 
     def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
@@ -316,7 +315,7 @@ class WCTensorStatistic(TensorStatistic):
         return mean_values_equal
 
     def get_data_to_dump(self):
-        tensor_method = return_tensor_method(self.mean_values[0].backend)
+        tensor_method = get_tensor_method(self.mean_values[0].backend)
         return {
             self.MEAN_STAT: tensor_method([mean_value.data for mean_value in self.mean_values]),
             self.SHAPE_STAT: tensor_method([[dim.data for dim in shape] for shape in self.shape_values]),

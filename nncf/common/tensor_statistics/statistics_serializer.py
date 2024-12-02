@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional, TextIO, Tuple, cast
 
 import nncf
-from nncf.common.utils.backend import BackendType
 from nncf.common.utils.os import safe_open
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.tensor import TTensor
@@ -25,8 +24,7 @@ METADATA_FILE = "statistics_metadata.json"
 
 def sanitize_filename(filename: str) -> str:
     """
-    Replaces forbidden characters in a filename with underscores.
-
+    Replaces any forbidden characters with an underscore.
     :param filename: Original filename.
     :return: Sanitized filename with no forbidden characters.
     """
@@ -35,10 +33,9 @@ def sanitize_filename(filename: str) -> str:
 
 def load_metadata(dir_path: Path) -> Dict[str, Any]:
     """
-    Loads metadata from the specified directory.
-
-    :param dir_path: Path to the directory containing the metadata file.
-    :return: Dictionary containing metadata and mapping.
+    Loads the metadata, including the mapping and any other metadata information from the metadata file.
+    :param dir_path: The directory where the metadata file is stored.
+    :return: A dictionary containing the metadata.
     """
     metadata_file = dir_path / METADATA_FILE
     if metadata_file.exists():
@@ -50,7 +47,6 @@ def load_metadata(dir_path: Path) -> Dict[str, Any]:
 def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
     """
     Saves metadata to a file in the specified directory.
-
     :param metadata: Dictionary containing metadata and mapping.
     :param dir_path: Path to the directory where the metadata file will be saved.
     """
@@ -62,8 +58,7 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
 def load_from_dir(dir_path: str, backend: TensorBackend) -> Tuple[Dict[str, Dict[str, TTensor]], Dict[str, Any]]:
     """
     Loads statistics and metadata from a directory.
-
-    :param dir_path: Path to the directory containing the data files.
+    :param dir_path: The path to the directory from which to load the statistics.
     :param backend: Backend type to determine the loading function.
     :return: Tuple containing statistics and metadata.
     """
@@ -75,7 +70,7 @@ def load_from_dir(dir_path: str, backend: TensorBackend) -> Tuple[Dict[str, Dict
     metadata = load_metadata(path)
     mapping = metadata.get("mapping", {})
 
-    load_file_func = return_load_file_method(backend)
+    load_file_func = get_load_file_method(backend)
     for statistics_file in path.iterdir():
         if statistics_file.name == METADATA_FILE:
             continue  # Skip the metadata file
@@ -98,18 +93,17 @@ def dump_to_dir(
 ) -> None:
     """
     Saves statistics and metadata to a directory.
-
-    :param statistics: Dictionary of statistics to save.
-    :param dir_path: Path to the directory where files will be saved.
+    :param statistics: A dictionary with statistic names as keys and the statistic data as values.
+    :param dir_path: The path to the directory where the statistics will be dumped.
     :param backend: Backend type to determine the saving function.
-    :param additional_metadata: Additional metadata to include in the metadata file.
+    :param additional_metadata: A dictionary containing any additional metadata to be saved with the mapping.
     """
     path = Path(dir_path)
     path.mkdir(parents=True, exist_ok=True)
 
     metadata: Dict[str, Any] = {"mapping": {}}
 
-    save_file_func = return_save_file_method(backend)
+    save_file_func = get_save_file_method(backend)
     for original_name, statistics_value in statistics.items():
         sanitized_name = sanitize_filename(original_name)
         file_path = path / sanitized_name
@@ -128,7 +122,7 @@ def dump_to_dir(
     save_metadata(metadata, path)
 
 
-def return_save_file_method(tensor_backend: TensorBackend) -> Callable[..., Any]:
+def get_save_file_method(tensor_backend: TensorBackend) -> Callable[..., Any]:
     """
     Returns the appropriate save_file function based on the backend.
 
@@ -148,7 +142,7 @@ def return_save_file_method(tensor_backend: TensorBackend) -> Callable[..., Any]
         raise nncf.ValidationError(f"Failed to import the required module: {e}")
 
 
-def return_load_file_method(tensor_backend: TensorBackend) -> Callable[..., Any]:
+def get_load_file_method(tensor_backend: TensorBackend) -> Callable[..., Any]:
     """
     Returns the appropriate load_file function based on the backend.
 
@@ -166,22 +160,3 @@ def return_load_file_method(tensor_backend: TensorBackend) -> Callable[..., Any]
             return torch_load_file
     except ImportError as e:
         raise nncf.ValidationError(f"Failed to import the required module: {e}")
-
-
-def get_tensor_backend(backend: BackendType) -> TensorBackend:
-    """
-    Maps a backend type to a tensor backend type.
-
-    :param backend: Backend type.
-    :return: Corresponding tensor backend type.
-    """
-    BACKEND_TO_TENSOR_BACKEND: Dict[BackendType, TensorBackend] = {
-        BackendType.OPENVINO: TensorBackend.numpy,
-        BackendType.ONNX: TensorBackend.numpy,
-        BackendType.TORCH_FX: TensorBackend.torch,
-        BackendType.TORCH: TensorBackend.torch,
-    }
-    if backend not in BACKEND_TO_TENSOR_BACKEND:
-        raise nncf.ValidationError(f"Unsupported backend type: {backend}")
-
-    return BACKEND_TO_TENSOR_BACKEND[backend]
