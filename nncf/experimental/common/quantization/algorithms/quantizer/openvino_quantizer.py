@@ -29,6 +29,7 @@ from nncf.common.quantization.structs import QuantizerConfig as NNCFQuantizerCon
 from nncf.experimental.common.quantization.algorithms.quantizer.base_quantizer import NNCFQuantizer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
+from nncf.experimental.torch.fx.transformations import fold_constant_except_qdq
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -164,3 +165,7 @@ class OpenVINOQuantizer(InductorQuantizer, NNCFQuantizer):
 
     def validate(self, model: torch.fx.GraphModule) -> None:
         pass
+
+    def transform_for_annotation(self, model: torch.fx.GraphModule) -> torch.fx.GraphModule:
+        fold_constant_except_qdq(model)
+        return model
