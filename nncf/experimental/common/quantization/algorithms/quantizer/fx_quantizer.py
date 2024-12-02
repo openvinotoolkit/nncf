@@ -29,7 +29,7 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.common.quantization.algorithms.quantizer.quantizer import NNCFQuantizer
+from nncf.experimental.common.quantization.algorithms.quantizer.base_quantizer import NNCFQuantizer
 
 EdgeOrNode = Union[Tuple[torch.fx.Node, torch.fx.Node]]
 
