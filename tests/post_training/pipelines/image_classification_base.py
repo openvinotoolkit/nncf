@@ -12,15 +12,27 @@
 import copy
 import os
 
+os.environ["TORCHINDUCTOR_FREEZING"] = "1"
+
+from itertools import islice
+
 import numpy as np
 import openvino as ov
 import torch
 from sklearn.metrics import accuracy_score
+from torch.ao.quantization.quantize_pt2e import convert_pt2e
+from torch.ao.quantization.quantize_pt2e import prepare_pt2e
+from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQuantizer
+from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x86_inductor_quantization_config
 from torchvision import datasets
 
 import nncf
 from nncf.common.logging.track_progress import track
+from nncf.experimental.common.quantization.algorithms.quantizer.openvino_quantizer import OpenVINOQuantizer
+from nncf.experimental.torch.fx.quantization.quantize_pt2e import quantize_pt2e
 from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
+from tests.post_training.pipelines.base import FX_BACKENDS
+from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import PTQTestPipeline
 
 
@@ -33,18 +45,15 @@ class ImageClassificationBase(PTQTestPipeline):
 
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
 
-    def _validate(self):
-        val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=2, shuffle=False)
-
-        dataset_size = len(val_loader)
-
-        # Initialize result tensors for async inference support.
-        predictions = np.zeros((dataset_size))
-        references = -1 * np.ones((dataset_size))
+    def _validate_ov(
+        self,
+        val_loader: torch.utils.data.DataLoader,
+        predictions: np.ndarray,
+        references: np.ndarray,
+        dataset_size: int,
+    ):
 
         core = ov.Core()
-
         if os.environ.get("INFERENCE_NUM_THREADS"):
             # Set CPU_THREADS_NUM for OpenVINO inference
             inference_num_threads = os.environ.get("INFERENCE_NUM_THREADS")
@@ -73,8 +82,111 @@ class ImageClassificationBase(PTQTestPipeline):
                 references[i] = target
 
             infer_queue.wait_all()
+        return predictions, references
+
+    def _validate_torch_compile(
+        self, val_loader: torch.utils.data.DataLoader, predictions: np.ndarray, references: np.ndarray
+    ):
+        # compiled_model = torch.compile(self.compressed_model, backend="openvino")
+        q_num = 0
+        for node in self.compressed_model.graph.nodes:
+            if ".quantize_per" in str(node.target):
+                q_num += 1
+
+        print(f"Qunatize ops num: {q_num}")
+
+        if self.backend in [BackendType.X86_QUANTIZER_AO, BackendType.X86_QUANTIZER_NNCF]:
+            compiled_model = torch.compile(self.compressed_model)
+        else:
+            compiled_model = torch.compile(self.compressed_model, backend="openvino")
+
+        for i, (images, target) in enumerate(val_loader):
+            # W/A for memory leaks when using torch DataLoader and OpenVINO
+            pred = compiled_model(images)
+            pred = torch.argmax(pred, dim=1)
+            predictions[i] = pred.numpy()
+            references[i] = target.numpy()
+        return predictions, references
+
+    def _validate(self):
+        val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=2, shuffle=False)
+
+        dataset_size = len(val_loader)
+
+        # Initialize result tensors for async inference support.
+        predictions = np.zeros((dataset_size))
+        references = -1 * np.ones((dataset_size))
+
+        if self.backend in FX_BACKENDS:
+            predictions, references = self._validate_torch_compile(val_loader, predictions, references)
+        else:
+            predictions, references = self._validate_ov(val_loader, predictions, references, dataset_size)
 
         acc_top1 = accuracy_score(predictions, references)
 
         self.run_info.metric_name = "Acc@1"
         self.run_info.metric_value = acc_top1
+
+    def _compress_torch_ao(self, quantizer):
+
+        prepared_model = prepare_pt2e(self.model, quantizer)
+        subset_size = self.compression_params.get("subset_size", 300)
+        for data in islice(self.calibration_dataset.get_inference_data(), subset_size):
+            prepared_model(data)
+        self.compressed_model = convert_pt2e(prepared_model)
+
+    def _compress_nncf_pt2e(self, quantizer):
+        pt2e_kwargs = {}
+        for key in (
+            "subset_size",
+            "fast_bias_correction",
+            "smooth_quant",
+            "bias_correction_params",
+            "smooth_quant_params",
+            "activations_range_estimator_params",
+            "weights_range_estimator_params",
+        ):
+            if key in self.compression_params:
+                pt2e_kwargs[key] = self.compression_params[key]
+        smooth_quant = False
+        if self.compression_params.get("model_type", False):
+            smooth_quant = self.compression_params["model_type"] == nncf.ModelType.TRANSFORMER
+        self.compressed_model = quantize_pt2e(
+            self.model, quantizer, self.calibration_dataset, smooth_quant=smooth_quant, fold_quantize=False
+        )
+
+    def _compress(self):
+        """
+        Quantize self.model
+        """
+        if self.backend not in FX_BACKENDS or self.backend == BackendType.FX_TORCH:
+            super()._compress()
+            return
+
+        if self.backend in [BackendType.OV_QUANTIZER_AO, BackendType.OV_QUANTIZER_NNCF]:
+            quantizer_kwargs = {}
+            for key in (
+                "mode",
+                "preset",
+                "target_device",
+                "model_type",
+                "ignored_scope",
+                "overflow_fix",
+                "quantize_outputs",
+                "activations_quantization_params",
+                "weights_quantization_params",
+                "quantizer_propagation_rule",
+            ):
+                if key in self.compression_params:
+                    quantizer_kwargs[key] = self.compression_params[key]
+            quantizer = OpenVINOQuantizer(**quantizer_kwargs)
+        else:
+
+            quantizer = X86InductorQuantizer()
+            quantizer.set_global(get_default_x86_inductor_quantization_config())
+
+        if self.backend in [BackendType.OV_QUANTIZER_NNCF, BackendType.X86_QUANTIZER_NNCF]:
+            self._compress_nncf_pt2e(quantizer)
+        else:
+            self._compress_torch_ao(quantizer)
