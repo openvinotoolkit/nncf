@@ -10,6 +10,8 @@
 # limitations under the License.
 
 from nncf.onnx.graph.metatypes import onnx_metatypes
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpWithWeightsMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import get_operator_metatypes
 
 QUANTIZE_AGNOSTIC_OPERATIONS = [
     onnx_metatypes.ONNXGlobalMaxPoolMetatype,
@@ -67,16 +69,11 @@ INPUTS_QUANTIZABLE_OPERATIONS = [
     onnx_metatypes.ONNXMinimumMetatype,
 ]
 
-
 CONSTANT_WEIGHT_LAYER_METATYPES = [
-    onnx_metatypes.ONNXConvolutionMetatype,
-    onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
-    onnx_metatypes.ONNXGroupConvolutionMetatype,
-    onnx_metatypes.ONNXDeformableConvolutionMetatype,
-    onnx_metatypes.ONNXConvolutionTransposeMetatype,
-    onnx_metatypes.ONNXEmbeddingMetatype,
+    metatype
+    for metatype in get_operator_metatypes()
+    if issubclass(metatype, ONNXOpWithWeightsMetatype) and metatype.weight_port_ids
 ]
-
 
 LINEAR_OPERATIONS = [
     onnx_metatypes.ONNXConvolutionMetatype,
