@@ -71,6 +71,8 @@ INPUTS_QUANTIZABLE_OPERATIONS = [
 CONSTANT_WEIGHT_LAYER_METATYPES = [
     onnx_metatypes.ONNXConvolutionMetatype,
     onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
+    onnx_metatypes.ONNXGroupConvolutionMetatype,
+    onnx_metatypes.ONNXDeformableConvolutionMetatype,
     onnx_metatypes.ONNXConvolutionTransposeMetatype,
     onnx_metatypes.ONNXEmbeddingMetatype,
 ]
