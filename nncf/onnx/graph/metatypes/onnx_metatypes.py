@@ -69,6 +69,7 @@ class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
     weight_channel_axis: int
     weight_port_ids: Optional[List[int]] = None
     bias_port_id: Optional[int] = None
+    possible_weight_ports: Optional[int] = None
 
 
 @ONNX_OPERATION_METATYPES.register(is_subtype=True)
@@ -131,19 +132,17 @@ class ONNXGemmMetatype(ONNXOpWithWeightsMetatype):
     op_names = ["Gemm"]
     hw_config_names = [HWConfigOpName.MATMUL]
     weight_channel_axis = -1  # For port_id=1
-    weight_port_ids = None
     bias_port_id = 2
     possible_weight_ports = [0, 1]
     output_channel_axis = -1
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXMatMulMetatype(ONNXOpMetatype):
+class ONNXMatMulMetatype(ONNXOpWithWeightsMetatype):
     name = "MatMulOp"
     op_names = ["MatMul"]
     hw_config_names = [HWConfigOpName.MATMUL]
     weight_channel_axis = -1  # For port_id=1
-    weight_port_ids = None
     bias_port_id = 2
     possible_weight_ports = [0, 1]
     output_channel_axis = -1
@@ -454,7 +453,7 @@ class ONNXReciprocalMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register(is_subtype=True)
-class ONNXEmbeddingMetatype(ONNXOpMetatype):
+class ONNXEmbeddingMetatype(ONNXOpWithWeightsMetatype):
     name = "EmbeddingOp"
     hw_config_names = [HWConfigOpName.EMBEDDING]
     weight_port_ids = [0]

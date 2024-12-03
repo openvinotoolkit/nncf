@@ -75,6 +75,17 @@ CONSTANT_WEIGHT_LAYER_METATYPES = [
     if issubclass(metatype, ONNXOpWithWeightsMetatype) and metatype.weight_port_ids
 ]
 
+POSSIBLE_WEIGHT_LAYER_METATYPES = [
+    metatype
+    for metatype in get_operator_metatypes()
+    if issubclass(metatype, ONNXOpWithWeightsMetatype) and metatype.possible_weight_ports
+]
+
+OPERATIONS_WITH_WEIGHTS = [
+    *CONSTANT_WEIGHT_LAYER_METATYPES,
+    *POSSIBLE_WEIGHT_LAYER_METATYPES,
+]
+
 LINEAR_OPERATIONS = [
     onnx_metatypes.ONNXConvolutionMetatype,
     onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
@@ -121,11 +132,6 @@ ELEMENTWISE_OPERATIONS = [
     onnx_metatypes.ONNXMaximumMetatype,
     onnx_metatypes.ONNXMinimumMetatype,
     onnx_metatypes.ONNXMeanMetatype,
-]
-
-OPERATIONS_WITH_WEIGHTS = [
-    *CONSTANT_WEIGHT_LAYER_METATYPES,
-    *MATMUL_METATYPES,
 ]
 
 
