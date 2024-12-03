@@ -81,10 +81,12 @@ POSSIBLE_WEIGHT_LAYER_METATYPES = [
     if issubclass(metatype, ONNXOpWithWeightsMetatype) and metatype.possible_weight_ports
 ]
 
-OPERATIONS_WITH_WEIGHTS = [
-    *CONSTANT_WEIGHT_LAYER_METATYPES,
-    *POSSIBLE_WEIGHT_LAYER_METATYPES,
-]
+OPERATIONS_WITH_WEIGHTS = list(
+    set(
+        *CONSTANT_WEIGHT_LAYER_METATYPES,
+        *POSSIBLE_WEIGHT_LAYER_METATYPES,
+    )
+)
 
 LINEAR_OPERATIONS = [
     onnx_metatypes.ONNXConvolutionMetatype,
