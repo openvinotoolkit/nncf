@@ -1,0 +1,14 @@
+strict digraph  {
+"0 conv_weight" [id=0, type=get_attr];
+"1 conv_bias" [id=1, type=get_attr];
+"2 conv2d_input" [id=2, type=input];
+"3 conv2d" [id=3, type=conv2d];
+"4 add" [id=4, type=add];
+"5 output" [id=5, type=output];
+"0 conv_weight" -> "3 conv2d"  [label="(1, 1, 1, 1)", style=solid];
+"1 conv_bias" -> "3 conv2d"  [label="(1,)", style=solid];
+"2 conv2d_input" -> "3 conv2d"  [label=None, style=solid];
+"3 conv2d" -> "4 add"  [label="(1, 1, 3, 3)", style=solid];
+"3 conv2d" -> "5 output"  [label="(1, 1, 3, 3)", style=solid];
+"4 add" -> "5 output"  [label="(1, 1, 3, 3)", style=solid];
+}

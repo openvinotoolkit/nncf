@@ -30,7 +30,6 @@ from nncf.experimental.torch.fx.quantization.backend_parameters import is_weight
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.experimental.torch.fx.transformations import fq_weights_transformation
-from nncf.experimental.torch.fx.transformations import revert_quantization_transformations
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
@@ -85,16 +84,11 @@ def quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
-    # To make it easier for bias correction algorithms,
-    # biases are being separated by the followng calls.
+    # To make it easier for bias correction algorithms.
     apply_quantization_transformations(copied_model)
 
     nncf_graph = NNCFGraphFactory.create(copied_model)
     quantized_model = quantization_algorithm.apply(copied_model, nncf_graph, dataset=calibration_dataset)
-
-    # Revert applied transformation to keep original model
-    # bias configuration.
-    revert_quantization_transformations(quantized_model)
 
     if is_weight_compression_needed(advanced_parameters):
         compress_post_quantize_transformation(quantized_model)
