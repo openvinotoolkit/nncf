@@ -829,7 +829,7 @@ def ones(
     Return a new array of given shape and type, filled with ones.
 
     :param shape: Shape of the new array
-    :param backend: The backend type for which the zero tensor is required.
+    :param backend: The backend type for which the ones tensor is required.
     :param dtype: The data type of the returned tensor, If dtype is not given,
         then the default data type is determined by backend.
     :param device: The device on which the tensor will be allocated, If device is not given,
