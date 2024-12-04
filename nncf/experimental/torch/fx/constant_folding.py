@@ -246,27 +246,28 @@ def constant_fold(
     :param constraint_fn: Constraint function which takes a node and returs the constraint:
         should the node be constant folded or not.
     """
-    with torch.utils._python_dispatch._disable_current_modes():
-        cf = ConstantFolder(gm)
-        cf.run()
+    with torch.no_grad():
+        with torch.utils._python_dispatch._disable_current_modes():
+            cf = ConstantFolder(gm)
+            cf.run()
 
-        for node, constant in cf.node_replacements.items():
-            if constraint_fn is not None and not constraint_fn(node):
-                continue
-            _replace_node_with_constant(gm, node, constant)
+            for node, constant in cf.node_replacements.items():
+                if constraint_fn is not None and not constraint_fn(node):
+                    continue
+                _replace_node_with_constant(gm, node, constant)
 
-        erased_params = []
-        for node in gm.graph.find_nodes(op="get_attr"):
-            if len(node.users) == 0:
-                if hasattr(gm, node.target):
-                    delattr(gm, node.target)
-                erased_params.append(node)
+            erased_params = []
+            for node in gm.graph.find_nodes(op="get_attr"):
+                if len(node.users) == 0:
+                    if hasattr(gm, node.target):
+                        delattr(gm, node.target)
+                    erased_params.append(node)
 
-        for node in erased_params:
-            gm.graph.erase_node(node)
+            for node in erased_params:
+                gm.graph.erase_node(node)
 
-        # Custom _is_impure function allows to eliminate all layers with zero
-        # users including inplace ops like relu_ besides output and placeholders.
-        gm.graph.eliminate_dead_code(_is_impure)
-        gm.graph.lint()
-        gm.recompile()
+            # Custom _is_impure function allows to eliminate all layers with zero
+            # users including inplace ops like relu_ besides output and placeholders.
+            gm.graph.eliminate_dead_code(_is_impure)
+            gm.graph.lint()
+            gm.recompile()

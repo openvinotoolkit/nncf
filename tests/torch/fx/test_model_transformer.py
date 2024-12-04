@@ -537,6 +537,10 @@ def test_constant_folding():
     captured_model = get_torch_fx_model(model, ex_inputs)
     folded_model = deepcopy(captured_model)
     constant_fold(folded_model)
+
+    # Check the folded const does not require gradient
+    assert not folded_model._frozen_param0.requires_grad
+
     assert torch.allclose(captured_model(*ex_inputs), folded_model(*ex_inputs))
 
     nncf_graph = GraphConverter.create_nncf_graph(folded_model)
