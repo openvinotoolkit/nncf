@@ -8,9 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import json
 import re
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, TextIO, Tuple, cast
 
@@ -29,7 +29,7 @@ def sanitize_filename(filename: str) -> str:
     :param filename: Original filename.
     :return: Sanitized filename with no forbidden characters.
     """
-    return re.sub(r'[\/:*?"<>|]', "_", filename)
+    return re.sub(r"[^\w]", "_", filename)
 
 
 def load_metadata(dir_path: Path) -> Dict[str, Any]:
@@ -102,13 +102,21 @@ def dump_to_dir(
 
     metadata: Dict[str, Any] = {"mapping": {}}
 
+    unique_map = defaultdict(list)
+
     save_file_func = get_safetensors_backend_fn("save_file", backend)
     for original_name, statistics_value in statistics.items():
         sanitized_name = sanitize_filename(original_name)
-        file_path = dir_path / sanitized_name
+
+        # Next number of the same sanitized name
+        count = len(unique_map[sanitized_name]) + 1
+        unique_sanitized_name = f"{sanitized_name}_{count}"
+        unique_map[sanitized_name].append(unique_sanitized_name)
+
+        file_path = dir_path / unique_sanitized_name
 
         # Update the mapping
-        metadata["mapping"][sanitized_name] = original_name
+        metadata["mapping"][unique_sanitized_name] = original_name
 
         try:
             save_file_func(statistics_value, file_path)
