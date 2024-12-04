@@ -10,17 +10,20 @@
 # limitations under the License.
 import json
 from abc import abstractmethod
+from collections import defaultdict
 from pathlib import Path
 from typing import Dict
 
 import pytest
 
 import nncf
+from nncf.common.tensor_statistics.statistics_serializer import add_unique_name
 from nncf.common.tensor_statistics.statistics_serializer import dump_to_dir
 from nncf.common.tensor_statistics.statistics_serializer import load_from_dir
 from nncf.common.tensor_statistics.statistics_serializer import load_metadata
 from nncf.common.tensor_statistics.statistics_serializer import sanitize_filename
 from nncf.common.tensor_statistics.statistics_serializer import save_metadata
+from nncf.common.utils.os import safe_open
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.tensor import TTensor
 
@@ -35,23 +38,47 @@ class TemplateTestStatisticsSerializer:
         """Returns the backend used for testing."""
 
     @abstractmethod
-    def is_equal(self) -> bool:
-        """_summary_"""
+    def is_equal(self, a1: Dict[str, TTensor], a2: Dict[str, TTensor]) -> bool:
+        """Determine if two statistics are equal."""
 
     def test_sanitize_filename(self):
         filename = "layer/1_mean/activation"
         sanitized = sanitize_filename(filename)
         assert sanitized == "layer_1_mean_activation", "Filename was not sanitized correctly"
 
+    def test_sanitize_filenames_with_collisions(self):
+        filename_1 = "layer/1_mean:activation"
+        filename_2 = "layer.1_mean/activation"
+        unique_map = defaultdict(list)
+        for filename in (filename_1, filename_2):
+            sanitized = sanitize_filename(filename)
+            add_unique_name(sanitized, unique_map)
+        assert unique_map[sanitized] == ["layer_1_mean_activation_1", "layer_1_mean_activation_2"]
+
     def test_load_metadata(self, tmp_path):
         # Create a metadata file in the temp directory
         metadata = {"mapping": {"key1": "value1"}, "metadata": {"model": "test"}}
         metadata_file = tmp_path / "statistics_metadata.json"
-        with open(metadata_file, "w") as f:
+        with safe_open(metadata_file, "w") as f:
             json.dump(metadata, f)
 
         loaded_metadata = load_metadata(tmp_path)
         assert loaded_metadata == metadata, "Metadata was not loaded correctly"
+
+    def test_load_no_existing_metadata(self, tmp_path):
+        with pytest.raises(nncf.InvalidPathError, match="Metadata file does not exist."):
+            load_metadata(tmp_path)
+
+    def test_load_no_statistics_file(self, tmp_path):
+        # Create a metadata file in the temp directory
+        metadata = {"mapping": {"key1": "value1"}, "metadata": {"model": "test"}}
+        metadata_file = tmp_path / "statistics_metadata.json"
+        with safe_open(metadata_file, "w") as f:
+            json.dump(metadata, f)
+
+        # Expect the load_from_dir to raise an error when trying to load non existed statistics
+        with pytest.raises(nncf.ValidationError, match="No statistics file was found for"):
+            load_from_dir(tmp_path, self._get_tensor_backend())
 
     def test_save_metadata(self, tmp_path):
         metadata = {"mapping": {"key1": "value1"}, "metadata": {"model": "test"}}
@@ -60,7 +87,7 @@ class TemplateTestStatisticsSerializer:
         metadata_file = tmp_path / "statistics_metadata.json"
         assert metadata_file.exists(), "Metadata file was not created"
 
-        with open(metadata_file, "r") as f:
+        with safe_open(metadata_file, "r") as f:
             loaded_metadata = json.load(f)
         assert loaded_metadata == metadata, "Metadata was not saved correctly"
 
@@ -76,7 +103,7 @@ class TemplateTestStatisticsSerializer:
         metadata_file = tmp_path / "statistics_metadata.json"
         assert metadata_file.exists(), "Metadata file was not created"
 
-        with open(metadata_file, "r") as f:
+        with safe_open(metadata_file, "r") as f:
             metadata = json.load(f)
             assert "mapping" in metadata, "Mapping is missing in metadata"
             assert metadata["model"] == "facebook/opt-125m"
@@ -87,13 +114,3 @@ class TemplateTestStatisticsSerializer:
             assert layer_name in loaded_statistics, "Statistics not loaded correctly"
             assert self.is_equal(loaded_statistics[layer_name], stat)
         assert loaded_metadata["model"] == "facebook/opt-125m", "Metadata not loaded correctly"
-
-    def test_invalid_statistics_file(self, tmp_path):
-        # Create a corrupt gzip file in the directory
-        invalid_file = tmp_path / "invalid_file"
-        with open(invalid_file, "w") as f:
-            f.write("This is not a valid file")
-
-        # Expect the load_from_dir to raise an error when trying to load the invalid file
-        with pytest.raises(nncf.InternalError, match="Error loading statistics"):
-            load_from_dir(tmp_path, self._get_tensor_backend())
