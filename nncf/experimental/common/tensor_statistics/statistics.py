@@ -320,7 +320,7 @@ class WCTensorStatistic(TensorStatistic):
     def get_data_to_dump(self):
         tensor_method = get_tensor_method(self.mean_values[0].backend)
         return {
-            self.MEAN_STAT: tensor_method([mean_value.data for mean_value in self.mean_values]),
+            self.MEAN_STAT: fns.stack(self.mean_values).data,
             self.SHAPE_STAT: tensor_method([[dim.data for dim in shape] for shape in self.shape_values]),
         }
 
