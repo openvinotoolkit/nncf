@@ -58,7 +58,7 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
         json.dump(metadata, cast(TextIO, f), indent=4)
 
 
-def load_from_dir(dir_path: str, backend: TensorBackend) -> Tuple[Dict[str, Dict[str, TTensor]], Dict[str, Any]]:
+def load_from_dir(dir_path: Path, backend: TensorBackend) -> Tuple[Dict[str, Dict[str, TTensor]], Dict[str, Any]]:
     """
     Loads statistics and metadata from a directory.
 
@@ -67,15 +67,14 @@ def load_from_dir(dir_path: str, backend: TensorBackend) -> Tuple[Dict[str, Dict
     :return: Tuple containing statistics and metadata.
     """
     statistics: Dict[str, Dict[str, TTensor]] = {}
-    path = Path(dir_path)
-    if not path.exists():
+    if not dir_path.exists():
         raise nncf.ValidationError("The provided directory path does not exist.")
 
-    metadata = load_metadata(path)
+    metadata = load_metadata(dir_path)
     mapping = metadata.get("mapping", {})
 
     load_file_func = get_load_file_method(backend)
-    for statistics_file in path.iterdir():
+    for statistics_file in dir_path.iterdir():
         if statistics_file.name == METADATA_FILE:
             continue  # Skip the metadata file
 
@@ -91,7 +90,7 @@ def load_from_dir(dir_path: str, backend: TensorBackend) -> Tuple[Dict[str, Dict
 
 def dump_to_dir(
     statistics: Dict[str, Dict[str, TTensor]],
-    dir_path: str,
+    dir_path: Path,
     backend: TensorBackend,
     additional_metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
@@ -103,15 +102,14 @@ def dump_to_dir(
     :param backend: Backend type to determine the saving function.
     :param additional_metadata: A dictionary containing any additional metadata to be saved with the mapping.
     """
-    path = Path(dir_path)
-    path.mkdir(parents=True, exist_ok=True)
+    dir_path.mkdir(parents=True, exist_ok=True)
 
     metadata: Dict[str, Any] = {"mapping": {}}
 
     save_file_func = get_save_file_method(backend)
     for original_name, statistics_value in statistics.items():
         sanitized_name = sanitize_filename(original_name)
-        file_path = path / sanitized_name
+        file_path = dir_path / sanitized_name
 
         # Update the mapping
         metadata["mapping"][sanitized_name] = original_name
@@ -124,7 +122,7 @@ def dump_to_dir(
     if additional_metadata:
         metadata |= additional_metadata
 
-    save_metadata(metadata, path)
+    save_metadata(metadata, dir_path)
 
 
 def get_save_file_method(tensor_backend: TensorBackend) -> Callable[..., Any]:
