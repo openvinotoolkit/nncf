@@ -12,7 +12,7 @@ import json
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, TextIO, Tuple, cast
+from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
 import nncf
 from nncf.common.utils.os import safe_open
@@ -21,7 +21,6 @@ from nncf.tensor.tensor import TTensor
 
 METADATA_FILE = "statistics_metadata.json"
 
-# Statistics File Format:
 # - Metadata is stored in a JSON file named "statistics_metadata.json".
 # - Statistics are stored in individual files with sanitized and unique filenames to prevent collisions.
 #
@@ -132,7 +131,7 @@ def dump_to_dir(
     save_file_func = get_safetensors_backend_fn("save_file", backend)
 
     metadata: Dict[str, Any] = {"mapping": {}}
-    unique_map = defaultdict(list)
+    unique_map: Dict[str, List[str]] = defaultdict(list)
     for original_name, statistics_value in statistics.items():
         sanitized_name = sanitize_filename(original_name)
         unique_sanitized_name = add_unique_name(sanitized_name, unique_map)
@@ -153,7 +152,7 @@ def dump_to_dir(
     save_metadata(metadata, dir_path)
 
 
-def get_safetensors_backend_fn(fn_name: str, backend: TensorBackend) -> Callable[..., Any]:
+def get_safetensors_backend_fn(fn_name: str, backend: TensorBackend) -> Any:
     """
     Returns a function based on the provided function name and backend type.
 
