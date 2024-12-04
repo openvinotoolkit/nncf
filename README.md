@@ -15,6 +15,10 @@
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](LICENSE)
 [![PyPI Downloads](https://static.pepy.tech/badge/nncf)](https://pypi.org/project/nncf/)
 
+![Python](https://img.shields.io/badge/python-3.9+-blue)
+![Backends](https://img.shields.io/badge/backends-openvino_|_pytorch_|_onnx_|_tensorflow-orange)
+![OS](https://img.shields.io/badge/OS-Linux_|_Windows_|_MacOS-blue)
+
 </div>
 
 Neural Network Compression Framework (NNCF) provides a suite of post-training and training-time algorithms for optimizing inference of neural networks in [OpenVINO&trade;](https://docs.openvino.ai) with a minimal accuracy drop.
@@ -467,17 +471,8 @@ NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
 conda install -c conda-forge nncf
 ```
 
-### System requirements
-
-- Ubuntu\* 18.04 or later (64-bit)
-- Python\* 3.9 or later
-- Supported frameworks:
-  - PyTorch\* >=2.4, <2.6
-  - TensorFlow\* >=2.8.4, <=2.15.1
-  - ONNX\* ==1.17.0
-  - OpenVINO\* >=2022.3.0
-
-This repository is tested on Python* 3.10.14, PyTorch* 2.5.0 (NVidia CUDA\* Toolkit 12.4) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
+System requirements of NNCF correspond to the used backend. System requirements for each backend and
+the matrix of corresponding versions can be found in [installation.md](./docs/Installation.md).
 
 ## NNCF Compressed NNCF Model Zoo
 
