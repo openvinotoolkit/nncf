@@ -25,6 +25,7 @@ METADATA_FILE = "statistics_metadata.json"
 def sanitize_filename(filename: str) -> str:
     """
     Replaces any forbidden characters with an underscore.
+
     :param filename: Original filename.
     :return: Sanitized filename with no forbidden characters.
     """
@@ -34,6 +35,7 @@ def sanitize_filename(filename: str) -> str:
 def load_metadata(dir_path: Path) -> Dict[str, Any]:
     """
     Loads the metadata, including the mapping and any other metadata information from the metadata file.
+
     :param dir_path: The directory where the metadata file is stored.
     :return: A dictionary containing the metadata.
     """
@@ -47,6 +49,7 @@ def load_metadata(dir_path: Path) -> Dict[str, Any]:
 def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
     """
     Saves metadata to a file in the specified directory.
+
     :param metadata: Dictionary containing metadata and mapping.
     :param dir_path: Path to the directory where the metadata file will be saved.
     """
@@ -58,6 +61,7 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
 def load_from_dir(dir_path: str, backend: TensorBackend) -> Tuple[Dict[str, Dict[str, TTensor]], Dict[str, Any]]:
     """
     Loads statistics and metadata from a directory.
+
     :param dir_path: The path to the directory from which to load the statistics.
     :param backend: Backend type to determine the loading function.
     :return: Tuple containing statistics and metadata.
@@ -93,6 +97,7 @@ def dump_to_dir(
 ) -> None:
     """
     Saves statistics and metadata to a directory.
+
     :param statistics: A dictionary with statistic names as keys and the statistic data as values.
     :param dir_path: The path to the directory where the statistics will be dumped.
     :param backend: Backend type to determine the saving function.

@@ -25,6 +25,7 @@ from nncf.tensor.tensor import TTensor
 def get_tensor_method(tensor_backend: TensorBackend) -> Callable:
     """
     Returns the appropriate tensor creation function based on the backend.
+
     :param tensor_backend: Tensor backend type.
     :return: Function to create a tensor.
     """
@@ -48,7 +49,7 @@ class TensorStatistic:
 
     def get_data(self) -> Dict[str, Any]:
         """
-        Retrieve the data of the tensor statistics.
+        Retrieves the data of the tensor statistics.
 
         :return: Dictionary with keys and their associated data.
         """
@@ -56,7 +57,8 @@ class TensorStatistic:
 
     def get_data_to_dump(self) -> Dict[str, TTensor]:
         """
-        Prepare the data for serialization in the original tensor framework.
+        Prepares the data for serialization in the original tensor framework.
+
         :return: Dictionary with data for serialization.
         """
         serialized_data = {}
@@ -70,7 +72,8 @@ class TensorStatistic:
 
     def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
         """
-        Load the data from the serialized data.
+        Loads the data from the serialized data.
+
         :param: Data to load.
         """
         for key in self.keys():

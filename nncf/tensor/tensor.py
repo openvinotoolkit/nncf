@@ -258,6 +258,7 @@ def unwrap_tensor_data(obj: Any) -> TTensor:
 def get_tensor_backend(backend: BackendType) -> TensorBackend:
     """
     Returns a tensor backend based on the provided backend.
+
     :param backend: Backend type.
     :return: Corresponding tensor backend type.
     """
