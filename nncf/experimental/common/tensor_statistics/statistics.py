@@ -325,7 +325,7 @@ class WCTensorStatistic(TensorStatistic):
         }
 
     def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
-        self.shape_values = [tuple(shape.tolist()) for shape in loaded_data[self.SHAPE_STAT]]
+        self.shape_values = [tuple(Tensor(shape)) for shape in loaded_data[self.SHAPE_STAT]]
         self.mean_values = [Tensor(data=it) for it in loaded_data[self.MEAN_STAT]]
 
     @classmethod
