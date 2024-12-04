@@ -21,6 +21,21 @@ from nncf.tensor.tensor import TTensor
 
 METADATA_FILE = "statistics_metadata.json"
 
+# Statistics File Format:
+# - Metadata is stored in a JSON file named "statistics_metadata.json".
+# - Statistics are stored in individual files with sanitized and unique filenames to prevent collisions.
+#
+# Metadata Format:
+# - : The metadata file must have a mapping of sanitized filenames to the original names in the following way:
+#   {
+#       "mapping": {
+#           "sanitized_name_1": "original_name_1",
+#           "sanitized_name_2": "original_name_2",
+#           ...
+#       },
+#       ... (additional metadata fields)
+#   }
+
 
 def sanitize_filename(filename: str) -> str:
     """
