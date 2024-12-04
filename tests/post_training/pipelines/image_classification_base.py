@@ -27,6 +27,7 @@ from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x
 from torchvision import datasets
 
 import nncf
+from nncf import AdvancedQuantizationParameters
 from nncf.common.logging.track_progress import track
 from nncf.experimental.common.quantization.algorithms.quantizer.openvino_quantizer import OpenVINOQuantizer
 from nncf.experimental.torch.fx.quantization.quantize_pt2e import quantize_pt2e
@@ -146,21 +147,40 @@ class ImageClassificationBase(PTQTestPipeline):
         for key in (
             "subset_size",
             "fast_bias_correction",
-            "smooth_quant",
-            "bias_correction_params",
-            "smooth_quant_params",
-            "activations_range_estimator_params",
-            "weights_range_estimator_params",
         ):
             if key in self.compression_params:
                 pt2e_kwargs[key] = self.compression_params[key]
+
+        advanced_parameters: AdvancedQuantizationParameters = self.compression_params.get(
+            "advanced_parameters", AdvancedQuantizationParameters()
+        )
+
+        sq_params = advanced_parameters.smooth_quant_alphas
+        sq_alpha = advanced_parameters.smooth_quant_alpha
+        if sq_alpha is not None:
+            if sq_alpha < 0:
+                sq_params.convolution = -1
+                sq_params.matmul = -1
+            else:
+                sq_params.matmul = sq_alpha
+        pt2e_kwargs["smooth_quant_params"] = sq_params
+        pt2e_kwargs["bias_correction_params"] = advanced_parameters.bias_correction_params
+        pt2e_kwargs["activations_range_estimator_params"] = advanced_parameters.activations_range_estimator_params
+        pt2e_kwargs["weights_range_estimator_params"] = advanced_parameters.weights_range_estimator_params
+
         smooth_quant = False
         if self.compression_params.get("model_type", False):
             smooth_quant = self.compression_params["model_type"] == nncf.ModelType.TRANSFORMER
+
         with disable_patching():
             with torch.no_grad():
                 self.compressed_model = quantize_pt2e(
-                    self.model, quantizer, self.calibration_dataset, smooth_quant=smooth_quant, fold_quantize=False
+                    self.model,
+                    quantizer,
+                    self.calibration_dataset,
+                    smooth_quant=smooth_quant,
+                    fold_quantize=False,
+                    **pt2e_kwargs,
                 )
 
     def _compress(self):
@@ -185,14 +205,18 @@ class ImageClassificationBase(PTQTestPipeline):
                 "target_device",
                 "model_type",
                 "ignored_scope",
-                "overflow_fix",
-                "quantize_outputs",
-                "activations_quantization_params",
-                "weights_quantization_params",
-                "quantizer_propagation_rule",
             ):
                 if key in self.compression_params:
                     quantizer_kwargs[key] = self.compression_params[key]
+            advanced_parameters: AdvancedQuantizationParameters = self.compression_params.get(
+                "advanced_parameters", AdvancedQuantizationParameters()
+            )
+            quantizer_kwargs["overflow_fix"] = advanced_parameters.overflow_fix
+            quantizer_kwargs["quantize_outputs"] = advanced_parameters.quantize_outputs
+            quantizer_kwargs["activations_quantization_params"] = advanced_parameters.activations_quantization_params
+            quantizer_kwargs["weights_quantization_params"] = advanced_parameters.weights_quantization_params
+            quantizer_kwargs["quantizer_propagation_rule"] = advanced_parameters.quantizer_propagation_rule
+
             quantizer = OpenVINOQuantizer(**quantizer_kwargs)
         else:
 
