@@ -25,15 +25,33 @@ METADATA_FILE = "statistics_metadata.json"
 # - Statistics are stored in individual files with sanitized and unique filenames to prevent collisions.
 #
 # Metadata Format:
-# - : The metadata file must have a mapping of sanitized filenames to the original names in the following way:
+# - : The metadata file must have a mapping of saved filenames to the original names in the following way:
 #   {
 #       "mapping": {
-#           "sanitized_name_1": "original_name_1",
-#           "sanitized_name_2": "original_name_2",
+#           "saved_file_name_1": "original_name_1",
+#           "saved_file_name_2": "original_name_2",
 #           ...
 #       },
 #       ... (additional metadata fields)
 #   }
+
+
+def get_safetensors_backend_fn(fn_name: str, backend: TensorBackend) -> Any:
+    """
+    Returns a function based on the provided function name and backend type.
+
+    :param fn_name: The name of the function.
+    :param backend: The backend type for which the function is required.
+    :return: The backend-specific function.
+    """
+    if backend == TensorBackend.numpy:
+        import safetensors.numpy as numpy_module
+
+        return getattr(numpy_module, fn_name)
+    if backend == TensorBackend.torch:
+        import safetensors.torch as torch_module
+
+        return getattr(torch_module, fn_name)
 
 
 def sanitize_filename(filename: str) -> str:
@@ -48,7 +66,7 @@ def sanitize_filename(filename: str) -> str:
 
 def add_unique_name(name: str, unique_map: Dict[str, List[str]]) -> str:
     """
-    Creates an unique name (if collision), adds it to a `unique_map` and returns this unique name.
+    Creates an unique name, adds it to a `unique_map` and returns this unique name.
 
     :param name: The original name.
     :param unique_map: A dictionary mapping names to lists of unique sanitized names.
@@ -150,21 +168,3 @@ def dump_to_dir(
         metadata |= additional_metadata
 
     save_metadata(metadata, dir_path)
-
-
-def get_safetensors_backend_fn(fn_name: str, backend: TensorBackend) -> Any:
-    """
-    Returns a function based on the provided function name and backend type.
-
-    :param fn_name: The name of the function.
-    :param backend: The backend type for which the function is required.
-    :return: The backend-specific function.
-    """
-    if backend == TensorBackend.numpy:
-        import safetensors.numpy as numpy_module
-
-        return getattr(numpy_module, fn_name)
-    if backend == TensorBackend.torch:
-        import safetensors.torch as torch_module
-
-        return getattr(torch_module, fn_name)
