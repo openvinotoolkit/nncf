@@ -44,9 +44,8 @@ jobs:
           cache: pip
       - name: cpuinfo
         run: cat /proc/cpuinfo
-      - name: Install NNCF and test requirements
+      - name: Install test requirements
         run: |
-          pip install -e .
           pip install -r tests/cross_fw/examples/requirements.txt
       - name: Print installed modules
         run: pip list
