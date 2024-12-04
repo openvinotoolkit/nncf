@@ -15,7 +15,7 @@ on:
       skip_windows:
         description: 'Skip tests on Windows'
         type: boolean
-        default: true
+        default: false
 
 concurrency:
   group: test-examples-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.pytest_args || '' }}-${{github.event.inputs.pull_request_number || ''}}
