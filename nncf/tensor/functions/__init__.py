@@ -46,6 +46,7 @@ from nncf.tensor.functions.numeric import min as min
 from nncf.tensor.functions.numeric import minimum as minimum
 from nncf.tensor.functions.numeric import moveaxis as moveaxis
 from nncf.tensor.functions.numeric import multiply as multiply
+from nncf.tensor.functions.numeric import ones as ones
 from nncf.tensor.functions.numeric import ones_like as ones_like
 from nncf.tensor.functions.numeric import percentile as percentile
 from nncf.tensor.functions.numeric import power as power

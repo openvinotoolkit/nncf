@@ -1514,6 +1514,19 @@ class TemplateTestNNCFTensorOperators:
             assert tensor_a.shape == shape
             assert fns.all(tensor_a == 0)
 
+    def test_fn_ones(self):
+        shape = (2, 2)
+        for dtype in TensorDataType:
+            if dtype == TensorDataType.bfloat16 and self.backend() == TensorBackend.numpy:
+                continue
+            tensor_a = fns.ones(shape, backend=self.backend(), dtype=dtype, device=self.device())
+            assert isinstance(tensor_a, Tensor)
+            assert tensor_a.device == self.device()
+            assert tensor_a.backend == self.backend()
+            assert tensor_a.dtype == dtype
+            assert tensor_a.shape == shape
+            assert fns.all(tensor_a == 1)
+
     @pytest.mark.parametrize(
         "n, m, ref",
         (

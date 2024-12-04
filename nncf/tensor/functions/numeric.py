@@ -818,6 +818,27 @@ def zeros(
     return Tensor(get_numeric_backend_fn("zeros", backend)(shape, dtype=dtype, device=device))
 
 
+def ones(
+    shape: Tuple[int, ...],
+    *,
+    backend: TensorBackend,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> Tensor:
+    """
+    Return a new array of given shape and type, filled with ones.
+
+    :param shape: Shape of the new array
+    :param backend: The backend type for which the zero tensor is required.
+    :param dtype: The data type of the returned tensor, If dtype is not given,
+        then the default data type is determined by backend.
+    :param device: The device on which the tensor will be allocated, If device is not given,
+        then the default device is determined by backend.
+    :return: A tensor filled with ones of the specified shape and data type.
+    """
+    return Tensor(get_numeric_backend_fn("ones", backend)(shape, dtype=dtype, device=device))
+
+
 def eye(
     n: int,
     m: Optional[int] = None,
