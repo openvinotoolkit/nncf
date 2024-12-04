@@ -43,7 +43,7 @@ def load_metadata(dir_path: Path) -> Dict[str, Any]:
     if metadata_file.exists():
         with safe_open(metadata_file, "r") as f:
             return cast(Dict[str, Any], json.load(f))
-    return {"mapping": {}}
+    raise nncf.InvalidPathError("Metadata file does not exist.")
 
 
 def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
@@ -76,11 +76,11 @@ def load_from_dir(dir_path: Path, backend: TensorBackend) -> Tuple[Dict[str, Dic
     load_file_func = get_safetensors_backend_fn("load_file", backend)
     for file_name, original_name in mapping.items():
         statistics_file = dir_path / file_name
-        try:
-            statistics[original_name] = load_file_func(statistics_file)
-        except Exception as e:
-            raise nncf.InternalError(f"Error loading statistics from {statistics_file.name}: {e}")
-
+        if not statistics_file.exists():
+            raise nncf.InternalError(
+                f"No statistics file was found for {original_name}. Probably, metadata is corrupted."
+            )
+        statistics[original_name] = load_file_func(statistics_file)
     return statistics, {key: value for key, value in metadata.items() if key != "mapping"}
 
 
