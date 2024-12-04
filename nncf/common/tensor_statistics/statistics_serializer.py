@@ -74,13 +74,9 @@ def load_from_dir(dir_path: Path, backend: TensorBackend) -> Tuple[Dict[str, Dic
     mapping = metadata.get("mapping", {})
 
     load_file_func = get_load_file_method(backend)
-    for statistics_file in dir_path.iterdir():
-        if statistics_file.name == METADATA_FILE:
-            continue  # Skip the metadata file
-
+    for file_name, original_name in mapping.items():
+        statistics_file = dir_path / file_name
         try:
-            sanitized_name = statistics_file.name
-            original_name = mapping.get(sanitized_name, sanitized_name)
             statistics[original_name] = load_file_func(statistics_file)
         except Exception as e:
             raise nncf.InternalError(f"Error loading statistics from {statistics_file.name}: {e}")
