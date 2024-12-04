@@ -73,7 +73,7 @@ def load_from_dir(dir_path: Path, backend: TensorBackend) -> Tuple[Dict[str, Dic
     metadata = load_metadata(dir_path)
     mapping = metadata.get("mapping", {})
 
-    load_file_func = get_load_file_method(backend)
+    load_file_func = get_safetensors_backend_fn("load_file", backend)
     for file_name, original_name in mapping.items():
         statistics_file = dir_path / file_name
         try:
@@ -102,7 +102,7 @@ def dump_to_dir(
 
     metadata: Dict[str, Any] = {"mapping": {}}
 
-    save_file_func = get_save_file_method(backend)
+    save_file_func = get_safetensors_backend_fn("save_file", backend)
     for original_name, statistics_value in statistics.items():
         sanitized_name = sanitize_filename(original_name)
         file_path = dir_path / sanitized_name
@@ -121,41 +121,19 @@ def dump_to_dir(
     save_metadata(metadata, dir_path)
 
 
-def get_save_file_method(tensor_backend: TensorBackend) -> Callable[..., Any]:
+def get_safetensors_backend_fn(fn_name: str, backend: TensorBackend) -> Callable[..., Any]:
     """
-    Returns the appropriate save_file function based on the backend.
+    Returns a function based on the provided function name and backend type.
 
-    :param tensor_backend: Tensor backend type.
-    :return: Function to save tensors.
+    :param fn_name: The name of the function.
+    :param backend: The backend type for which the function is required.
+    :return: The backend-specific function.
     """
-    try:
-        if tensor_backend == TensorBackend.numpy:
-            from safetensors.numpy import save_file as np_save_file
+    if backend == TensorBackend.numpy:
+        import safetensors.numpy as numpy_module
 
-            return np_save_file
-        if tensor_backend == TensorBackend.torch:
-            from safetensors.torch import save_file as torch_save_file
+        return getattr(numpy_module, fn_name)
+    if backend == TensorBackend.torch:
+        import safetensors.torch as torch_module
 
-            return torch_save_file
-    except ImportError as e:
-        raise nncf.ValidationError(f"Failed to import the required module: {e}")
-
-
-def get_load_file_method(tensor_backend: TensorBackend) -> Callable[..., Any]:
-    """
-    Returns the appropriate load_file function based on the backend.
-
-    :param tensor_backend: Tensor backend type.
-    :return: Function to load tensors.
-    """
-    try:
-        if tensor_backend == TensorBackend.numpy:
-            from safetensors.numpy import load_file as np_load_file
-
-            return np_load_file
-        if tensor_backend == TensorBackend.torch:
-            from safetensors.torch import load_file as torch_load_file
-
-            return torch_load_file
-    except ImportError as e:
-        raise nncf.ValidationError(f"Failed to import the required module: {e}")
+        return getattr(torch_module, fn_name)
