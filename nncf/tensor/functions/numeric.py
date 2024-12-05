@@ -818,6 +818,27 @@ def zeros(
     return Tensor(get_numeric_backend_fn("zeros", backend)(shape, dtype=dtype, device=device))
 
 
+def ones(
+    shape: Tuple[int, ...],
+    *,
+    backend: TensorBackend,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> Tensor:
+    """
+    Return a new array of given shape and type, filled with ones.
+
+    :param shape: Shape of the new array
+    :param backend: The backend type for which the ones tensor is required.
+    :param dtype: The data type of the returned tensor, If dtype is not given,
+        then the default data type is determined by backend.
+    :param device: The device on which the tensor will be allocated, If device is not given,
+        then the default device is determined by backend.
+    :return: A tensor filled with ones of the specified shape and data type.
+    """
+    return Tensor(get_numeric_backend_fn("ones", backend)(shape, dtype=dtype, device=device))
+
+
 def eye(
     n: int,
     m: Optional[int] = None,
@@ -905,3 +926,17 @@ def ceil(a: Tensor) -> Tensor:
     :return: An array of the same type as a, containing the ceiling values.
     """
     return Tensor(ceil(a.data))
+
+
+@functools.singledispatch
+@tensor_guard
+def reciprocal(a: Tensor) -> Tensor:
+    """
+    Compute the reciprocal of a tensor or a float.
+
+    This function returns a new tensor where each element is the reciprocal of the corresponding element in `a`.
+
+    :param a: The input tensor or float.
+    :return: A tensor containing the reciprocal of each element in `a`.
+    """
+    return Tensor(reciprocal(a.data))

@@ -423,6 +423,19 @@ def zeros(
     return torch.zeros(*shape, dtype=dtype, device=device)
 
 
+def ones(
+    shape: Tuple[int, ...],
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> torch.Tensor:
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    if device is not None:
+        device = DEVICE_MAP[device]
+    return torch.ones(*shape, dtype=dtype, device=device)
+
+
 def eye(
     n: int,
     m: Optional[int] = None,
@@ -465,3 +478,8 @@ def _(a: torch.Tensor) -> torch.Tensor:
 @numeric.ceil.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.ceil(a)
+
+
+@numeric.reciprocal.register(torch.Tensor)
+def _(a: torch.Tensor) -> torch.Tensor:
+    return torch.reciprocal(a)
