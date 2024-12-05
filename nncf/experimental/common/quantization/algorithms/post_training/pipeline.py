@@ -35,6 +35,7 @@ def experimental_create_ptq_pipeline(
     smooth_quant_params: Optional[AdvancedSmoothQuantParameters] = None,
     activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
     weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
+    batchwise_statistics: bool = None,
 ) -> Pipeline:
     """
     Creates an experimental post-training quantization pipeline.
@@ -57,6 +58,8 @@ def experimental_create_ptq_pipeline(
         of activations of the model.
     :param weights_range_estimator_params: Contains parameters for estimating the range
         of weights of the model.
+    :param batchwise_statistics: Determines whether quantizer statistics should be calculated
+        for each item of the batch or for the entire batch, default is False.
     :return: An experimental post-training quantization pipeline.
     """
 
@@ -77,6 +80,7 @@ def experimental_create_ptq_pipeline(
                 quantizer=quantizer,
                 subset_size=subset_size,
                 inplace_statistics=False,
+                batchwise_statistics=batchwise_statistics,
                 activations_range_estimator_params=activations_range_estimator_params,
                 weights_range_estimator_params=weights_range_estimator_params,
             )
