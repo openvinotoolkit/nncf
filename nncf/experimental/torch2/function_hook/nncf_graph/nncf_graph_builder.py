@@ -11,13 +11,14 @@
 
 
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import networkx as nx  # type: ignore
 import torch
 from torch import nn
 
 import nncf
+import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import Dtype
@@ -76,6 +77,20 @@ def get_dtype(dtype: torch.dtype) -> Dtype:
     return Dtype.INTEGER
 
 
+def get_meta_type(node_type: str, meta: Union[ConstMeta, FunctionMeta, InOutMeta]) -> om.PTOperatorMetatype:
+    """
+    Converts the node type and metadata into a PTOperatorMetatype object.
+    :param node_type: The type of the node.
+    :param meta: The metadata associated with the node.
+    :return: The PTOperatorMetatype object.
+    """
+    node_metatype = cast(om.PTOperatorMetatype, om.PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type))
+    node_sub_meta_type: Optional[om.PTOperatorMetatype] = None
+    if node_metatype.get_subtypes() and isinstance(meta, FunctionMeta):
+        node_sub_meta_type = node_metatype.determine_subtype(function_args=meta.args, functions_kwargs=meta.kwargs)
+    return node_sub_meta_type or node_metatype
+
+
 def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> NNCFGraph:
     """
     Converts a graph to an NNCFGraph.
@@ -88,12 +103,14 @@ def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> NNCFGraph:
     map_nx_node_to_nncf_node: Dict[int, NNCFNode] = {}
     for node, data in nx_graph.nodes(data=True):
         meta: Union[ConstMeta, FunctionMeta, InOutMeta] = data["meta"]
+        node_name = get_name_of_node(meta)
         node_type = get_node_type(data["type"], meta)
-        node_metatype = None  # TODO(AlexanderDokuchaev): add node_metatype
+        meta_type = get_meta_type(node_type, meta)
+
         nncf_node = nncf_graph.add_nncf_node(
-            node_name=get_name_of_node(meta),
+            node_name=node_name,
             node_type=node_type,
-            node_metatype=node_metatype,  # type: ignore[arg-type]
+            node_metatype=meta_type,  # type: ignore[arg-type]
         )
         map_nx_node_to_nncf_node[node] = nncf_node
 
