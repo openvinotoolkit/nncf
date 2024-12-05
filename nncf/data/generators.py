@@ -13,6 +13,9 @@ from typing import List, TypeVar
 
 import nncf
 from nncf.common.logging.track_progress import track
+from nncf.common.telemetry_extractors import DatasetGeneratedFromApi
+from nncf.telemetry import tracked_function
+from nncf.telemetry.events import NNCF_COMMON_CATEGORY
 
 BASE_VOCAB_SIZE = 12000
 
@@ -20,6 +23,12 @@ TModel = TypeVar("TModel")
 TTokenizer = TypeVar("TTokenizer")
 
 
+@tracked_function(
+    category=NNCF_COMMON_CATEGORY,
+    extractors=[
+        DatasetGeneratedFromApi(),
+    ],
+)
 def generate_text_data(
     model: TModel, tokenizer: TTokenizer, seq_len: int = 32, dataset_size: int = 128, unique_tokens_lower_limit: int = 5
 ) -> List[str]:

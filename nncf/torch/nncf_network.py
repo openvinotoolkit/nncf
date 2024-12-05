@@ -39,6 +39,9 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
 from nncf.common.utils.debug import is_debug
+from nncf.config.telemetry_extractors import NNCFNetworkConfigExtracted
+from nncf.telemetry import tracked_function
+from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.torch.debug import CombinedDebugInterface
 from nncf.torch.debug import debuggable_forward
 from nncf.torch.dynamic_graph.context import PreHookId
@@ -781,6 +784,12 @@ class NNCFNetworkInterface(torch.nn.Module):
                 result.append(scope_in_model)
         return result
 
+    @tracked_function(
+        NNCF_PT_CATEGORY,
+        [
+            NNCFNetworkConfigExtracted(),
+        ],
+    )
     def get_config(self) -> Dict[str, Any]:
         """
         Returns serializable NNCFNetwork config which contains
