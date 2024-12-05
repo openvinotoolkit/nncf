@@ -41,7 +41,8 @@ class NNCFFXQuantizer(NNCFQuantizer):
     def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         anotated_model = deepcopy(model)
 
-        self._quantizer.transform_for_annotation(anotated_model)
+        # self._quantizer.transform_for_annotation is called in the nncf quantize_pt2e method
+        # before the nncf_graph building.
         self._quantizer.annotate(anotated_model)
         self._quantizer.validate(anotated_model)
         return self.get_quantizer_config_from_anotated_model(anotated_model)
