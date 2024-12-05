@@ -44,7 +44,7 @@ def experimental_create_ptq_pipeline(
         2) MinMaxRangeInit
         3) FastBiasCorrection or BiasCorrection
 
-    :param quantizer: NNCFQuantizer to use in MiMaxRageInit algorithm.
+    :param quantizer: NNCFQuantizer to use in MiMaxRangeInit algorithm.
     :param subset_size: Size of a subset to calculate activations
         statistics used for quantization.
     :param fast_bias_correction: Setting this option to `False` enables a different
@@ -66,7 +66,7 @@ def experimental_create_ptq_pipeline(
     if smooth_quant_params is None:
         smooth_quant_params = AdvancedSmoothQuantParameters()
 
-    if smooth_quant and smooth_quant_params.convolution >= 0 or smooth_quant_params.matmul >= 0:
+    if smooth_quant and (smooth_quant_params.convolution >= 0 or smooth_quant_params.matmul >= 0):
         alpha_map = {"convolution": smooth_quant_params.convolution, "matmul": smooth_quant_params.matmul}
         pipeline_steps.append([SmoothQuant(subset_size, False, alpha_map=alpha_map)])
 

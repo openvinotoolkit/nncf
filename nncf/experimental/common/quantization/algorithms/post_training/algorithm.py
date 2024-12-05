@@ -47,7 +47,7 @@ class ExperimentalPostTrainingQuantization(Algorithm):
         weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
     ):
         """
-        :param quantizer: NNCFQuantizer to use in MiMaxRageInit algorithm.
+        :param quantizer: NNCFQuantizer to use in MiMaxRangeInit algorithm.
         :param subset_size: Size of a subset to calculate activations
             statistics used for quantization.
         :param fast_bias_correction: Setting this option to `False` enables a different
