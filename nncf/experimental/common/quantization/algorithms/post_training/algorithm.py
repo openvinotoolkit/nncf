@@ -45,6 +45,7 @@ class ExperimentalPostTrainingQuantization(Algorithm):
         smooth_quant_params: Optional[AdvancedSmoothQuantParameters] = None,
         activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
         weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
+        batchwise_statistics: bool = False,
     ):
         """
         :param quantizer: NNCFQuantizer to use in MiMaxRangeInit algorithm.
@@ -60,6 +61,8 @@ class ExperimentalPostTrainingQuantization(Algorithm):
             of activations of the model.
         :param weights_range_estimator_params: Contains parameters for estimating the range
             of weights of the model.
+        :param batchwise_statistics: Determines whether quantizer statistics should be calculated
+            for each item of the batch or for the entire batch, default is False.
         """
         self._pipeline = experimental_create_ptq_pipeline(
             quantizer=quantizer,
@@ -70,6 +73,7 @@ class ExperimentalPostTrainingQuantization(Algorithm):
             smooth_quant_params=smooth_quant_params,
             activations_range_estimator_params=activations_range_estimator_params,
             weights_range_estimator_params=weights_range_estimator_params,
+            batchwise_statistics=batchwise_statistics,
         )
 
     @property
