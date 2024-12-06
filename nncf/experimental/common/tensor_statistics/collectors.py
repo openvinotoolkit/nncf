@@ -17,7 +17,6 @@ from copy import deepcopy
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import nncf
-from nncf.quantization.range_estimator import StatisticsType
 import nncf.tensor.functions as fns
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import ReductionAxes
@@ -25,6 +24,7 @@ from nncf.experimental.common.tensor_statistics.statistical_functions import mea
 from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.quantization.advanced_parameters import AggregatorType
+from nncf.quantization.range_estimator import StatisticsType
 from nncf.tensor import Tensor
 
 InplaceInsertionFNType = TypeVar("InplaceInsertionFNType")
@@ -834,6 +834,7 @@ def _move_axes_flatten_cat(
 
     shape_after_aggregation = tuple(1 if idx in aggregation_axes else dim for idx, dim in enumerate(tensor_shape))
     return fns.concatenate(reshaped_tensors, axis=0), shape_after_aggregation
+
 
 REDUCERS_MAP = {
     StatisticsType.MIN: MinReducer,

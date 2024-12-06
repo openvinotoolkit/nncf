@@ -38,6 +38,7 @@ from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
+
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def preserved_metatypes(self) -> List[OperatorMetatype]:

@@ -47,6 +47,7 @@ from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
 
+
 class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property

@@ -14,8 +14,6 @@ import dataclasses
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, OrderedDict, Set, Tuple, TypeVar, Union
 
-from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP, REDUCERS_MAP, TensorCollector
-from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
 import numpy as np
 
 import nncf
@@ -46,12 +44,15 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
+from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -65,8 +66,10 @@ from nncf.quantization.fake_quantize import calculate_convert_parameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.quantization.passes import transform_to_inference_graph
-from nncf.quantization.range_estimator import AggregatorType, RangeEstimatorParameters, StatisticsType
+from nncf.quantization.range_estimator import AggregatorType
+from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
+from nncf.quantization.range_estimator import StatisticsType
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 
@@ -441,7 +444,7 @@ class MinMaxQuantization(Algorithm):
         target_point: TargetPoint,
         qconfig: QuantizerConfig,
         batchwise_statistics: bool,
-    ) -> TensorStatisticCollectorBase:
+    ) -> TensorCollector:
         """
         Creates and returns a statistic collector based on the quantizer's configuration.
 
@@ -477,7 +480,7 @@ class MinMaxQuantization(Algorithm):
             reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(
                 shape, channel_axes, batchwise_statistics
             )
-            
+
         return self._get_statistic_collector(
             range_estimator_params,
             collector_params.use_abs_max,
@@ -486,7 +489,7 @@ class MinMaxQuantization(Algorithm):
             self._inplace_statistics,
             num_samples,
         )
-        
+
     def _get_statistic_collector(
         self,
         range_estimator_params: RangeEstimatorParameters,
@@ -502,14 +505,10 @@ class MinMaxQuantization(Algorithm):
             [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
         ):
             if params.statistics_type not in self.reducer_map:
-                raise nncf.InternalError(
-                    f"Statistic type: {params.statistics_type} is not yet supported."
-                )
+                raise nncf.InternalError(f"Statistic type: {params.statistics_type} is not yet supported.")
 
             if params.aggregator_type not in AGGREGATORS_MAP:
-                raise nncf.InternalError(
-                    f"Aggregator type: {params.aggregator_type} is not yet supported."
-                )
+                raise nncf.InternalError(f"Aggregator type: {params.aggregator_type} is not yet supported.")
 
             statistic_type = params.statistics_type
             if statistic_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
@@ -518,7 +517,9 @@ class MinMaxQuantization(Algorithm):
                     quantile = params.quantile_outlier_prob
                 else:
                     quantile = 1 - params.quantile_outlier_prob
-                reducer = self.reducer_map[statistic_type](reduction_axes=reduction_axes, inplace=inplace, quantile=[quantile])
+                reducer = self.reducer_map[statistic_type](
+                    reduction_axes=reduction_axes, inplace=inplace, quantile=[quantile]
+                )
             else:
                 if use_abs_max and statistic_type == StatisticsType.MAX:
                     statistic_type = StatisticsType.ABS_MAX

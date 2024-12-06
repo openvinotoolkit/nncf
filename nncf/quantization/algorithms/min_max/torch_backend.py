@@ -26,12 +26,9 @@ from nncf.common.quantization.structs import QuantizationScheme as QuantizationM
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.quantization.range_estimator import AggregatorType
-from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.operator_metatypes import ELEMENTWISE_OPERATIONS
@@ -50,6 +47,7 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
+
 
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property

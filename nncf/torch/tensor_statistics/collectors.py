@@ -15,14 +15,12 @@ from typing import Optional, Tuple, Type
 import numpy as np
 
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import MedianAbsoluteDeviationAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
@@ -37,7 +35,6 @@ from nncf.experimental.common.tensor_statistics.statistics import MedianMADTenso
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
-from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.tensor import Tensor
 
 
