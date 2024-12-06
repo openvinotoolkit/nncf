@@ -14,12 +14,12 @@ import pytest
 import torch
 
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
-from nncf.torch.tensor_statistics.collectors import PT_REDUCERS_MAP
+from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
 from tests.common.experimental.test_tensor_collector_batch_size import TemplateTestTensorCollectorBatchSize
 
 
 class TestTensorCollectorBatchSize(TemplateTestTensorCollectorBatchSize):
-    @pytest.fixture(params=PT_REDUCERS_MAP.values())
+    @pytest.fixture(params=REDUCERS_MAP.values())
     def reducers(self, request) -> bool:
         return request.param
 
