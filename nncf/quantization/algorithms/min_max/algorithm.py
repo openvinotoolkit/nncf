@@ -499,6 +499,17 @@ class MinMaxQuantization(Algorithm):
         inplace: bool,
         num_samples: Optional[int] = None,
     ) -> TensorCollector:
+        """
+        Returns statistic collector.
+        
+        :param range_estimator_params: Parameters that specify estimators types.
+        :param use_abs_max: Wheather reduce absolute values of input tensors or not.
+        :param reduction_axes: Axes for reducer.
+        :param aggregation_axes: Axes for aggregator.
+        :param inplace: Whether to calculate statistic inplace or not.
+        :param num_samples: Maximum number of samples to collect.
+        :return: TensorCollector for the statistics calculation.
+        """
         collector = TensorCollector(MinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
