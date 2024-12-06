@@ -9,10 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
+from safetensors.torch import load_file
+from safetensors.torch import save_file
 
 from nncf.tensor import TensorDataType
 from nncf.tensor import TensorDeviceType
@@ -465,3 +467,13 @@ def _(a: torch.Tensor) -> torch.Tensor:
 @numeric.ceil.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.ceil(a)
+
+
+@numeric.load_file.register(torch.Tensor)
+def _(file_path: str) -> Dict[str, torch.Tensor]:
+    return load_file(file_path)
+
+
+@numeric.save_file.register(torch.Tensor)
+def _(data: Dict[str, torch.Tensor], file_path: str) -> None:
+    return save_file(data, file_path)
