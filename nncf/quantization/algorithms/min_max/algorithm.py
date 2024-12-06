@@ -453,7 +453,6 @@ class MinMaxQuantization(Algorithm):
             for each item of the batch or for the entire batch.
         :return: Statistic Collector.
         """
-        breakpoint()
         is_weight = target_point.is_weight_target_point()
         node = graph.get_node_by_name(target_point.target_node_name)
         shape = self._backend_entity.get_target_point_shape(graph, node, target_point)
