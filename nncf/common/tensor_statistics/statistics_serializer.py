@@ -16,8 +16,9 @@ from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
 import nncf
 from nncf.common.utils.os import safe_open
+from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorBackend
-from nncf.tensor.tensor import TTensor
+from nncf.tensor.tensor import Tensor
 
 METADATA_FILE = "statistics_metadata.json"
 
@@ -34,24 +35,6 @@ METADATA_FILE = "statistics_metadata.json"
 #       },
 #       ... (additional metadata fields)
 #   }
-
-
-def get_safetensors_backend_fn(fn_name: str, backend: TensorBackend) -> Any:
-    """
-    Returns a function based on the provided function name and backend type.
-
-    :param fn_name: The name of the function.
-    :param backend: The backend type for which the function is required.
-    :return: The backend-specific function.
-    """
-    if backend == TensorBackend.numpy:
-        import safetensors.numpy as numpy_module
-
-        return getattr(numpy_module, fn_name)
-    if backend == TensorBackend.torch:
-        import safetensors.torch as torch_module
-
-        return getattr(torch_module, fn_name)
 
 
 def sanitize_filename(filename: str) -> str:
@@ -105,7 +88,7 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
         json.dump(metadata, cast(TextIO, f), indent=4)
 
 
-def load_from_dir(dir_path: Path, backend: TensorBackend) -> Tuple[Dict[str, Dict[str, TTensor]], Dict[str, Any]]:
+def load_from_dir(dir_path: Path, backend: TensorBackend) -> Tuple[Dict[str, Dict[str, Tensor]], Dict[str, Any]]:
     """
     Loads statistics and metadata from a directory.
 
@@ -113,28 +96,26 @@ def load_from_dir(dir_path: Path, backend: TensorBackend) -> Tuple[Dict[str, Dic
     :param backend: Backend type to determine the loading function.
     :return: Tuple containing statistics and metadata.
     """
-    statistics: Dict[str, Dict[str, TTensor]] = {}
+    statistics: Dict[str, Dict[str, Tensor]] = {}
     if not dir_path.exists():
         raise nncf.ValidationError("The provided directory path does not exist.")
 
     metadata = load_metadata(dir_path)
     mapping = metadata.get("mapping", {})
 
-    load_file_func = get_safetensors_backend_fn("load_file", backend)
     for file_name, original_name in mapping.items():
         statistics_file = dir_path / file_name
         if not statistics_file.exists():
             raise nncf.ValidationError(
                 f"No statistics file was found for {original_name}. Probably, metadata is corrupted."
             )
-        statistics[original_name] = load_file_func(statistics_file)
+        statistics[original_name] = fns.load_file(statistics_file, backend)
     return statistics, {key: value for key, value in metadata.items() if key != "mapping"}
 
 
 def dump_to_dir(
-    statistics: Dict[str, Dict[str, TTensor]],
+    statistics: Dict[str, Dict[str, Tensor]],
     dir_path: Path,
-    backend: TensorBackend,
     additional_metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
     """
@@ -142,12 +123,9 @@ def dump_to_dir(
 
     :param statistics: A dictionary with statistic names as keys and the statistic data as values.
     :param dir_path: The path to the directory where the statistics will be dumped.
-    :param backend: Backend type to determine the saving function.
     :param additional_metadata: A dictionary containing any additional metadata to be saved with the mapping.
     """
     dir_path.mkdir(parents=True, exist_ok=True)
-    save_file_func = get_safetensors_backend_fn("save_file", backend)
-
     metadata: Dict[str, Any] = {"mapping": {}}
     unique_map: Dict[str, List[str]] = defaultdict(list)
     for original_name, statistics_value in statistics.items():
@@ -160,7 +138,7 @@ def dump_to_dir(
         metadata["mapping"][unique_sanitized_name] = original_name
 
         try:
-            save_file_func(statistics_value, file_path)
+            fns.save_file(statistics_value, file_path)
         except Exception as e:
             raise nncf.InternalError(f"Failed to write data to file {file_path}: {e}")
 

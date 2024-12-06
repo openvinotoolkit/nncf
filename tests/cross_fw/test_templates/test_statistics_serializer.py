@@ -25,12 +25,12 @@ from nncf.common.tensor_statistics.statistics_serializer import sanitize_filenam
 from nncf.common.tensor_statistics.statistics_serializer import save_metadata
 from nncf.common.utils.os import safe_open
 from nncf.tensor.definitions import TensorBackend
-from nncf.tensor.tensor import TTensor
+from nncf.tensor.tensor import Tensor
 
 
 class TemplateTestStatisticsSerializer:
     @abstractmethod
-    def _get_backend_statistics(self) -> Dict[str, Dict[str, TTensor]]:
+    def _get_backend_statistics(self) -> Dict[str, Dict[str, Tensor]]:
         """Returns a dictionary of statistics for testing purposes."""
 
     @abstractmethod
@@ -38,7 +38,7 @@ class TemplateTestStatisticsSerializer:
         """Returns the backend used for testing."""
 
     @abstractmethod
-    def is_equal(self, a1: Dict[str, TTensor], a2: Dict[str, TTensor]) -> bool:
+    def is_equal(self, a1: Dict[str, Tensor], a2: Dict[str, Tensor]) -> bool:
         """Determine if two statistics are equal."""
 
     def test_sanitize_filename(self):
@@ -96,7 +96,7 @@ class TemplateTestStatisticsSerializer:
         statistics = self._get_backend_statistics()
         additional_metadata = {"model": "facebook/opt-125m", "compression": "8-bit"}
 
-        dump_to_dir(statistics, tmp_path, tensor_backend, additional_metadata)
+        dump_to_dir(statistics, tmp_path, additional_metadata)
 
         assert len(list(Path(tmp_path).iterdir())) > 0, "No files created during dumping"
 

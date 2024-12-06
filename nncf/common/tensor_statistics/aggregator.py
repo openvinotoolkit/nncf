@@ -135,8 +135,7 @@ class StatisticsAggregator(ABC, Generic[TTensor]):
         """
         data_to_dump = self._prepare_statistics()
         metadata = {"backend": self.BACKEND.value, "subset_size": self.stat_subset_size}
-        tensor_backend = get_tensor_backend(self.BACKEND)
-        statistics_serializer.dump_to_dir(data_to_dump, dir_path, tensor_backend, metadata)
+        statistics_serializer.dump_to_dir(data_to_dump, dir_path, metadata)
         nncf_logger.info(f"Statistics were successfully saved to a directory {dir_path.absolute()}.")
 
     def _prepare_statistics(self) -> Dict[str, Any]:

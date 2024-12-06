@@ -19,7 +19,6 @@ import nncf
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorBackend
-from nncf.tensor.tensor import TTensor
 
 
 def get_tensor_method(tensor_backend: TensorBackend) -> Callable:
@@ -55,9 +54,9 @@ class TensorStatistic:
         """
         return {key: getattr(self, key) for key in self.keys()}
 
-    def get_data_to_dump(self) -> Dict[str, TTensor]:
+    def get_data_to_dump(self) -> Dict[str, Tensor]:
         """
-        Prepares the data for serialization in the original tensor framework.
+        Prepares the data for serialization.
 
         :return: Dictionary with data for serialization.
         """
@@ -65,19 +64,19 @@ class TensorStatistic:
         for key in self.keys():
             value = getattr(self, key)
             if isinstance(value, Tensor):
-                serialized_data[key] = value.data
+                serialized_data[key] = value
             else:
                 raise nncf.InternalError(f"Unsupported type of value: {type(value)}")
         return serialized_data
 
-    def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
+    def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
         """
         Loads the data from the serialized data.
 
         :param: Data to load.
         """
         for key in self.keys():
-            setattr(self, key, Tensor(loaded_data[key]))
+            setattr(self, key, loaded_data[key])
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
@@ -140,12 +139,12 @@ class MeanTensorStatistic(TensorStatistic):
             return self.shape == other.shape and fns.allclose(self.mean_values, other.mean_values)
         return False
 
-    def get_data_to_dump(self) -> Dict[str, TTensor]:
+    def get_data_to_dump(self) -> Dict[str, Tensor]:
         tensor_method = get_tensor_method(self.mean_values.backend)
-        return {self.MEAN_STAT: self.mean_values.data, self.SHAPE_STAT: tensor_method(self.shape)}
+        return {self.MEAN_STAT: self.mean_values, self.SHAPE_STAT: Tensor(tensor_method(self.shape))}
 
-    def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
-        self.mean_values = Tensor(loaded_data[self.MEAN_STAT])
+    def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
+        self.mean_values = loaded_data[self.MEAN_STAT]
         self.shape_values = tuple(loaded_data[self.SHAPE_STAT].tolist())
 
 
@@ -206,14 +205,11 @@ class PercentileTensorStatistic(TensorStatistic):
                 percentile_vs_values_dict[percentile] = value
         return cls(percentile_vs_values_dict=percentile_vs_values_dict)
 
-    def get_data_to_dump(self) -> Dict[str, TTensor]:
-        data = {}
-        for percentile, tensor in self.PERCENTILE_VS_VALUE_DICT.items():
-            data[percentile] = tensor.data
-        return data
+    def get_data_to_dump(self) -> Dict[str, Tensor]:
+        return self.PERCENTILE_VS_VALUE_DICT
 
-    def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
-        self.percentile_vs_values_dict = {k: Tensor(v) for k, v in loaded_data.items()}
+    def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
+        self.percentile_vs_values_dict = loaded_data
 
 
 @dataclass
@@ -317,16 +313,16 @@ class WCTensorStatistic(TensorStatistic):
         )
         return mean_values_equal
 
-    def get_data_to_dump(self):
+    def get_data_to_dump(self) -> Dict[str, Tensor]:
         tensor_method = get_tensor_method(self.mean_values[0].backend)
         return {
-            self.MEAN_STAT: fns.stack(self.mean_values).data,
-            self.SHAPE_STAT: tensor_method([[dim.data for dim in shape] for shape in self.shape_values]),
+            self.MEAN_STAT: fns.stack(self.mean_values),
+            self.SHAPE_STAT: Tensor(tensor_method([[dim.data for dim in shape] for shape in self.shape_values])),
         }
 
-    def load_data(self, loaded_data: Dict[str, TTensor]) -> None:
-        self.shape_values = [tuple(Tensor(shape)) for shape in loaded_data[self.SHAPE_STAT]]
-        self.mean_values = [Tensor(data=it) for it in loaded_data[self.MEAN_STAT]]
+    def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
+        self.shape_values = [tuple(shape) for shape in loaded_data[self.SHAPE_STAT]]
+        self.mean_values = [it for it in loaded_data[self.MEAN_STAT]]
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
