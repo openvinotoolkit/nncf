@@ -81,8 +81,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
         activation_port = 0
-
-        if hasattr(node.metatype, "possible_weight_ports"):
+        if node.metatype.possible_weight_ports:
             activation_ports = deepcopy(node.metatype.possible_weight_ports)
             for weight_port in node.layer_attributes.weight_attrs:
                 activation_ports.remove(weight_port)

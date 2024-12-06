@@ -53,7 +53,7 @@ def find_file_by_extension(directory: Path, extension: str) -> str:
 
 def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, backends: Set[str] = None):
     venv_path = tmp_path / "venv"
-    venv_path.mkdir()
+    venv_path.mkdir(exist_ok=True)
 
     python_executable_with_venv = get_python_executable_with_venv(venv_path)
     pip_with_venv = get_pip_executable_with_venv(venv_path)
@@ -73,7 +73,7 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
         subprocess.check_call(f"{pip_with_venv} install build", shell=True)
 
     run_path = tmp_path / "run"
-    run_path.mkdir()
+    run_path.mkdir(exist_ok=True)
 
     if package_type in ["build_s", "build_w"]:
         dist_path = tmp_path / "dist"

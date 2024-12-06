@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from pathlib import Path
+from typing import Tuple, Union
 
 import torch.fx
 import torch.nn.parallel
@@ -122,7 +123,9 @@ def visualize_fx_model(model: torch.fx.GraphModule, output_svg_path: str):
     g.get_dot_graph().write_svg(output_svg_path)
 
 
-def get_torch_fx_model(model: torch.nn.Module, ex_input: torch.Tensor) -> torch.fx.GraphModule:
+def get_torch_fx_model(
+    model: torch.nn.Module, ex_input: Union[torch.Tensor, Tuple[torch.Tensor, ...]]
+) -> torch.fx.GraphModule:
     """
     Converts given module to GraphModule.
 
@@ -138,11 +141,17 @@ def get_torch_fx_model(model: torch.nn.Module, ex_input: torch.Tensor) -> torch.
     else:
         device = named_param[1].device
 
-    ex_input = ex_input.to(device)
+    if isinstance(ex_input, torch.Tensor):
+        ex_input = (ex_input,)
+    device_ex_input = []
+    for inp in ex_input:
+        device_ex_input.append(inp.to(device))
+    device_ex_input = tuple(device_ex_input)
+
     model.eval()
     with torch.no_grad():
         with disable_patching():
-            return torch.export.export_for_training(model, args=(ex_input,)).module()
+            return torch.export.export_for_training(model, args=device_ex_input).module()
 
 
 def get_torch_fx_model_q_transformed(model: torch.nn.Module, ex_input: torch.Tensor) -> torch.fx.GraphModule:

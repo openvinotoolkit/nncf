@@ -15,7 +15,7 @@ import subprocess
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Tuple
+from typing import Tuple
 
 import openvino as ov
 import torch
@@ -28,11 +28,11 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
+from rich.progress import track
 from torch.jit import TracerWarning
 
 import nncf
 import nncf.torch
-from nncf.common.logging.track_progress import track
 from nncf.common.utils.helpers import create_table
 
 warnings.filterwarnings("ignore", category=TracerWarning)
@@ -51,11 +51,11 @@ CHECKPOINT_URL = (
     "https://storage.openvinotoolkit.org/repositories/nncf/openvino_notebook_ckpts/302_resnet18_fp32_v1.pth"
 )
 DATASET_URL = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
-DATASET_PATH = "~/.cache/nncf/datasets"
+DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
 
 
 def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH, archive="downloaded", data="extracted")
+    downloader = FastDownload(base=DATASET_PATH.resolve(), archive="downloaded", data="extracted")
     return downloader.get(DATASET_URL)
 
 
@@ -208,17 +208,23 @@ def prepare_tiny_imagenet_200(dataset_dir: Path):
     val_images_dir.rmdir()
 
 
-def run_benchmark(model_path: str, shape: List[int]) -> float:
-    command = f"benchmark_app -m {model_path} -d CPU -api async -t 15"
-    command += f' -shape "[{",".join(str(x) for x in shape)}]"'
-    cmd_output = subprocess.check_output(command, shell=True)  # nosec
-    match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))
+def run_benchmark(model_path: Path, shape: Tuple[int, ...]) -> float:
+    command = [
+        "benchmark_app",
+        "-m", model_path.as_posix(),
+        "-d", "CPU",
+        "-api", "async",
+        "-t", "15",
+        "-shape", str(list(shape)),
+    ]  # fmt: skip
+    cmd_output = subprocess.check_output(command, text=True)
+    match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
     return float(match.group(1))
 
 
-def get_model_size(ir_path: str, m_type: str = "Mb") -> float:
-    xml_size = os.path.getsize(ir_path)
-    bin_size = os.path.getsize(os.path.splitext(ir_path)[0] + ".bin")
+def get_model_size(ir_path: Path, m_type: str = "Mb") -> float:
+    xml_size = ir_path.stat().st_size
+    bin_size = ir_path.with_suffix(".bin").stat().st_size
     for t in ["bytes", "Kb", "Mb"]:
         if m_type == t:
             break
@@ -305,13 +311,13 @@ def main():
     example_input = torch.randn(*input_shape).cpu()
 
     # Export FP32 model to OpenVINO™ IR
-    fp32_ir_path = f"{ROOT}/{BASE_MODEL_NAME}_fp32.xml"
+    fp32_ir_path = ROOT / f"{BASE_MODEL_NAME}_fp32.xml"
     ov_model = ov.convert_model(model.cpu(), example_input=example_input, input=input_shape)
     ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
     print(f"Original model path: {fp32_ir_path}")
 
     # Export INT8 model to OpenVINO™ IR
-    int8_ir_path = f"{ROOT}/{BASE_MODEL_NAME}_int8.xml"
+    int8_ir_path = ROOT / f"{BASE_MODEL_NAME}_int8.xml"
     ov_model = ov.convert_model(quantized_model.cpu(), example_input=example_input, input=input_shape)
     ov.save_model(ov_model, int8_ir_path, compress_to_fp16=False)
     print(f"Quantized model path: {int8_ir_path}")

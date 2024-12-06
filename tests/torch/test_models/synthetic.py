@@ -514,6 +514,16 @@ class ConvolutionWithNotTensorBiasModel(torch.nn.Module):
         return nn.functional.conv2d(x, w)
 
 
+class ConvolutionWithSeveralOutputs(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 1, 1)
+
+    def forward(self, x):
+        x = self.conv(x)
+        return x, x + 2
+
+
 class ConvolutionWithAllConstantInputsModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -607,8 +617,12 @@ class ConstantFoldingTestModel(nn.Module):
 
         self.param = nn.Parameter(4 * torch.ones((3, 3)))
 
-    def forward(self, x):
+    def forward(self, x, dummy_disconnected_input):
         y = self.linear_w(self.param)
+        # Inplace relu to check
+        # that inplace operations are
+        # removed as well
+        y = torch.relu_(y)
         y += 10
         x = self.linear_act(x)
         return x + y
