@@ -338,13 +338,3 @@ def get_raw_stat_collector(num_samples: Optional[int] = None) -> TensorCollector
     collector = TensorCollector(RawTensorStatistic)
     collector.register_statistic_branch(RawTensorStatistic.VALUES_STATS, reducer, aggregator)
     return collector
-
-
-PT_REDUCERS_MAP = {
-    StatisticsType.MIN: MinReducer,
-    StatisticsType.MAX: MaxReducer,
-    StatisticsType.ABS_MAX: AbsMaxReducer,
-    StatisticsType.MEAN: MeanReducer,
-    StatisticsType.QUANTILE: QuantileReducer,
-    StatisticsType.ABS_QUANTILE: AbsQuantileReducer,
-}

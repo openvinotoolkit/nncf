@@ -26,7 +26,6 @@ from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregato
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
-from nncf.quantization.advanced_parameters import StatisticsType
 
 
 def get_mean_statistic_collector(
@@ -76,13 +75,3 @@ def get_raw_stat_collector(num_samples: int) -> TensorCollector:
     collector = TensorCollector(RawTensorStatistic)
     collector.register_statistic_branch(RawTensorStatistic.VALUES_STATS, reducer, aggregator)
     return collector
-
-
-ONNX_REDUCERS_MAP = {
-    StatisticsType.MIN: MinReducer,
-    StatisticsType.MAX: MaxReducer,
-    StatisticsType.ABS_MAX: AbsMaxReducer,
-    StatisticsType.MEAN: MeanReducer,
-    StatisticsType.QUANTILE: QuantileReducer,
-    StatisticsType.ABS_QUANTILE: AbsQuantileReducer,
-}

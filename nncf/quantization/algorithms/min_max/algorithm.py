@@ -14,6 +14,8 @@ import dataclasses
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, OrderedDict, Set, Tuple, TypeVar, Union
 
+from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP, REDUCERS_MAP, TensorCollector
+from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
 import numpy as np
 
 import nncf
@@ -63,7 +65,7 @@ from nncf.quantization.fake_quantize import calculate_convert_parameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.quantization.passes import transform_to_inference_graph
-from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.quantization.range_estimator import AggregatorType, RangeEstimatorParameters, StatisticsType
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
@@ -204,6 +206,7 @@ class MinMaxQuantization(Algorithm):
         self._preset = preset
         self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
         self.quantizer_propagation_rule = quantizer_propagation_rule
+        self.reducer_map = REDUCERS_MAP
 
         # preset definition
         if self._preset is None:
@@ -385,6 +388,7 @@ class MinMaxQuantization(Algorithm):
             from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 
             self._backend_entity = OVMinMaxAlgoBackend()
+            self.reducer_map = OV_REDUCERS_MAP
         elif model_backend == BackendType.TORCH_FX:
             from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
 
@@ -449,6 +453,7 @@ class MinMaxQuantization(Algorithm):
             for each item of the batch or for the entire batch.
         :return: Statistic Collector.
         """
+        breakpoint()
         is_weight = target_point.is_weight_target_point()
         node = graph.get_node_by_name(target_point.target_node_name)
         shape = self._backend_entity.get_target_point_shape(graph, node, target_point)
@@ -473,15 +478,63 @@ class MinMaxQuantization(Algorithm):
             reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(
                 shape, channel_axes, batchwise_statistics
             )
-
-        return self._backend_entity.get_statistic_collector(
+            
+        return self._get_statistic_collector(
             range_estimator_params,
             collector_params.use_abs_max,
             reduction_axes,
             aggregation_axes,
             self._inplace_statistics,
-            num_samples=num_samples,
+            num_samples,
         )
+        
+    def _get_statistic_collector(
+        self,
+        range_estimator_params: RangeEstimatorParameters,
+        use_abs_max: bool,
+        reduction_axes: Optional[Tuple[int, ...]],
+        aggregation_axes: Optional[Tuple[int, ...]],
+        inplace: bool,
+        num_samples: Optional[int] = None,
+    ) -> TensorCollector:
+        collector = TensorCollector(MinMaxTensorStatistic)
+        for params, container_key in zip(
+            [range_estimator_params.min, range_estimator_params.max],
+            [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
+        ):
+            if params.statistics_type not in self.reducer_map:
+                raise nncf.InternalError(
+                    f"Statistic type: {params.statistics_type} is not yet supported."
+                )
+
+            if params.aggregator_type not in AGGREGATORS_MAP:
+                raise nncf.InternalError(
+                    f"Aggregator type: {params.aggregator_type} is not yet supported."
+                )
+
+            statistic_type = params.statistics_type
+            if statistic_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
+                # TODO(dlyakhov): merge two quantile aggregators in one
+                if container_key == MinMaxTensorStatistic.MIN_STAT:
+                    quantile = params.quantile_outlier_prob
+                else:
+                    quantile = 1 - params.quantile_outlier_prob
+                reducer = self.reducer_map[statistic_type](reduction_axes=reduction_axes, inplace=inplace, quantile=[quantile])
+            else:
+                if use_abs_max and statistic_type == StatisticsType.MAX:
+                    statistic_type = StatisticsType.ABS_MAX
+                reducer = self.reducer_map[statistic_type](reduction_axes=reduction_axes, inplace=inplace)
+
+            kwargs = {
+                "num_samples": num_samples,
+                "aggregation_axes": aggregation_axes,
+            }
+            if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
+                kwargs.update({"quantile": params.quantile_outlier_prob})
+            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
+
+            collector.register_statistic_branch(container_key, reducer, aggregator)
+        return collector
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:
         """

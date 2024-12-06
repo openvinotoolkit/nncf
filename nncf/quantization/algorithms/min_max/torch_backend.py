@@ -24,9 +24,6 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import StatisticsType
@@ -53,8 +50,6 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
-from nncf.torch.tensor_statistics.collectors import PT_REDUCERS_MAP
-
 
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
@@ -156,54 +151,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_quantization_axes(node: NNCFNode, target_point: PTTargetPoint, ndims: int) -> Tuple[int]:
         return get_weight_channel_axes(node.metatype, ndims, target_point.input_port_id)
-
-    @staticmethod
-    def get_statistic_collector(
-        range_estimator_params: RangeEstimatorParameters,
-        use_abs_max: bool,
-        reduction_axes: Optional[Tuple[int, ...]],
-        aggregation_axes: Optional[Tuple[int, ...]],
-        inplace: bool,
-        num_samples: Optional[int] = None,
-    ) -> TensorCollector:
-        collector = TensorCollector(MinMaxTensorStatistic)
-        for params, container_key in zip(
-            [range_estimator_params.min, range_estimator_params.max],
-            [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
-        ):
-            if params.statistics_type not in PT_REDUCERS_MAP:
-                raise nncf.InternalError(
-                    f"Statistic type: {params.statistics_type} is not supported for Torch PTQ backend yet."
-                )
-
-            if params.aggregator_type not in AGGREGATORS_MAP:
-                raise nncf.InternalError(
-                    f"Aggregator type: {params.aggregator_type} is not supported for Torch PTQ backend yet."
-                )
-
-            statistic_type = params.statistics_type
-            if statistic_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
-                # TODO(dlyakhov): merge two quantile aggregators in one
-                if container_key == MinMaxTensorStatistic.MIN_STAT:
-                    quantile = params.quantile_outlier_prob
-                else:
-                    quantile = 1 - params.quantile_outlier_prob
-                reducer = PT_REDUCERS_MAP[statistic_type](reduction_axes=reduction_axes, quantile=[quantile])
-            else:
-                if use_abs_max and statistic_type == StatisticsType.MAX:
-                    statistic_type = StatisticsType.ABS_MAX
-                reducer = PT_REDUCERS_MAP[statistic_type](reduction_axes=reduction_axes)
-
-            kwargs = {
-                "num_samples": num_samples,
-                "aggregation_axes": aggregation_axes,
-            }
-            if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
-                kwargs.update({"quantile": params.quantile_outlier_prob})
-            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
-
-            collector.register_statistic_branch(container_key, reducer, aggregator)
-        return collector
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:

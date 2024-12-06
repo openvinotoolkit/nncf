@@ -231,28 +231,6 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_statistic_collector(
-        range_estimator_params: RangeEstimatorParameters,
-        use_abs_max: bool,
-        reduction_axes: Optional[Tuple[int, ...]],
-        aggregation_axes: Optional[Tuple[int, ...]],
-        inplace: bool,
-        num_samples: Optional[int] = None,
-    ) -> TensorStatisticCollectorBase:
-        """
-        Returns backend-specific statistic collector.
-
-        :param range_estimator_params: Parameters that specify estimators types.
-        :param use_abs_max: Wheather reduce absolute values of input tensors or not.
-        :param reduction_axes: Axes for reducer.
-        :param aggregation_axes: Axes for aggregator.
-        :param inplace: Whether to calculate statistic inplace or not.
-        :param num_samples: Maximum number of samples to collect.
-        :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
-        """
-
-    @staticmethod
-    @abstractmethod
     def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
         """
         Returns node's input port indices with weight tensors.

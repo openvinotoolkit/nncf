@@ -17,6 +17,7 @@ from copy import deepcopy
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import nncf
+from nncf.quantization.range_estimator import StatisticsType
 import nncf.tensor.functions as fns
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import ReductionAxes
@@ -834,6 +835,14 @@ def _move_axes_flatten_cat(
     shape_after_aggregation = tuple(1 if idx in aggregation_axes else dim for idx, dim in enumerate(tensor_shape))
     return fns.concatenate(reshaped_tensors, axis=0), shape_after_aggregation
 
+REDUCERS_MAP = {
+    StatisticsType.MIN: MinReducer,
+    StatisticsType.MAX: MaxReducer,
+    StatisticsType.ABS_MAX: AbsMaxReducer,
+    StatisticsType.MEAN: MeanReducer,
+    StatisticsType.QUANTILE: QuantileReducer,
+    StatisticsType.ABS_QUANTILE: AbsQuantileReducer,
+}
 
 AGGREGATORS_MAP = {
     AggregatorType.MIN: MinAggregator,
