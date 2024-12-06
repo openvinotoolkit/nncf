@@ -11,6 +11,7 @@
 
 import functools
 from collections import deque
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -910,7 +911,7 @@ def ceil(a: Tensor) -> Tensor:
 
 @functools.singledispatch
 def load_file(
-    file_path: str,
+    file_path: Path,
     backend: TensorBackend,
 ) -> Dict[str, Tensor]:
     """
@@ -927,7 +928,7 @@ def load_file(
 @functools.singledispatch
 def save_file(
     data: Dict[str, Tensor],
-    file_path: str,
+    file_path: Path,
 ) -> None:
     """
     Saves a dictionary of tensors to a file.
