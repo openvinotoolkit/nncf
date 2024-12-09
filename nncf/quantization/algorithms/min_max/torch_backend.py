@@ -24,11 +24,14 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.range_estimator import StatisticsType
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.operator_metatypes import ELEMENTWISE_OPERATIONS
@@ -50,6 +53,7 @@ from nncf.torch.quantization.layers import get_scale_shape
 
 
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
+
     @property
     def preserved_metatypes(self) -> List[OperatorMetatype]:
         return []
@@ -122,6 +126,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         return DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
+
+    @property
+    def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
+        return REDUCERS_MAP
 
     @staticmethod
     def get_start_nodes_for_activation_path_tracing(nncf_graph: PTNNCFGraph) -> List[NNCFNode]:

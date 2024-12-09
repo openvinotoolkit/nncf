@@ -17,6 +17,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import ELEMENTWISE_OPERATIONS
@@ -28,14 +29,17 @@ from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCom
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.hardware.config import OVHWConfig
 from nncf.openvino.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
+from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.range_estimator import StatisticsType
 
 
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
+
     @property
     def preserved_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVConvolutionMetatype, om.OVLSTMSequenceMetatype]
@@ -101,6 +105,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         return DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
+
+    @property
+    def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
+        return OV_REDUCERS_MAP
 
     @staticmethod
     def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:

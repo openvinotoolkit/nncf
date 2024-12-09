@@ -49,10 +49,8 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
-from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -209,7 +207,6 @@ class MinMaxQuantization(Algorithm):
         self._preset = preset
         self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
         self.quantizer_propagation_rule = quantizer_propagation_rule
-        self.reducer_map = REDUCERS_MAP
 
         # preset definition
         if self._preset is None:
@@ -391,7 +388,6 @@ class MinMaxQuantization(Algorithm):
             from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 
             self._backend_entity = OVMinMaxAlgoBackend()
-            self.reducer_map = OV_REDUCERS_MAP
         elif model_backend == BackendType.TORCH_FX:
             from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
 
@@ -515,7 +511,7 @@ class MinMaxQuantization(Algorithm):
             [range_estimator_params.min, range_estimator_params.max],
             [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
         ):
-            if params.statistics_type not in self.reducer_map:
+            if params.statistics_type not in self._backend_entity.reducer_map:
                 raise nncf.InternalError(f"Statistic type: {params.statistics_type} is not yet supported.")
 
             if params.aggregator_type not in AGGREGATORS_MAP:
@@ -528,13 +524,15 @@ class MinMaxQuantization(Algorithm):
                     quantile = params.quantile_outlier_prob
                 else:
                     quantile = 1 - params.quantile_outlier_prob
-                reducer = self.reducer_map[statistic_type](
+                reducer = self._backend_entity.reducer_map[statistic_type](
                     reduction_axes=reduction_axes, inplace=inplace, quantile=[quantile]
                 )
             else:
                 if use_abs_max and statistic_type == StatisticsType.MAX:
                     statistic_type = StatisticsType.ABS_MAX
-                reducer = self.reducer_map[statistic_type](reduction_axes=reduction_axes, inplace=inplace)
+                reducer = self._backend_entity.reducer_map[statistic_type](
+                    reduction_axes=reduction_axes, inplace=inplace
+                )
 
             kwargs = {
                 "num_samples": num_samples,
