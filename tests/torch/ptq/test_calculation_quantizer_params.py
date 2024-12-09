@@ -20,6 +20,7 @@ from torch import nn
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.model import ModelWrapper
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
@@ -314,16 +315,14 @@ def test_quantizer_parameters_export(tmp_path: Path, _seed):
     statistics_aggregator = PTStatisticsAggregator(dataset)
 
     nncf_network = wrap_model(model, torch.ones([1, 3, 32, 32]), True)
-    statistic_points = min_max_algo.get_statistic_points(nncf_network, nncf_network.nncf.get_graph())
+    statistic_points = min_max_algo.get_statistic_points(ModelWrapper(nncf_network))
     statistics_aggregator.register_statistic_points(statistic_points)
     statistics_aggregator.collect_statistics(model, nncf_network.nncf.get_graph())
-    torch_quantized_model = min_max_algo.apply(
-        nncf_network, nncf_network.nncf.get_graph(), statistics_aggregator.statistic_points
-    )
+    torch_quantized_model = min_max_algo.apply(ModelWrapper(nncf_network), statistics_aggregator.statistic_points)
 
     path = str(tmp_path / "torch_ptq_model.onnx")
     torch.onnx.export(
-        torch_quantized_model,
+        torch_quantized_model.model,
         input_data,
         path,
         export_params=True,

@@ -21,6 +21,7 @@ from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.model import ModelWrapper
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
@@ -203,7 +204,7 @@ class TemplateTestPTQParams:
         assert min_max_algo._range_estimator_params[QuantizerGroup.ACTIVATIONS] == range_estimator_params
 
         params = test_params["test_range_estimator_per_tensor"]
-        stat_points = min_max_algo.get_statistic_points(params["model"], params["nncf_graph"])
+        stat_points = min_max_algo.get_statistic_points(ModelWrapper(params["model"], params["nncf_graph"]))
         assert len(stat_points) == params["stat_points_num"]
 
         for _, stat_point in stat_points.items():
@@ -374,7 +375,7 @@ class TemplateTestPTQParams:
                 Tensor(self.get_backend_tensor(idx - 1)), Tensor(self.get_backend_tensor(idx + 2))
             )
             stats.add_statistic_point(StatisticPoint(tp, tc, algo._algorithm_key))
-        algo.apply(model, model.nncf_graph, stats)
+        algo.apply(ModelWrapper(model, model.nncf_graph), stats)
         mock_transformer.transform.assert_called_once()
         layout = mock_transformer.transform.call_args.args[0]
         self.check_unified_scale_layout(layout, unified_scales_group)
@@ -423,7 +424,5 @@ class TemplateTestPTQParams:
             "nncf.quantization.algorithms.min_max.algorithm.MinMaxQuantization._get_quantization_points_overflow_fix",
             return_value=mocker.MagicMock(),
         )
-        with pytest.raises(nncf.InternalError) as exc_info:
-            algo.apply(None, None, stat_points)
-
-        assert str(exc_info.value) == "Statistics were not collected for the node A"
+        with pytest.raises(nncf.InternalError, match="Statistics were not collected for the node A"):
+            algo.apply(mocker.MagicMock(), stat_points)

@@ -16,6 +16,7 @@ import pytest
 import torch
 
 import nncf
+from nncf.common.model import ModelWrapper
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import OverflowFix
@@ -58,8 +59,8 @@ def min_max_quantize_model(
 
     original_model.eval()
     nncf_network = wrap_model(original_model, torch.ones([1, 1, 10, 10]), trace_parameters=True)
-    quantized_model = post_training_quantization.apply(nncf_network, nncf_network.nncf.get_graph(), dataset=dataset)
-    return quantized_model
+    quantized_model = post_training_quantization.apply(ModelWrapper(nncf_network), dataset=dataset)
+    return quantized_model.model
 
 
 def get_fq_nodes(model: NNCFNetwork) -> Dict[Scope, torch.nn.Module]:

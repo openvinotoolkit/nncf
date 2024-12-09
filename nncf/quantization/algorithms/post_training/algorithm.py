@@ -95,7 +95,6 @@ class PostTrainingQuantization(Algorithm):
     def apply(
         self,
         model: TModel,
-        graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
@@ -109,4 +108,4 @@ class PostTrainingQuantization(Algorithm):
         if statistic_points:
             step_index_to_statistics = {0: statistic_points}
 
-        return self._pipeline.run_from_step(model, dataset, graph, 0, step_index_to_statistics)
+        return self._pipeline.run_from_step(model, dataset, 0, step_index_to_statistics)

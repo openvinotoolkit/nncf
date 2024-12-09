@@ -24,6 +24,7 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
+from nncf.common.model import ModelWrapper
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -98,11 +99,12 @@ class SmoothQuant(Algorithm):
 
     def apply(
         self,
-        model: TModel,
-        graph: NNCFGraph,
+        model_wrapper: ModelWrapper,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-    ) -> TModel:
+    ) -> ModelWrapper:
+        model = model_wrapper.model
+        graph = model_wrapper.graph
         self._set_backend_entity(model)
         alpha_map = self._get_alpha_map()
 
@@ -176,7 +178,7 @@ class SmoothQuant(Algorithm):
             transformation_layout.register(scale_insertion_command)
 
         transformed_model = model_transformer.transform(transformation_layout)
-        return transformed_model
+        return ModelWrapper(model=transformed_model, state=model_wrapper.state)
 
     @staticmethod
     def _calculate_scale_and_ratio(
@@ -245,7 +247,10 @@ class SmoothQuant(Algorithm):
             statistics_for_node.append(statistic)
         return statistics_for_node
 
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
+    def get_statistic_points(self, model_wrapper: ModelWrapper) -> StatisticPointsContainer:
+        model = model_wrapper.model
+        graph = model_wrapper.graph
+
         statistic_container = StatisticPointsContainer()
 
         self._set_backend_entity(model)
