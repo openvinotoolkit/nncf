@@ -57,3 +57,12 @@ class VerbatimTelemetryExtractor(TelemetryExtractor):
         if isinstance(argvalue, bool):
             argvalue = "enabled" if argvalue else "disabled"
         return CollectedEvent(name=self._argname, data=argvalue)
+
+
+class FunctionCallTelemetryExtractor(TelemetryExtractor):
+    def __init__(self, argvalue=None):
+        super().__init__(argname="function_call")
+        self._argvalue = argvalue
+
+    def extract(self, _: Any):
+        return CollectedEvent(name=self._argname, data=self._argvalue)

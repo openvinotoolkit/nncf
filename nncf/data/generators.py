@@ -13,9 +13,9 @@ from typing import List, TypeVar
 
 import nncf
 from nncf.common.logging.track_progress import track
-from nncf.common.telemetry_extractors import DatasetGeneratedFromApi
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_COMMON_CATEGORY
+from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
 
 BASE_VOCAB_SIZE = 12000
 
@@ -26,7 +26,7 @@ TTokenizer = TypeVar("TTokenizer")
 @tracked_function(
     category=NNCF_COMMON_CATEGORY,
     extractors=[
-        DatasetGeneratedFromApi(),
+        FunctionCallTelemetryExtractor("nncf.data.generate_text_data"),
     ],
 )
 def generate_text_data(

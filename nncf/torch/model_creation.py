@@ -21,16 +21,15 @@ from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
-from nncf.common.telemetry_extractors import NNCFNetworkGeneratedFromWrapApi
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import set_debug_log_dir
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.extractors import has_input_info_field
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
-from nncf.config.telemetry_extractors import NNCFNetworkGeneratedFromConfig
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
+from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
@@ -329,7 +328,7 @@ def create_compression_algorithm_builder_from_algo_names(
 @tracked_function(
     NNCF_PT_CATEGORY,
     [
-        NNCFNetworkGeneratedFromWrapApi(),
+        FunctionCallTelemetryExtractor("nncf.torch.wrap_model"),
     ],
 )
 def wrap_model(
@@ -379,7 +378,7 @@ def is_wrapped_model(model: torch.nn.Module) -> bool:
 @tracked_function(
     NNCF_PT_CATEGORY,
     [
-        NNCFNetworkGeneratedFromConfig(),
+        FunctionCallTelemetryExtractor("nncf.torch.load_from_config"),
     ],
 )
 def load_from_config(model: torch.nn.Module, config: Dict[str, Any], example_input: Any) -> NNCFNetwork:
