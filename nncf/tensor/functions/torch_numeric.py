@@ -469,7 +469,7 @@ def _(a: torch.Tensor) -> torch.Tensor:
     return torch.ceil(a)
 
 
-def safetensor_load_file(
+def load_file(
     file_path: str,
     *,
     device: Optional[TensorDeviceType] = None,
@@ -479,6 +479,6 @@ def safetensor_load_file(
     return pt_load_file(file_path, device=device)
 
 
-@numeric.safetensor_save_file.register(torch.Tensor)
+@numeric.save_file.register(torch.Tensor)
 def _(data: Dict[str, torch.Tensor], file_path: str) -> None:
     return pt_save_file(data, file_path)

@@ -435,12 +435,12 @@ def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
     return np.ceil(a)
 
 
-def safetensor_load_file(file_path: str, *, device: Optional[TensorDeviceType] = None) -> Dict[str, np.ndarray]:
+def load_file(file_path: str, *, device: Optional[TensorDeviceType] = None) -> Dict[str, np.ndarray]:
     if device is not None and device != TensorDeviceType.CPU:
-        raise ValueError("numpy_numeric.safetensor_load_file only supports CPU device.")
+        raise ValueError("numpy_numeric.load_file only supports CPU device.")
     return np_load_file(file_path)
 
 
-@register_numpy_types(numeric.safetensor_save_file)
+@register_numpy_types(numeric.save_file)
 def _(data: Dict[str, np.ndarray], file_path: str) -> None:
     return np_save_file(data, file_path)

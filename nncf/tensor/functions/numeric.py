@@ -909,7 +909,7 @@ def ceil(a: Tensor) -> Tensor:
     return Tensor(ceil(a.data))
 
 
-def safetensor_load_file(
+def load_file(
     file_path: Path,
     backend: TensorBackend,
     *,
@@ -924,12 +924,12 @@ def safetensor_load_file(
         then the default device is determined by backend.
     :return: A dictionary where the keys are tensor names and the values are Tensor objects.
     """
-    loaded_dict = get_numeric_backend_fn("safetensor_load_file", backend)(file_path, device=device)
+    loaded_dict = get_numeric_backend_fn("load_file", backend)(file_path, device=device)
     return {key: Tensor(val) for key, val in loaded_dict.items()}
 
 
 @functools.singledispatch
-def safetensor_save_file(
+def save_file(
     data: Dict[str, Tensor],
     file_path: Path,
 ) -> None:
@@ -940,5 +940,5 @@ def safetensor_save_file(
     :param file_path: The path to the file where the tensor data will be saved.
     """
     if isinstance(data, (dict)):
-        return dispatch_dict(safetensor_save_file, data, file_path)
+        return dispatch_dict(save_file, data, file_path)
     raise NotImplementedError(f"Function `save_file` is not implemented for {type(data)}")
