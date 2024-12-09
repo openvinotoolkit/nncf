@@ -164,13 +164,6 @@ class Tensor:
     def __ge__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(self.data >= unwrap_tensor_data(other))
 
-    # Methods to support pickling and unpickling
-    def __getstate__(self):
-        return self._data
-
-    def __setstate__(self, state):
-        self._data = state
-
     # Tensor functions
 
     def squeeze(self, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
