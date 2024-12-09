@@ -135,7 +135,7 @@ class MinMaxAlgoBackend(ABC):
     @abstractmethod
     def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
         """
-        Property for the backend-specific dictionary that conatins StatisticsType-specific tensor reducers.
+        Property for the backend-specific dictionary that contains backend-specific tensor reducers.
         """
 
     @staticmethod
