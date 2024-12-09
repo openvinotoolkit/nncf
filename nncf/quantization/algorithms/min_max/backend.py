@@ -21,10 +21,12 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.range_estimator import StatisticsType
 
 TModel = TypeVar("TModel")
 
@@ -127,6 +129,13 @@ class MinMaxAlgoBackend(ABC):
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         """
         Property for the backend-specific dictionary that contains QuantizationTrait-specific metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
+        """
+        Property for the backend-specific dictionary that conatins StatisticsType-specific tensor reducers.
         """
 
     @staticmethod
