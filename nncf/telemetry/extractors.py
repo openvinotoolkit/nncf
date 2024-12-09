@@ -61,8 +61,8 @@ class VerbatimTelemetryExtractor(TelemetryExtractor):
 
 class FunctionCallTelemetryExtractor(TelemetryExtractor):
     def __init__(self, argvalue=None):
-        super().__init__(argname="function_call")
+        super().__init__()
         self._argvalue = argvalue
 
     def extract(self, _: Any):
-        return CollectedEvent(name=self._argname, data=self._argvalue)
+        return CollectedEvent(name="function_call", data=self._argvalue)
