@@ -16,7 +16,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 
 # General categories
-NNCF_COMMON_CATEGORY = "nncf_common"
+NNCF_CATEGORY = "nncf"
 
 # Backend categories
 NNCF_TF_CATEGORY = "nncf_tf"
