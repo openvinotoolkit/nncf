@@ -501,7 +501,7 @@ class MinMaxQuantization(Algorithm):
     ) -> TensorCollector:
         """
         Returns statistic collector.
-        
+
         :param range_estimator_params: Parameters that specify estimators types.
         :param use_abs_max: Wheather reduce absolute values of input tensors or not.
         :param reduction_axes: Axes for reducer.
