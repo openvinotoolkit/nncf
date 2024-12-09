@@ -59,6 +59,7 @@ def dispatch_dict(fn: "functools._SingleDispatchCallable", tensor_dict: Dict[str
         else:
             assert tensor_backend is type(tensor.data)
         unwrapped_dict[key] = tensor.data
+
     return fn.dispatch(tensor_backend)(unwrapped_dict, *args, **kwargs)
 
 

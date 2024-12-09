@@ -13,8 +13,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
-from safetensors.torch import load_file
-from safetensors.torch import save_file
+from safetensors.torch import load_file as pt_load_file
+from safetensors.torch import save_file as pt_save_file
 
 from nncf.tensor import TensorDataType
 from nncf.tensor import TensorDeviceType
@@ -469,11 +469,16 @@ def _(a: torch.Tensor) -> torch.Tensor:
     return torch.ceil(a)
 
 
-@numeric.load_file.register(torch.Tensor)
-def _(file_path: str) -> Dict[str, torch.Tensor]:
-    return load_file(file_path)
+def safetensor_load_file(
+    file_path: str,
+    *,
+    device: Optional[TensorDeviceType] = None,
+) -> Dict[str, torch.Tensor]:
+    if device is not None:
+        device = DEVICE_MAP[device]
+    return pt_load_file(file_path, device=device)
 
 
-@numeric.save_file.register(torch.Tensor)
+@numeric.safetensor_save_file.register(torch.Tensor)
 def _(data: Dict[str, torch.Tensor], file_path: str) -> None:
-    return save_file(data, file_path)
+    return pt_save_file(data, file_path)

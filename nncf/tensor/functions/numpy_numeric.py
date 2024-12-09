@@ -12,8 +12,8 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-from safetensors.numpy import load_file
-from safetensors.numpy import save_file
+from safetensors.numpy import load_file as np_load_file
+from safetensors.numpy import save_file as np_save_file
 
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
@@ -435,11 +435,12 @@ def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
     return np.ceil(a)
 
 
-@register_numpy_types(numeric.load_file)
-def _(file_path: str) -> Dict[str, np.ndarray]:
-    return load_file(file_path)
+def safetensor_load_file(file_path: str, *, device: Optional[TensorDeviceType] = None) -> Dict[str, np.ndarray]:
+    if device is not None and device != TensorDeviceType.CPU:
+        raise ValueError("numpy_numeric.safetensor_load_file only supports CPU device.")
+    return np_load_file(file_path)
 
 
-@register_numpy_types(numeric.save_file)
+@register_numpy_types(numeric.safetensor_save_file)
 def _(data: Dict[str, np.ndarray], file_path: str) -> None:
-    return save_file(data, file_path)
+    return np_save_file(data, file_path)

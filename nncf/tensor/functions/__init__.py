@@ -33,7 +33,6 @@ from nncf.tensor.functions.numeric import from_numpy as from_numpy
 from nncf.tensor.functions.numeric import isclose as isclose
 from nncf.tensor.functions.numeric import isempty as isempty
 from nncf.tensor.functions.numeric import item as item
-from nncf.tensor.functions.numeric import load_file as load_file
 from nncf.tensor.functions.numeric import log2 as log2
 from nncf.tensor.functions.numeric import logical_or as logical_or
 from nncf.tensor.functions.numeric import masked_mean as masked_mean
@@ -53,7 +52,8 @@ from nncf.tensor.functions.numeric import power as power
 from nncf.tensor.functions.numeric import quantile as quantile
 from nncf.tensor.functions.numeric import reshape as reshape
 from nncf.tensor.functions.numeric import round as round
-from nncf.tensor.functions.numeric import save_file as save_file
+from nncf.tensor.functions.numeric import safetensor_load_file as load_file  # noqa: F401
+from nncf.tensor.functions.numeric import safetensor_save_file as save_file  # noqa: F401
 from nncf.tensor.functions.numeric import searchsorted as searchsorted
 from nncf.tensor.functions.numeric import squeeze as squeeze
 from nncf.tensor.functions.numeric import stack as stack
