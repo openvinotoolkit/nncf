@@ -1,0 +1,7 @@
+strict digraph  {
+x [id=0, metatype=PTInputNoopMetatype, type=nncf_model_input];
+"/add/0" [id=1, metatype=PTAddMetatype, type=add];
+output [id=2, metatype=PTOutputNoopMetatype, type=nncf_model_output];
+x -> "/add/0"  [dtype=float, parallel_input_port_ids="[1]", shape="(1, 1)"];
+"/add/0" -> output  [dtype=float, shape="(1, 1)"];
+}

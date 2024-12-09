@@ -1,0 +1,14 @@
+digraph  {
+rankdir=TB;
+0 [fillcolor="#adadad", fontcolor="#000000", label="{type: input|name: x|dtype: torch.float32|shape: (1, 1, 1)}", shape=record, style="filled,rounded"];
+1 [fillcolor="#a0c4ff", fontcolor="#000000", label="{type: function_call|op_name: /relu/0|fn_name: relu|args: [\nTensorMeta(dtype=torch.float32, shape=(1, 1, 1), requires_grad=False),\n]|kwargs: \{\}}", shape=record, style="filled,rounded"];
+2 [fillcolor="#a0c4ff", fontcolor="#000000", label="{type: function_call|op_name: /relu_/0|fn_name: relu_|args: [\nTensorMeta(dtype=torch.float32, shape=(1, 1, 1), requires_grad=False),\n]|kwargs: \{\}}", shape=record, style="filled,rounded"];
+3 [fillcolor="#a0c4ff", fontcolor="#000000", label="{type: function_call|op_name: /relu/1|fn_name: relu|args: [\nTensorMeta(dtype=torch.float32, shape=(1, 1, 1), requires_grad=False),\n]|kwargs: \{\}}", shape=record, style="filled,rounded"];
+4 [fillcolor="#a0c4ff", fontcolor="#000000", label="{type: function_call|op_name: /relu_/1|fn_name: relu_|args: [\nTensorMeta(dtype=torch.float32, shape=(1, 1, 1), requires_grad=False),\n]|kwargs: \{\}}", shape=record, style="filled,rounded"];
+5 [fillcolor="#adadad", fontcolor="#000000", label="{type: output|name: output|dtype: torch.float32|shape: (1, 1, 1)}", shape=record, style="filled,rounded"];
+0 -> 1  [label="(1, 1, 1)\n0 → 0"];
+1 -> 2  [label="(1, 1, 1)\n0 → 0"];
+2 -> 3  [label="(1, 1, 1)\n0 → 0"];
+3 -> 4  [label="(1, 1, 1)\n0 → 0"];
+4 -> 5  [label="(1, 1, 1)\n0 → 0"];
+}

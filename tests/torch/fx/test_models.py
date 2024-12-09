@@ -25,7 +25,6 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
-from torch._export import capture_pre_autograd_graph
 
 import nncf
 from nncf.common.graph.graph import NNCFNodeName
@@ -36,15 +35,15 @@ from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.quantization.backend_parameters import FXBackendParameters
 from nncf.experimental.torch.fx.transformations import DEQUANTIZE_NODE_TARGETS
 from nncf.experimental.torch.fx.transformations import _get_node_inputs
-from nncf.experimental.torch.fx.transformations import shared_constants_unification_transformation
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch import test_models
+from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.fx.test_sanity import count_q_dq
-from tests.torch.ptq.test_weights_compression import ShortTransformer
 from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
+from tests.torch.test_models.synthetic import ShortTransformer
+from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
 
 FX_DIR_NAME = Path("fx")
 FX_QUANTIZED_DIR_NAME = Path("fx") / "quantized"
@@ -70,6 +69,7 @@ TEST_MODELS = (
     torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
     ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
     ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
+    ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
 )
 
 
@@ -86,12 +86,6 @@ def get_full_path_to_json(model_json_name: str, attributes: bool = False) -> str
     path_to_dir = TEST_ROOT / "torch" / "data" / "reference_graphs" / "fx" / property_to_check
     path_to_json = path_to_dir / model_json_name
     return path_to_json
-
-
-def _capture_model(model: torch.nn.Module, inputs: torch.Tensor) -> torch.fx.GraphModule:
-    with torch.no_grad():
-        with disable_patching():
-            return capture_pre_autograd_graph(model, (inputs,))
 
 
 def get_ref_from_json(
@@ -120,11 +114,9 @@ def test_model(test_case: ModelCase):
     model = test_case.model_builder()
     model.to(device)
 
-    with torch.no_grad():
-        dtype = torch.int32 if test_case.model_id == "synthetic_transformer" else torch.float32
-        ex_input = torch.ones(test_case.input_shape, dtype=dtype)
-        model.eval()
-        exported_model = _capture_model(model, ex_input)
+    dtype = torch.int32 if test_case.model_id == "synthetic_transformer" else torch.float32
+    ex_input = torch.ones(test_case.input_shape, dtype=dtype)
+    exported_model = get_torch_fx_model(model, ex_input)
     nncf_graph = GraphConverter.create_nncf_graph(exported_model)
 
     # Check NNCFGrpah
@@ -162,7 +154,7 @@ TEST_MODELS_QUANIZED = (
         torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [
-            (298, 298),
+            (250, 250),
             (149, 149),
         ],
     ),
@@ -170,6 +162,11 @@ TEST_MODELS_QUANIZED = (
         ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [(4, 4), (2, 2)],
+    ),
+    (
+        ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
+        {"model_type": nncf.ModelType.TRANSFORMER},
+        [(4, 4), (3, 3)],
     ),
 )
 
@@ -185,9 +182,7 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters, compres
     dtype = torch.int32 if model_case.model_id == "synthetic_transformer" else torch.float32
     example_input = torch.ones(model_case.input_shape, dtype=dtype)
 
-    with torch.no_grad():
-        model.eval()
-        fx_model = _capture_model(model, example_input)
+    fx_model = get_torch_fx_model(model, example_input)
 
     def transform_fn(data_item):
         return data_item.to("cpu")
@@ -240,16 +235,12 @@ def check_compressed_post_quantized(quantized_model):
         assert result.dtype == torch.float32
 
 
-@pytest.mark.parametrize("unification", [False, True])
-def test_is_shared_attribute(unification):
+def test_is_shared_attribute_default():
     model = MultiBranchesConnectedModel()
     ex_inputs = torch.ones((1, 3, 3, 3))
-    captured_model = _capture_model(model, ex_inputs)
-    file_prefix = "not_unified"
-    if unification:
-        file_prefix = "unified"
-        shared_constants_unification_transformation(captured_model)
-    nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+    fx_model = get_torch_fx_model(model, ex_inputs)
+    nncf_graph = GraphConverter.create_nncf_graph(fx_model)
+
     shared_attributes = {n.node_name: n.is_shared() for n in nncf_graph.get_all_nodes()}
-    ref_attributes = get_ref_from_json(f"{file_prefix}_shared_attribute_test_model", shared_attributes, attributes=True)
+    ref_attributes = get_ref_from_json("default_shared_attribute_test_model", shared_attributes, attributes=True)
     assert shared_attributes == ref_attributes

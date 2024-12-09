@@ -14,6 +14,8 @@ from pathlib import Path
 from time import time
 from typing import Tuple
 
+# We need to import openvino.torch for torch.compile() with openvino backend to work.
+import openvino.torch  # noqa
 import torch
 import torch.nn as nn
 import torch.nn.parallel
@@ -24,11 +26,13 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
+from rich.progress import track
+from torch._dynamo.exc import BackendCompilerFailed
 
 import nncf
 import nncf.torch
-from nncf.common.logging.track_progress import track
 from nncf.common.utils.helpers import create_table
+from nncf.common.utils.os import is_windows
 from nncf.torch import disable_patching
 
 IMAGE_SIZE = 64
@@ -40,11 +44,11 @@ CHECKPOINT_URL = (
     "https://storage.openvinotoolkit.org/repositories/nncf/openvino_notebook_ckpts/302_resnet18_fp32_v1.pth"
 )
 DATASET_URL = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
-DATASET_PATH = "~/.cache/nncf/datasets"
+DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
 
 
 def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH, archive="downloaded", data="extracted")
+    downloader = FastDownload(base=DATASET_PATH.resolve(), archive="downloaded", data="extracted")
     return downloader.get(DATASET_URL)
 
 
@@ -190,7 +194,7 @@ def main():
     example_input = torch.ones(*input_shape).to(device)
 
     with disable_patching():
-        fx_model = torch.export.export(model.eval(), args=(example_input,)).module()
+        fx_model = torch.export.export_for_training(model.eval(), args=(example_input,)).module()
         quantized_fx_model = nncf.quantize(fx_model, quantization_dataset)
         quantized_fx_model = torch.compile(quantized_fx_model, backend="openvino")
 
@@ -205,7 +209,16 @@ def main():
     print("Benchmark FP32 model compiled with default backend ...")
     with disable_patching():
         compiled_model = torch.compile(model)
-        fp32_latency = measure_latency(compiled_model, example_inputs=example_input)
+        try:
+            fp32_latency = measure_latency(compiled_model, example_inputs=example_input)
+        except BackendCompilerFailed as exp:
+            if not is_windows():
+                raise exp
+            print(
+                "WARNING: Torch Inductor is currently unavailable on Windows. "
+                "For more information, visit https://github.com/pytorch/pytorch/issues/135954"
+            )
+            fp32_latency = float("nan")
     print(f"{fp32_latency:.3f} ms")
 
     print("Benchmark FP32 model compiled with openvino backend ...")

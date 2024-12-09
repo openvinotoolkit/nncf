@@ -35,7 +35,7 @@ from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
 from tests.cross_fw.test_templates.test_ptq_params import TemplateTestPTQParams
 from tests.torch.fx.helpers import get_single_conv_nncf_graph
-from tests.torch.fx.helpers import get_torch_fx_model
+from tests.torch.fx.helpers import get_torch_fx_model_q_transformed
 from tests.torch.ptq.helpers import get_single_no_weight_matmul_nncf_graph
 from tests.torch.test_models.synthetic import LinearPTQParamsTestModel
 
@@ -98,7 +98,8 @@ class TestPTQParams(TemplateTestPTQParams):
 
     @pytest.fixture(scope="session")
     def test_params(self):
-        linear_model = get_torch_fx_model(LinearPTQParamsTestModel())
+        linear_model = LinearPTQParamsTestModel()
+        linear_model = get_torch_fx_model_q_transformed(linear_model, torch.ones((1, 3, 32, 32)))
 
         return {
             "test_range_estimator_per_tensor": {

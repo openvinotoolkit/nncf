@@ -1,0 +1,17 @@
+strict digraph  {
+x [id=0, metatype=PTInputNoopMetatype, type=nncf_model_input];
+"conv.weight" [id=1, metatype=PTConstNoopMetatype, type=nncf_model_const];
+"conv.bias" [id=2, metatype=PTConstNoopMetatype, type=nncf_model_const];
+"conv/conv2d/0" [id=3, metatype=PTConv2dMetatype, type=conv2d];
+"__nncf_hooks.post_hooks.conv/conv2d/0__0.0.w" [id=4, metatype=PTConstNoopMetatype, type=nncf_model_const];
+"conv/post_hook__conv-conv2d-0__0[0]/add/0" [id=5, metatype=PTAddMetatype, type=add];
+"/relu/0" [id=6, metatype=PTRELUMetatype, type=relu];
+output [id=7, metatype=PTOutputNoopMetatype, type=nncf_model_output];
+x -> "conv/conv2d/0"  [dtype=float, shape="(1, 1, 3, 3)"];
+"conv.weight" -> "conv/conv2d/0"  [dtype=float, shape="(1, 1, 1, 1)"];
+"conv.bias" -> "conv/conv2d/0"  [dtype=float, shape="(1,)"];
+"conv/conv2d/0" -> "conv/post_hook__conv-conv2d-0__0[0]/add/0"  [dtype=float, shape="(1, 1, 3, 3)"];
+"__nncf_hooks.post_hooks.conv/conv2d/0__0.0.w" -> "conv/post_hook__conv-conv2d-0__0[0]/add/0"  [dtype=float, shape="(1,)"];
+"conv/post_hook__conv-conv2d-0__0[0]/add/0" -> "/relu/0"  [dtype=float, shape="(1, 1, 3, 3)"];
+"/relu/0" -> output  [dtype=float, shape="(1, 1, 3, 3)"];
+}

@@ -22,7 +22,7 @@ from tests.cross_fw.shared.command import Command
 from tests.cross_fw.shared.helpers import create_venv_with_nncf
 from tests.cross_fw.shared.helpers import get_pip_executable_with_venv
 from tests.cross_fw.shared.helpers import get_python_executable_with_venv
-from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.json import load_json
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 from tests.cross_fw.shared.paths import TEST_ROOT
 
@@ -54,6 +54,7 @@ def test_examples(
     is_check_performance: bool,
     ov_version_override: str,
     data: str,
+    reuse_venv: bool,
 ):
     print("\n" + "-" * 64)
     print(f"Example name: {example_name}")
@@ -64,6 +65,9 @@ def test_examples(
 
     backend = example_params["backend"]
     skip_if_backend_not_selected(backend, backends_list)
+    if reuse_venv:
+        # Use example directory as tmp_path
+        tmp_path = Path(example_params["requirements"]).parent
     venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {backend})
     pip_with_venv = get_pip_executable_with_venv(venv_path)
     if "requirements" in example_params:
@@ -81,6 +85,7 @@ def test_examples(
     env["PYTHONPATH"] = str(PROJECT_ROOT)  # need this to be able to import from tests.* in run_example.py
     env["ONEDNN_MAX_CPU_ISA"] = "AVX2"  # Set ISA to AVX2 to get CPU independent results
     env["CUDA_VISIBLE_DEVICES"] = ""  # Disable GPU
+    env["YOLO_VERBOSE"] = "False"  # Set ultralytics to quiet mode
 
     metrics_file_path = tmp_path / "metrics.json"
     python_executable_with_venv = get_python_executable_with_venv(venv_path)

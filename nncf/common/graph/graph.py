@@ -11,7 +11,7 @@
 import pathlib
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Callable, Dict, Generator, KeysView, List, Optional, Tuple, Type, ValuesView, cast
+from typing import Any, Callable, Dict, Generator, KeysView, List, Optional, Tuple, Type, Union, ValuesView, cast
 
 import networkx as nx  # type:ignore
 import networkx.algorithms.isomorphism as iso  # type:ignore
@@ -539,7 +539,7 @@ class NNCFGraph:
         self,
         from_node_id: int,
         to_node_id: int,
-        tensor_shape: List[int],
+        tensor_shape: Union[Tuple[int, ...], List[int]],
         input_port_id: int,
         output_port_id: int,
         dtype: Dtype,
@@ -638,7 +638,7 @@ class NNCFGraph:
                 if "shape" in label and len(label) == 1:
                     attrs_edge["label"] = label["shape"]
                 else:
-                    attrs_edge["label"] = ", ".join((f"{k}:{v}" for k, v in label.items()))
+                    attrs_edge["label"] = ", ".join((f"{k} {v}" for k, v in label.items()))
             out_graph.add_edge(u, v, **attrs_edge)
         return out_graph
 

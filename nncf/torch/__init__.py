@@ -14,6 +14,7 @@
 Base subpackage for NNCF PyTorch functionality.
 """
 
+import os
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
 
@@ -68,4 +69,13 @@ from nncf.torch.dynamic_graph.patch_pytorch import patch_torch_operators
 
 from nncf.torch.extensions import force_build_cpu_extensions, force_build_cuda_extensions
 
-patch_torch_operators()
+# This is required since torchvision changes a dictionary inside of pytorch mapping
+# different ops and their role in torch fx graph. Once the nncf mapping is done, it is
+# represented as a different custom operation which is how it is changed in
+# the said mapping. The polyfills loader is the specific file to be imported
+# before making wrapping changes
+if torch.__version__ >= "2.5.0":
+    from torch._dynamo.polyfills import loader
+
+if os.getenv("NNCF_EXPERIMENTAL_TORCH_TRACING") is None:
+    patch_torch_operators()

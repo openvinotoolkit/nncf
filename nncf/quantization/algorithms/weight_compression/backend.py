@@ -13,7 +13,6 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Dict, Iterable, List, Optional, Tuple, TypeVar
 
-from nncf import SensitivityMetric
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -21,8 +20,9 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
-from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
+from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import HessianTensorStatistic
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
@@ -162,7 +162,7 @@ class WeightCompressionAlgoBackend(ABC):
     def insert_adapters(
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
     ) -> None:
-        """
+        r"""
         Expands a model's execution graph following the Low-Rank Adaptation (LoRA) concept.
 
         It inserts two additional Linear layers with weight matrices of low rank that are executed in parallel to the
@@ -252,10 +252,10 @@ class AWQAlgoBackend(WeightCompressionAlgoBackend):
 class MixedPrecisionAlgoBackend(ABC):
     @staticmethod
     def hawq_statistic_collector(subset_size: Optional[int] = None) -> TensorCollector:
-        reducer = NoopReducer()
+        reducer = RawReducer()
         aggregator = HAWQAggregator(num_samples=subset_size)
-        collector = TensorCollector()
-        collector.register_statistic_branch(SensitivityMetric.HESSIAN_INPUT_ACTIVATION.value, reducer, aggregator)
+        collector = TensorCollector(HessianTensorStatistic)
+        collector.register_statistic_branch(HessianTensorStatistic.HESSIAN_INPUT_ACTIVATION_STATS, reducer, aggregator)
         return collector
 
     @staticmethod

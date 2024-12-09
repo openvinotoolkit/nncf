@@ -29,6 +29,7 @@ from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.parameters import BackupMode
 from nncf.quantization import compress_weights
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as LoraParams
@@ -43,9 +44,9 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import resh
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
-from tests.cross_fw.shared.helpers import compare_stats
-from tests.cross_fw.shared.helpers import dump_to_json
-from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.comparator import compare_stats
+from tests.cross_fw.shared.json import dump_to_json
+from tests.cross_fw.shared.json import load_json
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
@@ -727,6 +728,7 @@ def test_raise_error_channel_size_is_not_divisible_by_group_size():
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
+        {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):
@@ -884,25 +886,78 @@ def test_compression_for_different_dtypes(activation_dtype, weight_dtype):
     check_compressed_matmul_subgraph(scale_multiply_node, activation_dtype, weight_dtype)
 
 
-DATASET_SIZE = 129
+DATASET_SIZE = 5
 
 
 @pytest.mark.parametrize(
-    ("subset_size", "ref_size"),
+    ("dataset_size", "subset_size", "ref_size"),
     (
-        (1, 1),
-        (5, 5),
-        (130, DATASET_SIZE),
+        (DATASET_SIZE, 1, 1),
+        (DATASET_SIZE, DATASET_SIZE, DATASET_SIZE),
+        (DATASET_SIZE, DATASET_SIZE + 1, DATASET_SIZE),
     ),
 )
-def test_valid_subset_size(mocker, subset_size, ref_size):
+@pytest.mark.parametrize(
+    ("compression_args", "multiplier_of_calls"),
+    [
+        ({"mode": CompressWeightsMode.INT4_ASYM, "ratio": 1}, 0),  # data-free, no reducers
+        ({"mode": CompressWeightsMode.INT4_ASYM, "ratio": 1, "awq": True}, 2),  # mean & shape reducer for AWQ
+        (
+            {"mode": CompressWeightsMode.INT4_ASYM, "ratio": 0.5, "awq": True},
+            3,
+        ),  # 2 - for AWQ + 1 - for Mixed Precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
+            },
+            1,
+        ),  # 1 reducer for mixed precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.MEAN_ACTIVATION_VARIANCE,
+            },
+            1,
+        ),  # 1 reducer for mixed precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.MAX_ACTIVATION_VARIANCE,
+            },
+            1,
+        ),  # 1 reducer for mixed precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
+            },
+            1,
+        ),  # 1 reducer for mixed precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
+            },
+            0,
+        ),  # 0 - data-free method
+    ],
+)
+def test_number_of_reduced_statistics_for_subset_size(
+    mocker, dataset_size, subset_size, ref_size, compression_args, multiplier_of_calls
+):
     model = IdentityMatmul().ov_model
-    dataset = Dataset([ACTIVATION] * DATASET_SIZE)
+    dataset = Dataset([ACTIVATION] * dataset_size)
     stats_spy = mocker.spy(AggregatorBase, "register_reduced_input")
 
-    compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, dataset=dataset, subset_size=subset_size)
+    compress_weights(model, dataset=dataset, subset_size=subset_size, **compression_args)
 
-    assert stats_spy.call_count == ref_size
+    assert stats_spy.call_count == ref_size * multiplier_of_calls
 
 
 def test_default_subset_value():
@@ -910,7 +965,7 @@ def test_default_subset_value():
     assert default_value == 128
 
 
-@pytest.mark.parametrize("subset_size", (-1, 0, None))
+@pytest.mark.parametrize("subset_size", (-1, 0))
 def test_invalid_subset_size(subset_size):
     model = IdentityMatmul().ov_model
     dataset = Dataset([ACTIVATION])
@@ -1070,6 +1125,53 @@ def test_compressed_weighs_range(mode, data):
     compressed_weighs, _, _ = do_int_quantization(w, -1, config)
 
     assert np.allclose(np.abs(compressed_weighs.data), np.abs(w.data))
+
+
+@pytest.mark.parametrize(
+    ("config", "precompute_scale", "precompute_zero_point", "raises"),
+    [
+        (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), True, True, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), True, False, True),
+        (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), False, True, True),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), True, True, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), True, False, True),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), False, True, True),
+        (WeightCompressionConfig(CompressWeightsMode.INT8_SYM), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT8_SYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), False, False, False),
+    ],
+)
+def test_int_quantization_with_precomputed_parameters(config, precompute_scale, precompute_zero_point, raises):
+    is_asym = config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT8_ASYM]
+
+    precomputed_scale, precomputed_zero_point = None, None
+    weight = Tensor(((np.arange(11) - 5) / 10).astype(np.float32)[:, None])
+    if precompute_scale:
+        precomputed_scale = Tensor(-((np.arange(11) - 5) / 100).astype(np.float32)[:, None])
+    if precompute_zero_point:
+        precomputed_zero_point = Tensor(np.arange(11).astype(np.int32)[:, None])
+
+    if raises:
+        with pytest.raises(ValueError) as exc_info:
+            _, scale, zero_point = do_int_quantization(weight, -1, config, precomputed_scale, precomputed_zero_point)
+            assert exc_info.value == (
+                "If precomputed quantization parameters are provided, both scale and zero point "
+                "are required for asymmetric quantization."
+            )
+        return
+    else:
+        _, scale, zero_point = do_int_quantization(weight, -1, config, precomputed_scale, precomputed_zero_point)
+
+    if precompute_scale:
+        assert np.allclose(scale.data, precomputed_scale.data)
+    if is_asym:
+        if precompute_zero_point:
+            assert np.allclose(zero_point.data, precomputed_zero_point.data)
+    else:
+        assert zero_point is None
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)

@@ -8,24 +8,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
 import subprocess
 import sys
-from abc import ABC
-from abc import abstractmethod
-from copy import deepcopy
 from pathlib import Path
-from typing import Callable, Dict, List, Set, TypeVar, Union
+from typing import Callable, Set
 
-import numpy as np
-
-import nncf
-from nncf.common.utils.os import is_linux
-from nncf.common.utils.os import is_windows
 from tests.cross_fw.shared.paths import GITHUB_REPO_URL
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 
-TensorType = TypeVar("TensorType")
+
+def is_windows() -> bool:
+    return "win32" in sys.platform
+
+
+def is_linux() -> bool:
+    return "linux" in sys.platform
 
 
 def get_cli_dict_args(args):
@@ -46,9 +43,17 @@ MAP_BACKEND_PACKAGES = {
 }
 
 
+def find_file_by_extension(directory: Path, extension: str) -> str:
+    for file_path in directory.iterdir():
+        file_path_str = str(file_path)
+        if file_path_str.endswith(extension):
+            return file_path_str
+    raise FileNotFoundError("NNCF package not found")
+
+
 def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, backends: Set[str] = None):
     venv_path = tmp_path / "venv"
-    venv_path.mkdir()
+    venv_path.mkdir(exist_ok=True)
 
     python_executable_with_venv = get_python_executable_with_venv(venv_path)
     pip_with_venv = get_pip_executable_with_venv(venv_path)
@@ -68,7 +73,13 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
         subprocess.check_call(f"{pip_with_venv} install build", shell=True)
 
     run_path = tmp_path / "run"
-    run_path.mkdir()
+    run_path.mkdir(exist_ok=True)
+
+    if package_type in ["build_s", "build_w"]:
+        dist_path = tmp_path / "dist"
+        dist_path.mkdir(exist_ok=True)
+        build_path = tmp_path / "build"
+        build_path.mkdir(exist_ok=True)
 
     if package_type == "pip_pypi":
         run_cmd_line = f"{pip_with_venv} install nncf"
@@ -79,13 +90,19 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
     elif package_type == "pip_git_develop":
         run_cmd_line = f"{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf"
     elif package_type == "build_s":
-        run_cmd_line = f"{python_executable_with_venv} -m build -s"
+        run_cmd_line = f"{python_executable_with_venv} -m build -s --outdir {dist_path}"
     elif package_type == "build_w":
-        run_cmd_line = f"{python_executable_with_venv} -m build -w"
+        run_cmd_line = f"{python_executable_with_venv} -m build -w --outdir {dist_path}"
     else:
-        raise nncf.ValidationError(f"Invalid package type: {package_type}")
+        raise ValueError(f"Invalid package type: {package_type}")
 
     subprocess.run(run_cmd_line, check=True, shell=True, cwd=PROJECT_ROOT)
+
+    if package_type in ["build_s", "build_w"]:
+        package_path = find_file_by_extension(dist_path, ".tar.gz" if package_type == "build_s" else ".whl")
+        cmd_install_package = f"{pip_with_venv} install {package_path}"
+        subprocess.run(cmd_install_package, check=True, shell=True)
+
     if backends:
         # Install backend specific packages with according version from constraints.txt
         packages = [item for b in backends for item in MAP_BACKEND_PACKAGES[b]]
@@ -100,109 +117,12 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
     return venv_path
 
 
-class BaseTensorListComparator(ABC):
-    @classmethod
-    @abstractmethod
-    def _to_numpy(cls, tensor: TensorType) -> np.ndarray:
-        pass
-
-    @classmethod
-    def _check_assertion(
-        cls,
-        test: Union[TensorType, List[TensorType]],
-        reference: Union[TensorType, List[TensorType]],
-        assert_fn: Callable[[np.ndarray, np.ndarray], bool],
-    ):
-        if not isinstance(test, list):
-            test = [test]
-        if not isinstance(reference, list):
-            reference = [reference]
-        assert len(test) == len(reference)
-
-        for x, y in zip(test, reference):
-            x = cls._to_numpy(x)
-            y = cls._to_numpy(y)
-            assert_fn(x, y)
-
-    @classmethod
-    def check_equal(
-        cls,
-        test: Union[TensorType, List[TensorType]],
-        reference: Union[TensorType, List[TensorType]],
-        rtol: float = 1e-1,
-        atol=0,
-    ):
-        cls._check_assertion(test, reference, lambda x, y: np.testing.assert_allclose(x, y, rtol=rtol, atol=atol))
-
-    @classmethod
-    def check_not_equal(
-        cls,
-        test: Union[TensorType, List[TensorType]],
-        reference: Union[TensorType, List[TensorType]],
-        rtol: float = 1e-4,
-    ):
-        cls._check_assertion(
-            test,
-            reference,
-            lambda x, y: np.testing.assert_raises(AssertionError, np.testing.assert_allclose, x, y, rtol=rtol),
-        )
-
-    @classmethod
-    def check_less(
-        cls, test: Union[TensorType, List[TensorType]], reference: Union[TensorType, List[TensorType]], rtol=1e-4
-    ):
-        cls.check_not_equal(test, reference, rtol=rtol)
-        cls._check_assertion(test, reference, np.testing.assert_array_less)
-
-    @classmethod
-    def check_greater(
-        cls, test: Union[TensorType, List[TensorType]], reference: Union[TensorType, List[TensorType]], rtol=1e-4
-    ):
-        cls.check_not_equal(test, reference, rtol=rtol)
-        cls._check_assertion(
-            test, reference, lambda x, y: np.testing.assert_raises(AssertionError, np.testing.assert_array_less, x, y)
-        )
-
-
 def telemetry_send_event_test_driver(mocker, use_nncf_fn: Callable):
     from nncf.telemetry import telemetry
 
     telemetry_send_event_spy = mocker.spy(telemetry, "send_event")
     use_nncf_fn()
     telemetry_send_event_spy.assert_called()
-
-
-def load_json(stats_path: Path):
-    with open(stats_path, "r", encoding="utf8") as json_file:
-        return json.load(json_file)
-
-
-class NumpyEncoder(json.JSONEncoder):
-    """Special json encoder for numpy types"""
-
-    def default(self, o):
-        if isinstance(o, np.integer):
-            return int(o)
-        if isinstance(o, np.floating):
-            return float(o)
-        if isinstance(o, np.ndarray):
-            return o.tolist()
-        return json.JSONEncoder.default(self, o)
-
-
-def dump_to_json(local_path: Path, data: Dict[str, np.ndarray]):
-    with open(local_path, "w", encoding="utf8") as file:
-        json.dump(deepcopy(data), file, indent=4, cls=NumpyEncoder)
-
-
-def compare_stats(expected: Dict[str, np.ndarray], actual: Dict[str, np.ndarray]):
-    assert len(expected) == len(actual)
-    for ref_node_name, ref_stats in expected.items():
-        actual_stats = actual[ref_node_name]
-        for param_name, ref_param in ref_stats.items():
-            actual_param = actual_stats.get(param_name)
-            assert np.array(ref_param).shape == np.array(actual_param).shape
-            assert np.allclose(ref_param, actual_param, atol=1e-5)
 
 
 def get_python_executable_with_venv(venv_path: Path) -> str:
