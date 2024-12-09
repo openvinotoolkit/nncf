@@ -16,10 +16,10 @@ from typing import Dict, Optional, Tuple
 
 import openvino as ov
 import torch
-from tqdm import tqdm
+from rich.progress import track
 from ultralytics.cfg import get_cfg
-from ultralytics.engine.validator import BaseValidator as Validator
 from ultralytics.models.yolo import YOLO
+from ultralytics.models.yolo.segment.val import SegmentationValidator
 from ultralytics.utils import DEFAULT_CFG
 from ultralytics.utils.metrics import ConfusionMatrix
 
@@ -37,7 +37,7 @@ INT8_OV_MODEL_PATH = ROOT / f"{MODEL_NAME}_int8.xml"
 def validate_ov_model(
     ov_model: ov.Model,
     data_loader: torch.utils.data.DataLoader,
-    validator: Validator,
+    validator: SegmentationValidator,
     num_samples: Optional[int] = None,
 ) -> Tuple[Dict, int, int]:
     validator.seen = 0
@@ -47,7 +47,7 @@ def validate_ov_model(
     validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
     compiled_model = ov.compile_model(ov_model, device_name="CPU")
     num_outputs = len(compiled_model.outputs)
-    for batch_i, batch in enumerate(data_loader):
+    for batch_i, batch in enumerate(track(data_loader, description="Validating")):
         if num_samples is not None and batch_i == num_samples:
             break
         batch = validator.preprocess(batch)
@@ -65,12 +65,17 @@ def validate_ov_model(
     return stats, validator.seen, validator.nt_per_class.sum()
 
 
-def run_benchmark(model_path: str, config) -> float:
-    command = f"benchmark_app -m {model_path} -d CPU -api async -t 30"
-    command += f' -shape "[1,3,{config.imgsz},{config.imgsz}]"'
-    cmd_output = subprocess.check_output(command, shell=True)  # nosec
-
-    match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))
+def run_benchmark(model_path: Path, config) -> float:
+    command = [
+        "benchmark_app",
+        "-m", model_path.as_posix(),
+        "-d", "CPU",
+        "-api", "async",
+        "-t", "30",
+        "-shape", str([1, 3, config.imgsz, config.imgsz]),
+    ]  # fmt: skip
+    cmd_output = subprocess.check_output(command, text=True)
+    match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
     return float(match.group(1))
 
 
@@ -96,11 +101,11 @@ print(f"{int8_fps} FPS")
 validator, data_loader = prepare_validation(YOLO(ROOT / f"{MODEL_NAME}.pt"), args)
 
 print("[5/7] Validate OpenVINO FP32 model:")
-fp32_stats, total_images, total_objects = validate_ov_model(fp32_ov_model, tqdm(data_loader), validator)
+fp32_stats, total_images, total_objects = validate_ov_model(fp32_ov_model, data_loader, validator)
 print_statistics(fp32_stats, total_images, total_objects)
 
 print("[6/7] Validate OpenVINO INT8 model:")
-int8_stats, total_images, total_objects = validate_ov_model(int8_ov_model, tqdm(data_loader), validator)
+int8_stats, total_images, total_objects = validate_ov_model(int8_ov_model, data_loader, validator)
 print_statistics(int8_stats, total_images, total_objects)
 
 print("[7/7] Report:")

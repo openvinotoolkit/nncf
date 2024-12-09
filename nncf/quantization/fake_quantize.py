@@ -122,11 +122,13 @@ def tune_range(
         fval = -left_border * s
         qval = fns.round(fval)
 
-    ra = fns.where(qval < level_high, qval / (qval - level_high) * right_border, left_border)
     with warnings.catch_warnings():
         # If `qval` is 0 `rb` will equal `right_border`, and we don't want to show an unnecessary division by 0 warning
+        # The same for (qval - level_high)
         warnings.simplefilter("ignore")
+        ra_then_result = qval / (qval - level_high) * right_border
         rb_then_result = (qval - level_high) / qval * left_border
+    ra = fns.where(qval < level_high, ra_then_result, left_border)
     rb = fns.where(qval > 0.0, rb_then_result, right_border)
 
     range_a = right_border - ra

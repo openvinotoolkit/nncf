@@ -249,6 +249,7 @@ def main():
         "NUM_STREAMS": "1",
         "CACHE_DIR": "",
         "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0",
+        "KV_CACHE_PRECISION": "f16",
     }
     model = OVModelForCausalLM.from_pretrained(
         model_id,

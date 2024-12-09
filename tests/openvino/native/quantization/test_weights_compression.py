@@ -44,9 +44,9 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import resh
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
-from tests.cross_fw.shared.helpers import compare_stats
-from tests.cross_fw.shared.helpers import dump_to_json
-from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.comparator import compare_stats
+from tests.cross_fw.shared.json import dump_to_json
+from tests.cross_fw.shared.json import load_json
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel

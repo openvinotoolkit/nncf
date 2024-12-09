@@ -21,8 +21,8 @@ from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import QuantizationMode
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from tests.cross_fw.shared.helpers import compare_stats
-from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.comparator import compare_stats
+from tests.cross_fw.shared.json import load_json
 from tests.openvino.native.common import convert_torch_model
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.common import get_dataset_for_test

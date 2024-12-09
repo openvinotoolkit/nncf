@@ -11,9 +11,13 @@
 [Model Zoo](./docs/ModelZoo.md)
 
 [![GitHub Release](https://img.shields.io/github/v/release/openvinotoolkit/nncf?color=green)](https://github.com/openvinotoolkit/nncf/releases)
-[![Website](https://img.shields.io/website?up_color=blue&up_message=docs&url=https%3A%2F%2Fdocs.openvino.ai%2Flatest%2Fopenvino_docs_model_optimization_guide.html)](https://docs.openvino.ai/nncf)
+[![Website](https://img.shields.io/website?up_color=blue&up_message=docs&url=https%3A%2F%2Fdocs.openvino.ai%2Fnncf)](https://docs.openvino.ai/nncf)
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](LICENSE)
 [![PyPI Downloads](https://static.pepy.tech/badge/nncf)](https://pypi.org/project/nncf/)
+
+![Python](https://img.shields.io/badge/python-3.9+-blue)
+![Backends](https://img.shields.io/badge/backends-openvino_|_pytorch_|_onnx_|_tensorflow-orange)
+![OS](https://img.shields.io/badge/OS-Linux_|_Windows_|_MacOS-blue)
 
 </div>
 
@@ -394,18 +398,14 @@ A list of notebooks demonstrating OpenVINO conversion and inference together wit
 | [InstructPix2Pix](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/instruct-pix2pix-image-editing)                                                                                                                                                                                                                     |            Post-Training Quantization             | OpenVINO  |                            Image-to-Image                            |
 | [CLIP](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/clip-zero-shot-image-classification)                                                                                                                                                                                                                           |            Post-Training Quantization             | OpenVINO  |                            Image-to-Text                             |
 | [BLIP](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/blip-visual-language-processing)                                                                                                                                                                                                                               |            Post-Training Quantization             | OpenVINO  |                            Image-to-Text                             |
-| [Segmind-VegaRT](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/stable-diffusion-xl/segmind-vegart.ipynb)                                                                                                                                                                                                            |            Post-Training Quantization             | OpenVINO  |                            Text-to-Image                             |
 | [Latent Consistency Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/latent-consistency-models-image-generation)                                                                                                                                                                                                |            Post-Training Quantization             | OpenVINO  |                            Text-to-Image                             |
-| [Würstchen](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/wuerstchen-image-generation)                                                                                                                                                                                                                              |            Post-Training Quantization             | OpenVINO  |                            Text-to-Image                             |
 | [ControlNet QR Code Monster](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/qrcode-monster)                                                                                                                                                                                                                          |            Post-Training Quantization             | OpenVINO  |                            Text-to-Image                             |
 | [SDXL-turbo](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/sdxl-turbo)                                                                                                                                                                                                                                              |            Post-Training Quantization             | OpenVINO  |                   Text-to-Image,<br>Image-to-Image                   |
-| [ImageBind](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/image-bind)                                                                                                                                                                                                                                               |            Post-Training Quantization             | OpenVINO  |                        Multi-Modal Retrieval                         |
 | [Distil-Whisper](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/distil-whisper-asr)                                                                                                                                                                                                                                  |            Post-Training Quantization             | OpenVINO  |                            Speech-to-Text                            |
 | [Whisper](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/whisper-subtitles-generation)<br>[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/whisper-subtitles-generation/whisper-convert.ipynb) |            Post-Training Quantization             | OpenVINO  |                            Speech-to-Text                            |
 | [MMS Speech Recognition](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/mms-massively-multilingual-speech)                                                                                                                                                                                                           |            Post-Training Quantization             | OpenVINO  |                            Speech-to-Text                            |
 | [Grammar Error Correction](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/grammar-correction)                                                                                                                                                                                                                        |            Post-Training Quantization             | OpenVINO  |                       NLP, Grammar Correction                        |
 | [LLM Instruction Following](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-question-answering)                                                                                                                                                                                                                   |                Weight Compression                 | OpenVINO  |                      NLP, Instruction Following                      |
-| [Dolly 2.0](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/dolly-2-instruction-following)                                                                                                                                                                                                                            |                Weight Compression                 | OpenVINO  |                      NLP, Instruction Following                      |
 | [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-chatbot)                                                                                                                                                                                                                                          |                Weight Compression                 | OpenVINO  |                            NLP, Chat Bot                             |
 
 ### Post-Training Quantization Examples
@@ -471,17 +471,8 @@ NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
 conda install -c conda-forge nncf
 ```
 
-### System requirements
-
-- Ubuntu\* 18.04 or later (64-bit)
-- Python\* 3.9 or later
-- Supported frameworks:
-  - PyTorch\* >=2.4, <2.6
-  - TensorFlow\* >=2.8.4, <=2.15.1
-  - ONNX\* ==1.17.0
-  - OpenVINO\* >=2022.3.0
-
-This repository is tested on Python* 3.10.14, PyTorch* 2.5.0 (NVidia CUDA\* Toolkit 12.4) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
+System requirements of NNCF correspond to the used backend. System requirements for each backend and
+the matrix of corresponding versions can be found in [installation.md](./docs/Installation.md).
 
 ## NNCF Compressed NNCF Model Zoo
 
