@@ -20,6 +20,7 @@ class TensorBackend(Enum):
     """
 
     numpy = auto()
+    tf = auto()
     torch = auto()
 
 
