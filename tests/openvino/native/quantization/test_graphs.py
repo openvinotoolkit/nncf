@@ -18,6 +18,7 @@ import openvino as ov
 import pytest
 
 from nncf import Dataset
+from nncf.common.model import ModelWrapper
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.quantization.quantize_model import quantize_impl
@@ -137,10 +138,12 @@ def smooth_quant_model(ov_model: ov.Model, q_params: Dict, quantize=True):
 
     smooth_quant_algo = SmoothQuant(subset_size=1)
     statistics_aggregator = OVStatisticsAggregator(dataset)
-    statistic_points = smooth_quant_algo.get_statistic_points(ov_model, graph)
+    statistic_points = smooth_quant_algo.get_statistic_points(ModelWrapper(ov_model, graph))
     statistics_aggregator.register_statistic_points(statistic_points)
     statistics_aggregator.collect_statistics(ov_model, graph)
-    modified_model = smooth_quant_algo.apply(ov_model, graph, statistics_aggregator.statistic_points)
+    modified_model = smooth_quant_algo.apply(
+        ModelWrapper(ov_model, graph), statistics_aggregator.statistic_points
+    ).model
 
     if quantize:
         modified_model = quantize_model(modified_model, q_params)

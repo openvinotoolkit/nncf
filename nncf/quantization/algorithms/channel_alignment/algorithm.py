@@ -25,6 +25,7 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
+from nncf.common.model import ModelWrapper
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -381,8 +382,9 @@ class ChannelAlignment(Algorithm):
             node_in,
         )
 
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-        self._set_backend_entity(model)
+    def get_statistic_points(self, model_wrapper: ModelWrapper) -> StatisticPointsContainer:
+        self._set_backend_entity(model_wrapper.model)
+        graph = model_wrapper.graph
 
         statistic_container = StatisticPointsContainer()
         for conv_in, add_in, _ in self._get_node_pairs(graph):
