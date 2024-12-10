@@ -184,6 +184,14 @@ def llm_compression_synthetic() -> Dict[str, float]:
     return {"word_count": len(result.split())}
 
 
+def fp8_llm_quantization() -> Dict[str, float]:
+    from examples.llm_compression.openvino.smollm2_360m_fp8.main import main as fp8_llm_quantization_main
+
+    result = fp8_llm_quantization_main()
+
+    return {"answers": list(result.values())}
+
+
 def post_training_quantization_torch_fx_resnet18():
     from examples.post_training_quantization.torch_fx.resnet18.main import main as resnet18_main
 
@@ -277,6 +285,14 @@ def main(argv):
     parser.add_argument("--data", help="Path to datasets", default=None, required=False)
     parser.add_argument("-o", "--output", help="Path to the json file to save example metrics", required=True)
     args = parser.parse_args(args=argv)
+
+    # Disable progress bar for fastdownload module
+    try:
+        import fastprogress.fastprogress
+
+        fastprogress.fastprogress.NO_BAR = True
+    except ImportError:
+        pass
 
     if args.name == "quantization_aware_training_torch_anomalib":
         metrics = globals()[args.name](args.data)

@@ -14,6 +14,7 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Unio
 
 import nncf
 from nncf.common.logging import nncf_logger
+from nncf.common.logging.track_progress import track
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.timer import timer
@@ -276,20 +277,20 @@ class Evaluator:
 
         :param prepared_model: Model to infer.
         :param dataset: Dataset to collect values.
-        :param indices: The zero-based indices of data items that should be selected from
-            the dataset.
+        :param indices: The zero-based indices of data items that should be selected from the dataset.
         :return: Collected values.
         """
+        total = len(indices) if indices is not None else dataset.get_length()
         if self._metric_mode:
             # Collect metrics for each item
             values_for_each_item = [
                 self._validation_fn(prepared_model.model_for_inference, [data_item])[0]
-                for data_item in dataset.get_data(indices)
+                for data_item in track(dataset.get_data(indices), total=total, description="Collecting metrics")
             ]
         else:
             # Collect outputs for each item
             values_for_each_item = []
-            for data_item in dataset.get_inference_data(indices):
+            for data_item in track(dataset.get_inference_data(indices), total=total, description="Collecting outputs"):
                 logits = prepared_model(data_item)
                 values_for_each_item.append(list(logits.values()))
 
@@ -307,8 +308,7 @@ class Evaluator:
 
         :param model: A target model.
         :param dataset: Dataset to collect values.
-        :param indices: The zero-based indices of data items that should be selected from
-            the dataset.
+        :param indices: The zero-based indices of data items that should be selected from the dataset.
         :return: Collected values.
         """
         prepared_model = self.prepare_model(model)

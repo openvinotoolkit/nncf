@@ -1,0 +1,21 @@
+{
+    "kqv_weight": "PTConstNoopMetatype",
+    "x": "PTInputNoopMetatype",
+    "linear": "PTLinearMetatype",
+    "slice_1": "PTGatherMetatype",
+    "slice_2": "PTGatherMetatype",
+    "slice_3": "PTGatherMetatype",
+    "slice_4": "PTGatherMetatype",
+    "slice_5": "PTGatherMetatype",
+    "slice_6": "PTGatherMetatype",
+    "slice_7": "PTGatherMetatype",
+    "slice_8": "PTGatherMetatype",
+    "slice_9": "PTGatherMetatype",
+    "transpose": "PTTransposeMetatype",
+    "matmul": "PTMatMulMetatype",
+    "div_": "PTDivMetatype",
+    "softmax": "PTSoftmaxMetatype",
+    "transpose_1": "PTTransposeMetatype",
+    "matmul_1": "PTMatMulMetatype",
+    "output_1": "PTOutputNoopMetatype"
+}
