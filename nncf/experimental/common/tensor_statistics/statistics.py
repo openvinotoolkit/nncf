@@ -13,32 +13,11 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Callable, ClassVar, Dict, List, Tuple
+from typing import Any, ClassVar, Dict, List, Tuple
 
 import nncf
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
-from nncf.tensor.definitions import TensorBackend
-
-
-def get_tensor_method(tensor_backend: TensorBackend) -> Callable:
-    """
-    Returns the appropriate tensor creation function based on the backend.
-
-    :param tensor_backend: Tensor backend type.
-    :return: Function to create a tensor.
-    """
-    try:
-        if tensor_backend == TensorBackend.numpy:
-            import numpy as np
-
-            return np.array
-        if tensor_backend == TensorBackend.torch:
-            import torch
-
-            return torch.tensor
-    except ImportError as e:
-        raise RuntimeError(f"Failed to import the required module: {e}")
 
 
 class TensorStatistic:
@@ -140,8 +119,13 @@ class MeanTensorStatistic(TensorStatistic):
         return False
 
     def get_data_to_dump(self) -> Dict[str, Tensor]:
-        tensor_method = get_tensor_method(self.mean_values.backend)
-        return {self.MEAN_STAT: self.mean_values, self.SHAPE_STAT: Tensor(tensor_method(self.shape))}
+        backend = self.mean_values.backend
+        dtype = self.mean_values.dtype
+        device = self.mean_values.device
+        return {
+            self.MEAN_STAT: self.mean_values,
+            self.SHAPE_STAT: fns.tensor(self.shape, backend, dtype=dtype, device=device),
+        }
 
     def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
         self.mean_values = loaded_data[self.MEAN_STAT]
@@ -314,10 +298,14 @@ class WCTensorStatistic(TensorStatistic):
         return mean_values_equal
 
     def get_data_to_dump(self) -> Dict[str, Tensor]:
-        tensor_method = get_tensor_method(self.mean_values[0].backend)
+        backend = self.mean_values[0].backend
+        dtype = self.mean_values[0].dtype
+        device = self.mean_values[0].device
         return {
             self.MEAN_STAT: fns.stack(self.mean_values),
-            self.SHAPE_STAT: Tensor(tensor_method([[dim.data for dim in shape] for shape in self.shape_values])),
+            self.SHAPE_STAT: fns.tensor(
+                [[dim.data for dim in shape] for shape in self.shape_values], backend, dtype=dtype, device=device
+            ),
         }
 
     def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
