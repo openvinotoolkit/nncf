@@ -109,7 +109,7 @@ def load_from_dir(dir_path: Path, backend: TensorBackend) -> Tuple[Dict[str, Dic
             raise nncf.ValidationError(
                 f"No statistics file was found for {original_name}. Probably, metadata is corrupted."
             )
-        statistics[original_name] = fns.load_file(statistics_file, backend)
+        statistics[original_name] = fns.io.load_file(statistics_file, backend)
     return statistics, {key: value for key, value in metadata.items() if key != "mapping"}
 
 
@@ -138,7 +138,7 @@ def dump_to_dir(
         metadata["mapping"][unique_sanitized_name] = original_name
 
         try:
-            fns.save_file(statistics_value, file_path)
+            fns.io.save_file(statistics_value, file_path)
         except Exception as e:
             raise nncf.InternalError(f"Failed to write data to file {file_path}: {e}")
 

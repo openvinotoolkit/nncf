@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nncf.tensor.functions import io as io
 from nncf.tensor.functions import linalg as linalg
 from nncf.tensor.functions.numeric import abs as abs
 from nncf.tensor.functions.numeric import all as all
@@ -33,7 +34,6 @@ from nncf.tensor.functions.numeric import from_numpy as from_numpy
 from nncf.tensor.functions.numeric import isclose as isclose
 from nncf.tensor.functions.numeric import isempty as isempty
 from nncf.tensor.functions.numeric import item as item
-from nncf.tensor.functions.numeric import load_file as load_file
 from nncf.tensor.functions.numeric import log2 as log2
 from nncf.tensor.functions.numeric import logical_or as logical_or
 from nncf.tensor.functions.numeric import masked_mean as masked_mean
@@ -53,7 +53,6 @@ from nncf.tensor.functions.numeric import power as power
 from nncf.tensor.functions.numeric import quantile as quantile
 from nncf.tensor.functions.numeric import reshape as reshape
 from nncf.tensor.functions.numeric import round as round
-from nncf.tensor.functions.numeric import save_file as save_file
 from nncf.tensor.functions.numeric import searchsorted as searchsorted
 from nncf.tensor.functions.numeric import squeeze as squeeze
 from nncf.tensor.functions.numeric import stack as stack
@@ -70,12 +69,14 @@ from nncf.tensor.functions.numeric import zeros_like as zeros_like
 def _initialize_backends():
     import contextlib
 
+    import nncf.tensor.functions.numpy_io
     import nncf.tensor.functions.numpy_linalg
     import nncf.tensor.functions.numpy_numeric
 
     with contextlib.suppress(ImportError):
+        import nncf.tensor.functions.torch_io
         import nncf.tensor.functions.torch_linalg
-        import nncf.tensor.functions.torch_numeric  # noqa: F401
+        import nncf.tensor.functions.torch_numeric  # noqa F401
 
 
 _initialize_backends()

@@ -11,8 +11,7 @@
 
 import functools
 from collections import deque
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -22,7 +21,6 @@ from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
 from nncf.tensor.definitions import TensorDeviceType
 from nncf.tensor.definitions import TypeInfo
-from nncf.tensor.functions.dispatcher import dispatch_dict
 from nncf.tensor.functions.dispatcher import dispatch_list
 from nncf.tensor.functions.dispatcher import get_numeric_backend_fn
 from nncf.tensor.functions.dispatcher import tensor_guard
@@ -907,38 +905,3 @@ def ceil(a: Tensor) -> Tensor:
     :return: An array of the same type as a, containing the ceiling values.
     """
     return Tensor(ceil(a.data))
-
-
-def load_file(
-    file_path: Path,
-    backend: TensorBackend,
-    *,
-    device: Optional[TensorDeviceType] = None,
-) -> Dict[str, Tensor]:
-    """
-    Loads a file containing tensor data and returns a dictionary of tensors.
-
-    :param file_path: The path to the file to be loaded.
-    :param backend: The backend type to determine the loading function.
-    :param device: The device on which the tensor will be allocated, If device is not given,
-        then the default device is determined by backend.
-    :return: A dictionary where the keys are tensor names and the values are Tensor objects.
-    """
-    loaded_dict = get_numeric_backend_fn("load_file", backend)(file_path, device=device)
-    return {key: Tensor(val) for key, val in loaded_dict.items()}
-
-
-@functools.singledispatch
-def save_file(
-    data: Dict[str, Tensor],
-    file_path: Path,
-) -> None:
-    """
-    Saves a dictionary of tensors to a file.
-
-    :param data: A dictionary where the keys are tensor names and the values are Tensor objects.
-    :param file_path: The path to the file where the tensor data will be saved.
-    """
-    if isinstance(data, (dict)):
-        return dispatch_dict(save_file, data, file_path)
-    raise NotImplementedError(f"Function `save_file` is not implemented for {type(data)}")

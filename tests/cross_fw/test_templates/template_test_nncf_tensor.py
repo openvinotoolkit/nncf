@@ -1701,8 +1701,8 @@ class TemplateTestNNCFTensorOperators:
         tensor_key, tensor_filename = "tensor_key", "test_tensor"
         tensor = Tensor(self.to_tensor(data))
         stat = {tensor_key: tensor}
-        fns.save_file(stat, tmp_path / tensor_filename)
-        loaded_stat = fns.load_file(tmp_path / tensor_filename, backend=tensor.backend, device=tensor.device)
+        fns.io.save_file(stat, tmp_path / tensor_filename)
+        loaded_stat = fns.io.load_file(tmp_path / tensor_filename, backend=tensor.backend, device=tensor.device)
         assert fns.allclose(stat[tensor_key], loaded_stat[tensor_key])
         assert isinstance(loaded_stat[tensor_key], Tensor)
         assert loaded_stat[tensor_key].backend == tensor.backend

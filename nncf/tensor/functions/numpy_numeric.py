@@ -9,11 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 import numpy as np
-from safetensors.numpy import load_file as np_load_file
-from safetensors.numpy import save_file as np_save_file
 
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
@@ -433,14 +431,3 @@ def _(a: Union[np.ndarray, np.generic]) -> Union[np.ndarray, np.generic]:
 @register_numpy_types(numeric.ceil)
 def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
     return np.ceil(a)
-
-
-def load_file(file_path: str, *, device: Optional[TensorDeviceType] = None) -> Dict[str, np.ndarray]:
-    if device is not None and device != TensorDeviceType.CPU:
-        raise ValueError("numpy_numeric.load_file only supports CPU device.")
-    return np_load_file(file_path)
-
-
-@register_numpy_types(numeric.save_file)
-def _(data: Dict[str, np.ndarray], file_path: str) -> None:
-    return np_save_file(data, file_path)

@@ -13,6 +13,7 @@ from typing import Callable, Dict, List
 
 import numpy as np
 
+import nncf
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorBackend
 
@@ -57,7 +58,8 @@ def dispatch_dict(fn: "functools._SingleDispatchCallable", tensor_dict: Dict[str
         if tensor_backend is None:
             tensor_backend = type(tensor.data)
         else:
-            assert tensor_backend is type(tensor.data)
+            if tensor_backend is not type(tensor.data):
+                raise nncf.InternalError("All tensors in the dictionary should have the same backend")
         unwrapped_dict[key] = tensor.data
 
     return fn.dispatch(tensor_backend)(unwrapped_dict, *args, **kwargs)
@@ -95,3 +97,21 @@ def get_numeric_backend_fn(fn_name: str, backend: TensorBackend) -> Callable:
         from nncf.tensor.functions import torch_numeric
 
         return getattr(torch_numeric, fn_name)
+
+
+def get_io_backend_fn(fn_name: str, backend: TensorBackend) -> Callable:
+    """
+    Returns a io function based on the provided function name and backend type.
+
+    :param fn_name: The name of the numeric function.
+    :param backend: The backend type for which the function is required.
+    :return: The backend-specific io function.
+    """
+    if backend == TensorBackend.numpy:
+        from nncf.tensor.functions import numpy_io
+
+        return getattr(numpy_io, fn_name)
+    if backend == TensorBackend.torch:
+        from nncf.tensor.functions import torch_io
+
+        return getattr(torch_io, fn_name)
