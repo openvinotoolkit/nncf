@@ -1514,6 +1514,19 @@ class TemplateTestNNCFTensorOperators:
             assert tensor_a.shape == shape
             assert fns.all(tensor_a == 0)
 
+    def test_fn_ones(self):
+        shape = (2, 2)
+        for dtype in TensorDataType:
+            if dtype == TensorDataType.bfloat16 and self.backend() == TensorBackend.numpy:
+                continue
+            tensor_a = fns.ones(shape, backend=self.backend(), dtype=dtype, device=self.device())
+            assert isinstance(tensor_a, Tensor)
+            assert tensor_a.device == self.device()
+            assert tensor_a.backend == self.backend()
+            assert tensor_a.dtype == dtype
+            assert tensor_a.shape == shape
+            assert fns.all(tensor_a == 1)
+
     @pytest.mark.parametrize(
         "n, m, ref",
         (
@@ -1695,3 +1708,9 @@ class TemplateTestNNCFTensorOperators:
         for act, abs_ref in zip(res, abs_res_ref):
             assert isinstance(act, Tensor)
             assert fns.allclose(fns.abs(act), abs_ref, atol=1e-7)
+
+    @pytest.mark.parametrize("a,ref", [([1], [1.0]), ([2, 4], [0.5, 0.25])])
+    def test_reciprocal(self, a, ref):
+        t_a = Tensor(self.to_tensor(a)).astype(TensorDataType.float32)
+        res = fns.reciprocal(t_a)
+        assert fns.allclose(res, Tensor(self.to_tensor(ref)).astype(TensorDataType.float32))

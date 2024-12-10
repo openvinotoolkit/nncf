@@ -1078,32 +1078,47 @@ def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
     assert ref_e8m0_nodes == names_e8m0
 
 
-@pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
-def test_np_ov_compression_decompression(mode):
-    sz = 60
-    w = np.arange(-sz, sz).reshape(2, sz).astype(np.float32) / 9.0
+@pytest.mark.parametrize("mode", [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM])
+@pytest.mark.parametrize(
+    "w,s,zp",
+    [
+        (
+            np.array([[1.4372410774230957]], np.float32),
+            np.array([[-0.9581607580184937]], np.float32),
+            np.array([[1]], np.int32),
+        ),
+        (np.arange(-60, 60).reshape(2, 60).astype(np.float32) / 9.0, None, None),
+    ],
+)
+def test_np_ov_compression_decompression(mode, w, s, zp):
     w = Tensor(w)
+    if s is not None:
+        s = Tensor(s)
+    if mode == CompressWeightsMode.INT4_SYM:
+        zp = None
+    if zp is not None:
+        zp = Tensor(zp)
 
     config = WeightCompressionConfig(mode)
 
-    compressed_weighs, scale, zp = do_int_quantization(w, -1, config, invert_scale=True)
-    decompressed_weighs = do_int_dequantization(compressed_weighs, scale, zp)
+    compressed_weights, s, zp = do_int_quantization(w, -1, config, precomputed_scale=s, precomputed_zero_point=zp)
+    decompressed_weights = do_int_dequantization(compressed_weights, s, zp)
 
-    compressed_weighs = compressed_weighs.data
-    decompressed_weighs = decompressed_weighs.data
+    compressed_weights = compressed_weights.data
+    decompressed_weights = decompressed_weights.data
     zp_shape = zp.shape if zp is not None else None
 
-    compress = OVWeightCompressionAlgoBackend.get_compress_pipeline(config, w.shape, scale.shape, zp_shape)
+    compress = OVWeightCompressionAlgoBackend.get_compress_pipeline(config, w.shape, s.shape, zp_shape)
     compress_decompress = OVWeightCompressionAlgoBackend.get_compress_decompress_pipeline(
-        config, w.shape, scale.shape, zp_shape
+        config, w.shape, s.shape, zp_shape
     )
 
-    params = [w.data, scale.data, zp.data] if zp is not None else [w.data, scale.data]
-    compressed_weighs_ov = compress(params)
-    decompressed_weighs_ov = compress_decompress(params)
+    params = [w.data, s.data, zp.data] if zp is not None else [w.data, s.data]
+    compressed_weights_ov = compress(params)
+    decompressed_weights_ov = compress_decompress(params)
 
-    assert np.allclose(compressed_weighs, compressed_weighs_ov)
-    assert np.allclose(decompressed_weighs, decompressed_weighs_ov)
+    assert np.allclose(compressed_weights, compressed_weights_ov, atol=0)
+    assert np.allclose(decompressed_weights, decompressed_weights_ov, atol=0)
 
 
 @pytest.mark.parametrize(
