@@ -25,17 +25,23 @@ class TensorStatistic:
 
     TENSOR_STATISTIC_OUTPUT_KEY = "tensor_statistic_output"
 
-    def get_data(self) -> Dict[str, Any]:
+    def get_data(self, is_serialized: bool = False) -> Dict[str, Any]:
         """
-        Retrieves the data of the tensor statistics.
+        Retrieves the data of the tensor statistics. If `is_serialized` is True,
+        the data is prepared for serialization by including only Tensor instances.
 
-        :return: Dictionary with keys and their associated data.
+        :param is_serialized: If True, the data is prepared for serialization by
+            including only Tensor instances.
+        :return: Dictionary with keys and their associated data. If `is_serialized`
+            is True, the dictionary will contain only Tensor instances.
         """
+        if is_serialized:
+            return self._get_serialized_data()
         return {key: getattr(self, key) for key in self.keys()}
 
-    def get_data_to_dump(self) -> Dict[str, Tensor]:
+    def _get_serialized_data(self) -> Dict[str, Tensor]:
         """
-        Prepares the data for serialization.
+        Prepares the data for serialization by including only Tensor instances.
 
         :return: Dictionary with data for serialization.
         """
@@ -118,7 +124,7 @@ class MeanTensorStatistic(TensorStatistic):
             return self.shape == other.shape and fns.allclose(self.mean_values, other.mean_values)
         return False
 
-    def get_data_to_dump(self) -> Dict[str, Tensor]:
+    def _get_serialized_data(self) -> Dict[str, Tensor]:
         backend = self.mean_values.backend
         dtype = self.mean_values.dtype
         device = self.mean_values.device
@@ -189,7 +195,7 @@ class PercentileTensorStatistic(TensorStatistic):
                 percentile_vs_values_dict[percentile] = value
         return cls(percentile_vs_values_dict=percentile_vs_values_dict)
 
-    def get_data_to_dump(self) -> Dict[str, Tensor]:
+    def _get_serialized_data(self) -> Dict[str, Tensor]:
         return self.PERCENTILE_VS_VALUE_DICT
 
     def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
@@ -297,7 +303,7 @@ class WCTensorStatistic(TensorStatistic):
         )
         return mean_values_equal
 
-    def get_data_to_dump(self) -> Dict[str, Tensor]:
+    def _get_serialized_data(self) -> Dict[str, Tensor]:
         backend = self.mean_values[0].backend
         dtype = self.mean_values[0].dtype
         device = self.mean_values[0].device
