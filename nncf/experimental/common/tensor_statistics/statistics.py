@@ -12,7 +12,9 @@
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import asdict
 from dataclasses import dataclass
+from dataclasses import fields
 from typing import Any, ClassVar, Dict, List, Tuple
 
 import nncf
@@ -20,10 +22,11 @@ from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
 
+@dataclass
 class TensorStatistic:
     """Base class that stores statistic data"""
 
-    TENSOR_STATISTIC_OUTPUT_KEY = "tensor_statistic_output"
+    TENSOR_STATISTIC_OUTPUT_KEY: ClassVar[str] = "tensor_statistic_output"
 
     def get_data(self, is_serialized: bool = False) -> Dict[str, Any]:
         """
@@ -36,8 +39,8 @@ class TensorStatistic:
             is True, the dictionary will contain only Tensor instances.
         """
         if is_serialized:
-            return self._get_serialized_data()
-        return {key: getattr(self, key) for key in self.keys()}
+            return self._get_serialized_data()  # Dict[str, Tensor]
+        return asdict(self)
 
     def _get_serialized_data(self) -> Dict[str, Tensor]:
         """
@@ -46,8 +49,7 @@ class TensorStatistic:
         :return: Dictionary with data for serialization.
         """
         serialized_data = {}
-        for key in self.keys():
-            value = getattr(self, key)
+        for key, value in asdict(self).items():
             if isinstance(value, Tensor):
                 serialized_data[key] = value
             else:
@@ -60,17 +62,13 @@ class TensorStatistic:
 
         :param: Data to load.
         """
-        for key in self.keys():
+        for key in (field.name for field in fields(self)):
             setattr(self, key, loaded_data[key])
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
-        args = {key: config[key] for key in cls.keys()}  # noqa: SIM118
+        args = {key: config[key] for key in (field.name for field in fields(cls))}
         return cls(**args)
-
-    @classmethod
-    def keys(cls) -> Tuple[str]:
-        return ()
 
 
 @dataclass
@@ -80,10 +78,6 @@ class MinMaxTensorStatistic(TensorStatistic):
 
     min_values: Tensor
     max_values: Tensor
-
-    @classmethod
-    def keys(cls):
-        return (cls.MIN_STAT, cls.MAX_STAT)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MinMaxTensorStatistic):
@@ -96,10 +90,6 @@ class AbsMaxTensorStatistic(TensorStatistic):
     ABS_MAX_STAT: ClassVar[str] = "abs_max"
 
     abs_max: Tensor
-
-    @classmethod
-    def keys(cls):
-        return (cls.ABS_MAX_STAT,)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, AbsMaxTensorStatistic):
@@ -114,10 +104,6 @@ class MeanTensorStatistic(TensorStatistic):
 
     mean_values: Tensor
     shape: Tuple[int, ...]
-
-    @classmethod
-    def keys(cls):
-        return (cls.MEAN_STAT, cls.SHAPE_STAT)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanTensorStatistic):
@@ -146,10 +132,6 @@ class MedianMADTensorStatistic(TensorStatistic):
     median_values: Tensor
     mad_values: Tensor
 
-    @classmethod
-    def keys(cls):
-        return (cls.MEDIAN_VALUES_STAT, cls.MAD_VALUES_STAT)
-
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MedianMADTensorStatistic):
             return fns.allclose(self.median_values, other.median_values) and fns.allclose(
@@ -170,10 +152,6 @@ class PercentileTensorStatistic(TensorStatistic):
     PERCENTILE_VS_VALUE_DICT: ClassVar[str] = "percentile_vs_values_dict"
 
     percentile_vs_values_dict: Dict[str, Tensor]
-
-    @classmethod
-    def keys(cls):
-        return (cls.PERCENTILE_VS_VALUE_DICT,)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, PercentileTensorStatistic):
@@ -208,10 +186,6 @@ class RawTensorStatistic(TensorStatistic):
 
     values: Tensor
 
-    @classmethod
-    def keys(cls):
-        return (cls.VALUES_STATS,)
-
     def __eq__(self, other: RawTensorStatistic) -> bool:
         if isinstance(other, RawTensorStatistic):
             return fns.allclose(self.values, other.values)
@@ -223,10 +197,6 @@ class HessianTensorStatistic(TensorStatistic):
     HESSIAN_INPUT_ACTIVATION_STATS: ClassVar[str] = "hessian"
 
     hessian: Tensor
-
-    @classmethod
-    def keys(cls):
-        return (cls.HESSIAN_INPUT_ACTIVATION_STATS,)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, HessianTensorStatistic):
@@ -240,10 +210,6 @@ class MeanVarianceTensorStatistic(TensorStatistic):
 
     mean_variance: Tensor
 
-    @classmethod
-    def keys(cls):
-        return (cls.MEAN_VARIANCE_STAT,)
-
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanVarianceTensorStatistic):
             return fns.allclose(self.mean_variance, other.mean_variance)
@@ -256,10 +222,6 @@ class MaxVarianceTensorStatistic(TensorStatistic):
 
     max_variance: Tensor
 
-    @classmethod
-    def keys(cls):
-        return (cls.MAX_VARIANCE_STAT,)
-
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MaxVarianceTensorStatistic):
             return fns.allclose(self.max_variance, other.max_variance)
@@ -271,10 +233,6 @@ class MeanMagnitudeTensorStatistic(TensorStatistic):
     MEAN_MAGNITUDE_STAT: ClassVar[str] = "mean_magnitude"
 
     mean_magnitude: Tensor
-
-    @classmethod
-    def keys(cls):
-        return (cls.MEAN_MAGNITUDE_STAT,)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanMagnitudeTensorStatistic):
@@ -289,10 +247,6 @@ class WCTensorStatistic(TensorStatistic):
 
     mean_values: List[Tensor]
     shape_values: List[Tuple[Tensor]]
-
-    @classmethod
-    def keys(cls):
-        return (cls.MEAN_STAT, cls.SHAPE_STAT)
 
     def __eq__(self, other: Any) -> bool:
         shapes_equal = all(self.shapes[i] == other.shapes[i] for i in range(len(self.mean_values)))

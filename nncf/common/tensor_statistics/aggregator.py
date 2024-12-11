@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any, Dict, Optional, TypeVar
 
 import nncf
-import nncf.common.tensor_statistics.statistics_serializer as statistics_serializer
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -25,6 +24,8 @@ from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics_serializer import dump_statistics_to_dir
+from nncf.common.tensor_statistics.statistics_serializer import load_statistics_from_dir
 from nncf.common.utils.backend import BackendType
 from nncf.data.dataset import DataItem
 from nncf.data.dataset import Dataset
@@ -102,7 +103,7 @@ class StatisticsAggregator(ABC):
 
         :param dir_path: The name of the directory from which to load the statistics.
         """
-        loaded_data = statistics_serializer.load_from_dir(dir_path, self.BACKEND)
+        loaded_data = load_statistics_from_dir(dir_path, self.BACKEND)
         self._load_statistics(loaded_data)
         nncf_logger.info(f"Statistics were successfully loaded from a directory {dir_path.absolute()}")
 
@@ -128,7 +129,7 @@ class StatisticsAggregator(ABC):
         """
         data_to_dump = self._prepare_statistics()
         metadata = {"backend": self.BACKEND.value, "subset_size": self.stat_subset_size}
-        statistics_serializer.dump_to_dir(data_to_dump, dir_path, metadata)
+        dump_statistics_to_dir(data_to_dump, dir_path, metadata)
         nncf_logger.info(f"Statistics were successfully saved to a directory {dir_path.absolute()}")
 
     def _prepare_statistics(self) -> Dict[str, Any]:

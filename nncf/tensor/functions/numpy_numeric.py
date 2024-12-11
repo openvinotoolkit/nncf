@@ -445,4 +445,4 @@ def tensor(
 ) -> np.ndarray:
     validate_device(device)
     dtype = convert_to_numpy_dtype(dtype)
-    return np.array(data, dtype=dtype, device=device)
+    return np.array(data, dtype=dtype)

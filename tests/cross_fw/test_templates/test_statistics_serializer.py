@@ -18,9 +18,9 @@ import pytest
 
 import nncf
 from nncf.common.tensor_statistics.statistics_serializer import add_unique_name
-from nncf.common.tensor_statistics.statistics_serializer import dump_to_dir
-from nncf.common.tensor_statistics.statistics_serializer import load_from_dir
+from nncf.common.tensor_statistics.statistics_serializer import dump_statistics_to_dir
 from nncf.common.tensor_statistics.statistics_serializer import load_metadata
+from nncf.common.tensor_statistics.statistics_serializer import load_statistics_from_dir
 from nncf.common.tensor_statistics.statistics_serializer import sanitize_filename
 from nncf.common.tensor_statistics.statistics_serializer import save_metadata
 from nncf.common.utils.backend import BackendType
@@ -76,7 +76,7 @@ class TemplateTestStatisticsSerializer:
         with safe_open(metadata_file, "w") as f:
             json.dump(metadata, f)
 
-        # Expect the load_from_dir to raise an error when trying to load non existed statistics
+        # Expect the load_statistics_from_dir to raise an error when trying to load non existed statistics
         with pytest.raises(
             nncf.ValidationError,
             match=(
@@ -84,7 +84,7 @@ class TemplateTestStatisticsSerializer:
                 "Please, remove the cache directory and collect cache again."
             ),
         ):
-            load_from_dir(tmp_path, self._get_backend())
+            load_statistics_from_dir(tmp_path, self._get_backend())
 
     def test_save_metadata(self, tmp_path):
         metadata = {"mapping": {"key1": "value1"}, "metadata": {"model": "test"}}
@@ -102,7 +102,7 @@ class TemplateTestStatisticsSerializer:
         statistics = self._get_backend_statistics()
         additional_metadata = {"model": "facebook/opt-125m", "compression": "8-bit", "backend": backend.value}
 
-        dump_to_dir(statistics, tmp_path, additional_metadata)
+        dump_statistics_to_dir(statistics, tmp_path, additional_metadata)
 
         assert len(list(Path(tmp_path).iterdir())) > 0, "No files created during dumping"
 
@@ -115,7 +115,7 @@ class TemplateTestStatisticsSerializer:
             assert metadata["model"] == "facebook/opt-125m"
 
         # Load the statistics and ensure it was loaded correctly
-        loaded_statistics = load_from_dir(tmp_path, backend)
+        loaded_statistics = load_statistics_from_dir(tmp_path, backend)
         for layer_name, stat in statistics.items():
             assert layer_name in loaded_statistics, "Statistics not loaded correctly"
             assert self.is_equal(loaded_statistics[layer_name], stat)
