@@ -12,7 +12,6 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 import openvino as ov
 from openvino.runtime import opset13 as opset
-from openvino.runtime.op import Constant
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -31,6 +30,7 @@ from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import convert_if_needed
+from nncf.openvino.graph.node_utils import create_ov_const_from_tensor
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
@@ -240,13 +240,13 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         original_shape = weight.shape
         compressed_weight = compress_weight(weight, reduction_axes, compression_config, layer_scales, layer_zero_points)
 
-        compressed_const = self._create_ov_const_from_tensor(
+        compressed_const = create_ov_const_from_tensor(
             compressed_weight.tensor, compression_dtype, name=const_node_name
         )
         converted_const = opset.convert(compressed_const, ov.Type.f16)
 
         if compressed_weight.zero_point is not None:
-            zero_point_const = self._create_ov_const_from_tensor(
+            zero_point_const = create_ov_const_from_tensor(
                 compressed_weight.zero_point, compression_dtype, name=f"{const_node_name}/zero_point"
             )
             zero_point_const = opset.convert(zero_point_const, ov.Type.f16)
@@ -254,9 +254,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 converted_const, zero_point_const, name=f"{const_node_name}/zero_point/subtract"
             )
 
-        scale_const = self._create_ov_const_from_tensor(
-            compressed_weight.scale, scale_dtype, name=f"{const_node_name}/scale"
-        )
+        scale_const = create_ov_const_from_tensor(compressed_weight.scale, scale_dtype, name=f"{const_node_name}/scale")
         scale_const = convert_if_needed(scale_const, ov.Type.f16)
 
         mul = opset.multiply(
@@ -346,22 +344,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: ov.Model, parameters: Dict, algo_name: Optional[str] = "quantization", path: Optional[List] = None
     ) -> None:
         dump_parameters(model, parameters, algo_name, path)
-
-    @staticmethod
-    def _create_ov_const_from_tensor(x: Tensor, dtype: ov.Type, name: Optional[str] = None) -> Constant:
-        """
-        Create an OpenVINO Constant node from the given tensor.
-        :param x: Data tensor. Supports NumPy and OV tensor backends. If x backend is OV, the constant node is created
-            directly from underlying OV tensor.
-        :param dtype: Data type of the constant.
-        :param name: Optional name of the constant.
-        :return: OpenVINO Constant node.
-        """
-        if x.backend == TensorBackend.ov:
-            assert x.data.get_element_type() == dtype
-            return opset.constant(x.data, name=name)
-        const = opset.constant(x.data, dtype=dtype, name=name)
-        return const
 
 
 class OVAWQAlgoAlgoBackend(AWQAlgoBackend, OVWeightCompressionAlgoBackend):

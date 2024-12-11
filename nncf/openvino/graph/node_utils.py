@@ -14,6 +14,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 import numpy as np
 import openvino.runtime as ov
 import openvino.runtime.opset13 as opset
+from openvino._pyopenvino.op import Constant
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -41,6 +42,8 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
+from nncf.tensor import Tensor
+from nncf.tensor import TensorBackend
 
 InplaceInsertionFnType = Callable[[ov.Node, int, str], ov.Node]
 
@@ -654,3 +657,19 @@ def non_convertable_divide(a: ov.Node, b: ov.Node) -> ov.Node:
     divide_node = a / b
     divide_node.get_rt_info()["nonconvertable_divide_0"] = True
     return divide_node
+
+
+def create_ov_const_from_tensor(x: Tensor, dtype: ov.Type, name: Optional[str] = None) -> Constant:
+    """
+    Create an OpenVINO Constant node from the given tensor.
+    :param x: Data tensor. Supports NumPy and OV tensor backends. If x backend is OV, the constant node is created
+        directly from underlying OV tensor.
+    :param dtype: Data type of the constant.
+    :param name: Optional name of the constant.
+    :return: OpenVINO Constant node.
+    """
+    if x.backend == TensorBackend.ov:
+        assert x.data.get_element_type() == dtype
+        return opset.constant(x.data, name=name)
+    const = opset.constant(x.data, dtype=dtype, name=name)
+    return const
