@@ -57,14 +57,14 @@ class TensorStatistic:
                 raise nncf.InternalError(f"Unsupported type of value: {type(value)}")
         return serialized_data
 
-    def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
+    def load_data(self, data: Dict[str, Tensor]) -> None:
         """
         Loads the data from the serialized data.
 
-        :param: Data to load.
+        :param data: Data to load.
         """
         for key in (field.name for field in fields(self)):
-            setattr(self, key, loaded_data[key])
+            setattr(self, key, data[key])
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
