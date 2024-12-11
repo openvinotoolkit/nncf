@@ -21,12 +21,12 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.quantization.range_estimator import StatisticsType
 
 TModel = TypeVar("TModel")
 
@@ -131,6 +131,20 @@ class MinMaxAlgoBackend(ABC):
         Property for the backend-specific dictionary that contains QuantizationTrait-specific metatypes.
         """
 
+    @property
+    @abstractmethod
+    def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
+        """
+        Property for the backend-specific dictionary that contains backend-specific tensor reducers.
+        """
+
+    @property
+    @abstractmethod
+    def supports_inplace_statistics(self) -> bool:
+        """
+        Property for the backend-specific flag that specifies whether the backend supports inplace statistics.
+        """
+
     @staticmethod
     @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
@@ -227,28 +241,6 @@ class MinMaxAlgoBackend(ABC):
         :param target_point: Corresponding target point.
         :param ndims: Number of dimensions of weight.
         :return: Axes for per-channel quantization of weights.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_statistic_collector(
-        range_estimator_params: RangeEstimatorParameters,
-        use_abs_max: bool,
-        reduction_axes: Optional[Tuple[int, ...]],
-        aggregation_axes: Optional[Tuple[int, ...]],
-        inplace: bool,
-        num_samples: Optional[int] = None,
-    ) -> TensorStatisticCollectorBase:
-        """
-        Returns backend-specific statistic collector.
-
-        :param range_estimator_params: Parameters that specify estimators types.
-        :param use_abs_max: Wheather reduce absolute values of input tensors or not.
-        :param reduction_axes: Axes for reducer.
-        :param aggregation_axes: Axes for aggregator.
-        :param inplace: Whether to calculate statistic inplace or not.
-        :param num_samples: Maximum number of samples to collect.
-        :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
         """
 
     @staticmethod
