@@ -17,7 +17,7 @@ from safetensors.torch import save_file as pt_save_file
 
 from nncf.tensor import TensorDeviceType
 from nncf.tensor.functions import io as io
-from nncf.tensor.functions.torch_numeric import DEVICE_MAP
+from nncf.tensor.functions.torch_numeric import convert_to_torch_device
 
 
 def load_file(
@@ -25,8 +25,7 @@ def load_file(
     *,
     device: Optional[TensorDeviceType] = None,
 ) -> Dict[str, torch.Tensor]:
-    if device is not None:
-        device = DEVICE_MAP[device]
+    device = convert_to_torch_device(device)
     return pt_load_file(file_path, device=device)
 
 

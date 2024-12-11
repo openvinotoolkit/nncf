@@ -18,11 +18,11 @@ from safetensors.numpy import save_file as np_save_file
 from nncf.tensor.definitions import TensorDeviceType
 from nncf.tensor.functions import io as io
 from nncf.tensor.functions.dispatcher import register_numpy_types
+from nncf.tensor.functions.numpy_numeric import validate_device
 
 
 def load_file(file_path: str, *, device: Optional[TensorDeviceType] = None) -> Dict[str, np.ndarray]:
-    if device is not None and device != TensorDeviceType.CPU:
-        raise ValueError("numpy_numeric.load_file only supports CPU device.")
+    validate_device(device)
     return np_load_file(file_path)
 
 
