@@ -69,22 +69,6 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
     """
     Saves metadata to a file in the specified directory.
 
-    # - Metadata is stored in a JSON file named "statistics_metadata.json".
-    # - Statistics are stored in individual files with sanitized and unique filenames to prevent collisions.
-    #
-    # Metadata Format:
-    # - : The metadata file must have a mapping of saved filenames to the original names and backend type as well.
-    #   {
-    #       "mapping": {
-    #           "saved_file_name_1": "original_name_1",
-    #           "saved_file_name_2": "original_name_2",
-    #           ...
-    #       },
-    #       "backend": "backend_type",
-    #       ... (additional metadata fields)
-    #   }
-
-
     :param metadata: Dictionary containing metadata and mapping.
     :param dir_path: Path to the directory where the metadata file will be saved.
     """
@@ -109,7 +93,7 @@ def load_statistics_from_dir(dir_path: Path, backend: BackendType) -> Dict[str, 
     tensor_backend = get_tensor_backend(backend)
     for file_name, original_name in mapping.items():
         statistics_file = dir_path / file_name
-        statistics[original_name] = fns.io.load_file(statistics_file, tensor_backend)
+        statistics[original_name] = fns.io.load_file(statistics_file, tensor_backend)  # no device support
     return statistics
 
 
@@ -120,6 +104,21 @@ def dump_statistics_to_dir(
 ) -> None:
     """
     Saves statistics and metadata to a directory.
+
+    # - Metadata is stored in a JSON file named "statistics_metadata.json".
+    # - Statistics are stored in individual files with sanitized and unique filenames to prevent collisions.
+    #
+    # Metadata Format:
+    # - : The metadata file must have a mapping of saved filenames to the original names and backend type.
+    #   {
+    #       "mapping": {
+    #           "saved_file_name_1": "original_name_1",
+    #           "saved_file_name_2": "original_name_2",
+    #           ...
+    #       },
+    #       "backend": "backend_type",
+    #       ... (additional metadata fields)
+    #   }
 
     :param statistics: A dictionary with statistic names as keys and the statistic data as values.
     :param dir_path: The path to the directory where the statistics will be dumped.
