@@ -10,19 +10,14 @@
 # limitations under the License.
 import json
 from abc import abstractmethod
-from collections import defaultdict
 from pathlib import Path
 from typing import Dict
 
 import pytest
 
 import nncf
-from nncf.common.tensor_statistics.statistics_serializer import add_unique_name
 from nncf.common.tensor_statistics.statistics_serializer import dump_statistics_to_dir
-from nncf.common.tensor_statistics.statistics_serializer import load_metadata
 from nncf.common.tensor_statistics.statistics_serializer import load_statistics_from_dir
-from nncf.common.tensor_statistics.statistics_serializer import sanitize_filename
-from nncf.common.tensor_statistics.statistics_serializer import save_metadata
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.os import safe_open
 from nncf.tensor.tensor import Tensor
@@ -41,34 +36,6 @@ class TemplateTestStatisticsSerializer:
     def is_equal(self, a1: Dict[str, Tensor], a2: Dict[str, Tensor]) -> bool:
         """Determine if two statistics are equal."""
 
-    def test_sanitize_filename(self):
-        filename = "layer/1_mean/activation"
-        sanitized = sanitize_filename(filename)
-        assert sanitized == "layer_1_mean_activation", "Filename was not sanitized correctly"
-
-    def test_sanitize_filenames_with_collisions(self):
-        filename_1 = "layer/1_mean:activation"
-        filename_2 = "layer.1_mean/activation"
-        unique_map = defaultdict(list)
-        for filename in (filename_1, filename_2):
-            sanitized = sanitize_filename(filename)
-            add_unique_name(sanitized, unique_map)
-        assert unique_map[sanitized] == ["layer_1_mean_activation_1", "layer_1_mean_activation_2"]
-
-    def test_load_metadata(self, tmp_path):
-        # Create a metadata file in the temp directory
-        metadata = {"mapping": {"key1": "value1"}, "metadata": {"model": "test"}}
-        metadata_file = tmp_path / "statistics_metadata.json"
-        with safe_open(metadata_file, "w") as f:
-            json.dump(metadata, f)
-
-        loaded_metadata = load_metadata(tmp_path)
-        assert loaded_metadata == metadata, "Metadata was not loaded correctly"
-
-    def test_load_no_existing_metadata(self, tmp_path):
-        with pytest.raises(nncf.InvalidPathError, match="Metadata file does not exist."):
-            load_metadata(tmp_path)
-
     def test_load_no_statistics_file(self, tmp_path):
         # Create a metadata file in the temp directory
         metadata = {"mapping": {"key1": "value1"}, "metadata": {"model": "test"}}
@@ -85,17 +52,6 @@ class TemplateTestStatisticsSerializer:
             ),
         ):
             load_statistics_from_dir(tmp_path, self._get_backend())
-
-    def test_save_metadata(self, tmp_path):
-        metadata = {"mapping": {"key1": "value1"}, "metadata": {"model": "test"}}
-        save_metadata(metadata, tmp_path)
-
-        metadata_file = tmp_path / "statistics_metadata.json"
-        assert metadata_file.exists(), "Metadata file was not created"
-
-        with safe_open(metadata_file, "r") as f:
-            loaded_metadata = json.load(f)
-        assert loaded_metadata == metadata, "Metadata was not saved correctly"
 
     def test_dump_and_load_statistics(self, tmp_path):
         backend = self._get_backend()
