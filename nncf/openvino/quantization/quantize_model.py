@@ -403,8 +403,9 @@ def compress_weights_impl(
     statistics_points = None
     if advanced_parameters and advanced_parameters.statistics_path:
         # If there is no such directory, then caches statistics
-        if not Path(advanced_parameters.statistics_path).exists():
-            cache_weight_compression_statistics(model, graph, dataset, subset_size, advanced_parameters.statistics_path)
+        dir_path = Path(advanced_parameters.statistics_path)
+        if not dir_path.exists():
+            cache_weight_compression_statistics(model, graph, dataset, subset_size, dir_path)
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         compression_algorithm.set_backend_entity(model)
         _, matmul_input_to_output_nodes_map = compression_algorithm.get_compression_nodes_info(graph)
@@ -415,7 +416,7 @@ def compress_weights_impl(
             compression_algorithm,
             matmul_input_to_output_nodes_map,
         )
-        statistics_aggregator.load_statistics_from_dir(advanced_parameters.statistics_path)
+        statistics_aggregator.load_statistics_from_dir(dir_path)
         statistics_points = statistics_aggregator.statistic_points
 
     return compression_algorithm.apply(model, graph, statistics_points, dataset)

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -19,6 +19,7 @@ from nncf.tensor.definitions import TensorDeviceType
 from nncf.tensor.definitions import TypeInfo
 from nncf.tensor.functions import numeric as numeric
 from nncf.tensor.functions.dispatcher import register_numpy_types
+from nncf.tensor.tensor import TTensor
 
 DTYPE_MAP = {
     TensorDataType.float16: np.dtype(np.float16),
@@ -431,3 +432,12 @@ def _(a: Union[np.ndarray, np.generic]) -> Union[np.ndarray, np.generic]:
 @register_numpy_types(numeric.ceil)
 def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
     return np.ceil(a)
+
+
+def tensor(
+    data: Union[TTensor, Sequence[float]],
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> np.ndarray:
+    return np.array(data, dtype=dtype, device=device)

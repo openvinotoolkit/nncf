@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nncf.tensor.functions import io as io
 from nncf.tensor.functions import linalg as linalg
 from nncf.tensor.functions.numeric import abs as abs
 from nncf.tensor.functions.numeric import all as all
@@ -56,6 +57,7 @@ from nncf.tensor.functions.numeric import searchsorted as searchsorted
 from nncf.tensor.functions.numeric import squeeze as squeeze
 from nncf.tensor.functions.numeric import stack as stack
 from nncf.tensor.functions.numeric import sum as sum
+from nncf.tensor.functions.numeric import tensor as tensor
 from nncf.tensor.functions.numeric import transpose as transpose
 from nncf.tensor.functions.numeric import unsqueeze as unsqueeze
 from nncf.tensor.functions.numeric import unstack as unstack
@@ -68,12 +70,14 @@ from nncf.tensor.functions.numeric import zeros_like as zeros_like
 def _initialize_backends():
     import contextlib
 
+    import nncf.tensor.functions.numpy_io
     import nncf.tensor.functions.numpy_linalg
     import nncf.tensor.functions.numpy_numeric
 
     with contextlib.suppress(ImportError):
+        import nncf.tensor.functions.torch_io
         import nncf.tensor.functions.torch_linalg
-        import nncf.tensor.functions.torch_numeric  # noqa: F401
+        import nncf.tensor.functions.torch_numeric  # noqa F401
 
 
 _initialize_backends()

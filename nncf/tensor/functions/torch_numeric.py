@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
@@ -19,6 +19,7 @@ from nncf.tensor import TensorDeviceType
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TypeInfo
 from nncf.tensor.functions import numeric as numeric
+from nncf.tensor.tensor import TTensor
 
 DTYPE_MAP = {
     TensorDataType.float16: torch.float16,
@@ -465,3 +466,12 @@ def _(a: torch.Tensor) -> torch.Tensor:
 @numeric.ceil.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.ceil(a)
+
+
+def tensor(
+    data: Union[TTensor, Sequence[float]],
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> torch.Tensor:
+    return torch.tensor(data, dtype=dtype, device=device)
