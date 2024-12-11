@@ -451,7 +451,8 @@ def do_int_quantization(
             "for asymmetric quantization."
         )
 
-    accelerate_through_ov = is_openvino_available() and weight.backend != TensorBackend.torch
+    import os
+    accelerate_through_ov = is_openvino_available() and weight.backend != TensorBackend.torch and not bool(int(os.environ.get("NUMPY_COMPRESSION", "0")))
     if not is_openvino_available() and weight.backend != TensorBackend.torch:
         log_once(logging.INFO, "Running time may be improved after installing OpenVINO")
 
@@ -500,6 +501,11 @@ def do_int_quantization(
         ov_model_params.output_dtypes.update(
             {"compressed_weight": compressed_weight_dtype, "zero_point": compressed_weight_dtype}
         )
+
+    ov_model_params.dynamic_shapes = bool(int(os.environ.get("DYNAMIC_COMPRESSION", "0")))
+    ov_model_params.recompile = bool(int(os.environ.get("RECOMPILE", "0")))
+    ov_model_params.release_memory = bool(int(os.environ.get("RELEASE_MEMORY", "0")))
+    ov_model_params.share_outputs = bool(int(os.environ.get("SHARE_OUTPUTS", "0")))
 
     model = get_compress_weight_model(
         ov_model_params,
