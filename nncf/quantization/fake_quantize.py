@@ -357,13 +357,11 @@ def calculate_scale_zero_point(
     :return: Scale and Zero point values.
     """
     levels = level_high - level_low if narrow_range else level_high - level_low + 1
-    one_f64 = fns.ones(shape=(1,), backend=input_low.backend, dtype=TensorDataType.float64, device=input_low.device)
-    inverted_levels = one_f64 / (levels - 1)
-    scale = ((input_high - input_low) * inverted_levels).astype(TensorDataType.float32)
+    scale = ((input_high - input_low) / (levels - 1)).astype(TensorDataType.float32)
     eps = fns.finfo(scale).eps
     # NOTE: adding machine epsilon to avoid division by zero
     scale = fns.where(fns.abs(scale) < eps, eps, scale)
     expected_level_low = level_low + 1 if narrow_range else level_low
-    zero_point = expected_level_low - fns.round(input_low * fns.reciprocal(scale))
+    zero_point = expected_level_low - fns.round(input_low / scale)
     zero_point = fns.clip(zero_point.astype(TensorDataType.int32), level_low, level_high)
     return scale, zero_point
