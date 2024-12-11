@@ -285,7 +285,8 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             const_node = self.name_to_node_mapping[const_node_name]
             const_node_output = const_node.output(0)
             const_dtype = const_node_output.get_element_type()
-            weight = get_const_value(const_node, cast_bf16_to_fp32=False)
+            import os
+            weight = get_const_value(const_node, cast_bf16_to_fp32=False or bool(int(os.environ.get("NUMPY_COMPRESSION", "0"))))
             # Creation of ov.Tensor is required for two reasons:
             #   1. To be able to process BF16 weight properly
             #   2. To indicate that it is allowed for the compressed constant to be returned as int4/uint4 if needed
@@ -335,7 +336,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         self.name_to_node_mapping = None
 
         # clear openvino model cache
-        OV_MODEL_CACHE.clear()
+        # OV_MODEL_CACHE.clear()
 
         return model
 
