@@ -130,9 +130,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
         return REDUCERS_MAP
-    
+
     @property
-    def supports_inplace_statistics (self) -> bool:
+    def supports_inplace_statistics(self) -> bool:
         return False
 
     @staticmethod

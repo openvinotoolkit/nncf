@@ -137,10 +137,10 @@ class MinMaxAlgoBackend(ABC):
         """
         Property for the backend-specific dictionary that contains backend-specific tensor reducers.
         """
-        
+
     @property
     @abstractmethod
-    def supports_inplace_statistics (self) -> bool:
+    def supports_inplace_statistics(self) -> bool:
         """
         Property for the backend-specific flag that specifies whether the backend supports inplace statistics.
         """
