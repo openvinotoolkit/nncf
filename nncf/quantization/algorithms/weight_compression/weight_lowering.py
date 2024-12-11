@@ -340,8 +340,7 @@ def get_integer_quantization_error(
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
-    compressed_weights, scale, zero_point = do_int_quantization(weight, config, reduction_axes)
-    decompressed_weight = do_int_dequantization(compressed_weights, scale, zero_point)
+    decompressed_weight = calculate_quantized_dequantized_weight(weight, config, reduction_axes)
 
     decompressed_weight = decompressed_weight.reshape(orig_shape)
     diff = (decompressed_weight - weight) ** 2
