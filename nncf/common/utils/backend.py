@@ -61,7 +61,10 @@ def is_torch_model(model: TModel) -> bool:
     import torch
     import torch.fx
 
-    return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
+    try:
+        return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
+    except AttributeError:
+        return False
 
 
 def is_torch_fx_model(model: TModel) -> bool:
@@ -73,7 +76,10 @@ def is_torch_fx_model(model: TModel) -> bool:
     """
     import torch.fx
 
-    return isinstance(model, torch.fx.GraphModule)
+    try:
+        return isinstance(model, torch.fx.GraphModule)
+    except AttributeError:
+        return False
 
 
 def is_tensorflow_model(model: TModel) -> bool:
@@ -85,7 +91,10 @@ def is_tensorflow_model(model: TModel) -> bool:
     """
     import tensorflow  # type: ignore
 
-    return isinstance(model, tensorflow.Module)
+    try:
+        return isinstance(model, tensorflow.Module)
+    except AttributeError:
+        return False
 
 
 def is_onnx_model(model: TModel) -> bool:
@@ -97,7 +106,10 @@ def is_onnx_model(model: TModel) -> bool:
     """
     import onnx  # type: ignore
 
-    return isinstance(model, onnx.ModelProto)
+    try:
+        return isinstance(model, onnx.ModelProto)
+    except AttributeError:
+        return False
 
 
 def is_openvino_model(model: TModel) -> bool:
@@ -109,7 +121,10 @@ def is_openvino_model(model: TModel) -> bool:
     """
     import openvino.runtime as ov  # type: ignore
 
-    return isinstance(model, ov.Model)
+    try:
+        return isinstance(model, ov.Model)
+    except AttributeError:
+        return False
 
 
 def is_openvino_compiled_model(model: TModel) -> bool:
@@ -121,7 +136,10 @@ def is_openvino_compiled_model(model: TModel) -> bool:
     """
     import openvino.runtime as ov
 
-    return isinstance(model, ov.CompiledModel)
+    try:
+        return isinstance(model, ov.CompiledModel)
+    except AttributeError:
+        return False
 
 
 def get_backend(model: TModel) -> BackendType:
@@ -150,7 +168,7 @@ def get_backend(model: TModel) -> BackendType:
 
     raise nncf.UnsupportedBackendError(
         "Could not infer the backend framework from the model type because "
-        "the framework is not available or the model type is unsupported. "
+        "the framework is not available or corrupted, or the model type is unsupported. "
         "The available frameworks found: {}.".format(", ".join([b.value for b in available_backends]))
     )
 
