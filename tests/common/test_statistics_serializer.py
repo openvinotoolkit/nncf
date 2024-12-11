@@ -46,13 +46,13 @@ class TestNPStatisticsSerializer(TemplateTestStatisticsSerializer):
         return True
 
 
-def test_sanitize_filename(self):
+def test_sanitize_filename():
     filename = "layer/1_mean/activation"
     sanitized = sanitize_filename(filename)
     assert sanitized == "layer_1_mean_activation", "Filename was not sanitized correctly"
 
 
-def test_sanitize_filenames_with_collisions(self):
+def test_sanitize_filenames_with_collisions():
     filename_1 = "layer/1_mean:activation"
     filename_2 = "layer.1_mean/activation"
     unique_map = defaultdict(list)
@@ -62,7 +62,7 @@ def test_sanitize_filenames_with_collisions(self):
     assert unique_map[sanitized] == ["layer_1_mean_activation_1", "layer_1_mean_activation_2"]
 
 
-def test_load_metadata(self, tmp_path):
+def test_load_metadata(tmp_path):
     # Create a metadata file in the temp directory
     metadata = {"mapping": {"key1": "value1"}, "metadata": {"model": "test"}}
     metadata_file = tmp_path / "statistics_metadata.json"
@@ -73,12 +73,12 @@ def test_load_metadata(self, tmp_path):
     assert loaded_metadata == metadata, "Metadata was not loaded correctly"
 
 
-def test_load_no_existing_metadata(self, tmp_path):
+def test_load_no_existing_metadata(tmp_path):
     with pytest.raises(nncf.InvalidPathError, match="Metadata file does not exist."):
         load_metadata(tmp_path)
 
 
-def test_save_metadata(self, tmp_path):
+def test_save_metadata(tmp_path):
     metadata = {"mapping": {"key1": "value1"}, "metadata": {"model": "test"}}
     save_metadata(metadata, tmp_path)
 
