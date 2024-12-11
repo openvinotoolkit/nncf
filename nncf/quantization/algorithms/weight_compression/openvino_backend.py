@@ -243,7 +243,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         compressed_const = self._create_ov_const_from_tensor(
             compressed_weight.tensor, compression_dtype, name=const_node_name
         )
-        compressed_const = convert_if_needed(compressed_const, compression_dtype)
         converted_const = opset.convert(compressed_const, ov.Type.f16)
 
         if compressed_weight.zero_point is not None:
