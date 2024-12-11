@@ -80,7 +80,7 @@ class TemplateTestStatisticsSerializer:
         with pytest.raises(
             nncf.ValidationError,
             match=(
-                "Cache validation failed: The provided metadata has no information about backend."
+                "Cache validation failed: The provided metadata has no information about backend. "
                 "Please, remove the cache directory and collect cache again."
             ),
         ):
