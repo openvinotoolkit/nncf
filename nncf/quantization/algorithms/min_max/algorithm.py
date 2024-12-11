@@ -482,8 +482,8 @@ class MinMaxQuantization(Algorithm):
             collector_params.use_abs_max,
             reduction_axes,
             aggregation_axes,
-            self._backend_entity.supports_inplace_statistics,
-            num_samples,
+            self._inplace_statistics,
+            num_samples=num_samples,
         )
 
     def _get_statistic_collector(
