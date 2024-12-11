@@ -506,6 +506,8 @@ class MinMaxQuantization(Algorithm):
         :param num_samples: Maximum number of samples to collect.
         :return: TensorCollector for the statistics calculation.
         """
+        if not self._backend_entity.supports_inplace_statistics:
+            inplace = False
         collector = TensorCollector(MinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
