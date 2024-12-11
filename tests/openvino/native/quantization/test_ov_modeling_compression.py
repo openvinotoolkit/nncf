@@ -196,42 +196,11 @@ def test_quantization_alignment(
                 else:
                     mock.assert_called_once()
 
-        if quantization_task != QuantizationTask.Q_DQ:
-            # Scale should always be float32 and numpy backend
-            assert scale.dtype == TensorDataType.float32
-            assert scale.backend == TensorBackend.numpy
-            if precompute_s_zp:
-                # In case of precomputed scale or zero point, the returned scale and z.p. should equal the given ones
-                np.testing.assert_allclose(precomputed_scale.data, scale.data, atol=0, rtol=0)
-                if config.is_int_asym:
-                    np.testing.assert_allclose(precomputed_zero_point.data, zero_point.data, atol=0, rtol=0)
-
-        if (
-            quantization_task == QuantizationTask.Q
-            and cb == ComputationBackend.OV
-            and weight_tensor_backend == TensorBackend.ov
-            and config.num_bits == 4
-        ):
-            # For 4 bit compression in case of ov implementation and ov backend the compressed weight and the computed
-            # zero point must be in ov backend and have (u)int4 dtype in order to be able to insert them into OV model
-            # without re-packing
-            assert compressed_weight.backend == TensorBackend.ov
-            assert compressed_weight.dtype == (TensorDataType.uint4 if config.is_int_asym else TensorDataType.int4)
-            if config.is_int_asym and not precompute_s_zp:
-                assert zero_point.backend == TensorBackend.ov
-                assert zero_point.dtype == TensorDataType.uint4
-        else:
-            if quantization_task != QuantizationTask.Q_DQ:
-                # Otherwise compressed weight and zero point must be returned in numpy backend, compressed weight must
-                # be of (u)int8 data type, zero point -- in int32
-                assert compressed_weight.backend == TensorBackend.numpy
-                assert compressed_weight.dtype == (TensorDataType.uint8 if config.is_int_asym else TensorDataType.int8)
-                if config.is_int_asym and not precompute_s_zp:
-                    assert zero_point.backend == TensorBackend.numpy
-                    assert zero_point.dtype == TensorDataType.int32
-            if quantization_task != QuantizationTask.Q:
-                assert decompressed_weight.backend == TensorBackend.numpy
-                assert decompressed_weight.dtype == TensorDataType.float32
+        if quantization_task != QuantizationTask.Q_DQ and precompute_s_zp:
+            # In case of precomputed scale or zero point, the returned scale and z.p. should equal the given ones
+            np.testing.assert_allclose(precomputed_scale.data, scale.data, atol=0, rtol=0)
+            if config.is_int_asym:
+                np.testing.assert_allclose(precomputed_zero_point.data, zero_point.data, atol=0, rtol=0)
 
         # Save results for comparison between implementations
         if quantization_task != QuantizationTask.Q:
@@ -242,6 +211,66 @@ def test_quantization_alignment(
             if config.is_int_asym:
                 results[cb]["zero_point"] = zero_point.to_backend(TensorBackend.numpy)
 
+        _check_backends_and_dtypes(
+            quantization_task,
+            cb,
+            weight_tensor_backend,
+            config,
+            precompute_s_zp,
+            compressed_weight,
+            scale,
+            zero_point,
+            decompressed_weight,
+        )
+
+    _check_values(static_shapes, config, precompute_s_zp, dtype, results, precomputed_scale, weight_shape)
+
+
+def _check_backends_and_dtypes(
+    quantization_task,
+    cb,
+    weight_tensor_backend,
+    config,
+    precompute_s_zp,
+    compressed_weight,
+    scale,
+    zero_point,
+    decompressed_weight,
+):
+    if quantization_task != QuantizationTask.Q_DQ:
+        # Scale should always be float32 and numpy backend
+        assert scale.dtype == TensorDataType.float32
+        assert scale.backend == TensorBackend.numpy
+
+    if (
+        quantization_task == QuantizationTask.Q
+        and cb == ComputationBackend.OV
+        and weight_tensor_backend == TensorBackend.ov
+        and config.num_bits == 4
+    ):
+        # For 4 bit compression in case of ov implementation and ov backend the compressed weight and the computed
+        # zero point must be in ov backend and have (u)int4 dtype in order to be able to insert them into OV model
+        # without re-packing
+        assert compressed_weight.backend == TensorBackend.ov
+        assert compressed_weight.dtype == (TensorDataType.uint4 if config.is_int_asym else TensorDataType.int4)
+        if config.is_int_asym and not precompute_s_zp:
+            assert zero_point.backend == TensorBackend.ov
+            assert zero_point.dtype == TensorDataType.uint4
+    else:
+        if quantization_task != QuantizationTask.Q_DQ:
+            # Otherwise compressed weight and zero point must be returned in numpy backend, compressed weight must
+            # be of (u)int8 data type, zero point -- in int32
+            assert compressed_weight.backend == TensorBackend.numpy
+            assert compressed_weight.dtype == (TensorDataType.uint8 if config.is_int_asym else TensorDataType.int8)
+            if config.is_int_asym and not precompute_s_zp:
+                assert zero_point.backend == TensorBackend.numpy
+                assert zero_point.dtype == TensorDataType.int32
+        if quantization_task != QuantizationTask.Q:
+            assert decompressed_weight.backend == TensorBackend.numpy
+            assert decompressed_weight.dtype == TensorDataType.float32
+
+
+def _check_values(static_shapes, config, precompute_s_zp, dtype, results, precomputed_scale, weight_shape):
     keys = set(results[ComputationBackend.OV]).union(set(results[ComputationBackend.NumPy]))
     for key in keys:
         numpy_result = results[ComputationBackend.NumPy][key]
@@ -250,7 +279,7 @@ def test_quantization_alignment(
         atol = 0
         scale = None
         # For static-shaped OV models doing asymmetric compression there maybe misalignments between OV and NumPy
-        # For more details see 156511
+        # For more details see ticket 156511
         if static_shapes and config.is_int_asym:
             if key == "compressed_weight":
                 atol = MAX_MISALIGNMENT_MAGNITUDE
