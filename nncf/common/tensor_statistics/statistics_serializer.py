@@ -12,7 +12,7 @@ import json
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TextIO, cast
+from typing import Any, Dict, List, TextIO, cast
 
 import nncf
 from nncf.common.tensor_statistics.statistics_validator import validate_cache
@@ -116,7 +116,7 @@ def load_statistics_from_dir(dir_path: Path, backend: BackendType) -> Dict[str, 
 def dump_statistics_to_dir(
     statistics: Dict[str, Dict[str, Tensor]],
     dir_path: Path,
-    additional_metadata: Optional[Dict[str, Any]] = None,
+    additional_metadata: Dict[str, Any],
 ) -> None:
     """
     Saves statistics and metadata to a directory.
