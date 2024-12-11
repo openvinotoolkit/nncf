@@ -24,7 +24,7 @@ from nncf.experimental.torch.fx.model_utils import remove_fq_from_inputs
 from nncf.experimental.torch.fx.node_utils import get_bias_value
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import is_node_with_bias
-from nncf.experimental.torch.fx.transformations import bias_update_transformation_builder
+from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
@@ -45,7 +45,9 @@ class FXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def create_bias_correction_command(
         node: NNCFNode, bias_value: Tensor, nncf_graph: NNCFGraph
     ) -> FXApplyTransformationCommand:
-        return FXApplyTransformationCommand(bias_update_transformation_builder(node, bias_value.data, input_port_id=1))
+        return FXApplyTransformationCommand(
+            constant_update_transformation_builder(node, bias_value.data, input_port_id=2)
+        )
 
     @staticmethod
     def model_extraction_command(
@@ -90,6 +92,10 @@ class FXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def get_output_name(model: torch.fx.GraphModule, node_name: str, output_port_id: int) -> int:
         graph_node = get_graph_node_by_name(model.graph, node_name)
+        if graph_node.op == "output":
+            # Original node output is kept as the first
+            # output tensor, thus returns 0.
+            return 0
         nodes = list(graph_node.users)
         while nodes:
             node = nodes.pop()

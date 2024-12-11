@@ -42,9 +42,9 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import resh
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
-from tests.cross_fw.shared.helpers import compare_stats
-from tests.cross_fw.shared.helpers import dump_to_json
-from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.comparator import compare_stats
+from tests.cross_fw.shared.json import dump_to_json
+from tests.cross_fw.shared.json import load_json
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
@@ -884,25 +884,78 @@ def test_compression_for_different_dtypes(activation_dtype, weight_dtype):
     check_compressed_matmul_subgraph(scale_multiply_node, activation_dtype, weight_dtype)
 
 
-DATASET_SIZE = 129
+DATASET_SIZE = 5
 
 
 @pytest.mark.parametrize(
-    ("subset_size", "ref_size"),
+    ("dataset_size", "subset_size", "ref_size"),
     (
-        (1, 1),
-        (5, 5),
-        (130, DATASET_SIZE),
+        (DATASET_SIZE, 1, 1),
+        (DATASET_SIZE, DATASET_SIZE, DATASET_SIZE),
+        (DATASET_SIZE, DATASET_SIZE + 1, DATASET_SIZE),
     ),
 )
-def test_valid_subset_size(mocker, subset_size, ref_size):
+@pytest.mark.parametrize(
+    ("compression_args", "multiplier_of_calls"),
+    [
+        ({"mode": CompressWeightsMode.INT4_ASYM, "ratio": 1}, 0),  # data-free, no reducers
+        ({"mode": CompressWeightsMode.INT4_ASYM, "ratio": 1, "awq": True}, 2),  # mean & shape reducer for AWQ
+        (
+            {"mode": CompressWeightsMode.INT4_ASYM, "ratio": 0.5, "awq": True},
+            3,
+        ),  # 2 - for AWQ + 1 - for Mixed Precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
+            },
+            1,
+        ),  # 1 reducer for mixed precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.MEAN_ACTIVATION_VARIANCE,
+            },
+            1,
+        ),  # 1 reducer for mixed precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.MAX_ACTIVATION_VARIANCE,
+            },
+            1,
+        ),  # 1 reducer for mixed precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
+            },
+            1,
+        ),  # 1 reducer for mixed precision
+        (
+            {
+                "mode": CompressWeightsMode.INT4_ASYM,
+                "ratio": 0.5,
+                "sensitivity_metric": nncf.SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
+            },
+            0,
+        ),  # 0 - data-free method
+    ],
+)
+def test_number_of_reduced_statistics_for_subset_size(
+    mocker, dataset_size, subset_size, ref_size, compression_args, multiplier_of_calls
+):
     model = IdentityMatmul().ov_model
-    dataset = Dataset([ACTIVATION] * DATASET_SIZE)
+    dataset = Dataset([ACTIVATION] * dataset_size)
     stats_spy = mocker.spy(AggregatorBase, "register_reduced_input")
 
-    compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, dataset=dataset, subset_size=subset_size)
+    compress_weights(model, dataset=dataset, subset_size=subset_size, **compression_args)
 
-    assert stats_spy.call_count == ref_size
+    assert stats_spy.call_count == ref_size * multiplier_of_calls
 
 
 def test_default_subset_value():

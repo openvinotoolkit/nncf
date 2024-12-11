@@ -10,13 +10,12 @@
 # limitations under the License.
 
 import json
-import os
 import re
 import subprocess
 import sys
 from functools import partial
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Tuple
 
 import numpy as np
 import openvino as ov
@@ -69,7 +68,6 @@ def validate(
 
     output = model.outputs[0]
 
-    counter = 0
     for batch in val_loader:
         anomaly_maps = model(batch["image"])[output]
         pred_scores = np.max(anomaly_maps, axis=(1, 2, 3))
@@ -79,37 +77,38 @@ def validate(
         per_sample_metric = 1.0 if pred_label == groundtruth_label else 0.0
         per_sample_metric_values.append(per_sample_metric)
         metric.update(torch.from_numpy(pred_scores), groundtruth_label)
-        counter += 1
 
     metric_value = metric.compute()
-    print(f"Validate: dataset length = {counter}, metric value = {metric_value:.3f}")
     return metric_value, per_sample_metric_values
 
 
-def run_benchmark(model_path: str, shape: Optional[List[int]] = None, verbose: bool = True) -> float:
-    command = f"benchmark_app -m {model_path} -d CPU -api async -t 15"
-    if shape is not None:
-        command += f' -shape [{",".join(str(x) for x in shape)}]'
-    cmd_output = subprocess.check_output(command, shell=True)  # nosec
-    if verbose:
-        print(*str(cmd_output).split("\\n")[-9:-1], sep="\n")
-    match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))
+def run_benchmark(model_path: Path, shape: List[int]) -> float:
+    command = [
+        "benchmark_app",
+        "-m", model_path.as_posix(),
+        "-d", "CPU",
+        "-api", "async",
+        "-t", "15",
+        "-shape", str(shape),
+    ]  # fmt: skip
+    cmd_output = subprocess.check_output(command, text=True)
+    print(*cmd_output.splitlines()[-8:], sep="\n")
+    match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
     return float(match.group(1))
 
 
-def get_model_size(ir_path: str, m_type: str = "Mb", verbose: bool = True) -> float:
-    xml_size = os.path.getsize(ir_path)
-    bin_size = os.path.getsize(ir_path.replace("xml", "bin"))
+def get_model_size(ir_path: Path, m_type: str = "Mb") -> float:
+    xml_size = ir_path.stat().st_size
+    bin_size = ir_path.with_suffix(".bin").stat().st_size
     for t in ["bytes", "Kb", "Mb"]:
         if m_type == t:
             break
         xml_size /= 1024
         bin_size /= 1024
     model_size = xml_size + bin_size
-    if verbose:
-        print(f"Model graph (xml):   {xml_size:.3f} Mb")
-        print(f"Model weights (bin): {bin_size:.3f} Mb")
-        print(f"Model size:          {model_size:.3f} Mb")
+    print(f"Model graph (xml):   {xml_size:.3f} Mb")
+    print(f"Model weights (bin): {bin_size:.3f} Mb")
+    print(f"Model size:          {model_size:.3f} Mb")
     return model_size
 
 
@@ -168,24 +167,24 @@ def run_example():
     ###############################################################################
     # Benchmark performance, calculate compression rate and validate accuracy
 
-    fp32_ir_path = f"{ROOT}/stfpm_fp32.xml"
+    fp32_ir_path = ROOT / "stfpm_fp32.xml"
     ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
     print(f"[1/7] Save FP32 model: {fp32_ir_path}")
-    fp32_size = get_model_size(fp32_ir_path, verbose=True)
+    fp32_size = get_model_size(fp32_ir_path)
 
     # To avoid an accuracy drop when saving a model due to compression of unquantized
     # weights to FP16, compress_to_fp16=False should be used. This is necessary because
     # nncf.quantize_with_accuracy_control(...) keeps the most impactful operations within
     # the model in the original precision to achieve the specified model accuracy.
-    int8_ir_path = f"{ROOT}/stfpm_int8.xml"
+    int8_ir_path = ROOT / "stfpm_int8.xml"
     ov.save_model(ov_quantized_model, int8_ir_path)
     print(f"[2/7] Save INT8 model: {int8_ir_path}")
-    int8_size = get_model_size(int8_ir_path, verbose=True)
+    int8_size = get_model_size(int8_ir_path)
 
     print("[3/7] Benchmark FP32 model:")
-    fp32_fps = run_benchmark(fp32_ir_path, shape=[1, 3, 256, 256], verbose=True)
+    fp32_fps = run_benchmark(fp32_ir_path, shape=[1, 3, 256, 256])
     print("[4/7] Benchmark INT8 model:")
-    int8_fps = run_benchmark(int8_ir_path, shape=[1, 3, 256, 256], verbose=True)
+    int8_fps = run_benchmark(int8_ir_path, shape=[1, 3, 256, 256])
 
     print("[5/7] Validate OpenVINO FP32 model:")
     compiled_model = ov.compile_model(ov_model, device_name="CPU")

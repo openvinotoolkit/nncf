@@ -15,7 +15,7 @@ from transformers import AutoTokenizer
 
 import nncf
 from nncf.data import generate_text_data
-from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.json import load_json
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.helpers import set_torch_seed
 

@@ -11,13 +11,21 @@
 import warnings
 
 import numpy as np
+import pytest
 
 from nncf.quantization.fake_quantize import tune_range
 from nncf.tensor import Tensor
 
 
-def test_tune_range_zero_division_warning():
+@pytest.mark.parametrize(
+    "params",
+    (
+        (Tensor(np.array([0.0])), Tensor(np.array([1.0])), 8, False),
+        (Tensor(np.array([-1.0])), Tensor(np.array([0.0])), 8, False),
+    ),
+)
+def test_tune_range_zero_division_warning(params):
     with warnings.catch_warnings(record=True) as w:
         # Calling tune_range should not raise a warning
-        tune_range(Tensor(np.array([0.0])), Tensor(np.array([1.0])), 8, False)
+        tune_range(*params)
         assert len(w) == 0

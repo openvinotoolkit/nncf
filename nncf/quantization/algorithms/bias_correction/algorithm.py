@@ -442,7 +442,7 @@ class BiasCorrection(Algorithm):
         """
         bias_shift_magnitude = fns.max(
             fns.abs(
-                (updated_bias_value - current_bias_value) / (current_bias_value + fns.finfo(current_bias_value).min)
+                (updated_bias_value - current_bias_value) / (current_bias_value + fns.finfo(current_bias_value).eps)
             )
         )
         return bias_shift_magnitude

@@ -28,7 +28,7 @@ from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
 from tests.cross_fw.test_templates.helpers import SplittedModel
 from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
 from tests.cross_fw.test_templates.test_bias_correction import TemplateTestBCAlgorithm
-from tests.torch.fx.helpers import get_torch_fx_model
+from tests.torch.fx.helpers import get_torch_fx_model_q_transformed
 
 
 class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
@@ -43,7 +43,7 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> torch.fx.GraphModule:
-        return get_torch_fx_model(model)
+        return get_torch_fx_model_q_transformed(model, torch.ones(model.INPUT_SIZE))
 
     @staticmethod
     def fn_to_type(tensor) -> np.ndarray:
@@ -201,19 +201,19 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
                 SplittedModel,
                 {
                     ("conv2d", 0): ("concat", 0),
-                    ("concat", 1): ("arg0_1", 0),
+                    ("concat", 1): ("x", 0),
                 },
             ),
             (
                 MultipleConvTestModel,
                 {
-                    ("conv2d", 0): ("arg0_1", 0),
-                    ("conv2d_2", 0): ("arg0_1", 0),
+                    ("conv2d", 0): ("x", 0),
+                    ("conv2d_2", 0): ("x", 0),
                 },
             ),
-            (ConvTestModel, {("conv2d", 0): ("arg0_1", 0)}),
-            (DepthwiseConvTestModel, {("conv2d", 0): ("arg0_1", 0)}),
-            (TransposeConvTestModel, {("conv_transpose2d", 0): ("arg0_1", 0)}),
+            (ConvTestModel, {("conv2d", 0): ("x", 0)}),
+            (DepthwiseConvTestModel, {("conv2d", 0): ("x", 0)}),
+            (TransposeConvTestModel, {("conv_transpose2d", 0): ("x", 0)}),
         ),
     )
     def test_verify_collected_stat_inputs_map(self, model_cls, ref_stat_inputs_map, tmpdir):

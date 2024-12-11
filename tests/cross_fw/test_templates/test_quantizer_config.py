@@ -371,24 +371,14 @@ class TemplateTestQuantizerConfig:
             elif range_estimator_params == RangeEstimatorParametersSet.MEAN_MINMAX:
                 self.check_is_mean_min_max_statistic_collector(tensor_collector)
 
-        # reduction_shape check
-        # TODO(dlyakhov): remove this if state after PTQ experimental TensorCollector migration
-        if isinstance(tensor_collector, TensorCollector):
-            reducers = tensor_collector.reducers
-            assert len(reducers) == 2
-            # use_abs_max check
-            assert any(isinstance(r, MinReducer) for r in reducers)
-            if q_config_mode == QuantizationMode.SYMMETRIC:
-                assert any(isinstance(r, AbsMaxReducer) for r in reducers)
-            elif q_config_mode == QuantizationMode.ASYMMETRIC:
-                assert any(isinstance(r, MaxReducer) for r in reducers)
-        else:
-            # use_abs_max check
-            if q_config_mode == QuantizationMode.SYMMETRIC:
-                assert tensor_collector._use_abs_max
-            elif q_config_mode == QuantizationMode.ASYMMETRIC:
-                assert not tensor_collector._use_abs_max
-            reducers = [tensor_collector]
+        reducers = tensor_collector.reducers
+        assert len(reducers) == 2
+        # use_abs_max check
+        assert any(isinstance(r, MinReducer) for r in reducers)
+        if q_config_mode == QuantizationMode.SYMMETRIC:
+            assert any(isinstance(r, AbsMaxReducer) for r in reducers)
+        elif q_config_mode == QuantizationMode.ASYMMETRIC:
+            assert any(isinstance(r, MaxReducer) for r in reducers)
 
         for reducer in reducers:
             if q_config_per_channel:

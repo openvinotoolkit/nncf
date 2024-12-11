@@ -1,8 +1,8 @@
-torch==2.4.0
+torch==2.5.1
 datasets==3.0.1
 numpy>=1.23.5
-openvino==2024.4
+openvino==2024.5
 optimum-intel[openvino]>=1.13.0
 transformers>=4.35.2
-onnx==1.16.0
+onnx==1.17.0
 numpy<2

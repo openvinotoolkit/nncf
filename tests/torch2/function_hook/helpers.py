@@ -94,3 +94,12 @@ def get_wrapped_simple_model_with_hook() -> ConvModel:
     register_post_function_hook(wrapped, "conv/conv2d/0", 0, AddModule([2.0]))
     wrapped.eval()
     return wrapped
+
+
+class ModelMultiEdge(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = x + x
+        return x
