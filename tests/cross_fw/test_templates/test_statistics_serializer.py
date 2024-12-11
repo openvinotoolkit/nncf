@@ -23,8 +23,8 @@ from nncf.common.tensor_statistics.statistics_serializer import load_from_dir
 from nncf.common.tensor_statistics.statistics_serializer import load_metadata
 from nncf.common.tensor_statistics.statistics_serializer import sanitize_filename
 from nncf.common.tensor_statistics.statistics_serializer import save_metadata
+from nncf.common.utils.backend import BackendType
 from nncf.common.utils.os import safe_open
-from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.tensor import Tensor
 
 
@@ -34,7 +34,7 @@ class TemplateTestStatisticsSerializer:
         """Returns a dictionary of statistics for testing purposes."""
 
     @abstractmethod
-    def _get_tensor_backend(self) -> TensorBackend:
+    def _get_backend(self) -> BackendType:
         """Returns the backend used for testing."""
 
     @abstractmethod
@@ -77,8 +77,14 @@ class TemplateTestStatisticsSerializer:
             json.dump(metadata, f)
 
         # Expect the load_from_dir to raise an error when trying to load non existed statistics
-        with pytest.raises(nncf.ValidationError, match="No statistics file was found for"):
-            load_from_dir(tmp_path, self._get_tensor_backend())
+        with pytest.raises(
+            nncf.ValidationError,
+            match=(
+                "Cache validation failed: The provided metadata has no information about backend."
+                "Please, remove the cache directory and collect cache again."
+            ),
+        ):
+            load_from_dir(tmp_path, self._get_backend())
 
     def test_save_metadata(self, tmp_path):
         metadata = {"mapping": {"key1": "value1"}, "metadata": {"model": "test"}}
@@ -92,9 +98,9 @@ class TemplateTestStatisticsSerializer:
         assert loaded_metadata == metadata, "Metadata was not saved correctly"
 
     def test_dump_and_load_statistics(self, tmp_path):
-        tensor_backend = self._get_tensor_backend()
+        backend = self._get_backend()
         statistics = self._get_backend_statistics()
-        additional_metadata = {"model": "facebook/opt-125m", "compression": "8-bit"}
+        additional_metadata = {"model": "facebook/opt-125m", "compression": "8-bit", "backend": backend.value}
 
         dump_to_dir(statistics, tmp_path, additional_metadata)
 
@@ -109,8 +115,7 @@ class TemplateTestStatisticsSerializer:
             assert metadata["model"] == "facebook/opt-125m"
 
         # Load the statistics and ensure it was loaded correctly
-        loaded_statistics, loaded_metadata = load_from_dir(tmp_path, tensor_backend)
+        loaded_statistics = load_from_dir(tmp_path, backend)
         for layer_name, stat in statistics.items():
             assert layer_name in loaded_statistics, "Statistics not loaded correctly"
             assert self.is_equal(loaded_statistics[layer_name], stat)
-        assert loaded_metadata["model"] == "facebook/opt-125m", "Metadata not loaded correctly"

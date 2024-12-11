@@ -34,6 +34,15 @@ DTYPE_MAP = {
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
 
+def validate_device(device: TensorDeviceType):
+    if device is not None and device != TensorDeviceType.CPU:
+        raise ValueError("numpy_numeric only supports CPU device.")
+
+
+def convert_to_numpy_dtype(dtype: TensorDataType) -> np.dtype:
+    return DTYPE_MAP[dtype] if dtype is not None else None
+
+
 @register_numpy_types(numeric.device)
 def _(a: Union[np.ndarray, np.generic]) -> TensorDeviceType:
     return TensorDeviceType.CPU
@@ -188,7 +197,7 @@ def _(
     keepdims: bool = False,
     dtype: Optional[TensorDataType] = None,
 ) -> np.ndarray:
-    dtype = DTYPE_MAP[dtype] if dtype else None
+    dtype = convert_to_numpy_dtype(dtype)
     return np.array(np.mean(a, axis=axis, keepdims=keepdims, dtype=dtype))
 
 
@@ -388,10 +397,8 @@ def zeros(
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> np.ndarray:
-    if device is not None and device != TensorDeviceType.CPU:
-        raise ValueError("numpy_numeric.zeros only supports CPU device.")
-    if dtype is not None:
-        dtype = DTYPE_MAP[dtype]
+    validate_device(device)
+    dtype = convert_to_numpy_dtype(dtype)
     return np.zeros(shape, dtype=dtype)
 
 
@@ -402,10 +409,8 @@ def eye(
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> np.ndarray:
-    if device is not None and device != TensorDeviceType.CPU:
-        raise ValueError("numpy_numeric.eye only supports CPU device.")
-    if dtype is not None:
-        dtype = DTYPE_MAP[dtype]
+    validate_device(device)
+    dtype = convert_to_numpy_dtype(dtype)
     return np.eye(n, m, dtype=dtype)
 
 
@@ -417,10 +422,8 @@ def arange(
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> np.ndarray:
-    if device is not None and device != TensorDeviceType.CPU:
-        raise ValueError("numpy_numeric.arange only supports CPU device.")
-    if dtype is not None:
-        dtype = DTYPE_MAP[dtype]
+    validate_device(device)
+    dtype = convert_to_numpy_dtype(dtype)
     return np.arange(start, end, step, dtype=dtype)
 
 
@@ -440,4 +443,6 @@ def tensor(
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> np.ndarray:
+    validate_device(device)
+    dtype = convert_to_numpy_dtype(dtype)
     return np.array(data, dtype=dtype, device=device)

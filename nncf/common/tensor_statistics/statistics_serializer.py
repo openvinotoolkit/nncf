@@ -12,29 +12,18 @@ import json
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
+from typing import Any, Dict, List, Optional, TextIO, cast
 
 import nncf
+from nncf.common.tensor_statistics.statistics_validator import validate_cache
+from nncf.common.utils.backend import BackendType
 from nncf.common.utils.os import safe_open
 from nncf.tensor import functions as fns
-from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.tensor import Tensor
+from nncf.tensor.tensor import get_tensor_backend
 
 METADATA_FILE = "statistics_metadata.json"
-
-# - Metadata is stored in a JSON file named "statistics_metadata.json".
-# - Statistics are stored in individual files with sanitized and unique filenames to prevent collisions.
-#
-# Metadata Format:
-# - : The metadata file must have a mapping of saved filenames to the original names in the following way:
-#   {
-#       "mapping": {
-#           "saved_file_name_1": "original_name_1",
-#           "saved_file_name_2": "original_name_2",
-#           ...
-#       },
-#       ... (additional metadata fields)
-#   }
+STATISTICS_FILE_EXTENSION = ".safetensors"
 
 
 def sanitize_filename(filename: str) -> str:
@@ -80,37 +69,48 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
     """
     Saves metadata to a file in the specified directory.
 
+    # - Metadata is stored in a JSON file named "statistics_metadata.json".
+    # - Statistics are stored in individual files with sanitized and unique filenames to prevent collisions.
+    #
+    # Metadata Format:
+    # - : The metadata file must have a mapping of saved filenames to the original names and backend type as well.
+    #   {
+    #       "mapping": {
+    #           "saved_file_name_1": "original_name_1",
+    #           "saved_file_name_2": "original_name_2",
+    #           ...
+    #       },
+    #       "backend": "backend_type",
+    #       ... (additional metadata fields)
+    #   }
+
+
     :param metadata: Dictionary containing metadata and mapping.
     :param dir_path: Path to the directory where the metadata file will be saved.
     """
+    # Add device to each stat
     metadata_file = dir_path / METADATA_FILE
     with safe_open(metadata_file, "w") as f:
         json.dump(metadata, cast(TextIO, f), indent=4)
 
 
-def load_from_dir(dir_path: Path, backend: TensorBackend) -> Tuple[Dict[str, Dict[str, Tensor]], Dict[str, Any]]:
+def load_from_dir(dir_path: Path, backend: BackendType) -> Dict[str, Dict[str, Tensor]]:
     """
-    Loads statistics and metadata from a directory.
+    Loads statistics from a directory.
 
     :param dir_path: The path to the directory from which to load the statistics.
-    :param backend: Backend type to determine the loading function.
-    :return: Tuple containing statistics and metadata.
+    :param backend: Backend type to determine the tensor backend.
+    :return: Statistics.
     """
-    statistics: Dict[str, Dict[str, Tensor]] = {}
-    if not dir_path.exists():
-        raise nncf.ValidationError("The provided directory path does not exist.")
-
     metadata = load_metadata(dir_path)
+    validate_cache(metadata, dir_path, backend)
+    statistics: Dict[str, Dict[str, Tensor]] = {}
     mapping = metadata.get("mapping", {})
-
+    tensor_backend = get_tensor_backend(backend)
     for file_name, original_name in mapping.items():
         statistics_file = dir_path / file_name
-        if not statistics_file.exists():
-            raise nncf.ValidationError(
-                f"No statistics file was found for {original_name}. Probably, metadata is corrupted."
-            )
-        statistics[original_name] = fns.io.load_file(statistics_file, backend)
-    return statistics, {key: value for key, value in metadata.items() if key != "mapping"}
+        statistics[original_name] = fns.io.load_file(statistics_file, tensor_backend)
+    return statistics
 
 
 def dump_to_dir(
@@ -130,7 +130,7 @@ def dump_to_dir(
     unique_map: Dict[str, List[str]] = defaultdict(list)
     for original_name, statistics_value in statistics.items():
         sanitized_name = sanitize_filename(original_name)
-        unique_sanitized_name = add_unique_name(sanitized_name, unique_map)
+        unique_sanitized_name = add_unique_name(sanitized_name, unique_map) + STATISTICS_FILE_EXTENSION
 
         file_path = dir_path / unique_sanitized_name
 

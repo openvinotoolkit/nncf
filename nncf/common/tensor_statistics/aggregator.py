@@ -17,7 +17,6 @@ from typing import Any, Dict, Optional, TypeVar
 
 import nncf
 import nncf.common.tensor_statistics.statistics_serializer as statistics_serializer
-import nncf.common.tensor_statistics.statistics_validator as statistics_validator
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -31,8 +30,6 @@ from nncf.data.dataset import DataItem
 from nncf.data.dataset import Dataset
 from nncf.data.dataset import ModelInput
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
-from nncf.tensor.tensor import Tensor
-from nncf.tensor.tensor import get_tensor_backend
 
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")
@@ -105,13 +102,9 @@ class StatisticsAggregator(ABC):
 
         :param dir_path: The name of the directory from which to load the statistics.
         """
-        tensor_backend = get_tensor_backend(self.BACKEND)
-        loaded_data: Dict[str, Dict[str, Tensor]]
-        metadata: Dict[str, Any]
-        loaded_data, metadata = statistics_serializer.load_from_dir(dir_path, tensor_backend)
-        statistics_validator.validate_backend(metadata, self.BACKEND)
+        loaded_data = statistics_serializer.load_from_dir(dir_path, self.BACKEND)
         self._load_statistics(loaded_data)
-        nncf_logger.info(f"Statistics were successfully loaded from a directory {dir_path.absolute()}.")
+        nncf_logger.info(f"Statistics were successfully loaded from a directory {dir_path.absolute()}")
 
     def _load_statistics(self, data: Dict[str, Any]) -> None:
         """
@@ -136,7 +129,7 @@ class StatisticsAggregator(ABC):
         data_to_dump = self._prepare_statistics()
         metadata = {"backend": self.BACKEND.value, "subset_size": self.stat_subset_size}
         statistics_serializer.dump_to_dir(data_to_dump, dir_path, metadata)
-        nncf_logger.info(f"Statistics were successfully saved to a directory {dir_path.absolute()}.")
+        nncf_logger.info(f"Statistics were successfully saved to a directory {dir_path.absolute()}")
 
     def _prepare_statistics(self) -> Dict[str, Any]:
         """
@@ -148,7 +141,7 @@ class StatisticsAggregator(ABC):
         for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
             statistics = tensor_collector.get_statistics()
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
-            data: Dict[str, Tensor] = statistics.get_data(is_serialized=True)
+            data = statistics.get_data(is_serialized=True)
             data_to_dump[statistics_key] = data
         return data_to_dump
 
