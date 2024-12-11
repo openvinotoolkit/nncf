@@ -364,10 +364,6 @@ def _build_compress_model(
         zero_point = convert_if_needed(zero_point, ov.Type.f32)
     elif is_int_asym:
         # Compute zero point
-        if min_values is None:
-            # [a1, r, a2] -> [a1, 1, a2]
-            min_values = opset.reduce_min(weight, reduction_axes=reduction_axes, keep_dims=True)
-            min_values = opset.convert(min_values, ov.Type.f32)
         scaled_min_values = non_convertable_divide(min_values, scale)
         zero_point = opset.constant(level_low, ov.Type.f32) - opset.round(scaled_min_values)
         zero_point = opset.clamp(zero_point, level_low, level_high)
