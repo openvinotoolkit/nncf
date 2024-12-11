@@ -12,7 +12,6 @@
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import fields
 from typing import Any, ClassVar, Dict, List, Tuple
@@ -40,7 +39,7 @@ class TensorStatistic:
         """
         if is_serialized:
             return self._get_serialized_data()  # Dict[str, Tensor]
-        return asdict(self)
+        return {field.name: getattr(self, field.name) for field in fields(self)}
 
     def _get_serialized_data(self) -> Dict[str, Tensor]:
         """
@@ -49,7 +48,9 @@ class TensorStatistic:
         :return: Dictionary with data for serialization.
         """
         serialized_data = {}
-        for key, value in asdict(self).items():
+        for field in fields(self):
+            key = field.name
+            value = getattr(self, key)
             if isinstance(value, Tensor):
                 serialized_data[key] = value
             else:
