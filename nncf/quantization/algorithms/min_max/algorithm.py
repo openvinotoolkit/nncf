@@ -482,7 +482,7 @@ class MinMaxQuantization(Algorithm):
             collector_params.use_abs_max,
             reduction_axes,
             aggregation_axes,
-            self._inplace_statistics,
+            self._backend_entity.supports_inplace_statistics,
             num_samples,
         )
 

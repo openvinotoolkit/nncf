@@ -109,6 +109,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
         return OV_REDUCERS_MAP
+    
+    @property
+    def supports_inplace_statistics (self) -> bool:
+        return True
 
     @staticmethod
     def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:

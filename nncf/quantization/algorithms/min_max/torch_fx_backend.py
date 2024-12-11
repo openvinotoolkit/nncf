@@ -124,6 +124,10 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
         return REDUCERS_MAP
+    
+    @property
+    def supports_inplace_statistics (self) -> bool:
+        return False
 
     @staticmethod
     def get_start_nodes_for_activation_path_tracing(nncf_graph: PTNNCFGraph) -> List[NNCFNode]:
