@@ -39,7 +39,10 @@ DEVICE_MAP_REV = {v: k for k, v in DEVICE_MAP.items()}
 
 @numeric.device.register(tf.Tensor)
 def _(a: tf.Tensor) -> TensorDeviceType:
-    return DEVICE_MAP_REV[a.device.split("/")[-1].split(":")[1]]
+    if "CPU" in a.device:
+        return DEVICE_MAP_REV["CPU"]
+    if "GPU" in a.device:
+        return DEVICE_MAP_REV["GPU"]
 
 
 @numeric.backend.register(tf.Tensor)
@@ -136,7 +139,7 @@ def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Te
 
 @numeric.isempty.register(tf.Tensor)
 def _(a: tf.Tensor) -> bool:
-    return bool(tf.equal(tf.size(a), 0).numpy().T)
+    return bool(tf.equal(tf.size(a), 0).numpy())
 
 
 @numeric.isclose.register(tf.Tensor)
@@ -199,18 +202,8 @@ def _(x: tf.Tensor, axis: int = 0) -> List[tf.Tensor]:
 
 @numeric.moveaxis.register(tf.Tensor)
 def _(a: tf.Tensor, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> tf.Tensor:
-    perm = list(range(a._rank()))
-    if isinstance(source, int):
-        axe_to_move = perm.pop(source)
-        if destination < 0:
-            destination = len(perm) + destination + 1
-        perm.insert(destination, axe_to_move)
-    else:
-        old_perm = perm[:]
-        for i in range(len(source)):
-            perm[destination[i]] = old_perm[source[i]]
     with tf.device(a.device):
-        return tf.transpose(a, perm)
+        return tf.experimental.numpy.moveaxis(a, source, destination)
 
 
 @numeric.mean.register(tf.Tensor)
@@ -311,6 +304,7 @@ def _(a: tf.Tensor, data: Any) -> tf.Tensor:
 
 @numeric.item.register(tf.Tensor)
 def _(a: tf.Tensor) -> Union[int, float, bool]:
+    a = tf.reshape(a, [])
     np_item = a.numpy()
     if isinstance(np_item, np.floating):
         return float(np_item)
@@ -337,11 +331,10 @@ def _(
     a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False, ddof: int = 0
 ) -> tf.Tensor:
     with tf.device(a.device):
-        assert ddof in {0, 1}
         tf_var = tf.math.reduce_variance(a, axis=axis, keepdims=keepdims)
         if ddof:
             n = tf.shape(a)[axis] if axis is not None else tf.size(a)
-            tf_var *= float(n) / float(n - 1)
+            tf_var *= float(n) / float(n - ddof)
         return tf_var
 
 
@@ -480,8 +473,7 @@ def zeros(
     if device is not None:
         device = DEVICE_MAP[device]
     with tf.device(device):
-        zeros = tf.zeros(shape, dtype=dtype)
-    return zeros
+        return tf.zeros(shape, dtype=dtype)
 
 
 def eye(
@@ -513,8 +505,7 @@ def arange(
     if device is not None:
         device = DEVICE_MAP[device]
     with tf.device(device):
-        r = tf.range(start, end, step, dtype=dtype)
-    return r
+        return tf.range(start, end, step, dtype=dtype)
 
 
 def from_numpy(ndarray: np.ndarray) -> tf.Tensor:
