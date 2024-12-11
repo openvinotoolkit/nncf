@@ -30,7 +30,7 @@ def cast_to(x: tf.Tensor, dtype: TensorDataType) -> tf.Tensor:
 class TestTFNNCFTensorOperators(TemplateTestNNCFTensorOperators):
     @staticmethod
     def to_tensor(x):
-        with tf.device("/CPU:0"):
+        with tf.device("CPU"):
             return tf.constant(x)
 
     @staticmethod
