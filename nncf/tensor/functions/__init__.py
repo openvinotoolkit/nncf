@@ -30,8 +30,6 @@ from nncf.tensor.functions.numeric import eye as eye
 from nncf.tensor.functions.numeric import finfo as finfo
 from nncf.tensor.functions.numeric import flatten as flatten
 from nncf.tensor.functions.numeric import from_numpy as from_numpy
-from nncf.tensor.functions.numeric import inplace_inverted_divide as inplace_inverted_divide
-from nncf.tensor.functions.numeric import inverted_divide as inverted_divide
 from nncf.tensor.functions.numeric import isclose as isclose
 from nncf.tensor.functions.numeric import isempty as isempty
 from nncf.tensor.functions.numeric import item as item

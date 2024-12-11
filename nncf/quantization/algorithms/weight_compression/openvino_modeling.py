@@ -343,7 +343,7 @@ def _build_compress_model(
             min_values, max_values = opset.convert(min_values, ov.Type.f32), opset.convert(max_values, ov.Type.f32)
 
             levels = level_high - level_low + 1
-            scale = (max_values - min_values) / opset.constant(levels - 1, ov.Type.f32)
+            scale = _non_convertable_divide(max_values - min_values, opset.constant(levels - 1, ov.Type.f32))
             scale = opset.select(opset.abs(scale) < eps, eps, scale)
         else:
             w_abs_min = opset.abs(opset.reduce_min(weight, reduction_axes=reduction_axes, keep_dims=True))
@@ -351,7 +351,7 @@ def _build_compress_model(
             w_abs_min, w_max = opset.convert(w_abs_min, ov.Type.f32), opset.convert(w_max, ov.Type.f32)
 
             scale = opset.select(w_abs_min >= w_max, w_abs_min, opset.negative(w_max))
-            scale /= opset.constant(-level_low, ov.Type.f32)
+            scale = _non_convertable_divide(scale, opset.constant(-level_low, ov.Type.f32))
             scale = opset.select(opset.abs(scale) < eps, eps, scale)
 
     zero_point = None
@@ -367,11 +367,12 @@ def _build_compress_model(
             # [a1, r, a2] -> [a1, 1, a2]
             min_values = opset.reduce_min(weight, reduction_axes=reduction_axes, keep_dims=True)
             min_values = opset.convert(min_values, ov.Type.f32)
-        zero_point = opset.constant(level_low, ov.Type.f32) - opset.round(min_values / scale)
+        scaled_min_values = _non_convertable_divide(min_values, scale)
+        zero_point = opset.constant(level_low, ov.Type.f32) - opset.round(scaled_min_values)
         zero_point = opset.clamp(zero_point, level_low, level_high)
 
     weight = convert_if_needed(weight, ov.Type.f32)
-    compressed_weight = weight / scale
+    compressed_weight = _non_convertable_divide(weight, scale)
 
     if is_int_asym:
         compressed_weight += zero_point
@@ -488,3 +489,12 @@ def _build_astype_model(ov_model_params: OVModelParameters, arg_shape: Tuple) ->
     compiled_model = ov.compile_model(model, device_name="CPU")
 
     return partial(_infer_ov_model, ov_model_params, compiled_model)
+
+
+def _non_convertable_divide(a: Node, b: Node) -> Node:
+    """
+    Creates a "non-convertable" divide operation. It won't be converted to a*(1/b).
+    """
+    divide_node = a / b
+    divide_node.get_rt_info()["nonconvertable_divide_0"] = True
+    return divide_node
