@@ -645,3 +645,12 @@ def convert_if_needed(node: ov.Node, target_dtype: ov.Type) -> ov.Node:
     if node.get_element_type() == target_dtype:
         return node
     return opset.convert(node, target_dtype)
+
+
+def non_convertable_divide(a: ov.Node, b: ov.Node) -> ov.Node:
+    """
+    Creates a "non-convertable" divide operation. It won't be converted to a*(1/b).
+    """
+    divide_node = a / b
+    divide_node.get_rt_info()["nonconvertable_divide_0"] = True
+    return divide_node

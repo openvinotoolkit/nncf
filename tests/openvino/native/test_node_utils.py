@@ -22,6 +22,7 @@ from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.node_utils import get_weighted_layer_attributes
 from nncf.openvino.graph.node_utils import is_node_with_bias
+from nncf.openvino.graph.node_utils import non_convertable_divide
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import ConvNotBiasModel
 from tests.openvino.native.models import MatMul2DModel
@@ -147,3 +148,21 @@ def test_get_weight_channel_axes_for_matmul(weights_port_id, transpose, shape, d
 
     assert len(actual_channel_axes) == len(expected_channel_axes)
     assert all(a == b for a, b in zip(actual_channel_axes, expected_channel_axes))
+
+
+@pytest.mark.parametrize(
+    "a,b,convertable,ref_result",
+    [
+        (0.058599039912223816, 15, True, 0.003906603),
+        (0.058599039912223816, 15, False, 0.003906602505594492),
+    ],
+)
+def test_non_convertable_division(a, b, convertable, ref_result):
+    a, b, ref_result = tuple(map(lambda x: np.array([x], np.float32), [a, b, ref_result]))
+    a_param = opset.parameter((-1,), ov.Type.f32)
+    b_param = opset.parameter((-1,), ov.Type.f32)
+    division = (a_param / b_param) if convertable else non_convertable_divide(a_param, b_param)
+    model = ov.Model([division], [a_param, b_param])
+    compiled_model = ov.compile_model(model, device_name="CPU")
+    actual_result = compiled_model([a, b])[0]
+    np.testing.assert_allclose(actual_result, ref_result, atol=0, rtol=0)
