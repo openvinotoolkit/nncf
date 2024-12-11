@@ -29,6 +29,7 @@ from nncf.config.extractors import has_input_info_field
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
+from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
@@ -324,6 +325,12 @@ def create_compression_algorithm_builder_from_algo_names(
     return builder
 
 
+@tracked_function(
+    NNCF_PT_CATEGORY,
+    [
+        FunctionCallTelemetryExtractor("nncf.torch.wrap_model"),
+    ],
+)
 def wrap_model(
     model: torch.nn.Module,
     example_input: Any,
@@ -368,6 +375,12 @@ def is_wrapped_model(model: torch.nn.Module) -> bool:
     return isinstance(model, NNCFNetwork)
 
 
+@tracked_function(
+    NNCF_PT_CATEGORY,
+    [
+        FunctionCallTelemetryExtractor("nncf.torch.load_from_config"),
+    ],
+)
 def load_from_config(model: torch.nn.Module, config: Dict[str, Any], example_input: Any) -> NNCFNetwork:
     """
     Wraps given model to a NNCFNetwork and recovers additional modules from given NNCFNetwork config.
