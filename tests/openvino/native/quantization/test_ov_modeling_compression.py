@@ -202,9 +202,9 @@ def test_quantization_alignment(
             assert scale.backend == TensorBackend.numpy
             if precompute_s_zp:
                 # In case of precomputed scale or zero point, the returned scale and z.p. should equal the given ones
-                np.testing.assert_allclose(precomputed_scale.data, scale.data)
+                np.testing.assert_allclose(precomputed_scale.data, scale.data, atol=0, rtol=0)
                 if config.is_int_asym:
-                    np.testing.assert_allclose(precomputed_zero_point.data, zero_point.data)
+                    np.testing.assert_allclose(precomputed_zero_point.data, zero_point.data, atol=0, rtol=0)
 
         if (
             quantization_task == QuantizationTask.Q
@@ -274,7 +274,7 @@ def test_quantization_alignment(
 
         # Check that the computed tensors are equal between implementations
         np.testing.assert_allclose(
-            numpy_result.data, ov_result.data, atol=atol, err_msg=f"Results do not align for {key}."
+            ov_result.data, numpy_result.data, atol=atol, rtol=0, err_msg=f"Results do not align for {key}."
         )
 
         if max_misalignment_frequency is not None:
