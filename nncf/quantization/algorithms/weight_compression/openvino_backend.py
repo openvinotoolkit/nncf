@@ -245,7 +245,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             compression_config,
             layer_scales,
             layer_zero_points,
-            OVModelParameters(recompile=True, release_memory=False),
+            OVModelParameters(dynamic_shapes=False, recompile=True, release_memory=False),
         )
 
         compressed_const = create_ov_const_from_tensor(
