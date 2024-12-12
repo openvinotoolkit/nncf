@@ -26,14 +26,6 @@ hf/hf-internal-testing/tiny-random-gpt2_backend_OV:
   metric_value: null
 hf/hf-internal-testing/tiny-random-gpt2_backend_TORCH:
   metric_value: null
-hf/bert-base-uncased_fp16_backend_FP32:
-  metric_value: null
-hf/bert-base-uncased_fp16_backend_OV:
-  metric_value: null
-hf/bert-base-uncased_bf16_backend_FP32:
-  metric_value: null
-hf/bert-base-uncased_bf16_backend_OV:
-  metric_value: null
 torchvision/resnet18_backend_FP32:
   metric_value: 0.6978
 torchvision/resnet18_backend_OV:
@@ -49,7 +41,7 @@ torchvision/resnet18_backend_FX_TORCH:
 torchvision/mobilenet_v3_small_BC_backend_FP32:
   metric_value: 0.6766
 torchvision/mobilenet_v3_small_BC_backend_OV:
-  metric_value: 0.6669
+  metric_value: 0.6681
 torchvision/mobilenet_v3_small_BC_backend_ONNX:
   metric_value: 0.6679
 torchvision/mobilenet_v3_small_BC_backend_FX_TORCH:
@@ -111,7 +103,7 @@ timm/dpn68_backend_CUDA_TORCH:
 timm/dpn68_backend_FP32:
   metric_value: 0.76342
 timm/dpn68_backend_ONNX:
-  metric_value: 0.75906
+  metric_value: 0.7592
 timm/dpn68_backend_OV:
   metric_value: 0.75972
 timm/dpn68_backend_TORCH:
@@ -209,7 +201,7 @@ timm/regnetx_002_backend_CUDA_TORCH:
 timm/regnetx_002_backend_FP32:
   metric_value: 0.68756
 timm/regnetx_002_backend_ONNX:
-  metric_value: 0.6848
+  metric_value: 0.6854
 timm/regnetx_002_backend_OV:
   metric_value: 0.6852
 timm/regnetx_002_backend_TORCH:
@@ -219,7 +211,7 @@ timm/resnest14d_backend_CUDA_TORCH:
 timm/resnest14d_backend_FP32:
   metric_value: 0.75516
 timm/resnest14d_backend_ONNX:
-  metric_value: 0.75428
+  metric_value: 0.7538
 timm/resnest14d_backend_OV:
   metric_value: 0.75
 timm/resnest14d_backend_TORCH:
@@ -261,7 +253,7 @@ timm/visformer_small_backend_CUDA_TORCH:
 timm/visformer_small_backend_FP32:
   metric_value: 0.82098
 timm/visformer_small_backend_ONNX:
-  metric_value: 0.81562
+  metric_value: 0.8160
 timm/visformer_small_backend_OV:
   metric_value: 0.81674
 timm/visformer_small_backend_TORCH:

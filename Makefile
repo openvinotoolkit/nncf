@@ -97,7 +97,6 @@ install-tensorflow-test:
 	pip install -r tests/tensorflow/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
-	pip install -r examples/tensorflow/requirements.txt
 
 install-tensorflow-dev: install-tensorflow-test install-pre-commit
 	pip install -r examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt

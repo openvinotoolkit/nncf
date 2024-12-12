@@ -84,6 +84,7 @@ force_single_line = true
 profile = "black"
 single_line_exclusions = "typing"
 skip_glob = "examples/post_training_quantization/torch/ssd300_vgg16/main.py"
+known_third_party = "datasets"
 
 [tool.mypy]
 follow_imports = "silent"

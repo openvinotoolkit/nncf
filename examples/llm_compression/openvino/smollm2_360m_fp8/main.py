@@ -10,9 +10,9 @@
 # limitations under the License.
 from functools import partial
 
-import datasets
 import numpy as np
 import openvino as ov
+from datasets import load_dataset
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 
@@ -75,7 +75,7 @@ def main():
     MODEL_ID = "HuggingFaceTB/SmolLM2-360M-Instruct"
     OUTPUT_DIR = "smollm2_360m_compressed"
 
-    dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+    dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
     # Filtering to remove empty samples from the dataset
     dataset = dataset.filter(lambda example: len(example["text"]) > 1)
 
