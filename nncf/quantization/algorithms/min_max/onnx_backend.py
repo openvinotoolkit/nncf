@@ -43,7 +43,6 @@ from nncf.quantization.range_estimator import StatisticsType
 
 
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
-
     @property
     def preserved_metatypes(self) -> List[OperatorMetatype]:
         return []

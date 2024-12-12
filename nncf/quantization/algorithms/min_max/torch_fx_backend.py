@@ -52,7 +52,6 @@ from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
 
 
 class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
-
     @property
     def preserved_metatypes(self) -> List[OperatorMetatype]:
         return []

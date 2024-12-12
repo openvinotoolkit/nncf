@@ -53,7 +53,6 @@ from nncf.torch.quantization.layers import get_scale_shape
 
 
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
-
     @property
     def preserved_metatypes(self) -> List[OperatorMetatype]:
         return []
