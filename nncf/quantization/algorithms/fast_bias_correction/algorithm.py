@@ -148,38 +148,6 @@ class FastBiasCorrection(Algorithm):
         # for which we should update bias and new bias values.
         node_and_new_bias_value = []
 
-        input_feed = {}
-
-        me_transformation_layout = TransformationLayout()
-        for node, bias_value in track(node_and_bias_value, description="Applying Preparing step"):
-            node_name = node.node_name
-
-            if not self._backend_entity.is_quantized_weights(node, graph):
-                nncf_logger.debug(f"Skipping node {node_name} because weights were not quantized")
-                continue
-    
-            in_node_name, out_node_name = self._backend_entity.get_node_names_for_input_output_statistics(node, graph)
-            input_port_id, _ = self._backend_entity.get_activation_port_ids_for_bias_node(node)
-
-            input_id = (in_node_name, input_port_id)
-            output_id = (out_node_name, 0)
-
-            model_extraction_command = self._backend_entity.model_extraction_command([input_id], [output_id])
-            me_transformation_layout.register(model_extraction_command)
-
-            input_fp, input_shape = self._get_fp_inputs(statistic_points, in_node_name)
-            sub_input_name = self._backend_entity.get_parameter_node_name(node_name, input_port_id)
-
-            input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id, input_shape)
-            input_blob = self._backend_entity.create_input_data(
-                input_shape, input_fp, sub_input_name, input_channel_axis
-            )
-            input_feed.update(input_blob)
-
-        extracted_model = model_transformer.transform(me_transformation_layout)
-        engine = EngineFactory.create(extracted_model)
-        raw_output = engine.infer(input_feed)
-
         for node, bias_value in track(node_and_bias_value, description="Applying Fast Bias correction"):
             node_name = node.node_name
 
@@ -199,35 +167,29 @@ class FastBiasCorrection(Algorithm):
             # Outputs of the subgraphs for the FastBiasCorrection are the same across the backends.
             output_id = (out_node_name, 0)
 
-            sub_output_name = self._backend_entity.get_result_node_name(node_name, 0)
+            extracted_model = self._extract_submodel(model_transformer, input_id, output_id)
+            if extracted_model is None:
+                nncf_logger.debug(f"Skipping node {node_name} because cant extract submodel")
+                continue
 
-            # extracted_model = self._extract_submodel(model_transformer, input_id, output_id)
-            # if extracted_model is None:
-                # nncf_logger.debug(f"Skipping node {node_name} because cant extract submodel")
-                # continue
-
-            # sub_input_name, sub_output_name = self._backend_entity.get_sub_input_output_names(extracted_model)
+            sub_input_name, sub_output_name = self._backend_entity.get_sub_input_output_names(extracted_model)
 
             output_channel_axis = node.metatype.output_channel_axis
-            # input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id, input_shape)
-            # if bias_value.ndim > 1:
-            #     # Make index positive
-            #     output_channel_axis = range(bias_value.ndim)[output_channel_axis]
-            #     input_channel_axis = range(bias_value.ndim)[input_channel_axis]
-            # input_blob = self._backend_entity.create_input_data(
-            #     input_shape, input_fp, sub_input_name, input_channel_axis
-            # )
-            # bias_shift = self._get_bias_shift(
-            #     model=extracted_model,
-            #     input_blob=input_blob,
-            #     output_channel_axis=output_channel_axis,
-            #     output_fp=output_fp,
-            #     output_name=sub_output_name,
-            # )
-
-            q_outputs = self._backend_entity.process_model_output(raw_output, sub_output_name)
-            q_outputs = mean_per_channel(q_outputs, output_channel_axis)
-            bias_shift = fns.stack(output_fp) - q_outputs
+            input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id, input_shape)
+            if bias_value.ndim > 1:
+                # Make index positive
+                output_channel_axis = range(bias_value.ndim)[output_channel_axis]
+                input_channel_axis = range(bias_value.ndim)[input_channel_axis]
+            input_blob = self._backend_entity.create_input_data(
+                input_shape, input_fp, sub_input_name, input_channel_axis
+            )
+            bias_shift = self._get_bias_shift(
+                model=extracted_model,
+                input_blob=input_blob,
+                output_channel_axis=output_channel_axis,
+                output_fp=output_fp,
+                output_name=sub_output_name,
+            )
 
             bias_shift = self._reshape_bias_shift(bias_shift, bias_value, output_channel_axis)
             updated_bias = bias_value + bias_shift

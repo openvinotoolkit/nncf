@@ -29,8 +29,6 @@ from nncf.openvino.graph.transformations.commands import OVModelExtractionComman
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.collectors import get_mean_statistic_collector
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
-from nncf.openvino.graph.node_utils import get_parameter_node_name
-from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.tensor import Tensor
 
 
@@ -61,13 +59,6 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return get_mean_statistic_collector(num_samples, channel_axis, window_size, inplace)
 
     @staticmethod
-    def get_parameter_node_name(node_name: str, port_id: int) -> str:
-        return get_parameter_node_name(node_name, port_id)
-
-    @staticmethod
-    def get_result_node_name(node_name: str, port_id: int) -> str:
-        return get_result_node_name(node_name, port_id)
-
     def get_sub_input_output_names(subgraph: ov.Model) -> Tuple[str, str]:
         return subgraph.inputs[0].get_any_name(), subgraph.outputs[0].get_any_name()
 

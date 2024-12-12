@@ -558,50 +558,50 @@ class OVModelTransformer(ModelTransformer):
         :return: Extracted sub-model.
         """
         outputs_type = ov.Type.f32
+        transformation = transformations[-1]
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
 
         params, results = [], []
-        for transformation in transformations:
-            for input_name, input_port_id in transformation.input_ids:
-                input_node = name_to_node_mapping[input_name]
-                if input_name in [tensor.node.get_friendly_name() for tensor in model.inputs]:
-                    params.append(input_node)
-                    continue
+        for input_name, input_port_id in transformation.input_ids:
+            input_node = name_to_node_mapping[input_name]
+            if input_name in [tensor.node.get_friendly_name() for tensor in model.inputs]:
+                params.append(input_node)
+                continue
 
-                input_port = input_node.input(input_port_id)
-                input_type = input_port.get_element_type()
-                input_node_output = input_port.get_source_output()
-                parameter_name = get_parameter_node_name(input_name, input_port_id)
+            input_port = input_node.input(input_port_id)
+            input_type = input_port.get_element_type()
+            input_node_output = input_port.get_source_output()
+            parameter_name = get_parameter_node_name(input_name, input_port_id)
 
-                new_param = opset.parameter(
-                    shape=input_node_output.partial_shape,
-                    dtype=outputs_type,
-                    name=parameter_name,
-                )
-                new_input = new_param.output(0)
+            new_param = opset.parameter(
+                shape=input_node_output.partial_shape,
+                dtype=outputs_type,
+                name=parameter_name,
+            )
+            new_input = new_param.output(0)
 
-                if input_type != outputs_type:
-                    new_input = opset.convert(new_param, destination_type=input_type).output(0)
+            if input_type != outputs_type:
+                new_input = opset.convert(new_param, destination_type=input_type).output(0)
 
-                input_port.replace_source_output(new_input)
-                new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
-                OVModelTransformer._update_tensor_names(new_param_tensors, [parameter_name])
-                params.append(new_param)
+            input_port.replace_source_output(new_input)
+            new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
+            OVModelTransformer._update_tensor_names(new_param_tensors, [parameter_name])
+            params.append(new_param)
 
-            for output_name, output_port_id in transformation.output_ids:
-                output_node = name_to_node_mapping[output_name]
+        for output_name, output_port_id in transformation.output_ids:
+            output_node = name_to_node_mapping[output_name]
 
-                result_name = get_result_node_name(output_name, output_port_id)
-                output_port = output_node.output(output_port_id)
-                if output_port.get_element_type() != outputs_type:
-                    output_port = opset.convert(output_node, destination_type=outputs_type).output(0)
-                new_result = opset.result(output_port, name=result_name)
-                result_tensor_names = [result_name] + list(output_port.get_names())
-                OVModelTransformer._update_tensor_names([new_result.get_output_tensor(0)], result_tensor_names)
-                results.append(new_result)
+            result_name = get_result_node_name(output_name, output_port_id)
+            output_port = output_node.output(output_port_id)
+            if output_port.get_element_type() != outputs_type:
+                output_port = opset.convert(output_node, destination_type=outputs_type).output(0)
+            new_result = opset.result(output_port, name=result_name)
+            result_tensor_names = [result_name] + list(output_port.get_names())
+            OVModelTransformer._update_tensor_names([new_result.get_output_tensor(0)], result_tensor_names)
+            results.append(new_result)
 
-            if not results:
-                results.extend(model.get_results())
+        if not results:
+            results = model.get_results()
 
         extracted_model = ov.Model(results, params)
         copy_rt_info(model, extracted_model, path=["nncf"])
