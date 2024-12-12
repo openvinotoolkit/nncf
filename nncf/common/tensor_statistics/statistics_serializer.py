@@ -72,7 +72,6 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
     :param metadata: Dictionary containing metadata and mapping.
     :param dir_path: Path to the directory where the metadata file will be saved.
     """
-    # Add device to each stat
     metadata_file = dir_path / METADATA_FILE
     with safe_open(metadata_file, "w") as f:
         json.dump(metadata, cast(TextIO, f), indent=4)
