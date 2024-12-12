@@ -117,10 +117,7 @@ def _astype_ov(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
     a_dtype = DTYPE_MAP_REV[a.get_element_type()]
 
     ov_model_params = OVModelParameters(
-        dynamic_shapes=True,
-        recompile=True,
-        release_memory=False,
-        return_ov_tensors=True
+        dynamic_shapes=True, recompile=True, release_memory=False, return_ov_tensors=True
     )
     ov_model_params.input_dtypes = {"input": a_dtype}
     ov_model_params.output_dtypes = {"output": dtype}
