@@ -116,6 +116,10 @@ class OVModelParameters:
 ModelAsNodes = Tuple[List[Parameter], List[Node], OVModelParameters]
 
 
+def clear_ov_model_cache():
+    OV_MODEL_CACHE.clear()
+
+
 def _infer_ov_model(
     ov_model_params: OVModelParameters, compiled_model: ov.CompiledModel, inputs: TensorList
 ) -> TensorList:

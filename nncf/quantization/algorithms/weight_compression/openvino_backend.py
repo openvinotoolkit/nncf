@@ -49,7 +49,7 @@ from nncf.quantization.algorithms.weight_compression.backend import WeightCompre
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import OV_MODEL_CACHE
+from nncf.quantization.algorithms.weight_compression.openvino_modeling import clear_ov_model_cache
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorBackend
@@ -335,9 +335,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         # reset name_to_node_mapping
         self.name_to_node_mapping = None
 
-        # clear openvino model cache
-        # OV_MODEL_CACHE.clear()
-
         return model
 
     @staticmethod
@@ -345,6 +342,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: ov.Model, parameters: Dict, algo_name: Optional[str] = "quantization", path: Optional[List] = None
     ) -> None:
         dump_parameters(model, parameters, algo_name, path)
+
+    def __del__(self):
+        clear_ov_model_cache()
 
 
 class OVAWQAlgoAlgoBackend(AWQAlgoBackend, OVWeightCompressionAlgoBackend):
