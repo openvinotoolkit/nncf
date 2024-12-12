@@ -355,6 +355,7 @@ def compress_weight(
     config: WeightCompressionConfig,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
+    ov_model_params: Optional = None,
 ):
     """
     Compress weight using compression configuration.
@@ -364,6 +365,7 @@ def compress_weight(
     :param config: Compression configuration.
     :param precomputed_scale: Precomputed scale.
     :param precomputed_zero_point: Precomputed zero point.
+    :param ov_model_params: OpenVINO model parameters for acceleration.
     :return: The compressed weight and decompression parameters as instance of CompressedWeight
     """
     if not config.is_integer:
@@ -375,7 +377,7 @@ def compress_weight(
         )
         return CompressedWeight(compressed_weight, scale)
     compressed_weight, scale, zero_point = do_int_quantization(
-        weight, config, reduction_axes, precomputed_scale, precomputed_zero_point
+        weight, config, reduction_axes, precomputed_scale, precomputed_zero_point, ov_model_params
     )
 
     return CompressedWeight(compressed_weight, scale, zero_point)

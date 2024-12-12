@@ -49,6 +49,7 @@ from nncf.quantization.algorithms.weight_compression.backend import WeightCompre
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
+from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import clear_ov_model_cache
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
@@ -238,7 +239,14 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             raise nncf.ParameterNotSupportedError(f"{compression_config.mode.value} is not supported.")
 
         original_shape = weight.shape
-        compressed_weight = compress_weight(weight, reduction_axes, compression_config, layer_scales, layer_zero_points)
+        compressed_weight = compress_weight(
+            weight,
+            reduction_axes,
+            compression_config,
+            layer_scales,
+            layer_zero_points,
+            OVModelParameters(recompile=True, release_memory=False),
+        )
 
         compressed_const = create_ov_const_from_tensor(
             compressed_weight.tensor, compression_dtype, name=const_node_name
