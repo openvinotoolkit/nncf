@@ -908,7 +908,6 @@ def ceil(a: Tensor) -> Tensor:
     return Tensor(ceil(a.data))
 
 
-@functools.singledispatch
 def tensor(
     data: Union[TTensor, Sequence[float]],
     backend: TensorBackend,
@@ -917,7 +916,7 @@ def tensor(
     device: Optional[TensorDeviceType] = None,
 ) -> Tensor:
     """
-    Create a tensor from the given data.
+    Creates a tensor from the given data.
 
     :param data: The data for the tensor.
     :param backend: The backend type for which the tensor is required.

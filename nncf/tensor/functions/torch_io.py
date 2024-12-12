@@ -20,11 +20,7 @@ from nncf.tensor.functions import io as io
 from nncf.tensor.functions.torch_numeric import convert_to_torch_device
 
 
-def load_file(
-    file_path: str,
-    *,
-    device: Optional[TensorDeviceType] = None,
-) -> Dict[str, torch.Tensor]:
+def load_file(file_path: str, *, device: Optional[TensorDeviceType] = None) -> Dict[str, torch.Tensor]:
     device = convert_to_torch_device(device)
     return pt_load_file(file_path, device=device)
 
