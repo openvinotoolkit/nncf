@@ -394,6 +394,19 @@ def zeros(
     return np.zeros(shape, dtype=dtype)
 
 
+def ones(
+    shape: Tuple[int, ...],
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> np.ndarray:
+    if device is not None and device != TensorDeviceType.CPU:
+        raise ValueError("numpy_numeric.ones only supports CPU device.")
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    return np.ones(shape, dtype=dtype)
+
+
 def eye(
     n: int,
     m: Optional[int] = None,
@@ -431,3 +444,8 @@ def _(a: Union[np.ndarray, np.generic]) -> Union[np.ndarray, np.generic]:
 @register_numpy_types(numeric.ceil)
 def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
     return np.ceil(a)
+
+
+@register_numpy_types(numeric.reciprocal)
+def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+    return np.reciprocal(a)
