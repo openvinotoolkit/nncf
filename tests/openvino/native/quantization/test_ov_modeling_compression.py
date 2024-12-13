@@ -31,7 +31,6 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import do_i
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
-from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP as DTYPE_MAP_NP
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP_REV as DTYPE_MAP_REV_NP
@@ -57,16 +56,6 @@ COMPRESSION_CONFIGS = [
     WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, group_size=2),
     WeightCompressionConfig(CompressWeightsMode.INT4_SYM, group_size=2),
 ]
-
-MAX_MISALIGNMENT_FREQUENCY = {
-    TensorDataType.float32: 1e-2,  # tends to < 5e-6
-    TensorDataType.float16: 1e-2,  # tends to < 5e-5
-    TensorDataType.bfloat16: 1e-2,  # tends to < 5e-4
-}
-
-MAX_MISALIGNMENT_MAGNITUDE = 1
-
-EPS = np.finfo(np.float32).eps
 
 REDUCTION_AXES = (1,)
 
@@ -107,7 +96,7 @@ def openvino_available(available: bool):
     nncf.import_utils._openvino_available = original_value
 
 
-@pytest.mark.parametrize("weight_shape", [(10000, 4)], ids=[""])
+@pytest.mark.parametrize("weight_shape", [(100000, 4)], ids=[""])
 @pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
 @pytest.mark.parametrize(
     ("quantization_task", "tensor_backend"),
@@ -124,10 +113,7 @@ def openvino_available(available: bool):
 )
 @pytest.mark.parametrize("dtype", [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16])
 @pytest.mark.parametrize("precompute_s_zp", [False, True], ids=["no-precompute", "precompute"])
-@pytest.mark.parametrize("static_shapes", [False, True], ids=["dynamic-shapes", "static-shapes"])
-def test_quantization_alignment(
-    weight_shape, config, quantization_task, tensor_backend, dtype, precompute_s_zp, static_shapes
-):
+def test_quantization_alignment(weight_shape, config, quantization_task, tensor_backend, dtype, precompute_s_zp):
     d1, d2 = weight_shape
     group_size = config.group_size
     zero_point_shape = scale_shape = (d1, 1) if group_size == -1 else (d1, d2 // group_size, 1)
@@ -174,7 +160,7 @@ def test_quantization_alignment(
 
                 kwargs = {}
                 if cb == ComputationBackend.OV:
-                    ov_model_params = OVModelParameters(dynamic_shapes=not static_shapes)
+                    ov_model_params = OVModelParameters()
                     kwargs["ov_model_params"] = ov_model_params
                 if quantization_task == QuantizationTask.Q_DQ_RQ:
                     kwargs["return_compressed_weight"] = True
@@ -223,7 +209,7 @@ def test_quantization_alignment(
             decompressed_weight,
         )
 
-    _check_values(static_shapes, config, precompute_s_zp, dtype, results, precomputed_scale, weight_shape)
+    _check_values(results)
 
 
 def _check_backends_and_dtypes(
@@ -270,59 +256,16 @@ def _check_backends_and_dtypes(
             assert decompressed_weight.dtype == TensorDataType.float32
 
 
-def _check_values(static_shapes, config, precompute_s_zp, dtype, results, precomputed_scale, weight_shape):
+def _check_values(results):
+    # Check that the computed tensors are equal between implementations
     keys = set(results[ComputationBackend.OV]).union(set(results[ComputationBackend.NumPy]))
     for key in keys:
         numpy_result = results[ComputationBackend.NumPy][key]
         ov_result = results[ComputationBackend.OV][key]
 
-        atol = 0
-        scale = None
-        # For static-shaped OV models doing asymmetric compression there maybe misalignments between OV and NumPy
-        # For more details see ticket 156511
-        if static_shapes and config.is_int_asym:
-            if key == "compressed_weight":
-                atol = MAX_MISALIGNMENT_MAGNITUDE
-            elif key == "decompressed_weight":
-                if "scale" in results[ComputationBackend.NumPy]:
-                    scale = results[ComputationBackend.NumPy]["scale"]
-                else:
-                    if precompute_s_zp:
-                        scale = precomputed_scale
-                    else:
-                        weight = get_random_float_tensor(weight_shape, dtype, TensorBackend.numpy)
-                        with openvino_available(False):
-                            _, _, scale, _ = calculate_quantized_dequantized_weight(
-                                weight, config, REDUCTION_AXES, return_compressed_weight=True
-                            )
-                # For decompressed weight the misalignment magnitude depends on the scale
-                atol = MAX_MISALIGNMENT_MAGNITUDE * fns.abs(scale).max().item() + EPS
-            max_misalignment_frequency = MAX_MISALIGNMENT_FREQUENCY[dtype]
-        else:
-            max_misalignment_frequency = None
+        # Note: For static-shaped OV models doing asymmetric compression with convertable divisions there maybe
+        # misalignments equal to 1 quant between OV and NumPy. For more details see ticket 156511.
 
-        # Check that the computed tensors are equal between implementations
         np.testing.assert_allclose(
-            ov_result.data, numpy_result.data, atol=atol, rtol=0, err_msg=f"Results do not align for {key}."
+            ov_result.data, numpy_result.data, atol=0, rtol=0, err_msg=f"Results do not align for {key}."
         )
-
-        if max_misalignment_frequency is not None:
-            if key == "compressed_weight":
-                diff = fns.abs(numpy_result.astype(TensorDataType.int32) - ov_result.astype(TensorDataType.int32))
-            else:
-                diff = fns.abs(numpy_result - ov_result)
-
-            if diff.max() > 0:
-                # Check that the proportion of misaligned values is small
-                n_not_equal = fns.sum(diff > 0)
-                assert n_not_equal / numpy_result.size < max_misalignment_frequency
-
-                # Check that the magnitude of misalignment is as small as expected
-                if key == "decompressed_weight":
-                    # Reshape scale to match the shape of decompressed weight
-                    scale = np.repeat(scale.data, diff.shape[-1], axis=-1)
-                    np.testing.assert_array_less(
-                        diff.data,
-                        MAX_MISALIGNMENT_MAGNITUDE * np.abs(scale) + EPS,
-                        err_msg=f"Too large misalignment for {key}.",
-                    )
