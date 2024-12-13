@@ -38,20 +38,15 @@ class TemplateTestStatisticsSerializer:
 
     def test_load_no_statistics_file(self, tmp_path):
         # Create a metadata file in the temp directory
-        metadata = {"mapping": {"key1": "value1"}, "metadata": {"model": "test"}}
+        backend = self._get_backend()
+        metadata = {"mapping": {"key1": "value1"}, "model": "test", "backend": backend.value}
         metadata_file = tmp_path / "statistics_metadata.json"
         with safe_open(metadata_file, "w") as f:
             json.dump(metadata, f)
 
         # Expect the load_statistics_from_dir to raise an error when trying to load non existed statistics
-        with pytest.raises(
-            nncf.ValidationError,
-            match=(
-                "Cache validation failed: The provided metadata has no information about backend. "
-                "Please, remove the cache directory and collect cache again."
-            ),
-        ):
-            load_statistics(tmp_path, self._get_backend())
+        with pytest.raises(nncf.StatisticsCacheError, match="One of the statistics file:"):
+            load_statistics(tmp_path, backend)
 
     def test_dump_and_load_statistics(self, tmp_path):
         backend = self._get_backend()

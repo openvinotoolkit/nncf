@@ -74,7 +74,7 @@ def test_load_metadata(tmp_path):
 
 
 def test_load_no_existing_metadata(tmp_path):
-    with pytest.raises(nncf.InvalidPathError, match="Metadata file does not exist."):
+    with pytest.raises(nncf.StatisticsCacheError, match="Metadata file does not exist in the following path"):
         load_metadata(tmp_path)
 
 

@@ -23,11 +23,11 @@ def validate_backend(metadata: Dict[str, Any], backend: BackendType) -> None:
     :param backend: Provided backend.
     """
     if "backend" not in metadata:
-        raise nncf.ValidationError("The provided metadata has no information about backend.")
+        raise ValueError("The provided metadata has no information about backend.")
     data_backend = metadata["backend"]
     if data_backend != backend.value:
-        raise nncf.ValidationError(
-            f"Backend in loaded statistics {data_backend} does not match to an expected backend {backend.value}."
+        raise ValueError(
+            f"Backend in loaded statistics {data_backend} does not match the expected backend {backend.value}."
         )
 
 
@@ -41,10 +41,7 @@ def validate_statistics_files_exist(metadata: Dict[str, Any], dir_path: Path) ->
     for file_name in metadata["mapping"]:
         file_path = dir_path / file_name
         if not file_path.exists():
-            raise nncf.ValidationError(
-                f"One of the statistics file: {file_path} does not exist. "
-                "Whether statistics were collected for a different model or statistics were corrupted."
-            )
+            raise FileNotFoundError(f"One of the statistics file: {file_path} does not exist.")
 
 
 def validate_cache(metadata: Dict[str, Any], dir_path: Path, backend: BackendType) -> None:
@@ -55,12 +52,8 @@ def validate_cache(metadata: Dict[str, Any], dir_path: Path, backend: BackendTyp
     :param dir_path: Path to the cache directory.
     :param backend: Backend type.
     """
-    if not dir_path.exists():
-        raise nncf.ValidationError("Cache validation failed: The provided directory path does not exist.")
     try:
         validate_backend(metadata, backend)
         validate_statistics_files_exist(metadata, dir_path)
-    except (nncf.ValidationError, nncf.InvalidPathError) as e:
-        raise nncf.ValidationError(
-            f"Cache validation failed: {e} Please, remove the cache directory and collect cache again."
-        ) from e
+    except (ValueError, FileNotFoundError) as e:
+        raise nncf.StatisticsCacheError(str(e))
