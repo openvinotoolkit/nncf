@@ -46,7 +46,7 @@ class OVModelParameters:
         self,
         input_dtypes: Optional[Dict[str, TensorDataType]] = None,
         output_dtypes: Optional[Dict[str, TensorDataType]] = None,
-        dynamic_shapes: bool = False,
+        dynamic_shapes: bool = True,
         recompile: bool = False,
         release_memory: bool = True,
         share_inputs: bool = True,
