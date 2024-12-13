@@ -35,6 +35,7 @@ class TestNPStatisticsSerializer(TemplateTestStatisticsSerializer):
         }
 
     def _get_backend(self) -> TensorBackend:
+        # any backend for numpy tensor, e.g. OpenVINO
         return BackendType.OPENVINO
 
     def is_equal(self, a1: Dict[str, Tensor], a2: Dict[str, Tensor]) -> bool:

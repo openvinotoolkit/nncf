@@ -108,20 +108,20 @@ def dump_statistics(
     """
     Saves statistics and metadata to a directory.
 
-    # - Metadata is stored in a JSON file named "statistics_metadata.json".
-    # - Statistics are stored in individual files with sanitized and unique filenames to prevent collisions.
-    #
-    # Metadata Format:
-    # - : The metadata file must have a mapping of saved filenames to the original names and backend type.
-    #   {
-    #       "mapping": {
-    #           "saved_file_name_1": "original_name_1",
-    #           "saved_file_name_2": "original_name_2",
-    #           ...
-    #       },
-    #       "backend": "backend_type",
-    #       ... (additional metadata fields)
-    #   }
+    Metadata is stored in a JSON file named "statistics_metadata.json".
+    Statistics are stored in individual files with sanitized and unique filenames to prevent collisions.
+
+    Metadata Format:
+    The metadata file must have a mapping of saved filenames to the original names and backend type.
+    {
+        "mapping": {
+            "saved_file_name_1": "original_name_1",
+            "saved_file_name_2": "original_name_2",
+            ...
+        },
+        "backend": "backend_type",
+        ... (additional metadata fields)
+    }
 
     :param statistics: A dictionary with statistic names as keys and the statistic data as values.
     :param dir_path: The path to the directory where the statistics will be dumped.
