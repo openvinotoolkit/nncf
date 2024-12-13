@@ -267,7 +267,6 @@ class GPTQ:
                             activations = [inp[..., (i1 + i) : (i1 + i + group_size)] for inp in inputs]
                             wc_statistics = ScaleEstimation.activations_to_wc_statistics(activations)
                             scale, zero_point = ScaleEstimation.calculate_quantization_params(
-                                self._backend_entity,
                                 wc_statistics,
                                 weight_tensor[:, (i1 + i) : (i1 + i + group_size)],
                                 reduction_axes,

@@ -23,7 +23,6 @@ from nncf.common.utils.backend import get_backend
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
-from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight_and_fp4_scale
@@ -146,7 +145,6 @@ class ScaleEstimation:
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
             scales[weight_name], zero_points[weight_name] = self.calculate_quantization_params(
-                self._backend_entity,
                 stats,
                 weight,
                 wp.reduction_axes,
@@ -161,7 +159,6 @@ class ScaleEstimation:
 
     @staticmethod
     def calculate_quantization_params(
-        backend_entity: WeightCompressionAlgoBackend,
         statistics: WCTensorStatistic,
         weight: Tensor,
         reduction_axes: Tuple[int, ...],
@@ -181,7 +178,6 @@ class ScaleEstimation:
         1. Initial scale rectification based on activation statistics.
         2. A grid search to further refine the scale parameters.
 
-        :param backend_entity: The backend-specific implementation of the weight compression algorithm.
         :param statistics: The input activations of the layer reduced over batch and sequence length dimensions,
             together with original activation tensor shapes.
         :param weight: The weight tensor that is being quantized.
