@@ -11,7 +11,6 @@
 from pathlib import Path
 from typing import Any, Dict
 
-import nncf
 from nncf.common.utils.backend import BackendType
 
 
@@ -52,8 +51,5 @@ def validate_cache(metadata: Dict[str, Any], dir_path: Path, backend: BackendTyp
     :param dir_path: Path to the cache directory.
     :param backend: Backend type.
     """
-    try:
-        validate_backend(metadata, backend)
-        validate_statistics_files_exist(metadata, dir_path)
-    except (ValueError, FileNotFoundError) as e:
-        raise nncf.StatisticsCacheError(str(e))
+    validate_backend(metadata, backend)
+    validate_statistics_files_exist(metadata, dir_path)

@@ -910,8 +910,8 @@ def ceil(a: Tensor) -> Tensor:
 
 def tensor(
     data: Union[TTensor, Sequence[float]],
-    backend: TensorBackend,
     *,
+    backend: TensorBackend,
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> Tensor:

@@ -86,14 +86,17 @@ def load_statistics(dir_path: Path, backend: BackendType) -> Dict[str, Dict[str,
     :return: Statistics.
     """
     metadata = load_metadata(dir_path)
-    validate_cache(metadata, dir_path, backend)
-    statistics: Dict[str, Dict[str, Tensor]] = {}
-    mapping = metadata.get("mapping", {})
-    tensor_backend = get_tensor_backend(backend)
-    for file_name, original_name in mapping.items():
-        statistics_file = dir_path / file_name
-        statistics[original_name] = fns.io.load_file(statistics_file, tensor_backend)  # no device support
-    return statistics
+    try:
+        validate_cache(metadata, dir_path, backend)
+        statistics: Dict[str, Dict[str, Tensor]] = {}
+        mapping = metadata.get("mapping", {})
+        tensor_backend = get_tensor_backend(backend)
+        for file_name, original_name in mapping.items():
+            statistics_file = dir_path / file_name
+            statistics[original_name] = fns.io.load_file(statistics_file, backend=tensor_backend)  # no device support
+        return statistics
+    except Exception as e:
+        raise nncf.StatisticsCacheError(str(e))
 
 
 def dump_statistics(

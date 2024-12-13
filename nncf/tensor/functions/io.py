@@ -22,8 +22,8 @@ from nncf.tensor.functions.dispatcher import get_io_backend_fn
 
 def load_file(
     file_path: Path,
-    backend: TensorBackend,
     *,
+    backend: TensorBackend,
     device: Optional[TensorDeviceType] = None,
 ) -> Dict[str, Tensor]:
     """
