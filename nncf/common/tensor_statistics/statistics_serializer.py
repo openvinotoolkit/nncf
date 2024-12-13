@@ -77,7 +77,7 @@ def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:
         json.dump(metadata, cast(TextIO, f), indent=4)
 
 
-def load_statistics_from_dir(dir_path: Path, backend: BackendType) -> Dict[str, Dict[str, Tensor]]:
+def load_statistics(dir_path: Path, backend: BackendType) -> Dict[str, Dict[str, Tensor]]:
     """
     Loads statistics from a directory.
 
@@ -96,7 +96,7 @@ def load_statistics_from_dir(dir_path: Path, backend: BackendType) -> Dict[str, 
     return statistics
 
 
-def dump_statistics_to_dir(
+def dump_statistics(
     statistics: Dict[str, Dict[str, Tensor]],
     dir_path: Path,
     backend: BackendType,

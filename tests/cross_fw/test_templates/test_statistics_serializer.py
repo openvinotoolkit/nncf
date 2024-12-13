@@ -16,8 +16,8 @@ from typing import Dict
 import pytest
 
 import nncf
-from nncf.common.tensor_statistics.statistics_serializer import dump_statistics_to_dir
-from nncf.common.tensor_statistics.statistics_serializer import load_statistics_from_dir
+from nncf.common.tensor_statistics.statistics_serializer import dump_statistics
+from nncf.common.tensor_statistics.statistics_serializer import load_statistics
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.os import safe_open
 from nncf.tensor.tensor import Tensor
@@ -51,14 +51,14 @@ class TemplateTestStatisticsSerializer:
                 "Please, remove the cache directory and collect cache again."
             ),
         ):
-            load_statistics_from_dir(tmp_path, self._get_backend())
+            load_statistics(tmp_path, self._get_backend())
 
     def test_dump_and_load_statistics(self, tmp_path):
         backend = self._get_backend()
         statistics = self._get_backend_statistics()
         additional_metadata = {"model": "facebook/opt-125m", "compression": "8-bit"}
 
-        dump_statistics_to_dir(statistics, tmp_path, backend, additional_metadata)
+        dump_statistics(statistics, tmp_path, backend, additional_metadata)
 
         assert len(list(Path(tmp_path).iterdir())) > 0, "No files created during dumping"
 
@@ -71,7 +71,7 @@ class TemplateTestStatisticsSerializer:
             assert metadata["model"] == "facebook/opt-125m"
 
         # Load the statistics and ensure it was loaded correctly
-        loaded_statistics = load_statistics_from_dir(tmp_path, backend)
+        loaded_statistics = load_statistics(tmp_path, backend)
         for layer_name, stat in statistics.items():
             assert layer_name in loaded_statistics, "Statistics not loaded correctly"
             assert self.is_equal(loaded_statistics[layer_name], stat)
