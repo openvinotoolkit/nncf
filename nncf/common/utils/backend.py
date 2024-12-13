@@ -11,7 +11,7 @@
 import importlib
 from copy import deepcopy
 from enum import Enum
-from typing import Callable, List, TypeVar
+from typing import Any, Callable, List, TypeVar
 
 import nncf
 
@@ -26,8 +26,8 @@ class BackendType(Enum):
     OPENVINO = "OpenVINO"
 
 
-def result_verifier(func: Callable) -> Callable:
-    def verify_result(*args, **kwargs):
+def result_verifier(func: Callable[[TModel], bool]) -> Callable[..., None]:
+    def verify_result(*args: Any, **kwargs: Any):  # type: ignore
         try:
             return func(*args, **kwargs)
         except AttributeError:
