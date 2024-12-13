@@ -56,9 +56,9 @@ class TemplateTestStatisticsSerializer:
     def test_dump_and_load_statistics(self, tmp_path):
         backend = self._get_backend()
         statistics = self._get_backend_statistics()
-        additional_metadata = {"model": "facebook/opt-125m", "compression": "8-bit", "backend": backend.value}
+        additional_metadata = {"model": "facebook/opt-125m", "compression": "8-bit"}
 
-        dump_statistics_to_dir(statistics, tmp_path, additional_metadata)
+        dump_statistics_to_dir(statistics, tmp_path, backend, additional_metadata)
 
         assert len(list(Path(tmp_path).iterdir())) > 0, "No files created during dumping"
 

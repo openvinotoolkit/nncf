@@ -128,8 +128,8 @@ class StatisticsAggregator(ABC):
         :param dir_path: The path of the directory where the statistics will be saved.
         """
         data_to_dump = self._prepare_statistics()
-        metadata = {"backend": self.BACKEND.value, "subset_size": self.stat_subset_size}
-        dump_statistics_to_dir(data_to_dump, dir_path, metadata)
+        additional_metadata = {"subset_size": self.stat_subset_size}
+        dump_statistics_to_dir(data_to_dump, dir_path, self.BACKEND, additional_metadata)
         nncf_logger.info(f"Statistics were successfully saved to a directory {dir_path.absolute()}")
 
     def _prepare_statistics(self) -> Dict[str, Any]:

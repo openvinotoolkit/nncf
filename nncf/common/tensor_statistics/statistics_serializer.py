@@ -99,6 +99,7 @@ def load_statistics_from_dir(dir_path: Path, backend: BackendType) -> Dict[str, 
 def dump_statistics_to_dir(
     statistics: Dict[str, Dict[str, Tensor]],
     dir_path: Path,
+    backend: BackendType,
     additional_metadata: Dict[str, Any],
 ) -> None:
     """
@@ -121,10 +122,11 @@ def dump_statistics_to_dir(
 
     :param statistics: A dictionary with statistic names as keys and the statistic data as values.
     :param dir_path: The path to the directory where the statistics will be dumped.
+    :param backend: Backend type to save in metadata.
     :param additional_metadata: A dictionary containing any additional metadata to be saved with the mapping.
     """
     dir_path.mkdir(parents=True, exist_ok=True)
-    metadata: Dict[str, Any] = {"mapping": {}}
+    metadata: Dict[str, Any] = {"mapping": {}, "backend": backend.value}
     unique_map: Dict[str, List[str]] = defaultdict(list)
     for original_name, statistics_value in statistics.items():
         sanitized_name = sanitize_filename(original_name)
