@@ -11,7 +11,7 @@
 import importlib
 from copy import deepcopy
 from enum import Enum
-from typing import List, TypeVar
+from typing import Callable, List, TypeVar
 
 import nncf
 
@@ -24,6 +24,16 @@ class BackendType(Enum):
     TENSORFLOW = "Tensorflow"
     ONNX = "ONNX"
     OPENVINO = "OpenVINO"
+
+
+def result_verifier(func: Callable) -> Callable:
+    def verify_result(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except AttributeError:
+            return False
+
+    return verify_result
 
 
 def get_available_backends() -> List[BackendType]:
@@ -51,6 +61,7 @@ def get_available_backends() -> List[BackendType]:
     return available_backends
 
 
+@result_verifier
 def is_torch_model(model: TModel) -> bool:
     """
     Returns True if the model is an instance of torch.nn.Module and not a torch.fx.GraphModule, otherwise False.
@@ -61,12 +72,10 @@ def is_torch_model(model: TModel) -> bool:
     import torch
     import torch.fx
 
-    try:
-        return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
-    except AttributeError:
-        return False
+    return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
 
 
+@result_verifier
 def is_torch_fx_model(model: TModel) -> bool:
     """
     Returns True if the model is an instance of torch.fx.GraphModule, otherwise False.
@@ -76,12 +85,10 @@ def is_torch_fx_model(model: TModel) -> bool:
     """
     import torch.fx
 
-    try:
-        return isinstance(model, torch.fx.GraphModule)
-    except AttributeError:
-        return False
+    return isinstance(model, torch.fx.GraphModule)
 
 
+@result_verifier
 def is_tensorflow_model(model: TModel) -> bool:
     """
     Returns True if the model is an instance of tensorflow.Module, otherwise False.
@@ -91,12 +98,10 @@ def is_tensorflow_model(model: TModel) -> bool:
     """
     import tensorflow  # type: ignore
 
-    try:
-        return isinstance(model, tensorflow.Module)
-    except AttributeError:
-        return False
+    return isinstance(model, tensorflow.Module)
 
 
+@result_verifier
 def is_onnx_model(model: TModel) -> bool:
     """
     Returns True if the model is an instance of onnx.ModelProto, otherwise False.
@@ -106,12 +111,10 @@ def is_onnx_model(model: TModel) -> bool:
     """
     import onnx  # type: ignore
 
-    try:
-        return isinstance(model, onnx.ModelProto)
-    except AttributeError:
-        return False
+    return isinstance(model, onnx.ModelProto)
 
 
+@result_verifier
 def is_openvino_model(model: TModel) -> bool:
     """
     Returns True if the model is an instance of openvino.runtime.Model, otherwise False.
@@ -121,12 +124,10 @@ def is_openvino_model(model: TModel) -> bool:
     """
     import openvino.runtime as ov  # type: ignore
 
-    try:
-        return isinstance(model, ov.Model)
-    except AttributeError:
-        return False
+    return isinstance(model, ov.Model)
 
 
+@result_verifier
 def is_openvino_compiled_model(model: TModel) -> bool:
     """
     Returns True if the model is an instance of openvino.runtime.CompiledModel, otherwise False.
@@ -136,10 +137,7 @@ def is_openvino_compiled_model(model: TModel) -> bool:
     """
     import openvino.runtime as ov
 
-    try:
-        return isinstance(model, ov.CompiledModel)
-    except AttributeError:
-        return False
+    return isinstance(model, ov.CompiledModel)
 
 
 def get_backend(model: TModel) -> BackendType:
