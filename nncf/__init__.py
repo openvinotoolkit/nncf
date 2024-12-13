@@ -26,6 +26,7 @@ from nncf.errors import InvalidPathError as InvalidPathError
 from nncf.errors import InvalidQuantizerGroupError as InvalidQuantizerGroupError
 from nncf.errors import ModuleNotFoundError as ModuleNotFoundError
 from nncf.errors import ParameterNotSupportedError as ParameterNotSupportedError
+from nncf.errors import StatisticsCacheError as StatisticsCacheError
 from nncf.errors import UnknownDatasetError as UnknownDatasetError
 from nncf.errors import UnsupportedBackendError as UnsupportedBackendError
 from nncf.errors import UnsupportedDatasetError as UnsupportedDatasetError
