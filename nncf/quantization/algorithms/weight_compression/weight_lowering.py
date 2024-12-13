@@ -415,7 +415,9 @@ def do_int_dequantization(
         original shapes. If equals to -1: weights are not reshaped, assumed not a group quantization. Default to -1.
     :return: dequantized/decompressed weights.
     """
-    decompressed_weight = compressed_weights - zero_point if zero_point is not None else compressed_weights
+    decompressed_weight = (
+        compressed_weights.astype(TensorDataType.int32) - zero_point if zero_point is not None else compressed_weights
+    )
     decompressed_weight = decompressed_weight.astype(scale.dtype) * scale
 
     if reduction_axis > -1:
