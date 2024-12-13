@@ -117,7 +117,7 @@ class MeanTensorStatistic(TensorStatistic):
         device = self.mean_values.device
         return {
             self.MEAN_STAT: self.mean_values,
-            self.SHAPE_STAT: fns.tensor(self.shape, backend, dtype=dtype, device=device),
+            self.SHAPE_STAT: fns.tensor(self.shape, backend=backend, dtype=dtype, device=device),
         }
 
     def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
@@ -265,7 +265,10 @@ class WCTensorStatistic(TensorStatistic):
         return {
             self.MEAN_STAT: fns.stack(self.mean_values),
             self.SHAPE_STAT: fns.tensor(
-                [[dim.data for dim in shape] for shape in self.shape_values], backend, dtype=dtype, device=device
+                [[dim.data for dim in shape] for shape in self.shape_values],
+                backend=backend,
+                dtype=dtype,
+                device=device,
             ),
         }
 
