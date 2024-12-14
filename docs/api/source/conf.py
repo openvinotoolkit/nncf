@@ -75,7 +75,8 @@ def collect_api_entities() -> APIInfo:
         except Exception as e:
             skipped_modules[modname] = str(e)
 
-    from nncf.common.utils.api_marker import api
+    from nncf.common.utils.api_marker import API_MARKER_ATTR
+    from nncf.common.utils.api_marker import CANONICAL_ALIAS_ATTR
 
     canonical_imports_seen = set()
 
@@ -86,7 +87,7 @@ def collect_api_entities() -> APIInfo:
             if (
                 objects_module == modname
                 and (inspect.isclass(obj) or inspect.isfunction(obj))
-                and hasattr(obj, api.API_MARKER_ATTR)
+                and hasattr(obj, API_MARKER_ATTR)
             ):
                 marked_object_name = obj._nncf_api_marker
                 # Check the actual name of the originally marked object
@@ -95,8 +96,8 @@ def collect_api_entities() -> APIInfo:
                 if marked_object_name != obj.__name__:
                     continue
                 fqn = f"{modname}.{obj_name}"
-                if hasattr(obj, api.CANONICAL_ALIAS_ATTR):
-                    canonical_import_name = getattr(obj, api.CANONICAL_ALIAS_ATTR)
+                if hasattr(obj, CANONICAL_ALIAS_ATTR):
+                    canonical_import_name = getattr(obj, CANONICAL_ALIAS_ATTR)
                     if canonical_import_name in canonical_imports_seen:
                         assert False, f"Duplicate canonical_alias detected: {canonical_import_name}"
                     retval.fqn_vs_canonical_name[fqn] = canonical_import_name
