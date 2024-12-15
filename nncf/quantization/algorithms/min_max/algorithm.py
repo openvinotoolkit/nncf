@@ -891,6 +891,7 @@ class MinMaxQuantization(Algorithm):
     def apply(
         self,
         model_wrapper: ModelWrapper,
+        *,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> ModelWrapper:
@@ -990,7 +991,7 @@ class MinMaxQuantization(Algorithm):
         if not transformation_layout.transformations:
             nncf_logger.info("The model has no operations to apply quantization.")
         quantized_model = model_transformer.transform(transformation_layout)
-        return ModelWrapper(quantized_model, state=model_wrapper.state)
+        return ModelWrapper(quantized_model, attributes=model_wrapper.attributes)
 
     def get_statistic_points(self, model_wrapper: ModelWrapper) -> StatisticPointsContainer:
         self._set_backend_entity(model_wrapper.model)

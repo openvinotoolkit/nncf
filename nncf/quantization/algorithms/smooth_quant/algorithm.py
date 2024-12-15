@@ -100,6 +100,7 @@ class SmoothQuant(Algorithm):
     def apply(
         self,
         model_wrapper: ModelWrapper,
+        *,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> ModelWrapper:
@@ -178,7 +179,7 @@ class SmoothQuant(Algorithm):
             transformation_layout.register(scale_insertion_command)
 
         transformed_model = model_transformer.transform(transformation_layout)
-        return ModelWrapper(model=transformed_model, state=model_wrapper.state)
+        return ModelWrapper(transformed_model, attributes=model_wrapper.attributes)
 
     @staticmethod
     def _calculate_scale_and_ratio(

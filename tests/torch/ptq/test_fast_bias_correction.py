@@ -14,11 +14,10 @@ from typing import List
 import pytest
 import torch
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.model import ModelWrapper
 from nncf.quantization.algorithms.fast_bias_correction.torch_backend import PTFastBiasCorrectionAlgoBackend
 from nncf.torch.model_graph_manager import get_fused_bias_value
 from nncf.torch.model_graph_manager import is_node_with_fused_bias
-from nncf.torch.nncf_network import NNCFNetwork
 from tests.cross_fw.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
 from tests.torch.ptq.helpers import get_nncf_network
 
@@ -49,9 +48,9 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
         return transform_fn
 
     @staticmethod
-    def check_bias(model: NNCFNetwork, ref_bias: list):
+    def check_bias(model_wrapper: ModelWrapper, ref_bias: list):
         ref_bias = torch.Tensor(ref_bias)
-        nncf_graph = NNCFGraphFactory.create(model)
+        model, nncf_graph = model_wrapper.unwrap()
         for node in nncf_graph.get_all_nodes():
             if not is_node_with_fused_bias(node, nncf_graph):
                 continue
@@ -78,9 +77,9 @@ class TestTorchCudaFBCAlgorithm(TestTorchFBCAlgorithm):
         return torch.Tensor(tensor).cuda()
 
     @staticmethod
-    def check_bias(model: NNCFNetwork, ref_bias: list):
+    def check_bias(model_wrapper: ModelWrapper, ref_bias: list):
+        model, nncf_graph = model_wrapper.unwrap()
         ref_bias = torch.Tensor(ref_bias)
-        nncf_graph = NNCFGraphFactory.create(model)
         for node in nncf_graph.get_all_nodes():
             if not is_node_with_fused_bias(node, nncf_graph):
                 continue

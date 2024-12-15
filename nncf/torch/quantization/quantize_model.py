@@ -10,12 +10,11 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Optional
+from typing import Optional, cast
 
 import torch
 
 import nncf
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.model import ModelWrapper
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -79,7 +78,9 @@ def quantize_impl(
         model_wrapper.graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
     )
 
-    quantized_model: NNCFNetwork = quantization_algorithm.apply(model_wrapper, dataset=calibration_dataset).model
+    quantized_model_wrapper = quantization_algorithm.apply(model_wrapper, dataset=calibration_dataset)
+    quantized_model = cast(NNCFNetwork, quantized_model_wrapper.model)
+
     quantized_model.nncf.disable_dynamic_graph_building()
     return quantized_model
 
@@ -120,5 +121,5 @@ def compress_weights_impl(
         backup_mode,
         advanced_parameters,
     )
-    graph = NNCFGraphFactory.create(model)
-    return compression_algorithm.apply(model, graph, dataset=dataset)
+    model_wrapper = ModelWrapper(model)
+    return compression_algorithm.apply(model_wrapper, dataset=dataset).model

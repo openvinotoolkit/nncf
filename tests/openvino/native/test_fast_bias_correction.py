@@ -15,7 +15,7 @@ import numpy as np
 import openvino as ov
 import torch
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.model import ModelWrapper
 from nncf.common.utils.os import is_macos
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -52,9 +52,9 @@ class TestOVFBCAlgorithm(TemplateTestFBCAlgorithm):
         return transform_fn
 
     @staticmethod
-    def check_bias(model: ov.Model, ref_bias: list):
+    def check_bias(model_wrapper: ModelWrapper, ref_bias: list):
         ref_bias = np.array(ref_bias)
-        nncf_graph = NNCFGraphFactory.create(model)
+        model, nncf_graph = model_wrapper.unwrap()
 
         atol = 0.0001 if not is_macos() else 0.01
 

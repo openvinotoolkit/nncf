@@ -11,7 +11,7 @@
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union, cast
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
@@ -170,7 +170,8 @@ def native_quantize_impl(
     warning_model_no_batchwise_support(
         model_wrapper.graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
     )
-    quantized_model = quantization_algorithm.apply(model_wrapper, dataset=calibration_dataset).model
+    quantized_model_wrapper = quantization_algorithm.apply(model_wrapper, dataset=calibration_dataset)
+    quantized_model = cast(ov.Model, quantized_model_wrapper.model)
 
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)
@@ -385,7 +386,7 @@ def compress_weights_impl(
     Implementation of the `compress_weights()` method for the OpenVINO backend.
     """
     model = remove_friendly_name_duplicates(model)
-    graph = NNCFGraphFactory.create(model)
+    model_wrapper = ModelWrapper(model)
     compression_algorithm = WeightCompression(
         mode,
         ratio,
@@ -406,18 +407,20 @@ def compress_weights_impl(
     if advanced_parameters and advanced_parameters.statistics_path:
         # If there is no such directory, then caches statistics
         if not Path(advanced_parameters.statistics_path).exists():
-            cache_weight_compression_statistics(model, graph, dataset, subset_size, advanced_parameters.statistics_path)
+            cache_weight_compression_statistics(
+                model_wrapper.model, model_wrapper.graph, dataset, subset_size, advanced_parameters.statistics_path
+            )
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         compression_algorithm.set_backend_entity(model)
-        _, matmul_input_to_output_nodes_map = compression_algorithm.get_compression_nodes_info(graph)
+        _, matmul_input_to_output_nodes_map = compression_algorithm.get_compression_nodes_info(model_wrapper.graph)
         register_statistics_for_algorithm(
             statistics_aggregator,
-            model,
-            graph,
+            model_wrapper.model,
+            model_wrapper.graph,
             compression_algorithm,
             matmul_input_to_output_nodes_map,
         )
         statistics_aggregator.load_statistics_from_dir(advanced_parameters.statistics_path)
         statistics_points = statistics_aggregator.statistic_points
 
-    return compression_algorithm.apply(model, graph, statistics_points, dataset)
+    return compression_algorithm.apply(model_wrapper, statistic_points=statistics_points, dataset=dataset).model

@@ -38,24 +38,25 @@ class Algorithm(ABC):
     @abstractmethod
     def apply(
         self,
-        model: ModelWrapper,
+        model_wrapper: ModelWrapper,
+        *,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-    ) -> TModel:
+    ) -> ModelWrapper:
         """
         Applies the algorithm to the model.
 
-        :param model: Model for applying algorithm.
+        :param model_wrapper: A wrapper object containing the model to be applied.
         :param statistic_points: Statistic points with collected statistics values.
         :param dataset: A representative dataset for the calibration process.
         :return: A resulting model.
         """
 
     @abstractmethod
-    def get_statistic_points(self, model: ModelWrapper) -> StatisticPointsContainer:
+    def get_statistic_points(self, model_wrapper: ModelWrapper) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
 
-        :param model: Model for statistics collection.
+        :param model_wrapper: A wrapper object containing the model for statistics collection.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """

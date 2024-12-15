@@ -16,7 +16,7 @@ import openvino as ov
 import pytest
 import torch
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.model import ModelWrapper
 from nncf.openvino.graph.model_utils import remove_fq_from_inputs
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_bias_value
@@ -79,8 +79,8 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
         return compare_nncf_graphs(model, ref_path)
 
     @staticmethod
-    def check_bias(model: ov.Model, ref_biases: Dict) -> None:
-        nncf_graph = NNCFGraphFactory.create(model)
+    def check_bias(model_wrapper: ModelWrapper, ref_biases: Dict) -> None:
+        model, nncf_graph = model_wrapper.unwrap()
         for ref_name, ref_value in ref_biases.items():
             node = nncf_graph.get_node_by_name(ref_name)
             ref_value = np.array(ref_value)

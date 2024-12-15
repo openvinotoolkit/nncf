@@ -10,21 +10,28 @@
 # limitations under the License.
 
 
-from typing import Any, Dict, Optional, TypeVar
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, Tuple, TypeVar
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
 
 TModel = TypeVar("TModel")
 
 
-class StateAttributes:
+@dataclass
+class ModelAttributes:
     """
-    The state attributes.
+    A class to store model attributes.
+
+    :param example_input_args: Example input arguments for the model.
+    :param example_input_kwargs: Example input keyword arguments for the model.
     """
 
-    EXAMPLE_INPUT_ARGS = "example_input_args"
-    EXAMPLE_INPUT_KWARGS = "example_input_kwargs"
+    example_input_args: Optional[Tuple[Any]] = None
+    example_input_kwargs: Optional[Dict[str, Any]] = None
 
 
 class ModelWrapper:
@@ -33,15 +40,17 @@ class ModelWrapper:
 
     :param _model: The original model to be wrapped.
     :param _graph: The graph representation of the model.
-    :param state: The storage of the model state.
+    :param _attributes: The storage of the model attributes.
+    :param _backend: The backend of the model.
     """
 
     def __init__(
-        self, model: TModel, graph: Optional[NNCFGraph] = None, state: Optional[Dict[str, Any]] = None
+        self, model: TModel, *, graph: Optional[NNCFGraph] = None, attributes: Optional[ModelAttributes] = None
     ) -> None:
         self._model = model
         self._graph = graph
-        self.state = state if state is not None else {}
+        self._attributes = attributes or ModelAttributes()
+        self._backend = get_backend(model)
 
     @property
     def model(self) -> TModel:
@@ -60,8 +69,28 @@ class ModelWrapper:
         """
         if self._graph is None:
             self._graph = NNCFGraphFactory.create(
-                model=self.model,
-                input_args=self.state.get(StateAttributes.EXAMPLE_INPUT_ARGS),
-                input_kwargs=self.state.get(StateAttributes.EXAMPLE_INPUT_KWARGS),
+                self.model, self.attributes.example_input_args, self.attributes.example_input_kwargs
             )
         return self._graph
+
+    @property
+    def attributes(self) -> ModelAttributes:
+        """
+        Retrieves the model attributes.
+        """
+        return self._attributes
+
+    @property
+    def backend(self) -> BackendType:
+        """
+        Retrieves the model backend.
+        """
+        return self._backend
+
+    def unwrap(self) -> Tuple[TModel, NNCFGraph]:
+        """
+        Retrieves the model and graph.
+
+        :return: A tuple of the model and graph.
+        """
+        return self.model, self.graph

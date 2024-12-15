@@ -17,7 +17,6 @@ import torch
 
 from nncf.common.model import ModelWrapper
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import QuantizationMode
 from nncf.quantization.advanced_parameters import OverflowFix
@@ -67,14 +66,14 @@ def get_fq_nodes_stats_algo(model):
 
 def quantize_model(ov_model, q_params):
     dataset = get_dataset_for_test(ov_model)
-    graph = GraphConverter.create_nncf_graph(ov_model)
+    model_wrapper = ModelWrapper(ov_model)
 
     min_max_algo = MinMaxQuantization(subset_size=1, **q_params)
     statistics_aggregator = OVStatisticsAggregator(dataset)
-    statistic_points = min_max_algo.get_statistic_points(ModelWrapper(ov_model, graph))
+    statistic_points = min_max_algo.get_statistic_points(model_wrapper)
     statistics_aggregator.register_statistic_points(statistic_points)
-    statistics_aggregator.collect_statistics(ov_model, graph)
-    quantized_model = min_max_algo.apply(ModelWrapper(ov_model, graph), statistics_aggregator.statistic_points)
+    statistics_aggregator.collect_statistics(model_wrapper.model, model_wrapper.graph)
+    quantized_model = min_max_algo.apply(model_wrapper, statistic_points=statistics_aggregator.statistic_points)
     return quantized_model.model
 
 

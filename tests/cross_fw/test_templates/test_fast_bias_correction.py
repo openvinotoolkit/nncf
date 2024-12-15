@@ -115,6 +115,6 @@ class TemplateTestFBCAlgorithm:
         dataset = get_static_dataset(model_cls.INPUT_SIZE, self.get_transform_fn(), self.fn_to_type)
 
         quantization_algorithm = self.get_quantization_algorithm()
-        quantized_model = quantization_algorithm.apply(ModelWrapper(model), dataset=dataset)
+        quantized_model_wrapper = quantization_algorithm.apply(ModelWrapper(model), dataset=dataset)
 
-        self.check_bias(quantized_model.model, ref_bias)
+        self.check_bias(quantized_model_wrapper, ref_bias)

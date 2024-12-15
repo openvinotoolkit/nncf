@@ -26,7 +26,6 @@ from nncf.common.model import ModelWrapper
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import get_backend
 from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.tensor import Tensor
@@ -95,13 +94,12 @@ class FastBiasCorrection(Algorithm):
     def available_backends(self) -> List[BackendType]:
         return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
-    def _set_backend_entity(self, model: TModel) -> None:
+    def _set_backend_entity(self, model_backend: BackendType) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm.
 
-        :param model: Backend-specific input model.
+        :param model_backend: Backend of a model.
         """
-        model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
             from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import ONNXFastBiasCorrectionAlgoBackend
 
@@ -130,12 +128,12 @@ class FastBiasCorrection(Algorithm):
     def apply(
         self,
         model_wrapper: ModelWrapper,
+        *,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> ModelWrapper:
-        model = model_wrapper.model
-        graph = model_wrapper.graph
-        self._set_backend_entity(model)
+        self._set_backend_entity(model_wrapper.backend)
+        model, graph = model_wrapper.unwrap()
 
         model_transformer = ModelTransformerFactory.create(model)
 
@@ -208,9 +206,7 @@ class FastBiasCorrection(Algorithm):
             transformation_layout.register(self._backend_entity.create_bias_correction_command(node, bias_value, graph))
         transformed_model = model_transformer.transform(transformation_layout)
 
-        return ModelWrapper(
-            model=transformed_model, graph=graph, state=model_wrapper.state  # BC dows not changed model's graph
-        )
+        return ModelWrapper(transformed_model, attributes=model_wrapper.attributes)
 
     @staticmethod
     def _get_bias_shift_magnitude(current_bias_value: Tensor, updated_bias_value: Tensor) -> Tensor:
@@ -349,9 +345,8 @@ class FastBiasCorrection(Algorithm):
         return bias_shift
 
     def get_statistic_points(self, model_wrapper: ModelWrapper) -> StatisticPointsContainer:
-        model = model_wrapper.model
+        self._set_backend_entity(model_wrapper.backend)
         graph = model_wrapper.graph
-        self._set_backend_entity(model)
         nodes_with_bias = [
             node for node in graph.get_all_nodes() if self._backend_entity.is_node_with_bias(node, graph)
         ]

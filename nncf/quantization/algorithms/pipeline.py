@@ -26,14 +26,14 @@ PipelineStep = List[Algorithm]
 
 def collect_statistics(
     containers: Union[StatisticPointsContainer, List[StatisticPointsContainer]],
-    model_state: ModelWrapper,
+    model_wrapper: ModelWrapper,
     dataset: Dataset,
 ) -> StatisticPointsContainer:
     """
     Utility method for collecting statistics by model.
 
     :param statistic_points: Statistic points that need to be collected.
-    :param model: A model.
+    :param model_wrapper: A wrapper object containing the model
     :param graph: A graph associated with a model.
     :param dataset: A dataset.
     :return: Collected statistics.
@@ -41,10 +41,10 @@ def collect_statistics(
     if not isinstance(containers, list):
         containers = [containers]
 
-    statistics_aggregator = StatisticsAggregatorFactory.create(model_state.model, dataset)
+    statistics_aggregator = StatisticsAggregatorFactory.create(model_wrapper.model, dataset)
     for container in containers:
         statistics_aggregator.register_statistic_points(container)
-    statistics_aggregator.collect_statistics(model_state.model, model_state.graph)
+    statistics_aggregator.collect_statistics(model_wrapper.model, model_wrapper.graph)
 
     return statistics_aggregator.statistic_points
 
@@ -107,10 +107,10 @@ class Pipeline:
         """
         current_model = model_wrapper
 
-        pipeline_steps = self._remove_unsupported_algorithms(get_backend(model_wrapper.model))
+        pipeline_steps = self._remove_unsupported_algorithms(model_wrapper.backend)
         pipeline_step = pipeline_steps[step_index]
         for algorithm in pipeline_step:
-            current_model = algorithm.apply(current_model, step_statistics)
+            current_model = algorithm.apply(current_model, statistic_points=step_statistics)
         return current_model
 
     def run_from_step(

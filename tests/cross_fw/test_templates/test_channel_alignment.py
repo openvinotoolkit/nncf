@@ -416,7 +416,9 @@ class TemplateTestChannelAlignment:
                 ref_bias_in_after_scale_align,
             )
         )
-        algorithm.apply(None, nncf_graph, statistic_points)
+
+        mocker.patch("nncf.common.model.get_backend", return_value=None)
+        algorithm.apply(ModelWrapper(None, graph=nncf_graph), statistic_points=statistic_points)
 
         if empty_statistics or one_dim_mm:
             assert algorithm._align_means.call_count == 0
@@ -512,7 +514,8 @@ class TemplateTestChannelAlignment:
         MockBackend.get_statistic_collector = mocker.MagicMock(return_value=ref_stat_collector)
         algorithm._backend_entity = MockBackend
 
-        statistic_container = algorithm.get_statistic_points(ModelWrapper(None, nncf_graph))
+        mocker.patch("nncf.common.model.get_backend", return_value=None)
+        statistic_container = algorithm.get_statistic_points(ModelWrapper(None, graph=nncf_graph))
 
         backend_cls = self.get_backend_cls()
         target_node_name = "/Add_1_0" if num_biases else "/Conv_1_0"

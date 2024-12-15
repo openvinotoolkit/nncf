@@ -204,7 +204,7 @@ class TemplateTestPTQParams:
         assert min_max_algo._range_estimator_params[QuantizerGroup.ACTIVATIONS] == range_estimator_params
 
         params = test_params["test_range_estimator_per_tensor"]
-        stat_points = min_max_algo.get_statistic_points(ModelWrapper(params["model"], params["nncf_graph"]))
+        stat_points = min_max_algo.get_statistic_points(ModelWrapper(params["model"], graph=params["nncf_graph"]))
         assert len(stat_points) == params["stat_points_num"]
 
         for _, stat_point in stat_points.items():
@@ -375,7 +375,10 @@ class TemplateTestPTQParams:
                 Tensor(self.get_backend_tensor(idx - 1)), Tensor(self.get_backend_tensor(idx + 2))
             )
             stats.add_statistic_point(StatisticPoint(tp, tc, algo._algorithm_key))
-        algo.apply(ModelWrapper(model, model.nncf_graph), stats)
+
+        mocker.patch("nncf.common.model.get_backend", return_value=None)
+        model_wrapper = ModelWrapper(model, graph=model.nncf_graph)
+        algo.apply(model_wrapper, statistic_points=stats)
         mock_transformer.transform.assert_called_once()
         layout = mock_transformer.transform.call_args.args[0]
         self.check_unified_scale_layout(layout, unified_scales_group)
@@ -425,4 +428,4 @@ class TemplateTestPTQParams:
             return_value=mocker.MagicMock(),
         )
         with pytest.raises(nncf.InternalError, match="Statistics were not collected for the node A"):
-            algo.apply(mocker.MagicMock(), stat_points)
+            algo.apply(mocker.MagicMock(), statistic_points=stat_points)

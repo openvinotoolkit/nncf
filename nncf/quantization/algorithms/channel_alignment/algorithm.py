@@ -94,11 +94,12 @@ class ChannelAlignment(Algorithm):
 
     def apply(
         self,
-        model: TModel,
-        graph: NNCFGraph,
+        model_wrapper: ModelWrapper,
+        *,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-    ) -> TModel:
+    ) -> ModelWrapper:
+        model, graph = model_wrapper.unwrap()
         self._set_backend_entity(model)
         model_transformer = ModelTransformerFactory.create(model)
         transformation_layout = TransformationLayout()
@@ -128,7 +129,7 @@ class ChannelAlignment(Algorithm):
             ):
                 nncf_logger.debug(
                     f"Skipping channel alignment for pairs {conv_in.node_name}, {conv_out.node_name} "
-                    " because one of the node is 1D MatMul, 1D Matmuls are not supported by CA algortihm yet."
+                    "because one of the node is 1D MatMul, 1D Matmuls are not supported by CA algorithm yet."
                 )
                 continue
 
@@ -171,7 +172,7 @@ class ChannelAlignment(Algorithm):
                     transformation_layout.register(command)
 
         transformed_model = model_transformer.transform(transformation_layout)
-        return transformed_model
+        return ModelWrapper(transformed_model, attributes=model_wrapper.attributes)
 
     @staticmethod
     def _align_means(

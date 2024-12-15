@@ -20,7 +20,6 @@ import pytest
 from nncf import Dataset
 from nncf.common.model import ModelWrapper
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.quantization.quantize_model import quantize_impl
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import ModelType
@@ -134,15 +133,15 @@ def test_real_models_sq_placement(model_name_params, tmp_path):
 
 def smooth_quant_model(ov_model: ov.Model, q_params: Dict, quantize=True):
     dataset = get_dataset_for_test(ov_model)
-    graph = GraphConverter.create_nncf_graph(ov_model)
+    model_wrapper = ModelWrapper(ov_model)
 
     smooth_quant_algo = SmoothQuant(subset_size=1)
     statistics_aggregator = OVStatisticsAggregator(dataset)
-    statistic_points = smooth_quant_algo.get_statistic_points(ModelWrapper(ov_model, graph))
+    statistic_points = smooth_quant_algo.get_statistic_points(model_wrapper)
     statistics_aggregator.register_statistic_points(statistic_points)
-    statistics_aggregator.collect_statistics(ov_model, graph)
+    statistics_aggregator.collect_statistics(model_wrapper.model, model_wrapper.graph)
     modified_model = smooth_quant_algo.apply(
-        ModelWrapper(ov_model, graph), statistics_aggregator.statistic_points
+        model_wrapper, statistic_points=statistics_aggregator.statistic_points
     ).model
 
     if quantize:

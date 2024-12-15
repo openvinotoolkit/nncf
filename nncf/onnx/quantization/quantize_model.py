@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union, cast
 
 import onnx
 
@@ -82,9 +82,9 @@ def quantize_impl(
     warning_model_no_batchwise_support(
         model_wrapper.graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
     )
-    quantized_model = quantization_algorithm.apply(model_wrapper, dataset=calibration_dataset)
-
-    return quantized_model.model
+    quantized_model_wrapper = quantization_algorithm.apply(model_wrapper, dataset=calibration_dataset)
+    quantized_model = cast(onnx.ModelProto, quantized_model_wrapper.model)
+    return quantized_model
 
 
 def quantize_with_accuracy_control_impl(

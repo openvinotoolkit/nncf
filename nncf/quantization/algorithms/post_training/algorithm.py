@@ -10,10 +10,11 @@
 # limitations under the License.
 
 import itertools
-from typing import Callable, List, Optional, TypeVar
+from typing import List, Optional, TypeVar
 
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.model import ModelWrapper
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -26,7 +27,6 @@ from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipel
 from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")
-TPass = Callable[[TModel], TModel]
 
 
 class PostTrainingQuantization(Algorithm):
@@ -55,7 +55,7 @@ class PostTrainingQuantization(Algorithm):
             - `performance`: Symmetric quantization of weights and activations.
             - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
             Default value is None. In this case, `mixed` preset is used for `transformer`
-            model type otherwise `performace`.
+            model type otherwise `performance`.
         :param target_device: A target device the specificity of which will be taken
             into account while compressing in order to obtain the best performance
             for this type of device.
@@ -94,10 +94,11 @@ class PostTrainingQuantization(Algorithm):
 
     def apply(
         self,
-        model: TModel,
+        model: ModelWrapper,
+        *,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-    ) -> TModel:
+    ) -> ModelWrapper:
         if dataset is None and len(self._pipeline.pipeline_steps) > 1:
             raise ValueError(
                 "A dataset is required for the post-training quantization "

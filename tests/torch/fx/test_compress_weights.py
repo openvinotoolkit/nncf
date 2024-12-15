@@ -13,6 +13,7 @@ from typing import Dict
 
 import pytest
 import torch
+from torch.fx import GraphModule
 
 import nncf
 from nncf import BackupMode
@@ -52,7 +53,7 @@ def get_model_size(model):
 
 
 def get_compressed_modules_weights(
-    compressed_model: torch.fx.GraphModule, dtype: torch.dtype, compressed_node_weight_port: Dict[str, int]
+    compressed_model: GraphModule, dtype: torch.dtype, compressed_node_weight_port: Dict[str, int]
 ):
     n_target_modules = 0
     n_compressed_weights = 0
