@@ -24,6 +24,7 @@ from nncf.experimental.common.tensor_statistics.statistical_functions import mea
 from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.quantization.advanced_parameters import AggregatorType
+from nncf.quantization.range_estimator import StatisticsType
 from nncf.tensor import Tensor
 
 InplaceInsertionFNType = TypeVar("InplaceInsertionFNType")
@@ -798,8 +799,8 @@ class HAWQAggregator(AggregatorBase):
         # TODO: revise this formula as possibly it is with an error; adopted from previous HAWQ implementation
         self._container = (self._container + trace) / x.size
 
-    def _aggregate_impl(self) -> List[TensorType]:
-        return [self._container * 2 / self._collected_samples]
+    def _aggregate_impl(self) -> Tensor:
+        return self._container * 2 / self._collected_samples
 
 
 def _move_axes_flatten_cat(
@@ -834,6 +835,15 @@ def _move_axes_flatten_cat(
     shape_after_aggregation = tuple(1 if idx in aggregation_axes else dim for idx, dim in enumerate(tensor_shape))
     return fns.concatenate(reshaped_tensors, axis=0), shape_after_aggregation
 
+
+REDUCERS_MAP = {
+    StatisticsType.MIN: MinReducer,
+    StatisticsType.MAX: MaxReducer,
+    StatisticsType.ABS_MAX: AbsMaxReducer,
+    StatisticsType.MEAN: MeanReducer,
+    StatisticsType.QUANTILE: QuantileReducer,
+    StatisticsType.ABS_QUANTILE: AbsQuantileReducer,
+}
 
 AGGREGATORS_MAP = {
     AggregatorType.MIN: MinAggregator,

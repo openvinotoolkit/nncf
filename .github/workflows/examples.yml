@@ -75,7 +75,7 @@ jobs:
   examples-win-cpu:
     name: Test exmaples CPU Windows [${{ matrix.group }}/4]
     runs-on: windows-2019-16-core
-    if: ${{ github.event_name != 'workflow_dispatch' || !github.event.inputs.skip_windows }}
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_windows == 'false' }}
     strategy:
       fail-fast: false
       matrix:
