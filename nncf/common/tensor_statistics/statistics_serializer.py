@@ -143,7 +143,7 @@ def dump_statistics(
         try:
             fns.io.save_file(statistics_value, file_path)
         except Exception as e:
-            raise nncf.InternalError(f"Failed to write data to file {file_path}: {e}")
+            raise nncf.StatisticsCacheError(str(e))
 
     if additional_metadata:
         metadata |= additional_metadata
