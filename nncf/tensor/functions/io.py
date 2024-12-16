@@ -13,6 +13,7 @@ import functools
 from pathlib import Path
 from typing import Dict, Optional
 
+from nncf.common.utils.os import fail_if_symlink
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDeviceType
@@ -35,6 +36,7 @@ def load_file(
         then the default device is determined by backend.
     :return: A dictionary where the keys are tensor names and the values are Tensor objects.
     """
+    fail_if_symlink(file_path)
     loaded_dict = get_io_backend_fn("load_file", backend)(file_path, device=device)
     return {key: Tensor(val) for key, val in loaded_dict.items()}
 
@@ -50,6 +52,7 @@ def save_file(
     :param data: A dictionary where the keys are tensor names and the values are Tensor objects.
     :param file_path: The path to the file where the tensor data will be saved.
     """
+    fail_if_symlink(file_path)
     if isinstance(data, dict):
         return dispatch_dict(save_file, data, file_path)
     raise NotImplementedError(f"Function `save_file` is not implemented for {type(data)}")
