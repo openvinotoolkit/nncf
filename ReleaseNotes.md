@@ -6,7 +6,7 @@ Post-training Quantization:
 
 - Bugfixes:
   - (PyTorch) Fixed the `get_torch_compile_wrapper` function to match with the `torch.compile`.
-  - ...
+  - (OpenVINO) Updated cache statistics functionality to utilize the `safetensors` approach.
 
 ## New in Release 2.14.0
 
