@@ -1,5 +1,13 @@
 # Release Notes
 
+## New in Release 2.14.1
+
+Post-training Quantization:
+
+- Bugfixes:
+  - (PyTorch) Fixed the `get_torch_compile_wrapper` function to match with the `torch.compile`.
+  - ...
+
 ## New in Release 2.14.0
 
 Post-training Quantization:
