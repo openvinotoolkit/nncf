@@ -568,5 +568,5 @@ class TemplateTestReducersAggregators:
         for x in inputs:
             aggregator.register_reduced_input(self.get_nncf_tensor(x, Dtype.FLOAT))
 
-        ret_val = aggregator.aggregate()[0]
+        ret_val = aggregator.aggregate()
         assert fns.allclose(ret_val, reference_output)

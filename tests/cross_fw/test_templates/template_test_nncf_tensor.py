@@ -1695,3 +1695,26 @@ class TemplateTestNNCFTensorOperators:
         for act, abs_ref in zip(res, abs_res_ref):
             assert isinstance(act, Tensor)
             assert fns.allclose(fns.abs(act), abs_ref, atol=1e-7)
+
+    @pytest.mark.parametrize("data", [[[3.0, 2.0, 2.0], [2.0, 3.0, -2.0]]])
+    def test_save_load_file(self, tmp_path, data):
+        tensor_key, tensor_filename = "tensor_key", "test_tensor"
+        tensor = Tensor(self.to_tensor(data))
+        stat = {tensor_key: tensor}
+        fns.io.save_file(stat, tmp_path / tensor_filename)
+        loaded_stat = fns.io.load_file(tmp_path / tensor_filename, backend=tensor.backend, device=tensor.device)
+        assert fns.allclose(stat[tensor_key], loaded_stat[tensor_key])
+        assert isinstance(loaded_stat[tensor_key], Tensor)
+        assert loaded_stat[tensor_key].backend == tensor.backend
+        assert loaded_stat[tensor_key].device == tensor.device
+        assert loaded_stat[tensor_key].dtype == tensor.dtype
+
+    @pytest.mark.parametrize("data", [[3.0, 2.0, 2.0], [1, 2, 3]])
+    @pytest.mark.parametrize("dtype", [TensorDataType.float32, TensorDataType.int32, TensorDataType.uint8, None])
+    def test_fn_tensor(self, data, dtype):
+        nncf_tensor = fns.tensor(data, backend=self.backend(), dtype=dtype, device=self.device())
+        backend_tensor = Tensor(self.to_tensor(data))
+        if dtype is not None:
+            backend_tensor = backend_tensor.astype(dtype)
+        assert fns.allclose(nncf_tensor, backend_tensor)
+        assert nncf_tensor.dtype == backend_tensor.dtype
