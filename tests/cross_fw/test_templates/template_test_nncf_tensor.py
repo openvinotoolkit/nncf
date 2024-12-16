@@ -1724,7 +1724,7 @@ class TemplateTestNNCFTensorOperators:
         with pytest.raises(nncf.ValidationError, match="symbolic link"):
             fns.io.save_file(stat, symlink_path)
         with pytest.raises(nncf.ValidationError, match="symbolic link"):
-            fns.io.load_file(symlink_path, backend=tensor.backend, device=tensor.device)
+            fns.io.load_file(symlink_path, backend=tensor.backend)
 
     @pytest.mark.parametrize("data", [[3.0, 2.0, 2.0], [1, 2, 3]])
     @pytest.mark.parametrize("dtype", [TensorDataType.float32, TensorDataType.int32, TensorDataType.uint8, None])
