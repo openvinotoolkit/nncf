@@ -11,7 +11,7 @@
 
 import functools
 from collections import deque
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -24,6 +24,7 @@ from nncf.tensor.definitions import TypeInfo
 from nncf.tensor.functions.dispatcher import dispatch_list
 from nncf.tensor.functions.dispatcher import get_numeric_backend_fn
 from nncf.tensor.functions.dispatcher import tensor_guard
+from nncf.tensor.tensor import TTensor
 
 
 @functools.singledispatch
@@ -905,6 +906,27 @@ def ceil(a: Tensor) -> Tensor:
     :return: An array of the same type as a, containing the ceiling values.
     """
     return Tensor(ceil(a.data))
+
+
+def tensor(
+    data: Union[TTensor, Sequence[float]],
+    *,
+    backend: TensorBackend,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> Tensor:
+    """
+    Creates a tensor from the given data.
+
+    :param data: The data for the tensor.
+    :param backend: The backend type for which the tensor is required.
+    :param dtype: The data type of the returned tensor, If dtype is not given,
+        then the default data type is determined by backend.
+    :param device: The device on which the tensor will be allocated, If device is not given,
+        then the default device is determined by backend.
+    :return: A tensor created from the given data.
+    """
+    return Tensor(get_numeric_backend_fn("tensor", backend)(data, dtype=dtype, device=device))
 
 
 @functools.singledispatch

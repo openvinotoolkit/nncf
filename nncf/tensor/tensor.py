@@ -11,8 +11,10 @@
 from __future__ import annotations
 
 import operator
-from typing import Any, Optional, Tuple, TypeVar, Union
+from typing import Any, Dict, Optional, Tuple, TypeVar, Union
 
+import nncf
+from nncf.common.utils.backend import BackendType
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
 from nncf.tensor.definitions import TensorDeviceType
@@ -162,13 +164,6 @@ class Tensor:
     def __ge__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(self.data >= unwrap_tensor_data(other))
 
-    # Methods to support pickling and unpickling
-    def __getstate__(self):
-        return self._data
-
-    def __setstate__(self, state):
-        self._data = state
-
     # Tensor functions
 
     def squeeze(self, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
@@ -254,3 +249,22 @@ def unwrap_tensor_data(obj: Any) -> TTensor:
     :return: The data of the Tensor object, or the object itself.
     """
     return obj.data if isinstance(obj, Tensor) else obj
+
+
+def get_tensor_backend(backend: BackendType) -> TensorBackend:
+    """
+    Returns a tensor backend based on the provided backend.
+
+    :param backend: Backend type.
+    :return: Corresponding tensor backend type.
+    """
+    BACKEND_TO_TENSOR_BACKEND: Dict[BackendType, TensorBackend] = {
+        BackendType.OPENVINO: TensorBackend.numpy,
+        BackendType.ONNX: TensorBackend.numpy,
+        BackendType.TORCH_FX: TensorBackend.torch,
+        BackendType.TORCH: TensorBackend.torch,
+    }
+    if backend not in BACKEND_TO_TENSOR_BACKEND:
+        raise nncf.ValidationError(f"Unsupported backend type: {backend}")
+
+    return BACKEND_TO_TENSOR_BACKEND[backend]
