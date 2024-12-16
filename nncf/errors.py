@@ -129,3 +129,16 @@ class UnknownDatasetError(Exception):
     """
 
     pass
+
+
+class StatisticsCacheError(Exception):
+    """
+    Raised when any error occurs during statistics caching.
+    """
+
+    def __str__(self):
+        return (
+            "The error occurred during statistics caching:\n"
+            f"{super().__str__()}\n"
+            "Please, remove the cache directory and collect cache again."
+        )
