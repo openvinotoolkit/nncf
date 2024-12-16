@@ -26,7 +26,7 @@ from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
 
-ReductionAxes = Tuple[int, ...]
+ReductionAxes = Union[int, Tuple[int, ...]]
 
 NF4_QUANTILES = np.array(
     [
@@ -433,7 +433,6 @@ def do_int_quantization(
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
     ov_model_params: Optional = None,
-    is_numpy: bool = False,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
     Performs integer quantization on the given weight tensor.
@@ -454,7 +453,7 @@ def do_int_quantization(
             "for asymmetric quantization."
         )
 
-    accelerate_through_ov = is_openvino_available() and weight.backend != TensorBackend.torch and not is_numpy
+    accelerate_through_ov = is_openvino_available() and weight.backend != TensorBackend.torch
     if not is_openvino_available() and weight.backend != TensorBackend.torch:
         log_once(logging.INFO, "Running time may be improved after installing OpenVINO")
 
@@ -546,7 +545,6 @@ def calculate_quantized_dequantized_weight(
     precomputed_zero_point: Optional[Tensor] = None,
     return_compressed_weight: Optional[bool] = False,
     ov_model_params: Optional = None,
-    is_numpy: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor, Tensor]]:
     """
     First quantizes the given weight tensor and then dequantizes it back to obtain float32 values.
@@ -562,7 +560,7 @@ def calculate_quantized_dequantized_weight(
     :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight, scale,
         (and zero point).
     """
-    accelerate_through_ov = is_openvino_available() and weight.backend != TensorBackend.torch and not is_numpy
+    accelerate_through_ov = is_openvino_available() and weight.backend != TensorBackend.torch
     if not is_openvino_available() and weight.backend != TensorBackend.torch:
         log_once(logging.INFO, "Compression time may be improved after installing OpenVINO")
 

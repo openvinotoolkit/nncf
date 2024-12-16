@@ -352,64 +352,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     def __del__(self):
         clear_ov_model_cache()
-    @staticmethod
-    def get_compress_decompress_pipeline(config: WeightCompressionConfig, w_shape, s_shape, z_p_shape=None):
-        from openvino.properties.hint import inference_precision
-        import openvino as ov
-
-        parameters, clamp = OVWeightCompressionAlgoBackend.get_compress_pipeline(
-            config, w_shape, s_shape, z_p_shape, True
-        )
-
-        if len(parameters) == 3:
-            _, s, zp = parameters
-            result = (clamp - zp) * s
-        else:
-            s = parameters[1]
-            result = clamp * s
-
-        model = ov.Model([result], parameters)
-
-        compiled_model = ov.compile_model(model, device_name="CPU", config={inference_precision: ov.Type.f32})
-
-        return lambda parameters: compiled_model(parameters)[0]
-
-    @staticmethod
-    def get_compress_pipeline(config: WeightCompressionConfig, w_shape, s_shape, z_p_shape=None,
-                              return_nodes=False):
-        from openvino.properties.hint import inference_precision
-        import openvino as ov
-
-        mode = config.mode
-        assert mode in [
-            CompressWeightsMode.INT4_SYM,
-            CompressWeightsMode.INT4_ASYM,
-        ], f"Only int4 supported, but given={mode}"
-        num_bits = config.num_bits
-
-        asym_quant = mode in [CompressWeightsMode.INT4_ASYM]
-        level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
-        level_high = 2 ** num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
-
-        w = opset.parameter(w_shape, name="w")
-        s = opset.parameter(s_shape, name="s")
-        parameters = [w, s]
-        compressed_w = w / s
-        if z_p_shape is not None:
-            zp = opset.parameter(z_p_shape, name="zp")
-            parameters.append(zp)
-            compressed_w += zp
-
-        result = opset.clamp(opset.round(compressed_w), level_low, level_high, name="compressed_weights")
-
-        if return_nodes:
-            return parameters, result
-
-        model = ov.Model([result], parameters)
-
-        compiled_model = ov.compile_model(model, device_name="CPU", config={inference_precision: ov.Type.f32})
-
-        return lambda parameters: compiled_model(parameters)[0]
 
 
 class OVAWQAlgoAlgoBackend(AWQAlgoBackend, OVWeightCompressionAlgoBackend):

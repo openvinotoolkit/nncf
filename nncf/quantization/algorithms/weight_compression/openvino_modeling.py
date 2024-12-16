@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import copy
-import os
 from dataclasses import dataclass
 from functools import partial
 from typing import Callable, Dict, List, Optional, Tuple, Union
@@ -32,6 +31,7 @@ from nncf.tensor.functions.ov import DTYPE_MAP as DTYPE_MAP_OV
 
 TensorList = List[Tensor]
 ModelCallable = Callable[[TensorList], TensorList]
+ReductionAxes = Union[int, Tuple[int, ...]]
 
 
 OV_MODEL_CACHE = ResultsCacheContainer()
@@ -173,7 +173,7 @@ def get_compress_weight_model(
     weight_shape: Tuple,
     scale_shape: Optional[Tuple] = None,
     zero_point_shape: Optional[Tuple] = None,
-    reduction_axes: Optional[Tuple] = None,
+    reduction_axes: Optional[ReductionAxes] = None,
     return_nodes: Optional[bool] = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
     """
@@ -222,7 +222,7 @@ def get_compress_decompress_weight_model(
     weight_shape: Tuple,
     scale_shape: Optional[Tuple] = None,
     zero_point_shape: Optional[Tuple] = None,
-    reduction_axes: Optional[Tuple] = None,
+    reduction_axes: Optional[ReductionAxes] = None,
     return_compressed_weight: Optional[bool] = False,
 ) -> ModelCallable:
     """
@@ -270,7 +270,7 @@ def _build_compress_model(
     weight_shape: Tuple,
     scale_shape: Optional[Tuple] = None,
     zero_point_shape: Optional[Tuple] = None,
-    reduction_axes: Optional[Tuple] = None,
+    reduction_axes: Optional[ReductionAxes] = None,
     return_nodes: bool = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
     is_int_asym = config.is_int_asym
@@ -415,7 +415,7 @@ def _build_compress_decompress_model(
     weight_shape: Tuple,
     scale_shape: Optional[Tuple] = None,
     zero_point_shape: Optional[Tuple] = None,
-    reduction_axes: Optional[Tuple] = None,
+    reduction_axes: Optional[ReductionAxes] = None,
     return_compressed_weight: Optional[bool] = False,
 ) -> ModelCallable:
     default_output_dtypes = {"decompressed_weight": TensorDataType.float32}

@@ -8,11 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
+
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
-
-import numpy as np
 
 import nncf
 from nncf import Dataset
@@ -28,8 +26,7 @@ from nncf.quantization.algorithms.weight_compression.activation_stats import pro
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight_and_fp4_scale, \
-    do_int_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight_and_fp4_scale
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_dequantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
@@ -40,61 +37,6 @@ from nncf.tensor import TensorDataType
 from nncf.tensor import functions as fns
 
 TModel = TypeVar("TModel")
-
-
-def compare_tensors(
-        weight,
-        data_ref: Dict["str", Tensor],
-        data_actual: Dict["str", Tensor],
-        node_name: str,
-        rel_diff_threshold=5e-1,
-        verbosity=2
-):
-    hists = {}
-    stats = {}
-    for name in data_ref:
-        ref = data_ref[name]
-        actual = data_actual[name]
-        try:
-            np.testing.assert_allclose(actual.data, ref.data, atol=0, rtol=0)
-        except Exception as e:
-            not_equal = np.where(ref.data != actual.data)
-            diff = fns.abs(ref - actual).data[not_equal]
-            rel_diff = diff / fns.maximum(fns.abs(ref).data[not_equal], 1e-9)
-            stats[name] = (np.median(rel_diff), rel_diff.max(), len(not_equal[0]) / ref.size)
-
-            is_fp32 = ref.dtype == TensorDataType.float32
-            bins = np.logspace(-10, 2,) if is_fp32 else np.arange(17)
-            hists[name] = np.histogram(diff, bins=bins, density=False)
-
-            if verbosity > 0:
-                print()
-                print(node_name, name)
-                print(str(e).replace("Not equal to tolerance rtol=1e-07, atol=0", "").strip())
-                if verbosity > 1:
-                    # format_str = "{:.2e}"
-                    format_str = "{:.10f}"
-                    zip_arg = (
-                        rel_diff.tolist(),
-                        [format_str.format(it) if is_fp32 else f"{int(it):02d}" for it in ref.data[not_equal].tolist()],
-                        [format_str.format(it) if is_fp32 else f"{int(it):02d}" for it in actual.data[not_equal].tolist()],
-                    )
-                    if weight is not None:
-                        # zip_arg += ([f"{it:.30f}" for it in weight.data[not_equal].tolist()],)
-                        zip_arg += ([it for it in weight.data[not_equal].tolist()],)
-                    data = list(zip(*zip_arg))
-                    data = list(filter(lambda it: it[0] > (rel_diff_threshold if is_fp32 else 1), data))
-                    if len(data) > 0:
-                        data = sorted(data, key=lambda it: it[0], reverse=True)
-                        data = list(zip(*data))
-                        print("Rel. diff:", [f"{it:.2e}" if is_fp32 else int(it) for it in data[0]][:100])
-                        print("Reference:", data[1][:100])
-                        print("Actual:", data[2][:100])
-                        if weight is not None:
-                            print("Weight:", data[3][:100])
-    if verbosity > 0:
-        print('-' * 50)
-    return hists, stats
 
 
 class ScaleEstimation:
@@ -137,9 +79,6 @@ class ScaleEstimation:
         self._weight_penalty = weight_penalty
 
         self._set_backend_entity(model)
-
-        from nncf.quantization.algorithms.weight_compression.scale_estimation_old import ScaleEstimationOld
-        self.se_old = ScaleEstimationOld(model, name_to_node_mapping, all_weight_params, nodes_to_compress, statistics, subset_size, initial_steps, scale_steps, weight_penalty)
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -215,24 +154,6 @@ class ScaleEstimation:
                 self._initial_steps,
                 self._scale_steps,
                 self._weight_penalty,
-            )
-
-            scale_, zero_point = self.se_old.calculate_quantization_params(
-                self._backend_entity,
-                stats,
-                weight,
-                wp.reduction_axes,
-                config,
-                self._subset_size,
-                self._initial_steps,
-                self._scale_steps,
-                self._weight_penalty,
-            )
-            compare_tensors(
-                None,
-                {"scale": scale_, "zero_point": zero_point},
-                {"scale": scales[weight_name], "zero_point": zero_points[weight_name]},
-                node_name
             )
 
         return scales, zero_points
@@ -348,8 +269,11 @@ class ScaleEstimation:
                 out = do_nf4_dequantization(g_compressed_weighs, near_to_ideal_scale)
             else:
                 out = calculate_quantized_dequantized_weight(
-                    original_weight, config, precomputed_scale=near_to_ideal_scale, precomputed_zero_point=zp,
-                    ov_model_params=ov_model_params
+                    original_weight,
+                    config,
+                    precomputed_scale=near_to_ideal_scale,
+                    precomputed_zero_point=zp,
+                    ov_model_params=ov_model_params,
                 )
 
             q_weights_ = fns.zeros_like(original_weight) + out
@@ -380,8 +304,11 @@ class ScaleEstimation:
                     out = do_nf4_quantization(original_weight, near_to_ideal_scale)
                 else:
                     out, _, _ = do_int_quantization(
-                        original_weight, config, precomputed_scale=near_to_ideal_scale, precomputed_zero_point=zp,
-                        ov_model_params=ov_model_params
+                        original_weight,
+                        config,
+                        precomputed_scale=near_to_ideal_scale,
+                        precomputed_zero_point=zp,
+                        ov_model_params=ov_model_params,
                     )
                 compressed_weights = fns.zeros_like(original_weight) + out
                 target, zero_mask = get_target_zero_mask(compressed_weights, zp)
@@ -396,7 +323,11 @@ class ScaleEstimation:
                 out = do_nf4_quantization(original_weight, scaled_scale)
             else:
                 out, _, _ = do_int_quantization(
-                    original_weight, config, precomputed_scale=scaled_scale, precomputed_zero_point=zp, ov_model_params=ov_model_params,
+                    original_weight,
+                    config,
+                    precomputed_scale=scaled_scale,
+                    precomputed_zero_point=zp,
+                    ov_model_params=ov_model_params,
                 )
             compressed_weights = fns.zeros_like(original_weight) + out
 
@@ -410,7 +341,11 @@ class ScaleEstimation:
                 out = do_nf4_dequantization(g_compressed_weighs, near_to_ideal_scale)
             else:
                 out = calculate_quantized_dequantized_weight(
-                    original_weight, config, precomputed_scale=near_to_ideal_scale, precomputed_zero_point=zp, ov_model_params=ov_model_params
+                    original_weight,
+                    config,
+                    precomputed_scale=near_to_ideal_scale,
+                    precomputed_zero_point=zp,
+                    ov_model_params=ov_model_params,
                 )
             q_weights_ = fns.zeros_like(original_weight) + out
 
