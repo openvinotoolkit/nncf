@@ -21,11 +21,11 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.import_utils import is_openvino_available
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight_and_fp4_scale
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_dequantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
@@ -256,8 +256,13 @@ class ScaleEstimation:
         zero_scale = 0.001
         zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
-        # This is required for alignment with a previous OpenVINO models implementation
-        ov_model_params = OVModelParameters(dynamic_shapes=False, convertable_division=True)
+        if is_openvino_available():
+            # This is required for alignment with a previous OpenVINO models implementation
+            from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
+
+            ov_model_params = OVModelParameters(dynamic_shapes=False, convertable_division=True)
+        else:
+            ov_model_params = None
 
         # iterative rectification of initial scale
         for i in range(initial_steps):
