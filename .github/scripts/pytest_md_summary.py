@@ -10,7 +10,8 @@
 # limitations under the License.
 
 import sys
-import xml.etree.ElementTree as ET
+
+from defusedxml import ElementTree as ET
 
 
 def parse_xml_report(xml_file) -> None:

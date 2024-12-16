@@ -157,7 +157,6 @@ pythonpath = "."
 
 [tool.bandit]
 exclude_dirs = ["tools", "tests", "**/venv*", "build"]
-format = "json"
 skips = [
     "B101",   # assert_used
     "B404" ,  # import_subprocess
