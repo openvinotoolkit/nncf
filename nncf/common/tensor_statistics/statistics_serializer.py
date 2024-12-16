@@ -139,11 +139,7 @@ def dump_statistics(
 
         # Update the mapping
         metadata["mapping"][unique_sanitized_name] = original_name
-
-        try:
-            fns.io.save_file(statistics_value, file_path)
-        except Exception as e:
-            raise nncf.InternalError(f"Failed to write data to file {file_path}: {e}")
+        fns.io.save_file(statistics_value, file_path)
 
     if additional_metadata:
         metadata |= additional_metadata
