@@ -295,3 +295,25 @@ def test_share_inputs_outputs(mocker, share_inputs, share_outputs, return_ov_ten
         compiled_model.assert_called_once_with(
             [input_tensor.data], share_inputs=share_inputs, share_outputs=share_outputs
         )
+
+
+@pytest.mark.parametrize(
+    "weight,convertable_division,ref_compressed_weight",
+    [
+        ([[0.70361328125, 0.92919921875, 0.37109375, -0.98974609375]], True, [[225, 255, 181, 0]]),
+        ([[0.70361328125, 0.92919921875, 0.37109375, -0.98974609375]], False, [[226, 255, 181, 0]]),
+    ],
+)
+def test_convertable_divison(weight, convertable_division, ref_compressed_weight):
+    ov_model_params = OVModelParameters(
+        input_dtypes={"weight": TensorDataType.float32},
+        dynamic_shapes=not convertable_division,
+        convertable_division=convertable_division,
+    )
+    config = WeightCompressionConfig(CompressWeightsMode.INT8_ASYM)
+
+    weight = np.array(weight, np.float32)
+    ref_compressed_weight = np.array(ref_compressed_weight, np.uint8)
+    model_run_fn = get_compress_weight_model(ov_model_params, config, weight.shape, reduction_axes=(1,))
+    compressed_weight = model_run_fn([Tensor(weight)])[0]
+    np.testing.assert_allclose(compressed_weight.data, ref_compressed_weight, atol=0, rtol=0)
