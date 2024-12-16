@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import copy
+import os
 from dataclasses import dataclass
 from functools import partial
 from typing import Callable, Dict, List, Optional, Tuple, Union
@@ -52,6 +53,7 @@ class OVModelParameters:
         share_inputs: bool = True,
         share_outputs: bool = True,
         return_ov_tensors: bool = False,
+        convertable_division: bool = False,
     ):
         """
         :param input_dtypes: Optional dictionary mapping input names to their data types.
@@ -64,6 +66,8 @@ class OVModelParameters:
         :param share_inputs: Whether to share input tensors. Avoids cloning inputs for inference.
         :param share_outputs: Whether to share output tensors. Avoids cloning outputs after the inference.
         :param return_ov_tensors: Whether to return results as OpenVINO tensors or NumPy arrays.
+        :param convertable_division: Whether to use convertable division for division operations. If True, division a/b
+            will be transformed at runtime to a*(1/b).
         """
         self.input_dtypes = input_dtypes or {}
         self.output_dtypes = output_dtypes or {}
@@ -73,6 +77,7 @@ class OVModelParameters:
         self.share_inputs = share_inputs
         self.share_outputs = share_outputs
         self.return_ov_tensors = return_ov_tensors
+        self.convertable_division = convertable_division
 
     def __copy__(self):
         return OVModelParameters(
@@ -84,6 +89,7 @@ class OVModelParameters:
             share_inputs=self.share_inputs,
             share_outputs=self.share_outputs,
             return_ov_tensors=self.return_ov_tensors,
+            convertable_division=self.convertable_division,
         )
 
     def __deepcopy__(self, memo):
@@ -96,6 +102,7 @@ class OVModelParameters:
             share_inputs=self.share_inputs,
             share_outputs=self.share_outputs,
             return_ov_tensors=self.return_ov_tensors,
+            convertable_division=self.convertable_division,
         )
 
     def __hash__(self):
@@ -109,6 +116,7 @@ class OVModelParameters:
                 self.share_inputs,
                 self.share_outputs,
                 self.return_ov_tensors,
+                self.convertable_division,
             )
         )
 
@@ -334,6 +342,8 @@ def _build_compress_model(
     level_low = 0 if is_int_asym else -(2 ** (num_bits - 1))
     level_high = 2**num_bits - 1 if is_int_asym else 2 ** (num_bits - 1) - 1
 
+    divide_op = opset.divide if ov_model_params.convertable_division else non_convertable_divide
+
     min_values = None
     if scale_shape is not None:
         # Scale is given as an input
@@ -348,7 +358,7 @@ def _build_compress_model(
             min_values, max_values = opset.convert(min_values, ov.Type.f32), opset.convert(max_values, ov.Type.f32)
 
             levels = level_high - level_low + 1
-            scale = non_convertable_divide(max_values - min_values, opset.constant(levels - 1, ov.Type.f32))
+            scale = divide_op(max_values - min_values, opset.constant(levels - 1, ov.Type.f32))
             scale = opset.select(opset.abs(scale) < eps, eps, scale)
         else:
             w_abs_min = opset.abs(opset.reduce_min(weight, reduction_axes=reduction_axes, keep_dims=True))
@@ -356,7 +366,7 @@ def _build_compress_model(
             w_abs_min, w_max = opset.convert(w_abs_min, ov.Type.f32), opset.convert(w_max, ov.Type.f32)
 
             scale = opset.select(w_abs_min >= w_max, w_abs_min, opset.negative(w_max))
-            scale = non_convertable_divide(scale, opset.constant(-level_low, ov.Type.f32))
+            scale = divide_op(scale, opset.constant(-level_low, ov.Type.f32))
             scale = opset.select(opset.abs(scale) < eps, eps, scale)
 
     zero_point = None
@@ -368,12 +378,12 @@ def _build_compress_model(
         zero_point = convert_if_needed(zero_point, ov.Type.f32)
     elif is_int_asym:
         # Compute zero point
-        scaled_min_values = non_convertable_divide(min_values, scale)
+        scaled_min_values = divide_op(min_values, scale)
         zero_point = opset.constant(level_low, ov.Type.f32) - opset.round(scaled_min_values)
         zero_point = opset.clamp(zero_point, level_low, level_high)
 
     weight = convert_if_needed(weight, ov.Type.f32)
-    compressed_weight = non_convertable_divide(weight, scale)
+    compressed_weight = divide_op(weight, scale)
 
     if is_int_asym:
         compressed_weight += zero_point
