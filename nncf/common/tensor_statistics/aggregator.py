@@ -8,20 +8,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from abc import ABC
 from abc import abstractmethod
 from itertools import islice
+from pathlib import Path
 from typing import Any, Dict, Optional, TypeVar
 
 import nncf
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.tensor_statistics.statistics_serializer import dump_statistics
+from nncf.common.tensor_statistics.statistics_serializer import load_statistics
+from nncf.common.utils.backend import BackendType
+from nncf.data.dataset import DataItem
 from nncf.data.dataset import Dataset
-from nncf.tensor import Tensor
+from nncf.data.dataset import ModelInput
+from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")
@@ -36,7 +45,9 @@ class StatisticsAggregator(ABC):
     Base class for statistics collection.
     """
 
-    def __init__(self, dataset: Dataset):
+    BACKEND: BackendType
+
+    def __init__(self, dataset: Dataset[DataItem, ModelInput]):
         self.dataset = dataset
         self.stat_subset_size = None
         self.statistic_points = StatisticPointsContainer()
@@ -65,12 +76,11 @@ class StatisticsAggregator(ABC):
         model_transformer = factory.ModelTransformerFactory.create(model)
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
         transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
-        model_with_outputs = model_transformer.transform(transformation_layout)
+        model_with_outputs: TModel = model_transformer.transform(transformation_layout)
         engine = factory.EngineFactory.create(model_with_outputs)
-
         iterations_number = self._get_iterations_number()
-        empty_statistics = True
-        for input_data in track(
+        processed_samples = 0
+        for input_data in track(  # type: ignore
             islice(self.dataset.get_inference_data(), iterations_number),
             total=iterations_number,
             description="Statistics collection",
@@ -78,9 +88,63 @@ class StatisticsAggregator(ABC):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
             self._register_statistics(processed_outputs, merged_statistics)
-            empty_statistics = False
-        if empty_statistics:
+            processed_samples += 1
+        if processed_samples == 0:
             raise nncf.ValidationError(EMPTY_DATASET_ERROR)
+        if self.stat_subset_size is not None and self.stat_subset_size > processed_samples:
+            nncf_logger.warning(
+                f"Dataset contains only {processed_samples} samples, "
+                f"smaller than the requested subset size {self.stat_subset_size}."
+            )
+
+    def load_statistics_from_dir(self, dir_path: Path) -> None:
+        """
+        Loads statistics from a directory and populates the statistic points with the loaded data.
+
+        :param dir_path: The name of the directory from which to load the statistics.
+        """
+        loaded_data = load_statistics(dir_path, self.BACKEND)
+        self._load_statistics(loaded_data)
+        nncf_logger.info(f"Statistics were successfully loaded from a directory {dir_path.absolute()}")
+
+    def _load_statistics(self, data: Dict[str, Any]) -> None:
+        """
+        Loads statistics into the registered statistic points from the given data.
+
+        :param data: A dictionary containing the statistics loaded from a file.
+        """
+        for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
+            statistics = tensor_collector.get_statistics()
+            statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
+            if statistics_key not in data:
+                raise nncf.ValidationError(f"Not found statistics for {statistics_key}")
+            statistics.load_data(data[statistics_key])
+            tensor_collector.set_cache(statistics)
+
+    def dump_statistics(self, dir_path: Path) -> None:
+        """
+        Dumps the current statistics to a directory in a compressed format.
+
+        :param dir_path: The path of the directory where the statistics will be saved.
+        """
+        data_to_dump = self._prepare_statistics()
+        additional_metadata = {"subset_size": self.stat_subset_size}
+        dump_statistics(data_to_dump, dir_path, self.BACKEND, additional_metadata)
+        nncf_logger.info(f"Statistics were successfully saved to a directory {dir_path.absolute()}")
+
+    def _prepare_statistics(self) -> Dict[str, Any]:
+        """
+        Prepares the statistics data for dumping into a directory.
+
+        :return: A dictionary containing the statistics data to be dumped.
+        """
+        data_to_dump = {}
+        for _, statistic_point, tensor_collector in self.statistic_points.get_tensor_collectors():
+            statistics = tensor_collector.get_statistics()
+            statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
+            data = statistics.get_data(is_serialized=True)
+            data_to_dump[statistics_key] = data
+        return data_to_dump
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
@@ -141,10 +205,20 @@ class StatisticsAggregator(ABC):
 
     @staticmethod
     @abstractmethod
-    def _process_outputs(outputs: Any) -> Dict[str, Tensor]:
+    def _process_outputs(outputs: Any) -> Dict[str, NNCFTensor]:
         """
         Post-process model outputs for the further statistics collection.
 
         :param outputs: raw model outputs
         :return: processed model outputs in Dict[str, Tensor] format
+        """
+
+    @abstractmethod
+    def _get_statistics_key(self, statistics: TensorStatistic, target_point: TargetPoint) -> str:
+        """
+        Returns key of statistics.
+
+        :param statistics: Statistics value.
+        :param target_point: Statistics target point.
+        :return: Statistics key.
         """

@@ -21,11 +21,11 @@ from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
-from tests.post_training.test_templates.models import NNCFGraphToTest
-from tests.post_training.test_templates.test_min_max import MATMUL_WEIGHT_SHAPE
-from tests.post_training.test_templates.test_min_max import TemplateTestGetChannelAxes
-from tests.post_training.test_templates.test_min_max import TemplateTestGetTargetPointShape
-from tests.post_training.test_templates.test_min_max import TemplateTestMinMaxAlgorithm
+from tests.cross_fw.test_templates.models import NNCFGraphToTest
+from tests.cross_fw.test_templates.test_min_max import MATMUL_WEIGHT_SHAPE
+from tests.cross_fw.test_templates.test_min_max import TemplateTestGetChannelAxes
+from tests.cross_fw.test_templates.test_min_max import TemplateTestGetTargetPointShape
+from tests.cross_fw.test_templates.test_min_max import TemplateTestMinMaxAlgorithm
 
 
 class TestONNXMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):

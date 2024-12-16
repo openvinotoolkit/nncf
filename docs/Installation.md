@@ -2,7 +2,13 @@
 
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
 
-If you want to optimize a model from PyTorch, install PyTorch by following [PyTorch installation guide](https://pytorch.org/get-started/locally/#start-locally). For other backend follow: [TensorFlow installation guide](https://www.tensorflow.org/install/), [ONNX installation guide](https://onnxruntime.ai/docs/install/), [OpenVINO installation guide](https://docs.openvino.ai/latest/openvino_docs_install_guides_overview.html).
+NNCF supports multiple backends. Follow the corresponding installation guides and ensure your system meets
+the required specifications for your chosen backend:
+
+- OpenVINO&trade;: [Install Guide](https://docs.openvino.ai/2024/get-started/install-openvino.html), [System Requirements](https://docs.openvino.ai/2024/about-openvino/release-notes-openvino/system-requirements.html)
+- ONNX: [Install Guide](https://onnxruntime.ai/docs/install/)
+- PyTorch: [Install Guide](https://pytorch.org/get-started/locally/#start-locally)
+- TensorFlow: [Install Guide](https://www.tensorflow.org/install/)
 
 ## As a PyPI package
 
@@ -43,7 +49,10 @@ as well as the supported versions of Python:
 
 | NNCF      | OpenVINO   | PyTorch  | ONNX     | TensorFlow | Python |
 |-----------|------------|----------|----------|------------|--------|
-| `develop` | `2024.2.0` | `2.3.0`  | `1.16.0` | `2.15.1`   | `3.8`* |
+| `develop` | `2024.5.0` | `2.5.1`  | `1.17.0` | `2.15.1`   | `3.10` |
+| `2.14.0`  | `2024.5.0` | `2.5.1`  | `1.17.0` | `2.15.1`   | `3.10` |
+| `2.13.0`  | `2024.4.0` | `2.4.0`  | `1.16.0` | `2.15.1`   | `3.8`* |
+| `2.12.0`  | `2024.3.0` | `2.3.0`  | `1.16.0` | `2.15.1`   | `3.8`* |
 | `2.11.0`  | `2024.2.0` | `2.3.0`  | `1.16.0` | `2.12.0`   | `3.8`  |
 | `2.10.0`  | `2024.1.0` | `2.2.1`  | `1.16.0` | `2.12.0`   | `3.8`  |
 | `2.9.0`   | `2024.0.0` | `2.1.2`  | `1.13.1` | `2.12.0`   | `3.8`  |
@@ -55,3 +64,5 @@ as well as the supported versions of Python:
 | `2.4.0`   | `2022.1.0` | `1.12.1` | `1.12.0` | `2.8.2`    | `3.8`  |
 
 > (*) Python 3.9 or higher is required for TensorFlow 2.15.1
+
+This repository is tested on Python* 3.10.14, PyTorch* 2.5.0 (NVidia CUDA\* Toolkit 12.4) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).

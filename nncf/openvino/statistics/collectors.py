@@ -16,23 +16,30 @@ from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileRed
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import InplaceInsertionFNType
 from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
-from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
+from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_max_op
+from nncf.openvino.graph.node_utils import get_inplace_max_var_op
+from nncf.openvino.graph.node_utils import get_inplace_mean_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
+from nncf.openvino.graph.node_utils import get_inplace_mean_var_op
 from nncf.openvino.graph.node_utils import get_inplace_min_op
+from nncf.openvino.graph.node_utils import get_inplace_shape_op
 from nncf.quantization.advanced_parameters import StatisticsType
 
 
@@ -58,6 +65,26 @@ class OVMeanReducer(MeanReducer):
 
     def get_inplace_fn(self):
         return get_inplace_mean_op(self._reduction_axes)
+
+
+class OVMeanVarianceReducer(MeanVarianceReducer):
+    def get_inplace_fn(self):
+        return get_inplace_mean_var_op(self._reduction_axes)
+
+
+class OVMaxVarianceReducer(MaxVarianceReducer):
+    def get_inplace_fn(self):
+        return get_inplace_max_var_op(self._reduction_axes)
+
+
+class OVMeanAbsMaxReducer(MeanAbsMaxReducer):
+    def get_inplace_fn(self):
+        return get_inplace_mean_max_op(self._reduction_axes, True)
+
+
+class OVShapeReducer(ShapeReducer):
+    def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
+        return get_inplace_shape_op()
 
 
 class OVBatchMeanReducer(BatchMeanReducer):
@@ -100,7 +127,7 @@ def get_mean_statistic_collector(
         reducer = OVBatchMeanReducer(inplace)
     else:
         reducer = OVMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
-    noop_reducer = NoopReducer()
+    raw_reducer = RawReducer()
 
     kwargs = {
         "num_samples": num_samples,
@@ -111,7 +138,7 @@ def get_mean_statistic_collector(
 
     collector = TensorCollector(MeanTensorStatistic)
     collector.register_statistic_branch(MeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
-    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
+    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, raw_reducer, aggregate_shape)
     return collector
 
 

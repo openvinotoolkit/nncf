@@ -1,0 +1,12 @@
+{
+    "wte_weight": "PTConstNoopMetatype",
+    "linear_weight": "PTConstNoopMetatype",
+    "linear_bias": "PTConstNoopMetatype",
+    "lm_head_weight": "PTConstNoopMetatype",
+    "lm_head_bias": "PTConstNoopMetatype",
+    "input_ids": "PTInputNoopMetatype",
+    "embedding": "PTAtenEmbeddingMetatype",
+    "linear": "PTLinearMetatype",
+    "linear_1": "PTLinearMetatype",
+    "output_1": "PTOutputNoopMetatype"
+}

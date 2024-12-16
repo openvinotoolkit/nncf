@@ -38,7 +38,13 @@ class ONNXEngine(Engine):
         :param input_data: inputs for the model
         :return output_data: models outputs
         """
-        output_tensors = self.sess.run([], {k: v for k, v in input_data.items() if k in self.input_names})
+        output_tensors = self.sess.run([], input_data)
         model_outputs = self.sess.get_outputs()
 
-        return {output.name: tensor for tensor, output in zip(output_tensors, model_outputs)}
+        outputs_safe = {}
+        for tensor, output in zip(output_tensors, model_outputs):
+            # Workaround for https://github.com/microsoft/onnxruntime/issues/21922
+            # After fixing this copying should be removed
+            outputs_safe[output.name] = tensor.copy() if output.name in self.input_names else tensor
+
+        return outputs_safe

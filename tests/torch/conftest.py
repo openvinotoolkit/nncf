@@ -23,10 +23,10 @@ try:
 except:  # noqa: E722
     torch = None
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
-from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
-from tests.shared.install_fixtures import tmp_venv_with_nncf  # noqa: F401
-from tests.shared.logging import nncf_caplog  # noqa: F401
+from tests.cross_fw.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
+from tests.cross_fw.shared.case_collection import skip_marked_cases_if_options_not_specified
+from tests.cross_fw.shared.install_fixtures import tmp_venv_with_nncf  # noqa: F401
+from tests.cross_fw.shared.logging import nncf_caplog  # noqa: F401
 
 pytest.register_assert_rewrite("tests.torch.helpers")
 
@@ -52,6 +52,14 @@ def pytest_addoption(parser: Parser):
         default=False,
         help="If specified, the "
         "reference .dot files will be regenerated "
+        "using the current state of the repository.",
+    )
+    parser.addoption(
+        "--regen-json",
+        action="store_true",
+        default=False,
+        help="If specified, the "
+        "reference .json files will be regenerated "
         "using the current state of the repository.",
     )
     parser.addoption(
@@ -116,9 +124,9 @@ def pytest_addoption(parser: Parser):
 
 
 def pytest_configure(config: Config):
-    regen_dot = config.getoption("--regen-dot", False)
-    if regen_dot:
-        os.environ["NNCF_TEST_REGEN_DOT"] = "1"
+    for regen_option in ["dot", "json"]:
+        if config.getoption(f"--regen-{regen_option}", False):
+            os.environ[f"NNCF_TEST_REGEN_{regen_option.upper()}"] = "1"
 
 
 @pytest.fixture(scope="module")

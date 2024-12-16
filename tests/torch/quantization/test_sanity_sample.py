@@ -20,7 +20,7 @@ from torch import nn
 from nncf import NNCFConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.torch.quantization.algo import QuantizationController
-from tests.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.sample_test_validator import SampleType
 from tests.torch.sample_test_validator import SanitySampleValidator
 from tests.torch.sample_test_validator import SanityTestCaseDescriptor

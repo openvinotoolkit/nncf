@@ -15,7 +15,7 @@ from typing import List
 import pytest
 import torch
 
-from nncf.common.quantization.quantizer_propagation.solver import PropagationStrategy
+from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationRule
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.layers import NNCFConv2d
@@ -50,10 +50,10 @@ class MultiBranchesModelDesc(GeneralModelDesc):
         }
         self._hw_config = False
         self.custom_hw_config_dict = None
-        self.propagation_strategy = PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT
+        self.propagation_strategy = QuantizerPropagationRule.MERGE_ALL_IN_ONE
 
     def requant_prop_strategy(self):
-        self.propagation_strategy = PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION
+        self.propagation_strategy = QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION
         return self
 
     @staticmethod

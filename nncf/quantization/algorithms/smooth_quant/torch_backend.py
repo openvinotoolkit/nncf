@@ -21,6 +21,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
@@ -37,7 +38,6 @@ from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
-from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
 
 
 @COMPRESSION_MODULES.register()
@@ -113,27 +113,18 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
     ) -> TensorCollector:
         collector = TensorCollector()
-        reducer = PTAbsMaxReducer(reduction_axes=stats_reduction_axes)
+        reducer = AbsMaxReducer(reduction_axes=stats_reduction_axes)
         aggregator = MaxAggregator(num_samples=num_samples)
         collector.register_statistic_branch(branch_key, reducer, aggregator)
         return collector
 
     @staticmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: NNCFNetwork) -> Tensor:
-        weight_node = get_const_node(
-            node_with_weight, node_with_weight.metatype.weight_port_ids[0], model.nncf.get_graph()
-        )
+    def get_weight_value(node_with_weight: NNCFNode, model: NNCFNetwork, nncf_graph: NNCFGraph) -> Tensor:
+        weight_node = get_const_node(node_with_weight, node_with_weight.metatype.weight_port_ids[0], nncf_graph)
         if weight_node is None:
             raise RuntimeError(f"{node_with_weight} node has no weight node.")
         weight_data = get_const_data(weight_node, model)
         return Tensor(weight_data)
-
-    @staticmethod
-    def get_weight_tensor_port_id(node: NNCFNode) -> int:
-        const_ids = node.layer_attributes.get_const_port_ids()
-        if len(const_ids) != 1:
-            raise RuntimeError(f"Found more than 1 port for {node.node_name} node")
-        return const_ids[0]
 
     @staticmethod
     def weight_update_command(node_with_weight: NNCFNode, weight_value: np.ndarray) -> OVWeightUpdateCommand:

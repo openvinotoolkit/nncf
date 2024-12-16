@@ -21,17 +21,25 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.quantization.range_estimator import StatisticsType
 
 TModel = TypeVar("TModel")
 
 
 class MinMaxAlgoBackend(ABC):
+    @property
+    @abstractmethod
+    def preserved_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for backend-specific metatypes that require preserving float subgraphs
+        when removing the ShapeOf subgraph.
+        """
+
     @property
     @abstractmethod
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
@@ -65,6 +73,13 @@ class MinMaxAlgoBackend(ABC):
     def dropout_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific Dropout metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific Elementwises metatypes.
         """
 
     @property
@@ -114,6 +129,20 @@ class MinMaxAlgoBackend(ABC):
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         """
         Property for the backend-specific dictionary that contains QuantizationTrait-specific metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
+        """
+        Property for the backend-specific dictionary that contains backend-specific tensor reducers.
+        """
+
+    @property
+    @abstractmethod
+    def supports_inplace_statistics(self) -> bool:
+        """
+        Property for the backend-specific flag that specifies whether the backend supports inplace statistics.
         """
 
     @staticmethod
@@ -216,28 +245,6 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_statistic_collector(
-        range_estimator_params: RangeEstimatorParameters,
-        use_abs_max: bool,
-        reduction_axes: Optional[Tuple[int, ...]],
-        aggregation_axes: Optional[Tuple[int, ...]],
-        inplace: bool,
-        num_samples: Optional[int] = None,
-    ) -> TensorStatisticCollectorBase:
-        """
-        Returns backend-specific statistic collector.
-
-        :param range_estimator_params: Parameters that specify estimators types.
-        :param use_abs_max: Wheather reduce absolute values of input tensors or not.
-        :param reduction_axes: Axes for reducer.
-        :param aggregation_axes: Axes for aggregator.
-        :param inplace: Whether to calculate statistic inplace or not.
-        :param num_samples: Maximum number of samples to collect.
-        :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
-        """
-
-    @staticmethod
-    @abstractmethod
     def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
         """
         Returns node's input port indices with weight tensors.
@@ -288,12 +295,21 @@ class MinMaxAlgoBackend(ABC):
         :return: List of ignored names.
         """
 
-    @staticmethod
     @abstractmethod
-    def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_weight_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
         """
         Returns nodes that have weights.
 
         :param nncf_graph: Instance of NNCFGraph.
         :return: All nodes with weights.
+        """
+
+    @abstractmethod
+    def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        """
+        Returns true if given nncf matmul node is a matmul with a constant, False otherwise.
+
+        :param Node: Instance of NNCFNode.
+        :param nncf_graph: Instance of NNCFGraph.
+        :return: True if given nncf matmul node is a matmul with a constant, False otherwise.
         """

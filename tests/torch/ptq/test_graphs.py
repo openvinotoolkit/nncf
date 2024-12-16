@@ -16,14 +16,16 @@ import pytest
 import torch
 
 from nncf import Dataset
+from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.torch import wrap_model
 from nncf.torch.layers import NNCF_RNN
 from nncf.torch.layers import LSTMCellNNCF
-from tests.post_training.test_templates.helpers import EmbeddingModel
-from tests.post_training.test_templates.helpers import ScaledDotProductAttentionModel
+from tests.cross_fw.test_templates.helpers import EmbeddingModel
+from tests.cross_fw.test_templates.helpers import RoPEModel
+from tests.cross_fw.test_templates.helpers import ScaledDotProductAttentionModel
 from tests.torch import test_models
 from tests.torch.quantization.test_algo_quantization import SharedLayersModel
 from tests.torch.test_compressed_graph import ModelDesc
@@ -50,6 +52,7 @@ def get_model_name(description):
 
 TEST_MODELS_DESC = [
     (ModelDesc("embedding_model", EmbeddingModel, [1, 10]), {}),
+    (ModelDesc("rope_model", RoPEModel, [1, 10]), {"model_type": ModelType.TRANSFORMER}),
     (
         ModelDesc(
             "scaled_dot_product_attention_model",

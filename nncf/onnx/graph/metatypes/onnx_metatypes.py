@@ -58,17 +58,17 @@ class ONNXOpMetatype(OperatorMetatype):
 class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
     """
     Metatype which could have weights.
-
-    :param weight_channel_axis: Axis for weight per-channel quantization, meaning the number of output filters.
-    :param weight_port_ids: Input ports of the node's weight.
-    If the value is None the weight_port_id should be determined dynamically.
-    :param bias_port_id: Input port of the node's bias.
-    If the value is None it means that the Metatype does not have bias.
+    :param weight_channel_axis: Axis for weight per-channel quantization.
+    :param weight_port_ids: Constant input ports of the node's weight. Defaults to an empty list.
+    :param bias_port_id: Input port of the node's bias. If the value is None,
+    it means that the Metatype does not have bias. Defaults to None.
+    :param possible_weight_ports: Input ports on which weight could be laid. Defaults to an empty list.
     """
 
     weight_channel_axis: int
-    weight_port_ids: Optional[List[int]] = None
+    weight_port_ids: List[int] = []
     bias_port_id: Optional[int] = None
+    possible_weight_ports: List[int] = []
 
 
 @ONNX_OPERATION_METATYPES.register(is_subtype=True)
@@ -131,19 +131,17 @@ class ONNXGemmMetatype(ONNXOpWithWeightsMetatype):
     op_names = ["Gemm"]
     hw_config_names = [HWConfigOpName.MATMUL]
     weight_channel_axis = -1  # For port_id=1
-    weight_port_ids = None
     bias_port_id = 2
     possible_weight_ports = [0, 1]
     output_channel_axis = -1
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXMatMulMetatype(ONNXOpMetatype):
+class ONNXMatMulMetatype(ONNXOpWithWeightsMetatype):
     name = "MatMulOp"
     op_names = ["MatMul"]
     hw_config_names = [HWConfigOpName.MATMUL]
     weight_channel_axis = -1  # For port_id=1
-    weight_port_ids = None
     bias_port_id = 2
     possible_weight_ports = [0, 1]
     output_channel_axis = -1
@@ -344,10 +342,24 @@ class ONNXLessMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXLessOrEqualMetatype(ONNXOpMetatype):
+    name = "LessOrEqualOp"
+    op_names = ["LessOrEqual"]
+    hw_config_names = [HWConfigOpName.LESSEQUAL]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXGreaterMetatype(ONNXOpMetatype):
     name = "GreaterOp"
     op_names = ["Greater"]
     hw_config_names = [HWConfigOpName.GREATER]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXGreaterOrEqualMetatype(ONNXOpMetatype):
+    name = "GreaterOrEqualOp"
+    op_names = ["GreaterOrEqual"]
+    hw_config_names = [HWConfigOpName.GREATEREQUAL]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -379,6 +391,20 @@ class ONNXOrMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXXOrMetatype(ONNXOpMetatype):
+    name = "XorOp"
+    op_names = ["Xor"]
+    hw_config_names = [HWConfigOpName.LOGICALXOR]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXModMetatype(ONNXOpMetatype):
+    name = "ModOp"
+    op_names = ["Mod"]
+    hw_config_names = [HWConfigOpName.FLOORMOD]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXMaximumMetatype(ONNXOpMetatype):
     name = "MaxOp"
     op_names = ["Max"]
@@ -393,10 +419,15 @@ class ONNXMinimumMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXMeanMetatype(ONNXOpMetatype):
+    name = "MeanOp"
+    op_names = ["Mean"]
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXFloorMetatype(ONNXOpMetatype):
     name = "FloorOp"
     op_names = ["Floor"]
-    hw_config_names = [HWConfigOpName.FLOORMOD]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -421,7 +452,7 @@ class ONNXReciprocalMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register(is_subtype=True)
-class ONNXEmbeddingMetatype(ONNXOpMetatype):
+class ONNXEmbeddingMetatype(ONNXOpWithWeightsMetatype):
     name = "EmbeddingOp"
     hw_config_names = [HWConfigOpName.EMBEDDING]
     weight_port_ids = [0]
@@ -642,6 +673,18 @@ class ONNXDeformableConvolutionMetatype(ONNXOpMetatype):
 class ONNXErfMetatype(ONNXOpMetatype):
     name = "ErfOp"
     op_names = ["Erf"]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXCosMetatype(ONNXOpMetatype):
+    name = "CosOp"
+    op_names = ["Cos"]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSinMetatype(ONNXOpMetatype):
+    name = "SinOp"
+    op_names = ["Sin"]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:

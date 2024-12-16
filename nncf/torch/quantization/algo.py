@@ -81,6 +81,7 @@ from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.operator_metatypes import ELEMENTWISE_OPERATIONS
 from nncf.torch.graph.operator_metatypes import UNIFICATION_PRODUCING_METATYPES
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
@@ -375,7 +376,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(
             self._pattern_fusing_graph
         )
-        quantization_proposal = prop_graph_solver.run_on_ip_graph(merged_ip_graph)
+        quantization_proposal = prop_graph_solver.run_on_ip_graph(merged_ip_graph, ELEMENTWISE_OPERATIONS)
         self._num_potential_quantized_activations = prop_graph_solver.get_num_potential_quantized_activations()
 
         quantizer_setup = deepcopy(quantization_proposal.quantizer_setup)

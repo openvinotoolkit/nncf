@@ -972,7 +972,8 @@ class TestRedundantQuantizerMerge:
                 [pq_1, pq_2], [QuantizerConfig()], [None, None], InsertionPointGraph.get_post_hook_node_key("1 /B_0")
             )
             pq_3 = qpsg.add_propagating_quantizer(
-                [QuantizerConfig(per_channel=True)], InsertionPointGraph.get_pre_hook_node_key("4 /E_0")  # sic!
+                [QuantizerConfig(per_channel=True)],
+                InsertionPointGraph.get_pre_hook_node_key("4 /E_0"),  # sic!
             )
             # pq_3 should be considered redundant w.r.t the upstream per-tensor quantizer
             paths = get_edge_paths_for_propagation(
@@ -1311,55 +1312,55 @@ def create_graph_for_output_quant_as_weights() -> NNCFGraph:
 MODEL_GRAPH: NNCFGraph = create_graph_for_output_quant_as_weights()
 
 
+class OutputQuantAsWeightsSetupTestStruct(ABC):
+    operator_node_key_vs_trait_dict: Dict[str, QuantizationTrait]
+    quantizable_module_node_names_vs_qconfigs: Dict[NNCFNodeName, List[QuantizerConfig]]
+
+    def prepare_qpsg_state(self, qpsg: QPSG) -> QPSG:
+        qpsg = TestQuantizerPropagationStateGraph.mark_nodes_with_traits(qpsg, self.operator_node_key_vs_trait_dict)
+        return self._setup_and_propagate_quantizers(qpsg)
+
+    @abstractmethod
+    def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+        pass
+
+    @abstractmethod
+    def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
+        pass
+
+
+class LinearPropagation(OutputQuantAsWeightsSetupTestStruct):
+    operator_node_key_vs_trait_dict = {
+        "5 F/F_0": QuantizationTrait.QUANTIZATION_AGNOSTIC,
+        "8 G/G_0": QuantizationTrait.INPUTS_QUANTIZABLE,
+        "2 C/C_0": QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
+    }
+    quantizable_module_node_names_vs_qconfigs = {"C/C_0": [QuantizerConfig()]}
+
+    def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
+        setup = MultiConfigQuantizerSetup()
+        setup.quantization_points[0] = MultiConfigQuantizationPoint(
+            WeightQuantizationInsertionPoint(target_node_name="C/C_0"),
+            possible_qconfigs=[QuantizerConfig()],
+            directly_quantized_operator_node_names=["C/C_0", "G/G_0"],
+        )
+        setup.shared_input_operation_set_groups[0] = {0}
+        return setup
+
+    def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+        pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig()], InsertionPointGraph.get_pre_hook_node_key("6 G/G_0"))
+        paths = get_edge_paths_for_propagation(
+            qpsg,
+            InsertionPointGraph.get_post_hook_node_key("2 C/C_0"),
+            InsertionPointGraph.get_pre_hook_node_key("6 G/G_0"),
+        )
+        path = paths[0]
+        qpsg.propagate_quantizer_via_path(pq_1, path)
+        qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, "2 C/C_0")
+        return qpsg
+
+
 class TestOutputQuantAsWeightsSetup:
-    class OutputQuantAsWeightsSetupTestStruct(ABC):
-        operator_node_key_vs_trait_dict: Dict[str, QuantizationTrait]
-        quantizable_module_node_names_vs_qconfigs: Dict[NNCFNodeName, List[QuantizerConfig]]
-
-        def prepare_qpsg_state(self, qpsg: QPSG) -> QPSG:
-            qpsg = TestQuantizerPropagationStateGraph.mark_nodes_with_traits(qpsg, self.operator_node_key_vs_trait_dict)
-            return self._setup_and_propagate_quantizers(qpsg)
-
-        @abstractmethod
-        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
-            pass
-
-        @abstractmethod
-        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
-            pass
-
-    class LinearPropagation(OutputQuantAsWeightsSetupTestStruct):
-        operator_node_key_vs_trait_dict = {
-            "5 F/F_0": QuantizationTrait.QUANTIZATION_AGNOSTIC,
-            "8 G/G_0": QuantizationTrait.INPUTS_QUANTIZABLE,
-            "2 C/C_0": QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
-        }
-        quantizable_module_node_names_vs_qconfigs = {"C/C_0": [QuantizerConfig()]}
-
-        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
-            setup = MultiConfigQuantizerSetup()
-            setup.quantization_points[0] = MultiConfigQuantizationPoint(
-                WeightQuantizationInsertionPoint(target_node_name="C/C_0"),
-                possible_qconfigs=[QuantizerConfig()],
-                directly_quantized_operator_node_names=["C/C_0", "G/G_0"],
-            )
-            setup.shared_input_operation_set_groups[0] = {0}
-            return setup
-
-        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
-            pq_1 = qpsg.add_propagating_quantizer(
-                [QuantizerConfig()], InsertionPointGraph.get_pre_hook_node_key("6 G/G_0")
-            )
-            paths = get_edge_paths_for_propagation(
-                qpsg,
-                InsertionPointGraph.get_post_hook_node_key("2 C/C_0"),
-                InsertionPointGraph.get_pre_hook_node_key("6 G/G_0"),
-            )
-            path = paths[0]
-            qpsg.propagate_quantizer_via_path(pq_1, path)
-            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, "2 C/C_0")
-            return qpsg
-
     class LinearPropagationWithConfigSubspaceSelection(OutputQuantAsWeightsSetupTestStruct):
         operator_node_key_vs_trait_dict = {
             "4 D/D_0": QuantizationTrait.QUANTIZATION_AGNOSTIC,
@@ -1689,9 +1690,7 @@ class TestOutputQuantAsWeightsSetup:
 
     @pytest.fixture
     def model_graph_qpsg(self):
-        ip_graph = get_ip_graph_for_test(
-            MODEL_GRAPH, weighted_node_names=[node.node_name for node in MODEL_GRAPH.get_all_nodes()]
-        )
+        ip_graph = get_ip_graph_for_test(MODEL_GRAPH)
         quant_prop_graph = QPSG(ip_graph)
         return quant_prop_graph
 
@@ -1837,3 +1836,27 @@ class TestOutputQuantAsWeightsSetup:
 def test_get_weight_and_activation_qconfig_list_intersection(weight_configs, activation_configs, reference_configs):
     resulted_configs = QPSG._get_weight_and_activation_qconfig_list_intersection(weight_configs, activation_configs)
     assert resulted_configs == reference_configs
+
+
+class LinearPropagationForRemovalTest(LinearPropagation):
+    def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+        pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig()], InsertionPointGraph.get_pre_hook_node_key("6 G/G_0"))
+        paths = get_edge_paths_for_propagation(
+            qpsg,
+            InsertionPointGraph.get_post_hook_node_key("2 C/C_0"),
+            InsertionPointGraph.get_pre_hook_node_key("6 G/G_0"),
+        )
+        path = paths[0]
+        qpsg.propagate_quantizer_via_path(pq_1, path)
+        qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, "2 C/C_0")
+        return qpsg, pq_1
+
+
+def test_remove_pq_from_pqs_after_weight_dependent_output_quantized_nodes():
+    ip_graph = get_ip_graph_for_test(MODEL_GRAPH)
+    quant_prop_graph = QPSG(ip_graph)
+    linear_propagation = LinearPropagationForRemovalTest()
+    quant_prop_graph, pq_1 = linear_propagation.prepare_qpsg_state(quant_prop_graph)
+    qpsg, pq_1 = linear_propagation._setup_and_propagate_quantizers(quant_prop_graph)
+    qpsg.remove_propagating_quantizer(pq_1)
+    assert pq_1 not in qpsg._pqs_after_weight_dependent_output_quantized_nodes

@@ -1,0 +1,21 @@
+strict digraph  {
+"0 wte_weight" [id=0, type=get_attr];
+"1 linear_weight" [id=1, type=get_attr];
+"2 linear_bias" [id=2, type=get_attr];
+"3 lm_head_weight" [id=3, type=get_attr];
+"4 lm_head_bias" [id=4, type=get_attr];
+"5 input_ids" [id=5, type=input];
+"6 embedding" [id=6, type=embedding];
+"7 linear" [id=7, type=linear];
+"8 linear_1" [id=8, type=linear];
+"9 output_1" [id=9, type=output];
+"0 wte_weight" -> "6 embedding"  [label="(10, 5)", style=solid];
+"1 linear_weight" -> "7 linear"  [label="(5, 5)", style=solid];
+"2 linear_bias" -> "7 linear"  [label="(5,)", style=solid];
+"3 lm_head_weight" -> "8 linear_1"  [label="(10, 5)", style=solid];
+"4 lm_head_bias" -> "8 linear_1"  [label="(10,)", style=solid];
+"5 input_ids" -> "6 embedding"  [label="(5,)", style=solid];
+"6 embedding" -> "7 linear"  [label="(5, 5)", style=solid];
+"7 linear" -> "8 linear_1"  [label="(5, 5)", style=solid];
+"8 linear_1" -> "9 output_1"  [label="(5, 10)", style=solid];
+}

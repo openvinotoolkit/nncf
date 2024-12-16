@@ -1,0 +1,18 @@
+digraph  {
+rankdir=TB;
+0 [fillcolor="#adadad", fontcolor="#000000", label=x, shape=record, style="filled,rounded"];
+1 [fillcolor="#ffffff", fontcolor="#000000", label="conv.weight", shape=record, style="filled,rounded"];
+2 [fillcolor="#ffffff", fontcolor="#000000", label="conv.bias", shape=record, style="filled,rounded"];
+3 [fillcolor="#ffd6a5", fontcolor="#000000", label="conv/conv2d/0", shape=record, style="filled,rounded"];
+4 [fillcolor="#ffffff", fontcolor="#000000", label="__nncf_hooks.post_hooks.conv/conv2d/0__0.0.w", shape=record, style="filled,rounded"];
+5 [fillcolor="#caffbf", fontcolor="#000000", label="conv/post_hook__conv-conv2d-0__0[0]/add/0", shape=record, style="filled,rounded"];
+6 [fillcolor="#a0c4ff", fontcolor="#000000", label="/relu/0", shape=record, style="filled,rounded"];
+7 [fillcolor="#adadad", fontcolor="#000000", label=output, shape=record, style="filled,rounded"];
+0 -> 3  [label="(1, 1, 3, 3)\n0 → 0"];
+1 -> 3  [label="(1, 1, 1, 1)\n0 → 1"];
+2 -> 3  [label="(1,)\n0 → 2"];
+3 -> 5  [label="(1, 1, 3, 3)\n0 → 0"];
+4 -> 5  [label="(1,)\n0 → 1"];
+5 -> 6  [label="(1, 1, 3, 3)\n0 → 0"];
+6 -> 7  [label="(1, 1, 3, 3)\n0 → 0"];
+}

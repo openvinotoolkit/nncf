@@ -26,12 +26,14 @@ from nncf.errors import InvalidPathError as InvalidPathError
 from nncf.errors import InvalidQuantizerGroupError as InvalidQuantizerGroupError
 from nncf.errors import ModuleNotFoundError as ModuleNotFoundError
 from nncf.errors import ParameterNotSupportedError as ParameterNotSupportedError
+from nncf.errors import StatisticsCacheError as StatisticsCacheError
 from nncf.errors import UnknownDatasetError as UnknownDatasetError
 from nncf.errors import UnsupportedBackendError as UnsupportedBackendError
 from nncf.errors import UnsupportedDatasetError as UnsupportedDatasetError
 from nncf.errors import UnsupportedModelError as UnsupportedModelError
 from nncf.errors import UnsupportedVersionError as UnsupportedVersionError
 from nncf.errors import ValidationError as ValidationError
+from nncf.parameters import BackupMode as BackupMode
 from nncf.parameters import CompressWeightsMode as CompressWeightsMode
 from nncf.parameters import DropType as DropType
 from nncf.parameters import ModelType as ModelType
@@ -45,8 +47,13 @@ from nncf.quantization import quantize_with_accuracy_control as quantize_with_ac
 from nncf.quantization.advanced_parameters import (
     AdvancedAccuracyRestorerParameters as AdvancedAccuracyRestorerParameters,
 )
+from nncf.quantization.advanced_parameters import AdvancedAWQParameters as AdvancedAWQParameters
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters as AdvancedBiasCorrectionParameters
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as AdvancedCompressionParameters
+from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as AdvancedGPTQParameters
+from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters as AdvancedLoraCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters as AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedScaleEstimationParameters as AdvancedScaleEstimationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters as AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import OverflowFix as OverflowFix
 from nncf.scopes import IgnoredScope as IgnoredScope

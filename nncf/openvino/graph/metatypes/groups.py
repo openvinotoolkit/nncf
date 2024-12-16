@@ -13,6 +13,7 @@ from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
 
 QUANTIZE_AGNOSTIC_OPERATIONS = [
     ov_metatypes.OVMaxPoolMetatype,
+    ov_metatypes.OVAdaptiveMaxPoolMetatype,
     ov_metatypes.OVReduceMaxMetatype,
     ov_metatypes.OVReshapeMetatype,
     ov_metatypes.OVSqueezeMetatype,
@@ -38,6 +39,7 @@ QUANTIZE_AGNOSTIC_OPERATIONS = [
     ov_metatypes.OVSpaceToDepthMetatype,
     ov_metatypes.OVBatchToSpaceMetatype,
     ov_metatypes.OVSpaceToBatchMetatype,
+    # ov_metatypes.OVSliceMetatype removed from the agnostic list cause of 149909 ticket.
     # OVReluMetatype is not considered to be QUANTIZATION_AGNOSTIC, because:
     # 1. Runtime doesn't provide performance benefits by quantizing the stand-alone RELU's (ticket: 59548)
     # 2. It's frequently better for the end accuracy to have quantizers set up after the RELU
@@ -61,6 +63,7 @@ INPUTS_QUANTIZABLE_OPERATIONS = [
     ov_metatypes.OVMaximumMetatype,
     ov_metatypes.OVMinimumMetatype,
     ov_metatypes.OVAvgPoolMetatype,
+    ov_metatypes.OVAdaptiveAvgPoolMetatype,
     ov_metatypes.OVReduceMeanMetatype,
     ov_metatypes.OVMVNMetatype,
     ov_metatypes.OVNormalizeL2Metatype,
@@ -189,7 +192,11 @@ OPERATIONS_WITH_BIAS_REDUCED = [
     ov_metatypes.OVMatMulMetatype,
 ]
 
-OPERATIONS_WITH_BIAS = [*OPERATIONS_WITH_BIAS_REDUCED, ov_metatypes.OVDepthwiseConvolutionMetatype]
+OPERATIONS_WITH_BIAS = [
+    *OPERATIONS_WITH_BIAS_REDUCED,
+    ov_metatypes.OVDepthwiseConvolutionMetatype,
+    ov_metatypes.OVConvolutionBackpropDataMetatype,
+]
 
 CONV_OPERATIONS = [
     ov_metatypes.OVConvolutionMetatype,

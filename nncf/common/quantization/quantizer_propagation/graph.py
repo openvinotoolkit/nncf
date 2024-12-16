@@ -719,6 +719,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         if prop_quantizer.unified_scale_type is not None:
             gid = self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(prop_quantizer.id)
             self._unified_scale_group_manager.remove_from_group(gid, prop_quantizer)
+        self._pqs_after_weight_dependent_output_quantized_nodes.pop(prop_quantizer, None)
 
     def propagate_quantizer_via_path(
         self, prop_quantizer: PropagatingQuantizer, path: PropagationPath
@@ -768,6 +769,35 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         recursive_helper(node_key, ret_node_key_list)
         return ret_node_key_list
+
+    def all_outputs_are_quantized(self, node_key) -> bool:
+        """
+        Returns True if all pathes from the given node to the first
+        input quantable nodes have an activation quantizer, False otherwise.
+
+        :param node_key: Given node key.
+        :return: True if all pathes from the given node to the first
+        input quantable nodes have an activation quantizer, False otherwise.
+        """
+
+        nodes_keys_stack = deque(self.successors(node_key))
+        while nodes_keys_stack:
+            node_key = nodes_keys_stack.popleft()
+            node = self.nodes[node_key]
+            node_type = node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
+            if node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
+                trait = node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
+                if trait != QuantizationTrait.QUANTIZATION_AGNOSTIC:
+                    return False
+            elif node_type in [
+                QuantizerPropagationStateGraphNodeType.PRE_HOOK,
+                QuantizerPropagationStateGraphNodeType.POST_HOOK,
+            ]:
+                quantizer = node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR]
+                if quantizer:
+                    continue
+            nodes_keys_stack.extend(self.successors(node_key))
+        return True
 
     def get_paths_to_immediately_dominating_insertion_points(
         self, insertion_point_node_key: str

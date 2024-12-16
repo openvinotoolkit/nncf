@@ -32,12 +32,12 @@ from nncf.common.compression import BaseCompressionAlgorithmController as BaseCo
 from nncf.common.compression import BaseControllerStateNames
 from nncf.common.hardware.config import HWConfigType
 from nncf.config import NNCFConfig
-from tests.shared.command import arg_list_from_arg_dict
-from tests.shared.config_factory import ConfigFactory
-from tests.shared.helpers import remove_line_breaks
-from tests.shared.paths import ROOT_PYTHONPATH_ENV
-from tests.shared.paths import TEST_ROOT
-from tests.shared.paths import get_accuracy_aware_checkpoint_dir_path
+from tests.cross_fw.shared.command import arg_list_from_arg_dict
+from tests.cross_fw.shared.config_factory import ConfigFactory
+from tests.cross_fw.shared.helpers import remove_line_breaks
+from tests.cross_fw.shared.paths import ROOT_PYTHONPATH_ENV
+from tests.cross_fw.shared.paths import TEST_ROOT
+from tests.cross_fw.shared.paths import get_accuracy_aware_checkpoint_dir_path
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import create_command_line
 

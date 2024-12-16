@@ -12,5 +12,29 @@ jobs:
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - uses: AlexanderDokuchaev/md-dead-link-check@cc3ed55268899a1a6d5fd7068abbc4591eab1f74 # v0.9
+
+  tensorflow:
+    runs-on: ubuntu-20.04-8-cores
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
-          config: md_dead_link_check.toml
+          lfs: true
+      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+        with:
+          python-version: 3.10.14
+          cache: pip
+      - name: Install NNCF and test requirements
+        run: |
+          pip install -e .
+          pip install -r tests/tensorflow/requirements.txt
+      - name: Print installed modules
+        run: pip list
+      - name: Run TensorFlow precommit
+        run:  pytest tests/tensorflow -m 'nightly'
+

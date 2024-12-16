@@ -247,6 +247,7 @@
         {"type": "Crop"},
         {"type": "Transpose"},
         {"type": "Tile"},
-        {"type": "StridedSlice"}
+        {"type": "StridedSlice"},
+        {"type": "Slice"}
     ]
 }

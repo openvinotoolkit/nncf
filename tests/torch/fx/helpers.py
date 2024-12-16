@@ -10,8 +10,9 @@
 # limitations under the License.
 
 from pathlib import Path
+from typing import Tuple, Union
 
-import torch
+import torch.fx
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
@@ -19,6 +20,18 @@ import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
+from torch.fx.passes.graph_drawer import FxGraphDrawer
+
+from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
+from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
+from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.operator_metatypes import PTConstNoopMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleDepthwiseConv2dSubtype
+from nncf.torch.graph.operator_metatypes import PTSumMetatype
+from tests.cross_fw.test_templates.models import NNCFGraphToTest
+from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
+from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
 
 
 class TinyImagenetDatasetManager:
@@ -103,3 +116,76 @@ class TinyImagenetDatasetManager:
         )
 
         return train_loader, val_loader, calibration_dataset
+
+
+def visualize_fx_model(model: torch.fx.GraphModule, output_svg_path: str):
+    g = FxGraphDrawer(model, output_svg_path)
+    g.get_dot_graph().write_svg(output_svg_path)
+
+
+def get_torch_fx_model(
+    model: torch.nn.Module, ex_input: Union[torch.Tensor, Tuple[torch.Tensor, ...]]
+) -> torch.fx.GraphModule:
+    """
+    Converts given module to GraphModule.
+
+    :param model: Given torch Module.
+    :return: Exported GraphModule.
+    """
+    try:
+        named_param = next(model.named_parameters())
+    except StopIteration:
+        named_param = None
+    if named_param is None:
+        device = torch.device("cpu")
+    else:
+        device = named_param[1].device
+
+    if isinstance(ex_input, torch.Tensor):
+        ex_input = (ex_input,)
+    device_ex_input = []
+    for inp in ex_input:
+        device_ex_input.append(inp.to(device))
+    device_ex_input = tuple(device_ex_input)
+
+    model.eval()
+    with torch.no_grad():
+        with disable_patching():
+            return torch.export.export_for_training(model, args=device_ex_input).module()
+
+
+def get_torch_fx_model_q_transformed(model: torch.nn.Module, ex_input: torch.Tensor) -> torch.fx.GraphModule:
+    """
+    Converts given module to GraphModule and applies required quantization transformations to it.
+
+    :param model: Given torch Module.
+    :return: Exported GraphModule.
+    """
+    fx_model = get_torch_fx_model(model, ex_input)
+    apply_quantization_transformations(fx_model)
+    return fx_model
+
+
+def get_single_conv_nncf_graph() -> NNCFGraphToTest:
+    return NNCFGraphToTest(
+        conv_metatype=PTModuleConv2dMetatype,
+        nncf_graph_cls=PTNNCFGraph,
+        const_metatype=PTConstNoopMetatype,
+    )
+
+
+def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
+    return NNCFGraphToTestDepthwiseConv(
+        depthwise_conv_metatype=PTModuleDepthwiseConv2dSubtype,
+        nncf_graph_cls=PTNNCFGraph,
+        const_metatype=PTConstNoopMetatype,
+    )
+
+
+def get_sum_aggregation_nncf_graph() -> NNCFGraphToTestSumAggregation:
+    return NNCFGraphToTestSumAggregation(
+        conv_metatype=PTModuleConv2dMetatype,
+        sum_metatype=PTSumMetatype,
+        nncf_graph_cls=PTNNCFGraph,
+        const_metatype=PTConstNoopMetatype,
+    )

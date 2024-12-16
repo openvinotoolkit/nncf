@@ -2,3 +2,5 @@ graft nncf/torch/extensions
 graft nncf/common/hardware/configs
 include LICENSE
 include licensing/third-party-programs.txt
+include docs/PyPiPublishing.md
+include custom_version.py

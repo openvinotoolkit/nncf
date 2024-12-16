@@ -1,0 +1,61 @@
+name: Set API label
+permissions: read-all
+
+on:
+  workflow_run:
+    workflows: ["API changes check"]
+    types:
+      - completed
+
+jobs:
+  update_labels:
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Download artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@bf251b5aa9c2f7eeb574a96ee720e24f801b7c11 # v6
+        with:
+            run_id: ${{ github.event.workflow_run.id }}
+            name: api_status
+
+      - name: Get api_status
+        run: cat api_status.json
+
+      - name: Set output value
+        id: status
+        run: |
+          echo "action=$(cat api_status.json | jq -r .action)" >> $GITHUB_OUTPUT
+          echo "pr_number=$(cat api_status.json | jq -r .pr_number)" >> $GITHUB_OUTPUT
+
+      - name: Print outputs
+        run: echo ${{ steps.status.outputs.action }} ${{ steps.status.outputs.pr_number }}
+
+      - name: Add label
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        if: ${{ steps.status.outputs.action == 'add' }}
+        with:
+            github-token: "${{ secrets.GITHUB_TOKEN }}"
+            script: |
+              github.rest.issues.addLabels({
+                  issue_number: ${{ steps.status.outputs.pr_number }},
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  labels: ["API"]
+              })
+
+      - name: Remove label
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        if: ${{ steps.status.outputs.action == 'remove' }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.removeLabel({
+              issue_number: ${{ steps.status.outputs.pr_number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "API"
+            })

@@ -12,10 +12,12 @@
 import json
 import os
 import sys
+import tarfile
 from argparse import ArgumentParser
-from typing import Dict, Tuple
+from pathlib import Path
+from typing import Dict, Tuple, Union
 
-from tests.shared.paths import PROJECT_ROOT
+from tests.cross_fw.shared.paths import PROJECT_ROOT
 
 
 def post_training_quantization_mobilenet_v2(example_root_dir: str) -> Dict[str, float]:
@@ -174,6 +176,37 @@ def llm_tune_params() -> Dict[str, float]:
     return {"awq": bool(awq), "ratio": ratio, "group_size": group_size}
 
 
+def llm_compression_synthetic() -> Dict[str, float]:
+    from examples.llm_compression.openvino.tiny_llama_synthetic_data.main import main as llm_compression_synthetic_main
+
+    result = llm_compression_synthetic_main()
+
+    return {"word_count": len(result.split())}
+
+
+def fp8_llm_quantization() -> Dict[str, float]:
+    from examples.llm_compression.openvino.smollm2_360m_fp8.main import main as fp8_llm_quantization_main
+
+    result = fp8_llm_quantization_main()
+
+    return {"answers": list(result.values())}
+
+
+def post_training_quantization_torch_fx_resnet18():
+    from examples.post_training_quantization.torch_fx.resnet18.main import main as resnet18_main
+
+    # Set manual seed and determenistic cuda mode to make the test determenistic
+    results = resnet18_main()
+
+    return {
+        "fp32_top1": float(results[0]),
+        "int8_top1": float(results[1]),
+        "fp32_latency": float(results[2]),
+        "fp32_ov_latency": float(results[3]),
+        "int8_latency": float(results[4]),
+    }
+
+
 def quantization_aware_training_torch_resnet18():
     from examples.quantization_aware_training.torch.resnet18.main import main as resnet18_main
 
@@ -216,8 +249,17 @@ def set_torch_cuda_seed(seed: int = 42):
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
-def quantization_aware_training_torch_anomalib():
+def quantization_aware_training_torch_anomalib(data: Union[str, None]):
+    from anomalib.data.image import mvtec
+
+    from examples.quantization_aware_training.torch.anomalib.main import DATASET_PATH as dataset_path
     from examples.quantization_aware_training.torch.anomalib.main import main as anomalib_main
+
+    if data is not None and not dataset_path.exists():
+        dataset_path.mkdir(parents=True, exist_ok=True)
+        tar_file_path = Path(data) / mvtec.DOWNLOAD_INFO.url.split("/")[-1]
+        with tarfile.open(tar_file_path) as tar_file:
+            tar_file.extractall(dataset_path)
 
     # Set manual seed and determenistic cuda mode to make the test determenistic
     set_torch_cuda_seed()
@@ -240,10 +282,22 @@ def quantization_aware_training_torch_anomalib():
 def main(argv):
     parser = ArgumentParser()
     parser.add_argument("--name", help="Example name", required=True)
+    parser.add_argument("--data", help="Path to datasets", default=None, required=False)
     parser.add_argument("-o", "--output", help="Path to the json file to save example metrics", required=True)
     args = parser.parse_args(args=argv)
 
-    metrics = globals()[args.name]()
+    # Disable progress bar for fastdownload module
+    try:
+        import fastprogress.fastprogress
+
+        fastprogress.fastprogress.NO_BAR = True
+    except ImportError:
+        pass
+
+    if args.name == "quantization_aware_training_torch_anomalib":
+        metrics = globals()[args.name](args.data)
+    else:
+        metrics = globals()[args.name]()
 
     with open(args.output, "w", encoding="utf8") as json_file:
         return json.dump(metrics, json_file)

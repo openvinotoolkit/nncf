@@ -158,9 +158,23 @@ class OVAvgPoolMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVAdaptiveAvgPoolMetatype(OVOpMetatype):
+    name = "AdaptiveAvgPoolOp"
+    op_names = ["AdaptiveAvgPool"]
+    hw_config_names = [HWConfigOpName.AVGPOOL]
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVMaxPoolMetatype(OVOpMetatype):
     name = "MaxPoolOp"
     op_names = ["MaxPool"]
+    hw_config_names = [HWConfigOpName.MAXPOOL]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVAdaptiveMaxPoolMetatype(OVOpMetatype):
+    name = "AdaptiveMaxPoolOp"
+    op_names = ["AdaptiveMaxPool"]
     hw_config_names = [HWConfigOpName.MAXPOOL]
 
 
@@ -566,6 +580,13 @@ class OVStridedSliceMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVSliceMetatype(OVOpMetatype):
+    name = "SliceOp"
+    op_names = ["Slice"]
+    hw_config_names = [HWConfigOpName.SLICE]
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVExpMetatype(OVOpMetatype):
     name = "ExpOp"
     op_names = ["Exp"]
@@ -703,6 +724,18 @@ class OVScaledDotProductAttentionMetatype(OVOpMetatype):
     op_names = ["ScaledDotProductAttention"]
     hw_config_names = [HWConfigOpName.SCALED_DOT_PRODUCT_ATTENTION]
     target_input_ports = [0, 1]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVCosMetatype(OVOpMetatype):
+    name = "CosOp"
+    op_names = ["Cos"]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVSinMetatype(OVOpMetatype):
+    name = "SinOp"
+    op_names = ["Sin"]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:

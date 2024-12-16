@@ -18,7 +18,7 @@ import pytest
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
-from nncf.quantization.passes import remove_shapeof_subgraphs
+from nncf.quantization.passes import find_shapeof_subgraphs
 from tests.common.quantization.metatypes import CONSTANT_METATYPES
 from tests.common.quantization.metatypes import METATYPES_FOR_TEST
 from tests.common.quantization.metatypes import QUANTIZABLE_METATYPES
@@ -304,7 +304,11 @@ def test_find_quantizer_nodes_to_cut(nncf_graph: NNCFGraph, test_case: Parameter
     # As test graphs are fully connected and does not have readvariable metatype,
     # this should work
     input_nodes = nncf_graph.get_input_nodes()
-    nncf_graph_without_shapeof = remove_shapeof_subgraphs(deepcopy(nncf_graph), SHAPEOF_METATYPES, input_nodes)
+
+    shapeof_subgraphs = find_shapeof_subgraphs(nncf_graph, SHAPEOF_METATYPES, input_nodes)
+    nncf_graph_without_shapeof = deepcopy(nncf_graph)
+    nncf_graph_without_shapeof.remove_nodes_from(shapeof_subgraphs)
+
     nodes, ops = find_quantizer_nodes_to_cut(
         nncf_graph_without_shapeof,
         quantizer_node,

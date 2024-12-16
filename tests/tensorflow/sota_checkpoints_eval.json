@@ -35,7 +35,9 @@
                     "model_description": "Inception V3",
                     "compression_description": "INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 61% (RB)",
                     "target_tf": 77.52,
-                    "target_ov": 77.51
+                    "target_ov": 77.51,
+                    "skip_ov": "CVS-147730 only for OV 2024.3",
+                    "skip_ov_version": "2024.3"
                 },
                 "inception_v3_imagenet_magnitude_sparsity": {
                     "config": "examples/tensorflow/classification/configs/sparsity/inception_v3_imagenet_magnitude_sparsity.json",
@@ -256,7 +258,7 @@
                     "model_description": "RetinaNet",
                     "batch_per_gpu": 15,
                     "target_tf": 33.43,
-                    "target_ov": 33.33
+                    "target_ov": 33.35
                 },
                 "retinanet_coco_int8": {
                     "config": "examples/tensorflow/object_detection/configs/quantization/retinanet_coco_int8.json",
@@ -270,7 +272,7 @@
                     "diff_target_tf_min": -0.15,
                     "diff_target_tf_max": 0.15,
                     "target_tf": 33.19,
-                    "target_ov": 33.23
+                    "target_ov": 33.25
                 },
                 "retinanet_coco_magnitude_sparsity": {
                     "config": "examples/tensorflow/object_detection/configs/sparsity/retinanet_coco_magnitude_sparsity.json",
@@ -282,7 +284,7 @@
                     "compression_description": "Magnitude sparsity (50%)",
                     "batch_per_gpu": 15,
                     "target_tf": 33.1,
-                    "target_ov": 33.09
+                    "target_ov": 33.11
                 },
                 "retinanet_coco_pruning_geometric_median": {
                     "config": "examples/tensorflow/object_detection/configs/pruning/retinanet_coco_pruning_geometric_median.json",
@@ -295,7 +297,7 @@
                     "batch_per_gpu": 15,
                     "diff_fp32_max": 0.4,
                     "target_tf": 32.72,
-                    "target_ov": 32.59
+                    "target_ov": 32.62
                 },
                 "retinanet_coco_pruning_geometric_median_int8": {
                     "config": "examples/tensorflow/object_detection/configs/pruning_quantization/retinanet_coco_pruning_geometric_median_int8.json",
@@ -307,7 +309,7 @@
                     "compression_description": "INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + filter pruning 40%",
                     "batch_per_gpu": 15,
                     "target_tf": 32.61,
-                    "target_ov": 32.47,
+                    "target_ov": 32.49,
                     "diff_target_tf_min": -0.15,
                     "diff_target_tf_max": 0.15
                 },
@@ -318,7 +320,9 @@
                     "model_description": "YOLO v4",
                     "batch_per_gpu": 15,
                     "target_tf": 47.07,
-                    "target_ov": 48.46
+                    "target_ov": 48.46,
+                    "diff_target_ov_min": -0.02,
+                    "diff_target_ov_max": 0.02
                 },
                 "yolo_v4_coco_int8": {
                     "config": "examples/tensorflow/object_detection/configs/quantization/yolo_v4_coco_int8.json",
@@ -347,7 +351,7 @@
                     "diff_target_tf_min": -0.15,
                     "diff_target_tf_max": 0.15,
                     "target_tf": 46.49,
-                    "target_ov": 48.08
+                    "target_ov": 48.10
                 }
             }
         }

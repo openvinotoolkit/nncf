@@ -124,7 +124,7 @@
             "mobilenet_v2_imagenet_int8": {
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8.json",
                 "reference": "mobilenet_v2_imagenet",
-                "target_ov": 71.07,
+                "target_ov": 71.18,
                 "target_pt": 71.3,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_int8.pth",
@@ -138,7 +138,7 @@
             "mobilenet_v2_imagenet_int8_per_tensor": {
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8_per_tensor.json",
                 "reference": "mobilenet_v2_imagenet",
-                "target_ov": 71.23,
+                "target_ov": 71.25,
                 "target_pt": 71.28,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_int8_per_tensor.pth",
@@ -187,7 +187,7 @@
             "mobilenet_v3_small_imagenet_int8": {
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet_int8.json",
                 "reference": "mobilenet_v3_small_imagenet",
-                "target_ov": 66.9,
+                "target_ov": 66.86,
                 "target_pt": 66.87,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v3_small_imagenet_int8.pth",
@@ -208,7 +208,7 @@
             "squeezenet1_1_imagenet_int8": {
                 "config": "examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8.json",
                 "reference": "squeezenet1_1_imagenet",
-                "target_ov": 58.2,
+                "target_ov": 58.17,
                 "target_pt": 58.28,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int8.pth",
@@ -222,7 +222,7 @@
             "squeezenet1_1_imagenet_int8_per_tensor": {
                 "config": "examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json",
                 "reference": "squeezenet1_1_imagenet",
-                "target_ov": 58.07,
+                "target_ov": 58.09,
                 "target_pt": 58.14,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int8_per_tensor.pth",

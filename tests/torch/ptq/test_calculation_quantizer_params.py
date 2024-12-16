@@ -34,7 +34,7 @@ from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.statistics.aggregator import PTStatisticsAggregator
-from tests.post_training.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
+from tests.cross_fw.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
 from tests.torch.helpers import get_all_inputs_for_graph_node
 from tests.torch.helpers import get_nodes_by_type
 

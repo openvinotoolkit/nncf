@@ -33,6 +33,7 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
+from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationRule
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
@@ -43,11 +44,12 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
@@ -62,8 +64,10 @@ from nncf.quantization.fake_quantize import calculate_convert_parameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.quantization.passes import transform_to_inference_graph
+from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
+from nncf.quantization.range_estimator import StatisticsType
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 
@@ -148,6 +152,7 @@ class MinMaxQuantization(Algorithm):
         weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
         activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
         weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
+        quantizer_propagation_rule: Optional[QuantizerPropagationRule] = None,
         backend_params: Optional[Dict[str, Any]] = None,
     ):
         """
@@ -183,6 +188,7 @@ class MinMaxQuantization(Algorithm):
             parameters for activation.
         :param weights_range_estimator_params: Quantization range estimation parameters
             for weights.
+        :param quantizer_propagation_rule: The strategy to be used while propagating and merging quantizers.
         :param backend_params: Backend specific parameters.
         """
         self._target_device = target_device
@@ -200,6 +206,7 @@ class MinMaxQuantization(Algorithm):
         self._weights_range_estimator_params = weights_range_estimator_params
         self._preset = preset
         self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
+        self.quantizer_propagation_rule = quantizer_propagation_rule
 
         # preset definition
         if self._preset is None:
@@ -433,7 +440,7 @@ class MinMaxQuantization(Algorithm):
         target_point: TargetPoint,
         qconfig: QuantizerConfig,
         batchwise_statistics: bool,
-    ) -> TensorStatisticCollectorBase:
+    ) -> TensorCollector:
         """
         Creates and returns a statistic collector based on the quantizer's configuration.
 
@@ -470,7 +477,7 @@ class MinMaxQuantization(Algorithm):
                 shape, channel_axes, batchwise_statistics
             )
 
-        return self._backend_entity.get_statistic_collector(
+        return self._get_statistic_collector(
             range_estimator_params,
             collector_params.use_abs_max,
             reduction_axes,
@@ -478,6 +485,68 @@ class MinMaxQuantization(Algorithm):
             self._inplace_statistics,
             num_samples=num_samples,
         )
+
+    def _get_statistic_collector(
+        self,
+        range_estimator_params: RangeEstimatorParameters,
+        use_abs_max: bool,
+        reduction_axes: Optional[Tuple[int, ...]],
+        aggregation_axes: Optional[Tuple[int, ...]],
+        inplace: bool,
+        num_samples: Optional[int] = None,
+    ) -> TensorCollector:
+        """
+        Returns statistic collector.
+
+        :param range_estimator_params: Parameters that specify estimators types.
+        :param use_abs_max: Wheather reduce absolute values of input tensors or not.
+        :param reduction_axes: Axes for reducer.
+        :param aggregation_axes: Axes for aggregator.
+        :param inplace: Whether to calculate statistic inplace or not.
+        :param num_samples: Maximum number of samples to collect.
+        :return: TensorCollector for the statistics calculation.
+        """
+        if not self._backend_entity.supports_inplace_statistics:
+            inplace = False
+
+        collector = TensorCollector(MinMaxTensorStatistic)
+        for params, container_key in zip(
+            [range_estimator_params.min, range_estimator_params.max],
+            [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
+        ):
+            if params.statistics_type not in self._backend_entity.reducer_map:
+                raise nncf.InternalError(f"Statistic type: {params.statistics_type} is not yet supported.")
+
+            if params.aggregator_type not in AGGREGATORS_MAP:
+                raise nncf.InternalError(f"Aggregator type: {params.aggregator_type} is not yet supported.")
+
+            statistic_type = params.statistics_type
+            if statistic_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
+                # TODO(dlyakhov): merge two quantile aggregators in one
+                if container_key == MinMaxTensorStatistic.MIN_STAT:
+                    quantile = params.quantile_outlier_prob
+                else:
+                    quantile = 1 - params.quantile_outlier_prob
+                reducer = self._backend_entity.reducer_map[statistic_type](
+                    reduction_axes=reduction_axes, inplace=inplace, quantile=[quantile]
+                )
+            else:
+                if use_abs_max and statistic_type == StatisticsType.MAX:
+                    statistic_type = StatisticsType.ABS_MAX
+                reducer = self._backend_entity.reducer_map[statistic_type](
+                    reduction_axes=reduction_axes, inplace=inplace
+                )
+
+            kwargs = {
+                "num_samples": num_samples,
+                "aggregation_axes": aggregation_axes,
+            }
+            if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
+                kwargs.update({"quantile": params.quantile_outlier_prob})
+            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
+
+            collector.register_statistic_branch(container_key, reducer, aggregator)
+        return collector
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:
         """
@@ -611,6 +680,7 @@ class MinMaxQuantization(Algorithm):
             weight_ignored_scopes=list(ignored_names.keys()),
             hw_config=hw_config,
             default_trait_to_metatype_map=self._backend_entity.quant_trait_op_dict,
+            propagation_strategy=self.quantizer_propagation_rule,
             default_qconfig_list=[
                 self._get_default_qconfig(self._global_quantizer_constraints[QuantizerGroup.ACTIVATIONS])
             ],
@@ -623,7 +693,7 @@ class MinMaxQuantization(Algorithm):
             scope_overrides=scope_overrides,
         )
 
-        quantization_proposal = solver.run_on_ip_graph(ip_graph)
+        quantization_proposal = solver.run_on_ip_graph(ip_graph, self._backend_entity.elementwise_metatypes)
         multi_config_setup = quantization_proposal.quantizer_setup
         single_config_setup = multi_config_setup.select_first_qconfig_for_each_point()
         finalized_proposal = quantization_proposal.finalize(single_config_setup)
@@ -705,8 +775,13 @@ class MinMaxQuantization(Algorithm):
             node = nncf_graph.get_node_by_name(node_name)
             unique_output_port_ids = set(e.output_port_id for e in nncf_graph.get_output_edges(node))
             if len(unique_output_port_ids) > 1:
-                raise nncf.InternalError(f"Cannot determine the output_port_id for the operation: {node_name}")
-            output_port_id = next(iter(unique_output_port_ids))
+                nncf_logger.warning(
+                    f"Cannot determine the output_port_id for the operation: {node_name}, "
+                    "output_port_id = 0 will be used."
+                )
+                output_port_id = 0
+            else:
+                output_port_id = next(iter(unique_output_port_ids))
 
             activation_quantization_target_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, node_name, output_port_id
@@ -737,6 +812,7 @@ class MinMaxQuantization(Algorithm):
             self._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             self._backend_entity.shapeof_metatypes,
             self._backend_entity.dropout_metatypes,
+            self._backend_entity.preserved_metatypes,
         )
 
         quantizer_setup = self._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
@@ -926,6 +1002,7 @@ class MinMaxQuantization(Algorithm):
                     transformation_layout.register(
                         self._backend_entity.create_convert_insertion_command(quantization_target_point, parameters)
                     )
+                    unified_ops_list.add(quantization_target_point)
                 continue
             parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
             commands = self._backend_entity.create_unified_scales_quantizers_insertion_commands(
@@ -1019,7 +1096,7 @@ class MinMaxQuantization(Algorithm):
                             continue
                         if (
                             quantization_point.qconfig.mode != QuantizationScheme.SYMMETRIC
-                            and node.layer_attributes is None
+                            and not self._backend_entity.is_matmul_with_constant(node, nncf_graph)
                         ):
                             quantization_point.qconfig.mode = QuantizationScheme.SYMMETRIC
                             nncf_logger.debug(

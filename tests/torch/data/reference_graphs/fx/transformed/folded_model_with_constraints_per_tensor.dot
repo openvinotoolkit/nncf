@@ -1,0 +1,20 @@
+strict digraph  {
+"0 linear_act_weight" [id=0, type=get_attr];
+"1 linear_act_bias" [id=1, type=get_attr];
+"2 x" [id=2, type=input];
+"3 dummy_disconnected_input" [id=3, type=input];
+"4 _frozen_param0" [id=4, type=get_attr];
+"5 quantize_per_tensor_default" [id=5, type=quantize_per_tensor];
+"6 dequantize_per_tensor_default" [id=6, type=dequantize_per_tensor];
+"7 linear_1" [id=7, type=linear];
+"8 add" [id=8, type=add];
+"9 output_1" [id=9, type=output];
+"0 linear_act_weight" -> "5 quantize_per_tensor_default"  [label="(3, 3)", style=solid];
+"1 linear_act_bias" -> "7 linear_1"  [label="(3,)", style=solid];
+"2 x" -> "7 linear_1"  [label="(1, 3, 3, 3)", style=solid];
+"4 _frozen_param0" -> "8 add"  [label="(3, 3)", style=solid];
+"5 quantize_per_tensor_default" -> "6 dequantize_per_tensor_default"  [label="(3, 3)", style=solid];
+"6 dequantize_per_tensor_default" -> "7 linear_1"  [label="(3, 3)", style=solid];
+"7 linear_1" -> "8 add"  [label="(1, 3, 3, 3)", style=solid];
+"8 add" -> "9 output_1"  [label="(1, 3, 3, 3)", style=solid];
+}
