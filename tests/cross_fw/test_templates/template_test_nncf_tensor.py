@@ -1713,7 +1713,7 @@ class TemplateTestNNCFTensorOperators:
     def test_save_load_symlink_error(self, tmp_path):
         file_path = tmp_path / "test_tensor"
         symlink_path = tmp_path / "symlink_test_tensor"
-        file_path.symlink_to(symlink_path)
+        symlink_path.symlink_to(file_path)
 
         tensor_key = "tensor_key"
         tensor = Tensor(self.to_tensor([1, 2]))
