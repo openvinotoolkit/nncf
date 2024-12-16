@@ -218,8 +218,6 @@ compressed_model = compress_weights(
 
 When `statistics_path` is provided, the system first checks if the specified path exists. If it does, the statistics are loaded from this path. If the path does not exist, the statistics are computed and saved to this path for future use.
 
-> **NOTE**: Use the `statistics_path` option only in the secure environment to avoid any substitution of the files with statistics.
-
 ### Evaluation results
 
 #### Data-free Mixed-Precision on Lambada OpenAI dataset
