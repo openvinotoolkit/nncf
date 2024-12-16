@@ -11,7 +11,6 @@
 
 
 import operator
-import os
 from abc import abstractmethod
 from math import log2
 from math import sqrt
@@ -1711,14 +1710,13 @@ class TemplateTestNNCFTensorOperators:
         assert loaded_stat[tensor_key].device == tensor.device
         assert loaded_stat[tensor_key].dtype == tensor.dtype
 
-    @pytest.mark.parametrize("data", [[[3.0, 2.0, 2.0], [2.0, 3.0, -2.0]]])
-    def test_save_load_symlink(self, tmp_path, data):
+    def test_save_load_symlink_error(self, tmp_path):
         file_path = tmp_path / "test_tensor"
         symlink_path = tmp_path / "symlink_test_tensor"
-        os.symlink(file_path, symlink_path)
+        file_path.symlink_to(symlink_path)
 
         tensor_key = "tensor_key"
-        tensor = Tensor(self.to_tensor(data))
+        tensor = Tensor(self.to_tensor([1, 2]))
         stat = {tensor_key: tensor}
 
         with pytest.raises(nncf.ValidationError, match="symbolic link"):
