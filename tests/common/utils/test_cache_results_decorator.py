@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pytest
 
 from nncf.common.utils.decorators import ResultsCacheContainer
 from nncf.common.utils.decorators import cache_results
@@ -21,113 +20,113 @@ def cached_addition(a, b):
     return a + b
 
 
-@pytest.mark.parametrize(
-    "inputs,disable_caching,output,clear_cache,cache_size,ref_cache,ref_access_count",
-    [
-        (
-            (1, 2),
-            False,
-            3,
-            False,
-            1,
-            {("cached_addition", frozenset({("a", 1), ("b", 2)})): 3},
-            {("cached_addition", frozenset({("a", 1), ("b", 2)})): 0},
-        ),
-        (
-            (1, 2),
-            False,
-            3,
-            False,
-            1,
-            {("cached_addition", frozenset({("a", 1), ("b", 2)})): 3},
-            {("cached_addition", frozenset({("a", 1), ("b", 2)})): 1},
-        ),
-        (
-            (2, 3),
-            True,
-            5,
-            False,
-            1,
-            {("cached_addition", frozenset({("a", 1), ("b", 2)})): 3},
-            {("cached_addition", frozenset({("a", 1), ("b", 2)})): 1},
-        ),
-        (
-            (3, 4),
-            False,
-            7,
-            False,
-            2,
-            {
-                ("cached_addition", frozenset({("a", 1), ("b", 2)})): 3,
-                ("cached_addition", frozenset({("a", 3), ("b", 4)})): 7,
-            },
-            {
-                ("cached_addition", frozenset({("a", 1), ("b", 2)})): 1,
-                ("cached_addition", frozenset({("a", 3), ("b", 4)})): 0,
-            },
-        ),
-        (
-            (1, 2),
-            False,
-            3,
-            False,
-            2,
-            {
-                ("cached_addition", frozenset({("a", 1), ("b", 2)})): 3,
-                ("cached_addition", frozenset({("a", 3), ("b", 4)})): 7,
-            },
-            {
-                ("cached_addition", frozenset({("a", 1), ("b", 2)})): 2,
-                ("cached_addition", frozenset({("a", 3), ("b", 4)})): 0,
-            },
-        ),
-        (
-            (3, 4),
-            False,
-            7,
-            False,
-            2,
-            {
-                ("cached_addition", frozenset({("a", 1), ("b", 2)})): 3,
-                ("cached_addition", frozenset({("a", 3), ("b", 4)})): 7,
-            },
-            {
-                ("cached_addition", frozenset({("a", 1), ("b", 2)})): 2,
-                ("cached_addition", frozenset({("a", 3), ("b", 4)})): 1,
-            },
-        ),
-        (
-            (3, 4),
-            True,
-            7,
-            False,
-            2,
-            {
-                ("cached_addition", frozenset({("a", 1), ("b", 2)})): 3,
-                ("cached_addition", frozenset({("a", 3), ("b", 4)})): 7,
-            },
-            {
-                ("cached_addition", frozenset({("a", 1), ("b", 2)})): 2,
-                ("cached_addition", frozenset({("a", 3), ("b", 4)})): 1,
-            },
-        ),
-        ((3, 4), True, 7, True, 0, {}, {}),
-        (
-            (1, 2),
-            False,
-            3,
-            False,
-            1,
-            {("cached_addition", frozenset({("a", 1), ("b", 2)})): 3},
-            {("cached_addition", frozenset({("a", 1), ("b", 2)})): 0},
-        ),
-    ],
-)
-def test_caching_results(inputs, disable_caching, output, clear_cache, cache_size, ref_cache, ref_access_count):
-    if clear_cache:
-        TEST_CACHE_CONTAINER.clear()
-    kwargs = {"disable_caching": True} if disable_caching else {}
-    assert cached_addition(*inputs, **kwargs) == output
-    assert len(TEST_CACHE_CONTAINER._cache) == cache_size
-    assert TEST_CACHE_CONTAINER._cache == ref_cache
-    assert TEST_CACHE_CONTAINER._access_count == ref_access_count
+CALL_SEQUENCE = [
+    (
+        (1, 2),
+        False,
+        3,
+        False,
+        1,
+        {("cached_addition", frozenset({("a", 1), ("b", 2)})): 3},
+        {("cached_addition", frozenset({("a", 1), ("b", 2)})): 0},
+    ),
+    (
+        (1, 2),
+        False,
+        3,
+        False,
+        1,
+        {("cached_addition", frozenset({("a", 1), ("b", 2)})): 3},
+        {("cached_addition", frozenset({("a", 1), ("b", 2)})): 1},
+    ),
+    (
+        (2, 3),
+        True,
+        5,
+        False,
+        1,
+        {("cached_addition", frozenset({("a", 1), ("b", 2)})): 3},
+        {("cached_addition", frozenset({("a", 1), ("b", 2)})): 1},
+    ),
+    (
+        (3, 4),
+        False,
+        7,
+        False,
+        2,
+        {
+            ("cached_addition", frozenset({("a", 1), ("b", 2)})): 3,
+            ("cached_addition", frozenset({("a", 3), ("b", 4)})): 7,
+        },
+        {
+            ("cached_addition", frozenset({("a", 1), ("b", 2)})): 1,
+            ("cached_addition", frozenset({("a", 3), ("b", 4)})): 0,
+        },
+    ),
+    (
+        (1, 2),
+        False,
+        3,
+        False,
+        2,
+        {
+            ("cached_addition", frozenset({("a", 1), ("b", 2)})): 3,
+            ("cached_addition", frozenset({("a", 3), ("b", 4)})): 7,
+        },
+        {
+            ("cached_addition", frozenset({("a", 1), ("b", 2)})): 2,
+            ("cached_addition", frozenset({("a", 3), ("b", 4)})): 0,
+        },
+    ),
+    (
+        (3, 4),
+        False,
+        7,
+        False,
+        2,
+        {
+            ("cached_addition", frozenset({("a", 1), ("b", 2)})): 3,
+            ("cached_addition", frozenset({("a", 3), ("b", 4)})): 7,
+        },
+        {
+            ("cached_addition", frozenset({("a", 1), ("b", 2)})): 2,
+            ("cached_addition", frozenset({("a", 3), ("b", 4)})): 1,
+        },
+    ),
+    (
+        (3, 4),
+        True,
+        7,
+        False,
+        2,
+        {
+            ("cached_addition", frozenset({("a", 1), ("b", 2)})): 3,
+            ("cached_addition", frozenset({("a", 3), ("b", 4)})): 7,
+        },
+        {
+            ("cached_addition", frozenset({("a", 1), ("b", 2)})): 2,
+            ("cached_addition", frozenset({("a", 3), ("b", 4)})): 1,
+        },
+    ),
+    ((3, 4), True, 7, True, 0, {}, {}),
+    (
+        (1, 2),
+        False,
+        3,
+        False,
+        1,
+        {("cached_addition", frozenset({("a", 1), ("b", 2)})): 3},
+        {("cached_addition", frozenset({("a", 1), ("b", 2)})): 0},
+    ),
+]
+
+
+def test_caching_results():
+    for inputs, disable_caching, output, clear_cache, cache_size, ref_cache, ref_access_count in CALL_SEQUENCE:
+        if clear_cache:
+            TEST_CACHE_CONTAINER.clear()
+        kwargs = {"disable_caching": True} if disable_caching else {}
+        assert cached_addition(*inputs, **kwargs) == output
+        assert len(TEST_CACHE_CONTAINER._cache) == cache_size
+        assert TEST_CACHE_CONTAINER._cache == ref_cache
+        assert TEST_CACHE_CONTAINER._access_count == ref_access_count
