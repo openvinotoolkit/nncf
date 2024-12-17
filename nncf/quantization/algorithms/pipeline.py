@@ -115,7 +115,7 @@ class Pipeline:
 
     def run_from_step(
         self,
-        model: ModelWrapper,
+        model_wrapper: ModelWrapper,
         dataset: Dataset,
         start_step_index: int = 0,
         step_index_to_statistics: Optional[Dict[int, StatisticPointsContainer]] = None,
@@ -134,23 +134,23 @@ class Pipeline:
         :return: The updated model after executing the pipeline from the specified pipeline
             step to the end.
         """
-        pipeline_steps = self._remove_unsupported_algorithms(get_backend(model.model))
+        pipeline_steps = self._remove_unsupported_algorithms(model_wrapper.backend)
         if step_index_to_statistics is None:
             step_index_to_statistics = {}
 
         # The `step_model` and `step_graph` entities are required to execute `step_index`-th pipeline step
-        step_model = model
+        step_model_wrapper = model_wrapper
         for step_index in range(start_step_index, len(pipeline_steps)):
             # Collect statistics required to run current pipeline step
             step_statistics = step_index_to_statistics.get(step_index)
             if step_statistics is None:
-                statistic_points = self.get_statistic_points_for_step(step_index, step_model)
-                step_statistics = collect_statistics(statistic_points, step_model, dataset)
+                statistic_points = self.get_statistic_points_for_step(step_index, step_model_wrapper)
+                step_statistics = collect_statistics(statistic_points, step_model_wrapper, dataset)
 
             # Run current pipeline step
-            step_model = self.run_step(step_index, step_statistics, step_model)
+            step_model_wrapper = self.run_step(step_index, step_statistics, step_model_wrapper)
 
-        return step_model
+        return step_model_wrapper
 
     def get_statistic_points_for_step(self, step_index: int, model_wrapper: ModelWrapper) -> StatisticPointsContainer:
         """

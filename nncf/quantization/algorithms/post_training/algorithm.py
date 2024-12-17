@@ -94,7 +94,7 @@ class PostTrainingQuantization(Algorithm):
 
     def apply(
         self,
-        model: ModelWrapper,
+        model_wrapper: ModelWrapper,
         *,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
@@ -109,4 +109,4 @@ class PostTrainingQuantization(Algorithm):
         if statistic_points:
             step_index_to_statistics = {0: statistic_points}
 
-        return self._pipeline.run_from_step(model, dataset, 0, step_index_to_statistics)
+        return self._pipeline.run_from_step(model_wrapper, dataset, 0, step_index_to_statistics)
