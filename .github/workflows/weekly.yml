@@ -1,0 +1,23 @@
+name: nightly
+permissions: read-all
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0'
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+jobs:
+  precommit:
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version: ["3.9", "3.11", "3.12"]
+    uses: ./.github/workflows/call_precommit.yml
+    with:
+      python_version: ${{ matrix.python_version }}
+      gpu_enabled: false
