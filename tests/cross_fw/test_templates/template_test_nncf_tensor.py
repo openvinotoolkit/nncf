@@ -19,6 +19,7 @@ from typing import TypeVar
 import numpy as np
 import pytest
 
+import nncf
 import nncf.tensor.functions as fns
 from nncf.experimental.common.tensor_statistics import statistical_functions as s_fns
 from nncf.tensor import Tensor
@@ -1708,6 +1709,20 @@ class TemplateTestNNCFTensorOperators:
         assert loaded_stat[tensor_key].backend == tensor.backend
         assert loaded_stat[tensor_key].device == tensor.device
         assert loaded_stat[tensor_key].dtype == tensor.dtype
+
+    def test_save_load_symlink_error(self, tmp_path):
+        file_path = tmp_path / "test_tensor"
+        symlink_path = tmp_path / "symlink_test_tensor"
+        symlink_path.symlink_to(file_path)
+
+        tensor_key = "tensor_key"
+        tensor = Tensor(self.to_tensor([1, 2]))
+        stat = {tensor_key: tensor}
+
+        with pytest.raises(nncf.ValidationError, match="symbolic link"):
+            fns.io.save_file(stat, symlink_path)
+        with pytest.raises(nncf.ValidationError, match="symbolic link"):
+            fns.io.load_file(symlink_path, backend=tensor.backend)
 
     @pytest.mark.parametrize("data", [[3.0, 2.0, 2.0], [1, 2, 3]])
     @pytest.mark.parametrize("dtype", [TensorDataType.float32, TensorDataType.int32, TensorDataType.uint8, None])
