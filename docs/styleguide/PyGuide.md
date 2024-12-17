@@ -37,7 +37,7 @@
   - [6.3 Folder structure](#63-folder-structure)
   - [6.4 Test runtime considerations](#64-test-runtime-considerations)
   - [6.5 BKC management](#65-bkc-management)
-- [7 SDL rules](#s7-sdl-rules)
+- [7 Security rules](#s7-security-rules)
   - [7.1 Symlinks](#71-symlinks)
 
 </details>
@@ -968,11 +968,11 @@ Good:
 torch==2.1.0
 ```
 
-<a id="s7-sdl-rules"></a>
-<a id="7-sdl-rules"></a>
-<a id="sdl-rules"></a>
+<a id="s7-security-rules"></a>
+<a id="7-security-rules"></a>
+<a id="security-rules"></a>
 
-## 7 SDL rules
+## 7 Security rules
 
 <a id="s71-symlinks"></a>
 <a id="71-symlinks"></a>
