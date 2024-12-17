@@ -16,7 +16,7 @@ on:
       - 'tests/cross_fw/examples/*'  # examples tests runs in separate workflow
 
 jobs:
-  precommit:
+  pytest:
     uses: ./.github/workflows/call_precommit.yml
     with:
       python_version: "3.10.14"
