@@ -2,19 +2,18 @@ name: precommit
 permissions: read-all
 
 on:
-  # pull_request:
-  #   types:
-  #     - opened
-  #     - reopened
-  #     - synchronize
-  #   paths-ignore:
-  #     - '**/*.md'
-  #     - 'docs/**/*'
-  #     - 'tests/post_training/*'  # post_training tests runs on Jenkins
-  #     - 'tests/torch/sota_checkpoints_eval.json'  # reference for PT e2e
-  #     - 'tests/tensorflow/sota_checkpoints_eval.json'  # reference for TF e2e
-  #     - 'tests/cross_fw/examples/*'  # examples tests runs in separate workflow
-  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**/*'
+      - 'tests/post_training/*'  # post_training tests runs on Jenkins
+      - 'tests/torch/sota_checkpoints_eval.json'  # reference for PT e2e
+      - 'tests/tensorflow/sota_checkpoints_eval.json'  # reference for TF e2e
+      - 'tests/cross_fw/examples/*'  # examples tests runs in separate workflow
 
 jobs:
   pytest:
