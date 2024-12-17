@@ -1,15 +1,10 @@
-name: nightly
+name: weekly
 permissions: read-all
 
 on:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * 0'
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
 
 jobs:
   precommit:
