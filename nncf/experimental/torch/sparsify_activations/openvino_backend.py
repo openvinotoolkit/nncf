@@ -69,7 +69,7 @@ class OVSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
 
     @staticmethod
     def get_activation_port_id(matmul_node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        # return 0
+        return 0
         n_inputs = len(nncf_graph.get_input_edges(matmul_node))
         if n_inputs != 2:
             raise RuntimeError(f"Expected node to have two inputs, but found {n_inputs} for node {matmul_node}.")
@@ -78,6 +78,7 @@ class OVSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
             nncf_graph.get_input_edges(matmul_node)[i].from_node.node_type == "Constant" for i in range(2)
         ]
         if is_const_node_on_port[0] != is_const_node_on_port[1]:
+            assert not is_const_node_on_port[0], matmul_node.node_name
             return 1 if is_const_node_on_port[0] else 0
 
         # Try to match compressed constant subgraph
@@ -85,17 +86,18 @@ class OVSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
             node = nncf_graph.get_input_edges(matmul_node)[i].from_node
             if node.node_type == "Convert":
                 node = nncf_graph.get_input_edges(node)[0].from_node
+            if node.node_type == "Reshape":
+                node = nncf_graph.get_input_edges(node)[0].from_node
             if node.node_type == "Multiply":
                 node = nncf_graph.get_input_edges(node)[0].from_node
-            else:
-                continue
-            if node.node_type == "Subtract":
-                node = nncf_graph.get_input_edges(node)[0].from_node
-            else:
-                continue
-            if node.node_type == "Convert":
-                node = nncf_graph.get_input_edges(node)[0].from_node
+                if node.node_type == "Subtract":
+                    node = nncf_graph.get_input_edges(node)[0].from_node
+                if node.node_type == "Convert":
+                    node = nncf_graph.get_input_edges(node)[0].from_node
+                else:
+                    continue
             if node.node_type == "Constant":
+                assert i == 1, matmul_node.node_name
                 return int(i == 0)
 
         raise RuntimeError(f"Could not find activation port id for node {matmul_node}.")
