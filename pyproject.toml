@@ -100,6 +100,10 @@ files = [
     "nncf/common/utils/",
     "nncf/common/tensor_statistics",
     "nncf/experimental/torch2",
+    "nncf/quantization/passes.py",
+    "nncf/quantization/advanced_parameters.py",
+    "nncf/quantization/range_estimator.py",
+    "nncf/quantization/telemetry_extractors.py",
 ]
 
 [tool.ruff]

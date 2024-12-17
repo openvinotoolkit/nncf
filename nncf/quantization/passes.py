@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import collections
-from typing import List, TypeVar
+from typing import Deque, List, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -80,7 +80,7 @@ def find_shapeof_subgraphs(
     for shape_of_node in shape_of_nodes:
         shapeof_subgraphs.add(shape_of_node)
 
-        shape_of_queue = collections.deque()
+        shape_of_queue: Deque[NNCFNode] = collections.deque()
         shape_of_queue.extend(nncf_graph.get_next_nodes(shape_of_node))
         while shape_of_queue:
             node = shape_of_queue.pop()
