@@ -2,7 +2,7 @@
 
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
 
-If you want to optimize a model from PyTorch, install PyTorch by following [PyTorch installation guide](https://pytorch.org/get-started/locally/#start-locally). For other backend follow: [TensorFlow installation guide](https://www.tensorflow.org/install/), [ONNX installation guide](https://onnxruntime.ai/docs/install/), [OpenVINO installation guide](https://docs.openvino.ai/latest/openvino_docs_install_guides_overview.html).
+If you want to optimize a model from PyTorch, install PyTorch by following [PyTorch installation guide](https://pytorch.org/get-started/locally/#start-locally). For other backend follow: [TensorFlow installation guide](https://www.tensorflow.org/install/), [ONNX installation guide](https://onnxruntime.ai/docs/install/), [OpenVINO installation guide](https://docs.openvino.ai/2024/get-started/install-openvino.html).
 
 ## As a PyPI package
 
