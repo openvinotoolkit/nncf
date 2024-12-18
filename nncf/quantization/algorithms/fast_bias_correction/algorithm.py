@@ -134,7 +134,6 @@ class FastBiasCorrection(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-        self._backend_entity.node_mapping = model
 
         model_transformer = ModelTransformerFactory.create(model)
 

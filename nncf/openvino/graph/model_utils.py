@@ -12,7 +12,6 @@ from collections import deque
 from typing import List
 
 import openvino.runtime as ov
-from openvino._pyopenvino import DescriptorTensor
 
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -107,15 +106,3 @@ def copy_rt_info(model_source: ov.Model, model_dest: ov.Model, path: List[str]) 
     if model_source.has_rt_info(path):
         source_rt_info = model_source.get_rt_info(path)
         model_dest.set_rt_info(source_rt_info, path)
-
-
-def update_tensor_name(tensors: List[DescriptorTensor], name: str) -> None:
-    """
-    Updates tensors names in-place.
-    :param model: List of the tensors.
-    :param name: New name for tensor.
-    """
-    for tensor in tensors:
-        current_names = tensor.get_names()
-        current_names.add(name)
-        tensor.set_names(current_names)
