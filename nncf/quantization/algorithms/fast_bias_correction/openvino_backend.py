@@ -20,7 +20,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS_REDUCED
-from nncf.openvino.graph.model_builder import build_for_fast_bc
+from nncf.openvino.graph.model_builder import ModelBuilder
 from nncf.openvino.graph.node_utils import get_activation_channel_axis
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -35,17 +35,10 @@ from nncf.tensor import Tensor
 
 class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
-    def __init__(self):
-        super().__init__()
-        self._node_mapping = None
-
-    @property
-    def node_mapping(self):
-        return self._node_mapping
-
-    @node_mapping.setter
-    def node_mapping(self, model):
+    def __init__(self, model):
+        # Node mapping caching to reduce time for calculations
         self._node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
+        self._model_builder = ModelBuilder()
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
@@ -88,7 +81,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return input_data
 
     def get_bias_value(self, node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> Tensor:
-        return Tensor(get_bias_value(node, nncf_graph, model, node_mapping=self.node_mapping))
+        return Tensor(get_bias_value(node, nncf_graph, model, node_mapping=self._node_mapping))
 
     @staticmethod
     def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
@@ -127,14 +120,10 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
         return get_activation_channel_axis(node, port_id, input_shape)
 
-    def build_submodel(self, model: ov.Model, node: NNCFNode, input_port_id: int, output_port_id: int) -> ov.Model:
-        const_port_ids = node.layer_attributes.get_const_port_ids()
-        assert len(const_port_ids) == 1
-        return build_for_fast_bc(
-            model,
-            node,
-            act_port_id=input_port_id,
-            weight_port_id=const_port_ids[0],
-            out_port_id=output_port_id,
-            node_mapping=self.node_mapping,
+    def extract_submodel(self, model_transformer, input_id, output_id):
+
+        return self._model_builder.build(
+            input_ids=[input_id],
+            output_ids=[output_id],
+            node_mapping=self._node_mapping,
         )

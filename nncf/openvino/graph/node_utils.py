@@ -122,7 +122,7 @@ def get_const_value(const_node: ov.Node) -> np.ndarray:
 
 
 def get_bias_value(
-    node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model, node_mapping=Dict[str, ov.Node]
+    node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model, node_mapping: Dict[str, ov.Node]
 ) -> np.ndarray:
     """
     Returns the bias tensor for the biased node.
