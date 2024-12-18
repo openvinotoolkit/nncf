@@ -29,7 +29,7 @@ def result_verifier(func: Callable[[TModel], bool]) -> Callable[..., None]:
     def verify_result(*args: Any, **kwargs: Any):  # type: ignore
         try:
             return func(*args, **kwargs)
-        except AttributeError:
+        except Exception:
             return False
 
     return verify_result
