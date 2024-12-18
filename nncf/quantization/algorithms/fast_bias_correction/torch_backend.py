@@ -39,18 +39,6 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
     }
 
-    def __init__(self):
-        super().__init__()
-        self._node_mapping = None
-
-    @property
-    def node_mapping(self):
-        return self._node_mapping
-
-    @node_mapping.setter
-    def node_mapping(self, model):
-        self._node_mapping = {}
-
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
         if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
