@@ -1,5 +1,5 @@
 [![GitHub Release](https://img.shields.io/github/v/release/openvinotoolkit/nncf?color=green)](https://github.com/openvinotoolkit/nncf/releases)
-[![Website](https://img.shields.io/website?up_color=blue&up_message=docs&url=https%3A%2F%2Fdocs.openvino.ai%2Flatest%2Fopenvino_docs_model_optimization_guide.html)](https://docs.openvino.ai/nncf)
+[![Website](https://img.shields.io/website?up_color=blue&up_message=docs&url=https%3A%2F%2Fdocs.openvino.ai%2Fnncf)](https://docs.openvino.ai/nncf)
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](https://github.com/openvinotoolkit/nncf?tab=Apache-2.0-1-ov-file#readme)
 [![PyPI Downloads](https://static.pepy.tech/badge/nncf)](https://pypi.org/project/nncf/)
 
@@ -92,7 +92,7 @@ For detailed installation instructions, refer to the
 ### System Requirements
 
 - Ubuntu 18.04 or later (64-bit)
-- Python 3.8 or later
+- Python 3.9 or later
 - Supported frameworks:
   - PyTorch >=2.2, <2.5
   - TensorFlow >=2.8.4, <=2.15.1

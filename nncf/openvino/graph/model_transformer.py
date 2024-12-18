@@ -205,7 +205,7 @@ class OVModelTransformer(ModelTransformer):
             output_name = node_output.get_node().get_friendly_name()
             result_name = get_result_node_name(output_name, port_id)
 
-            if node_output.get_element_type() != dtype:
+            if dtype is not None and node_output.get_element_type() != dtype:
                 node_output = opset.convert(output, destination_type=dtype)
 
             result = opset.result(node_output, name=result_name)

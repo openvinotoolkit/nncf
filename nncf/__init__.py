@@ -26,12 +26,14 @@ from nncf.errors import InvalidPathError as InvalidPathError
 from nncf.errors import InvalidQuantizerGroupError as InvalidQuantizerGroupError
 from nncf.errors import ModuleNotFoundError as ModuleNotFoundError
 from nncf.errors import ParameterNotSupportedError as ParameterNotSupportedError
+from nncf.errors import StatisticsCacheError as StatisticsCacheError
 from nncf.errors import UnknownDatasetError as UnknownDatasetError
 from nncf.errors import UnsupportedBackendError as UnsupportedBackendError
 from nncf.errors import UnsupportedDatasetError as UnsupportedDatasetError
 from nncf.errors import UnsupportedModelError as UnsupportedModelError
 from nncf.errors import UnsupportedVersionError as UnsupportedVersionError
 from nncf.errors import ValidationError as ValidationError
+from nncf.parameters import BackupMode as BackupMode
 from nncf.parameters import CompressWeightsMode as CompressWeightsMode
 from nncf.parameters import DropType as DropType
 from nncf.parameters import ModelType as ModelType

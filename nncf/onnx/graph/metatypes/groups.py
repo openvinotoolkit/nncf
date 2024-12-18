@@ -10,6 +10,8 @@
 # limitations under the License.
 
 from nncf.onnx.graph.metatypes import onnx_metatypes
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpWithWeightsMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import get_operator_metatypes
 
 QUANTIZE_AGNOSTIC_OPERATIONS = [
     onnx_metatypes.ONNXGlobalMaxPoolMetatype,
@@ -67,14 +69,19 @@ INPUTS_QUANTIZABLE_OPERATIONS = [
     onnx_metatypes.ONNXMinimumMetatype,
 ]
 
-
 CONSTANT_WEIGHT_LAYER_METATYPES = [
-    onnx_metatypes.ONNXConvolutionMetatype,
-    onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
-    onnx_metatypes.ONNXConvolutionTransposeMetatype,
-    onnx_metatypes.ONNXEmbeddingMetatype,
+    metatype
+    for metatype in get_operator_metatypes()
+    if issubclass(metatype, ONNXOpWithWeightsMetatype) and metatype.weight_port_ids
 ]
 
+POSSIBLE_WEIGHT_LAYER_METATYPES = [
+    metatype
+    for metatype in get_operator_metatypes()
+    if issubclass(metatype, ONNXOpWithWeightsMetatype) and metatype.possible_weight_ports
+]
+
+OPERATIONS_WITH_WEIGHTS = list(set().union(CONSTANT_WEIGHT_LAYER_METATYPES, POSSIBLE_WEIGHT_LAYER_METATYPES))
 
 LINEAR_OPERATIONS = [
     onnx_metatypes.ONNXConvolutionMetatype,
@@ -124,11 +131,6 @@ ELEMENTWISE_OPERATIONS = [
     onnx_metatypes.ONNXMeanMetatype,
 ]
 
-OPERATIONS_WITH_WEIGHTS = [
-    *CONSTANT_WEIGHT_LAYER_METATYPES,
-    *MATMUL_METATYPES,
-]
-
 
 BATCH_NORMALIZATION_OPERATIONS = [
     onnx_metatypes.ONNXBatchNormMetatype,
@@ -142,7 +144,11 @@ OPERATIONS_WITH_BIAS_REDUCED = [
     # TODO: Need to add MatMul with the separate bias support (CVS-135433)
 ]
 
-OPERATIONS_WITH_BIAS = [*OPERATIONS_WITH_BIAS_REDUCED, onnx_metatypes.ONNXDepthwiseConvolutionMetatype]
+OPERATIONS_WITH_BIAS = [
+    *OPERATIONS_WITH_BIAS_REDUCED,
+    onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
+    onnx_metatypes.ONNXConvolutionTransposeMetatype,
+]
 
 
 QUANTIZE_DEQUANTIZE_OPERATIONS = [

@@ -1,7 +1,6 @@
 -c ../../constraints.txt
+-r ../../examples/tensorflow/requirements.txt
 PyYAML
-tensorflow_addons==0.20.0; python_version < '3.9'
-tensorflow_addons==0.23.0; python_version >= '3.9'
 tensorflow-metadata==1.13.0
 pytest
 pytest-cov

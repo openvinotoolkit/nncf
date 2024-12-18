@@ -55,7 +55,7 @@ def _add_softmax_reshape_matmul(
     #           \
     #            \
     #             \
-    #             RESHAPE   RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT
+    #    RESHAPE || TRANSPOSE   RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT
     #                 \                 /
     #                  \               /
     #                   \             /
@@ -66,7 +66,10 @@ def _add_softmax_reshape_matmul(
     branch_matmul_nodes = reshape_squeeze_metatypes + gather_metatypes + transpose_metatypes + concat_metatypes
     softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.PTSoftmaxMetatype})
     reshape = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: reshape_squeeze_metatypes}
+        **{
+            GraphPattern.LABEL_ATTR: "RESHAPE",
+            GraphPattern.METATYPE_ATTR: reshape_squeeze_metatypes + transpose_metatypes,
+        }
     )
     matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: matmul_metatypes})
     matmul_branch_nodes = pattern.add_node(
@@ -227,3 +230,23 @@ def create_se_block() -> GraphPattern:
     main_pattern.add_pattern_alternative(get_se_block_with_reshape())
     main_pattern.add_pattern_alternative(get_se_block_with_bias_and_reshape())
     return main_pattern
+
+
+@PT_IGNORED_PATTERNS.register(IgnoredPatternNames.ROPE)
+def create_rope() -> GraphPattern:
+    pattern = GraphPattern()
+    matmul_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.PTMatMulMetatype}
+    )
+    transpose_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "TRANSPOSE", GraphPattern.METATYPE_ATTR: om.PTTransposeMetatype}
+    )
+    concat_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CONCAT", GraphPattern.METATYPE_ATTR: om.PTCatMetatype})
+    cos_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "COS", GraphPattern.METATYPE_ATTR: om.PTCosMetatype})
+    sin_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SIN", GraphPattern.METATYPE_ATTR: om.PTSinMetatype})
+
+    pattern.add_edge(matmul_node, transpose_node)
+    pattern.add_edge(transpose_node, concat_node)
+    pattern.add_edge(concat_node, cos_node)
+    pattern.add_edge(concat_node, sin_node)
+    return pattern

@@ -21,6 +21,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
@@ -37,7 +38,6 @@ from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
-from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
 
 
 @COMPRESSION_MODULES.register()
@@ -113,7 +113,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
     ) -> TensorCollector:
         collector = TensorCollector()
-        reducer = PTAbsMaxReducer(reduction_axes=stats_reduction_axes)
+        reducer = AbsMaxReducer(reduction_axes=stats_reduction_axes)
         aggregator = MaxAggregator(num_samples=num_samples)
         collector.register_statistic_branch(branch_key, reducer, aggregator)
         return collector

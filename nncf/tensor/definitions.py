@@ -14,13 +14,13 @@ from enum import Enum
 from enum import auto
 
 
-class TensorBackendType(Enum):
+class TensorBackend(Enum):
     """
     Enum representing the different tensor backends.
     """
 
-    NUMPY = auto()
-    TORCH = auto()
+    numpy = auto()
+    torch = auto()
 
 
 class TensorDataType(Enum):
@@ -37,6 +37,12 @@ class TensorDataType(Enum):
     int64 = auto()
     uint8 = auto()
 
+    def is_float(self):
+        """
+        :return: True if the tensor data type is a floating-point type, else False.
+        """
+        return self in [TensorDataType.float16, TensorDataType.bfloat16, TensorDataType.float32, TensorDataType.float64]
+
 
 class TensorDeviceType(Enum):
     """
@@ -45,15 +51,6 @@ class TensorDeviceType(Enum):
 
     CPU = auto()
     GPU = auto()
-
-
-class TensorBackend(Enum):
-    """
-    Enum representing the different tensor backends.
-    """
-
-    numpy = auto()
-    torch = auto()
 
 
 @dataclass

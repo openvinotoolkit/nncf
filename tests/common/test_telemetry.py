@@ -18,10 +18,17 @@ from unittest.mock import call
 
 import pytest
 
+from nncf.common.utils.backend import BackendType
 from nncf.definitions import NNCF_CI_ENV_VAR_NAME
 from nncf.definitions import NNCF_DEV_ENV_VAR_NAME
 from nncf.telemetry import TelemetryExtractor
 from nncf.telemetry import tracked_function
+from nncf.telemetry.events import MODEL_BASED_CATEGORY
+from nncf.telemetry.events import NNCF_ONNX_CATEGORY
+from nncf.telemetry.events import NNCF_OV_CATEGORY
+from nncf.telemetry.events import NNCF_PT_CATEGORY
+from nncf.telemetry.events import NNCF_PT_FX_CATEGORY
+from nncf.telemetry.events import NNCF_TF_CATEGORY
 from nncf.telemetry.extractors import CollectedEvent
 from nncf.telemetry.wrapper import NNCFTelemetryStub
 from nncf.telemetry.wrapper import skip_if_raised
@@ -205,3 +212,33 @@ def test_skip_if_raised():
     # Incorrect args
     wrapped(1, 2, 3)
     assert raises.call_count == 1
+
+
+@pytest.mark.parametrize(
+    "backend_type, reference_category",
+    [
+        (BackendType.OPENVINO, NNCF_OV_CATEGORY),
+        (BackendType.TENSORFLOW, NNCF_TF_CATEGORY),
+        (BackendType.ONNX, NNCF_ONNX_CATEGORY),
+        (BackendType.TORCH, NNCF_PT_CATEGORY),
+        (BackendType.TORCH_FX, NNCF_PT_FX_CATEGORY),
+    ],
+)
+def test_model_based_category(backend_type, reference_category, spies, mocker):
+    send_event_spy, start_session_event_spy, end_session_event_spy = spies
+    mocker.patch("nncf.telemetry.events.get_backend", return_value=backend_type)
+
+    @tracked_function(category=MODEL_BASED_CATEGORY, extractors=["arg1"])
+    def model_based_fn_to_test(model, arg1):
+        pass
+
+    model_based_fn_to_test(MagicMock(), "arg1_value")
+
+    assert start_session_event_spy.call_count == 1
+    assert end_session_event_spy.call_count == 1
+    assert send_event_spy.call_count == 1
+
+    expected_call_args_list = [
+        call(event_category=reference_category, event_action="arg1", event_label="arg1_value", event_value=None),
+    ]
+    assert send_event_spy.call_args_list == expected_call_args_list

@@ -11,9 +11,9 @@
 import time
 from functools import partial
 
-import datasets
 import numpy as np
 import openvino as ov
+from datasets import load_dataset
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 
@@ -24,7 +24,7 @@ def main():
     MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
     OUTPUT_DIR = "tinyllama_compressed"
 
-    dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+    dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
     model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False, stateful=False)
@@ -67,7 +67,9 @@ def main():
     )
     model.save_pretrained(OUTPUT_DIR)
 
-    model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"})
+    model = OVModelForCausalLM.from_pretrained(
+        OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"}
+    )
     input_ids = tokenizer("What is PyTorch?", return_tensors="pt").to(device=model.device)
 
     start_t = time.time()

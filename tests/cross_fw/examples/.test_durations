@@ -1,0 +1,18 @@
+{
+    "tests/cross_fw/examples/test_examples.py::test_examples[llm_compression]": 222.974,
+    "tests/cross_fw/examples/test_examples.py::test_examples[llm_compression_synthetic]": 873.780,
+    "tests/cross_fw/examples/test_examples.py::test_examples[llm_tune_params]": 1018.932,
+    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_onnx_mobilenet_v2]": 178.509,
+    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_onnx_yolo8_quantize_with_accuracy_control]": 292.766,
+    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control]": 443.025,
+    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_openvino_mobilenet_v2_quantize]": 169.789,
+    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_openvino_yolo8_quantize]": 170.593,
+    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_openvino_yolo8_quantize_with_accuracy_control]": 205.533,
+    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_tensorflow_mobilenet_v2]": 149.202,
+    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_torch_mobilenet_v2]": 192.227,
+    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_torch_ssd300_vgg16]": 231.613,
+    "tests/cross_fw/examples/test_examples.py::test_examples[quantization_aware_training_torch_anomalib]": 478.797,
+    "tests/cross_fw/examples/test_examples.py::test_examples[quantization_aware_training_torch_resnet18]": 1251.144,
+    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_torch_fx_resnet18]": 412.243,
+    "tests/cross_fw/examples/test_examples.py::test_examples[fp8_llm_quantization]": 229.69
+}
