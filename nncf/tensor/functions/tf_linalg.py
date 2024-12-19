@@ -24,17 +24,18 @@ def _(
     axis: Optional[Union[int, Tuple[int, ...]]] = None,
     keepdims: bool = False,
 ) -> tf.Tensor:
-    if axis is None:
-        axis = 0 if a._rank() == 1 else (0, 1)
-
-    if ord is None or (a._rank() == 1 and ord == "fro"):
+    if ord is None:
         ord = "euclidean"
+    rank = tf.rank(a)
+    if rank == 2 and axis is None:
+        axis = (0, 1)
 
     with tf.device(a.device):
-        if ord == "nuc":
-            s, _, _ = tf.linalg.svd(a)
-            result = tf.reduce_sum(s)
-
+        if ord == "nuc" and isinstance(axis, tuple) and len(axis) != 1:
+            if rank != 2:
+                raise ValueError("ord='nuc' is only supported for 2D tensors")
+            s = tf.linalg.svd(a, compute_uv=False)
+            result = tf.reduce_sum(s, axis=-1)
             if keepdims:
                 result_shape = [1 if i in axis else dim for i, dim in enumerate(a.shape)]
                 result = tf.reshape(result, result_shape)
@@ -42,6 +43,38 @@ def _(
 
         if ord == 0:
             return tf.cast(tf.math.count_nonzero(a, axis=axis, keepdims=keepdims), a.dtype)
+
+        if ord == -1 and isinstance(axis, tuple) and len(axis) != 1:
+            if rank != 2:
+                raise ValueError("ord=-1 is only supported for 2D tensors")
+            return tf.reduce_min(tf.reduce_sum(tf.abs(a), axis=axis[0]), keepdims=keepdims)
+
+        if ord == 1 and isinstance(axis, tuple) and len(axis) != 1:
+            if rank != 2:
+                raise ValueError("ord=1 is only supported for 2D tensors")
+            return tf.reduce_max(tf.reduce_sum(tf.abs(a), axis=axis[0]), keepdims=keepdims)
+
+        if ord == -2 and isinstance(axis, tuple) and len(axis) != 1:
+            if rank != 2:
+                raise ValueError("ord=-2 is only supported for 2D tensors")
+            s = tf.linalg.svd(a, compute_uv=False)
+            return tf.reduce_min(s, axis=-1)
+
+        if ord == 2 and isinstance(axis, tuple) and len(axis) != 1:
+            if rank != 2:
+                raise ValueError("ord=2 is only supported for 2D tensors")
+            s = tf.linalg.svd(a, compute_uv=False)
+            return tf.reduce_max(s, axis=-1)
+
+        if ord == float("inf") and isinstance(axis, tuple) and len(axis) != 1:
+            if rank != 2:
+                raise ValueError("ord=inf is only supported for 2D tensors")
+            return tf.reduce_max(tf.reduce_sum(tf.abs(a), axis=axis[1]), keepdims=keepdims)
+
+        if ord == -float("inf") and isinstance(axis, tuple) and len(axis) != 1:
+            if rank != 2:
+                raise ValueError("ord=-inf is only supported for 2D tensors")
+            return tf.reduce_min(tf.reduce_sum(tf.abs(a), axis=axis[1]), keepdims=keepdims)
 
         return tf.linalg.norm(a, ord=ord, axis=axis, keepdims=keepdims)
 
@@ -97,4 +130,4 @@ def _(a: tf.Tensor, full_matrices: Optional[bool] = True) -> tf.Tensor:
     with tf.device(a.device):
         s, u, v = tf.linalg.svd(a, full_matrices=full_matrices)
 
-        return u, s, tf.transpose(v)
+        return u, s, tf.transpose(v, conjugate=True)
