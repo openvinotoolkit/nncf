@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional, Union
 
-SerializableData = Union[str, Enum]
+SerializableData = Union[str, Enum, bool]
 
 
 @dataclass
@@ -26,8 +26,8 @@ class CollectedEvent:
     """
 
     name: str
-    data: SerializableData = None  # GA limitations
-    int_data: int = None
+    data: Optional[SerializableData] = None  # GA limitations
+    int_data: Optional[int] = None
 
 
 class TelemetryExtractor(ABC):
@@ -35,7 +35,7 @@ class TelemetryExtractor(ABC):
     Interface for custom telemetry extractors, to be used with the `nncf.telemetry.tracked_function` decorator.
     """
 
-    def __init__(self, argname: Optional[str] = None):
+    def __init__(self, argname: str = "") -> None:
         self._argname = argname
 
     @property
