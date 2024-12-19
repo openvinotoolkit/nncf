@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from itertools import islice
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast
 
 import openvino.runtime as ov
 
@@ -25,6 +25,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
+from nncf.common.model import ModelWrapper
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
 from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
@@ -155,7 +156,13 @@ def apply_algorithm_if_bodies(
     """
     nncf_logger.info(f"Iteration [{current_model_num}/{len(graphs)}] ...")
     parent_graph = graphs[graph_id]
-    quantized_model = algorithm.apply(parent_model, parent_graph, parent_statistic_points, parent_dataset)
+
+    model_wrapper = ModelWrapper(parent_model, graph=parent_graph)
+    quantized_model_wrapper = algorithm.apply(
+        model_wrapper, statistic_points=parent_statistic_points, dataset=parent_dataset
+    )
+    quantized_model = cast(ov.Model, quantized_model_wrapper.model)
+
     if get_number_if_op(parent_model) == 0:
         return quantized_model, current_model_num
     model_transformer_fp32 = factory.ModelTransformerFactory.create(parent_model)

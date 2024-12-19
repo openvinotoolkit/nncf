@@ -31,6 +31,7 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.logging import nncf_logger
+from nncf.common.model import ModelWrapper
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationRule
@@ -954,14 +955,17 @@ class MinMaxQuantization(Algorithm):
 
     def apply(
         self,
-        model: TModel,
-        graph: NNCFGraph,
+        model_wrapper: ModelWrapper,
+        *,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-    ) -> TModel:
+    ) -> ModelWrapper:
         transformation_layout = TransformationLayout()
-        model_transformer = ModelTransformerFactory.create(model)
-        quantization_target_points, unified_scale_groups = self._get_quantization_target_points(model, graph)
+        model_transformer = ModelTransformerFactory.create(model_wrapper.model)
+        graph = model_wrapper.graph
+        quantization_target_points, unified_scale_groups = self._get_quantization_target_points(
+            model_wrapper.model, graph
+        )
         quantization_points_overflow_fix = self._get_quantization_points_overflow_fix(
             self._overflow_fix, quantization_target_points, graph
         )
@@ -1052,12 +1056,12 @@ class MinMaxQuantization(Algorithm):
         if not transformation_layout.transformations:
             nncf_logger.info("The model has no operations to apply quantization.")
         quantized_model = model_transformer.transform(transformation_layout)
-        return quantized_model
+        return ModelWrapper(quantized_model, attributes=model_wrapper.attributes)
 
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-        self._set_backend_entity(model)
+    def get_statistic_points(self, model_wrapper: ModelWrapper) -> StatisticPointsContainer:
+        self._set_backend_entity(model_wrapper.model)
         self._reset_cache()
-        quantization_target_points, _ = self._get_quantization_target_points(model, graph)
+        quantization_target_points, _ = self._get_quantization_target_points(model_wrapper.model, model_wrapper.graph)
         output = StatisticPointsContainer()
         for quantization_target_point, qconfig in quantization_target_points.items():
             nncf_logger.debug(
@@ -1065,7 +1069,7 @@ class MinMaxQuantization(Algorithm):
                 f" with type {quantization_target_point.type} for statistics collection"
             )
             stat_collector = self._get_stat_collector(
-                graph, quantization_target_point, qconfig, self._batchwise_statistics
+                model_wrapper.graph, quantization_target_point, qconfig, self._batchwise_statistics
             )
             output.add_statistic_point(
                 StatisticPoint(

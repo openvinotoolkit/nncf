@@ -15,7 +15,7 @@ import pytest
 import torch
 import torch.fx
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.model import ModelWrapper
 from nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend import FXFastBiasCorrectionAlgoBackend
 from nncf.torch.model_graph_manager import OPERATORS_WITH_BIAS_METATYPES
 from tests.cross_fw.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
@@ -49,9 +49,9 @@ class TestTorchFXFBCAlgorithm(TemplateTestFBCAlgorithm):
         return transform_fn
 
     @staticmethod
-    def check_bias(model: torch.fx.GraphModule, ref_bias: list):
+    def check_bias(model_wrapper: ModelWrapper, ref_bias: list):
+        model, nncf_graph = model_wrapper.unwrap()
         ref_bias = torch.Tensor(ref_bias)
-        nncf_graph = NNCFGraphFactory.create(model)
         for node in nncf_graph.get_all_nodes():
             if node.metatype not in OPERATORS_WITH_BIAS_METATYPES:
                 continue
@@ -77,7 +77,3 @@ class TestTorchFXCudaFBCAlgorithm(TestTorchFXFBCAlgorithm):
     @staticmethod
     def fn_to_type(tensor):
         return torch.Tensor(tensor).cuda()
-
-    @staticmethod
-    def check_bias(model: torch.fx.GraphModule, ref_bias: list):
-        TestTorchFXFBCAlgorithm.check_bias(model, ref_bias)

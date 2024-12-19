@@ -10,12 +10,12 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Optional
+from typing import Optional, cast
 
 import torch
 
 import nncf
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.model import ModelWrapper
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.parameters import BackupMode
@@ -32,6 +32,7 @@ from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.scopes import IgnoredScope
 from nncf.torch.graph.operator_metatypes import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 from nncf.torch.model_creation import wrap_model
+from nncf.torch.nncf_network import NNCFNetwork
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
 
@@ -72,12 +73,15 @@ def quantize_impl(
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
     )
-    graph = nncf_network.nncf.get_graph()
-    warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
-    quantized_model = quantization_algorithm.apply(nncf_network, graph, dataset=calibration_dataset)
+    model_wrapper = ModelWrapper(nncf_network)
+    warning_model_no_batchwise_support(
+        model_wrapper.graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
+    )
+
+    quantized_model_wrapper = quantization_algorithm.apply(model_wrapper, dataset=calibration_dataset)
+    quantized_model = cast(NNCFNetwork, quantized_model_wrapper.model)
 
     quantized_model.nncf.disable_dynamic_graph_building()
-
     return quantized_model
 
 
@@ -117,5 +121,5 @@ def compress_weights_impl(
         backup_mode,
         advanced_parameters,
     )
-    graph = NNCFGraphFactory.create(model)
-    return compression_algorithm.apply(model, graph, dataset=dataset)
+    model_wrapper = ModelWrapper(model)
+    return compression_algorithm.apply(model_wrapper, dataset=dataset).model

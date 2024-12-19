@@ -15,7 +15,7 @@ import numpy as np
 import onnx
 import torch
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.model import ModelWrapper
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_node_with_bias
 from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import ONNXFastBiasCorrectionAlgoBackend
@@ -58,9 +58,9 @@ class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
         return transform_fn
 
     @staticmethod
-    def check_bias(model: onnx.ModelProto, ref_bias: list):
+    def check_bias(model_wrapper: ModelWrapper, ref_bias: list):
         ref_bias = np.array(ref_bias)
-        nncf_graph = NNCFGraphFactory.create(model)
+        model, nncf_graph = model_wrapper.unwrap()
         for node in nncf_graph.get_all_nodes():
             if not is_node_with_bias(node):
                 continue
