@@ -61,7 +61,7 @@ class tracked_function:
             events: List[CollectedEvent] = []
             for collector in self._collectors:
                 argname = collector.argname
-                argvalue = bound_args.arguments[argname] if argname is not None else None
+                argvalue = bound_args.arguments[argname] if argname else None
                 event = collector.extract(argvalue)
                 events.append(event)
 

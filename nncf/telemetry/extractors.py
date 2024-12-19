@@ -35,7 +35,7 @@ class TelemetryExtractor(ABC):
     Interface for custom telemetry extractors, to be used with the `nncf.telemetry.tracked_function` decorator.
     """
 
-    def __init__(self, argname: str = "") -> None:
+    def __init__(self, argname: str = ""):
         self._argname = argname
 
     @property
