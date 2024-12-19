@@ -10,7 +10,7 @@
 # limitations under the License.
 import functools
 import inspect
-from typing import Callable, List, Union
+from typing import Any, Callable, List, Optional, TypeVar, Union
 
 from nncf.telemetry.events import MODEL_BASED_CATEGORY
 from nncf.telemetry.events import get_current_category
@@ -21,6 +21,8 @@ from nncf.telemetry.extractors import TelemetryExtractor
 from nncf.telemetry.extractors import VerbatimTelemetryExtractor
 from nncf.telemetry.wrapper import telemetry
 
+TFunction = TypeVar("TFunction", bound=Callable[..., Any])
+
 
 class tracked_function:
     """
@@ -29,7 +31,7 @@ class tracked_function:
     function execution. The category of the session and events will be determined by parameters to the decorator.
     """
 
-    def __init__(self, category: str = None, extractors: List[Union[str, TelemetryExtractor]] = None):
+    def __init__(self, category: str = None, extractors: Optional[List[Union[str, TelemetryExtractor]]] = None) -> None:
         """
         :param category: A category to be attributed to the events. If set to None, no events will be sent.
         :param extractors: Add argument names in this list as string values to send an event with an "action" equal to
@@ -44,11 +46,11 @@ class tracked_function:
         else:
             self._collectors = []
 
-    def __call__(self, fn: Callable) -> Callable:
+    def __call__(self, fn: TFunction) -> TFunction:
         fn_signature = inspect.signature(fn)
 
         @functools.wraps(fn)
-        def wrapped(*args, **kwargs):
+        def wrapped(*args: Any, **kwargs: Any) -> Any:
             bound_args = fn_signature.bind(*args, **kwargs)
             bound_args.apply_defaults()
 
@@ -59,7 +61,7 @@ class tracked_function:
             events: List[CollectedEvent] = []
             for collector in self._collectors:
                 argname = collector.argname
-                argvalue = bound_args.arguments[argname] if argname is not None else None
+                argvalue = bound_args.arguments[argname] if argname else None
                 event = collector.extract(argvalue)
                 events.append(event)
 
@@ -82,4 +84,4 @@ class tracked_function:
                     telemetry.end_session(self._category)
             return retval
 
-        return wrapped
+        return wrapped  # type: ignore[return-value]

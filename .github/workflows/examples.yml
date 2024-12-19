@@ -70,7 +70,8 @@ jobs:
       - name: Test Summary
         if: ${{ !cancelled() }}
         run: |
-            python .github/scripts/pytest_md_summary.py pytest-results.xml >> $GITHUB_STEP_SUMMARY
+          pip install defusedxml==0.7.1
+          python .github/scripts/pytest_md_summary.py pytest-results.xml >> $GITHUB_STEP_SUMMARY
 
   examples-win-cpu:
     name: Test exmaples CPU Windows [${{ matrix.group }}/4]
@@ -124,4 +125,5 @@ jobs:
       - name: Test Summary
         if: ${{ !cancelled() }}
         run: |
-            python .github/scripts/pytest_md_summary.py pytest-results.xml >> $GITHUB_STEP_SUMMARY
+          pip install defusedxml==0.7.1
+          python .github/scripts/pytest_md_summary.py pytest-results.xml >> $GITHUB_STEP_SUMMARY
