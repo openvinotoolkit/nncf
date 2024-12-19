@@ -53,10 +53,6 @@ def _(a: tf.Tensor) -> TensorBackend:
 @numeric.squeeze.register(tf.Tensor)
 def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Tensor:
     with tf.device(a.device):
-        if axis is None:
-            return tf.squeeze(a)
-        if isinstance(axis, Tuple) and any(a.shape[i] != 1 for i in axis):
-            raise ValueError("Cannot select an axis to squeeze out which has size not equal to one")
         return tf.squeeze(a, axis)
 
 
@@ -67,19 +63,15 @@ def _(a: tf.Tensor) -> tf.Tensor:
 
 
 @numeric.max.register(tf.Tensor)
-def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False) -> tf.Tensor:
+def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> tf.Tensor:
     with tf.device(a.device):
-        if axis is None:
-            return tf.reduce_max(a)
-        return tf.reduce_max(a, axis=axis, keepdims=keepdim)
+        return tf.reduce_max(a, axis=axis, keepdims=keepdims)
 
 
 @numeric.min.register(tf.Tensor)
-def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False) -> tf.Tensor:
+def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> tf.Tensor:
     with tf.device(a.device):
-        if axis is None:
-            return tf.reduce_min(a)
-        return tf.reduce_min(a, axis=axis, keepdims=keepdim)
+        return tf.reduce_min(a, axis=axis, keepdims=keepdims)
 
 
 @numeric.abs.register(tf.Tensor)
@@ -139,7 +131,7 @@ def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Te
 
 @numeric.isempty.register(tf.Tensor)
 def _(a: tf.Tensor) -> bool:
-    return bool(tf.equal(tf.size(a), 0).numpy())
+    return bool(tf.equal(tf.size(a), 0))
 
 
 @numeric.isclose.register(tf.Tensor)
@@ -214,6 +206,7 @@ def _(
     dtype: Optional[TensorDataType] = None,
 ) -> tf.Tensor:
     with tf.device(a.device):
+        a = tf.cast(a, DTYPE_MAP[dtype]) if dtype is not None else a
         return tf.reduce_mean(a, axis=axis, keepdims=keepdims)
 
 
@@ -304,14 +297,7 @@ def _(a: tf.Tensor, data: Any) -> tf.Tensor:
 
 @numeric.item.register(tf.Tensor)
 def _(a: tf.Tensor) -> Union[int, float, bool]:
-    a = tf.reshape(a, [])
-    np_item = a.numpy()
-    if isinstance(np_item, np.floating):
-        return float(np_item)
-    if isinstance(np_item, np.bool_):
-        return bool(np_item)
-
-    return int(np_item)
+    return a.numpy().item()
 
 
 @numeric.sum.register(tf.Tensor)
