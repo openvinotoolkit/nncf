@@ -806,8 +806,8 @@ class HAWQAggregator(AggregatorBase):
         # TODO: revise this formula as possibly it is with an error; adopted from previous HAWQ implementation
         self._container = (self._container + trace) / x.size
 
-    def _aggregate_impl(self) -> List[TensorType]:
-        return [self._container * 2 / self._collected_samples]
+    def _aggregate_impl(self) -> Tensor:
+        return self._container * 2 / self._collected_samples
 
 
 def _move_axes_flatten_cat(

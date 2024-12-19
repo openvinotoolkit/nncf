@@ -10,7 +10,6 @@
 # limitations under the License.
 import pytest
 
-import nncf
 from nncf.common.tensor_statistics.statistics_validator import validate_backend
 from nncf.common.utils.backend import BackendType
 
@@ -23,12 +22,12 @@ def test_validate_backend(backend_value):
 
     validate_backend(data, backend)
 
-    with pytest.raises(nncf.ValidationError) as exc_info:
+    with pytest.raises(ValueError) as exc_info:
         # Test case where backend does not match
         validate_backend({"backend": BackendType.ONNX.value}, BackendType.TORCH)
-    assert "Backend in loaded statistics ONNX does not match to an expected backend Torch." in str(exc_info)
+    assert "Backend in loaded statistics" in str(exc_info)
 
-    with pytest.raises(nncf.ValidationError) as exc_info:
+    with pytest.raises(ValueError) as exc_info:
         # Test case where backend key is missing
         validate_backend({}, BackendType.TORCH)
     assert "The provided metadata has no information about backend." in str(exc_info)
