@@ -1807,6 +1807,13 @@ class TemplateTestNNCFTensorOperators:
     @pytest.mark.parametrize("data", [[3.0, 2.0, 2.0], [1, 2, 3]])
     @pytest.mark.parametrize("dtype", [TensorDataType.float32, TensorDataType.int32, TensorDataType.uint8, None])
     def test_fn_tensor(self, data, dtype):
+        if (
+            self.backend() == TensorBackend.tf
+            and dtype is not None
+            and not dtype.is_float()
+            and (data == [3.0, 2.0, 2.0])
+        ):
+            pytest.skip("TF backend does not support non-float dtypes for float data")
         nncf_tensor = fns.tensor(data, backend=self.backend(), dtype=dtype, device=self.device())
         backend_tensor = Tensor(self.to_tensor(data))
         if dtype is not None:

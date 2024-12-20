@@ -75,6 +75,7 @@ def _initialize_backends() -> None:
     import nncf.tensor.functions.numpy_numeric
 
     with contextlib.suppress(ImportError):
+        import nncf.tensor.functions.tf_io
         import nncf.tensor.functions.tf_linalg
         import nncf.tensor.functions.tf_numeric
 

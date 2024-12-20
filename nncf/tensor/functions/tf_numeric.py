@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
@@ -19,6 +19,7 @@ from nncf.tensor import TensorDeviceType
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TypeInfo
 from nncf.tensor.functions import numeric as numeric
+from nncf.tensor.tensor import TTensor
 
 DTYPE_MAP = {
     TensorDataType.float16: tf.float16,
@@ -35,6 +36,14 @@ DEVICE_MAP = {TensorDeviceType.CPU: "CPU", TensorDeviceType.GPU: "GPU"}
 
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 DEVICE_MAP_REV = {v: k for k, v in DEVICE_MAP.items()}
+
+
+def convert_to_tf_device(device: TensorDeviceType) -> str:
+    return DEVICE_MAP[device] if device is not None else None
+
+
+def convert_to_tf_dtype(dtype: TensorDataType) -> tf.DType:
+    return DTYPE_MAP[dtype] if dtype is not None else None
 
 
 @numeric.device.register(tf.Tensor)
@@ -357,16 +366,13 @@ def _(a: tf.Tensor, axis: int = -1, descending=False, stable=False) -> tf.Tensor
 @numeric.diag.register(tf.Tensor)
 def _(a: tf.Tensor, k: int = 0) -> tf.Tensor:
     with tf.device(a.device):
-        if a._rank() == 2:
-            if k == 0:
-                return tf.linalg.diag_part(a)
-            elif k > 0:
-                return tf.linalg.diag_part(a[:, k:])
-            else:
-                return tf.linalg.diag_part(a[-k:, :])
-
-        if a._rank() == 1:
+        rank = tf.rank(a)
+        if rank == 1:
             return tf.linalg.diag(a, k=k)
+        elif rank == 2:
+            return tf.linalg.diag_part(a, k=k)
+        else:
+            raise ValueError("Input tensor must be 1D or 2D.")
 
 
 @numeric.logical_or.register(tf.Tensor)
@@ -509,3 +515,15 @@ def _(a: tf.Tensor) -> tf.Tensor:
 def _(a: tf.Tensor) -> tf.Tensor:
     with tf.device(a.device):
         return tf.math.ceil(a)
+
+
+def tensor(
+    data: Union[TTensor, Sequence[float]],
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> tf.Tensor:
+    device = convert_to_tf_device(device)
+    dtype = convert_to_tf_dtype(dtype)
+    with tf.device(device):
+        return tf.constant(data, dtype=dtype)
