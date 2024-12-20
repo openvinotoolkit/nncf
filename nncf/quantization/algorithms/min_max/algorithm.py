@@ -788,9 +788,7 @@ class MinMaxQuantization(Algorithm):
             )
         return activation_quantization_target_point
 
-    def _find_quantization_target_points(
-        self, model: TModel, nncf_graph: NNCFGraph
-    ) -> Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]]:
+    def find_quantization_setup(self, model: TModel, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         """
         Initializes a cache, finds quantization target points and them puts in the cache.
 
@@ -818,6 +816,19 @@ class MinMaxQuantization(Algorithm):
         quantizer_setup = self._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         self._apply_model_type_pass(self._model_type, quantizer_setup, nncf_graph)
         self._apply_device_pass(self._target_device, quantizer_setup, inference_nncf_graph)
+        return quantizer_setup
+
+    def fill_quantization_target_points(
+        self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
+    ) -> Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]]:
+        """
+        Initializes a cache, finds quantization target points and them puts in the cache.
+
+        :param model: Backend-specific model, for which Quantization Target Points are being seek.
+        :param nncf_graph: NNCFGraph instance.
+        :return: Mapping of quantization target points with associated quantization configuration,
+        along with target points for scale unification.
+        """
         self._unified_scale_groups = self._collect_unified_groups(quantizer_setup, nncf_graph)
         quantization_points = list(quantizer_setup.quantization_points.values())
         quantization_points = self._topological_sort_quantization_points(quantization_points, nncf_graph)
@@ -845,7 +856,8 @@ class MinMaxQuantization(Algorithm):
         if self._quantization_target_points_to_qconfig is not None:
             return self._quantization_target_points_to_qconfig, self._unified_scale_groups
         self._init_cache()
-        return self._find_quantization_target_points(model, nncf_graph)
+        quantizer_setup = self.find_quantization_setup(model, nncf_graph)
+        return self.fill_quantization_target_points(quantizer_setup, nncf_graph)
 
     def _collect_unified_groups(
         self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
@@ -1054,10 +1066,30 @@ class MinMaxQuantization(Algorithm):
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 
+    def get_cached_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
+        """
+        Build statistic point container using already cached target points vs qconfigs cache.
+
+        :param model: Model instance.
+        :param graph: NNCFGraph instance corespondent to the passed model.
+        :return: Filled statistic point container.
+        """
+        if self._quantization_target_points_to_qconfig is None:
+            raise RuntimeError("get_cached_statistic_points is called before statistic caching.")
+        self._set_backend_entity(model)
+        return self._get_statistic_point_container(self._quantization_target_points_to_qconfig, graph)
+
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         self._reset_cache()
         quantization_target_points, _ = self._get_quantization_target_points(model, graph)
+        return self._get_statistic_point_container(quantization_target_points, graph)
+
+    def _get_statistic_point_container(
+        self,
+        quantization_target_points: Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]],
+        graph: NNCFGraph,
+    ) -> StatisticPointsContainer:
         output = StatisticPointsContainer()
         for quantization_target_point, qconfig in quantization_target_points.items():
             nncf_logger.debug(
