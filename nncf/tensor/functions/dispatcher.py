@@ -115,6 +115,10 @@ def get_io_backend_fn(fn_name: str, backend: TensorBackend) -> Callable:
         from nncf.tensor.functions import numpy_io
 
         return getattr(numpy_io, fn_name)
+    if backend == TensorBackend.tf:
+        from nncf.tensor.functions import tf_io
+
+        return getattr(tf_io, fn_name)
     if backend == TensorBackend.torch:
         from nncf.tensor.functions import torch_io
 
