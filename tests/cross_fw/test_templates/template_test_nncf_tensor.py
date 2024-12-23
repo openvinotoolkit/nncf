@@ -566,19 +566,23 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res, bool)
 
     @pytest.mark.parametrize(
-        "x1, x2, rtol, atol, ref",
+        "x1, x2, is_tensor, rtol, atol, ref",
         (
-            ([0.1], [0.1], None, None, True),
-            ([0.1], [0.10001], None, None, False),
-            ([0.1], [0.10001], 0.1, None, True),
-            ([0.1], [0.10001], None, 0.1, True),
-            ([0.1], [0.20001], None, 0.1, False),
-            ([0.1], 0.1, None, None, True),
+            ([0.1], [0.1], True, None, None, True),
+            ([0.1], [0.10001], True, None, None, False),
+            ([0.1], [0.10001], True, 0.1, None, True),
+            ([0.1], [0.10001], True, None, 0.1, True),
+            ([0.1], [0.20001], True, None, 0.1, False),
+            ([0.1], 0.1, True, None, None, True),
+            ([0.1], 0.1, False, None, None, True),
         ),
     )
-    def test_fn_allclose(self, x1, x2, rtol, atol, ref):
+    def test_fn_allclose(self, x1, x2, is_tensor, rtol, atol, ref):
         tensor1 = Tensor(self.to_tensor(x1))
-        tensor2 = Tensor(self.to_tensor(x2))
+        if is_tensor:
+            tensor2 = Tensor(self.to_tensor(x2))
+        else:
+            tensor2 = x2
         if rtol is not None:
             res = fns.allclose(tensor1, tensor2, rtol=rtol)
         elif atol is not None:
