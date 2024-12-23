@@ -31,7 +31,7 @@ def result_verifier(func: Callable[[TModel], bool]) -> Callable[..., None]:
     def verify_result(*args: Any, **kwargs: Any):  # type: ignore
         try:
             return func(*args, **kwargs)
-        except AttributeError:
+        except Exception:
             return False
 
     return verify_result
@@ -163,30 +163,23 @@ def get_backend(model: TModel) -> BackendType:
     :param model: The framework-specific model.
     :return: A BackendType representing the correct NNCF backend to be used when working with the framework.
     """
-    available_backends = get_available_backends()
 
-    if BackendType.TORCH2 in available_backends and is_torch2_model(model):
-        return BackendType.TORCH2
+    verify_map = {
+        is_torch_fx_model: BackendType.TORCH_FX,
+        is_torch_model: BackendType.TORCH,
+        is_torch2_model: BackendType.TORCH2,
+        is_tensorflow_model: BackendType.TENSORFLOW,
+        is_onnx_model: BackendType.ONNX,
+        is_openvino_model: BackendType.OPENVINO,
+    }
 
-    if BackendType.TORCH_FX in available_backends and is_torch_fx_model(model):
-        return BackendType.TORCH_FX
-
-    if BackendType.TORCH in available_backends and is_torch_model(model):
-        return BackendType.TORCH
-
-    if BackendType.TENSORFLOW in available_backends and is_tensorflow_model(model):
-        return BackendType.TENSORFLOW
-
-    if BackendType.ONNX in available_backends and is_onnx_model(model):
-        return BackendType.ONNX
-
-    if BackendType.OPENVINO in available_backends and is_openvino_model(model):
-        return BackendType.OPENVINO
+    for backend_call, backend in verify_map.items():
+        if backend_call(model):
+            return backend
 
     raise nncf.UnsupportedBackendError(
         "Could not infer the backend framework from the model type because "
         "the framework is not available or corrupted, or the model type is unsupported. "
-        "The available frameworks found: {}.".format(", ".join([b.value for b in available_backends]))
     )
 
 
