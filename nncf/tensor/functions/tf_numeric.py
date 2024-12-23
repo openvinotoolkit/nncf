@@ -119,9 +119,7 @@ def _(
     a: tf.Tensor, b: Union[tf.Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
 ) -> bool:
     with tf.device(a.device):
-        if not isinstance(b, tf.Tensor):
-            b = tf.constant(b)
-        return tf.experimental.numpy.allclose(a, tf.cast(b, a.dtype), rtol=rtol, atol=atol, equal_nan=equal_nan)
+        return bool(tf.experimental.numpy.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan))
 
 
 @numeric.any.register(tf.Tensor)
@@ -148,7 +146,7 @@ def _(
     a: tf.Tensor, b: Union[tf.Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
 ) -> tf.Tensor:
     with tf.device(a.device):
-        return tf.experimental.numpy.isclose(a, tf.cast(b, a.dtype), atol=atol, rtol=rtol, equal_nan=equal_nan)
+        return tf.experimental.numpy.isclose(a, b, atol=atol, rtol=rtol, equal_nan=equal_nan)
 
 
 @numeric.maximum.register(tf.Tensor)
@@ -225,13 +223,31 @@ def _(
     axis: Union[int, Tuple[int, ...]] = None,
     keepdims: bool = False,
 ) -> tf.Tensor:
-    numpy_a = np.array(a)
-    numpy_median = np.median(numpy_a, axis=axis, keepdims=keepdims)
-
     with tf.device(a.device):
-        tf_median = tf.constant(numpy_median)
+        if axis is None:
+            a = tf.reshape(a, [-1])
+        else:
+            if isinstance(axis, int):
+                axis = (axis,)
+            destination_axis = tuple([-(i + 1) for i in range(len(axis))])
+            a = tf.experimental.numpy.moveaxis(a, axis, destination_axis)
+            last_axis = 1
+            for i in range(len(axis)):
+                last_axis *= a.shape[-(i + 1)]
+            new_shape = a.shape[: -len(axis)] + [last_axis]
+            a = tf.reshape(a, new_shape)
+        k = 1 + a.shape[-1] // 2
+        top_k = tf.math.top_k(a, k=k, sorted=True).values
+        if a.shape[-1] % 2 == 0:
+            median = (tf.gather(top_k, indices=[k - 2], axis=-1) + tf.gather(top_k, indices=[k - 1], axis=-1)) / 2
+        else:
+            median = tf.gather(top_k, indices=[k - 1], axis=-1)
+        median = tf.squeeze(median, axis=-1)
+        if keepdims:
+            for axe in sorted(axis, key=lambda x: abs(x)):
+                median = tf.expand_dims(median, axe)
 
-    return tf_median
+        return median
 
 
 @numeric.round.register(tf.Tensor)
