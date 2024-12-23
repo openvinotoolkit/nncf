@@ -927,3 +927,15 @@ def tensor(
     :return: A tensor created from the given data.
     """
     return Tensor(get_numeric_backend_fn("tensor", backend)(data, dtype=dtype, device=device))
+
+
+@functools.singledispatch
+@tensor_guard
+def to_backend(a: Tensor, b: TensorBackend) -> Tensor:
+    """
+    Change backend of the tensor to the given one.
+    :param a: Tensor to change backend for.
+    :param b: Target backend to change to.
+    :return: Tensor in the target backend.
+    """
+    return Tensor(to_backend(a.data, b))
