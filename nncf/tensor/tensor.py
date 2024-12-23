@@ -135,7 +135,7 @@ class Tensor:
         return _call_function("_binary_reverse_op_nowarn", self, other, operator.floordiv)
 
     def __ifloordiv__(self, other: Union[Tensor, float]) -> Tensor:
-        self._data /= unwrap_tensor_data(other)
+        self._data //= unwrap_tensor_data(other)
         return self
 
     def __matmul__(self, other: Union[Tensor, float]) -> Tensor:
