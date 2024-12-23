@@ -10,7 +10,7 @@
 # limitations under the License.
 
 """
-This module implements selected functions from the `torch` module, excluding the `hand_function` mechanism.
+This module implements selected functions from the `torch` module, excluding the `handle_torch_function` function.
 
 It processes inner functions to handle exception hooks and graph analysis. The implementation is designed
 to support custom handling of inner function exceptions for specific functions.

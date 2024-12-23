@@ -20,6 +20,7 @@ TModel = TypeVar("TModel")
 
 class BackendType(Enum):
     TORCH = "Torch"
+    TORCH2 = "Torch2"
     TORCH_FX = "TorchFX"
     TENSORFLOW = "Tensorflow"
     ONNX = "ONNX"
@@ -44,6 +45,7 @@ def get_available_backends() -> List[BackendType]:
     """
     frameworks = [
         ("torch", BackendType.TORCH),
+        ("torch", BackendType.TORCH2),
         ("torch.fx", BackendType.TORCH_FX),
         ("tensorflow", BackendType.TENSORFLOW),
         ("onnx", BackendType.ONNX),
@@ -73,6 +75,20 @@ def is_torch_model(model: TModel) -> bool:
     import torch.fx
 
     return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
+
+
+@result_verifier
+def is_torch2_model(model: TModel) -> bool:
+    """
+    Returns True if the model is an instance of GraphModelWrapper, otherwise False.
+
+    :param model: A target model.
+    :return: True if the model is an instance of GraphModelWrapper, otherwise False.
+    """
+
+    from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+
+    return isinstance(model, GraphModelWrapper)
 
 
 @result_verifier
@@ -148,6 +164,9 @@ def get_backend(model: TModel) -> BackendType:
     :return: A BackendType representing the correct NNCF backend to be used when working with the framework.
     """
     available_backends = get_available_backends()
+
+    if BackendType.TORCH2 in available_backends and is_torch2_model(model):
+        return BackendType.TORCH2
 
     if BackendType.TORCH_FX in available_backends and is_torch_fx_model(model):
         return BackendType.TORCH_FX

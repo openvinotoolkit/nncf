@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import nncf
@@ -230,8 +230,10 @@ def quantize(
         )
 
     if backend == BackendType.TORCH:
-        from nncf.torch.quantization.quantize_model import quantize_impl
-
+        if os.getenv("NNCF_EXPERIMENTAL_TORCH_TRACING") is None:
+            from nncf.torch.quantization.quantize_model import quantize_impl
+        else:
+            from nncf.experimental.torch2.quantization.quantize_model import quantize_impl
         return quantize_impl(
             model=model,
             calibration_dataset=calibration_dataset,
@@ -244,6 +246,7 @@ def quantize(
             ignored_scope=ignored_scope,
             advanced_parameters=advanced_parameters,
         )
+
     if backend == BackendType.TORCH_FX:
         from nncf.experimental.torch.fx.quantization.quantize_model import quantize_impl
 
