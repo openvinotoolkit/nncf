@@ -25,6 +25,7 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
+from nncf.common.model import ModelWrapper
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -93,11 +94,12 @@ class ChannelAlignment(Algorithm):
 
     def apply(
         self,
-        model: TModel,
-        graph: NNCFGraph,
+        model_wrapper: ModelWrapper,
+        *,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-    ) -> TModel:
+    ) -> ModelWrapper:
+        model, graph = model_wrapper.unwrap()
         self._set_backend_entity(model)
         model_transformer = ModelTransformerFactory.create(model)
         transformation_layout = TransformationLayout()
@@ -127,7 +129,7 @@ class ChannelAlignment(Algorithm):
             ):
                 nncf_logger.debug(
                     f"Skipping channel alignment for pairs {conv_in.node_name}, {conv_out.node_name} "
-                    " because one of the node is 1D MatMul, 1D Matmuls are not supported by CA algortihm yet."
+                    "because one of the node is 1D MatMul, 1D Matmuls are not supported by CA algorithm yet."
                 )
                 continue
 
@@ -170,7 +172,7 @@ class ChannelAlignment(Algorithm):
                     transformation_layout.register(command)
 
         transformed_model = model_transformer.transform(transformation_layout)
-        return transformed_model
+        return ModelWrapper(transformed_model, attributes=model_wrapper.attributes)
 
     @staticmethod
     def _align_means(
@@ -381,8 +383,9 @@ class ChannelAlignment(Algorithm):
             node_in,
         )
 
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-        self._set_backend_entity(model)
+    def get_statistic_points(self, model_wrapper: ModelWrapper) -> StatisticPointsContainer:
+        self._set_backend_entity(model_wrapper.model)
+        graph = model_wrapper.graph
 
         statistic_container = StatisticPointsContainer()
         for conv_in, add_in, _ in self._get_node_pairs(graph):

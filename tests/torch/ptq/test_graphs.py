@@ -16,6 +16,7 @@ import pytest
 import torch
 
 from nncf import Dataset
+from nncf.common.model import ModelWrapper
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -121,8 +122,7 @@ def test_min_max_classification_quantized_graphs(desc: ModelDesc, quantization_p
     quantization_algorithm = PostTrainingQuantization(**quantization_parameters)
 
     quantized_model = quantization_algorithm.apply(
-        nncf_network,
-        nncf_network.nncf.get_graph(),
+        ModelWrapper(nncf_network),
         dataset=Dataset([example_input]),
-    )
+    ).model
     check_graph(quantized_model.nncf.get_graph(), desc.dot_filename(), graph_dir)

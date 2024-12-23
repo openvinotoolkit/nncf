@@ -16,6 +16,7 @@ import numpy as np
 import onnx
 
 from nncf import Dataset
+from nncf.common.model import ModelWrapper
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
@@ -108,7 +109,6 @@ def min_max_quantize_model(
 ) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
-    graph = GraphConverter.create_nncf_graph(original_model)
     dataset = get_random_dataset_for_test(original_model, dataset_has_batch_size)
     quantization_params = {} if quantization_params is None else quantization_params
 
@@ -123,8 +123,8 @@ def min_max_quantize_model(
 
     post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
 
-    quantized_model = post_training_quantization.apply(original_model, graph, dataset=dataset)
-    return quantized_model
+    quantized_model = post_training_quantization.apply(ModelWrapper(original_model), dataset=dataset)
+    return quantized_model.model
 
 
 def ptq_quantize_model(
