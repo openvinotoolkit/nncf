@@ -15,7 +15,7 @@ from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.common.quantization.algorithms.quantizer.base_quantizer import NNCFQuantizer
+from nncf.experimental.quantization.algorithms.quantizer.base_quantizer import Quantizer as NNCFQuantizer
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.range_estimator import RangeEstimatorParameters

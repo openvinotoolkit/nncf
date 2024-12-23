@@ -11,8 +11,8 @@
 
 from typing import Optional, TypeVar
 
-from nncf.experimental.common.quantization.algorithms.quantizer.base_quantizer import NNCFQuantizer
-from nncf.experimental.common.quantization.algorithms.range_estimator.range_estimator import MinMaxRangeEstimator
+from nncf.experimental.quantization.algorithms.quantizer.base_quantizer import Quantizer as NNCFQuantizer
+from nncf.experimental.quantization.algorithms.range_estimator.algorithm import MinMaxRangeEstimator
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
@@ -35,7 +35,7 @@ def experimental_create_ptq_pipeline(
     smooth_quant_params: Optional[AdvancedSmoothQuantParameters] = None,
     activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
     weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
-    batchwise_statistics: bool = None,
+    batchwise_statistics: bool = False,
 ) -> Pipeline:
     """
     Creates an experimental post-training quantization pipeline.

@@ -18,7 +18,7 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 TModel = TypeVar("TModel")
 
 
-class NNCFQuantizer:
+class Quantizer:
     @abstractmethod
     def get_quantization_setup(self, model: TModel, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         """

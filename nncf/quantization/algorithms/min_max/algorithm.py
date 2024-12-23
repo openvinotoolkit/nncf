@@ -792,7 +792,7 @@ class MinMaxQuantization(Algorithm):
         """
         Initializes a cache, finds quantization target points and them puts in the cache.
 
-        :param model: Backend-specific model, for which Quantization Target Points are being seek.
+        :param quantizer_setup: Quantization Target Points in format of SingleConfigQuantizerSetup.
         :param nncf_graph: NNCFGraph instance.
         :return: Mapping of quantization target points with associated quantization configuration,
         along with target points for scale unification.
