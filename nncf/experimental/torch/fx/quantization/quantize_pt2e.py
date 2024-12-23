@@ -16,7 +16,6 @@ import torch
 import torch.fx
 from torch.ao.quantization.pt2e.duplicate_dq_pass import DuplicateDQPass
 from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
-from torch.ao.quantization.pt2e.qat_utils import _fold_conv_bn_qat
 from torch.ao.quantization.pt2e.utils import _disallow_eval_train
 from torch.ao.quantization.quantizer import Quantizer
 from torch.fx import GraphModule
@@ -26,11 +25,9 @@ import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.data import Dataset
-from nncf.experimental.common.quantization.algorithms.post_training.algorithm import (
-    ExperimentalPostTrainingQuantization,
-)
-from nncf.experimental.common.quantization.algorithms.quantizer.base_quantizer import NNCFQuantizer
-from nncf.experimental.common.quantization.algorithms.quantizer.fx_quantizer import NNCFFXQuantizer
+from nncf.experimental.quantization.algorithms.post_training.algorithm import ExperimentalPostTrainingQuantization
+from nncf.experimental.quantization.algorithms.quantizer.base_quantizer import Quantizer as NNCFQuantizer
+from nncf.experimental.quantization.algorithms.quantizer.fx_quantizer import NNCFFXQuantizer
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.transformations import QUANTIZE_NODE_TARGETS
 from nncf.experimental.torch.fx.transformations import fuse_conv_bn
@@ -50,7 +47,7 @@ def quantize_pt2e(
     smooth_quant_params: Optional[AdvancedSmoothQuantParameters] = None,
     activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
     weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
-    batchwise_statistics: bool = False,
+    batchwise_statistics: Optional[bool] = None,
     fold_quantize: bool = False,
 ) -> torch.fx.GraphModule:
     """
@@ -72,21 +69,17 @@ def quantize_pt2e(
     :param weights_range_estimator_params: Contains parameters for estimating the range
         of weights of the model.
     :param batchwise_statistics: Determines whether quantizer statistics should be calculated
-        for each item of the batch or for the entire batch, default is False.
+        for each item of the batch or for the entire batch, default is None, which means
+        it set True if batch_size > 1 otherwise False.
     :param fold_quantize: Boolean flag for whether fold the quantize op or not.
     """
-    nncf_logger.warning(
-        "Experimental Torch FX quantization backend is being used for the given torch.fx.GraphModule model."
-        " Torch FX PTQ is an experimental feature, consider using Torch or OpenVino PTQ backends"
-        " in case of errors or a poor model performance."
-    )
+    nncf_logger.warning("This is an experimental feature and may change in the future without notice.")
 
     if subset_size < 1:
         raise nncf.ValidationError("Subset size must be positive.")
 
     batch_size = calibration_dataset.get_batch_size()
-    if batch_size is not None and batch_size > 1 and batchwise_statistics is not None:
-        batchwise_statistics = True
+    batchwise_statistics = batchwise_statistics is None and batch_size is not None and batch_size > 1
 
     original_graph_meta = model.meta
 
@@ -121,7 +114,6 @@ def quantize_pt2e(
     # is not preformant
     quantized_model = GraphModule(quantized_model, quantized_model.graph)
 
-    quantized_model = _fold_conv_bn_qat(quantized_model)
     if fold_quantize:
         constant_fold(quantized_model, _quant_node_constraint)
 
