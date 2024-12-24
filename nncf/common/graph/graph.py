@@ -83,7 +83,7 @@ class NNCFNode:
 
     @property
     def metatype(self) -> Type[OperatorMetatype]:
-        return cast(OperatorMetatype, self._attributes[NNCFNode.METATYPE_ATTR])
+        return cast(Type[OperatorMetatype], self._attributes[NNCFNode.METATYPE_ATTR])
 
     @property
     def node_type(self) -> str:
@@ -259,7 +259,7 @@ class NNCFGraph:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type
 
-    def get_nodes_by_metatypes(self, metatype_list: Collection[OperatorMetatype]) -> List[NNCFNode]:
+    def get_nodes_by_metatypes(self, metatype_list: Collection[Type[OperatorMetatype]]) -> List[NNCFNode]:
         """
         Return a list of nodes with provided metatypes.
 
