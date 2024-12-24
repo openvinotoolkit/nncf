@@ -1,0 +1,27 @@
+name: sdl
+permissions: read-all
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+jobs:
+  bandit:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+        with:
+          python-version: 3.10.14
+      - name: Install bandit
+        run: pip install bandit[toml]==1.7.4
+      - name: Run bandit
+        run: bandit -c pyproject.toml -r .
+
