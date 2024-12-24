@@ -82,7 +82,7 @@ class NNCFNode:
         return cast(NNCFNodeName, self._attributes[NNCFNode.NODE_NAME_ATTR])
 
     @property
-    def metatype(self) -> OperatorMetatype:
+    def metatype(self) -> Type[OperatorMetatype]:
         return cast(OperatorMetatype, self._attributes[NNCFNode.METATYPE_ATTR])
 
     @property

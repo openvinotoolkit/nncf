@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from functools import partial
-from typing import List, Set, Tuple, Union
+from typing import List, Set, Tuple, Type, Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -90,8 +90,8 @@ def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]
 
 def get_number_of_quantized_ops(
     graph: NNCFGraph,
-    quantizer_metatypes: List[OperatorMetatype],
-    quantizable_metatypes: List[OperatorMetatype],
+    quantizer_metatypes: List[Type[OperatorMetatype]],
+    quantizable_metatypes: List[Type[OperatorMetatype]],
 ) -> int:
     """
     Returns the number of quantized operations in the graph.
