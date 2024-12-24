@@ -182,7 +182,7 @@ class AdvancedQuantizationParameters:
 
     :param overflow_fix: This option controls whether to apply the overflow issue fix
         for the 8-bit quantization.
-    :type overflow_fix: nncf.quantization.advanced_parameters.OverflowFix
+    :type overflow_fix: Optional[nncf.quantization.advanced_parameters.OverflowFix]
     :param quantize_outputs: Whether to insert additional quantizers right before each
         of the model outputs.
     :type quantize_outputs: bool
