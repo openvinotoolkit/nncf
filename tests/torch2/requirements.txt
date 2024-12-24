@@ -9,3 +9,5 @@ pytest-mock
 pytest-xdist
 torch
 torchvision
+
+efficientnet_pytorch==0.7.1
