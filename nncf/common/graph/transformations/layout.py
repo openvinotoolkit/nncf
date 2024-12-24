@@ -11,7 +11,7 @@
 
 from typing import List
 
-from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.graph.transformations.commands import Command
 
 
 class TransformationLayout:
@@ -27,13 +27,13 @@ class TransformationLayout:
         """
         Initialize Transformation Layout.
         """
-        self._transformations: List[TransformationCommand] = []
+        self._transformations: List[Command] = []
 
     @property
-    def transformations(self) -> List[TransformationCommand]:
+    def transformations(self) -> List[Command]:
         return self._transformations
 
-    def register(self, transformation: TransformationCommand) -> None:
+    def register(self, transformation: Command) -> None:
         """
         Registers the transformation command in the transformation layout.
 

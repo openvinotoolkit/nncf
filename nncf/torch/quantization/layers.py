@@ -20,6 +20,7 @@ import numpy as np
 import torch
 from torch import distributed
 from torch import nn
+from torch._C import DisableTorchFunction
 
 import nncf
 from nncf.common.graph import NNCFNodeName
@@ -341,7 +342,8 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
 
     @property
     def level_low(self) -> int:
-        return self._level_low.item()
+        with DisableTorchFunction():
+            return self._level_low.item()
 
     @level_low.setter
     def level_low(self, val: int):
@@ -349,7 +351,8 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
 
     @property
     def level_high(self) -> int:
-        return self._level_high.item()
+        with DisableTorchFunction():
+            return self._level_high.item()
 
     @level_high.setter
     def level_high(self, val: int):
@@ -369,7 +372,8 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
 
     def is_enabled_quantization(self):
         with no_jit_trace():
-            return self.enabled[0].item() == 1
+            with DisableTorchFunction():
+                return self.enabled[0].item() == 1
 
     def enable_quantization(self):
         self.enabled[0] = 1
@@ -464,7 +468,8 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
     @property
     def num_bits(self):
         with no_jit_trace():
-            return self._num_bits.item()
+            with DisableTorchFunction():
+                return self._num_bits.item()
 
     @num_bits.setter
     def num_bits(self, num_bits: int):
@@ -724,7 +729,8 @@ class SymmetricQuantizer(BaseQuantizer):
     @property
     def signed(self):
         with no_jit_trace():
-            return self.signed_tensor.item() == 1
+            with DisableTorchFunction():
+                return self.signed_tensor.item() == 1
 
     @signed.setter
     def signed(self, signed: bool):

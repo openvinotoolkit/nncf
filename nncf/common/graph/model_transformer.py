@@ -9,14 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TypeVar
+from typing import Generic, TypeVar
 
 from nncf.common.graph.transformations.layout import TransformationLayout
 
 TModel = TypeVar("TModel")
 
 
-class ModelTransformer:
+class ModelTransformer(Generic[TModel]):
     """
     Applies transformations to the model.
     """
@@ -29,7 +29,7 @@ class ModelTransformer:
         """
         self._model = model
 
-    def transform(self, transformation_layout: TransformationLayout) -> TModel:  # type:ignore
+    def transform(self, transformation_layout: TransformationLayout) -> TModel:
         """
         Applies transformations to the model.
 

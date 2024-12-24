@@ -8,8 +8,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
+import os
+from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 import nncf
 from nncf.api.compression import TModel
@@ -58,8 +58,8 @@ BATCHWISE_STATISTICS_WARNING = (
 def warning_model_no_batchwise_support(
     graph: NNCFGraph,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
-    model_type: ModelType,
-    no_batchwise_support_metatypes: List[OperatorMetatype],
+    model_type: Optional[ModelType],
+    no_batchwise_support_metatypes: Sequence[Type[OperatorMetatype]],
 ) -> None:
     """
     Logs when is_model_no_batchwise_support(...) returns True.
@@ -67,7 +67,7 @@ def warning_model_no_batchwise_support(
     :param graph: Model's NNCFGraph.
     :param advanced_quantization_parameters: AdvancedQuantizationParameters.
     :param model_type: Model type algorithm option.
-    :param no_batchwise_support_metatypes: Meatypes having no batchwise statistics support.
+    :param no_batchwise_support_metatypes: Metatypes having no batchwise statistics support.
     """
     if is_model_no_batchwise_support(
         graph, advanced_quantization_parameters, model_type, no_batchwise_support_metatypes
@@ -78,8 +78,8 @@ def warning_model_no_batchwise_support(
 def is_model_no_batchwise_support(
     graph: NNCFGraph,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
-    model_type: ModelType,
-    no_batchwise_support_metatypes: List[OperatorMetatype],
+    model_type: Optional[ModelType],
+    no_batchwise_support_metatypes: Sequence[Type[OperatorMetatype]],
 ) -> None:
     """
     Returns True if batchwise statistics could lead to a significant accuracy drop.
@@ -87,7 +87,7 @@ def is_model_no_batchwise_support(
     :param graph: Model's NNCFGraph.
     :param advanced_quantization_parameters: AdvancedQuantizationParameters.
     :param model_type: Model type algorithm option.
-    :param no_batchwise_support_metatypes: Meatypes having no batchwise statistics support.
+    :param no_batchwise_support_metatypes: Metatypes having no batchwise statistics support.
     """
     return (
         advanced_quantization_parameters
@@ -230,8 +230,10 @@ def quantize(
         )
 
     if backend == BackendType.TORCH:
-        from nncf.torch.quantization.quantize_model import quantize_impl
-
+        if os.getenv("NNCF_EXPERIMENTAL_TORCH_TRACING") is None:
+            from nncf.torch.quantization.quantize_model import quantize_impl
+        else:
+            from nncf.experimental.torch2.quantization.quantize_model import quantize_impl
         return quantize_impl(
             model=model,
             calibration_dataset=calibration_dataset,
@@ -244,6 +246,7 @@ def quantize(
             ignored_scope=ignored_scope,
             advanced_parameters=advanced_parameters,
         )
+
     if backend == BackendType.TORCH_FX:
         from nncf.experimental.torch.fx.quantization.quantize_model import quantize_impl
 

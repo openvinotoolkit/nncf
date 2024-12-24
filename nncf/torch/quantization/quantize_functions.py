@@ -11,6 +11,8 @@
 from typing import Any
 
 import torch
+from torch.overrides import handle_torch_function
+from torch.overrides import has_torch_function_unary
 
 from nncf.common.logging import nncf_logger
 from nncf.errors import ValidationError
@@ -193,6 +195,10 @@ def get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, inp
 
 @register_operator()
 def symmetric_quantize(input_, levels, level_low, level_high, scale, eps, skip: bool = False):
+    if has_torch_function_unary(input_):
+        return handle_torch_function(
+            symmetric_quantize, (input_,), input_, levels, level_low, level_high, scale, eps, skip
+        )
     if skip:
         return input_
     scale = scale.to(dtype=input_.dtype)
@@ -202,6 +208,10 @@ def symmetric_quantize(input_, levels, level_low, level_high, scale, eps, skip: 
 
 @register_operator()
 def asymmetric_quantize(input_, levels, level_low, level_high, input_low, input_range, eps, skip: bool = False):
+    if has_torch_function_unary(input_):
+        return handle_torch_function(
+            asymmetric_quantize, (input_,), input_, levels, level_low, level_high, input_low, input_range, eps, skip
+        )
     if skip:
         return input_
     input_range_safe = abs(input_range) + eps

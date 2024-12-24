@@ -76,6 +76,12 @@ class ModelTransformerFactory:
             from nncf.torch.model_transformer import PTModelTransformer
 
             return PTModelTransformer(model)
+
+        if model_backend == BackendType.TORCH2:
+            from nncf.experimental.torch2.model_transformer import PT2ModelTransformer
+
+            return PT2ModelTransformer(model)
+
         if model_backend == BackendType.TORCH_FX:
             from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 
@@ -107,6 +113,10 @@ class EngineFactory:
             from nncf.torch.engine import PTEngine
 
             return PTEngine(model)
+        if model_backend == BackendType.TORCH2:
+            from nncf.experimental.torch2.engine import PT2Engine
+
+            return PT2Engine(model)
         raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific engine because {} is not supported!".format(model_backend.value)
         )
@@ -159,6 +169,11 @@ class StatisticsAggregatorFactory:
             from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 
             return PTStatisticsAggregator(dataset)
+        if model_backend == BackendType.TORCH2:
+            from nncf.experimental.torch2.statistics.aggregator import PT2StatisticsAggregator
+
+            return PT2StatisticsAggregator(dataset)
+
         if model_backend == BackendType.TORCH_FX:
             from nncf.experimental.torch.fx.statistics.aggregator import FXStatisticsAggregator
 

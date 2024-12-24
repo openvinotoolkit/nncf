@@ -1,0 +1,25 @@
+strict digraph  {
+x [id=0, metatype=PTInputNoopMetatype, type=nncf_model_input];
+"/type/0" [id=1, metatype=UnknownMetatype, type=type];
+"embedding.weight" [id=2, metatype=PTConstNoopMetatype, type=nncf_model_const];
+"__nncf_hooks.pre_hooks.embedding/embedding/0__1.0._scale_param_storage" [id=3, metatype=PTConstNoopMetatype, type=nncf_model_const];
+"embedding/pre_hook__embedding-embedding-0__1[0]/symmetric_quantize/0" [id=4, metatype=UnknownMetatype, type=symmetric_quantize];
+"embedding/embedding/0" [id=5, metatype=PTEmbeddingMetatype, type=embedding];
+"matmul.weight" [id=6, metatype=PTConstNoopMetatype, type=nncf_model_const];
+"matmul.bias" [id=7, metatype=PTConstNoopMetatype, type=nncf_model_const];
+"__nncf_hooks.pre_hooks.matmul/linear/0__1.0._scale_param_storage" [id=8, metatype=PTConstNoopMetatype, type=nncf_model_const];
+"matmul/pre_hook__matmul-linear-0__1[0]/symmetric_quantize/0" [id=9, metatype=UnknownMetatype, type=symmetric_quantize];
+"matmul/linear/0" [id=10, metatype=PTLinearMetatype, type=linear];
+output [id=11, metatype=PTOutputNoopMetatype, type=nncf_model_output];
+x -> "/type/0"  [dtype=float, shape="(1, 10)"];
+"/type/0" -> "embedding/embedding/0"  [dtype=int, shape="(1, 10)"];
+"embedding.weight" -> "embedding/pre_hook__embedding-embedding-0__1[0]/symmetric_quantize/0"  [dtype=float, shape="(10, 20)"];
+"__nncf_hooks.pre_hooks.embedding/embedding/0__1.0._scale_param_storage" -> "embedding/pre_hook__embedding-embedding-0__1[0]/symmetric_quantize/0"  [dtype=float, shape="(1,)"];
+"embedding/pre_hook__embedding-embedding-0__1[0]/symmetric_quantize/0" -> "embedding/embedding/0"  [dtype=float, shape="(10, 20)"];
+"embedding/embedding/0" -> "matmul/linear/0"  [dtype=float, shape="(1, 10, 20)"];
+"matmul.weight" -> "matmul/pre_hook__matmul-linear-0__1[0]/symmetric_quantize/0"  [dtype=float, shape="(5, 20)"];
+"matmul.bias" -> "matmul/linear/0"  [dtype=float, shape="(1, 5)"];
+"__nncf_hooks.pre_hooks.matmul/linear/0__1.0._scale_param_storage" -> "matmul/pre_hook__matmul-linear-0__1[0]/symmetric_quantize/0"  [dtype=float, shape="(5, 1)"];
+"matmul/pre_hook__matmul-linear-0__1[0]/symmetric_quantize/0" -> "matmul/linear/0"  [dtype=float, shape="(5, 20)"];
+"matmul/linear/0" -> output  [dtype=float, shape="(1, 10, 5)"];
+}

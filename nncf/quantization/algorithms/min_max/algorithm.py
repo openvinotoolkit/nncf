@@ -335,7 +335,7 @@ class MinMaxQuantization(Algorithm):
 
     @property
     def available_backends(self) -> List[BackendType]:
-        return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
+        return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX, BackendType.TORCH2]
 
     def _get_quantizer_constraints(
         self,
@@ -396,6 +396,10 @@ class MinMaxQuantization(Algorithm):
             from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 
             self._backend_entity = PTMinMaxAlgoBackend()
+        elif model_backend == BackendType.TORCH2:
+            from nncf.quantization.algorithms.min_max.torch2_backend import PT2MinMaxAlgoBackend
+
+            self._backend_entity = PT2MinMaxAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
