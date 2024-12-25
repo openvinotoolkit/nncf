@@ -80,7 +80,7 @@ def is_model_no_batchwise_support(
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
     model_type: Optional[ModelType],
     no_batchwise_support_metatypes: Sequence[Type[OperatorMetatype]],
-) -> None:
+) -> bool:
     """
     Returns True if batchwise statistics could lead to a significant accuracy drop.
 
@@ -89,7 +89,7 @@ def is_model_no_batchwise_support(
     :param model_type: Model type algorithm option.
     :param no_batchwise_support_metatypes: Metatypes having no batchwise statistics support.
     """
-    return (
+    return bool(
         advanced_quantization_parameters
         and advanced_quantization_parameters.batchwise_statistics
         and (graph.get_nodes_by_metatypes(no_batchwise_support_metatypes) or model_type == ModelType.TRANSFORMER)
