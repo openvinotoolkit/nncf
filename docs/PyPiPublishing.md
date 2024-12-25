@@ -80,24 +80,22 @@ For more information about NNCF, see:
 
 ## Installation Guide<a id="installation-guide"></a>
 
-NNCF can be installed as a regular PyPI package:
+For detailed installation instructions, refer to the [Installation](https://github.com/openvinotoolkit/nncf/docs/Installation.md) guide.
+
+NNCF can be installed as a regular PyPI package via pip:
 
 ```bash
 pip install nncf
 ```
 
-For detailed installation instructions, refer to the
-[Installation](https://github.com/openvinotoolkit/nncf/blob/develop/docs/Installation.md) guide.
+NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
 
-### System Requirements
+```bash
+conda install -c conda-forge nncf
+```
 
-- Ubuntu 18.04 or later (64-bit)
-- Python 3.9 or later
-- Supported frameworks:
-  - PyTorch >=2.2, <2.5
-  - TensorFlow >=2.8.4, <=2.15.1
-  - ONNX ==1.16.0
-  - OpenVINO >=2022.3.0
+System requirements of NNCF correspond to the used backend. System requirements for each backend and
+the matrix of corresponding versions can be found in [installation.md](./docs/Installation.md).
 
 ## Third-party Repository Integration<a id="third-party-repository-integration"></a>
 
