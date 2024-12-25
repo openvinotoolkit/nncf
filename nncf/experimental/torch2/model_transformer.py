@@ -10,12 +10,11 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Any, Callable, Dict, List, cast
+from typing import Dict, List
 
 from torch import nn
 
 from nncf.common.graph.model_transformer import ModelTransformer
-from nncf.common.graph.model_transformer import TModel
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -27,7 +26,7 @@ from nncf.experimental.torch2.function_hook.wrapper import register_pre_function
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 
-class PT2ModelTransformer(ModelTransformer):
+class PT2ModelTransformer(ModelTransformer[GraphModelWrapper]):
     """
     Applies transformations upon PyTorch model.
     """
@@ -39,7 +38,7 @@ class PT2ModelTransformer(ModelTransformer):
             (PT2InsertionCommand, self._apply_insertion_transformation),
         ]
 
-    def transform(self, transformation_layout: TransformationLayout) -> TModel:
+    def transform(self, transformation_layout: TransformationLayout) -> GraphModelWrapper:
         """
         Applies transformations to the model using an out-of-place approach.
         The transformations do not affect the original model, and a new model
@@ -55,13 +54,12 @@ class PT2ModelTransformer(ModelTransformer):
         for transformation in transformations:
             aggregated_transformations[transformation.__class__].append(transformation)
 
-        wrapped_model = cast(GraphModelWrapper, self._model)
-        model = wrapped_model.model
+        model = self._model.model
 
         for transformation_cls, transformation_fn in self._command_transformation_ordered_pairs:
             transformations = aggregated_transformations[transformation_cls]
             if transformations:
-                model = transformation_fn(model, transformations)
+                model = transformation_fn(model, transformations)  # type: ignore[arg-type]
         return self._model
 
     def _apply_insertion_transformation(
@@ -84,9 +82,7 @@ class PT2ModelTransformer(ModelTransformer):
         return model
 
 
-def insert_hook(
-    model: nn.Module, hook: Dict[nn.Module, Callable[..., Any]], target_point: PTTargetPoint
-) -> RemovableHookHandle:
+def insert_hook(model: nn.Module, hook: nn.Module, target_point: PTTargetPoint) -> RemovableHookHandle:
     """
     Inserts hooks into the model.
 

@@ -9,16 +9,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import torch
 from torch import nn
 
-from nncf.common.factory import TModel
+import nncf
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
@@ -44,18 +45,18 @@ class PT2StatisticsAggregator(StatisticsAggregator):
     BACKEND: BackendType = BackendType.TORCH
     HOOKS_GROUP_NAME = "statistics_hooks"
 
-    def __init__(self, dataset: Dataset):
+    def __init__(self, dataset: Dataset):  # type: ignore[type-arg]
         super().__init__(dataset)
         self.hook_handles: List[RemovableHookHandle] = []
 
-    def collect_statistics(self, model: GraphModelWrapper, graph: NNCFGraph) -> None:
+    def collect_statistics(self, model: GraphModelWrapper, graph: NNCFGraph) -> None:  # type: ignore[override]
         with torch.no_grad():
             super().collect_statistics(model, graph)
 
         for hook_handle in self.hook_handles:
             hook_handle.remove()
 
-    def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
+    def _register_statistics(self, outputs: Any, statistic_points: StatisticPointsContainer) -> None:
         # PyTorch backend doesn't use outputs to register statistics
         return
 
@@ -80,7 +81,7 @@ class PT2StatisticsAggregator(StatisticsAggregator):
 
     @staticmethod
     def _get_merged_statistic_points(
-        statistic_points: StatisticPointsContainer, model: TModel, graph: NNCFGraph
+        statistic_points: StatisticPointsContainer, model: GraphModelWrapper, graph: NNCFGraph  # type: ignore[override]
     ) -> StatisticPointsContainer:
         # TODO: migrate to experimental statistic collector and use common merging algorithm
         return statistic_points
@@ -90,7 +91,7 @@ class PT2StatisticsAggregator(StatisticsAggregator):
         # PyTorch backend doesn't use outputs to register statistics
         return {}
 
-    def _get_statistics_key(self, statistics: TensorStatistic, target_point: PTTargetPoint) -> str:
+    def _get_statistics_key(self, statistics: TensorStatistic, target_point: TargetPoint) -> str:
         """
         Returns key of statistics.
 
@@ -98,5 +99,7 @@ class PT2StatisticsAggregator(StatisticsAggregator):
         :param target_point: Statistics target point.
         :return: Statistics key.
         """
+        if not isinstance(target_point, PTTargetPoint):
+            raise nncf.InternalError(f"Unexpected target point type: {type(target_point)}")
         target_point_id = f"{target_point.target_node_name}_{target_point.type}_{target_point.input_port_id}"
         return f"{statistics.__class__.__name__}_{target_point_id}"

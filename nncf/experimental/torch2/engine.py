@@ -32,9 +32,7 @@ class PT2Engine(Engine):
         self._model = model.model
         self._model.eval()
 
-    def infer(
-        self, input_data: Union[torch.Tensor, Tuple[torch.Tensor], Dict[str, torch.Tensor]]
-    ) -> Union[torch.Tensor, Dict[str, Any]]:
+    def infer(self, input_data: Union[torch.Tensor, Tuple[torch.Tensor], Dict[str, torch.Tensor]]) -> Any:
         """
         Runs Torch model on the provided input.
 
