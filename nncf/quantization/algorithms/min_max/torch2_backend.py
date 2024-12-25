@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple, Type, TypeVar, cast
+from typing import Dict, List, Optional, Set, Tuple, Type, cast
 
 import torch
 
@@ -49,8 +49,6 @@ from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.layers import get_scale_shape
-
-TOperatorMetatype = TypeVar("TOperatorMetatype", bound=OperatorMetatype)
 
 
 class PT2MinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -141,6 +139,8 @@ class PT2MinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
+        if target_type in (TargetType.POST_LAYER_OPERATION, TargetType.OPERATOR_POST_HOOK):
+            port_id = None
         return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
 
     @staticmethod
