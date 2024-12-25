@@ -14,7 +14,7 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
@@ -96,7 +96,7 @@ class PTQuantizerSpec(QuantizerSpec):
         scale_shape: Tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool = False,
-        compression_lr_multiplier: float = None,
+        compression_lr_multiplier: Optional[float] = None,
     ):
         """
         :param scale_shape: Shape of quantizer scale parameters
@@ -118,10 +118,10 @@ class PTQuantizerSpec(QuantizerSpec):
         qconfig: QuantizerConfig,
         narrow_range: bool,
         half_range: bool,
-        scale_shape: Tuple[int],
+        scale_shape: Tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool,
-        compression_lr_multiplier: float,
+        compression_lr_multiplier: Optional[float],
     ) -> "PTQuantizerSpec":
         return cls(
             qconfig.num_bits,
@@ -291,6 +291,9 @@ class PTQuantizerSetup(QuantizerSetupBase):
 
 
 class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
+
+    eps: float
+
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__()
         self._qspec = qspec
@@ -847,6 +850,8 @@ class AsymmetricQuantizer(BaseQuantizer):
     INPUT_RANGE_PARAM_NAME = "input_range"
     _INPUT_RANGE_PARAM_STORAGE_ATTR = "_input_range_param_storage"
 
+    input_low: CompressionParameter
+
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__(qspec)
         self.input_low = CompressionParameter(
@@ -1038,7 +1043,9 @@ def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None
     return scale_shape
 
 
-def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool, channel_idx: int = None) -> List[int]:
+def get_scale_shape(
+    input_shape: Sequence[int], is_weights: bool, per_channel: bool, channel_idx: int = None
+) -> List[int]:
     """
     Assumes that input_shape is supplied in either [B, C, H, W] or [N_out, N_in, H, W] format,
     or derivatives.

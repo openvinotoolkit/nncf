@@ -9,19 +9,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple, Type
+from typing import Dict, List, Optional, Set, Tuple, Type, TypeVar, cast
 
 import torch
 
 import nncf
+import nncf.tensor.functions as fns
 import nncf.torch.graph.operator_metatypes as om
-from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.transformations.commands import Command
+from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
+from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
@@ -34,60 +37,57 @@ from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import StatisticsType
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.operator_metatypes import ELEMENTWISE_OPERATIONS
+from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.model_graph_manager import get_weight_channel_axes
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
+from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.layers import get_scale_shape
+
+TOperatorMetatype = TypeVar("TOperatorMetatype", bound=OperatorMetatype)
 
 
 class PT2MinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
-    def preserved_metatypes(self) -> List[OperatorMetatype]:
+    def preserved_metatypes(self) -> List[Type[OperatorMetatype]]:
         return []
 
-    TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
-        TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
-        TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
-    }
-
     @property
-    def mat_mul_metatypes(self) -> List[OperatorMetatype]:
+    def mat_mul_metatypes(self) -> List[Type[OperatorMetatype]]:
         return [om.PTLinearMetatype, om.PTMatMulMetatype, om.PTAddmmMetatype]
 
     @property
-    def post_processing_metatypes(self) -> List[OperatorMetatype]:
+    def post_processing_metatypes(self) -> List[Type[OperatorMetatype]]:
         return []
 
     @property
-    def shapeof_metatypes(self) -> List[OperatorMetatype]:
+    def shapeof_metatypes(self) -> List[Type[OperatorMetatype]]:
         return []
 
     @property
-    def dropout_metatypes(self) -> List[OperatorMetatype]:
+    def dropout_metatypes(self) -> List[Type[OperatorMetatype]]:
         return [om.PTDropoutMetatype]
 
     @property
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
+    def read_variable_metatypes(self) -> List[Type[OperatorMetatype]]:
         return []
 
     @property
-    def conv_metatypes(self) -> List[OperatorMetatype]:
+    def conv_metatypes(self) -> List[Type[OperatorMetatype]]:
         return [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype]
 
     @property
-    def elementwise_metatypes(self) -> List[OperatorMetatype]:
-        return ELEMENTWISE_OPERATIONS
+    def elementwise_metatypes(self) -> List[Type[OperatorMetatype]]:
+        return cast(List[Type[OperatorMetatype]], ELEMENTWISE_OPERATIONS)
 
     @property
-    def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
+    def overflow_fix_metatypes(self) -> List[Type[OperatorMetatype]]:
         return [
             om.PTConv1dMetatype,
             om.PTConv2dMetatype,
@@ -99,70 +99,81 @@ class PT2MinMaxAlgoBackend(MinMaxAlgoBackend):
         ]
 
     @property
-    def add_metatypes(self) -> List[OperatorMetatype]:
+    def add_metatypes(self) -> List[Type[OperatorMetatype]]:
         return [om.PTAddMetatype]
 
     @property
-    def group_conv_metatypes(self) -> List[OperatorMetatype]:
+    def group_conv_metatypes(self) -> List[Type[OperatorMetatype]]:
         return self.conv_metatypes
 
     @property
-    def scaled_dot_product_attention_metatypes(self) -> List[OperatorMetatype]:
+    def scaled_dot_product_attention_metatypes(self) -> List[Type[OperatorMetatype]]:
         return [om.PTScaledDotProductAttentionMetatype]
 
     @property
-    def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
-        return {om.PTCatMetatype: self.overflow_fix_metatypes}
+    def scales_unification_map(self) -> Dict[Type[OperatorMetatype], List[Type[OperatorMetatype]]]:
+        ret_map: Dict[Type[OperatorMetatype], List[Type[OperatorMetatype]]] = {
+            om.PTCatMetatype: self.overflow_fix_metatypes,
+        }
+        return ret_map
 
     @property
-    def hw_config(self) -> HWConfig:
+    def hw_config(self) -> Type[HWConfig]:
         return PTHWConfig
 
     @property
-    def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
-        return DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
+    def quant_trait_op_dict(self) -> Dict[QuantizationTrait, List[Type[OperatorMetatype]]]:
+        return cast(Dict[QuantizationTrait, List[Type[OperatorMetatype]]], DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT)
 
     @property
     def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
-        return REDUCERS_MAP
+        return cast(Dict[StatisticsType, TensorReducerBase], REDUCERS_MAP)
 
     @property
     def supports_inplace_statistics(self) -> bool:
         return False
 
     @staticmethod
-    def get_start_nodes_for_activation_path_tracing(nncf_graph: PTNNCFGraph) -> List[NNCFNode]:
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        if not isinstance(nncf_graph, PTNNCFGraph):
+            raise nncf.InternalError(f"Only PTNNCFGraph is supported: {type(nncf_graph)}")
         return nncf_graph.get_nodes_with_missed_input_edges() + nncf_graph.get_input_nodes()
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
-        if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
-            port_id = None
-        if target_type in PT2MinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
-            target_type = PT2MinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]
         return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
 
     @staticmethod
     def create_convert_insertion_command(
-        target_point: PTTargetPoint,
+        target_point: TargetPoint,
         parameters: FakeConvertParameters,
     ) -> TransformationCommand:
         raise nncf.InternalError("FakeConvert insertion not implemented in PyTorch backend!")
 
     @staticmethod
-    def get_target_point_shape(nncf_graph: PTNNCFGraph, node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int, ...]:
+    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: TargetPoint) -> Tuple[int, ...]:
+        if not isinstance(nncf_graph, PTNNCFGraph):
+            raise nncf.InternalError(f"Only PTNNCFGraph is supported: {type(nncf_graph)}")
+        if not isinstance(target_point, PTTargetPoint):
+            raise nncf.InternalError(f"Only PTTargetPoint is supported: {type(target_point)}")
         return nncf_graph.get_input_shape_for_insertion_point(target_point)
 
     @staticmethod
-    def get_weight_quantization_axes(node: NNCFNode, target_point: PTTargetPoint, ndims: int) -> Tuple[int]:
+    def get_weight_quantization_axes(node: NNCFNode, target_point: TargetPoint, ndims: int) -> Tuple[int, ...]:
+        if not isinstance(target_point, PTTargetPoint):
+            raise nncf.InternalError(f"Only PTTargetPoint is supported: {type(target_point)}")
+        if target_point.input_port_id is None:
+            raise nncf.InternalError("Weight target point must have input port id")
         return get_weight_channel_axes(node.metatype, ndims, target_point.input_port_id)
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
-        return get_weight_tensor_port_ids(node, graph)
+        return cast(List[Optional[int]], get_weight_tensor_port_ids(node, graph))
 
     @staticmethod
-    def get_weight_name(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> str:
+    def get_weight_name(nncf_graph: NNCFGraph, target_point: TargetPoint) -> str:
+        if not isinstance(target_point, PTTargetPoint):
+            raise nncf.InternalError(f"Only PTTargetPoint is supported: {type(target_point)}")
         return target_point.target_node_name
 
     @staticmethod
@@ -171,13 +182,7 @@ class PT2MinMaxAlgoBackend(MinMaxAlgoBackend):
         return weight_name not in quantized_weight_names
 
     @staticmethod
-    def get_weight_config(config: QuantizerConfig, model: NNCFNetwork) -> QuantizerConfig:
-        return config
-
-    @staticmethod
-    def _get_input_scale_shape(
-        nncf_graph: PTNNCFGraph, target_point: PTTargetPoint, per_channel: bool
-    ) -> Tuple[int, ...]:
+    def _get_input_scale_shape(nncf_graph: NNCFGraph, target_point: TargetPoint, per_channel: bool) -> Tuple[int, ...]:
         """
         Determines the scale shape for the input data at a given target point in the NNCF graph.
 
@@ -188,15 +193,21 @@ class PT2MinMaxAlgoBackend(MinMaxAlgoBackend):
         :return: Tuple[int, ...]: The shape of the scale to be applied to the input.
         """
 
+        if not isinstance(nncf_graph, PTNNCFGraph):
+            raise nncf.ValidationError(f"Only PTNNCFGraph is supported: {type(nncf_graph)}")
+        if not isinstance(target_point, PTTargetPoint):
+            raise nncf.ValidationError(f"Only PTTargetPoint is supported: {type(target_point)}")
+
         is_weights = target_point.is_weight_target_point()
         input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
         if is_weights:
+            if target_point.input_port_id is None:
+                raise nncf.InternalError("Weight target point must have input port id")
             node_with_weight = nncf_graph.get_node_by_name(target_point.target_node_name)
             channel_axes = get_weight_channel_axes(
                 node_with_weight.metatype, len(input_shape), target_point.input_port_id
             )
         else:
-
             channel_axes = (1,)  # channel dim for activations
 
         if len(channel_axes):
@@ -214,13 +225,14 @@ class PT2MinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def _create_quantizer(
         quantizer_config: QuantizerConfig,
-        scale_shape: Tuple,
+        scale_shape: Tuple[int, ...],
         parameters: FakeQuantizeParameters,
         target_type: TargetType,
     ) -> BaseQuantizer:
-        mode = quantizer_config.mode
+        # TODO(AlexanderDokuchaev): remove cast after use Enum as parent class for QuantizationScheme
+        mode = cast(str, quantizer_config.mode)
         quantizer_cls = QUANTIZATION_MODULES.get(mode)
-        narrow_range = target_type == TargetType.OPERATION_WITH_WEIGHTS and mode == QuantizationMode.SYMMETRIC
+        narrow_range = bool(target_type == TargetType.OPERATION_WITH_WEIGHTS and mode == QuantizationMode.SYMMETRIC)
         quantizer_spec = PTQuantizerSpec.from_config(
             quantizer_config,
             narrow_range=narrow_range,
@@ -230,7 +242,7 @@ class PT2MinMaxAlgoBackend(MinMaxAlgoBackend):
             is_quantized_on_export=False,
             compression_lr_multiplier=None,
         )
-        quantizer = quantizer_cls(quantizer_spec)
+        quantizer = cast(BaseQuantizer, quantizer_cls(quantizer_spec))
 
         # Fill it with minmax
         PT2MinMaxAlgoBackend._fill_quantizer_parameters(quantizer, parameters, quantizer_spec.scale_shape)
@@ -241,52 +253,65 @@ class PT2MinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer: BaseQuantizer, parameters: FakeQuantizeParameters, scale_shape: Tuple[int, ...]
     ) -> None:
         if isinstance(quantizer, AsymmetricQuantizer):
-            quantizer.input_low = torch.nn.Parameter(parameters.input_low.data.reshape(scale_shape))
-            input_range = parameters.input_high - parameters.input_low
+            input_low = cast(torch.Tensor, parameters.input_low.data)
+            input_high = cast(torch.Tensor, parameters.input_high.data)
             # Subtract eps from the input_range to make quantizer parameters equal to
             # original parameters on the forward call.
-            quantizer.input_range = torch.nn.Parameter((input_range.data - quantizer.eps).reshape(scale_shape))
-        else:
-            quantizer.signed = bool(torch.any(parameters.input_low.data < 0))
+
+            input_range = input_high - input_low - quantizer.eps
+
+            quantizer.input_low.data = input_low.reshape(scale_shape)
+            quantizer.input_range.data = input_range.reshape(scale_shape)
+        elif isinstance(quantizer, SymmetricQuantizer):
+            quantizer.signed = bool(fns.any(parameters.input_low < 0))
             # Subtract eps from the scale to make quantizer parameters equal to
             # original parameters on the forward call.
-            quantizer.scale = torch.nn.Parameter((parameters.input_high.data - quantizer.eps).reshape(scale_shape))
+            input_high = cast(torch.Tensor, (parameters.input_high.data))
+            scale = input_high - quantizer.eps
+            quantizer.scale = torch.nn.Parameter(scale.reshape(scale_shape))
+        else:
+            raise nncf.ValidationError(f"Unsupported quantizer type: {type(quantizer)}")
 
     @staticmethod
     def create_quantizer_insertion_command(
         nncf_graph: NNCFGraph,
-        target_point: PTTargetPoint,
+        target_point: TargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ) -> PT2InsertionCommand:
+    ) -> Command:
+        if not isinstance(target_point, PTTargetPoint):
+            raise nncf.InternalError(f"Only PTTargetPoint is supported: {type(target_point)}")
         scale_shape = PT2MinMaxAlgoBackend._get_input_scale_shape(
             nncf_graph, target_point, quantizer_config.per_channel
         )
         quantizer = PT2MinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_point.target_type
         )
-        return PT2InsertionCommand([target_point], quantizer)
+        return PT2InsertionCommand(target_points=[target_point], hook_module=quantizer)
 
     @staticmethod
     def create_unified_scales_quantizers_insertion_commands(
         nncf_graph: NNCFGraph,
-        target_points: List[PTTargetPoint],
+        target_points: List[TargetPoint],
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ) -> List[PT2InsertionCommand]:
+    ) -> List[Command]:
+        if not isinstance(target_points, list) or not all(isinstance(tp, PTTargetPoint) for tp in target_points):
+            raise nncf.InternalError("Only PTTargetPoint is supported")
+        pt_target_points = cast(List[PTTargetPoint], target_points)
         scale_shape = PT2MinMaxAlgoBackend._get_input_scale_shape(
-            nncf_graph, target_points[0], quantizer_config.per_channel
+            nncf_graph, pt_target_points[0], quantizer_config.per_channel
         )
 
         quantizer = PT2MinMaxAlgoBackend._create_quantizer(
-            quantizer_config, scale_shape, parameters, target_points[0].target_type
+            quantizer_config, scale_shape, parameters, pt_target_points[0].target_type
         )
 
-        return [PT2InsertionCommand(target_points, quantizer)]
+        return [PT2InsertionCommand(pt_target_points, quantizer)]
 
     @staticmethod
     def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[Type[OperatorMetatype]]:
-        types = []
+        types: List[Type[OperatorMetatype]] = []
         if model_type == ModelType.TRANSFORMER:
             types = [
                 om.PTAddMetatype,

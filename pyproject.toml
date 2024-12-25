@@ -104,6 +104,7 @@ files = [
     "nncf/quantization/advanced_parameters.py",
     "nncf/quantization/range_estimator.py",
     "nncf/quantization/telemetry_extractors.py",
+    "nncf/quantization/algorithms/min_max/torch2_backend.py",
     "nncf/telemetry/",
 ]
 

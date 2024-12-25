@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Type, Union
 
 import torch
 
@@ -17,6 +17,7 @@ import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.graph import operator_metatypes as om
@@ -339,7 +340,7 @@ def get_fake_quantizer(
     return None
 
 
-def get_weight_channel_axes(metatype: om.PTOperatorMetatype, ndims: int, input_port_id: int) -> Tuple[int, ...]:
+def get_weight_channel_axes(metatype: Type[OperatorMetatype], ndims: int, input_port_id: int) -> Tuple[int, ...]:
     """
     Returns axes numbers of the weight tensor which correspond to its channels.
 
