@@ -80,7 +80,7 @@ For more information about NNCF, see:
 
 ## Installation Guide<a id="installation-guide"></a>
 
-For detailed installation instructions, refer to the [Installation](https://github.com/openvinotoolkit/nncf/docs/Installation.md) guide.
+For detailed installation instructions, refer to the [Installation](https://github.com/openvinotoolkit/nncf/blob/develop/docs/Installation.md) guide.
 
 NNCF can be installed as a regular PyPI package via pip:
 
@@ -95,7 +95,7 @@ conda install -c conda-forge nncf
 ```
 
 System requirements of NNCF correspond to the used backend. System requirements for each backend and
-the matrix of corresponding versions can be found in [installation.md](./docs/Installation.md).
+the matrix of corresponding versions can be found in [installation.md](https://github.com/openvinotoolkit/nncf/blob/develop/docs/Installation.md).
 
 ## Third-party Repository Integration<a id="third-party-repository-integration"></a>
 
