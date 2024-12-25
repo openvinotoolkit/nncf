@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import re
 import subprocess
 from functools import partial
@@ -33,14 +32,6 @@ CHECKPOINT_URL = "https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolv
 DATASET_URL = "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz"
 DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
 DATASET_CLASSES = 10
-
-
-def set_cuda_arch_list():
-    if "TORCH_CUDA_ARCH_LIST" not in os.environ:
-        arch_list = torch.cuda.get_arch_list()
-        formatted_arch_list = [str(int(arch.split("_")[1]) / 10.0) for arch in arch_list]
-        arch_string = ";".join(formatted_arch_list)
-        os.environ["TORCH_CUDA_ARCH_LIST"] = arch_string
 
 
 def download_dataset() -> Path:
@@ -103,8 +94,6 @@ def get_model_size(ir_path: Path, m_type: str = "Mb") -> float:
 
 ###############################################################################
 # Create a PyTorch model and dataset
-set_cuda_arch_list()
-
 dataset_path = download_dataset()
 
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])

@@ -12,6 +12,7 @@
 import enum
 import os
 import textwrap
+import warnings
 from abc import ABC
 from abc import abstractmethod
 from multiprocessing.context import TimeoutError as MPTimeoutError
@@ -45,6 +46,14 @@ def get_build_directory_for_extension(name: str) -> Path:
         nncf_logger.debug(f"Creating build directory: {str(build_dir)}")
         build_dir.mkdir(parents=True, exist_ok=True)
     return build_dir
+
+
+def set_cuda_arch_list():
+    if "TORCH_CUDA_ARCH_LIST" not in os.environ:
+        arch_list = torch.cuda.get_arch_list()
+        formatted_arch_list = [str(int(arch.split("_")[1]) / 10.0) for arch in arch_list]
+        arch_string = ";".join(formatted_arch_list)
+        os.environ["TORCH_CUDA_ARCH_LIST"] = arch_string
 
 
 class ExtensionLoader(ABC):
@@ -98,9 +107,13 @@ class ExtensionNamespace:
 
             with extension_is_loading_info_log(self._loader.name()):
                 try:
-                    pool = ThreadPool(processes=1)
-                    async_result = pool.apply_async(self._loader.load)
-                    self._loaded_namespace = async_result.get(timeout=timeout)
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore", message="TORCH_CUDA_ARCH_LIST is not set")
+                        set_cuda_arch_list()
+
+                        pool = ThreadPool(processes=1)
+                        async_result = pool.apply_async(self._loader.load)
+                        self._loaded_namespace = async_result.get(timeout=timeout)
                 except MPTimeoutError as error:
                     msg = textwrap.dedent(
                         f"""\
