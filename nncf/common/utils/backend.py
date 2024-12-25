@@ -8,10 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import importlib
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Callable, List, TypeVar
+from typing import Any, Callable, TypeVar
 
 import nncf
 
@@ -35,32 +34,6 @@ def result_verifier(func: Callable[[TModel], bool]) -> Callable[..., None]:
             return False
 
     return verify_result
-
-
-def get_available_backends() -> List[BackendType]:
-    """
-    Returns a list of available backends.
-
-    :return: A list of available backends.
-    """
-    frameworks = [
-        ("torch", BackendType.TORCH),
-        ("torch", BackendType.TORCH2),
-        ("torch.fx", BackendType.TORCH_FX),
-        ("tensorflow", BackendType.TENSORFLOW),
-        ("onnx", BackendType.ONNX),
-        ("openvino.runtime", BackendType.OPENVINO),
-    ]
-
-    available_backends = []
-    for module_name, backend in frameworks:
-        try:
-            importlib.import_module(module_name)
-            available_backends.append(backend)
-        except ImportError:
-            pass
-
-    return available_backends
 
 
 @result_verifier
