@@ -139,9 +139,10 @@ class PT2MinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
+        input_port_id: Optional[int] = port_id
         if target_type in (TargetType.POST_LAYER_OPERATION, TargetType.OPERATOR_POST_HOOK):
-            port_id = None
-        return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
+            input_port_id = None
+        return PTTargetPoint(target_type, target_node_name, input_port_id=input_port_id)
 
     @staticmethod
     def create_convert_insertion_command(
