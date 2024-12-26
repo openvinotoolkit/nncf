@@ -47,9 +47,9 @@ jobs:
         run: pip list
       - name: Run examples test scope
         run: |
-          python -m pytest -ras tests/post_training/test_quantize_conformance.py::test_weight_compression \
-            --junit-xml=pytest-results-${{ matrix.group }}.xml \
-            --durations-path=tests/post_training/.test_durations \
+          python -m pytest -s -ra tests/post_training/test_quantize_conformance.py::test_weight_compression \
+            --junit-xml=pytest-results.xml \
+            --durations-path=tests/post_training/data/wc_test_durations.json \
             --splitting-algorithm=least_duration \
             --splits 2 \
             --group ${{ matrix.group }} \
@@ -59,12 +59,8 @@ jobs:
         env:
           TQDM_DISABLE: 1
           HOME_HF: "/home/runner/hf_home"
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Test Summary
         if: ${{ !cancelled() }}
-        with:
-          overwrite: True
-          name: pytest-results-${{ matrix.group }}
-          path: |
-            pytest-results-${{ matrix.group }}.xml
-            tmp/results.csv
+        run: |
+          pip install defusedxml==0.7.1
+          python .github/scripts/pytest_md_summary.py pytest-results.xml >> $GITHUB_STEP_SUMMARY
