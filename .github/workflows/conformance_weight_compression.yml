@@ -2,9 +2,7 @@ name: Weight compression
 permissions: read-all
 
 on:
-  pull_request:
-  schedule:
-    - cron: '0 0 * * *'
+  workflow_call:
   workflow_dispatch:
     inputs:
       pull_request_number:
