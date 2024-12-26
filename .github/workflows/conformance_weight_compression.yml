@@ -42,9 +42,7 @@ jobs:
       - name: cpuinfo
         run: cat /proc/cpuinfo
       - name: Install NNCF and test requirements
-        run: |
-          pip install -e .
-          pip install -r tests/post_training/requirements.txt
+        run: pip install -e . -r tests/post_training/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run examples test scope
@@ -56,6 +54,8 @@ jobs:
             --splits 2 \
             --group ${{ matrix.group }} \
             ${{ github.event.inputs.pytest_args || '' }}
+          ret=$?
+          [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
         env:
           TQDM_DISABLE: 1
           HOME_HF: "/home/runner/hf_home"
