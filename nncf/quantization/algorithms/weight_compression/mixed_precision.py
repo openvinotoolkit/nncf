@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABC
 from abc import abstractmethod
 from typing import Iterable, List, Optional, Tuple, TypeVar
 
@@ -45,18 +46,16 @@ class MixedPrecisionCriterion(Algorithm):
     for weights based on some criteria.
     """
 
-    def __init__(
-        self,
-        primary_config: WeightCompressionConfig,
-        ratio: float,
-    ):
+    def __init__(self, primary_config: WeightCompressionConfig, ratio: float, subset_size: Optional[int] = None):
         """
         :param primary_config: Configuration on how to compress (quantize) weights to primary precision.
         :param ratio: The ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to INT8_ASYM).
+        :param subset_size: Size of dataset subset for statistics.
         """
         self._primary_config = primary_config
         self._ratio = ratio
+        self._subset_size = subset_size
         self._algorithm_key = f"MPC_{hash(self)}"
         self._backend_entity = None
 
@@ -102,20 +101,13 @@ class MixedPrecisionCriterion(Algorithm):
             weight_param.compression_config = self._primary_config
             num_weights_in_4bit += weight_param.num_weights
 
-    @property
-    def available_backends(self) -> List[BackendType]:
-        return [BackendType.OPENVINO]
-
+    @abstractmethod
     def _set_backend_entity(self, model: TModel) -> None:
-        model_backend = get_backend(model)
-        if model_backend == BackendType.OPENVINO:
-            from nncf.quantization.algorithms.weight_compression.openvino_backend import OVMixedPrecisionAlgoBackend
+        """
+        Creates a helper class with a backed-specific logic of the algorithm.
 
-            self._backend_entity = OVMixedPrecisionAlgoBackend(model)
-        else:
-            raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
-            )
+        :param model: Backend-specific input model.
+        """
 
     @abstractmethod
     def get_statistic_points(
@@ -123,7 +115,6 @@ class MixedPrecisionCriterion(Algorithm):
         model: TModel,
         graph: NNCFGraph,
         nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
-        subset_size: Optional[int] = None,
     ) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
@@ -131,7 +122,6 @@ class MixedPrecisionCriterion(Algorithm):
         :param model: Model for statistics collection.
         :param graph: Model graph.
         :param nodes_and_port_ids: Nodes and port ids for which statistics should be collected.
-        :param subset_size: Number of samples to collect.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
 
@@ -141,6 +131,29 @@ class DataFreeCriterion(MixedPrecisionCriterion):
     """
     A baseline mixed precision criterion that is based on quantization noise of weights only.
     """
+
+    @property
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
+
+    def _set_backend_entity(self, model: TModel) -> None:
+        model_backend = get_backend(model)
+        if model_backend == BackendType.OPENVINO:
+            from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
+
+            self._backend_entity = OVWeightCompressionAlgoBackend(model)
+        elif model_backend == BackendType.TORCH:
+            from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
+
+            self._backend_entity = PTWeightCompressionAlgoBackend()
+        elif model_backend == BackendType.TORCH_FX:
+            from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
+
+            self._backend_entity = FXWeightCompressionAlgoBackend()
+        else:
+            raise nncf.UnsupportedBackendError(
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
+            )
 
     def _calc_weight_sensitivity(
         self,
@@ -184,18 +197,32 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         model: TModel,
         graph: NNCFGraph,
         nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
-        subset_size: Optional[int] = None,
     ) -> StatisticPointsContainer:
         raise RuntimeError("No statistics collection intended for data-free mixed precision criterion")
 
 
-class DataBasedCriterion(DataFreeCriterion):
+class DataBasedCriterion(DataFreeCriterion, ABC):
     """
     Data-based mixed precision criterion that takes into account outliers in the input statistics.
     Expecting statistics of the following shape: [hidden_dim]
     """
 
     STAT_KEY = None
+
+    @property
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.OPENVINO]
+
+    def _set_backend_entity(self, model: TModel) -> None:
+        model_backend = get_backend(model)
+        if model_backend == BackendType.OPENVINO:
+            from nncf.quantization.algorithms.weight_compression.openvino_backend import OVMixedPrecisionAlgoBackend
+
+            self._backend_entity = OVMixedPrecisionAlgoBackend(model)
+        else:
+            raise nncf.UnsupportedBackendError(
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
+            )
 
     def _calc_activation_sensitivity(
         self,
@@ -230,7 +257,6 @@ class DataBasedCriterion(DataFreeCriterion):
         model: TModel,
         graph: NNCFGraph,
         nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
-        subset_size: Optional[int] = None,
     ) -> StatisticPointsContainer:
         self._set_backend_entity(model)
 
@@ -245,7 +271,7 @@ class DataBasedCriterion(DataFreeCriterion):
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, act_node.node_name, port_id=output_port_id
             )
-            stat_collector = self._get_statistic_collector(subset_size=subset_size)
+            stat_collector = self._get_statistic_collector()
             statistic_container.add_statistic_point(
                 StatisticPoint(
                     target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
@@ -255,11 +281,9 @@ class DataBasedCriterion(DataFreeCriterion):
         return statistic_container
 
     @abstractmethod
-    def _get_statistic_collector(self, subset_size=None):
+    def _get_statistic_collector(self):
         """
         Get statistic collector
-
-        :param subset_size: Number of samples to collect
         """
 
     def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[NNCFNode, int]:
@@ -295,11 +319,12 @@ class DataBasedCriterion(DataFreeCriterion):
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             act_node.node_name, input_filter_func, self._algorithm_key
         ):
-            statistics = tensor_collector.get_statistics()[stat_key]
-            if isinstance(statistics, Tensor):
-                stats.append(statistics)
-            else:
-                stats.extend(statistics)
+            statistics = tensor_collector.get_statistics()
+            for data in statistics.get_data().values():
+                if isinstance(data, Tensor):
+                    stats.append(data)
+                else:
+                    stats.extend(data)
         return stats
 
 
@@ -334,8 +359,8 @@ class HAWQCriterion(DataBasedCriterion):
         decompressed_weight = decompressed_weight.reshape(orig_shape)
         return fns.linalg.norm(decompressed_weight - weight, ord="fro").item()
 
-    def _get_statistic_collector(self, subset_size=None):
-        return self._backend_entity.hawq_statistic_collector(subset_size)
+    def _get_statistic_collector(self):
+        return self._backend_entity.hawq_statistic_collector(self._subset_size)
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_VARIANCE)
@@ -346,9 +371,11 @@ class MeanVarianceCriterion(DataBasedCriterion):
 
     STAT_KEY = SensitivityMetric.MEAN_ACTIVATION_VARIANCE.value
 
-    def _get_statistic_collector(self, subset_size=None):
+    def _get_statistic_collector(self):
         # Reducing across the second-last dimension, assuming it is the sequence length dimension
-        return self._backend_entity.mean_variance_statistic_collector(reduction_axes=(-2,), subset_size=subset_size)
+        return self._backend_entity.mean_variance_statistic_collector(
+            reduction_axes=(-2,), subset_size=self._subset_size
+        )
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
@@ -359,9 +386,11 @@ class MaxVarianceCriterion(DataBasedCriterion):
 
     STAT_KEY = SensitivityMetric.MAX_ACTIVATION_VARIANCE.value
 
-    def _get_statistic_collector(self, subset_size=None):
+    def _get_statistic_collector(self):
         # Reducing across the second-last dimension, assuming it is the sequence length dimension
-        return self._backend_entity.max_variance_statistic_collector(reduction_axes=(-2,), subset_size=subset_size)
+        return self._backend_entity.max_variance_statistic_collector(
+            reduction_axes=(-2,), subset_size=self._subset_size
+        )
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE)
@@ -372,6 +401,8 @@ class MeanMaxCriterion(DataBasedCriterion):
 
     STAT_KEY = SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE.value
 
-    def _get_statistic_collector(self, subset_size=None):
+    def _get_statistic_collector(self):
         # Reducing across the second-last dimension, assuming it is the sequence length dimension
-        return self._backend_entity.mean_abs_max_statistic_collector(reduction_axes=(-2,), subset_size=subset_size)
+        return self._backend_entity.mean_abs_max_statistic_collector(
+            reduction_axes=(-2,), subset_size=self._subset_size
+        )

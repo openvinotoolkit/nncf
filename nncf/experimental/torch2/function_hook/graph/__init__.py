@@ -8,16 +8,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import warnings
-
-import numpy as np
-
-from nncf.quantization.fake_quantize import tune_range
-from nncf.tensor import Tensor
-
-
-def test_tune_range_zero_division_warning():
-    with warnings.catch_warnings(record=True) as w:
-        # Calling tune_range should not raise a warning
-        tune_range(Tensor(np.array([0.0])), Tensor(np.array([1.0])), 8, False)
-        assert len(w) == 0

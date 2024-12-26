@@ -182,7 +182,7 @@ class AdvancedQuantizationParameters:
 
     :param overflow_fix: This option controls whether to apply the overflow issue fix
         for the 8-bit quantization.
-    :type overflow_fix: nncf.quantization.advanced_parameters.OverflowFix
+    :type overflow_fix: Optional[nncf.quantization.advanced_parameters.OverflowFix]
     :param quantize_outputs: Whether to insert additional quantizers right before each
         of the model outputs.
     :type quantize_outputs: bool
@@ -232,7 +232,7 @@ class AdvancedQuantizationParameters:
     """
 
     # General parameters
-    overflow_fix: OverflowFix = None
+    overflow_fix: Optional[OverflowFix] = None
     quantize_outputs: bool = False
     inplace_statistics: bool = True
     disable_channel_alignment: bool = True
@@ -240,8 +240,8 @@ class AdvancedQuantizationParameters:
     batchwise_statistics: Optional[bool] = None
 
     # Advanced Quantization parameters
-    activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None
-    weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None
+    activations_quantization_params: Optional[Union[QuantizationParameters, FP8QuantizationParameters]] = None
+    weights_quantization_params: Optional[Union[QuantizationParameters, FP8QuantizationParameters]] = None
     quantizer_propagation_rule: QuantizerPropagationRule = QuantizerPropagationRule.MERGE_ALL_IN_ONE
 
     # Range estimator parameters
@@ -254,7 +254,7 @@ class AdvancedQuantizationParameters:
     # Advanced SmoothQuant algorithm parameters
     smooth_quant_alphas: AdvancedSmoothQuantParameters = field(default_factory=AdvancedSmoothQuantParameters)
     # Deprecated parameter
-    smooth_quant_alpha: float = None
+    smooth_quant_alpha: Optional[float] = None
 
     # Backend specific parameters
     backend_params: Dict[str, Any] = field(default_factory=dict)
@@ -361,12 +361,15 @@ class AdvancedCompressionParameters:
     """
     Contains advanced parameters for compression algorithms.
 
+    :param statistics_path: Directory path to dump statistics.
+    :type statistics_path: str
     :param awq_params: Advanced parameters for AWQ algorithm.
     :type awq_params: AdvancedAWQParameters
     :param scale_estimation_params: Advanced parameters for scale estimation algorithm.
     :type scale_estimation_params: AdvancedScaleEstimationParameters
     """
 
+    statistics_path: Optional[str] = None
     # Advanced AWQ algorithm parameters
     awq_params: AdvancedAWQParameters = field(default_factory=AdvancedAWQParameters)
 
@@ -457,14 +460,14 @@ def convert_to_dict_recursively(params: Any) -> Dict[str, Any]:
     return result
 
 
-def convert_quantization_parameters_to_dict(params: QuantizationParameters) -> Dict[str, Any]:
+def convert_quantization_parameters_to_dict(params: Optional[QuantizationParameters]) -> Dict[str, Any]:
     """
     Converts quantization parameters to the dict in the legacy format
 
     :param params: Quantization parameters
     :return: Quantization parameters as dict in the legacy format
     """
-    result = {}
+    result: Dict[str, Any] = {}
     if params is not None:
         if params.num_bits is not None:
             result["bits"] = params.num_bits
@@ -489,7 +492,7 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
     if params.min.clipping_value is not None or params.max.clipping_value is not None:
         raise nncf.ParameterNotSupportedError("clipping_value parameter is not supported in the legacy format")
 
-    result = {}
+    result: Dict[str, Any] = {}
     if (
         params.min.statistics_type == StatisticsType.MIN
         and params.min.aggregator_type == AggregatorType.MIN
@@ -548,13 +551,15 @@ def apply_advanced_parameters_to_config(
         initializer["batchnorm_adaptation"] = {"num_bn_adaptation_samples": 0}
         config["initializer"] = initializer
 
-    activations_config = convert_quantization_parameters_to_dict(params.activations_quantization_params)
-    if activations_config:
-        config["activations"] = activations_config
+    if isinstance(params.activations_quantization_params, QuantizationParameters):
+        activations_config = convert_quantization_parameters_to_dict(params.activations_quantization_params)
+        if activations_config:
+            config["activations"] = activations_config
 
-    weights_config = convert_quantization_parameters_to_dict(params.weights_quantization_params)
-    if weights_config:
-        config["weights"] = weights_config
+    if isinstance(params.weights_quantization_params, QuantizationParameters):
+        weights_config = convert_quantization_parameters_to_dict(params.weights_quantization_params)
+        if weights_config:
+            config["weights"] = weights_config
 
     activations_init_range_config = convert_range_estimator_parameters_to_dict(
         params.activations_range_estimator_params

@@ -10,12 +10,14 @@
 # limitations under the License.
 
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
 from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -49,18 +51,14 @@ from nncf.quantization.quantize_model import BATCHWISE_STATISTICS_WARNING
 from nncf.quantization.quantize_model import is_model_no_batchwise_support
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
-from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
-from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
-from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi
+from nncf.quantization.statistics_caching import cache_weight_compression_statistics
+from nncf.quantization.statistics_caching import register_statistics_for_algorithm
 from nncf.scopes import IgnoredScope
 from nncf.scopes import validate_ignored_scope
-from nncf.telemetry.decorator import tracked_function
-from nncf.telemetry.events import NNCF_OV_CATEGORY
 
 TTensor = TypeVar("TTensor")
 
 
-@tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
 def native_quantize_if_op_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
@@ -143,7 +141,6 @@ def native_quantize_if_op_impl(
     return quantized_model
 
 
-@tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
 def native_quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
@@ -191,10 +188,6 @@ def native_quantize_impl(
     return quantized_model
 
 
-@tracked_function(
-    NNCF_OV_CATEGORY,
-    [CompressionStartedWithQuantizeWithAccuracyControlApi(), "target_device", "preset", "max_drop", "drop_type"],
-)
 def quantize_with_accuracy_control_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
@@ -369,18 +362,6 @@ def quantize_impl(
     )
 
 
-@tracked_function(
-    NNCF_OV_CATEGORY,
-    [
-        CompressionStartedWithCompressWeightsApi(),
-        "mode",
-        "awq",
-        "scale_estimation",
-        "gptq",
-        "lora_correction",
-        "backup_mode",
-    ],
-)
 def compress_weights_impl(
     model: ov.Model,
     dataset: Dataset,
@@ -401,8 +382,8 @@ def compress_weights_impl(
     """
     Implementation of the `compress_weights()` method for the OpenVINO backend.
     """
-
     model = remove_friendly_name_duplicates(model)
+    graph = NNCFGraphFactory.create(model)
     compression_algorithm = WeightCompression(
         mode,
         ratio,
@@ -418,5 +399,24 @@ def compress_weights_impl(
         backup_mode,
         advanced_parameters,
     )
-    graph = NNCFGraphFactory.create(model)
-    return compression_algorithm.apply(model, graph, dataset=dataset)
+
+    statistics_points = None
+    if advanced_parameters and advanced_parameters.statistics_path:
+        # If there is no such directory, then caches statistics
+        statistics_path = Path(advanced_parameters.statistics_path)
+        if not statistics_path.exists():
+            cache_weight_compression_statistics(model, graph, dataset, subset_size, statistics_path)
+        statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
+        compression_algorithm.set_backend_entity(model)
+        _, matmul_input_to_output_nodes_map = compression_algorithm.get_compression_nodes_info(graph)
+        register_statistics_for_algorithm(
+            statistics_aggregator,
+            model,
+            graph,
+            compression_algorithm,
+            matmul_input_to_output_nodes_map,
+        )
+        statistics_aggregator.load_statistics_from_dir(statistics_path)
+        statistics_points = statistics_aggregator.statistic_points
+
+    return compression_algorithm.apply(model, graph, statistics_points, dataset)

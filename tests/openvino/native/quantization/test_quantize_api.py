@@ -32,6 +32,6 @@ def get_mock_model() -> Model:
 def test_non_positive_subset_size():
     model_to_test = get_mock_model()
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(nncf.ValidationError) as e:
         nncf.quantize(model_to_test, Dataset(MockDataset(INPUT_SHAPE)), subset_size=0)
         assert "Subset size must be positive." in e.info

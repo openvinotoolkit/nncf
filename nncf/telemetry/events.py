@@ -10,17 +10,27 @@
 # limitations under the License.
 
 from contextlib import contextmanager
-from typing import Optional
+from typing import Generator, Optional, TypeVar
 
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
+
+# Backend categories
 NNCF_TF_CATEGORY = "nncf_tf"
 NNCF_PT_CATEGORY = "nncf_pt"
+NNCF_PT_FX_CATEGORY = "nncf_pt_fx"
 NNCF_ONNX_CATEGORY = "nncf_onnx"
 NNCF_OV_CATEGORY = "nncf_ov"
 
-CURRENT_CATEGORY = None
+# Dynamic categories
+MODEL_BASED_CATEGORY = "model_based"
+
+CURRENT_CATEGORY: Optional[str] = None
+
+TModel = TypeVar("TModel")
 
 
-def _set_current_category(category: str):
+def _set_current_category(category: Optional[str]) -> None:
     global CURRENT_CATEGORY
     CURRENT_CATEGORY = category
 
@@ -29,8 +39,24 @@ def get_current_category() -> Optional[str]:
     return CURRENT_CATEGORY
 
 
+def get_model_based_category(model: TModel) -> str:
+    category_by_backend = {
+        BackendType.ONNX: NNCF_ONNX_CATEGORY,
+        BackendType.OPENVINO: NNCF_OV_CATEGORY,
+        BackendType.TORCH: NNCF_PT_CATEGORY,
+        BackendType.TENSORFLOW: NNCF_TF_CATEGORY,
+        BackendType.TORCH_FX: NNCF_PT_FX_CATEGORY,
+    }
+    category = None
+    if model is not None:
+        model_backend = get_backend(model)
+        category = category_by_backend[model_backend]
+
+    return category
+
+
 @contextmanager
-def telemetry_category(category: str) -> str:
+def telemetry_category(category: Optional[str]) -> Generator[Optional[str], None, None]:
     previous_category = get_current_category()
     _set_current_category(category)
     yield category

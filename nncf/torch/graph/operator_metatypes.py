@@ -148,6 +148,13 @@ class PTDepthwiseConvOperatorSubtype(PTOperatorSubtype):
     def matches(
         cls, layer_attributes: Optional[BaseLayerAttributes] = None, function_args=None, functions_kwargs=None
     ) -> bool:
+        if layer_attributes is None and function_args is not None and functions_kwargs is not None:
+            # Used for torch2
+            weight_meta = functions_kwargs.get("weight", function_args[0])
+            in_channels = weight_meta.shape[1]
+            groups = functions_kwargs.get("groups", function_args[6] if len(function_args) > 6 else 1)
+            return in_channels > 1 and groups == in_channels
+
         if _is_called_inside_nncf_module(functions_kwargs):
             return False
         if not isinstance(layer_attributes, ConvolutionLayerAttributes):
@@ -1108,6 +1115,18 @@ class PTScaledDotProductAttentionMetatype(PTOperatorMetatype):
     }
     hw_config_names = [HWConfigOpName.SCALED_DOT_PRODUCT_ATTENTION]
     target_input_ports = [0, 1]
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTCosMetatype(PTOperatorMetatype):
+    name = "CosOp"
+    module_to_function_names = {NamespaceTarget.TORCH: ["cos"]}
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTSinMetatype(PTOperatorMetatype):
+    name = "SinOp"
+    module_to_function_names = {NamespaceTarget.TORCH: ["sin"]}
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:

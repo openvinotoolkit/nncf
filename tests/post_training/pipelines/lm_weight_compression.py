@@ -271,7 +271,12 @@ class LMWeightCompression(BaseTestPipeline):
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
             print("Collection ground-truth reference data")
             model_gold = OVModelForCausalLM.from_pretrained(
-                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                self.fp32_model_dir,
+                trust_remote_code=True,
+                load_in_8bit=False,
+                compile=False,
+                stateful=is_stateful,
+                ov_config={"KV_CACHE_PRECISION": "f16"},
             )
             evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
             evaluator.dump_gt(str(gt_data_path))
@@ -290,7 +295,7 @@ class LMWeightCompression(BaseTestPipeline):
                 load_in_8bit=False,
                 compile=False,
                 stateful=is_stateful,
-                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
+                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
             )
         print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)
