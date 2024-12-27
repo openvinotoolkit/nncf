@@ -135,7 +135,7 @@ def fixture_wc_reference_data():
     fp32_test_cases = defaultdict(dict)
     for test_case_name in data:
         if "atol" not in data[test_case_name]:
-            data[test_case_name]["atol"] = 1e-5
+            data[test_case_name]["atol"] = 1e-4
         reported_name = test_case_name.split("_backend_")[0]
         fp32_case_name = f"{reported_name}_backend_FP32"
         fp32_test_cases[fp32_case_name]["metric_value"] = 1

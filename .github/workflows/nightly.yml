@@ -2,7 +2,6 @@ name: nightly
 permissions: read-all
 
 on:
-  pull_request: # TODO: remove
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * *'
