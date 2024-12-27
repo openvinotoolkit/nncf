@@ -31,9 +31,20 @@ from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import RunInfo
 
-os.environ["ONEDNN_MAX_CPU_ISA"] = "AVX2"
-
 DATA_ROOT = Path(__file__).parent / "data"
+
+
+@pytest.fixture(scope="function", name="use_avx2")
+def fixture_use_avx2():
+    old_value = os.environ.get("ONEDNN_MAX_CPU_ISA")
+    os.environ["ONEDNN_MAX_CPU_ISA"] = "AVX2"
+    if old_value is not None and old_value != "AVX2":
+        print(f"Warning: ONEDNN_MAX_CPU_ISA is overriding to AVX2, was {old_value}")
+    yield
+    if old_value is None:
+        del os.environ["ONEDNN_MAX_CPU_ISA"]
+    else:
+        os.environ["ONEDNN_MAX_CPU_ISA"] = old_value
 
 
 @pytest.fixture(scope="session", name="data_dir")
@@ -342,6 +353,7 @@ def test_weight_compression(
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
     memory_monitor: bool,
+    use_avx2: None,
 ):
     pipeline = None
     err_msg = None
