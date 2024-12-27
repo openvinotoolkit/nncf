@@ -100,6 +100,11 @@ files = [
     "nncf/common/utils/",
     "nncf/common/tensor_statistics",
     "nncf/experimental/torch2",
+    "nncf/quantization/passes.py",
+    "nncf/quantization/advanced_parameters.py",
+    "nncf/quantization/range_estimator.py",
+    "nncf/quantization/telemetry_extractors.py",
+    "nncf/telemetry/",
 ]
 
 [tool.ruff]
@@ -154,3 +159,10 @@ notice-rgx = """\
 
 [tool.pytest.ini_options]
 pythonpath = "."
+
+[tool.bandit]
+exclude_dirs = ["tools", "tests", "**/venv*", "build"]
+skips = [
+    "B101",   # assert_used
+    "B404" ,  # import_subprocess
+]
