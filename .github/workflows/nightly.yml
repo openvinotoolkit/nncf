@@ -16,10 +16,6 @@ jobs:
     if: github.repository_owner == 'openvinotoolkit'
     uses: ./.github/workflows/examples.yml
 
-  macos:
-    if: github.repository_owner == 'openvinotoolkit'
-    uses: ./.github/workflows/macos.yml
-
   md-dead-link-check:
     runs-on: ubuntu-22.04
     if: github.repository_owner == 'openvinotoolkit'

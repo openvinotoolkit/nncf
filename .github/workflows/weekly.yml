@@ -18,3 +18,7 @@ jobs:
     with:
       python_version: ${{ matrix.python_version }}
       gpu_enabled: false
+
+  macos:
+    if: github.repository_owner == 'openvinotoolkit'
+    uses: ./.github/workflows/macos.yml
