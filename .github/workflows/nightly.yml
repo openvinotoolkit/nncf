@@ -7,14 +7,29 @@ on:
     - cron: '0 0 * * *'
 
 jobs:
+  install:
+    if: github.repository_owner == 'openvinotoolkit'
+    uses: ./.github/workflows/install.yml
+
+  examples:
+    if: github.repository_owner == 'openvinotoolkit'
+    uses: ./.github/workflows/examples.yml
+
+  macos:
+    if: github.repository_owner == 'openvinotoolkit'
+    uses: ./.github/workflows/macos.yml
+
   md-dead-link-check:
     runs-on: ubuntu-22.04
+    if: github.repository_owner == 'openvinotoolkit'
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - uses: AlexanderDokuchaev/md-dead-link-check@cc3ed55268899a1a6d5fd7068abbc4591eab1f74 # v0.9
 
   tensorflow:
     runs-on: ubuntu-20.04-8-cores
+    if: github.repository_owner == 'openvinotoolkit'
     timeout-minutes: 60
     defaults:
       run:
@@ -30,9 +45,7 @@ jobs:
           python-version: 3.10.14
           cache: pip
       - name: Install NNCF and test requirements
-        run: |
-          pip install -e .
-          pip install -r tests/tensorflow/requirements.txt
+        run: pip install -e . -r tests/tensorflow/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run TensorFlow precommit

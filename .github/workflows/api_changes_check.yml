@@ -19,6 +19,7 @@ jobs:
     with:
       ref: "refs/pull/${{ github.event.number }}/merge"
   compare-api-doc-with-develop:
+    timeout-minutes: 30
     needs: call-build-api-doc
     runs-on: ubuntu-20.04
     permissions:
