@@ -58,8 +58,9 @@ TEST_MODELS_DESC = [
     ),
     (ModelDesc("squeezenet1_1", test_models.squeezenet1_1, [1, 3, 32, 32]), {}),
     (ModelDesc("shufflenetv2", partial(test_models.ShuffleNetV2, net_size=0.5), [1, 3, 32, 32]), {}),
-    # (ModelDesc("ssd_vgg", test_models.ssd_vgg300, [2, 3, 300, 300]), {}),  #  too long
-    # (ModelDesc("ssd_mobilenet", test_models.ssd_mobilenet, [2, 3, 300, 300]), {}),  # too long
+    # TODO(AlexanderDokuchaev): too long without disabled tracing of ssd_head - no_nncf_trace()
+    # (ModelDesc("ssd_vgg", test_models.ssd_vgg300, [2, 3, 300, 300]), {}),
+    # (ModelDesc("ssd_mobilenet", test_models.ssd_mobilenet, [2, 3, 300, 300]), {}),
     (ModelDesc("mobilenet_v2", test_models.mobilenet_v2, [1, 3, 32, 32]), {}),
     (ModelDesc("mobilenet_v3_small", test_models.mobilenet_v3_small, [1, 3, 32, 32]), {}),
     (ModelDesc("unet", test_models.UNet, [1, 3, 360, 480]), {}),
@@ -90,5 +91,5 @@ def test_quantized_graphs(desc: ModelDesc, quantization_parameters: Dict[str, An
         nncf_graph = build_nncf_graph(q_model, example_input)
     nx_graph = get_reference_graph(nncf_graph)
     dot_nncf_graph = to_pydot(nx_graph)
-    ref_file = REF_DIR / f"model_graph_{desc.model_name}.dot"
+    ref_file = REF_DIR / f"{desc.model_name}.dot"
     compare_with_reference_file(str(dot_nncf_graph), ref_file, regen_ref_data)
