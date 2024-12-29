@@ -49,6 +49,7 @@ def quantize_pt2e(
     weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
     batchwise_statistics: Optional[bool] = None,
     fold_quantize: bool = False,
+    do_copy: bool = False,
 ) -> torch.fx.GraphModule:
     """
     Applies post-training quantization to the torch.fx.GraphModule provided model
@@ -72,6 +73,8 @@ def quantize_pt2e(
         for each item of the batch or for the entire batch, default is None, which means
         it set True if batch_size > 1 otherwise False.
     :param fold_quantize: Boolean flag for whether fold the quantize op or not.
+    :param do_copy: The copy of the given model is being quantized if do_copy == True,
+        otherwise the model is quantized inplace. Default value is False.
     """
     nncf_logger.warning("This is an experimental feature and may change in the future without notice.")
 
@@ -79,18 +82,20 @@ def quantize_pt2e(
         raise nncf.ValidationError("Subset size must be positive.")
 
     batch_size = calibration_dataset.get_batch_size()
-    batchwise_statistics = batchwise_statistics is None and batch_size is not None and batch_size > 1
+    if batchwise_statistics is None:
+        batchwise_statistics = batch_size is not None and batch_size > 1
 
     original_graph_meta = model.meta
 
-    copied_model = deepcopy(model)
+    if do_copy:
+        model = deepcopy(model)
 
     # To make it easier for bias correction algorithms,
     # biases are being separated by the followng calls.
-    fuse_conv_bn(copied_model)
+    fuse_conv_bn(model)
     # Call ao quantizer transform_for_annotation
     # before the NNCFGraph creation
-    quantizer.transform_for_annotation(copied_model)
+    quantizer.transform_for_annotation(model)
 
     if not isinstance(quantizer, NNCFQuantizer):
         quantizer = NNCFFXQuantizer(quantizer)
@@ -107,8 +112,8 @@ def quantize_pt2e(
         batchwise_statistics=batchwise_statistics,
     )
 
-    nncf_graph = NNCFGraphFactory.create(copied_model)
-    quantized_model = quantization_algorithm.apply(copied_model, nncf_graph, dataset=calibration_dataset)
+    nncf_graph = NNCFGraphFactory.create(model)
+    quantized_model = quantization_algorithm.apply(model, nncf_graph, dataset=calibration_dataset)
 
     # Magic. Without this call compiled model
     # is not preformant

@@ -137,6 +137,7 @@ class TestModelQuantization:
             calibration_dataset=calibration_dataset,
             fast_bias_correction=None,  # BC is disabled
             fold_quantize=True,
+            do_copy=True,
             **pt2e_params,
         )
 

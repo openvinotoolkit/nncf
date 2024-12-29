@@ -790,7 +790,7 @@ class MinMaxQuantization(Algorithm):
 
     def find_quantization_setup(self, model: TModel, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         """
-        Initializes a cache, finds quantization target points and them puts in the cache.
+        Initializes a cache, finds quantization target points and then puts them in the cache.
 
         :param quantizer_setup: Quantization Target Points in format of SingleConfigQuantizerSetup.
         :param nncf_graph: NNCFGraph instance.
@@ -822,7 +822,7 @@ class MinMaxQuantization(Algorithm):
         self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
     ) -> Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]]:
         """
-        Initializes a cache, finds quantization target points and them puts in the cache.
+        Initializes a cache and puts the given quantization target points in the cache.
 
         :param model: Backend-specific model, for which Quantization Target Points are being seek.
         :param nncf_graph: NNCFGraph instance.
