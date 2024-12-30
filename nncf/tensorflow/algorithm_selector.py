@@ -13,6 +13,7 @@ from typing import Dict, Type
 import tensorflow as tf
 
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.api.compression import CompressionStage
 from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -64,6 +65,9 @@ class NoCompressionAlgorithmController(BaseCompressionAlgorithmController):
         if do_copy:
             model = copy_model(self.model)
         return model
+
+    def compression_stage(self) -> CompressionStage:
+        return CompressionStage.UNCOMPRESSED
 
 
 def get_compression_algorithm_builder(algo_name: str) -> Type[TFCompressionAlgorithmBuilder]:

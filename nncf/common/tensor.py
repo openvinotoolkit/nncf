@@ -29,7 +29,7 @@ class NNCFTensor:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, NNCFTensor):
             raise nncf.InternalError("Attempt to compare NNCFTensor with a non-NNCFTensor object")
-        return bool(self._tensor == other.tensor)
+        return self._tensor == other.tensor
 
     @property
     def tensor(self) -> TensorType:  # type: ignore

@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
+from nncf.api.compression import CompressionStage
 from nncf.api.statistics import Statistics
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController
@@ -89,6 +90,9 @@ class A(BaseCompressionAlgorithmController):
 
     def statistics(self, quickly_collected_only: bool = False) -> Statistics:
         return NNCFStatistics()
+
+    def compression_stage(self) -> CompressionStage:
+        pass
 
 
 class B(A):
