@@ -88,6 +88,8 @@ known_third_party = "datasets"
 
 [tool.mypy]
 follow_imports = "silent"
+# disable_error_code = ["import-untyped"]
+plugins = "numpy.typing.mypy_plugin"
 strict = true
 # should be removed later
 # mypy recommends the following tool as an autofix:
@@ -95,17 +97,27 @@ strict = true
 implicit_optional = true
 files = [
     "nncf/api",
-    "nncf/common/sparsity",
+    "nncf/common/deprecation.py",
+    "nncf/common/engine.py",
+    "nncf/common/hook_handle.py",
+    "nncf/common/insertion_point_graph.py",
+    "nncf/common/plotting.py",
+    "nncf/common/schedulers.py",
+    "nncf/common/scopes.py",
+    "nncf/common/stateful_classes_registry.py",
+    "nncf/common/strip.py",
+    "nncf/common/tensor.py",
+    "nncf/common/accuracy_aware_training",
     "nncf/common/graph",
-    "nncf/common/accuracy_aware_training/",
-    "nncf/common/utils/",
+    "nncf/common/sparsity",
     "nncf/common/tensor_statistics",
+    "nncf/common/utils",
     "nncf/experimental/torch2",
     "nncf/quantization/passes.py",
     "nncf/quantization/advanced_parameters.py",
     "nncf/quantization/range_estimator.py",
     "nncf/quantization/telemetry_extractors.py",
-    "nncf/telemetry/",
+    "nncf/telemetry",
 ]
 
 [tool.ruff]

@@ -9,10 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from contextlib import contextmanager
+from typing import Generator
 
 
 @contextmanager
-def noninteractive_plotting():
+def noninteractive_plotting() -> Generator[None, None, None]:
     from matplotlib import pyplot as plt
 
     backend = plt.get_backend()

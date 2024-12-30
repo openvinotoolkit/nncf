@@ -10,19 +10,18 @@
 # limitations under the License.
 
 import functools
-import inspect
 import warnings
-from typing import Callable, Type, TypeVar
+from types import FunctionType
+from typing import Any, Callable, TypeVar, cast
 
 from packaging import version
+
+ClassOrFn = TypeVar("ClassOrFn")
 
 
 def warning_deprecated(msg: str) -> None:
     # Note: must use FutureWarning in order not to get suppressed by default
     warnings.warn(msg, FutureWarning, stacklevel=2)
-
-
-ClassOrFn = TypeVar("ClassOrFn", Callable, Type)
 
 
 class deprecated:
@@ -41,15 +40,17 @@ class deprecated:
         self.end_version = version.parse(end_version) if end_version is not None else None
 
     def __call__(self, fn_or_class: ClassOrFn) -> ClassOrFn:
-        name = fn_or_class.__module__ + "." + fn_or_class.__name__
-        if inspect.isclass(fn_or_class):
-            fn_or_class.__init__ = self._get_wrapper(fn_or_class.__init__, name)
-            return fn_or_class
-        return self._get_wrapper(fn_or_class, name)
+        if isinstance(fn_or_class, type):
+            name = f"{fn_or_class.__module__}.{fn_or_class.__name__}"
+            fn_or_class.__init__ = self._get_wrapper(fn_or_class.__init__, name)  # type: ignore[misc]
+            return cast(ClassOrFn, fn_or_class)
+        if isinstance(fn_or_class, FunctionType):
+            return cast(ClassOrFn, self._get_wrapper(fn_or_class, f"{fn_or_class.__module__}.{fn_or_class.__name__}"))
+        raise TypeError("Unsupported type for @deprecated decorator")
 
-    def _get_wrapper(self, fn_to_wrap: Callable, name: str) -> Callable:
+    def _get_wrapper(self, fn_to_wrap: Callable[..., Any], name: str) -> Callable[..., Any]:
         @functools.wraps(fn_to_wrap)
-        def wrapped(*args, **kwargs):
+        def wrapped(*args: Any, **kwargs: Any) -> Any:
             msg = f"Usage of {name} is deprecated "
             if self.start_version is not None:
                 msg += f"starting from NNCF v{str(self.start_version)} "
