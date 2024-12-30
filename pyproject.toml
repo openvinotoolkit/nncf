@@ -114,6 +114,7 @@ files = [
     "nncf/common/sparsity",
     "nncf/common/tensor_statistics",
     "nncf/common/utils",
+    "nncf/common/logging/logger.py",
     "nncf/experimental/torch2",
     "nncf/quantization/passes.py",
     "nncf/quantization/advanced_parameters.py",
