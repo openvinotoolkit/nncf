@@ -193,4 +193,4 @@ class RBSparsityController(BaseSparsityController):
         self._scheduler = StubCompressionScheduler()
 
     def compression_stage(self) -> CompressionStage:
-        raise NotImplementedError("RB sparsity algorithm do not support compression stages")
+        raise None
