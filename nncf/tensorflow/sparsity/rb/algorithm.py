@@ -193,4 +193,4 @@ class RBSparsityController(BaseSparsityController):
         self._scheduler = StubCompressionScheduler()
 
     def compression_stage(self) -> CompressionStage:
-        raise None
+        return None
