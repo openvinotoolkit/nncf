@@ -12,7 +12,7 @@
 import math
 from abc import ABC
 from abc import abstractmethod
-from typing import Optional
+from typing import Optional, Type
 
 from nncf.api.compression import TModel
 from nncf.common.initialization.dataloader import NNCFDataLoader
@@ -83,6 +83,7 @@ class BatchnormAdaptationAlgorithm:
         :param model: A model for which the algorithm will be applied.
         """
         backend = get_backend(model)
+        impl_cls: Type[BatchnormAdaptationAlgorithmImpl]
         if backend is BackendType.TORCH:
             from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl
 
