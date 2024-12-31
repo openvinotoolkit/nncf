@@ -17,7 +17,9 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
-from nncf.common.utils.os import is_windows
+
+def is_windows() -> bool:
+    return "win32" in sys.platform
 
 
 class Command:

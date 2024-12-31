@@ -19,7 +19,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.quantization.algorithms.fast_bias_correction.torch_fx_backend import FXFastBiasCorrectionAlgoBackend
 from nncf.torch.model_graph_manager import OPERATORS_WITH_BIAS_METATYPES
 from tests.cross_fw.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
-from tests.torch.fx.helpers import get_torch_fx_model
+from tests.torch.fx.helpers import get_torch_fx_model_q_transformed
 
 
 class TestTorchFXFBCAlgorithm(TemplateTestFBCAlgorithm):
@@ -33,7 +33,7 @@ class TestTorchFXFBCAlgorithm(TemplateTestFBCAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> torch.fx.GraphModule:
-        fx_model = get_torch_fx_model(model)
+        fx_model = get_torch_fx_model_q_transformed(model, torch.ones(model.INPUT_SIZE))
         return fx_model
 
     @staticmethod
@@ -72,8 +72,7 @@ class TestTorchFXCudaFBCAlgorithm(TestTorchFXFBCAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: bool, tmp_dir: str):
-        fx_cuda_model = get_torch_fx_model(model.cuda())
-        return fx_cuda_model
+        return get_torch_fx_model_q_transformed(model.cuda(), torch.ones(model.INPUT_SIZE))
 
     @staticmethod
     def fn_to_type(tensor):
