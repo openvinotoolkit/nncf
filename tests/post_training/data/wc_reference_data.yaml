@@ -21,7 +21,7 @@ tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
 tinyllama_int8_data_free_backend_TORCH:
   metric_value: 0.95624
   num_int4: 0
-  num_int8: 312
+  num_int8: 311
 tinyllama_data_aware_gptq_scale_estimation_stateful_backend_OV:
   metric_value: 0.86503
   num_int4: 94
@@ -47,4 +47,4 @@ tinyllama_awq_backup_mode_none_backend_OV:
 tinyllama_int4_data_free_backend_TORCH:
   metric_value: 0.73873
   num_int4: 114
-  num_int8: 84
+  num_int8: 83
