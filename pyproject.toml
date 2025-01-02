@@ -88,8 +88,6 @@ known_third_party = "datasets"
 
 [tool.mypy]
 follow_imports = "silent"
-# disable_error_code = ["import-untyped"]
-plugins = "numpy.typing.mypy_plugin"
 strict = true
 # should be removed later
 # mypy recommends the following tool as an autofix:
@@ -97,7 +95,6 @@ strict = true
 implicit_optional = true
 files = [
     "nncf/api",
-    "nncf/common/deprecation.py",
     "nncf/common/engine.py",
     "nncf/common/hook_handle.py",
     "nncf/common/insertion_point_graph.py",
