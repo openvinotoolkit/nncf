@@ -43,9 +43,9 @@ def generate_text_data(
         raise nncf.ModuleNotFoundError("torch is required in order to generate text data: `pip install torch`.")
 
     try:
-        from transformers import PreTrainedModel
+        from transformers import PreTrainedModel  # type: ignore
         from transformers import PreTrainedTokenizerBase
-        from transformers.utils import logging
+        from transformers.utils import logging  # type: ignore
 
         logging.set_verbosity_error()
     except ImportError:
@@ -59,7 +59,7 @@ def generate_text_data(
     if not isinstance(tokenizer, PreTrainedTokenizerBase.__bases__):
         raise nncf.ValidationError("tokenizer should be instance of the `transformers.PreTrainedTokenizerBase`.")
 
-    generated_data = []
+    generated_data: List[str] = []
 
     vocab_size_names = ["padded_vocab_size", "vocab_size"]
     vocab_size = BASE_VOCAB_SIZE

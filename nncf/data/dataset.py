@@ -9,7 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Generic, Iterable, List, Optional, TypeVar
+from __future__ import annotations
+
+from typing import Callable, Generator, Generic, Iterator, List, Optional, Sequence, TypeVar, cast
 
 from nncf.common.utils.api_marker import api
 
@@ -42,12 +44,12 @@ class Dataset(Generic[DataItem, ModelInput]):
     """
 
     def __init__(
-        self, data_source: Iterable[DataItem], transform_func: Optional[Callable[[DataItem], ModelInput]] = None
+        self, data_source: Sequence[DataItem], transform_func: Optional[Callable[[DataItem], ModelInput]] = None
     ):
         self._data_source = data_source
         self._transform_func = transform_func
 
-    def get_data(self, indices: Optional[List[int]] = None) -> Iterable[DataItem]:
+    def get_data(self, indices: Optional[List[int]] = None) -> DataProvider[DataItem, ModelInput]:
         """
         Returns the iterable object that contains selected data items from the data source as-is.
 
@@ -58,7 +60,7 @@ class Dataset(Generic[DataItem, ModelInput]):
         """
         return DataProvider(self._data_source, None, indices)
 
-    def get_inference_data(self, indices: Optional[List[int]] = None) -> Iterable[ModelInput]:
+    def get_inference_data(self, indices: Optional[List[int]] = None) -> DataProvider[DataItem, ModelInput]:
         """
         Returns the iterable object that contains selected data items from the data source, for which
         the transformation function was applied. The item, which was returned per iteration from this
@@ -87,26 +89,27 @@ class Dataset(Generic[DataItem, ModelInput]):
         :return: The value of batch_size or _batch_size attributes of the data_source if exist, and None otherwise.
         """
         if hasattr(self._data_source, "batch_size"):  # Torch dataloader
-            return self._data_source.batch_size
+            return cast(int, self._data_source.batch_size)
         if hasattr(self._data_source, "_batch_size"):  # TF dataloader
-            return self._data_source._batch_size
+            return cast(int, self._data_source._batch_size)
         return None
 
 
 class DataProvider(Generic[DataItem, ModelInput]):
     def __init__(
         self,
-        data_source: Iterable[DataItem],
-        transform_func: Callable[[DataItem], ModelInput],
+        data_source: Sequence[DataItem],
+        transform_func: Optional[Callable[[DataItem], ModelInput]],
         indices: Optional[List[int]] = None,
     ):
         self._data_source = data_source
         if transform_func is None:
-            transform_func = lambda x: x
-        self._transform_func = transform_func
+            self._transform_func = lambda x: x
+        else:
+            self._transform_func = transform_func
         self._indices = indices
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[ModelInput]:
         if self._indices is None:
             return map(self._transform_func, self._data_source)
 
@@ -117,15 +120,15 @@ class DataProvider(Generic[DataItem, ModelInput]):
 
     @staticmethod
     def _get_iterator_for_map_style(
-        data_source: Iterable[DataItem], transform_func: Callable[[DataItem], ModelInput], indices: List[int]
-    ):
+        data_source: Sequence[DataItem], transform_func: Callable[[DataItem], ModelInput], indices: List[int]
+    ) -> Generator[ModelInput, None, None]:
         for index in indices:
             yield transform_func(data_source[index])
 
     @staticmethod
     def _get_iterator_for_iter(
-        data_source: Iterable[DataItem], transform_func: Callable[[DataItem], ModelInput], indices: List[int]
-    ):
+        data_source: Sequence[DataItem], transform_func: Callable[[DataItem], ModelInput], indices: List[int]
+    ) -> Generator[ModelInput, None, None]:
         pos = 0
         num_indices = len(indices)
         for idx, data_item in enumerate(data_source):
