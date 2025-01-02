@@ -160,7 +160,7 @@ BASIC_RANGE_INIT_CONFIG_PROPERTIES = {
 PER_LAYER_RANGE_INIT_CONFIG_PROPERTIES = {
     "type": "object",
     "properties": {
-        **BASIC_RANGE_INIT_CONFIG_PROPERTIES["properties"],
+        **BASIC_RANGE_INIT_CONFIG_PROPERTIES["properties"],  # type: ignore[dict-item]
         **SCOPING_PROPERTIES,
         "target_quantizer_group": with_attributes(
             STRING,
@@ -338,7 +338,7 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
     "parameters have a better chance to get fine-tuned to values that result in good accuracy.",
     "properties": {
         "batchnorm_adaptation": BATCHNORM_ADAPTATION_SCHEMA,
-        **RANGE_INIT_CONFIG_PROPERTIES["initializer"]["properties"],
+        **RANGE_INIT_CONFIG_PROPERTIES["initializer"]["properties"],  # type: ignore[dict-item]
         "precision": PRECISION_INITIALIZER_SCHEMA,
     },
     "additionalProperties": False,

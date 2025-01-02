@@ -11,10 +11,10 @@
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 import jsonschema
-import jstyleson as json
+import jstyleson as json  # type: ignore
 
 import nncf
 from nncf.common.logging import nncf_logger
@@ -28,7 +28,7 @@ from nncf.config.structures import NNCFExtraConfigStruct
 
 
 @api(canonical_alias="nncf.NNCFConfig")
-class NNCFConfig(dict):
+class NNCFConfig(dict[str, Any]):
     """Contains the configuration parameters required for NNCF to apply the selected algorithms.
 
     This is a regular dictionary object extended with some utility functions, such as the ability to attach well-defined
@@ -36,19 +36,19 @@ class NNCFConfig(dict):
     Python JSON-like dictionary - both data types will be checked against a JSONSchema. See the definition of the
     schema at https://openvinotoolkit.github.io/nncf/schema/, or by calling NNCFConfig.schema()."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.__nncf_extra_structs: Dict[str, NNCFExtraConfigStruct] = {}
 
     @classmethod
-    def from_dict(cls, nncf_dict: Dict) -> "NNCFConfig":
+    def from_dict(cls, nncf_dict: Dict[str, Any]) -> "NNCFConfig":
         """
         Load NNCF config from a Python dictionary. The dict must contain only JSON-supported primitives.
 
         :param nncf_dict: A Python dict with the JSON-style configuration for NNCF.
         """
 
-        NNCFConfig.validate(nncf_dict)
+        cls.validate(nncf_dict)
         return cls(deepcopy(nncf_dict))
 
     @classmethod
@@ -63,7 +63,7 @@ class NNCFConfig(dict):
             loaded_json = json.load(f)
         return cls.from_dict(loaded_json)
 
-    def register_extra_structs(self, struct_list: List[NNCFExtraConfigStruct]):
+    def register_extra_structs(self, struct_list: List[NNCFExtraConfigStruct]) -> None:
         """
         Attach the supplied list of extra configuration structures to this configuration object.
 
@@ -78,7 +78,7 @@ class NNCFConfig(dict):
     def get_extra_struct(self, struct_cls: Type[NNCFExtraConfigStruct]) -> NNCFExtraConfigStruct:
         return self.__nncf_extra_structs[struct_cls.get_id()]
 
-    def has_extra_struct(self, struct_cls: Type[NNCFExtraConfigStruct]) -> NNCFExtraConfigStruct:
+    def has_extra_struct(self, struct_cls: Type[NNCFExtraConfigStruct]) -> bool:
         return struct_cls.get_id() in self.__nncf_extra_structs
 
     def get_all_extra_structs(self) -> List[NNCFExtraConfigStruct]:
@@ -108,7 +108,7 @@ class NNCFConfig(dict):
         return param
 
     @staticmethod
-    def schema() -> Dict:
+    def schema() -> Dict[str, Any]:
         """
         Returns the JSONSchema against which the input data formats (.json or Python dict) are validated.
         """
@@ -124,7 +124,7 @@ class NNCFConfig(dict):
         )
 
     @staticmethod
-    def validate(loaded_json):
+    def validate(loaded_json: Dict[str, Any]) -> None:
         try:
             jsonschema.validate(loaded_json, NNCFConfig.schema())
         except jsonschema.ValidationError as e:
@@ -132,7 +132,7 @@ class NNCFConfig(dict):
             absolute_path_parts = [str(x) for x in e.absolute_path]
             if not NNCFConfig._is_path_to_algorithm_name(absolute_path_parts):
                 e.message += f"\nRefer to the NNCF config schema documentation at {SCHEMA_VISUALIZATION_URL}"
-                e.schema = "*schema too long for stdout display*"
+                e.schema = "*schema too long for stdout display*"  # type: ignore[assignment]
                 raise e
 
             # Need to make the error more algo-specific in case the config was so bad that no

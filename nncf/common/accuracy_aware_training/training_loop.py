@@ -277,7 +277,7 @@ class EarlyExitCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         super().__init__(compression_controller)
         accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
         runner_factory = EarlyExitTrainingRunnerCreator(
-            accuracy_aware_training_params,  # type: ignore
+            accuracy_aware_training_params,
             compression_controller,
             uncompressed_model_accuracy,
             verbose,
@@ -330,7 +330,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
 
         accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
         runner_factory = AdaptiveCompressionLevelTrainingRunnerCreator(
-            accuracy_aware_training_params,  # type: ignore
+            accuracy_aware_training_params,
             self.adaptive_controller,
             uncompressed_model_accuracy,
             verbose,
