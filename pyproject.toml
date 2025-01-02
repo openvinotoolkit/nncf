@@ -104,6 +104,7 @@ files = [
     "nncf/quantization/range_estimator.py",
     "nncf/quantization/telemetry_extractors.py",
     "nncf/telemetry/",
+    "nncf/*py",
 ]
 
 [tool.ruff]

@@ -16,7 +16,7 @@ from nncf.common.utils.api_marker import api
 
 class StrEnum(str, Enum):
     def __str__(self) -> str:
-        return self.value
+        return str(self.value)
 
 
 @api(canonical_alias="nncf.TargetDevice")
