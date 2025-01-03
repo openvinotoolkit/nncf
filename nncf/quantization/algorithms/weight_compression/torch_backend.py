@@ -21,12 +21,20 @@ from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import MaxVarianceTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MeanMagnitudeTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressWeightsMode
+from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
@@ -291,3 +299,35 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         transformed_model = PTModelTransformer(model).transform(transformation_layout)
 
         return transformed_model
+
+
+class PTMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, PTWeightCompressionAlgoBackend):
+    @staticmethod
+    def mean_variance_statistic_collector(
+        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+    ) -> TensorCollector:
+        reducer = MeanVarianceReducer(reduction_axes, inplace=True)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector(MeanVarianceTensorStatistic)
+        collector.register_statistic_branch(MeanVarianceTensorStatistic.MEAN_VARIANCE_STAT, reducer, aggregator)
+        return collector
+
+    @staticmethod
+    def max_variance_statistic_collector(
+        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+    ) -> TensorCollector:
+        reducer = MaxVarianceReducer(reduction_axes, inplace=True)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector(MaxVarianceTensorStatistic)
+        collector.register_statistic_branch(MaxVarianceTensorStatistic.MAX_VARIANCE_STAT, reducer, aggregator)
+        return collector
+
+    @staticmethod
+    def mean_abs_max_statistic_collector(
+        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+    ) -> TensorCollector:
+        reducer = MeanAbsMaxReducer(reduction_axes, inplace=True)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector(MeanMagnitudeTensorStatistic)
+        collector.register_statistic_branch(MeanMagnitudeTensorStatistic.MEAN_MAGNITUDE_STAT, reducer, aggregator)
+        return collector

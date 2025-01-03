@@ -702,8 +702,6 @@ class WeightCompression(Algorithm):
         """
         matmul_input_to_output_nodes_map = defaultdict(list)
         for node in matmul_nodes:
-            if node.layer_attributes.input_attributes["transpose"]:  # It works only for OV
-                raise nncf.UnsupportedModelError("Transposed input is not supported")
             act_node, output_port_id = self._get_activation_node_and_port(node, graph)
             matmul_input_to_output_nodes_map[(act_node, output_port_id)].append(node)
         return matmul_input_to_output_nodes_map

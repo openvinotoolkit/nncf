@@ -84,7 +84,7 @@ class ScaleEstimation:
 
     @property
     def available_backends(self) -> List[BackendType]:
-        return [BackendType.OPENVINO]
+        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
@@ -101,6 +101,14 @@ class ScaleEstimation:
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
 
             self._backend_entity = OVWeightCompressionAlgoBackend(model, self.name_to_node_mapping)
+        if model_backend == BackendType.TORCH:
+            from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
+
+            self._backend_entity = PTWeightCompressionAlgoBackend(model, self.name_to_node_mapping)
+        if model_backend == BackendType.TORCH_FX:
+            from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
+
+            self._backend_entity = FXWeightCompressionAlgoBackend(model, self.name_to_node_mapping)
         else:
             raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific AWQ entity because {} is not supported!".format(model_backend.value)

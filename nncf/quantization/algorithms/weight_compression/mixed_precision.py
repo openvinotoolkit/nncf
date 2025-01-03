@@ -211,7 +211,7 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
 
     @property
     def available_backends(self) -> List[BackendType]:
-        return [BackendType.OPENVINO]
+        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
     def _set_backend_entity(self, model: TModel) -> None:
         model_backend = get_backend(model)
@@ -219,6 +219,14 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVMixedPrecisionAlgoBackend
 
             self._backend_entity = OVMixedPrecisionAlgoBackend(model)
+        elif model_backend == BackendType.TORCH:
+            from nncf.quantization.algorithms.weight_compression.torch_backend import PTMixedPrecisionAlgoBackend
+
+            self._backend_entity = PTMixedPrecisionAlgoBackend()
+        elif model_backend == BackendType.TORCH_FX:
+            from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXMixedPrecisionAlgoBackend
+
+            self._backend_entity = FXMixedPrecisionAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
@@ -303,7 +311,7 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
     def _get_statistics_for_node(
         self, statistic_points: StatisticPointsContainer, node: NNCFNode, nncf_graph: NNCFGraph, stat_key: str
     ) -> List[Tensor]:
-        act_node, output_port_id = self._get_activation_node_and_port(node, nncf_graph)
+        act_node, _ = self._get_activation_node_and_port(node, nncf_graph)
 
         def input_filter_func(point):
             # For the floating-point statistics collected in POST_LAYER style,
@@ -311,8 +319,9 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
             # For the cases when the layer has more than one (0) output port.
             return (
                 self._algorithm_key in point.algorithm_to_tensor_collectors
-                and point.target_point.type == TargetType.POST_LAYER_OPERATION
-                and point.target_point.port_id == output_port_id
+                and point.target_point.type in [TargetType.POST_LAYER_OPERATION, TargetType.OPERATOR_POST_HOOK]
+                # and point.target_point.port_id == output_port_id
+                # Add a unique filter func for backend??
             )
 
         stats = []
