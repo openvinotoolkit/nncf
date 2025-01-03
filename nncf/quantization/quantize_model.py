@@ -67,7 +67,7 @@ def warning_model_no_batchwise_support(
     :param graph: Model's NNCFGraph.
     :param advanced_quantization_parameters: AdvancedQuantizationParameters.
     :param model_type: Model type algorithm option.
-    :param no_batchwise_support_metatypes: Meatypes having no batchwise statistics support.
+    :param no_batchwise_support_metatypes: Metatypes having no batchwise statistics support.
     """
     if is_model_no_batchwise_support(
         graph, advanced_quantization_parameters, model_type, no_batchwise_support_metatypes
@@ -80,16 +80,16 @@ def is_model_no_batchwise_support(
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
     model_type: ModelType,
     no_batchwise_support_metatypes: List[OperatorMetatype],
-) -> None:
+) -> bool:
     """
     Returns True if batchwise statistics could lead to a significant accuracy drop.
 
     :param graph: Model's NNCFGraph.
     :param advanced_quantization_parameters: AdvancedQuantizationParameters.
     :param model_type: Model type algorithm option.
-    :param no_batchwise_support_metatypes: Meatypes having no batchwise statistics support.
+    :param no_batchwise_support_metatypes: Metatypes having no batchwise statistics support.
     """
-    return (
+    return bool(
         advanced_quantization_parameters
         and advanced_quantization_parameters.batchwise_statistics
         and (graph.get_nodes_by_metatypes(no_batchwise_support_metatypes) or model_type == ModelType.TRANSFORMER)

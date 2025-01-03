@@ -37,6 +37,8 @@
   - [6.3 Folder structure](#63-folder-structure)
   - [6.4 Test runtime considerations](#64-test-runtime-considerations)
   - [6.5 BKC management](#65-bkc-management)
+- [7 Security rules](#s7-security-rules)
+  - [7.1 Symlinks](#71-symlinks)
 
 </details>
 
@@ -964,4 +966,47 @@ Good:
 
 ```bash
 torch==2.1.0
+```
+
+<a id="s7-security-rules"></a>
+<a id="7-security-rules"></a>
+<a id="security-rules"></a>
+
+## 7 Security rules
+
+<a id="s71-symlinks"></a>
+<a id="71-symlinks"></a>
+<a id="symlinks"></a>
+
+### 7.1 Symlinks
+
+The software attempts to access a file based on the filename, but it does not properly prevent that filename from
+identifying a hard or symlinks that resolves to an unintended recourses.
+
+Check for existence if file before opening or creating them:
+
+- If they already exists, make sure they are neither symbolic links nor hard links, unless it is an expected requirement of the application.
+- If a symlink is expected, check the target of the symlink to make sure it is pointing to an expected path before any other action.
+
+Bad:
+
+```python
+with open(file_path) as f:
+    loaded_json = json.load(f)
+```
+
+Good:
+
+```python
+from nncf.common.utils.os import safe_open
+...
+with safe_open(file_path) as f:
+    loaded_json = json.load(f)
+```
+
+```python
+from nncf.common.utils.os import fail_if_symlink
+...
+fail_if_symlink(file_path)
+function_to_save_or_read_file(file_path)
 ```
