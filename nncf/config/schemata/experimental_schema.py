@@ -35,7 +35,7 @@ from nncf.config.schemata.common.targeting import TARGET_SCOPES_DESCRIPTION
 # Experimental Quantization
 ########################################################################################################################
 EXPERIMENTAL_QUANTIZATION_SCHEMA = copy.deepcopy(QUANTIZATION_SCHEMA)
-EXPERIMENTAL_QUANTIZATION_SCHEMA["properties"]["algorithm"]["const"] = EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG
+EXPERIMENTAL_QUANTIZATION_SCHEMA["properties"]["algorithm"]["const"] = EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG  # type: ignore[index]
 
 ########################################################################################################################
 # BootstrapNAS

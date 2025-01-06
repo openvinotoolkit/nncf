@@ -31,7 +31,7 @@ def extract_algorithm_names(config: NNCFConfig) -> List[str]:
     return retval
 
 
-def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) -> Dict:
+def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) -> Dict[str, Any]:
     """
     Extracts a .json sub-dictionary for a given compression algorithm from the
     common NNCFConfig.
@@ -77,7 +77,7 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
     return next(iter(matches))
 
 
-def extract_range_init_params(config: NNCFConfig, algorithm_name: str = "quantization") -> Optional[Dict[str, object]]:
+def extract_range_init_params(config: NNCFConfig, algorithm_name: str = "quantization") -> Optional[Dict[str, Any]]:
     """
     Extracts parameters of the quantization range initialization algorithm from the
     compression algorithm NNCFconfig.
@@ -90,7 +90,6 @@ def extract_range_init_params(config: NNCFConfig, algorithm_name: str = "quantiz
     algo_config = extract_algo_specific_config(config, algorithm_name)
     init_range_config_dict_or_list = algo_config.get("initializer", {}).get("range", {})
 
-    range_init_args = None
     try:
         range_init_args = config.get_extra_struct(QuantizationRangeInitArgs)
     except KeyError:
@@ -120,7 +119,7 @@ def extract_range_init_params(config: NNCFConfig, algorithm_name: str = "quantiz
 
     if max_num_init_samples == 0:
         return None
-    if range_init_args is None:
+    if not isinstance(range_init_args, QuantizationRangeInitArgs):
         raise ValueError(
             "Should run range initialization as specified via config,"
             "but the initializing data loader is not provided as an extra struct. "
@@ -161,7 +160,7 @@ class BNAdaptDataLoaderNotFoundError(RuntimeError):
     pass
 
 
-def get_bn_adapt_algo_kwargs(nncf_config: NNCFConfig, params: Dict[str, Any]) -> Dict[str, Any]:
+def get_bn_adapt_algo_kwargs(nncf_config: NNCFConfig, params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     num_bn_adaptation_samples = params.get("num_bn_adaptation_samples", NUM_BN_ADAPTATION_SAMPLES)
 
     if num_bn_adaptation_samples == 0:
@@ -175,6 +174,11 @@ def get_bn_adapt_algo_kwargs(nncf_config: NNCFConfig, params: Dict[str, Any]) ->
             "because the data loader is not provided as an extra struct. Refer to the "
             "`NNCFConfig.register_extra_structs` method and the `BNAdaptationInitArgs` class."
         ) from None
+
+    if not isinstance(args, BNAdaptationInitArgs):
+        raise BNAdaptDataLoaderNotFoundError(
+            "The extra struct for batch-norm adaptation must be an instance of the BNAdaptationInitArgs class."
+        )
     params = {
         "num_bn_adaptation_samples": num_bn_adaptation_samples,
         "data_loader": args.data_loader,
@@ -183,7 +187,7 @@ def get_bn_adapt_algo_kwargs(nncf_config: NNCFConfig, params: Dict[str, Any]) ->
     return params
 
 
-def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, object]:
+def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, Any]:
     """
     Extracts accuracy aware training parameters from NNCFConfig.
 
@@ -196,7 +200,7 @@ def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, obje
         FILTER_PRUNING = "filter_pruning"
         SPARSITY = ["rb_sparsity", "magnitude_sparsity", "const_sparsity"]
 
-    def validate_accuracy_aware_schema(config: NNCFConfig, params: Dict[str, object]):
+    def validate_accuracy_aware_schema(config: NNCFConfig, params: Dict[str, Any]) -> None:
         from nncf.common.accuracy_aware_training import AccuracyAwareTrainingMode
 
         if params["mode"] == AccuracyAwareTrainingMode.EARLY_EXIT:
