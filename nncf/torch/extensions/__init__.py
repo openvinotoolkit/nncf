@@ -47,15 +47,6 @@ def get_build_directory_for_extension(name: str) -> Path:
         build_dir.mkdir(parents=True, exist_ok=True)
     return build_dir
 
-
-def set_cuda_arch_list():
-    if "TORCH_CUDA_ARCH_LIST" not in os.environ:
-        arch_list = torch.cuda.get_arch_list()
-        formatted_arch_list = [str(int(arch.split("_")[1]) / 10.0) for arch in arch_list]
-        arch_string = ";".join(formatted_arch_list)
-        os.environ["TORCH_CUDA_ARCH_LIST"] = arch_string
-
-
 class ExtensionLoader(ABC):
     @classmethod
     @abstractmethod
@@ -109,8 +100,6 @@ class ExtensionNamespace:
                 try:
                     with warnings.catch_warnings():
                         warnings.filterwarnings("ignore", message="TORCH_CUDA_ARCH_LIST is not set")
-                        set_cuda_arch_list()
-
                         pool = ThreadPool(processes=1)
                         async_result = pool.apply_async(self._loader.load)
                         self._loaded_namespace = async_result.get(timeout=timeout)

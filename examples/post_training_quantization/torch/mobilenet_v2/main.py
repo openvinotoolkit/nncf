@@ -94,6 +94,7 @@ def get_model_size(ir_path: Path, m_type: str = "Mb") -> float:
 
 ###############################################################################
 # Create a PyTorch model and dataset
+
 dataset_path = download_dataset()
 
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
