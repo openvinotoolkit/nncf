@@ -387,19 +387,27 @@ will return the currently associated model object “stripped” in-place.</p></
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.NNCFConfig">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">NNCFConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/config/config.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.NNCFConfig" title="Permalink to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></p>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">Any</span></code>]</p>
 <p>Contains the configuration parameters required for NNCF to apply the selected algorithms.</p>
 <p>This is a regular dictionary object extended with some utility functions, such as the ability to attach well-defined
 structures to pass non-serializable objects as parameters. It is primarily built from a .json file, or from a
 Python JSON-like dictionary - both data types will be checked against a JSONSchema. See the definition of the
 schema at <a class="reference external" href="https://openvinotoolkit.github.io/nncf/schema/">https://openvinotoolkit.github.io/nncf/schema/</a>, or by calling NNCFConfig.schema().</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>args</strong> (<em>Any</em>) – </p></li>
+<li><p><strong>kwargs</strong> (<em>Any</em>) – </p></li>
+</ul>
+</dd>
+</dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.NNCFConfig.from_dict">
 <em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nncf_dict</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/config/config.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.NNCFConfig.from_dict" title="Permalink to this definition">#</a></dt>
 <dd><p>Load NNCF config from a Python dictionary. The dict must contain only JSON-supported primitives.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>nncf_dict</strong> (<em>Dict</em>) – A Python dict with the JSON-style configuration for NNCF.</p>
+<dd class="field-odd"><p><strong>nncf_dict</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – A Python dict with the JSON-style configuration for NNCF.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#nncf.NNCFConfig" title="nncf.NNCFConfig">NNCFConfig</a></p>
@@ -428,6 +436,9 @@ schema at <a class="reference external" href="https://openvinotoolkit.github.io/
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>struct_list</strong> (<em>List</em><em>[</em><em>nncf.config.structures.NNCFExtraConfigStruct</em><em>]</em>) – List of extra configuration structures.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -464,7 +475,7 @@ the resolution of the redefinable parameter should occur.</p></li>
 <dd><p>Returns the JSONSchema against which the input data formats (.json or Python dict) are validated.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Dict</p>
+<dd class="field-odd"><p>Dict[str, Any]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -906,7 +917,7 @@ are quantized using a half of the 8-bit quantization range.</p></li>
 <p>The ignored scope defines model sub-graphs that should be excluded from the compression process such as
 quantization, pruning and etc.</p>
 <p>Example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">nncf</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">nncf</span>
 
 <span class="c1"># Exclude by node name:</span>
 <span class="n">node_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;node_1&#39;</span><span class="p">,</span> <span class="s1">&#39;node_2&#39;</span><span class="p">,</span> <span class="s1">&#39;node_3&#39;</span><span class="p">]</span>

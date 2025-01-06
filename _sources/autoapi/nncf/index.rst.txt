@@ -68,7 +68,7 @@ Functions
 
 .. py:class:: NNCFConfig(*args, **kwargs)
 
-   Bases: :py:obj:`dict`
+   Bases: :py:obj:`dict`\ [\ :py:obj:`str`\ , :py:obj:`Any`\ ]
 
    Contains the configuration parameters required for NNCF to apply the selected algorithms.
 
