@@ -136,7 +136,7 @@ class StatisticsCacheError(Exception):
     Raised when any error occurs during statistics caching.
     """
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             "The error occurred during statistics caching:\n"
             f"{super().__str__()}\n"
