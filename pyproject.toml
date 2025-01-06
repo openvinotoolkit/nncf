@@ -94,6 +94,7 @@ strict = true
 implicit_optional = true
 files = [
     "nncf/data",
+    "nncf/config",
     "nncf/common/sparsity",
     "nncf/common/graph",
     "nncf/common/accuracy_aware_training/",
@@ -105,6 +106,7 @@ files = [
     "nncf/quantization/range_estimator.py",
     "nncf/quantization/telemetry_extractors.py",
     "nncf/telemetry/",
+    "nncf/*py",
 ]
 
 [tool.ruff]

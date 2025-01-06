@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -141,7 +141,7 @@ def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List
     :param ignored_scope: The ignored scope.
     :return: An ignored scope in the legacy format as list.
     """
-    results = []
+    results: List[str] = []
     if ignored_scope is None:
         return results
     results.extend(ignored_scope.names)
@@ -164,7 +164,7 @@ def get_matched_ignored_scope_info(
     :param nncf_graphs: Graphs.
     :returns: Matched ignored scope along with all matches.
     """
-    names, patterns, types, subgraphs_numbers = set(), set(), set(), set()
+    names, patterns, types, subgraphs_numbers = set(), set(), set(), set()  # type: ignore
     matches = {"names": names, "patterns": set(), "types": set(), "subgraphs": set()}
 
     for graph in nncf_graphs:

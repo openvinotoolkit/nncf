@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -35,7 +35,7 @@ from nncf.config.schemata.common.targeting import TARGET_SCOPES_DESCRIPTION
 # Experimental Quantization
 ########################################################################################################################
 EXPERIMENTAL_QUANTIZATION_SCHEMA = copy.deepcopy(QUANTIZATION_SCHEMA)
-EXPERIMENTAL_QUANTIZATION_SCHEMA["properties"]["algorithm"]["const"] = EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG
+EXPERIMENTAL_QUANTIZATION_SCHEMA["properties"]["algorithm"]["const"] = EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG  # type: ignore[index]
 
 ########################################################################################################################
 # BootstrapNAS

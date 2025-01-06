@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -277,7 +277,7 @@ class EarlyExitCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         super().__init__(compression_controller)
         accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
         runner_factory = EarlyExitTrainingRunnerCreator(
-            accuracy_aware_training_params,  # type: ignore
+            accuracy_aware_training_params,
             compression_controller,
             uncompressed_model_accuracy,
             verbose,
@@ -330,7 +330,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
 
         accuracy_aware_training_params = extract_accuracy_aware_training_params(nncf_config)
         runner_factory = AdaptiveCompressionLevelTrainingRunnerCreator(
-            accuracy_aware_training_params,  # type: ignore
+            accuracy_aware_training_params,
             self.adaptive_controller,
             uncompressed_model_accuracy,
             verbose,
