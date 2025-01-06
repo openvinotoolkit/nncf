@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, Generator, Generic, Iterator, List, Optional, Sequence, TypeVar, cast
+from typing import Callable, Generator, Generic, Iterable, Iterator, List, Optional, TypeVar, cast
 
 from nncf.common.utils.api_marker import api
 
@@ -44,12 +44,12 @@ class Dataset(Generic[DataItem, ModelInput]):
     """
 
     def __init__(
-        self, data_source: Sequence[DataItem], transform_func: Optional[Callable[[DataItem], ModelInput]] = None
+        self, data_source: Iterable[DataItem], transform_func: Optional[Callable[[DataItem], ModelInput]] = None
     ):
         self._data_source = data_source
         self._transform_func = transform_func
 
-    def get_data(self, indices: Optional[List[int]] = None) -> DataProvider[DataItem, ModelInput]:
+    def get_data(self, indices: Optional[List[int]] = None) -> Iterable[DataItem]:
         """
         Returns the iterable object that contains selected data items from the data source as-is.
 
@@ -60,7 +60,7 @@ class Dataset(Generic[DataItem, ModelInput]):
         """
         return DataProvider(self._data_source, None, indices)
 
-    def get_inference_data(self, indices: Optional[List[int]] = None) -> DataProvider[DataItem, ModelInput]:
+    def get_inference_data(self, indices: Optional[List[int]] = None) -> Iterable[ModelInput]:
         """
         Returns the iterable object that contains selected data items from the data source, for which
         the transformation function was applied. The item, which was returned per iteration from this
@@ -80,7 +80,7 @@ class Dataset(Generic[DataItem, ModelInput]):
         :return: The length of the data_source if __len__() is implemented for it, and None otherwise.
         """
         if hasattr(self._data_source, "__len__"):
-            return self._data_source.__len__()
+            return cast(int, self._data_source.__len__())
         return None
 
     def get_batch_size(self) -> Optional[int]:
@@ -98,7 +98,7 @@ class Dataset(Generic[DataItem, ModelInput]):
 class DataProvider(Generic[DataItem, ModelInput]):
     def __init__(
         self,
-        data_source: Sequence[DataItem],
+        data_source: Iterable[DataItem],
         transform_func: Optional[Callable[[DataItem], ModelInput]],
         indices: Optional[List[int]] = None,
     ):
@@ -120,14 +120,14 @@ class DataProvider(Generic[DataItem, ModelInput]):
 
     @staticmethod
     def _get_iterator_for_map_style(
-        data_source: Sequence[DataItem], transform_func: Callable[[DataItem], ModelInput], indices: List[int]
+        data_source: Iterable[DataItem], transform_func: Callable[[DataItem], ModelInput], indices: List[int]
     ) -> Generator[ModelInput, None, None]:
         for index in indices:
-            yield transform_func(data_source[index])
+            yield transform_func(data_source[index])  # type: ignore[index]
 
     @staticmethod
     def _get_iterator_for_iter(
-        data_source: Sequence[DataItem], transform_func: Callable[[DataItem], ModelInput], indices: List[int]
+        data_source: Iterable[DataItem], transform_func: Callable[[DataItem], ModelInput], indices: List[int]
     ) -> Generator[ModelInput, None, None]:
         pos = 0
         num_indices = len(indices)
