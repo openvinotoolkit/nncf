@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        group: [1, 2]
+        group: [1, 2, 3]
     defaults:
       run:
         shell: bash
@@ -50,7 +50,7 @@ jobs:
             --junit-xml=pytest-results.xml \
             --durations-path=tests/post_training/data/wc_test_durations.json \
             --splitting-algorithm=least_duration \
-            --splits 2 \
+            --splits 3 \
             --group ${{ matrix.group }} \
             ${{ github.event.inputs.pytest_args || '' }}
           ret=$?
@@ -58,7 +58,7 @@ jobs:
         env:
           TQDM_DISABLE: 1
           HOME_HF: "/home/runner/hf_home"
-      - name: Print report
+      - name: Print results.csv
         if: ${{ !cancelled() }}
         run: column -s, -t < tmp/results.csv || echo "no file"
       - name: Upload artifact
