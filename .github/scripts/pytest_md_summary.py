@@ -44,8 +44,12 @@ def parse_xml_report(xml_file) -> None:
         elif testcase.find("error") is not None:
             status = "$${\color{red}Error}$$"
         elif testcase.find("skipped") is not None:
-            status = "$${\color{orange}Skipped}$$"
-            message = testcase.find("skipped").get("message", "")
+            if "xfail" in testcase.find("skipped").get("type", ""):
+                status = "$${\color{orange}xfail}$$"
+                message = testcase.find("skipped").get("message", "")
+            else:
+                status = "$${\color{yellow}Skipped}$$"
+                message = testcase.find("skipped").get("message", "")
         else:
             status = "$${\color{green}Ok}$$"
 
