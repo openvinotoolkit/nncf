@@ -11,6 +11,7 @@ on:
       pytest_args:
         description: 'Pytest arguments'
         default: ''
+  pull_request:  # TODO: remove
 
 jobs:
   examples-cpu:
@@ -57,6 +58,15 @@ jobs:
         env:
           TQDM_DISABLE: 1
           HOME_HF: "/home/runner/hf_home"
+      - name: Print report
+        if: ${{ !cancelled() }}
+        run: column -s, -t < tmp/results.csv || echo "no file"
+      - name: Upload artifact
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b #v4.5.0
+        with:
+          name: wc_results_${{ matrix.group }}
+          path: tmp/results.csv
       - name: Test Summary
         if: ${{ !cancelled() }}
         run: |
