@@ -8,6 +8,7 @@ on:
 
 jobs:
   precommit:
+    if: github.repository_owner == 'openvinotoolkit'
     strategy:
       fail-fast: false
       matrix:
@@ -16,3 +17,7 @@ jobs:
     with:
       python_version: ${{ matrix.python_version }}
       gpu_enabled: false
+
+  macos:
+    if: github.repository_owner == 'openvinotoolkit'
+    uses: ./.github/workflows/macos.yml
