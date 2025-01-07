@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,7 +11,7 @@
 
 
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
 
 import networkx as nx  # type: ignore
 import torch
@@ -21,6 +21,7 @@ import nncf
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
 from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
@@ -28,6 +29,7 @@ from nncf.experimental.torch2.function_hook.graph.graph_utils import EdgeMeta
 from nncf.experimental.torch2.function_hook.graph.graph_utils import FunctionMeta
 from nncf.experimental.torch2.function_hook.graph.graph_utils import InOutMeta
 from nncf.experimental.torch2.function_hook.graph.graph_utils import NodeType
+from nncf.experimental.torch2.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
 
 
 def get_node_type(type: NodeType, meta: Union[ConstMeta, FunctionMeta, InOutMeta]) -> str:
@@ -45,7 +47,7 @@ def get_node_type(type: NodeType, meta: Union[ConstMeta, FunctionMeta, InOutMeta
     if isinstance(meta, ConstMeta):
         return "nncf_model_const"
     if isinstance(meta, FunctionMeta):
-        return meta.fn_name
+        return meta.func_name
     raise nncf.InternalError("Unexpected metadata type")
 
 
@@ -77,18 +79,84 @@ def get_dtype(dtype: torch.dtype) -> Dtype:
     return Dtype.INTEGER
 
 
-def get_meta_type(node_type: str, meta: Union[ConstMeta, FunctionMeta, InOutMeta]) -> om.PTOperatorMetatype:
+def get_meta_type(node_type: str, meta: Union[ConstMeta, FunctionMeta, InOutMeta]) -> type[om.PTOperatorMetatype]:
     """
     Converts the node type and metadata into a PTOperatorMetatype object.
     :param node_type: The type of the node.
     :param meta: The metadata associated with the node.
     :return: The PTOperatorMetatype object.
     """
-    node_metatype = cast(om.PTOperatorMetatype, om.PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type))
-    node_sub_meta_type: Optional[om.PTOperatorMetatype] = None
+    node_metatype = cast(
+        type[om.PTOperatorMetatype], om.PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
+    )
+    node_sub_meta_type: Optional[type[om.PTOperatorMetatype]] = None
     if node_metatype.get_subtypes() and isinstance(meta, FunctionMeta):
         node_sub_meta_type = node_metatype.determine_subtype(function_args=meta.args, functions_kwargs=meta.kwargs)
     return node_sub_meta_type or node_metatype
+
+
+def is_constant_input_node(nx_graph: nx.MultiDiGraph, node: int) -> bool:
+    """
+    Check if a node is a constant input node or constant subgraph:
+
+    1) constant
+    2) quantize_function -> constant
+
+    :param nx_graph: The graph to check the node from.
+    :param node: The node to check.
+    :return: True if the node is a constant input node, False otherwise.
+    """
+    meta = nx_graph.nodes[node]["meta"]
+
+    # 1) Input node is a constant node (parameter or buffer)
+    if isinstance(meta, ConstMeta):
+        return True
+
+    # 2) Quantize node with constant input
+    if (
+        isinstance(meta, FunctionMeta)
+        and meta.func_name in om.QUANTIZE_NODE_TYPES
+        and isinstance(nx_graph.nodes[node]["meta"], FunctionMeta)
+    ):
+        return all(isinstance(nx_graph.nodes[s_node]["meta"], ConstMeta) for s_node, _ in nx_graph.in_edges(node))
+
+    return False
+
+
+def get_constant_port_ids(nx_graph: nx.MultiDiGraph, node: int) -> Set[int]:
+    """
+    Get the indices of input ports corresponding to the constant node or subgraph.
+
+    :param nx_graph: The graph to get the constant port IDs from.
+    :param node: The node to get the constant port IDs from.
+    :return: The list of input port indices with constants.
+    """
+    constant_port_ids: Set[int] = set()
+
+    for s_node, _, data in nx_graph.in_edges(node, data=True):
+        if is_constant_input_node(nx_graph, s_node):
+            meta = cast(EdgeMeta, data["meta"])
+            constant_port_ids.add(meta.input_port)
+
+    return constant_port_ids
+
+
+def get_layer_attributes(
+    nx_graph: nx.MultiDiGraph, node: int, meta: Union[ConstMeta, FunctionMeta, InOutMeta]
+) -> Optional[BaseLayerAttributes]:
+    """
+    Get the layer attributes of a node in the graph.
+
+    :param nx_graph: The graph to get the layer attributes from.
+    :param node: The node to get the layer attributes from.
+    :param meta: The metadata associated with the node.
+    :return: The layer attributes of the node.
+    """
+    if isinstance(meta, FunctionMeta):
+        constant_port_ids = get_constant_port_ids(nx_graph, node)
+        return PT2OpLayerAttributes(meta.func, meta.args, meta.kwargs, constant_port_ids)
+
+    return None
 
 
 def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> NNCFGraph:
@@ -102,15 +170,18 @@ def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> NNCFGraph:
 
     map_nx_node_to_nncf_node: Dict[int, NNCFNode] = {}
     for node, data in nx_graph.nodes(data=True):
-        meta: Union[ConstMeta, FunctionMeta, InOutMeta] = data["meta"]
+        meta = data["meta"]
+        if not isinstance(meta, (ConstMeta, FunctionMeta, InOutMeta)):
+            raise nncf.InternalError(f"Unknown metadata type: {type(meta)}")
         node_name = get_name_of_node(meta)
         node_type = get_node_type(data["type"], meta)
         meta_type = get_meta_type(node_type, meta)
-
+        layer_attributes = get_layer_attributes(nx_graph, node, meta)
         nncf_node = nncf_graph.add_nncf_node(
             node_name=node_name,
             node_type=node_type,
-            node_metatype=meta_type,  # type: ignore[arg-type]
+            node_metatype=meta_type,
+            layer_attributes=layer_attributes,
         )
         map_nx_node_to_nncf_node[node] = nncf_node
 

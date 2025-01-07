@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple, Union, cast
+from typing import Any, Callable, Dict, Optional, Tuple, Union, cast
 
 import networkx as nx  # type: ignore[import-untyped]
 import torch
@@ -185,23 +185,23 @@ class GraphBuilderMode(FunctionHookMode):
         :param output: The output tensor.
         :param op_meta: Metadata about the operation.
         """
-        fn_name = None
+        func: Optional[Callable[..., Any]] = None
         fn_kwargs = None
 
         if output.grad_fn is not None:
             if output.grad_fn.name() == "TransposeBackward0":
-                fn_name = "transpose"
+                func = torch.transpose
                 # grad_fn collect arguments as _saved_dim0=18446744073709551614
                 fn_kwargs = {
                     "dim0": -(2**64 - output.grad_fn._saved_dim0),  # type: ignore[attr-defined]
                     "dim1": -(2**64 - output.grad_fn._saved_dim1),  # type: ignore[attr-defined]
                 }
             if output.grad_fn.name() == "PermuteBackward0":
-                fn_name = "permute"
+                func = torch.permute
                 fn_kwargs = {"dims": output.grad_fn._saved_dims}  # type: ignore[attr-defined]
 
-        if fn_name is not None and fn_kwargs is not None:
-            self.graph.nodes[op_meta.extra_info["node_id"]]["meta"].fn_name = fn_name
+        if func is not None and fn_kwargs is not None:
+            self.graph.nodes[op_meta.extra_info["node_id"]]["meta"].func = func
             self.graph.nodes[op_meta.extra_info["node_id"]]["meta"].kwargs = fn_kwargs
 
     def execute_post_hooks(self, outputs: Any, op_meta: OpMeta) -> Any:
@@ -320,7 +320,7 @@ class GraphBuilderMode(FunctionHookMode):
         self.graph.add_node(
             node_id,
             type=NodeType.fn_call,
-            meta=FunctionMeta(op_name=op_name, fn_name=op_meta.func.__name__, args=tuple(op_attrs), kwargs=op_kwargs),
+            meta=FunctionMeta(op_name=op_name, func=op_meta.func, args=tuple(op_attrs), kwargs=op_kwargs),
         )
 
         logger.debug(f"GraphBuilderMode.process_op_inputs: {node_id=} {op_name=} {op_attrs=} {op_kwargs=}")
