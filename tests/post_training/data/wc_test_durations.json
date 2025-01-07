@@ -1,0 +1,15 @@
+{
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_awq_backup_mode_none_backend_OV]": 269,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_aware_awq_scale_estimation_backend_OV]": 421,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV]": 374,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_aware_awq_stateful_backend_OV]": 243,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_aware_backend_OV]": 190,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_aware_gptq_scale_estimation_stateful_backend_OV]": 1463,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_aware_lora_stateful_backend_OV]": 483,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_free_backend_FP32]": 0,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_data_free_backend_OV]": 196,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_int4_data_free_backend_TORCH]": 133,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_int8_data_free_backend_TORCH]": 154,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_NF4_scale_estimation_stateful_per_channel_backend_OV]": 256,
+    "tests/post_training/test_quantize_conformance.py::test_weight_compression[tinyllama_scale_estimation_per_channel_backend_OV]": 258
+}

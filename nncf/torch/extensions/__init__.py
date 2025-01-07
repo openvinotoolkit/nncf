@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 import enum
 import os
 import textwrap
+import warnings
 from abc import ABC
 from abc import abstractmethod
 from multiprocessing.context import TimeoutError as MPTimeoutError
@@ -96,9 +97,11 @@ class ExtensionNamespace:
             timeout = timeout if timeout > 0 else None
             nncf_logger.info(f"Compiling and loading torch extension: {self._loader.name()}...")
             try:
-                pool = ThreadPool(processes=1)
-                async_result = pool.apply_async(self._loader.load)
-                self._loaded_namespace = async_result.get(timeout=timeout)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", message="TORCH_CUDA_ARCH_LIST is not set")
+                    pool = ThreadPool(processes=1)
+                    async_result = pool.apply_async(self._loader.load)
+                    self._loaded_namespace = async_result.get(timeout=timeout)
             except MPTimeoutError as error:
                 msg = textwrap.dedent(
                     f"""\
