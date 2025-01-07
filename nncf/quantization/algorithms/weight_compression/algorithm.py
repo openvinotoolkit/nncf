@@ -266,6 +266,14 @@ class WeightCompression(Algorithm):
                 subset_size=gptq_params.subset_size,
                 scale_estimation=self._scale_estimation,
             )
+        if self._scale_estimation:
+            scale_estimation_params = self._advanced_parameters.scale_estimation_params
+            self._scale_estimation_algo = ScaleEstimation(
+                scale_estimation_params.subset_size,
+                scale_estimation_params.initial_steps,
+                scale_estimation_params.scale_steps,
+                scale_estimation_params.weight_penalty,
+            )
 
         self._data_aware_mixed_precision = (
             self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
@@ -616,18 +624,13 @@ class WeightCompression(Algorithm):
             )
         else:
             if self._scale_estimation:
-                scale_estimation_params = self._advanced_parameters.scale_estimation_params
-                scales, zero_points = ScaleEstimation(
-                    model,
-                    self._backend_entity.name_to_node_mapping,
-                    all_weight_params,
-                    nodes_to_compress,
-                    statistics,
-                    scale_estimation_params.subset_size,
-                    scale_estimation_params.initial_steps,
-                    scale_estimation_params.scale_steps,
-                    scale_estimation_params.weight_penalty,
-                ).apply(model, graph)
+                scales, zero_points = self._scale_estimation_algo.apply(
+                    model=model,
+                    graph=graph,
+                    all_weight_params=all_weight_params,
+                    statistics=statistics,
+                    backend_entity=self._backend_entity,
+                )
 
             if self._lora_correction:
                 lora_correction_params = self._advanced_parameters.lora_correction_params
