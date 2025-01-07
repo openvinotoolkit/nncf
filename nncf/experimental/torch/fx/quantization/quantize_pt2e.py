@@ -17,6 +17,7 @@ import torch.fx
 from torch.ao.quantization.pt2e.duplicate_dq_pass import DuplicateDQPass
 from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
 from torch.ao.quantization.pt2e.utils import _disallow_eval_train
+from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.ao.quantization.quantizer import Quantizer
 from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
@@ -26,11 +27,9 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.data import Dataset
 from nncf.experimental.quantization.algorithms.post_training.algorithm import ExperimentalPostTrainingQuantization
-from nncf.experimental.quantization.algorithms.quantizer.base_quantizer import Quantizer as NNCFQuantizer
-from nncf.experimental.quantization.algorithms.quantizer.fx_quantizer import NNCFFXQuantizer
+from nncf.experimental.quantization.algorithms.quantizer.torch_ao_adapter import TorchAOQuantizerAdapter
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.transformations import QUANTIZE_NODE_TARGETS
-from nncf.experimental.torch.fx.transformations import fuse_conv_bn
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
@@ -48,7 +47,7 @@ def quantize_pt2e(
     activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
     weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
     batchwise_statistics: Optional[bool] = None,
-    fold_quantize: bool = False,
+    fold_quantize: bool = True,
     do_copy: bool = False,
 ) -> torch.fx.GraphModule:
     """
@@ -72,7 +71,7 @@ def quantize_pt2e(
     :param batchwise_statistics: Determines whether quantizer statistics should be calculated
         for each item of the batch or for the entire batch, default is None, which means
         it set True if batch_size > 1 otherwise False.
-    :param fold_quantize: Boolean flag for whether fold the quantize op or not.
+    :param fold_quantize: Boolean flag for whether fold the quantize op or not. The value is True by default.
     :param do_copy: The copy of the given model is being quantized if do_copy == True,
         otherwise the model is quantized inplace. Default value is False.
     """
@@ -90,15 +89,12 @@ def quantize_pt2e(
     if do_copy:
         model = deepcopy(model)
 
-    # To make it easier for bias correction algorithms,
-    # biases are being separated by the followng calls.
-    fuse_conv_bn(model)
+    _fuse_conv_bn_(model)
     # Call ao quantizer transform_for_annotation
     # before the NNCFGraph creation
     quantizer.transform_for_annotation(model)
 
-    if not isinstance(quantizer, NNCFQuantizer):
-        quantizer = NNCFFXQuantizer(quantizer)
+    quantizer = TorchAOQuantizerAdapter(quantizer)
 
     quantization_algorithm = ExperimentalPostTrainingQuantization(
         quantizer=quantizer,

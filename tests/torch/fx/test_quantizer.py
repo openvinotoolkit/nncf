@@ -156,8 +156,10 @@ class TestModelQuantization:
         # Uncomment to visualize reference graphs
         # from torch.ao.quantization.quantize_pt2e import convert_pt2e
         # from torch.ao.quantization.quantize_pt2e import prepare_pt2e
+        # from tests.torch.fx.helpers import visualize_fx_model
         # prepared_model = prepare_pt2e(fx_model, quantizer)
         # prepared_model(example_input)
         # ao_quantized_model = convert_pt2e(prepared_model)
+        # visualize_fx_model(ao_quantized_model, f"{model_case.model_id}ao_int8.svg")
         # ao_nncf_graph = GraphConverter.create_nncf_graph(ao_quantized_model)
         # ao_nncf_graph.visualize_graph("ao_" + get_dot_filename(model_case.model_id))

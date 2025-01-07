@@ -34,7 +34,7 @@ from nncf.experimental.quantization.algorithms.quantizer.base_quantizer import Q
 EdgeOrNode = Union[Tuple[torch.fx.Node, torch.fx.Node]]
 
 
-class NNCFFXQuantizer(NNCFQuantizer):
+class TorchAOQuantizerAdapter(NNCFQuantizer):
     def __init__(self, quantizer: Quantizer):
         self._quantizer = quantizer
 
