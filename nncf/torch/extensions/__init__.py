@@ -12,6 +12,7 @@
 import enum
 import os
 import textwrap
+import warnings
 from abc import ABC
 from abc import abstractmethod
 from multiprocessing.context import TimeoutError as MPTimeoutError
@@ -98,9 +99,11 @@ class ExtensionNamespace:
 
             with extension_is_loading_info_log(self._loader.name()):
                 try:
-                    pool = ThreadPool(processes=1)
-                    async_result = pool.apply_async(self._loader.load)
-                    self._loaded_namespace = async_result.get(timeout=timeout)
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore", message="TORCH_CUDA_ARCH_LIST is not set")
+                        pool = ThreadPool(processes=1)
+                        async_result = pool.apply_async(self._loader.load)
+                        self._loaded_namespace = async_result.get(timeout=timeout)
                 except MPTimeoutError as error:
                     msg = textwrap.dedent(
                         f"""\
