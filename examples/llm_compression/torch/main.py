@@ -19,12 +19,12 @@ from transformers import AutoTokenizer
 
 import nncf
 
-MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v0.3"
+MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
 OUTPUT_DIR = "tinyllama_compressed"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def quantize(model, dataset):
+def quantize(model, tokenizer, dataset):
     quantization_dataset = nncf.Dataset(dataset)
     compressed_model = nncf.compress_weights(
         model,
@@ -51,23 +51,23 @@ def validate(tokenizer, model):
 
 def main():
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    model = AutoModelForCausalLM.from_pretrained(MODEL_ID).to(device)
+    model = AutoModelForCausalLM.from_pretrained(MODEL_ID, load_in_8bit=False).to(device)
     model.eval()
 
     dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
-    dataset = dataset.filter(lambda example: len(example["text"]) > 128)  # necessary - why??
+    # dataset = dataset.filter(lambda example: len(example["text"]) > 128)  # THIS LEADS TO A WORSE RESULT ON VALIDATION
 
     def transform_fn(data):
-        tokenized_text = tokenizer(data["text"], return_tensors="pt")
+        tokenized_text = tokenizer(data["text"], return_tensors="pt").to(device)
         return tokenized_text.data  # NEED TO RETURN ONE OF THE FORMATS of ENGINE (DICT)
 
     dataset = dataset.map(transform_fn).with_format("torch", device=device)
 
-    quantize(model, dataset)
-    compressed_model = OVModelForCausalLM.from_pretrained(
+    quantize(model, tokenizer, dataset)
+    model = OVModelForCausalLM.from_pretrained(
         OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"}
     )
-    validate(tokenizer, compressed_model)
+    validate(tokenizer, model)
 
 
 if __name__ == "__main__":
