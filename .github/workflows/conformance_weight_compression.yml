@@ -1,0 +1,74 @@
+name: Weight compression
+permissions: read-all
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: 'The pull request number'
+        default: ''
+      pytest_args:
+        description: 'Pytest arguments'
+        default: ''
+
+jobs:
+  examples-cpu:
+    name: Weight compression [${{ matrix.group }}/3]
+    runs-on: ubuntu-22.04-16-cores
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1, 2, 3]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        with:
+            lfs: true
+            fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
+      - name: Fetch and Checkout the Pull Request Branch
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
+        run: |
+          git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
+          git checkout pr-${{ github.event.inputs.pull_request_number }}
+      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+        with:
+          python-version: 3.10.14
+          cache: pip
+      - name: cpuinfo
+        run: cat /proc/cpuinfo
+      - name: Install NNCF and test requirements
+        run: pip install -e . -r tests/post_training/requirements.txt
+      - name: Print installed modules
+        run: pip list
+      - name: Run examples test scope
+        run: |
+          python -m pytest -s -ra tests/post_training/test_quantize_conformance.py::test_weight_compression \
+            --junit-xml=pytest-results.xml \
+            --durations-path=tests/post_training/data/wc_test_durations.json \
+            --splitting-algorithm=least_duration \
+            --splits 3 \
+            --group ${{ matrix.group }} \
+            ${{ github.event.inputs.pytest_args || '' }}
+          ret=$?
+          [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+        env:
+          TQDM_DISABLE: 1
+          HOME_HF: "/home/runner/hf_home"
+      - name: Print results.csv
+        if: ${{ !cancelled() }}
+        run: column -s, -t < tmp/results.csv || echo "no file"
+      - name: Upload artifact
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b #v4.5.0
+        with:
+          name: wc_results_${{ matrix.group }}
+          path: tmp/results.csv
+      - name: Test Summary
+        if: ${{ !cancelled() }}
+        run: |
+          pip install defusedxml==0.7.1
+          python .github/scripts/pytest_md_summary.py pytest-results.xml >> $GITHUB_STEP_SUMMARY
