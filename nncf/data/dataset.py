@@ -11,16 +11,13 @@
 
 from __future__ import annotations
 
-from typing import Callable, Generator, Generic, Iterable, Iterator, List, Optional, TypeVar, cast
+from typing import Any, Callable, Generator, Iterable, Iterator, List, Optional, cast
 
 from nncf.common.utils.api_marker import api
 
-DataItem = TypeVar("DataItem")
-ModelInput = TypeVar("ModelInput")
-
 
 @api(canonical_alias="nncf.Dataset")
-class Dataset(Generic[DataItem, ModelInput]):
+class Dataset:
     """
     Wrapper for passing custom user datasets into NNCF algorithms.
 
@@ -43,13 +40,11 @@ class Dataset(Generic[DataItem, ModelInput]):
         will be passed into the model as-is.
     """
 
-    def __init__(
-        self, data_source: Iterable[DataItem], transform_func: Optional[Callable[[DataItem], ModelInput]] = None
-    ):
+    def __init__(self, data_source: Iterable[Any], transform_func: Optional[Callable[..., Any]] = None):
         self._data_source = data_source
         self._transform_func = transform_func
 
-    def get_data(self, indices: Optional[List[int]] = None) -> Iterable[DataItem]:
+    def get_data(self, indices: Optional[List[int]] = None) -> Iterable[Any]:
         """
         Returns the iterable object that contains selected data items from the data source as-is.
 
@@ -60,7 +55,7 @@ class Dataset(Generic[DataItem, ModelInput]):
         """
         return DataProvider(self._data_source, None, indices)
 
-    def get_inference_data(self, indices: Optional[List[int]] = None) -> Iterable[ModelInput]:
+    def get_inference_data(self, indices: Optional[List[int]] = None) -> Iterable[Any]:
         """
         Returns the iterable object that contains selected data items from the data source, for which
         the transformation function was applied. The item, which was returned per iteration from this
@@ -95,11 +90,11 @@ class Dataset(Generic[DataItem, ModelInput]):
         return None
 
 
-class DataProvider(Generic[DataItem, ModelInput]):
+class DataProvider:
     def __init__(
         self,
-        data_source: Iterable[DataItem],
-        transform_func: Optional[Callable[[DataItem], ModelInput]],
+        data_source: Iterable[Any],
+        transform_func: Optional[Callable[..., Any]],
         indices: Optional[List[int]] = None,
     ):
         self._data_source = data_source
@@ -109,7 +104,7 @@ class DataProvider(Generic[DataItem, ModelInput]):
             self._transform_func = transform_func
         self._indices = indices
 
-    def __iter__(self) -> Iterator[ModelInput]:
+    def __iter__(self) -> Iterator[Any]:
         if self._indices is None:
             return map(self._transform_func, self._data_source)
 
@@ -120,15 +115,15 @@ class DataProvider(Generic[DataItem, ModelInput]):
 
     @staticmethod
     def _get_iterator_for_map_style(
-        data_source: Iterable[DataItem], transform_func: Callable[[DataItem], ModelInput], indices: List[int]
-    ) -> Generator[ModelInput, None, None]:
+        data_source: Iterable[Any], transform_func: Callable[..., Any], indices: List[int]
+    ) -> Generator[Any, None, None]:
         for index in indices:
             yield transform_func(data_source[index])  # type: ignore[index]
 
     @staticmethod
     def _get_iterator_for_iter(
-        data_source: Iterable[DataItem], transform_func: Callable[[DataItem], ModelInput], indices: List[int]
-    ) -> Generator[ModelInput, None, None]:
+        data_source: Iterable[Any], transform_func: Callable[..., Any], indices: List[int]
+    ) -> Generator[Any, None, None]:
         pos = 0
         num_indices = len(indices)
         for idx, data_item in enumerate(data_source):
