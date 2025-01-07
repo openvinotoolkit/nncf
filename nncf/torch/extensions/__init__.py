@@ -47,6 +47,7 @@ def get_build_directory_for_extension(name: str) -> Path:
         build_dir.mkdir(parents=True, exist_ok=True)
     return build_dir
 
+
 class ExtensionLoader(ABC):
     @classmethod
     @abstractmethod
