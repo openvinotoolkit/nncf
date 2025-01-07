@@ -9,8 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
-
 from typing import Any, Callable, Generator, Iterable, Iterator, List, Optional, cast
 
 from nncf.common.utils.api_marker import api
