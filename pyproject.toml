@@ -46,11 +46,10 @@ dependencies = [
     "pydot>=1.4.1, <3.0.0",
     "pymoo>=0.6.0.1",
     "rich>=13.5.2",
+    "safetensors>=0.4.1",
     "scikit-learn>=0.24.0",
     "scipy>=1.3.2",
     "tabulate>=0.9.0",
-    "tqdm>=4.54.1",
-    "safetensors>=0.4.1"
 ]
 
 [project.optional-dependencies]
@@ -94,6 +93,7 @@ strict = true
 # https://github.com/hauntsaninja/no_implicit_optional
 implicit_optional = true
 files = [
+    "nncf/config",
     "nncf/common/sparsity",
     "nncf/common/graph",
     "nncf/common/accuracy_aware_training/",
@@ -105,6 +105,7 @@ files = [
     "nncf/quantization/range_estimator.py",
     "nncf/quantization/telemetry_extractors.py",
     "nncf/telemetry/",
+    "nncf/*py",
 ]
 
 [tool.ruff]

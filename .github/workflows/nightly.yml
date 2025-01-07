@@ -30,11 +30,11 @@ jobs:
           python-version: 3.10.14
           cache: pip
       - name: Install NNCF and test requirements
-        run: |
-          pip install -e .
-          pip install -r tests/tensorflow/requirements.txt
+        run: pip install -e . -r tests/tensorflow/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run TensorFlow precommit
         run:  pytest tests/tensorflow -m 'nightly'
 
+  weight-compression:
+    uses: ./.github/workflows/conformance_weight_compression.yml
