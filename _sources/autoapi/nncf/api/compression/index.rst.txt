@@ -216,6 +216,7 @@ Classes
 
 
    .. py:method:: compression_stage()
+      :abstractmethod:
 
       Returns the compression stage. Should be used on saving best checkpoints
       to distinguish between uncompressed, partially compressed, and fully
