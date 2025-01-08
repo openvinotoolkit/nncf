@@ -246,7 +246,7 @@ class TemplateTestReducersAggregators:
     )
     def test_mean_variance_reducer(self, axes, np_data, reference):
         reducer = MeanVarianceReducer(reduction_axes=axes)
-        nncf_data = self.get_nncf_tensor(np_data)
+        nncf_data = self.get_nncf_tensor(np_data, dtype=Dtype.FLOAT)
         result = reducer._reduce_out_of_place([nncf_data])
         assert len(result) == 1
         assert fns.allclose(result[0], self.get_nncf_tensor(reference))
@@ -262,7 +262,7 @@ class TemplateTestReducersAggregators:
     )
     def test_mean_abs_max_reducer(self, axes, np_data, reference):
         reducer = MeanAbsMaxReducer(reduction_axes=axes)
-        nncf_data = self.get_nncf_tensor(np_data)
+        nncf_data = self.get_nncf_tensor(np_data, dtype=Dtype.FLOAT)
         result = reducer._reduce_out_of_place([nncf_data])
         assert len(result) == 1
         assert fns.allclose(result[0], self.get_nncf_tensor(reference))
@@ -278,7 +278,7 @@ class TemplateTestReducersAggregators:
     )
     def test_max_variance_reducer(self, axes, np_data, reference):
         reducer = MaxVarianceReducer(reduction_axes=axes)
-        nncf_data = self.get_nncf_tensor(np_data)
+        nncf_data = self.get_nncf_tensor(np_data, dtype=Dtype.FLOAT)
         result = reducer._reduce_out_of_place([nncf_data])
         assert len(result) == 1
         assert fns.allclose(result[0], self.get_nncf_tensor(reference))
