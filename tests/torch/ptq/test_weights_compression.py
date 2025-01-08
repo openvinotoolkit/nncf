@@ -30,14 +30,7 @@ from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
 from tests.torch.test_models.synthetic import ShortTransformer
 
-DATA_BASED_SENSITIVITY_METRICS = (
-    SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
-    SensitivityMetric.MEAN_ACTIVATION_VARIANCE,
-    SensitivityMetric.MAX_ACTIVATION_VARIANCE,
-    SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
-)
-
-ALL_SENSITIVITY_METRICS = DATA_BASED_SENSITIVITY_METRICS + (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,)
+ALL_SENSITIVITY_METRICS = all_sensitivity_metrics = list(SensitivityMetric)
 
 INT8_MODES = (CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM)
 INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
