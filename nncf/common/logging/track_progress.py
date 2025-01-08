@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 from typing import Any, Callable, Dict, Generic, Iterable, Iterator, List, Optional, Sequence, Union
 
@@ -122,7 +123,7 @@ class WeightedProgress(Progress):
 class track(Generic[ProgressType]):
     def __init__(
         self,
-        sequence: Union[Sequence[ProgressType], Iterable[ProgressType]],
+        sequence: Union[Sequence[ProgressType], Iterable[ProgressType], None] = None,
         description: str = "Working...",
         total: Optional[float] = None,
         auto_refresh: bool = True,
@@ -143,6 +144,19 @@ class track(Generic[ProgressType]):
         Track progress by iterating over a sequence.
 
         This function is very similar to rich.progress.track(), but with some customizations.
+
+        Usage:
+
+        ```
+        iterable = [1,2]
+
+        for i in track(iterable, description="Processing..."):
+            print(i)
+
+        with track[None](iterable, description="Processing...") as pbar:
+            for i in iterable:
+                pbar.update(advance=1)
+        ```
 
         :param sequence: An iterable (must support "len") you wish to iterate over.
         :param description: Description of the task to show next to the progress bar. Defaults to "Working".
@@ -212,6 +226,8 @@ class track(Generic[ProgressType]):
         )
 
     def __iter__(self) -> Iterator[ProgressType]:
+        if self.sequence is None:
+            raise RuntimeError("__iter__ called without set sequence.")
         with self:
             yield from self.progress.track(
                 self.sequence,
@@ -221,7 +237,7 @@ class track(Generic[ProgressType]):
                 update_period=self.update_period,
             )
 
-    def __enter__(self) -> "track[ProgressType]":
+    def __enter__(self) -> track[ProgressType]:
         kwargs: Dict[str, Any] = {}
         if self.weights is not None:
             kwargs["weights"] = self.weights
@@ -235,3 +251,8 @@ class track(Generic[ProgressType]):
         if self.task is not None:
             self.progress.remove_task(self.task)
             self.task = None
+
+    def update(self, advance: float, **kwargs: Any) -> None:
+        if self.task is None:
+            raise RuntimeError("update available only inside context manager.")
+        self.progress.update(self.task, advance=advance, **kwargs)

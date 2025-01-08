@@ -62,7 +62,7 @@ class ImageClassificationBase(PTQTestPipeline):
                 output_data = request.get_output_tensor().data
                 predicted_label = np.argmax(output_data, axis=1)
                 predictions[userdata] = predicted_label
-                pbar.progress.update(pbar.task, advance=1)
+                pbar.update(advance=1)
 
             infer_queue.set_callback(process_result)
 
