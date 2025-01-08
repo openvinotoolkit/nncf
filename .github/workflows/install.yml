@@ -2,13 +2,12 @@ name: Test install
 permissions: read-all
 
 on:
+  workflow_call:
   workflow_dispatch:
     inputs:
       pull_request_number:
         description: 'The pull request number'
         default: ''
-  schedule:
-    - cron: '0 0 * * *'
 
 jobs:
   install-cpu:

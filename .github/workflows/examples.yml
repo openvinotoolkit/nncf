@@ -2,8 +2,7 @@ name: Test examples
 permissions: read-all
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
+  workflow_call:
   workflow_dispatch:
     inputs:
       pull_request_number:

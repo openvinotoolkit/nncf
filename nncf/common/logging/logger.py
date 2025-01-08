@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,7 +11,7 @@
 
 import logging
 import sys
-from contextlib import contextmanager
+from typing import Set
 
 NNCF_LOGGER_NAME = "nncf"
 
@@ -30,7 +30,7 @@ nncf_logger.addHandler(stdout_handler)
 nncf_logger.setLevel(logging.INFO)
 
 
-def set_log_level(level: int):
+def set_log_level(level: int) -> None:
     """
     Sets the log level for the NNCF logging.
     :param level: An integer passed into the underlying `logging.Logger` object,
@@ -42,7 +42,7 @@ def set_log_level(level: int):
         handler.setLevel(level)
 
 
-def set_log_file(filename: str):
+def set_log_file(filename: str) -> None:
     """
     Sets the log file for the NNCF logging.
 
@@ -53,7 +53,7 @@ def set_log_file(filename: str):
     nncf_logger.addHandler(file_handler)
 
 
-def disable_logging():
+def disable_logging() -> None:
     """
     Disables NNCF logging entirely. `FutureWarning`s are still shown.
     """
@@ -61,10 +61,10 @@ def disable_logging():
 
 
 class DuplicateFilter:
-    def __init__(self):
-        self.msgs = set()
+    def __init__(self) -> None:
+        self.msgs: Set[str] = set()
 
-    def filter(self, rec):
+    def filter(self, rec: logging.LogRecord) -> bool:
         retval = rec.msg not in self.msgs
         self.msgs.add(rec.msg)
         return retval
@@ -73,14 +73,7 @@ class DuplicateFilter:
 NNCFDeprecationWarning = FutureWarning
 
 
-@contextmanager
-def extension_is_loading_info_log(extension_name: str):
-    nncf_logger.info(f"Compiling and loading torch extension: {extension_name}...")
-    yield
-    nncf_logger.info(f"Finished loading torch extension: {extension_name}")
-
-
-def warn_bkc_version_mismatch(backend: str, bkc_version: str, current_version: str):
+def warn_bkc_version_mismatch(backend: str, bkc_version: str, current_version: str) -> None:
     nncf_logger.warning(
         f"NNCF provides best results with {backend}{bkc_version}, "
         f"while current {backend} version is {current_version}. "

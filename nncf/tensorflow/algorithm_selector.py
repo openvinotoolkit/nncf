@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ from typing import Dict, Type
 import tensorflow as tf
 
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.api.compression import CompressionStage
 from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -64,6 +65,9 @@ class NoCompressionAlgorithmController(BaseCompressionAlgorithmController):
         if do_copy:
             model = copy_model(self.model)
         return model
+
+    def compression_stage(self) -> CompressionStage:
+        return CompressionStage.UNCOMPRESSED
 
 
 def get_compression_algorithm_builder(algo_name: str) -> Type[TFCompressionAlgorithmBuilder]:

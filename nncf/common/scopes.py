@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -73,7 +73,7 @@ def should_consider_scope(
     )
 
 
-def get_not_matched_scopes(scope: Union[List[str], str, IgnoredScope], nodes: List[NNCFNode]) -> List[str]:
+def get_not_matched_scopes(scope: Union[List[str], str, IgnoredScope, None], nodes: List[NNCFNode]) -> List[str]:
     """
     Return list of scope that do not match node list.
 
@@ -82,6 +82,8 @@ def get_not_matched_scopes(scope: Union[List[str], str, IgnoredScope], nodes: Li
 
     :return : List of not matched scopes.
     """
+    if scope is None:
+        return []
 
     if isinstance(scope, str):
         patterns = [scope]

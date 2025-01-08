@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -57,3 +57,12 @@ class VerbatimTelemetryExtractor(TelemetryExtractor):
         if isinstance(argvalue, bool):
             argvalue = "enabled" if argvalue else "disabled"
         return CollectedEvent(name=self._argname, data=argvalue)
+
+
+class FunctionCallTelemetryExtractor(TelemetryExtractor):
+    def __init__(self, argvalue=None):
+        super().__init__()
+        self._argvalue = argvalue
+
+    def extract(self, _: Any):
+        return CollectedEvent(name="function_call", data=self._argvalue)
