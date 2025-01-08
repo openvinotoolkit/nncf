@@ -57,8 +57,6 @@ from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 
-PT_POST_LAYER_TARGET_TYPE = TargetType.OPERATOR_POST_HOOK
-
 
 class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
@@ -340,7 +338,8 @@ class PTMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, PTWeightCompression
         def filter_func(point: StatisticPoint) -> bool:
             return (
                 algorithm_key in point.algorithm_to_tensor_collectors
-                and point.target_point.type == PT_POST_LAYER_TARGET_TYPE
+                and point.target_point.type
+                == PTWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[TargetType.POST_LAYER_OPERATION]
             )
 
         return filter_func

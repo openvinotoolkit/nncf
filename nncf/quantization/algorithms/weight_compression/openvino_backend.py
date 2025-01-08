@@ -54,8 +54,6 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import comp
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
 
-OV_POST_LAYER_TARGET_TYPE = TargetType.POST_LAYER_OPERATION
-
 
 class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def __init__(self, model: ov.Model, name_to_node_mapping: Dict = None):
@@ -108,7 +106,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        if node.layer_attributes.input_attributes["transpose"]:  # It works only for OV
+        if node.layer_attributes.input_attributes["transpose"]:
             raise nncf.UnsupportedModelError("Transposed input is not supported")
         constant_ports = node.layer_attributes.get_const_port_ids()
         activation_ports = [
@@ -441,7 +439,7 @@ class OVMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, OVWeightCompression
         def filter_func(point: StatisticPoint) -> bool:
             return (
                 algorithm_key in point.algorithm_to_tensor_collectors
-                and point.target_point.type == OV_POST_LAYER_TARGET_TYPE
+                and point.target_point.type == TargetType.POST_LAYER_OPERATION
                 and point.target_point.port_id == activation_port_id
             )
 
