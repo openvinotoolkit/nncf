@@ -109,6 +109,7 @@ files = [
     "nncf/common/accuracy_aware_training",
     "nncf/common/graph",
     "nncf/common/initialization",
+    "nncf/common/logging",
     "nncf/common/sparsity",
     "nncf/common/tensor_statistics",
     "nncf/common/utils",

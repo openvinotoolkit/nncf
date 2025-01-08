@@ -9,11 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Iterable, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, Generic, Iterable, Iterator, List, Optional, Sequence, Union
 
 from rich.console import Console
 from rich.progress import BarColumn
-from rich.progress import Column
 from rich.progress import Progress
 from rich.progress import ProgressColumn
 from rich.progress import ProgressType
@@ -24,6 +23,7 @@ from rich.progress import TextColumn
 from rich.progress import TimeElapsedColumn
 from rich.progress import TimeRemainingColumn
 from rich.style import StyleType
+from rich.table import Column
 from rich.text import Text
 
 INTEL_BLUE_COLOR = "#0068b5"
@@ -65,7 +65,7 @@ class WeightedProgress(Progress):
     A class to perform a weighted progress tracking.
     """
 
-    def update(self, task_id: TaskID, **kwargs) -> None:
+    def update(self, task_id: TaskID, **kwargs: Any) -> None:
         task = self._tasks[task_id]
 
         advance = kwargs.get("advance", None)
@@ -84,7 +84,7 @@ class WeightedProgress(Progress):
             advance = self.weighted_advance(task, advance)
         super().advance(task_id, advance)
 
-    def reset(self, task_id: TaskID, **kwargs) -> None:
+    def reset(self, task_id: TaskID, **kwargs: Any) -> None:
         task = self._tasks[task_id]
 
         completed = kwargs.get("completed", None)
@@ -104,8 +104,8 @@ class WeightedProgress(Progress):
         if advance % 1 != 0:
             raise Exception(f"Unexpected `advance` value: {advance}.")
         advance = int(advance)
-        current_step = task.fields["completed_steps"]
-        weighted_advance = sum(task.fields["weights"][current_step : current_step + advance])
+        current_step: int = task.fields["completed_steps"]
+        weighted_advance: float = sum(task.fields["weights"][current_step : current_step + advance])
         task.fields["completed_steps"] = current_step + advance
         return weighted_advance
 
@@ -116,13 +116,13 @@ class WeightedProgress(Progress):
         """
         if completed % 1 != 0:
             raise Exception(f"Unexpected `completed` value: {completed}.")
-        return sum(task.fields["weights"][: int(completed)])
+        return float(sum(task.fields["weights"][: int(completed)]))
 
 
-class track:
+class track(Generic[ProgressType]):
     def __init__(
         self,
-        sequence: Optional[Union[Sequence[ProgressType], Iterable[ProgressType]]] = None,
+        sequence: Union[Sequence[ProgressType], Iterable[ProgressType]],
         description: str = "Working...",
         total: Optional[float] = None,
         auto_refresh: bool = True,
@@ -169,7 +169,7 @@ class track:
         self.total = sum(self.weights) if self.weights is not None else total
         self.description = description
         self.update_period = update_period
-        self.task = None
+        self.task: Optional[TaskID] = None
 
         self.columns: List[ProgressColumn] = (
             [TextColumn("[progress.description]{task.description}")] if description else []
@@ -198,7 +198,7 @@ class track:
             )
         )
 
-        disable = disable or (hasattr(sequence, "__len__") and len(sequence) == 0)
+        disable = disable or (hasattr(sequence, "__len__") and len(sequence) == 0)  # type: ignore[arg-type]
 
         progress_cls = Progress if weights is None else WeightedProgress
         self.progress = progress_cls(
@@ -211,7 +211,7 @@ class track:
             disable=disable,
         )
 
-    def __iter__(self) -> Iterable[ProgressType]:
+    def __iter__(self) -> Iterator[ProgressType]:
         with self:
             yield from self.progress.track(
                 self.sequence,
@@ -221,8 +221,8 @@ class track:
                 update_period=self.update_period,
             )
 
-    def __enter__(self):
-        kwargs = {}
+    def __enter__(self) -> "track[ProgressType]":
+        kwargs: Dict[str, Any] = {}
         if self.weights is not None:
             kwargs["weights"] = self.weights
             kwargs["completed_steps"] = 0
@@ -230,7 +230,8 @@ class track:
         self.progress.__enter__()
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: Any) -> None:
         self.progress.__exit__(*args)
-        self.progress.remove_task(self.task)
-        self.task = None
+        if self.task is not None:
+            self.progress.remove_task(self.task)
+            self.task = None
