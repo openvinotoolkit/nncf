@@ -24,8 +24,11 @@ from nncf.common.tensor import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanNoOutliersAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MeanVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import MedianAbsoluteDeviationAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MedianNoOutliersAggregator
@@ -569,3 +572,45 @@ class TemplateTestReducersAggregators:
 
         ret_val = aggregator.aggregate()
         assert fns.allclose(ret_val, reference_output)
+
+    @pytest.mark.parametrize("axes", [None, (0,), (0, 1), (0, 1, 2)])
+    def test_mean_variance_reducer(self, axes):
+        reducer = MeanVarianceReducer(reduction_axes=axes)
+        np_data = np.random.rand(3, 10, 10, 4)
+        nncf_data = self.get_nncf_tensor(np_data)
+        result = reducer._reduce_out_of_place([nncf_data])
+
+        # Calculate expected result using numpy
+        variance = np.var(np_data, axis=axes)
+        expected_result = np.mean(variance)
+
+        assert len(result) == 1
+        assert fns.allclose(result[0], self.get_nncf_tensor(expected_result))
+
+    @pytest.mark.parametrize("axes", [None, (0,), (0, 1), (0, 1, 2)])
+    def test_mean_abs_max_reducer(self, axes):
+        reducer = MeanAbsMaxReducer(reduction_axes=axes)
+        np_data = np.random.rand(3, 10, 10, 4)
+        nncf_data = self.get_nncf_tensor(np_data)
+        result = reducer._reduce_out_of_place([nncf_data])
+
+        # Calculate expected result using numpy
+        abs_max = np.max(np.abs(np_data), axis=axes)
+        expected_result = np.mean(abs_max)
+
+        assert len(result) == 1
+        assert fns.allclose(result[0], self.get_nncf_tensor(expected_result))
+
+    @pytest.mark.parametrize("axes", [None, (0,), (0, 1), (0, 1, 2)])
+    def test_max_variance_reducer(self, axes):
+        reducer = MaxVarianceReducer(reduction_axes=axes)
+        np_data = np.random.rand(3, 10, 10, 4)
+        nncf_data = self.get_nncf_tensor(np_data)
+        result = reducer._reduce_out_of_place([nncf_data])
+
+        # Calculate expected result using numpy
+        variance = np.var(np_data, axis=axes)
+        expected_result = np.max(variance)
+
+        assert len(result) == 1
+        assert fns.allclose(result[0], self.get_nncf_tensor(expected_result))
