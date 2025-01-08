@@ -44,6 +44,9 @@ class QuantizationControllerBaseForTest(QuantizationControllerBase):
     def statistics(self, quickly_collected_only: bool = False):
         return NNCFStatistics()
 
+    def compression_stage(self):
+        pass
+
 
 class QuantizationCtrlBaseSpy:
     def __init__(self, mocker):
