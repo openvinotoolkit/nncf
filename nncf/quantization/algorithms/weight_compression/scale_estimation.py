@@ -111,10 +111,11 @@ class ScaleEstimation:
         MatMul with compressed weights.
         The algorithm computes weighted scale for the group of weights in MatMul, which
         shared the same scale.
-        :param all_weight_params: List of all weight parameters.
-        :param statistics: Input activation statistics for each node.
+
         :param model: Model for applying algorithm.
         :param graph: Model graph.
+        :param all_weight_params: List of all weight parameters.
+        :param statistics: Input activation statistics for each node.
         :param statistic_points: Statistic points with collected statistics values.
         :param dataset: A representative dataset for the calibration process.
         :param backend_entity: Weight compression algorithm backend.

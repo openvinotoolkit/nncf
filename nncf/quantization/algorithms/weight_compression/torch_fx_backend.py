@@ -269,7 +269,7 @@ class FXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, FXWeightCompression
     def mean_variance_statistic_collector(
         reduction_axes: Tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
-        reducer = MeanVarianceReducer(reduction_axes, inplace=True)
+        reducer = MeanVarianceReducer(reduction_axes)
         aggregator = MeanAggregator(num_samples=subset_size)
         collector = TensorCollector(MeanVarianceTensorStatistic)
         collector.register_statistic_branch(MeanVarianceTensorStatistic.MEAN_VARIANCE_STAT, reducer, aggregator)
@@ -279,7 +279,7 @@ class FXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, FXWeightCompression
     def max_variance_statistic_collector(
         reduction_axes: Tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
-        reducer = MaxVarianceReducer(reduction_axes, inplace=True)
+        reducer = MaxVarianceReducer(reduction_axes)
         aggregator = MeanAggregator(num_samples=subset_size)
         collector = TensorCollector(MaxVarianceTensorStatistic)
         collector.register_statistic_branch(MaxVarianceTensorStatistic.MAX_VARIANCE_STAT, reducer, aggregator)
@@ -289,7 +289,7 @@ class FXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, FXWeightCompression
     def mean_abs_max_statistic_collector(
         reduction_axes: Tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
-        reducer = MeanAbsMaxReducer(reduction_axes, inplace=True)
+        reducer = MeanAbsMaxReducer(reduction_axes)
         aggregator = MeanAggregator(num_samples=subset_size)
         collector = TensorCollector(MeanMagnitudeTensorStatistic)
         collector.register_statistic_branch(MeanMagnitudeTensorStatistic.MEAN_MAGNITUDE_STAT, reducer, aggregator)

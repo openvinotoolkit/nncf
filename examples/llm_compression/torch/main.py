@@ -24,7 +24,7 @@ OUTPUT_DIR = "tinyllama_compressed"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def quantize(model, tokenizer, dataset):
+def quantize(model, dataset):
     quantization_dataset = nncf.Dataset(dataset)
     compressed_model = nncf.compress_weights(
         model,
@@ -63,7 +63,7 @@ def main():
 
     dataset = dataset.map(transform_fn).with_format("torch", device=device)
 
-    quantize(model, tokenizer, dataset)
+    quantize(model, dataset)
     model = OVModelForCausalLM.from_pretrained(
         OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"}
     )
