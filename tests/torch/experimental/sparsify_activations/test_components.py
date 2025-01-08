@@ -217,7 +217,7 @@ class TestPTSparsifyActivationsAlgoBackend:
         model = ThreeLinearModel()
         dataset = nncf.Dataset(torch.randint(0, 30, (3, 2, 8)))
         if compress_weights:
-            model = nncf.compress_weights(model, mode=nncf.CompressWeightsMode.INT8_SYM)
+            model = nncf.compress_weights(model, mode=nncf.CompressWeightsMode.INT8_SYM, dataset=dataset)
         else:
             model = wrap_model(
                 model,

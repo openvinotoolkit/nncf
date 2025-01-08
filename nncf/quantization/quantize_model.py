@@ -539,6 +539,8 @@ def compress_weights(
         else:
             example_input = next(iter(dataset.get_inference_data()))
             model = wrap_model(model, example_input=example_input, trace_parameters=True)
+        if mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM):
+            dataset = None  # workaround as INT8 mode still does not support dataset
         compression_weights_impl = pt_compression_weights_impl
 
     if backend == BackendType.TORCH_FX:
