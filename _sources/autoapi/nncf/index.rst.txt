@@ -18,6 +18,7 @@ Subpackages
    api/index.rst
    common/index.rst
    config/index.rst
+   data/index.rst
    quantization/index.rst
 
 
