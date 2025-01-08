@@ -125,8 +125,6 @@ Functions
 
 .. py:class:: Dataset(data_source, transform_func = None)
 
-   Bases: :py:obj:`Generic`\ [\ :py:obj:`DataItem`\ , :py:obj:`ModelInput`\ ]
-
    Wrapper for passing custom user datasets into NNCF algorithms.
 
    This class defines the interface by which compression algorithms

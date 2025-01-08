@@ -487,8 +487,7 @@ the resolution of the redefinable parameter should occur.</p></li>
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.Dataset">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">Dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transform_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset" title="Permalink to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">DataItem</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">ModelInput</span></code>]</p>
-<p>Wrapper for passing custom user datasets into NNCF algorithms.</p>
+<dd><p>Wrapper for passing custom user datasets into NNCF algorithms.</p>
 <p>This class defines the interface by which compression algorithms
 retrieve data items from the passed data source object. These data items are used
 for different purposes, for example, model inference and model validation, based
@@ -501,8 +500,8 @@ the examples from the data item.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data_source</strong> (<em>Iterable</em><em>[</em><em>DataItem</em><em>]</em>) – The iterable object serving as the source of data items.</p></li>
-<li><p><strong>transform_func</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>DataItem</em><em>]</em><em>, </em><em>ModelInput</em><em>]</em><em>]</em>) – The function that is used to extract the model’s input
+<li><p><strong>data_source</strong> (<em>Iterable</em><em>[</em><em>Any</em><em>]</em>) – The iterable object serving as the source of data items.</p></li>
+<li><p><strong>transform_func</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>Ellipsis</em><em>, </em><em>Any</em><em>]</em><em>]</em>) – The function that is used to extract the model’s input
 from the data item. The data item here is the data item that is returned from
 the data source per iteration. This function should be passed when
 the data item cannot be directly used as model’s input. If this is not specified, then the data item
@@ -524,7 +523,7 @@ not passed all data items are selected from the data source.</p>
 <dd class="field-even"><p>The iterable object that contains selected data items from the data source as-is.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Iterable[DataItem]</p>
+<dd class="field-odd"><p>Iterable[Any]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -546,7 +545,7 @@ not passed all data items are selected from the data source.</p>
 the transformation function was applied.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Iterable[ModelInput]</p>
+<dd class="field-odd"><p>Iterable[Any]</p>
 </dd>
 </dl>
 </dd></dl>
