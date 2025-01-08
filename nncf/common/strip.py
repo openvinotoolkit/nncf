@@ -33,8 +33,8 @@ def strip(model: TModel, do_copy: bool = True) -> TModel:
     """
     model_backend = get_backend(model)
     if model_backend == BackendType.TORCH:
-        from nncf.torch import strip as strip_pt
+        from nncf.torch.strip import strip as strip_pt
 
-        return strip_pt(model, do_copy)
+        return strip_pt(model, do_copy)  # type: ignore
 
     raise nncf.UnsupportedBackendError(f"Method `strip` does not support for {model_backend.value} backend.")
