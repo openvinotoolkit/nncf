@@ -94,6 +94,7 @@ strict = true
 implicit_optional = true
 files = [
     "nncf/api",
+    "nncf/data",
     "nncf/common/collector.py",
     "nncf/common/engine.py",
     "nncf/common/hook_handle.py",
