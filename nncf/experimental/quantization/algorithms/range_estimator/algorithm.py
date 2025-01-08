@@ -15,7 +15,7 @@ from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.quantization.algorithms.quantizer.base_quantizer import Quantizer as NNCFQuantizer
+from nncf.experimental.quantization.quantizer.quantizer import Quantizer as NNCFQuantizer
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.range_estimator import RangeEstimatorParameters
@@ -34,6 +34,8 @@ class MinMaxRangeEstimator(Algorithm):
         weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
     ):
         """
+        :param quantizer: Instance of NNCFQuantizer to retrieve a quantization config
+            for the given model.
         :param subset_size: Size of a subset to calculate activations statistics used
             for quantization, defaults to 300.
         :param inplace_statistics: Defines wheather to calculate quantizers statistics
@@ -68,7 +70,7 @@ class MinMaxRangeEstimator(Algorithm):
     ) -> TModel:
         if self._min_max_algo._quantization_target_points_to_qconfig is None:
             raise RuntimeError(
-                "Static points are not available."
+                "Statistic points are not available."
                 " Please call `get_statistic_points` before calling the `apply` method."
             )
         return self._min_max_algo.apply(model=model, graph=graph, statistic_points=statistic_points)

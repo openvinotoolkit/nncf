@@ -12,7 +12,7 @@
 
 from collections import defaultdict
 from copy import deepcopy
-from typing import Dict, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import torch
 import torch.fx
@@ -23,18 +23,25 @@ from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.quantization.algorithms.quantizer.base_quantizer import Quantizer as NNCFQuantizer
+from nncf.experimental.quantization.quantizer.quantizer import Quantizer as NNCFQuantizer
+from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 
 EdgeOrNode = Union[Tuple[torch.fx.Node, torch.fx.Node]]
 
 
 class TorchAOQuantizerAdapter(NNCFQuantizer):
+    """
+    Implementation of the NNCF Quantizer interface for any given torch.ao quantizer.
+    """
+
     def __init__(self, quantizer: Quantizer):
         self._quantizer = quantizer
 
@@ -46,6 +53,40 @@ class TorchAOQuantizerAdapter(NNCFQuantizer):
         self._quantizer.annotate(anotated_model)
         self._quantizer.validate(anotated_model)
         return self.get_quantizer_config_from_anotated_model(anotated_model)
+
+    @staticmethod
+    def _get_quantization_points(
+        from_node: torch.fx.Node,
+        to_nodes: List[torch.fx.Node],
+        anotated_model: torch.fx.GraphModule,
+        qconfig: QuantizerConfig,
+    ) -> List[QuantizationPointBase]:
+        to_n = to_nodes[0]
+        if from_node.op == "get_attr":
+            _, metatype = GraphConverter.get_node_type_and_metatype(to_n, anotated_model)
+            # Check that the constant is placed on the actual weight port, as it is possible for
+            # activations to be a constant as well.
+            if TorchAOQuantizerAdapter._get_node_args(to_n).index(from_node) in metatype.weight_port_ids:
+                qip = WeightQuantizationInsertionPoint(to_n.name)
+                return [SingleConfigQuantizationPoint(qip, qconfig, [x.name for x in to_nodes])]
+
+        if len(from_node.users) == len(to_nodes):
+            qip = ActivationQuantizationInsertionPoint(from_node.name)
+            return [SingleConfigQuantizationPoint(qip, qconfig, [x.name for x in to_nodes])]
+
+        qps = []
+        for to_n_ in to_nodes:
+            input_port_id = to_n_.args.index(from_node)
+            qip = ActivationQuantizationInsertionPoint(to_n_.name, input_port_id)
+            qp = SingleConfigQuantizationPoint(qip, qconfig, [to_n_.name])
+            qps.append(qp)
+        return qps
+
+    @staticmethod
+    def _get_node_args(node: torch.fx.Node):
+        if node.target == torch.ops.aten.cat.default:
+            return node.args[0]
+        return node.args
 
     @staticmethod
     def get_quantizer_config_from_anotated_model(anotated_model: torch.fx.GraphModule) -> SingleConfigQuantizerSetup:
@@ -71,36 +112,23 @@ class TorchAOQuantizerAdapter(NNCFQuantizer):
                     per_channel = False
                 else:
                     raise nncf.InternalError(f"Unknown qscheme: {qspec.qscheme}")
-                signed = qspec.dtype is torch.uint8
+                signed = qspec.dtype is torch.int8
                 mode = (
                     QuantizationMode.SYMMETRIC
                     if qspec.qscheme in [torch.per_channel_symmetric, torch.per_tensor_symmetric]
                     else QuantizationMode.ASYMMETRIC
                 )
                 qconfig = QuantizerConfig(mode=mode, signedness_to_force=signed, per_channel=per_channel)
-                qps = []
-                # If input node is a constant and placed not at activations port (0)
-                if from_n.op == "get_attr" and to_n.args.index(from_n) != 0:
-                    qip = WeightQuantizationInsertionPoint(to_n.name)
-                    qp = SingleConfigQuantizationPoint(qip, qconfig, [x.name for x in to_nodes])
-                    qps.append(qp)
-                else:
-                    if len(from_n.users) == len(to_nodes):
-                        qip = ActivationQuantizationInsertionPoint(from_n.name)
-                        qp = SingleConfigQuantizationPoint(qip, qconfig, [x.name for x in to_nodes])
-                        qps.append(qp)
-                    else:
-                        for to_n_ in to_nodes:
-                            input_port_id = to_n_.args.index(from_n)
-                            qip = ActivationQuantizationInsertionPoint(to_n_.name, input_port_id)
-                            qp = SingleConfigQuantizationPoint(qip, qconfig, [to_n_.name])
-                            qps.append(qp)
 
+                qps = TorchAOQuantizerAdapter._get_quantization_points(from_n, to_nodes, anotated_model, qconfig)
                 for qp in qps:
                     q_setup.add_independent_quantization_point(qp)
 
             elif isinstance(qspec, SharedQuantizationSpec):
-                pass
+                # TODO(dlyakhov): Support SharedQuantizationSpec
+                nncf_logger.warning(
+                    "SharedQuantizationSpec is not supported yet;" f" edges {from_n} -> {to_nodes} won't be quantized."
+                )
             else:
                 raise nncf.InternalError(f"Unknown torch.ao quantization spec: {qspec}")
 

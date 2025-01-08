@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABC
 from abc import abstractmethod
 from typing import TypeVar
 
@@ -18,7 +19,12 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 TModel = TypeVar("TModel")
 
 
-class Quantizer:
+class Quantizer(ABC):
+    """
+    Quantizer is an interface for the RangeEstimator algorithm
+    which specifies all the required methods to retrieve quantization setup from the given model.
+    """
+
     @abstractmethod
     def get_quantization_setup(self, model: TModel, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         """
