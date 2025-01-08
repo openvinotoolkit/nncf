@@ -311,22 +311,12 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
     def _get_statistics_for_node(
         self, statistic_points: StatisticPointsContainer, node: NNCFNode, nncf_graph: NNCFGraph, stat_key: str
     ) -> List[Tensor]:
-        act_node, _ = self._get_activation_node_and_port(node, nncf_graph)
-
-        def input_filter_func(point):
-            # For the floating-point statistics collected in POST_LAYER style,
-            # we also need to determine the output port id.
-            # For the cases when the layer has more than one (0) output port.
-            return (
-                self._algorithm_key in point.algorithm_to_tensor_collectors
-                and point.target_point.type in [TargetType.POST_LAYER_OPERATION, TargetType.OPERATOR_POST_HOOK]
-                # and point.target_point.port_id == output_port_id
-                # Add a unique filter func for backend??
-            )
-
+        act_node, act_port_id = self._get_activation_node_and_port(node, nncf_graph)
         stats = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
-            act_node.node_name, input_filter_func, self._algorithm_key
+            act_node.node_name,
+            self._backend_entity.get_filter_fn_for_statistics(act_port_id, self._algorithm_key),
+            self._algorithm_key,
         ):
             statistics = tensor_collector.get_statistics()
             for data in statistics.get_data().values():

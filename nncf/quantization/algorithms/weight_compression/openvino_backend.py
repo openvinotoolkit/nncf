@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import openvino as ov
 from openvino import Type
@@ -21,6 +21,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_reduction_axes
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
@@ -52,6 +53,8 @@ from nncf.quantization.algorithms.weight_compression.lora_correction import Lora
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
+
+OV_POST_LAYER_TARGET_TYPE = TargetType.POST_LAYER_OPERATION
 
 
 class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
@@ -432,3 +435,14 @@ class OVMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, OVWeightCompression
         collector = TensorCollector(MeanMagnitudeTensorStatistic)
         collector.register_statistic_branch(MeanMagnitudeTensorStatistic.MEAN_MAGNITUDE_STAT, reducer, aggregator)
         return collector
+
+    @staticmethod
+    def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
+        def filter_func(point: StatisticPoint) -> bool:
+            return (
+                algorithm_key in point.algorithm_to_tensor_collectors
+                and point.target_point.type == OV_POST_LAYER_TARGET_TYPE
+                and point.target_point.port_id == activation_port_id
+            )
+
+        return filter_func

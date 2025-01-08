@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import torch
 import torch.fx
@@ -22,6 +22,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
@@ -57,6 +58,8 @@ from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
+
+PT_POST_LAYER_TARGET_TYPE = TargetType.OPERATOR_POST_HOOK
 
 
 class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
@@ -291,3 +294,13 @@ class FXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, FXWeightCompression
         collector = TensorCollector(MeanMagnitudeTensorStatistic)
         collector.register_statistic_branch(MeanMagnitudeTensorStatistic.MEAN_MAGNITUDE_STAT, reducer, aggregator)
         return collector
+
+    @staticmethod
+    def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
+        def filter_func(point: StatisticPoint) -> bool:
+            return (
+                algorithm_key in point.algorithm_to_tensor_collectors
+                and point.target_point.type == PT_POST_LAYER_TARGET_TYPE
+            )
+
+        return filter_func
