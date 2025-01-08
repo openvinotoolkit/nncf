@@ -19,8 +19,8 @@ from transformers import AutoTokenizer
 
 import nncf
 
-MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
-OUTPUT_DIR = "tinyllama_compressed"
+MODEL_ID = "unsloth/Llama-3.2-1B"
+OUTPUT_DIR = "compressed"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
