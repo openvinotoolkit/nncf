@@ -1,0 +1,44 @@
+name: "CodeQL"
+permissions: read-all
+
+on:
+  workflow_call:
+  pull_request:
+    # paths:
+    #   - '**.py'
+
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    permissions:
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        with:
+          lfs: true
+
+      # Initializes the CodeQL tools for scanning.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@47b3d888fe66b639e431abf22ebca059152f1eea # v3.24.5
+        with:
+          languages: python
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@47b3d888fe66b639e431abf22ebca059152f1eea # v3.24.5
+        with:
+          category: "/language:python"
+
+      - name: Generate Security Report
+        uses: rsdmike/github-security-report-action@a149b24539044c92786ec39af8ba38c93496495d # v3.0.4
+        with:
+          template: report
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload CodeQL Artifacts
+        uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
+        with:
+          name: codeql-scan-results
+          path: "./report.pdf"

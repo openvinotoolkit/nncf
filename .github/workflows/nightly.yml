@@ -49,3 +49,6 @@ jobs:
 
   weight-compression:
     uses: ./.github/workflows/conformance_weight_compression.yml
+
+  codeql:
+    uses: ./.github/workflows/codeql.yml
