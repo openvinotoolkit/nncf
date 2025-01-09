@@ -27,8 +27,12 @@ jobs:
           # the sphinx can generate valid links in the TOC for the JSON schema across all pages.
           generate-schema-doc --deprecated-from-description schema.json schema/index.html
 
+      - name: Archive built schema
+        shell: bash
+        run: tar -czf artifact.tar schema
+
       - name: Upload result as artifact
-        uses: alehechka/upload-tartifact@a055d3a102b9ed9cfff1263bc713295047d0197e # v2
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b #v4.5.0
         with:
           name: schema_doc_artifact
-          path: schema
+          path: artifact.tar
