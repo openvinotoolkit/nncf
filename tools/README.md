@@ -146,7 +146,7 @@ The input file should contain the following columns:
 - `wikitext, word perplexity` - Word perplexity on the Wikitext dataset, measured using rolling loglikelihoods in the [lm_eval tool](https://github.com/EleutherAI/lm-evaluation-harness).
 - `lambada-openai, acc` - Accuracy on the Lambada-OpenAI dataset, measured using [lm_eval tool](https://github.com/EleutherAI/lm-evaluation-harness).
 - `lambada-openai, perplexity` - Perplexity on the Lambada-OpenAI dataset, measured using the [lm_eval tool](https://github.com/EleutherAI/lm-evaluation-harness).
-- `WWB, similarity` - Similarity, measured using the [WWB tool](https://github.com/openvinotoolkit/openvino.genai/tree/master/llm_bench/python/).
+- `WWB, similarity` - Similarity, measured using the [WWB tool](https://github.com/openvinotoolkit/openvino.genai/tree/master/tools/llm_bench).
 
 ### Example of script usage
 
