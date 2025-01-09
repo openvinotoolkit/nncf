@@ -2,27 +2,27 @@ name: "CodeQL"
 permissions: read-all
 
 on:
-  workflow_call:
+  push:
+    branches:
+      - develop
+      - release_v*
   pull_request:
-    # paths:
-    #   - '**.py'
-
+    paths:
+      - '.github/workflows/codeql.yml'
+      - '**.py'
 
 jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    timeout-minutes: 15
     permissions:
       security-events: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
           lfs: true
-
-      # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@47b3d888fe66b639e431abf22ebca059152f1eea # v3.24.5
         with:
@@ -32,13 +32,23 @@ jobs:
         with:
           category: "/language:python"
 
+      # Pdf reports always empty for PRs
       - name: Generate Security Report
+        # if: ${{ github.event_name != 'pull_request' }}
         uses: rsdmike/github-security-report-action@a149b24539044c92786ec39af8ba38c93496495d # v3.0.4
         with:
           template: report
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rename Report
+        shell: bash
+        continue-on-error: true
+        run: |
+          DATE=$(date +"%Y-%m-%d")
+          REF_NAME="${{ github.ref_name }}"
+          mv "report.pdf" "codeql_nncf_report_${DATE}_${REF_NAME//\//-}_${{ github.sha }}.pdf"
       - name: Upload CodeQL Artifacts
+        # if: ${{ github.event_name != 'pull_request' }}
         uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
         with:
           name: codeql-scan-results
-          path: "./report.pdf"
+          path: "./codeql*.pdf"
