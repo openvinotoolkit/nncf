@@ -19,6 +19,7 @@ from nncf import IgnoredScope
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.model import ModelWrapper
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.parameters import ModelType
@@ -165,8 +166,7 @@ class TemplateTestSQAlgorithm:
         dataset = get_static_dataset(model_cls.INPUT_SIZE, self.get_transform_fn(), self.fn_to_type)
 
         quantization_algorithm = self.get_quantization_algorithm(self.get_ignored_scope(model_cls))
-        graph = NNCFGraphFactory.create(model)
-        quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
+        quantized_model = quantization_algorithm.apply(ModelWrapper(model), dataset=dataset).model
 
         self.check_scales(quantized_model, reference_values, model_cls)
 
@@ -244,9 +244,10 @@ class TemplateTestSQAlgorithm:
         model = self.backend_specific_model(model_cls(), tmpdir)
         dataset = get_static_dataset(model_cls.INPUT_SIZE, self.get_transform_fn(), self.fn_to_type)
 
-        graph = NNCFGraphFactory.create(model)
+        model_wrapper = ModelWrapper(model)
+        graph = model_wrapper.graph
         algo = SmoothQuant(subset_size=1, inplace_statistics=False)
-        algo_statistic_points = algo.get_statistic_points(model, graph)
+        algo_statistic_points = algo.get_statistic_points(model_wrapper)
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         statistics_aggregator.register_statistic_points(algo_statistic_points)
         statistics_aggregator.collect_statistics(model, graph)
@@ -260,7 +261,8 @@ class TemplateTestSQAlgorithm:
 
         mocked_transformer = mocker.MagicMock()
         mocker.patch("nncf.common.factory.ModelTransformerFactory.create", return_value=mocked_transformer)
-        algo.apply(model, graph, algo_statistic_points)
+        mocker.patch("nncf.common.model.get_backend", return_value=None)
+        algo.apply(model_wrapper, statistic_points=algo_statistic_points)
 
         mocked_transformer.transform.assert_called_once()
         arg = mocked_transformer.transform.call_args.args[0]

@@ -9,16 +9,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union, cast
 
 import onnx
 
 import nncf
 from nncf.common.logging.logger import nncf_logger
+from nncf.common.model import ModelWrapper
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
-from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
@@ -78,10 +78,12 @@ def quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
-    graph = GraphConverter.create_nncf_graph(model)
-    warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
-    quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
-
+    model_wrapper = ModelWrapper(model)
+    warning_model_no_batchwise_support(
+        model_wrapper.graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
+    )
+    quantized_model_wrapper = quantization_algorithm.apply(model_wrapper, dataset=calibration_dataset)
+    quantized_model = cast(onnx.ModelProto, quantized_model_wrapper.model)
     return quantized_model
 
 

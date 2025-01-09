@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Tuple, TypeVar
 
 import pytest
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.model import ModelWrapper
 from nncf.data import Dataset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
@@ -81,7 +81,7 @@ class TemplateTestBCAlgorithm:
 
     @staticmethod
     @abstractmethod
-    def check_bias(model: TModel, ref_biases: Dict) -> None:
+    def check_bias(model_wrapper: ModelWrapper, ref_biases: Dict) -> None:
         """
         Checks biases values.
         """
@@ -121,9 +121,8 @@ class TemplateTestBCAlgorithm:
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm(disable_bias_correction=True)
-        graph = NNCFGraphFactory.create(model)
-        quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
-        modified_model = self.remove_fq_from_inputs(quantized_model)
+        quantized_model = quantization_algorithm.apply(ModelWrapper(model), dataset=dataset)
+        modified_model = self.remove_fq_from_inputs(quantized_model.model)
         return modified_model
 
     @pytest.mark.parametrize(
@@ -150,17 +149,17 @@ class TemplateTestBCAlgorithm:
         dataset = Dataset(self.get_dataset(model_cls.INPUT_SIZE), self.get_transform_fn())
 
         quantization_algorithm = self.get_quantization_algorithm()
-        graph = NNCFGraphFactory.create(model)
-        quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
+        quantized_model_wrapper = quantization_algorithm.apply(ModelWrapper(model), dataset=dataset)
 
         mapped_ref_biases = self.map_references(ref_biases, model_cls)
-        self.check_bias(quantized_model, mapped_ref_biases)
+        self.check_bias(quantized_model_wrapper, mapped_ref_biases)
 
     def test__get_subgraph_data_for_node(self, quantized_test_model, layer_name, ref_data):
-        nncf_graph = NNCFGraphFactory.create(quantized_test_model)
+        model_wrapper = ModelWrapper(quantized_test_model)
+        nncf_graph = model_wrapper.graph
 
         bc_algo = self.get_bias_correction_algorithm()
-        bc_algo._set_backend_entity(quantized_test_model)
+        bc_algo._set_backend_entity(model_wrapper.backend)
 
         node = nncf_graph.get_node_by_name(layer_name)
         bc_algo._collected_stat_inputs_map.update(ref_data["collected_inputs"])
@@ -171,10 +170,9 @@ class TemplateTestBCAlgorithm:
 
     def test_verify_collected_stat_inputs_map(self, model_cls, ref_stat_inputs_map, tmpdir):
         model = self.backend_specific_model(model_cls(), tmpdir)
-        graph = NNCFGraphFactory.create(model)
 
         bc_algo = self.get_bias_correction_algorithm()
-        bc_algo.get_statistic_points(model, graph)
+        bc_algo.get_statistic_points(ModelWrapper(model))
 
         collected_stat_inputs_map = getattr(bc_algo, "_collected_stat_inputs_map")
         assert collected_stat_inputs_map == ref_stat_inputs_map

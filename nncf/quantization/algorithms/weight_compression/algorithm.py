@@ -24,6 +24,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
+from nncf.common.model import ModelWrapper
 from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -480,11 +481,12 @@ class WeightCompression(Algorithm):
 
     def apply(
         self,
-        model: TModel,
-        graph: NNCFGraph,
+        model_wrapper: ModelWrapper,
+        *,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-    ) -> TModel:
+    ) -> ModelWrapper:
+        model, graph = model_wrapper.unwrap()
         self.set_backend_entity(model)
 
         nodes_to_compress = self.get_nodes_to_compress(graph)
@@ -667,7 +669,7 @@ class WeightCompression(Algorithm):
             },
             algo_name="weight_compression",
         )
-        return transformed_model
+        return ModelWrapper(transformed_model, attributes=model_wrapper.attributes)
 
     def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[NNCFNode, int]:
         """

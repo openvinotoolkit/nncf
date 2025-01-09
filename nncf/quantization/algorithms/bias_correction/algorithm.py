@@ -25,11 +25,11 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging.track_progress import track
+from nncf.common.model import ModelWrapper
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
-from nncf.common.utils.backend import get_backend
 from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.tensor import Tensor
@@ -107,13 +107,12 @@ class BiasCorrection(Algorithm):
     def available_backends(self) -> List[BackendType]:
         return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH_FX]
 
-    def _set_backend_entity(self, model: TModel) -> None:
+    def _set_backend_entity(self, model_backend: BackendType) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm.
 
-        :param model: Backend-specific input model.
+        :param model_backend: Backend of a model.
         """
-        model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
             from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
 
@@ -133,12 +132,15 @@ class BiasCorrection(Algorithm):
 
     def apply(
         self,
-        model: TModel,
-        graph: NNCFGraph,
+        model_wrapper: ModelWrapper,
+        *,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
-    ) -> TModel:
-        self._set_backend_entity(model)
+    ) -> ModelWrapper:
+        self._set_backend_entity(model_wrapper.backend)
+
+        model = model_wrapper.model
+
         main_transformations_layout = TransformationLayout()
         main_model_transformer = ModelTransformerFactory.create(model)
 
@@ -205,7 +207,8 @@ class BiasCorrection(Algorithm):
             # to reduce memory usage during the algorithm's pipeline.
             self._remove_unnecessary_stats(position, subgraphs_data)
 
-        return main_model_transformer.transform(main_transformations_layout)
+        transformed_model = main_model_transformer.transform(main_transformations_layout)
+        return ModelWrapper(transformed_model, attributes=model_wrapper.attributes)
 
     def _is_node_correctable(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
@@ -553,8 +556,10 @@ class BiasCorrection(Algorithm):
             output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
 
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-        self._set_backend_entity(model)
+    def get_statistic_points(self, model_wrapper: ModelWrapper) -> StatisticPointsContainer:
+        self._set_backend_entity(model_wrapper.backend)
+        model, graph = model_wrapper.unwrap()
+
         statistic_container = StatisticPointsContainer()
 
         nodes_with_bias = [

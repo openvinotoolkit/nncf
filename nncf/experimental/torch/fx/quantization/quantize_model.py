@@ -10,10 +10,8 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Optional
+from typing import Optional, cast
 
-import torch
-import torch.fx
 from torch.ao.quantization.pt2e.duplicate_dq_pass import DuplicateDQPass
 from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
 from torch.ao.quantization.pt2e.qat_utils import _fold_conv_bn_qat
@@ -22,8 +20,8 @@ from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
 
 import nncf
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
+from nncf.common.model import ModelWrapper
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.experimental.torch.fx.quantization.backend_parameters import is_weight_compression_needed
@@ -46,7 +44,7 @@ DEFAULT_RANGE_TYPE = "mean_min_max"
 
 
 def quantize_impl(
-    model: torch.fx.GraphModule,
+    model: GraphModule,
     calibration_dataset: Dataset,
     mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
@@ -56,7 +54,7 @@ def quantize_impl(
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
-) -> torch.fx.GraphModule:
+) -> GraphModule:
     """
     Implementation of the `quantize()` method for the Torch FX backend.
     """
@@ -86,9 +84,9 @@ def quantize_impl(
 
     # To make it easier for bias correction algorithms.
     apply_quantization_transformations(copied_model)
-
-    nncf_graph = NNCFGraphFactory.create(copied_model)
-    quantized_model = quantization_algorithm.apply(copied_model, nncf_graph, dataset=calibration_dataset)
+    model_wrapper = ModelWrapper(copied_model)
+    quantized_model_wrapper = quantization_algorithm.apply(model_wrapper, dataset=calibration_dataset)
+    quantized_model = cast(GraphModule, quantized_model_wrapper.model)
 
     if is_weight_compression_needed(advanced_parameters):
         compress_post_quantize_transformation(quantized_model)
@@ -116,7 +114,7 @@ def quantize_impl(
 
 
 def compress_weights_impl(
-    model: torch.fx.GraphModule,
+    model: GraphModule,
     dataset: Dataset,
     mode: CompressWeightsMode,
     ratio: float,
@@ -131,7 +129,7 @@ def compress_weights_impl(
     lora_correction: bool,
     backup_mode: BackupMode,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
-) -> torch.fx.GraphModule:
+) -> GraphModule:
     """
     Implementation of the `compress_weights()` method for the Torch Fx backend.
     """
@@ -151,8 +149,9 @@ def compress_weights_impl(
         backup_mode,
         advanced_parameters,
     )
-    graph = NNCFGraphFactory.create(model)
-    compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
+    model_wrapper = ModelWrapper(model)
+    compressed_model_wrapper = compression_algorithm.apply(model_wrapper, dataset=dataset)
+    compressed_model = compressed_model_wrapper.model
     compressed_model = GraphModule(compressed_model, compressed_model.graph)
     compressed_model = _disallow_eval_train(compressed_model)
 

@@ -13,11 +13,10 @@ import re
 from typing import Any, Dict, List
 
 import numpy as np
-import openvino as ov
 import pytest
 import torch.fx
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.common.model import ModelWrapper
 from nncf.experimental.torch.fx.model_utils import remove_fq_from_inputs
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_bias_value
@@ -77,8 +76,8 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
         return remove_fq_from_inputs(model, graph)
 
     @staticmethod
-    def check_bias(model: ov.Model, ref_biases: Dict) -> None:
-        nncf_graph = NNCFGraphFactory.create(model)
+    def check_bias(model_wrapper: ModelWrapper, ref_biases: Dict) -> None:
+        model, nncf_graph = model_wrapper.unwrap()
         for ref_name, ref_value in ref_biases.items():
             node = nncf_graph.get_node_by_name(ref_name)
             ref_value = torch.tensor(ref_value)

@@ -9,7 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TypeVar
+import os
+from typing import Any, Dict, Optional, Tuple, TypeVar
 
 import nncf
 from nncf.common.engine import Engine
@@ -26,13 +27,20 @@ TModel = TypeVar("TModel")
 
 class NNCFGraphFactory:
     @staticmethod
-    def create(model: TModel) -> NNCFGraph:
+    def create(
+        model: TModel, input_args: Optional[Tuple[Any, ...]] = None, input_kwargs: Optional[Dict[str, Any]] = None
+    ) -> NNCFGraph:
         """
         Factory method to create backend-specific NNCFGraph instance based on the input model.
 
         :param model: backend-specific model instance
         :return: backend-specific NNCFGraph instance
         """
+        if input_args is None:
+            input_args = ()
+        if input_kwargs is None:
+            input_kwargs = {}
+
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
             from nncf.onnx.graph.nncf_graph_builder import GraphConverter
@@ -47,7 +55,13 @@ class NNCFGraphFactory:
 
             return GraphConverter.create_nncf_graph(model)
         if model_backend == BackendType.TORCH:
-            return model.nncf.get_graph()
+            if os.getenv("NNCF_EXPERIMENTAL_TORCH_TRACING") is None:
+                return model.nncf.get_graph()
+            else:
+                from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
+
+                return build_nncf_graph(model, *input_args, **input_kwargs)
+
         raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific graph because {} is not supported!".format(model_backend.value)
         )
