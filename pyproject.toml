@@ -99,7 +99,6 @@ files = [
     "nncf/common/engine.py",
     "nncf/common/hook_handle.py",
     "nncf/common/insertion_point_graph.py",
-    "nncf/common/logging/logger.py",
     "nncf/common/plotting.py",
     "nncf/common/schedulers.py",
     "nncf/common/scopes.py",
