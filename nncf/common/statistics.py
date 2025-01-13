@@ -61,7 +61,7 @@ class NNCFStatistics:
         setattr(self, algorithm_name, stats)
 
     def to_str(self) -> str:
-        pretty_string = "\n\n".join([str(x[1].to_str()) for x in self])
+        pretty_string = "\n\n".join([x[1].to_str() for x in self])
         return pretty_string
 
     def __iter__(self) -> Iterator[Tuple[str, Statistics]]:
