@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import collections
-from typing import List, TypeVar
+from typing import Deque, List, Type, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -23,9 +23,9 @@ TModel = TypeVar("TModel")
 def transform_to_inference_graph(
     nncf_graph: NNCFGraph,
     input_nodes: List[NNCFNode],
-    shapeof_metatypes: List[OperatorMetatype],
-    dropout_metatypes: List[OperatorMetatype],
-    preserved_metatypes: List[OperatorMetatype],
+    shapeof_metatypes: List[Type[OperatorMetatype]],
+    dropout_metatypes: List[Type[OperatorMetatype]],
+    preserved_metatypes: List[Type[OperatorMetatype]],
 ) -> NNCFGraph:
     """
     This method contains inplace pipeline of the passes that uses to provide inference graph without constant flows.
@@ -49,7 +49,7 @@ def transform_to_inference_graph(
 
 def find_shapeof_subgraphs(
     nncf_graph: NNCFGraph,
-    shapeof_metatypes: List[OperatorMetatype],
+    shapeof_metatypes: List[Type[OperatorMetatype]],
     input_nodes: List[NNCFNode],
 ) -> List[NNCFNode]:
     """
@@ -80,7 +80,7 @@ def find_shapeof_subgraphs(
     for shape_of_node in shape_of_nodes:
         shapeof_subgraphs.add(shape_of_node)
 
-        shape_of_queue = collections.deque()
+        shape_of_queue: Deque[NNCFNode] = collections.deque()
         shape_of_queue.extend(nncf_graph.get_next_nodes(shape_of_node))
         while shape_of_queue:
             node = shape_of_queue.pop()
@@ -97,7 +97,7 @@ def find_shapeof_subgraphs(
 def find_preserved_nodes(
     graph: NNCFGraph,
     shapeof_subgraphs: List[NNCFNode],
-    preserved_metatypes: List[OperatorMetatype],
+    preserved_metatypes: List[Type[OperatorMetatype]],
 ) -> List[NNCFNode]:
     """
     :param graph: The input graph to be analyzed.
@@ -129,7 +129,7 @@ def find_preserved_nodes(
 
 def remove_nodes_and_reconnect_graph(
     nncf_graph: NNCFGraph,
-    metatypes: List[OperatorMetatype],
+    metatypes: List[Type[OperatorMetatype]],
 ) -> NNCFGraph:
     """
     Removes nodes with metatypes specified by `metatypes` parameter from

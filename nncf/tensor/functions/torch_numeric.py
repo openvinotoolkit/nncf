@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
@@ -19,6 +19,7 @@ from nncf.tensor import TensorDeviceType
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TypeInfo
 from nncf.tensor.functions import numeric as numeric
+from nncf.tensor.tensor import TTensor
 
 DTYPE_MAP = {
     TensorDataType.float16: torch.float16,
@@ -35,6 +36,14 @@ DEVICE_MAP = {TensorDeviceType.CPU: "cpu", TensorDeviceType.GPU: "cuda"}
 
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 DEVICE_MAP_REV = {v: k for k, v in DEVICE_MAP.items()}
+
+
+def convert_to_torch_device(device: TensorDeviceType) -> str:
+    return DEVICE_MAP[device] if device is not None else None
+
+
+def convert_to_torch_dtype(dtype: TensorDataType) -> torch.dtype:
+    return DTYPE_MAP[dtype] if dtype is not None else None
 
 
 @numeric.device.register(torch.Tensor)
@@ -200,7 +209,7 @@ def _(
     keepdims: bool = False,
     dtype: Optional[TensorDataType] = None,
 ) -> torch.Tensor:
-    dtype = DTYPE_MAP[dtype] if dtype else None
+    dtype = convert_to_torch_dtype(dtype)
     return torch.mean(a, dim=axis, keepdim=keepdims, dtype=dtype)
 
 
@@ -416,10 +425,8 @@ def zeros(
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> torch.Tensor:
-    if dtype is not None:
-        dtype = DTYPE_MAP[dtype]
-    if device is not None:
-        device = DEVICE_MAP[device]
+    device = convert_to_torch_device(device)
+    dtype = convert_to_torch_dtype(dtype)
     return torch.zeros(*shape, dtype=dtype, device=device)
 
 
@@ -430,10 +437,8 @@ def eye(
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> torch.Tensor:
-    if dtype is not None:
-        dtype = DTYPE_MAP[dtype]
-    if device is not None:
-        device = DEVICE_MAP[device]
+    device = convert_to_torch_device(device)
+    dtype = convert_to_torch_dtype(dtype)
     p_args = (n,) if m is None else (n, m)
     return torch.eye(*p_args, dtype=dtype, device=device)
 
@@ -446,10 +451,8 @@ def arange(
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> torch.Tensor:
-    if dtype is not None:
-        dtype = DTYPE_MAP[dtype]
-    if device is not None:
-        device = DEVICE_MAP[device]
+    device = convert_to_torch_device(device)
+    dtype = convert_to_torch_dtype(dtype)
     return torch.arange(start, end, step, dtype=dtype, device=device)
 
 
@@ -465,3 +468,14 @@ def _(a: torch.Tensor) -> torch.Tensor:
 @numeric.ceil.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.ceil(a)
+
+
+def tensor(
+    data: Union[TTensor, Sequence[float]],
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> torch.Tensor:
+    device = convert_to_torch_device(device)
+    dtype = convert_to_torch_dtype(dtype)
+    return torch.tensor(data, dtype=dtype, device=device)

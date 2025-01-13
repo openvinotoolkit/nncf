@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import logging
-from typing import Dict
+from typing import Any, Dict
 
 import jsonschema
 
@@ -148,7 +148,9 @@ NNCF_CONFIG_SCHEMA = {
 }
 
 
-def validate_single_compression_algo_schema(single_compression_algo_dict: Dict, ref_vs_algo_schema: Dict):
+def validate_single_compression_algo_schema(
+    single_compression_algo_dict: Dict[str, Any], ref_vs_algo_schema: Dict[str, Any]
+) -> None:
     """single_compression_algo_dict must conform to BASIC_COMPRESSION_ALGO_SCHEMA (and possibly has other
     algo-specific properties"""
     algo_name = single_compression_algo_dict["algorithm"]
@@ -172,7 +174,7 @@ def validate_single_compression_algo_schema(single_compression_algo_dict: Dict, 
         raise e
 
 
-def validate_accuracy_aware_training_schema(single_compression_algo_dict: Dict):
+def validate_accuracy_aware_training_schema(single_compression_algo_dict: Dict[str, Any]) -> None:
     """
     Checks accuracy_aware_training section.
     """

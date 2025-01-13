@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -57,7 +57,7 @@ def validate(model: ov.Model, val_loader: torch.utils.data.DataLoader) -> float:
 
 def run_benchmark(model_path: Path, shape: List[int]) -> float:
     cmd = ["benchmark_app", "-m", model_path.as_posix(), "-d", "CPU", "-api", "async", "-t", "15", "-shape", str(shape)]
-    cmd_output = subprocess.check_output(cmd, text=True)
+    cmd_output = subprocess.check_output(cmd, text=True)  # nosec
     print(*cmd_output.splitlines()[-8:], sep="\n")
     match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
     return float(match.group(1))

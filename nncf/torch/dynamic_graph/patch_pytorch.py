@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,7 +12,7 @@
 import functools
 import inspect
 from contextlib import contextmanager
-from typing import Callable, List, Union
+from typing import Callable, List, Optional, Union
 
 import torch
 import torch.utils.cpp_extension
@@ -251,13 +251,13 @@ def get_torch_compile_wrapper():
     """
 
     @functools.wraps(_ORIG_TORCH_COMPILE)
-    def wrapper(model, *args, **kwargs):
+    def wrapper(model: Optional[Callable] = None, **kwargs):
         from nncf.torch.nncf_network import NNCFNetwork
 
         if isinstance(model, NNCFNetwork):
             raise TypeError("At the moment torch.compile() is not supported for models optimized by NNCF.")
         with disable_patching():
-            return _ORIG_TORCH_COMPILE(model, *args, **kwargs)
+            return _ORIG_TORCH_COMPILE(model, **kwargs)
 
     return wrapper
 

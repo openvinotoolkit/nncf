@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -44,11 +44,12 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
@@ -63,8 +64,10 @@ from nncf.quantization.fake_quantize import calculate_convert_parameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.quantization.passes import transform_to_inference_graph
+from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
+from nncf.quantization.range_estimator import StatisticsType
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 
@@ -437,7 +440,7 @@ class MinMaxQuantization(Algorithm):
         target_point: TargetPoint,
         qconfig: QuantizerConfig,
         batchwise_statistics: bool,
-    ) -> TensorStatisticCollectorBase:
+    ) -> TensorCollector:
         """
         Creates and returns a statistic collector based on the quantizer's configuration.
 
@@ -474,7 +477,7 @@ class MinMaxQuantization(Algorithm):
                 shape, channel_axes, batchwise_statistics
             )
 
-        return self._backend_entity.get_statistic_collector(
+        return self._get_statistic_collector(
             range_estimator_params,
             collector_params.use_abs_max,
             reduction_axes,
@@ -482,6 +485,68 @@ class MinMaxQuantization(Algorithm):
             self._inplace_statistics,
             num_samples=num_samples,
         )
+
+    def _get_statistic_collector(
+        self,
+        range_estimator_params: RangeEstimatorParameters,
+        use_abs_max: bool,
+        reduction_axes: Optional[Tuple[int, ...]],
+        aggregation_axes: Optional[Tuple[int, ...]],
+        inplace: bool,
+        num_samples: Optional[int] = None,
+    ) -> TensorCollector:
+        """
+        Returns statistic collector.
+
+        :param range_estimator_params: Parameters that specify estimators types.
+        :param use_abs_max: Wheather reduce absolute values of input tensors or not.
+        :param reduction_axes: Axes for reducer.
+        :param aggregation_axes: Axes for aggregator.
+        :param inplace: Whether to calculate statistic inplace or not.
+        :param num_samples: Maximum number of samples to collect.
+        :return: TensorCollector for the statistics calculation.
+        """
+        if not self._backend_entity.supports_inplace_statistics:
+            inplace = False
+
+        collector = TensorCollector(MinMaxTensorStatistic)
+        for params, container_key in zip(
+            [range_estimator_params.min, range_estimator_params.max],
+            [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
+        ):
+            if params.statistics_type not in self._backend_entity.reducer_map:
+                raise nncf.InternalError(f"Statistic type: {params.statistics_type} is not yet supported.")
+
+            if params.aggregator_type not in AGGREGATORS_MAP:
+                raise nncf.InternalError(f"Aggregator type: {params.aggregator_type} is not yet supported.")
+
+            statistic_type = params.statistics_type
+            if statistic_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
+                # TODO(dlyakhov): merge two quantile aggregators in one
+                if container_key == MinMaxTensorStatistic.MIN_STAT:
+                    quantile = params.quantile_outlier_prob
+                else:
+                    quantile = 1 - params.quantile_outlier_prob
+                reducer = self._backend_entity.reducer_map[statistic_type](
+                    reduction_axes=reduction_axes, inplace=inplace, quantile=[quantile]
+                )
+            else:
+                if use_abs_max and statistic_type == StatisticsType.MAX:
+                    statistic_type = StatisticsType.ABS_MAX
+                reducer = self._backend_entity.reducer_map[statistic_type](
+                    reduction_axes=reduction_axes, inplace=inplace
+                )
+
+            kwargs = {
+                "num_samples": num_samples,
+                "aggregation_axes": aggregation_axes,
+            }
+            if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
+                kwargs.update({"quantile": params.quantile_outlier_prob})
+            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
+
+            collector.register_statistic_branch(container_key, reducer, aggregator)
+        return collector
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:
         """

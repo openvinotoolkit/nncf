@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import weakref
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 
 class HookHandle:
@@ -24,7 +24,7 @@ class HookHandle:
         :param hooks_registry: A dictionary of hooks, indexed by hook `id`.
         :param hook_id: Hook id to use as key in the dictionary of hooks.
         """
-        self.hooks_registry_ref = weakref.ref(hooks_registry)
+        self.hooks_registry_ref: Optional[weakref.ReferenceType[Dict[Any, Any]]] = weakref.ref(hooks_registry)
         self._hook_id = hook_id
 
     @property
@@ -58,8 +58,8 @@ def add_op_to_registry(hooks_registry: Dict[Any, Any], op: Any) -> HookHandle:
     """
     if hooks_registry:
         hook_id = max(map(int, hooks_registry))
-        hook_id = str(hook_id + 1)
+        hook_id_str = str(hook_id + 1)
     else:
-        hook_id = "0"
-    hooks_registry[hook_id] = op
-    return HookHandle(hooks_registry, hook_id)
+        hook_id_str = "0"
+    hooks_registry[hook_id_str] = op
+    return HookHandle(hooks_registry, hook_id_str)

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -74,7 +74,7 @@ def run_benchmark(model_path: Path, config) -> float:
         "-t", "30",
         "-shape", str([1, 3, config.imgsz, config.imgsz]),
     ]  # fmt: skip
-    cmd_output = subprocess.check_output(command, text=True)
+    cmd_output = subprocess.check_output(command, text=True)  # nosec
     match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
     return float(match.group(1))
 

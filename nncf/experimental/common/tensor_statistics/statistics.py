@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,32 +13,63 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
+from dataclasses import fields
 from typing import Any, ClassVar, Dict, List, Tuple
 
+import nncf
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
 
+@dataclass
 class TensorStatistic:
     """Base class that stores statistic data"""
 
-    TENSOR_STATISTIC_OUTPUT_KEY = "tensor_statistic_output"
+    TENSOR_STATISTIC_OUTPUT_KEY: ClassVar[str] = "tensor_statistic_output"
 
-    def get_data(self) -> Dict[str, Any]:
-        return {key: getattr(self, key) for key in self.keys()}
+    def get_data(self, is_serialized: bool = False) -> Dict[str, Any]:
+        """
+        Retrieves the data of the tensor statistics. If `is_serialized` is True,
+        the data is prepared for serialization by including only Tensor instances.
 
-    def load_data(self, data: Dict[str, Any]):
-        for key in self.keys():
-            setattr(self, key, data.get(key))
+        :param is_serialized: If True, the data is prepared for serialization by
+            including only Tensor instances.
+        :return: Dictionary with keys and their associated data. If `is_serialized`
+            is True, the dictionary will contain only Tensor instances.
+        """
+        if is_serialized:
+            return self._get_serialized_data()  # Dict[str, Tensor]
+        return {field.name: getattr(self, field.name) for field in fields(self)}
+
+    def _get_serialized_data(self) -> Dict[str, Tensor]:
+        """
+        Prepares the data for serialization by including only Tensor instances.
+
+        :return: Dictionary with data for serialization.
+        """
+        serialized_data = {}
+        for field in fields(self):
+            key = field.name
+            value = getattr(self, key)
+            if isinstance(value, Tensor):
+                serialized_data[key] = value
+            else:
+                raise nncf.InternalError(f"Unsupported type of value: {type(value)}")
+        return serialized_data
+
+    def load_data(self, data: Dict[str, Tensor]) -> None:
+        """
+        Loads the data from the serialized data.
+
+        :param data: Data to load.
+        """
+        for key in (field.name for field in fields(self)):
+            setattr(self, key, data[key])
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:
-        args = {key: config[key] for key in cls.keys()}  # noqa: SIM118
+        args = {key: config[key] for key in (field.name for field in fields(cls))}
         return cls(**args)
-
-    @classmethod
-    def keys(cls) -> Tuple[str]:
-        return ()
 
 
 @dataclass
@@ -48,10 +79,6 @@ class MinMaxTensorStatistic(TensorStatistic):
 
     min_values: Tensor
     max_values: Tensor
-
-    @classmethod
-    def keys(cls):
-        return (cls.MIN_STAT, cls.MAX_STAT)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MinMaxTensorStatistic):
@@ -64,10 +91,6 @@ class AbsMaxTensorStatistic(TensorStatistic):
     ABS_MAX_STAT: ClassVar[str] = "abs_max"
 
     abs_max: Tensor
-
-    @classmethod
-    def keys(cls):
-        return (cls.ABS_MAX_STAT,)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, AbsMaxTensorStatistic):
@@ -83,14 +106,23 @@ class MeanTensorStatistic(TensorStatistic):
     mean_values: Tensor
     shape: Tuple[int, ...]
 
-    @classmethod
-    def keys(cls):
-        return (cls.MEAN_STAT, cls.SHAPE_STAT)
-
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanTensorStatistic):
             return self.shape == other.shape and fns.allclose(self.mean_values, other.mean_values)
         return False
+
+    def _get_serialized_data(self) -> Dict[str, Tensor]:
+        backend = self.mean_values.backend
+        dtype = self.mean_values.dtype
+        device = self.mean_values.device
+        return {
+            self.MEAN_STAT: self.mean_values,
+            self.SHAPE_STAT: fns.tensor(self.shape, backend=backend, dtype=dtype, device=device),
+        }
+
+    def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
+        self.mean_values = loaded_data[self.MEAN_STAT]
+        self.shape_values = tuple(loaded_data[self.SHAPE_STAT].tolist())
 
 
 @dataclass
@@ -100,10 +132,6 @@ class MedianMADTensorStatistic(TensorStatistic):
 
     median_values: Tensor
     mad_values: Tensor
-
-    @classmethod
-    def keys(cls):
-        return (cls.MEDIAN_VALUES_STAT, cls.MAD_VALUES_STAT)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MedianMADTensorStatistic):
@@ -126,10 +154,6 @@ class PercentileTensorStatistic(TensorStatistic):
 
     percentile_vs_values_dict: Dict[str, Tensor]
 
-    @classmethod
-    def keys(cls):
-        return (cls.PERCENTILE_VS_VALUE_DICT,)
-
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, PercentileTensorStatistic):
             if Counter(self.percentile_vs_values_dict.keys()) != Counter(other.percentile_vs_values_dict.keys()):
@@ -150,16 +174,18 @@ class PercentileTensorStatistic(TensorStatistic):
                 percentile_vs_values_dict[percentile] = value
         return cls(percentile_vs_values_dict=percentile_vs_values_dict)
 
+    def _get_serialized_data(self) -> Dict[str, Tensor]:
+        return self.PERCENTILE_VS_VALUE_DICT
+
+    def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
+        self.percentile_vs_values_dict = loaded_data
+
 
 @dataclass
 class RawTensorStatistic(TensorStatistic):
     VALUES_STATS: ClassVar[str] = "values"
 
     values: Tensor
-
-    @classmethod
-    def keys(cls):
-        return (cls.VALUES_STATS,)
 
     def __eq__(self, other: RawTensorStatistic) -> bool:
         if isinstance(other, RawTensorStatistic):
@@ -173,10 +199,6 @@ class HessianTensorStatistic(TensorStatistic):
 
     hessian: Tensor
 
-    @classmethod
-    def keys(cls):
-        return (cls.HESSIAN_INPUT_ACTIVATION_STATS,)
-
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, HessianTensorStatistic):
             return fns.allclose(self.hessian, other.hessian)
@@ -188,10 +210,6 @@ class MeanVarianceTensorStatistic(TensorStatistic):
     MEAN_VARIANCE_STAT: ClassVar[str] = "mean_variance"
 
     mean_variance: Tensor
-
-    @classmethod
-    def keys(cls):
-        return (cls.MEAN_VARIANCE_STAT,)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanVarianceTensorStatistic):
@@ -205,10 +223,6 @@ class MaxVarianceTensorStatistic(TensorStatistic):
 
     max_variance: Tensor
 
-    @classmethod
-    def keys(cls):
-        return (cls.MAX_VARIANCE_STAT,)
-
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MaxVarianceTensorStatistic):
             return fns.allclose(self.max_variance, other.max_variance)
@@ -220,10 +234,6 @@ class MeanMagnitudeTensorStatistic(TensorStatistic):
     MEAN_MAGNITUDE_STAT: ClassVar[str] = "mean_magnitude"
 
     mean_magnitude: Tensor
-
-    @classmethod
-    def keys(cls):
-        return (cls.MEAN_MAGNITUDE_STAT,)
 
     def __eq__(self, other: TensorStatistic):
         if isinstance(other, MeanMagnitudeTensorStatistic):
@@ -237,11 +247,7 @@ class WCTensorStatistic(TensorStatistic):
     SHAPE_STAT = "shape_values"
 
     mean_values: List[Tensor]
-    shape_values: List[Tuple[int, ...]]
-
-    @classmethod
-    def keys(cls):
-        return (cls.MEAN_STAT, cls.SHAPE_STAT)
+    shape_values: List[Tuple[Tensor]]
 
     def __eq__(self, other: Any) -> bool:
         shapes_equal = all(self.shapes[i] == other.shapes[i] for i in range(len(self.mean_values)))
@@ -251,6 +257,24 @@ class WCTensorStatistic(TensorStatistic):
             self.tensor_eq(self.mean_values[i], other.mean_values[i]) for i in range(len(self.mean_values))
         )
         return mean_values_equal
+
+    def _get_serialized_data(self) -> Dict[str, Tensor]:
+        backend = self.mean_values[0].backend
+        dtype = self.mean_values[0].dtype
+        device = self.mean_values[0].device
+        return {
+            self.MEAN_STAT: fns.stack(self.mean_values),
+            self.SHAPE_STAT: fns.tensor(
+                [[dim.data for dim in shape] for shape in self.shape_values],
+                backend=backend,
+                dtype=dtype,
+                device=device,
+            ),
+        }
+
+    def load_data(self, loaded_data: Dict[str, Tensor]) -> None:
+        self.shape_values = [tuple(shape) for shape in loaded_data[self.SHAPE_STAT]]
+        self.mean_values = [it for it in loaded_data[self.MEAN_STAT]]
 
     @classmethod
     def from_config(cls, config: Dict[str, Any]) -> TensorStatistic:

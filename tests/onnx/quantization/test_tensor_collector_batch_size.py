@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,13 +13,13 @@ import numpy as np
 import pytest
 
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
-from nncf.onnx.statistics.collectors import ONNX_REDUCERS_MAP
+from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
 from tests.common.experimental.test_tensor_collector_batch_size import TemplateTestTensorCollectorBatchSize
 
 
 class TestTensorCollectorBatchSize(TemplateTestTensorCollectorBatchSize):
 
-    @pytest.fixture(params=ONNX_REDUCERS_MAP.values())
+    @pytest.fixture(params=REDUCERS_MAP.values())
     def reducers(self, request) -> bool:
         return request.param
 

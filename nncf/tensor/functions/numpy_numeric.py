@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -19,6 +19,7 @@ from nncf.tensor.definitions import TensorDeviceType
 from nncf.tensor.definitions import TypeInfo
 from nncf.tensor.functions import numeric as numeric
 from nncf.tensor.functions.dispatcher import register_numpy_types
+from nncf.tensor.tensor import TTensor
 
 DTYPE_MAP = {
     TensorDataType.float16: np.dtype(np.float16),
@@ -31,6 +32,15 @@ DTYPE_MAP = {
 }
 
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
+
+
+def validate_device(device: TensorDeviceType) -> None:
+    if device is not None and device != TensorDeviceType.CPU:
+        raise ValueError("numpy_numeric only supports CPU device.")
+
+
+def convert_to_numpy_dtype(dtype: TensorDataType) -> np.dtype:
+    return DTYPE_MAP[dtype] if dtype is not None else None
 
 
 @register_numpy_types(numeric.device)
@@ -187,7 +197,7 @@ def _(
     keepdims: bool = False,
     dtype: Optional[TensorDataType] = None,
 ) -> np.ndarray:
-    dtype = DTYPE_MAP[dtype] if dtype else None
+    dtype = convert_to_numpy_dtype(dtype)
     return np.array(np.mean(a, axis=axis, keepdims=keepdims, dtype=dtype))
 
 
@@ -387,10 +397,8 @@ def zeros(
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> np.ndarray:
-    if device is not None and device != TensorDeviceType.CPU:
-        raise ValueError("numpy_numeric.zeros only supports CPU device.")
-    if dtype is not None:
-        dtype = DTYPE_MAP[dtype]
+    validate_device(device)
+    dtype = convert_to_numpy_dtype(dtype)
     return np.zeros(shape, dtype=dtype)
 
 
@@ -401,10 +409,8 @@ def eye(
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> np.ndarray:
-    if device is not None and device != TensorDeviceType.CPU:
-        raise ValueError("numpy_numeric.eye only supports CPU device.")
-    if dtype is not None:
-        dtype = DTYPE_MAP[dtype]
+    validate_device(device)
+    dtype = convert_to_numpy_dtype(dtype)
     return np.eye(n, m, dtype=dtype)
 
 
@@ -416,10 +422,8 @@ def arange(
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> np.ndarray:
-    if device is not None and device != TensorDeviceType.CPU:
-        raise ValueError("numpy_numeric.arange only supports CPU device.")
-    if dtype is not None:
-        dtype = DTYPE_MAP[dtype]
+    validate_device(device)
+    dtype = convert_to_numpy_dtype(dtype)
     return np.arange(start, end, step, dtype=dtype)
 
 
@@ -431,3 +435,14 @@ def _(a: Union[np.ndarray, np.generic]) -> Union[np.ndarray, np.generic]:
 @register_numpy_types(numeric.ceil)
 def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
     return np.ceil(a)
+
+
+def tensor(
+    data: Union[TTensor, Sequence[float]],
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> np.ndarray:
+    validate_device(device)
+    dtype = convert_to_numpy_dtype(dtype)
+    return np.array(data, dtype=dtype)

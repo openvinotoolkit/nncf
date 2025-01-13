@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,16 +11,13 @@
 
 from typing import Dict, List, Optional, Set, Tuple
 
-import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import ELEMENTWISE_OPERATIONS
@@ -35,12 +32,10 @@ from nncf.openvino.quantization.default_quantization import DEFAULT_OV_QUANT_TRA
 from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanced_parameters import RangeEstimatorParameters
-from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.quantization.range_estimator import AggregatorType
+from nncf.quantization.range_estimator import StatisticsType
 
 
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -110,6 +105,14 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         return DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 
+    @property
+    def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
+        return OV_REDUCERS_MAP
+
+    @property
+    def supports_inplace_statistics(self) -> bool:
+        return True
+
     @staticmethod
     def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
         return get_start_nodes_for_activation_path_tracing(nncf_graph)
@@ -162,52 +165,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_quantization_axes(node: NNCFNode, target_point: OVTargetPoint, ndims: int) -> Tuple[int]:
         return tuple(get_weight_channel_axes(node))
-
-    @staticmethod
-    def get_statistic_collector(
-        range_estimator_params: RangeEstimatorParameters,
-        use_abs_max: bool,
-        reduction_axes: Optional[Tuple[int, ...]],
-        aggregation_axes: Optional[Tuple[int, ...]],
-        inplace: bool,
-        num_samples: Optional[int] = None,
-    ) -> TensorCollector:
-        collector = TensorCollector(MinMaxTensorStatistic)
-        for params, container_key in zip(
-            [range_estimator_params.min, range_estimator_params.max],
-            [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
-        ):
-            if params.statistics_type not in OV_REDUCERS_MAP:
-                raise nncf.InternalError(
-                    f"Statistic type: {params.statistics_type} is not supported for OpenVino PTQ backend yet."
-                )
-            if params.aggregator_type not in AGGREGATORS_MAP:
-                raise nncf.InternalError(
-                    f"Aggregator type: {params.aggregator_type} is not supported for OpenVino PTQ backend yet."
-                )
-            kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
-            if params.statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
-                if container_key == MinMaxTensorStatistic.MIN_STAT:
-                    quantile = params.quantile_outlier_prob
-                else:
-                    quantile = 1 - params.quantile_outlier_prob
-                kwargs.update({"quantile": [quantile]})
-            # TODO(dlyakhov): merge two quantile aggregators in one
-            statistic_type = params.statistics_type
-            if use_abs_max and statistic_type == StatisticsType.MAX:
-                statistic_type = StatisticsType.ABS_MAX
-            reducer = OV_REDUCERS_MAP[statistic_type](**kwargs)
-
-            kwargs = {
-                "num_samples": num_samples,
-                "aggregation_axes": aggregation_axes,
-            }
-            if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
-                kwargs.update({"quantile": params.quantile_outlier_prob})
-            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
-
-            collector.register_statistic_branch(container_key, reducer, aggregator)
-        return collector
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:

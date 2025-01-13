@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,7 +10,8 @@
 # limitations under the License.
 
 import sys
-import xml.etree.ElementTree as ET
+
+from defusedxml import ElementTree as ET
 
 
 def parse_xml_report(xml_file) -> None:
@@ -43,8 +44,12 @@ def parse_xml_report(xml_file) -> None:
         elif testcase.find("error") is not None:
             status = "$${\color{red}Error}$$"
         elif testcase.find("skipped") is not None:
-            status = "$${\color{orange}Skipped}$$"
-            message = testcase.find("skipped").get("message", "")
+            if "xfail" in testcase.find("skipped").get("type", ""):
+                status = "$${\color{orange}xfail}$$"
+                message = testcase.find("skipped").get("message", "")
+            else:
+                status = "$${\color{yellow}Skipped}$$"
+                message = testcase.find("skipped").get("message", "")
         else:
             status = "$${\color{green}Ok}$$"
 

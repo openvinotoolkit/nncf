@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,7 +11,6 @@
 from abc import abstractmethod
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 import nncf
@@ -48,6 +47,14 @@ class TemplateTestStatisticsCaching:
         """
         pass
 
+    @abstractmethod
+    def _create_dummy_min_max_tensor(self) -> Tensor:
+        """
+        Creates a dummy tensor for testing purposes.
+
+        :return: A Tensor object with dummy data.
+        """
+
     def _create_dummy_statistic_point(self) -> StatisticPoint:
         """
         Creates a dummy statistic point for testing purposes.
@@ -56,7 +63,7 @@ class TemplateTestStatisticsCaching:
         """
         dummy_t_p = self.create_target_point(TargetType.PRE_LAYER_OPERATION, "dummy_name", 0)
         dummy_tensor_collector = TensorCollector()
-        dummy_tensor_collector._cached_statistics = MinMaxTensorStatistic(Tensor(np.zeros((3))), Tensor(np.ones((3))))
+        dummy_tensor_collector._cached_statistics = MinMaxTensorStatistic(*self._create_dummy_min_max_tensor())
         return StatisticPoint(
             target_point=dummy_t_p, tensor_collector=dummy_tensor_collector, algorithm="dummy_algorithm"
         )
@@ -98,5 +105,5 @@ class TemplateTestStatisticsCaching:
         assert (tmp_path / test_file).exists(), "Statistics file was not created"
         # spoil backend
         aggregator.BACKEND = BackendType.TENSORFLOW
-        with pytest.raises(nncf.ValidationError):
+        with pytest.raises(nncf.StatisticsCacheError):
             aggregator.load_statistics_from_dir(tmp_path / test_file)

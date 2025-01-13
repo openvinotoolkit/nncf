@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -129,3 +129,16 @@ class UnknownDatasetError(Exception):
     """
 
     pass
+
+
+class StatisticsCacheError(Exception):
+    """
+    Raised when any error occurs during statistics caching.
+    """
+
+    def __str__(self) -> str:
+        return (
+            "The error occurred during statistics caching:\n"
+            f"{super().__str__()}\n"
+            "Please, remove the cache directory and collect cache again."
+        )
