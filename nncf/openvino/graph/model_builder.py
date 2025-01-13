@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -66,7 +66,7 @@ class ModelBuilder:
         to start graph creation from them (as well as Parameter layers), because
         OpenVINO graph is created from top-down and cannot be created otherwise.
 
-        Legend: w - weigths, c - convert, il/lh - input low/high, ol/oh - output low/high
+        Legend: w - weigths, c - convert, il/ih - input low/high, ol/oh - output low/high
         (w)
          |
         (c) (il) (ih) (ol) (oh)
@@ -79,8 +79,10 @@ class ModelBuilder:
         Based on the above graph, the return value would look like this:
         [convolution, parameter, fake quantize, oh, ol, ih, il, c, w]
 
-        :param input_ids: List of the ids specified in algorithm.
-        :param output_ids: List of the ids specified in algorithm.
+        :param input_ids: List of the points in the special format - (node_name, port_id).
+            This helps to point to the precise part of the model that may be used to define the subgraph inputs.
+        :param output_ids: List of the points in the special format - (node_name, port_id).
+            This helps to point to the precise part of the model that may be used to define the subgraph outputs.
         :param node_mapping: Original nodes mapping.
         :return: List of the ov.Nodes to clone.
         """
@@ -117,7 +119,7 @@ class ModelBuilder:
         The basic method of the algorithm. This method uses an aggregated list of layers to be recreated.
         Let us take a graph of this kind as an example:
 
-        Legend: w - weigths, c - convert, il/lh - input low/high, ol/oh - output low/high
+        Legend: w - weigths, c - convert, il/ih - input low/high, ol/oh - output low/high
         (w)
          |
         (c) (il) (ih) (ol) (oh)
@@ -149,7 +151,7 @@ class ModelBuilder:
             graph_nodes = [convolution, parameter, fake quantize, oh, ol, ih, il]
             clone_nodes = [c]
 
-        *creating il/lh - input low/high, ol/oh - output low/high nodes.
+        *creating il/ih - input low/high, ol/oh - output low/high nodes.
         Since these nodes are constants and do not require any nodes as inputs, cloned nodes will not be used.*
             graph_nodes = [convolution, parameter, fake quantize, oh, ol, ih, il]
             clone_nodes = [c, il, ih, ol, oh]
@@ -175,8 +177,10 @@ class ModelBuilder:
 
         The last step is to create a subgraph model based on the parameters & results lists.
 
-        :param input_ids: List of the ids specified in algorithm.
-        :param output_ids: List of the ids specified in algorithm.
+        :param input_ids: List of the points in the special format - (node_name, port_id).
+            This helps to point to the precise part of the model that may be used to define the subgraph inputs.
+        :param output_ids: List of the points in the special format - (node_name, port_id).
+            This helps to point to the precise part of the model that may be used to define the subgraph outputs.
         :param node_mapping: Original nodes mapping.
         :return: Builded ov.Model based on parameters.
         """
