@@ -20,7 +20,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS_REDUCED
-from nncf.openvino.graph.model_builder import ModelBuilder
+from nncf.openvino.graph.model_builder import OVModelBuilder
 from nncf.openvino.graph.node_utils import get_activation_channel_axis
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -38,7 +38,7 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def __init__(self, model):
         # Node mapping caching to reduce time for calculations
         self._node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
-        self._model_builder = ModelBuilder()
+        self._model_builder = OVModelBuilder()
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:

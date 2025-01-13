@@ -20,7 +20,7 @@ from nncf.openvino.graph.node_utils import get_parameter_node_name
 from nncf.openvino.graph.node_utils import get_result_node_name
 
 
-class ModelBuilder:
+class OVModelBuilder:
     """
     The purpose of the ModelBuilder is to build a new OpenVINO model from input and output points.
     This Builder was created to reduce the number of model cloning that is required for ModelTransformer to work.
