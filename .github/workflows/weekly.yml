@@ -14,17 +14,7 @@ jobs:
       matrix:
         include:
           - python_version: "3.9"
-            override_requirements: "numpy==1.19.1"
-          - python_version: "3.9"
-            override_requirements: "numpy==1.19.2"
-          - python_version: "3.9"
             override_requirements: "numpy==1.19.3"
-          - python_version: "3.9"
-            override_requirements: "numpy==1.19.4"
-          - python_version: "3.9"
-            override_requirements: "numpy==1.19.5"
-          - python_version: "3.9"
-            override_requirements: "numpy==1.20.0"
           - python_version: "3.11"
           - python_version: "3.12"
     uses: ./.github/workflows/call_precommit.yml

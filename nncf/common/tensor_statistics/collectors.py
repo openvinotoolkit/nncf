@@ -317,7 +317,7 @@ class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
     Collector estimates median and median absolute deviation (MAD).
     """
 
-    def _prepare_statistics(self) -> Tuple[np.ndarray, np.ndarray]:
+    def _prepare_statistics(self) -> Tuple[np.ndarray[Any], np.ndarray[Any]]:
         per_channel_history = get_per_channel_history(
             self._samples, cast(List[int], self._reduction_shape), discard_zeros=True
         )
