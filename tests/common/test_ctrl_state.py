@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
+from nncf.api.compression import CompressionStage
 from nncf.api.statistics import Statistics
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController
@@ -89,6 +90,9 @@ class A(BaseCompressionAlgorithmController):
 
     def statistics(self, quickly_collected_only: bool = False) -> Statistics:
         return NNCFStatistics()
+
+    def compression_stage(self) -> CompressionStage:
+        pass
 
 
 class B(A):

@@ -46,11 +46,10 @@ dependencies = [
     "pydot>=1.4.1, <3.0.0",
     "pymoo>=0.6.0.1",
     "rich>=13.5.2",
+    "safetensors>=0.4.1",
     "scikit-learn>=0.24.0",
     "scipy>=1.3.2",
     "tabulate>=0.9.0",
-    "tqdm>=4.54.1",
-    "safetensors>=0.4.1"
 ]
 
 [project.optional-dependencies]
@@ -94,12 +93,33 @@ strict = true
 # https://github.com/hauntsaninja/no_implicit_optional
 implicit_optional = true
 files = [
-    "nncf/common/sparsity",
+    "nncf/api",
+    "nncf/data",
+    "nncf/common/collector.py",
+    "nncf/common/engine.py",
+    "nncf/common/hook_handle.py",
+    "nncf/common/insertion_point_graph.py",
+    "nncf/common/logging/logger.py",
+    "nncf/common/plotting.py",
+    "nncf/common/schedulers.py",
+    "nncf/common/scopes.py",
+    "nncf/common/stateful_classes_registry.py",
+    "nncf/common/strip.py",
+    "nncf/common/tensor.py",
+    "nncf/common/accuracy_aware_training",
     "nncf/common/graph",
-    "nncf/common/accuracy_aware_training/",
-    "nncf/common/utils/",
+    "nncf/common/initialization",
+    "nncf/common/sparsity",
     "nncf/common/tensor_statistics",
+    "nncf/common/utils",
+    "nncf/config",
     "nncf/experimental/torch2",
+    "nncf/quantization/passes.py",
+    "nncf/quantization/advanced_parameters.py",
+    "nncf/quantization/range_estimator.py",
+    "nncf/quantization/telemetry_extractors.py",
+    "nncf/telemetry/",
+    "nncf/*py",
 ]
 
 [tool.ruff]
@@ -154,3 +174,10 @@ notice-rgx = """\
 
 [tool.pytest.ini_options]
 pythonpath = "."
+
+[tool.bandit]
+exclude_dirs = ["tools", "tests", "**/venv*", "build"]
+skips = [
+    "B101",   # assert_used
+    "B404" ,  # import_subprocess
+]

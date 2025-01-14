@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -139,11 +139,7 @@ def dump_statistics(
 
         # Update the mapping
         metadata["mapping"][unique_sanitized_name] = original_name
-
-        try:
-            fns.io.save_file(statistics_value, file_path)
-        except Exception as e:
-            raise nncf.InternalError(f"Failed to write data to file {file_path}: {e}")
+        fns.io.save_file(statistics_value, file_path)
 
     if additional_metadata:
         metadata |= additional_metadata

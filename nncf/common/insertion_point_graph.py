@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,7 +14,7 @@ from copy import deepcopy
 from enum import Enum
 from typing import Dict, List, Set
 
-import networkx as nx
+import networkx as nx  # type: ignore
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
@@ -36,7 +36,7 @@ class PreHookInsertionPoint:
         self.target_node_name = target_node_name
         self.input_port_id = input_port_id
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.input_port_id) + " " + self.target_node_name
 
 
@@ -44,11 +44,11 @@ class PostHookInsertionPoint:
     def __init__(self, target_node_name: str):
         self.target_node_name = target_node_name
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.target_node_name
 
 
-class InsertionPointGraph(nx.DiGraph):
+class InsertionPointGraph(nx.DiGraph):  # type: ignore
     """
     This graph is built from the NNCFGraph representation of the model control flow graph and adds ephemeral
     "insertion point nodes" into the NNCF model graph representation corresponding to operator pre- and
@@ -304,7 +304,7 @@ class InsertionPointGraph(nx.DiGraph):
             if data[InsertionPointGraph.IS_MERGED_NODE_ATTR]:
                 for nncf_node in data[InsertionPointGraph.MERGED_NNCF_NODE_LIST_NODE_ATTR]:
                     if node_key == nncf_node.node_key:
-                        return node
+                        return node  # type: ignore
         return node_key
 
     def get_ip_graph_with_merged_hw_optimized_operations(

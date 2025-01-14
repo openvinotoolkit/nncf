@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -73,16 +73,13 @@ def test_get_node_type(node_type: NodeType, meta: Union[ConstMeta, FunctionMeta,
 @pytest.mark.parametrize(
     "meta, ref",
     [
-        [InOutMeta(torch.float32, (1), "input"), "input"],
-        [InOutMeta(torch.float32, (1), "output"), "output"],
-        [FunctionMeta("op_name", "fn_name", [], {}), "op_name"],
-        [ConstMeta(torch.float32, (1), "model.bias"), "model.bias"],
+        (InOutMeta(torch.float32, (1), "input"), "input"),
+        (InOutMeta(torch.float32, (1), "output"), "output"),
+        (FunctionMeta("op_name", "fn_name", [], {}), "op_name"),
+        (ConstMeta(torch.float32, (1), "model.bias"), "model.bias"),
     ],
 )
-def test_get_name_of_node(
-    meta: list[InOutMeta | str] | list[FunctionMeta | str] | list[ConstMeta | str],
-    ref: list[InOutMeta | str] | list[FunctionMeta | str] | list[ConstMeta | str],
-):
+def test_get_name_of_node(meta: Union[InOutMeta, FunctionMeta, ConstMeta], ref: str):
     assert get_name_of_node(meta) == ref
 
 

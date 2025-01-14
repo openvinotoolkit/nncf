@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional, Union
 
-SerializableData = Union[str, Enum]
+SerializableData = Union[str, Enum, bool]
 
 
 @dataclass
@@ -26,8 +26,8 @@ class CollectedEvent:
     """
 
     name: str
-    data: SerializableData = None  # GA limitations
-    int_data: int = None
+    data: Optional[SerializableData] = None  # GA limitations
+    int_data: Optional[int] = None
 
 
 class TelemetryExtractor(ABC):
@@ -35,7 +35,7 @@ class TelemetryExtractor(ABC):
     Interface for custom telemetry extractors, to be used with the `nncf.telemetry.tracked_function` decorator.
     """
 
-    def __init__(self, argname: Optional[str] = None):
+    def __init__(self, argname: str = ""):
         self._argname = argname
 
     @property
@@ -57,3 +57,12 @@ class VerbatimTelemetryExtractor(TelemetryExtractor):
         if isinstance(argvalue, bool):
             argvalue = "enabled" if argvalue else "disabled"
         return CollectedEvent(name=self._argname, data=argvalue)
+
+
+class FunctionCallTelemetryExtractor(TelemetryExtractor):
+    def __init__(self, argvalue: Any = None) -> None:
+        super().__init__()
+        self._argvalue = argvalue
+
+    def extract(self, _: Any) -> CollectedEvent:
+        return CollectedEvent(name="function_call", data=self._argvalue)

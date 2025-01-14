@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -86,9 +86,4 @@ if not any(_AVAILABLE_FRAMEWORKS.values()):
         "environment.\n"
         "Please install one of the supported frameworks above in order to use NNCF on top of it.\n"
         "See the installation guide at https://github.com/openvinotoolkit/nncf#installation-guide for help."
-    )
-else:
-    nncf_logger.info(
-        f"NNCF initialized successfully. Supported frameworks detected: "
-        f"{', '.join([name for name, loaded in _AVAILABLE_FRAMEWORKS.items() if loaded])}"
     )

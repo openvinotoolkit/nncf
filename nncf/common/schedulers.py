@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -69,7 +69,7 @@ class PolynomialDecaySchedule:
         else:
             value = self.initial_value + (self.target_value - self.initial_value) * np.power(progress, self.power)
 
-        return value
+        return float(value)
 
 
 class MultiStepSchedule:
@@ -141,7 +141,7 @@ class ExponentialDecaySchedule:
         if self.target_epoch == 0:
             return self.target_value
 
-        value = self.initial_value * np.power(self.decay_rate, epoch / self.target_epoch)
+        value = self.initial_value * float(np.power(self.decay_rate, epoch / self.target_epoch))
         return max(value, self.target_value)
 
 
