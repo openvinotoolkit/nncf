@@ -109,7 +109,6 @@ exclude = [
     "nncf/common/composite_compression.py",
     "nncf/common/compression.py",
     "nncf/common/deprecation.py",
-    "nncf/common/hardware/config.py",
     "nncf/common/logging/progress_bar.py",
     "nncf/common/logging/track_progress.py",
     "nncf/common/pruning/clusterization.py",
