@@ -27,8 +27,10 @@ jobs:
       - name: Build API docs
         run: |
           sphinx-build -M html docs/api/source html_build
-      - name: Upload built HTMLs as job artifact
-        uses: alehechka/upload-tartifact@a055d3a102b9ed9cfff1263bc713295047d0197e # v2
+      - name: Archive built HTMLs
+        shell: bash
+        run: tar -czf artifact.tar html_build/html
+      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b #v4.5.0
         with:
           name: html_doc_artifact
-          path: html_build/html
+          path: artifact.tar
