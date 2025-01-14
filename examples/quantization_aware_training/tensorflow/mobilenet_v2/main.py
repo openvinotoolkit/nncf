@@ -154,7 +154,6 @@ def transform_fn(data_item):
 
 calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
 tf_quantized_model = nncf.quantize(tf_model, calibration_dataset)
-tf_quantized_model = nncf.strip(tf_quantized_model)
 
 tf_quantized_model.compile(
     optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5),
@@ -168,7 +167,8 @@ tf_quantized_model.fit(train_dataset, epochs=3, verbose=1)
 # Benchmark performance, calculate compression rate and validate accuracy
 
 ov_model = ov.convert_model(tf_model, share_weights=False)
-ov_quantized_model = ov.convert_model(tf_quantized_model, share_weights=False)
+stripped_model = nncf.strip(tf_quantized_model)
+ov_quantized_model = ov.convert_model(stripped_model, share_weights=False)
 
 fp32_ir_path = ROOT / "mobilenet_v2_fp32.xml"
 ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)

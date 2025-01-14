@@ -41,7 +41,7 @@ def strip(model: TModel, do_copy: bool = True) -> TModel:
 
         return strip_pt(model, do_copy)  # type: ignore
     elif model_backend == BackendType.TENSORFLOW:
-        from nncf.tensorflow import strip as strip_tf
+        from nncf.tensorflow.strip import strip as strip_tf
 
         return strip_tf(model, do_copy)
 
