@@ -9,58 +9,85 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import functools
-import inspect
+import types
 import warnings
-from typing import Callable, Type, TypeVar
+from functools import wraps
+from typing import Any, Callable, Optional, TypeVar, cast
 
-from packaging import version
+TObj = TypeVar("TObj")
 
 
 def warning_deprecated(msg: str) -> None:
+    """
+    Display a warning message indicating that a certain functionality is deprecated.
+
+    :param msg: The warning message to display.
+    """
     # Note: must use FutureWarning in order not to get suppressed by default
     warnings.warn(msg, FutureWarning, stacklevel=2)
 
 
-ClassOrFn = TypeVar("ClassOrFn", Callable, Type)
-
-
-class deprecated:
+def deprecated(
+    msg: Optional[str] = None, start_version: Optional[str] = None, end_version: Optional[str] = None
+) -> Callable[[TObj], TObj]:
     """
-    A decorator for marking function calls or class instantiations as deprecated. A call to the marked function or an
-    instantiation of an object of the marked class will trigger a `FutureWarning`. If a class is marked as
-    @deprecated, only the instantiations will trigger a warning, but static attribute accesses or method calls will not.
+    Decorator to mark a function or class as deprecated.
+
+    :param msg: Message to provide additional information about the deprecation.
+    :param start_version: Start version from which the function or class is deprecated.
+    :param end_version: End version until which the function or class is deprecated.
+
+    :return: The decorator function.
     """
 
-    def __init__(self, msg: str = None, start_version: str = None, end_version: str = None):
-        """
-        :param msg: Custom message to be added after the boilerplate deprecation text.
-        """
-        self.msg = msg
-        self.start_version = version.parse(start_version) if start_version is not None else None
-        self.end_version = version.parse(end_version) if end_version is not None else None
+    def decorator(obj: TObj) -> TObj:
 
-    def __call__(self, fn_or_class: ClassOrFn) -> ClassOrFn:
-        name = fn_or_class.__module__ + "." + fn_or_class.__name__
-        if inspect.isclass(fn_or_class):
-            fn_or_class.__init__ = self._get_wrapper(fn_or_class.__init__, name)
-            return fn_or_class
-        return self._get_wrapper(fn_or_class, name)
+        if isinstance(obj, types.FunctionType):
 
-    def _get_wrapper(self, fn_to_wrap: Callable, name: str) -> Callable:
-        @functools.wraps(fn_to_wrap)
-        def wrapped(*args, **kwargs):
-            msg = f"Usage of {name} is deprecated "
-            if self.start_version is not None:
-                msg += f"starting from NNCF v{str(self.start_version)} "
-            msg += "and will be removed in "
-            if self.end_version is not None:
-                msg += f"NNCF v{str(self.end_version)}."
-            else:
-                msg += "a future NNCF version."
-            if self.msg is not None:
-                msg += "\n" + self.msg
-            warning_deprecated(msg)
-            return fn_to_wrap(*args, **kwargs)
+            @wraps(obj)
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
+                name = f"function '{obj.__module__}.{obj.__name__}'"
+                text = _generate_deprecation_message(name, msg, start_version, end_version)
+                warning_deprecated(text)
+                return obj(*args, **kwargs)
 
-        return wrapped
+            return cast(TObj, wrapper)
+
+        if isinstance(obj, type):
+            original_init = obj.__init__  # type: ignore[misc]
+
+            @wraps(original_init)
+            def wrapped_init(*args: Any, **kwargs: Any) -> Any:
+                name = f"class '{obj.__module__}.{obj.__name__}'"
+                text = _generate_deprecation_message(name, msg, start_version, end_version)
+                warning_deprecated(text)
+                return original_init(*args, **kwargs)
+
+            obj.__init__ = wrapped_init  # type: ignore[misc]
+
+            return cast(TObj, obj)
+
+        raise TypeError("The @deprecated decorator can only be used on functions or classes.")
+
+    return decorator
+
+
+def _generate_deprecation_message(
+    name: str, text: Optional[str], start_version: Optional[str], end_version: Optional[str]
+) -> str:
+    """
+    Generate a deprecation message for a given name, with optional start and end versions.
+
+    :param name: The name of the deprecated feature.
+    :param text: Additional text to include in the deprecation message.
+    :param start_version: The version from which the feature is deprecated.
+    :param end_version: The version in which the feature will be removed.
+    :return: The deprecation message.
+    """
+    msg = (
+        f"Usage of {name} is deprecated {f'starting from NNCF v{start_version} ' if start_version else ''}"
+        f"and will be removed in {f'NNCF v{end_version}.' if end_version else 'a future NNCF version.'}"
+    )
+    if text:
+        return "\n".join([msg, text])
+    return msg
