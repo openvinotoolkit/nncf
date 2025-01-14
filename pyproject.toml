@@ -108,7 +108,6 @@ files = [
 exclude = [
     "nncf/common/composite_compression.py",
     "nncf/common/compression.py",
-    "nncf/common/factory.py",
     "nncf/common/hardware/config.py",
     "nncf/common/logging/progress_bar.py",
     "nncf/common/logging/track_progress.py",
@@ -134,7 +133,6 @@ exclude = [
     "nncf/common/quantization/quantizers.py",
     "nncf/common/quantization/statistics.py",
     "nncf/common/quantization/structs.py",
-    "nncf/common/statistics.py",
 ]
 
 [tool.ruff]
