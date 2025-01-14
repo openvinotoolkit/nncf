@@ -43,6 +43,6 @@ def strip(model: TModel, do_copy: bool = True) -> TModel:
     elif model_backend == BackendType.TENSORFLOW:
         from nncf.tensorflow.strip import strip as strip_tf
 
-        return strip_tf(model, do_copy)
+        return strip_tf(model, do_copy)  # type: ignore
 
     raise nncf.UnsupportedBackendError(f"Method `strip` does not support for {model_backend.value} backend.")
