@@ -11,7 +11,7 @@
 
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import nncf
 from nncf.common.graph import NNCFNode
@@ -45,7 +45,7 @@ class QuantizerConfig:
     def __init__(
         self,
         num_bits: int = QUANTIZATION_BITS,
-        mode: QuantizationScheme = QuantizationScheme.SYMMETRIC,
+        mode: Union[QuantizationScheme, str] = QuantizationScheme.SYMMETRIC,  # TODO(AlexanderDokuchaev): use enum
         signedness_to_force: Optional[bool] = None,
         per_channel: bool = QUANTIZATION_PER_CHANNEL,
     ):
