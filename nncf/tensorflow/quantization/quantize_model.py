@@ -176,7 +176,6 @@ def quantize_impl(
         ]
     )
 
-    compression_ctrl, compressed_model = create_compressed_model(model=model, config=nncf_config)
-    stripped_model = compression_ctrl.strip_model(compressed_model)
+    _, compressed_model = create_compressed_model(model=model, config=nncf_config)
 
-    return stripped_model
+    return compressed_model

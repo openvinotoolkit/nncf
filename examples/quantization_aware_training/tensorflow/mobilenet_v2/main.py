@@ -154,6 +154,7 @@ def transform_fn(data_item):
 
 calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
 tf_quantized_model = nncf.quantize(tf_model, calibration_dataset)
+tf_quantized_model = nncf.strip(tf_quantized_model)
 
 tf_quantized_model.compile(
     optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5),
