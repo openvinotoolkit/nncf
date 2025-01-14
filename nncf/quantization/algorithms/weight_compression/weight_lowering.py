@@ -455,7 +455,7 @@ def do_int_quantization(
 
     accelerate_through_ov = is_openvino_available() and weight.backend != TensorBackend.torch
     if not is_openvino_available() and weight.backend != TensorBackend.torch:
-        log_once(logging.INFO, "Running time may be improved after installing OpenVINO")
+        log_once(logging.INFO, "Compression time may be improved after installing OpenVINO")
 
     # When reduction axes are not provided, assuming that the weights are already reshaped
     if config.group_size != -1 and reduction_axes is not None:
