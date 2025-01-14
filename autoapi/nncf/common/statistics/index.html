@@ -259,99 +259,8 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.common.statistics.NNCFStatistics">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.common.statistics.</span></span><span class="sig-name descname"><span class="pre">NNCFStatistics</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/statistics.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.common.statistics.NNCFStatistics" title="Permalink to this definition">#</a></dt>
-<dd><p>Bases: <a class="reference internal" href="../../api/statistics/index.html#nncf.api.statistics.Statistics" title="nncf.api.statistics.Statistics"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nncf.api.statistics.Statistics</span></code></a></p>
-<p>Groups statistics for all available NNCF compression algorithms.
+<dd><p>Groups statistics for all available NNCF compression algorithms.
 Statistics are present only if the algorithm has been started.</p>
-<dl class="py property">
-<dt class="sig sig-object py" id="nncf.common.statistics.NNCFStatistics.magnitude_sparsity">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">magnitude_sparsity</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="../sparsity/statistics/index.html#nncf.common.sparsity.statistics.MagnitudeSparsityStatistics" title="nncf.common.sparsity.statistics.MagnitudeSparsityStatistics"><span class="pre">nncf.common.sparsity.statistics.MagnitudeSparsityStatistics</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/statistics.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.common.statistics.NNCFStatistics.magnitude_sparsity" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns statistics of the magnitude sparsity algorithm. If statistics
-have not been collected, <cite>None</cite> will be returned.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Instance of the <cite>MagnitudeSparsityStatistics</cite> class.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>Optional[<a class="reference internal" href="../sparsity/statistics/index.html#nncf.common.sparsity.statistics.MagnitudeSparsityStatistics" title="nncf.common.sparsity.statistics.MagnitudeSparsityStatistics">nncf.common.sparsity.statistics.MagnitudeSparsityStatistics</a>]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="nncf.common.statistics.NNCFStatistics.rb_sparsity">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">rb_sparsity</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="../sparsity/statistics/index.html#nncf.common.sparsity.statistics.RBSparsityStatistics" title="nncf.common.sparsity.statistics.RBSparsityStatistics"><span class="pre">nncf.common.sparsity.statistics.RBSparsityStatistics</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/statistics.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.common.statistics.NNCFStatistics.rb_sparsity" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns statistics of the RB-sparsity algorithm. If statistics
-have not been collected, <cite>None</cite> will be returned.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Instance of the <cite>RBSparsityStatistics</cite> class.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>Optional[<a class="reference internal" href="../sparsity/statistics/index.html#nncf.common.sparsity.statistics.RBSparsityStatistics" title="nncf.common.sparsity.statistics.RBSparsityStatistics">nncf.common.sparsity.statistics.RBSparsityStatistics</a>]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="nncf.common.statistics.NNCFStatistics.movement_sparsity">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">movement_sparsity</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="../sparsity/statistics/index.html#nncf.common.sparsity.statistics.MovementSparsityStatistics" title="nncf.common.sparsity.statistics.MovementSparsityStatistics"><span class="pre">nncf.common.sparsity.statistics.MovementSparsityStatistics</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/statistics.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.common.statistics.NNCFStatistics.movement_sparsity" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns statistics of the movement sparsity algorithm. If statistics
-have not been collected, <cite>None</cite> will be returned.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Instance of the <cite>MovementSparsityStatistics</cite> class.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>Optional[<a class="reference internal" href="../sparsity/statistics/index.html#nncf.common.sparsity.statistics.MovementSparsityStatistics" title="nncf.common.sparsity.statistics.MovementSparsityStatistics">nncf.common.sparsity.statistics.MovementSparsityStatistics</a>]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="nncf.common.statistics.NNCFStatistics.const_sparsity">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">const_sparsity</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="../sparsity/statistics/index.html#nncf.common.sparsity.statistics.ConstSparsityStatistics" title="nncf.common.sparsity.statistics.ConstSparsityStatistics"><span class="pre">nncf.common.sparsity.statistics.ConstSparsityStatistics</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/statistics.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.common.statistics.NNCFStatistics.const_sparsity" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns statistics of the const sparsity algorithm. If statistics
-have not been collected, <cite>None</cite> will be returned.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Instance of the <cite>ConstSparsityStatistics</cite> class.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>Optional[<a class="reference internal" href="../sparsity/statistics/index.html#nncf.common.sparsity.statistics.ConstSparsityStatistics" title="nncf.common.sparsity.statistics.ConstSparsityStatistics">nncf.common.sparsity.statistics.ConstSparsityStatistics</a>]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="nncf.common.statistics.NNCFStatistics.quantization">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">quantization</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="../quantization/statistics/index.html#nncf.common.quantization.statistics.QuantizationStatistics" title="nncf.common.quantization.statistics.QuantizationStatistics"><span class="pre">nncf.common.quantization.statistics.QuantizationStatistics</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/statistics.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.common.statistics.NNCFStatistics.quantization" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns statistics of the quantization algorithm. If statistics
-have not been collected, <cite>None</cite> will be returned.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Instance of the <cite>QuantizationStatistics</cite> class.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>Optional[<a class="reference internal" href="../quantization/statistics/index.html#nncf.common.quantization.statistics.QuantizationStatistics" title="nncf.common.quantization.statistics.QuantizationStatistics">nncf.common.quantization.statistics.QuantizationStatistics</a>]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="nncf.common.statistics.NNCFStatistics.filter_pruning">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">filter_pruning</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="../pruning/statistics/index.html#nncf.common.pruning.statistics.FilterPruningStatistics" title="nncf.common.pruning.statistics.FilterPruningStatistics"><span class="pre">nncf.common.pruning.statistics.FilterPruningStatistics</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/statistics.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.common.statistics.NNCFStatistics.filter_pruning" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns statistics of the filter pruning algorithm. If statistics
-have not been collected, <cite>None</cite> will be returned.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Instance of the <cite>FilterPruningStatistics</cite> class.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>Optional[<a class="reference internal" href="../pruning/statistics/index.html#nncf.common.pruning.statistics.FilterPruningStatistics" title="nncf.common.pruning.statistics.FilterPruningStatistics">nncf.common.pruning.statistics.FilterPruningStatistics</a>]</p>
-</dd>
-</dl>
-</dd></dl>
-
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.common.statistics.NNCFStatistics.register">
 <span class="sig-name descname"><span class="pre">register</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">algorithm_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stats</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/statistics.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.common.statistics.NNCFStatistics.register" title="Permalink to this definition">#</a></dt>
@@ -360,28 +269,17 @@ have not been collected, <cite>None</cite> will be returned.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>algorithm_name</strong> (<em>str</em>) – Name of the algorithm. Should be one of the following
-* magnitude_sparsity
-* rb_sparsity
 * const_sparsity
+* filter_pruning
+* magnitude_sparsity
+* movement_sparsity
 * quantization
-* filter_pruning</p></li>
+* rb_sparsity</p></li>
 <li><p><strong>stats</strong> (<a class="reference internal" href="../../api/statistics/index.html#nncf.api.statistics.Statistics" title="nncf.api.statistics.Statistics"><em>nncf.api.statistics.Statistics</em></a>) – Statistics of the algorithm.</p></li>
 </ul>
 </dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="nncf.common.statistics.NNCFStatistics.to_str">
-<span class="sig-name descname"><span class="pre">to_str</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/statistics.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.common.statistics.NNCFStatistics.to_str" title="Permalink to this definition">#</a></dt>
-<dd><p>Calls <cite>to_str()</cite> method for all registered statistics of the algorithm and returns
-a sum-up string.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>A representation of the NNCF statistics as a human-readable string.</p>
-</dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>str</p>
+<dd class="field-even"><p>None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -448,14 +346,7 @@ a sum-up string.</p>
 <li><a class="reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.common.statistics</span></code></a><ul>
 <li><a class="reference internal" href="#classes">Classes</a><ul>
 <li><a class="reference internal" href="#nncf.common.statistics.NNCFStatistics"><code class="docutils literal notranslate"><span class="pre">NNCFStatistics</span></code></a><ul>
-<li><a class="reference internal" href="#nncf.common.statistics.NNCFStatistics.magnitude_sparsity"><code class="docutils literal notranslate"><span class="pre">NNCFStatistics.magnitude_sparsity</span></code></a></li>
-<li><a class="reference internal" href="#nncf.common.statistics.NNCFStatistics.rb_sparsity"><code class="docutils literal notranslate"><span class="pre">NNCFStatistics.rb_sparsity</span></code></a></li>
-<li><a class="reference internal" href="#nncf.common.statistics.NNCFStatistics.movement_sparsity"><code class="docutils literal notranslate"><span class="pre">NNCFStatistics.movement_sparsity</span></code></a></li>
-<li><a class="reference internal" href="#nncf.common.statistics.NNCFStatistics.const_sparsity"><code class="docutils literal notranslate"><span class="pre">NNCFStatistics.const_sparsity</span></code></a></li>
-<li><a class="reference internal" href="#nncf.common.statistics.NNCFStatistics.quantization"><code class="docutils literal notranslate"><span class="pre">NNCFStatistics.quantization</span></code></a></li>
-<li><a class="reference internal" href="#nncf.common.statistics.NNCFStatistics.filter_pruning"><code class="docutils literal notranslate"><span class="pre">NNCFStatistics.filter_pruning</span></code></a></li>
 <li><a class="reference internal" href="#nncf.common.statistics.NNCFStatistics.register"><code class="docutils literal notranslate"><span class="pre">NNCFStatistics.register()</span></code></a></li>
-<li><a class="reference internal" href="#nncf.common.statistics.NNCFStatistics.to_str"><code class="docutils literal notranslate"><span class="pre">NNCFStatistics.to_str()</span></code></a></li>
 </ul>
 </li>
 </ul>
