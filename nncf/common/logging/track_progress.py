@@ -148,13 +148,13 @@ class track(Generic[ProgressType]):
         Usage:
 
         ```
-        iterable = [1,2]
+        arr = [1,2]
 
-        for i in track(iterable, description="Processing..."):
+        for i in track(arr, description="Processing..."):
             print(i)
 
-        with track[None](iterable, description="Processing...") as pbar:
-            for i in iterable:
+        with track[None](total=len(arr), description="Processing...") as pbar:
+            for i in arr:
                 pbar.update(advance=1)
         ```
 
