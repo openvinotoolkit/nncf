@@ -20,7 +20,6 @@ from nncf.tensor.functions import numeric
 from ..definitions import TensorBackend
 from ..definitions import TensorDeviceType
 from .numpy_numeric import DTYPE_MAP as DTYPE_MAP_NP
-from .numpy_numeric import DTYPE_MAP_REV as DTYPE_MAP_REV_NP
 
 DTYPE_MAP = {
     TensorDataType.float16: ov.Type.f16,
@@ -75,22 +74,8 @@ def _(a: ov.Tensor, shape: Union[int, Tuple[int, ...]]) -> ov.Tensor:
     return ov.Tensor(a.data.reshape(shape), shape, a.get_element_type())
 
 
-@numeric.to_backend.register(np.ndarray)
-def _(a: np.ndarray, b: TensorBackend) -> Union[np.ndarray, ov.Tensor]:
-    if b == TensorBackend.numpy:
-        return a
-    if b != TensorBackend.ov:
-        raise ValueError("Not supported backend")
-    return ov.Tensor(a, a.shape, DTYPE_MAP[DTYPE_MAP_REV_NP[a.dtype]])
-
-
-@numeric.to_backend.register(ov.Tensor)
-def _(a: ov.Tensor, b: TensorBackend) -> Union[np.ndarray, ov.Tensor]:
-    if b == TensorBackend.ov:
-        return a
-    if b != TensorBackend.numpy:
-        raise ValueError("Not supported backend")
-
+@numeric.as_numpy_tensor.register(ov.Tensor)
+def _(a: ov.Tensor) -> np.ndarray:
     # Cannot convert bfloat16, uint4, int4 to numpy directly
     a_dtype = DTYPE_MAP_REV[a.get_element_type()]
     if a_dtype in [TensorDataType.bfloat16, TensorDataType.uint4, TensorDataType.int4]:
@@ -100,7 +85,6 @@ def _(a: ov.Tensor, b: TensorBackend) -> Union[np.ndarray, ov.Tensor]:
         elif a_dtype == TensorDataType.int4:
             dtype = TensorDataType.int8
         a = _astype_ov(a, dtype)
-
     return a.data
 
 

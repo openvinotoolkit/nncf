@@ -391,6 +391,11 @@ def _(a: np.ndarray, v: np.ndarray, side: str = "left", sorter: Optional[np.ndar
     return np.searchsorted(a, v, side, sorter)
 
 
+@register_numpy_types(numeric.as_numpy_tensor)
+def _(a: np.ndarray) -> np.ndarray:
+    return a
+
+
 def zeros(
     shape: Tuple[int, ...],
     *,

@@ -84,12 +84,11 @@ class TestOVNNCFTensorOperators:
         assert res.device == tensor.device
 
     @pytest.mark.parametrize("from_backend", [TensorBackend.numpy, TensorBackend.ov])
-    @pytest.mark.parametrize("to_backend", [TensorBackend.numpy, TensorBackend.ov])
-    def test_to_backend(self, from_backend, to_backend):
+    def test_as_numpy_tensor(self, from_backend):
         tensor1 = Tensor(self.to_tensor([1], backend=from_backend))
         assert tensor1.backend == from_backend
-        tensor2 = tensor1.to_backend(to_backend)
-        assert tensor2.backend == to_backend
+        tensor2 = tensor1.as_numpy_tensor()
+        assert tensor2.backend == TensorBackend.numpy
         assert tensor1.dtype == tensor2.dtype
         assert tensor1.shape == tensor2.shape
         assert tensor1.device == tensor2.device

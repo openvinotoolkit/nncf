@@ -370,7 +370,7 @@ def compress_weight(
     """
     if not config.is_integer:
         if weight.backend == TensorBackend.ov:
-            weight = weight.to_backend(TensorBackend.numpy)
+            weight = weight.as_numpy_tensor()
 
         compressed_weight, scale = calculate_normalized_weight_and_fp4_scale(
             weight, reduction_axes, config.group_size, precomputed_scale, config.mode
@@ -465,7 +465,7 @@ def do_int_quantization(
     if not accelerate_through_ov:
         # Reference implementation
         if weight.backend == TensorBackend.ov:
-            weight = weight.to_backend(TensorBackend.numpy)
+            weight = weight.as_numpy_tensor()
         if weight.dtype != TensorDataType.float32:
             weight = weight.astype(TensorDataType.float32)
 
@@ -523,7 +523,7 @@ def do_int_quantization(
 
         # Scale is always in fp32 so there is no need to store it in ov.Tensor
         if scale.backend == TensorBackend.ov:
-            scale = scale.to_backend(TensorBackend.numpy)
+            scale = scale.as_numpy_tensor()
     else:
         # weight, scale, (zero_point) -> compressed_weight
         inputs = (

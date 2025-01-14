@@ -931,11 +931,10 @@ def tensor(
 
 @functools.singledispatch
 @tensor_guard
-def to_backend(a: Tensor, b: TensorBackend) -> Tensor:
+def as_numpy_tensor(a: Tensor) -> Tensor:
     """
-    Change backend of the tensor to the given one.
+    Change backend of the tensor to numpy.
     :param a: Tensor to change backend for.
-    :param b: Target backend to change to.
-    :return: Tensor in the target backend.
+    :return: Tensor in numpy backend.
     """
-    return Tensor(to_backend(a.data, b))
+    return Tensor(as_numpy_tensor(a.data))

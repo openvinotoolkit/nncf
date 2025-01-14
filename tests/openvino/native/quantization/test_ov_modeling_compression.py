@@ -73,7 +73,7 @@ def get_random_float_tensor(shape, dtype, backend, seed=0):
         if dtype == TensorDataType.bfloat16:
             data = data.astype(TensorDataType.bfloat16)
     if backend == TensorBackend.numpy:
-        data = data.to_backend(TensorBackend.numpy) if dtype == TensorDataType.bfloat16 else Tensor(data)
+        data = data.as_numpy_tensor() if dtype == TensorDataType.bfloat16 else Tensor(data)
     return Tensor(data)
 
 
@@ -192,10 +192,10 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
         if quantization_task != QuantizationTask.Q:
             results[cb]["decompressed_weight"] = decompressed_weight
         if quantization_task != QuantizationTask.Q_DQ:
-            results[cb]["compressed_weight"] = compressed_weight.to_backend(TensorBackend.numpy)
+            results[cb]["compressed_weight"] = compressed_weight.as_numpy_tensor()
             results[cb]["scale"] = scale
             if config.is_asym_mode:
-                results[cb]["zero_point"] = zero_point.to_backend(TensorBackend.numpy)
+                results[cb]["zero_point"] = zero_point.as_numpy_tensor()
 
         _check_backends_and_dtypes(
             quantization_task,
