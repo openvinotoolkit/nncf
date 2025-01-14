@@ -41,7 +41,7 @@ class WeightCompressionConfig:
         return 8 if self.mode in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM] else 4
 
     @property
-    def is_int_asym(self):
+    def is_asym_mode(self):
         return self.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT8_ASYM]
 
     @property

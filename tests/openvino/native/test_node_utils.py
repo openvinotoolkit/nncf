@@ -22,7 +22,7 @@ from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.node_utils import get_weighted_layer_attributes
 from nncf.openvino.graph.node_utils import is_node_with_bias
-from nncf.openvino.graph.node_utils import non_convertable_divide
+from nncf.openvino.graph.node_utils import non_convertable_divide_op
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import ConvNotBiasModel
 from tests.openvino.native.models import MatMul2DModel
@@ -161,7 +161,7 @@ def test_non_convertable_division(a, b, convertable, ref_result):
     a, b, ref_result = tuple(map(lambda x: np.array([x], np.float32), [a, b, ref_result]))
     a_param = opset.parameter((-1,), ov.Type.f32)
     b_param = opset.parameter((-1,), ov.Type.f32)
-    division = (a_param / b_param) if convertable else non_convertable_divide(a_param, b_param)
+    division = (a_param / b_param) if convertable else non_convertable_divide_op(a_param, b_param)
     model = ov.Model([division], [a_param, b_param])
     compiled_model = ov.compile_model(model, device_name="CPU")
     actual_result = compiled_model([a, b])[0]

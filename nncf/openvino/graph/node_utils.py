@@ -13,8 +13,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
 import openvino.runtime as ov
+import openvino.runtime.op as op
 import openvino.runtime.opset13 as opset
-from openvino._pyopenvino.op import Constant
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -100,11 +100,11 @@ def get_number_if_op(model: ov.Model) -> int:
     """
 
     def cnt_if_op(model: ov.Model, cnt: int) -> int:
-        for op in model.get_ops():
-            if get_node_metatype(op) == OVIfMetatype:
+        for model_op in model.get_ops():
+            if get_node_metatype(model_op) == OVIfMetatype:
                 cnt += 1
-                cnt = cnt_if_op(op.get_function(0), cnt)
-                cnt = cnt_if_op(op.get_function(1), cnt)
+                cnt = cnt_if_op(model_op.get_function(0), cnt)
+                cnt = cnt_if_op(model_op.get_function(1), cnt)
         return cnt
 
     return cnt_if_op(model, 0)
@@ -637,9 +637,10 @@ def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple
     return channel_axis
 
 
-def convert_if_needed(node: ov.Node, target_dtype: ov.Type) -> ov.Node:
+def convert_op(node: ov.Node, target_dtype: ov.Type) -> ov.Node:
     """
-    Converts the input node to the target data type if it is not already in the target data type.
+    Return a subgraph which converts the given node output to the target data type. If the output is already in the
+    target data type then the given node is returned.
 
     :param node: The input node to convert.
     :param target_dtype: The target data type to convert the input node to.
@@ -650,7 +651,7 @@ def convert_if_needed(node: ov.Node, target_dtype: ov.Type) -> ov.Node:
     return opset.convert(node, target_dtype)
 
 
-def non_convertable_divide(a: ov.Node, b: ov.Node) -> ov.Node:
+def non_convertable_divide_op(a: ov.Node, b: ov.Node) -> ov.Node:
     """
     Creates a "non-convertable" divide operation. It won't be converted to a*(1/b).
     """
@@ -659,7 +660,7 @@ def non_convertable_divide(a: ov.Node, b: ov.Node) -> ov.Node:
     return divide_node
 
 
-def create_ov_const_from_tensor(x: Tensor, dtype: ov.Type, name: Optional[str] = None) -> Constant:
+def create_ov_const_from_tensor(x: Tensor, dtype: ov.Type, name: Optional[str] = None) -> op.Constant:
     """
     Create an OpenVINO Constant node from the given tensor.
     :param x: Data tensor. Supports NumPy and OV tensor backends. If x backend is OV, the constant node is created

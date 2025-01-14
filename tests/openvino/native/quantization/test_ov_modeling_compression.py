@@ -26,15 +26,15 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_decompress_weight_model
 from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_weight_model
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_dequantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import quantize_dequantize_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP as DTYPE_MAP_NP
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP_REV as DTYPE_MAP_REV_NP
-from nncf.tensor.functions.ov import DTYPE_MAP as DTYPE_MAP_OV
+from nncf.tensor.functions.ov_numeric import DTYPE_MAP as DTYPE_MAP_OV
 
 
 class ComputationBackend(Enum):
@@ -141,7 +141,7 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
                     weight, _ = reshape_weight_for_grouped_quantization(weight, REDUCTION_AXES, group_size)
 
                 precomputed_scale = get_random_float_tensor(scale_shape, TensorDataType.float32, TensorBackend.numpy)
-                if config.is_int_asym:
+                if config.is_asym_mode:
                     precomputed_zero_point = get_random_integer_tensor(
                         zero_point_shape, level_low, level_high, TensorDataType.int32, TensorBackend.numpy
                     )
@@ -150,7 +150,7 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
                 fn_to_call = do_int_quantization
                 fn_to_patch = get_compress_weight_model
             else:
-                fn_to_call = calculate_quantized_dequantized_weight
+                fn_to_call = quantize_dequantize_weight
                 fn_to_patch = get_compress_decompress_weight_model
             patch_path = f"{inspect.getmodule(fn_to_patch).__name__}.{fn_to_patch.__name__}"
             with patch(patch_path, side_effect=fn_to_patch) as mock:
@@ -185,7 +185,7 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
         if quantization_task != QuantizationTask.Q_DQ and precompute_s_zp:
             # In case of precomputed scale or zero point, the returned scale and z.p. should equal the given ones
             np.testing.assert_allclose(precomputed_scale.data, scale.data, atol=0, rtol=0)
-            if config.is_int_asym:
+            if config.is_asym_mode:
                 np.testing.assert_allclose(precomputed_zero_point.data, zero_point.data, atol=0, rtol=0)
 
         # Save results for comparison between implementations
@@ -194,7 +194,7 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
         if quantization_task != QuantizationTask.Q_DQ:
             results[cb]["compressed_weight"] = compressed_weight.to_backend(TensorBackend.numpy)
             results[cb]["scale"] = scale
-            if config.is_int_asym:
+            if config.is_asym_mode:
                 results[cb]["zero_point"] = zero_point.to_backend(TensorBackend.numpy)
 
         _check_backends_and_dtypes(
@@ -238,8 +238,8 @@ def _check_backends_and_dtypes(
         # zero point must be in ov backend and have (u)int4 dtype in order to be able to insert them into OV model
         # without re-packing
         assert compressed_weight.backend == TensorBackend.ov
-        assert compressed_weight.dtype == (TensorDataType.uint4 if config.is_int_asym else TensorDataType.int4)
-        if config.is_int_asym and not precompute_s_zp:
+        assert compressed_weight.dtype == (TensorDataType.uint4 if config.is_asym_mode else TensorDataType.int4)
+        if config.is_asym_mode and not precompute_s_zp:
             assert zero_point.backend == TensorBackend.ov
             assert zero_point.dtype == TensorDataType.uint4
     else:
@@ -247,8 +247,8 @@ def _check_backends_and_dtypes(
             # Otherwise compressed weight and zero point must be returned in numpy backend, compressed weight must
             # be of (u)int8 data type, zero point -- in int32
             assert compressed_weight.backend == TensorBackend.numpy
-            assert compressed_weight.dtype == (TensorDataType.uint8 if config.is_int_asym else TensorDataType.int8)
-            if config.is_int_asym and not precompute_s_zp:
+            assert compressed_weight.dtype == (TensorDataType.uint8 if config.is_asym_mode else TensorDataType.int8)
+            if config.is_asym_mode and not precompute_s_zp:
                 assert zero_point.backend == TensorBackend.numpy
                 assert zero_point.dtype == TensorDataType.int32
         if quantization_task != QuantizationTask.Q:

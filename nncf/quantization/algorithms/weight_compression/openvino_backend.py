@@ -29,7 +29,7 @@ from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatis
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.openvino.graph.model_transformer import OVModelTransformer
-from nncf.openvino.graph.node_utils import convert_if_needed
+from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import create_ov_const_from_tensor
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
@@ -55,7 +55,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import comp
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
-from nncf.tensor.functions.ov import DTYPE_MAP_REV
+from nncf.tensor.functions.ov_numeric import DTYPE_MAP_REV
 
 
 class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
@@ -263,7 +263,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             )
 
         scale_const = create_ov_const_from_tensor(compressed_weight.scale, scale_dtype, name=f"{const_node_name}/scale")
-        scale_const = convert_if_needed(scale_const, ov.Type.f16)
+        scale_const = convert_op(scale_const, ov.Type.f16)
 
         mul = opset.multiply(
             converted_const,

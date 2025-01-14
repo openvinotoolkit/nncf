@@ -1135,7 +1135,7 @@ def test_int_quantization_with_precomputed_parameters(config, precompute_scale, 
 
     if precompute_scale:
         assert np.allclose(scale.data, precomputed_scale.data)
-    if config.is_int_asym:
+    if config.is_asym_mode:
         if precompute_zero_point:
             assert np.allclose(zero_point.data, precomputed_zero_point.data)
     else:

@@ -272,7 +272,7 @@ def calculate_integer_quantization_params(
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
-    if config.is_int_asym:
+    if config.is_asym_mode:
         level_low = 0
         level_high = 2**num_bits - 1
         min_values = fns.min(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
@@ -307,7 +307,7 @@ def calculate_quantized_weight(
         scale = scale.astype(TensorDataType.float32)
 
     num_bits = config.num_bits
-    asym_quant = config.is_int_asym
+    asym_quant = config.is_asym_mode
     dtype = TensorDataType.uint8 if asym_quant else TensorDataType.int8
     level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
     level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
@@ -340,7 +340,7 @@ def get_integer_quantization_error(
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
-    decompressed_weight = calculate_quantized_dequantized_weight(weight, config, reduction_axes)
+    decompressed_weight = quantize_dequantize_weight(weight, config, reduction_axes)
 
     decompressed_weight = decompressed_weight.reshape(orig_shape)
     diff = (decompressed_weight - weight) ** 2
@@ -447,7 +447,7 @@ def do_int_quantization(
     :return: A tuple containing the compressed weights, scale, and zero point tensors.
     """
     assert config.is_integer, "The function supports integer quantization only"
-    if config.is_int_asym and (precomputed_scale is None) != (precomputed_zero_point is None):
+    if config.is_asym_mode and (precomputed_scale is None) != (precomputed_zero_point is None):
         raise ValueError(
             "If precomputed quantization parameters are provided, both scale and zero point are required "
             "for asymmetric quantization."
@@ -470,7 +470,7 @@ def do_int_quantization(
             weight = weight.astype(TensorDataType.float32)
 
         scale, zero_point = None, None
-        if precomputed_scale is None or (config.is_int_asym and precomputed_zero_point is None):
+        if precomputed_scale is None or (config.is_asym_mode and precomputed_zero_point is None):
             if reduction_axes is None:
                 raise ValueError("Reduction axes are required for computing the scale and (zero point) vectors.")
             scale, zero_point = calculate_integer_quantization_params(weight, reduction_axes, config)
@@ -498,7 +498,7 @@ def do_int_quantization(
     if config.num_bits == 4 and weight.backend == TensorBackend.ov:
         # Return ov tensors in target precision to seamlessly insert them into openvino model later
         ov_model_params.return_ov_tensors = weight.backend == TensorBackend.ov
-        compressed_weight_dtype = TensorDataType.uint4 if config.is_int_asym else TensorDataType.int4
+        compressed_weight_dtype = TensorDataType.uint4 if config.is_asym_mode else TensorDataType.int4
         ov_model_params.output_dtypes.update(
             {"compressed_weight": compressed_weight_dtype, "zero_point": compressed_weight_dtype}
         )
@@ -515,7 +515,7 @@ def do_int_quantization(
     if precomputed_scale is None:
         # weight -> compressed_weight, scale, (zero_point)
         results = model([weight])
-        if config.is_int_asym:
+        if config.is_asym_mode:
             compressed_weight, scale, zero_point = results
         else:
             compressed_weight, scale = results
@@ -537,7 +537,7 @@ def do_int_quantization(
     return compressed_weight, scale, zero_point
 
 
-def calculate_quantized_dequantized_weight(
+def quantize_dequantize_weight(
     weight: Tensor,
     config: WeightCompressionConfig,
     reduction_axes: Optional[ReductionAxes] = None,

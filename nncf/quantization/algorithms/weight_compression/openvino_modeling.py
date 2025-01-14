@@ -23,12 +23,12 @@ from openvino.runtime import opset13 as opset
 
 from nncf.common.utils.decorators import ResultsCacheContainer
 from nncf.common.utils.decorators import cache_results
-from nncf.openvino.graph.node_utils import convert_if_needed
-from nncf.openvino.graph.node_utils import non_convertable_divide
+from nncf.openvino.graph.node_utils import convert_op
+from nncf.openvino.graph.node_utils import non_convertable_divide_op
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
-from nncf.tensor.functions.ov import DTYPE_MAP as DTYPE_MAP_OV
+from nncf.tensor.functions.ov_numeric import DTYPE_MAP as DTYPE_MAP_OV
 
 TensorList = List[Tensor]
 ModelCallable = Callable[[TensorList], TensorList]
@@ -290,14 +290,14 @@ def _build_compress_model(
     reduction_axes: Optional[ReductionAxes] = None,
     return_nodes: bool = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
-    is_int_asym = config.is_int_asym
+    is_asym_mode = config.is_asym_mode
 
     default_input_dtypes = {
         "scale": TensorDataType.float32,
         "zero_point": TensorDataType.int32,
     }
     default_output_dtypes = {
-        "compressed_weight": TensorDataType.uint8 if is_int_asym else TensorDataType.int8,
+        "compressed_weight": TensorDataType.uint8 if is_asym_mode else TensorDataType.int8,
         "scale": TensorDataType.float32,
         "zero_point": TensorDataType.int32,
     }
@@ -344,7 +344,7 @@ def _build_compress_model(
         )
     if scale_shape is None and output_scale_dtype != TensorDataType.float32:
         raise ValueError(f"Output scale must be of float32 data type. But found: {output_scale_dtype}.")
-    if is_int_asym and zero_point_shape is None and output_zero_point_dtype not in valid_compressed_weight_dtypes:
+    if is_asym_mode and zero_point_shape is None and output_zero_point_dtype not in valid_compressed_weight_dtypes:
         raise ValueError(
             f"Output zero point must be of one of the following data types: {valid_compressed_weight_dtypes}. "
             f"But found: {output_zero_point_dtype}."
@@ -356,10 +356,10 @@ def _build_compress_model(
 
     num_bits = config.num_bits
     eps = np.finfo(np.float32).eps
-    level_low = 0 if is_int_asym else -(2 ** (num_bits - 1))
-    level_high = 2**num_bits - 1 if is_int_asym else 2 ** (num_bits - 1) - 1
+    level_low = 0 if is_asym_mode else -(2 ** (num_bits - 1))
+    level_high = 2**num_bits - 1 if is_asym_mode else 2 ** (num_bits - 1) - 1
 
-    divide_op = opset.divide if ov_model_params.convertable_division else non_convertable_divide
+    divide_op = opset.divide if ov_model_params.convertable_division else non_convertable_divide_op
 
     min_values = None
     if scale_shape is not None:
@@ -368,7 +368,7 @@ def _build_compress_model(
         ov_parameters.append(scale)
     else:
         # Compute scale
-        if is_int_asym:
+        if is_asym_mode:
             # [a1, r, a2] -> [a1, 1, a2]
             min_values = opset.reduce_min(weight, reduction_axes=reduction_axes, keep_dims=True)
             max_values = opset.reduce_max(weight, reduction_axes=reduction_axes, keep_dims=True)
@@ -392,28 +392,28 @@ def _build_compress_model(
         zero_point = opset.parameter(zero_point_shape, name="zero_point", dtype=DTYPE_MAP_OV[input_zero_point_dtype])
         ov_parameters.append(zero_point)
         # Cast to float32 for an addition later
-        zero_point = convert_if_needed(zero_point, ov.Type.f32)
-    elif is_int_asym:
+        zero_point = convert_op(zero_point, ov.Type.f32)
+    elif is_asym_mode:
         # Compute zero point
         scaled_min_values = divide_op(min_values, scale)
         zero_point = opset.constant(level_low, ov.Type.f32) - opset.round(scaled_min_values)
         zero_point = opset.clamp(zero_point, level_low, level_high)
 
-    weight = convert_if_needed(weight, ov.Type.f32)
+    weight = convert_op(weight, ov.Type.f32)
     compressed_weight = divide_op(weight, scale)
 
-    if is_int_asym:
+    if is_asym_mode:
         compressed_weight += zero_point
 
     compressed_weight = opset.round(compressed_weight)
     compressed_weight = opset.clamp(opset.round(compressed_weight), level_low, level_high)
-    compressed_weight = convert_if_needed(compressed_weight, DTYPE_MAP_OV[compressed_weight_dtype])
+    compressed_weight = convert_op(compressed_weight, DTYPE_MAP_OV[compressed_weight_dtype])
 
     ov_results = [compressed_weight]
     if len(ov_parameters) == 1:
         ov_results.append(scale)
         if zero_point is not None:
-            zero_point = convert_if_needed(zero_point, DTYPE_MAP_OV[output_zero_point_dtype])
+            zero_point = convert_op(zero_point, DTYPE_MAP_OV[output_zero_point_dtype])
             ov_results.append(zero_point)
 
     if return_nodes:
@@ -451,7 +451,7 @@ def _build_compress_decompress_model(
         ov_model_params, config, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_nodes=True
     )
 
-    if config.is_int_asym:
+    if config.is_asym_mode:
         if len(ov_parameters) == 1:
             # weight -> compressed_weight, scale, zero_point
             compressed_weight, scale, zero_point = ov_results
@@ -460,9 +460,7 @@ def _build_compress_decompress_model(
             compressed_weight = ov_results[0]
             scale, zero_point = ov_parameters[1:]
 
-        compressed_weight = convert_if_needed(compressed_weight, ov.Type.i32) - convert_if_needed(
-            zero_point, ov.Type.i32
-        )
+        compressed_weight = convert_op(compressed_weight, ov.Type.i32) - convert_op(zero_point, ov.Type.i32)
     else:
         if len(ov_parameters) == 1:
             # weight -> compressed_weight, scale
@@ -472,7 +470,7 @@ def _build_compress_decompress_model(
             compressed_weight = ov_results[0]
             scale = ov_parameters[1]
 
-    decompressed_weight = opset.multiply(scale, convert_if_needed(compressed_weight, ov.Type.f32))
+    decompressed_weight = opset.multiply(scale, convert_op(compressed_weight, ov.Type.f32))
 
     ov_results = [decompressed_weight] + ov_results if return_compressed_weight else [decompressed_weight]
     model = ov.Model(ov_results, ov_parameters)
