@@ -12,6 +12,7 @@
 import logging
 import sys
 from contextlib import contextmanager
+from functools import lru_cache
 
 NNCF_LOGGER_NAME = "nncf"
 
@@ -88,9 +89,11 @@ def warn_bkc_version_mismatch(backend: str, bkc_version: str, current_version: s
     )
 
 
-@contextmanager
-def no_duplicate_logs():
-    dup_filter = DuplicateFilter()
-    nncf_logger.addFilter(dup_filter)
-    yield
-    nncf_logger.removeFilter(dup_filter)
+@lru_cache(None)
+def log_once(level: int, message: str) -> None:
+    """
+    Logs a message only once.
+    :param level: Logging level, e.g. logging.WARNING.
+    :param message: The message to log.
+    """
+    nncf_logger.log(level, message)
