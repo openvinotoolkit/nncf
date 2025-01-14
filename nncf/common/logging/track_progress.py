@@ -254,5 +254,5 @@ class track(Generic[ProgressType]):
 
     def update(self, advance: float, **kwargs: Any) -> None:
         if self.task is None:
-            raise RuntimeError("update available only inside context manager.")
+            raise RuntimeError("update is available only inside context manager.")
         self.progress.update(self.task, advance=advance, **kwargs)
