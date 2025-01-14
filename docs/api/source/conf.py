@@ -145,7 +145,7 @@ mock_modules = [
     "nncf.tensor.functions.torch_linalg",
     "nncf.tensor.functions.torch_io",
     "nncf.tensor.functions.numpy_io",
-    "nncf.tensor.functions.ov",
+    "nncf.tensor.functions.ov_numeric",
 ]
 
 with mock(mock_modules):
