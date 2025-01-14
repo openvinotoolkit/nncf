@@ -15,7 +15,6 @@ from collections import deque
 from typing import Any, Deque, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
-from numpy.typing import NDArray
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorType
@@ -318,7 +317,7 @@ class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
     Collector estimates median and median absolute deviation (MAD).
     """
 
-    def _prepare_statistics(self) -> Tuple[NDArray[Any], NDArray[Any]]:
+    def _prepare_statistics(self) -> Tuple[np.ndarray, np.ndarray]:
         per_channel_history = get_per_channel_history(
             self._samples, cast(List[int], self._reduction_shape), discard_zeros=True
         )
