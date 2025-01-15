@@ -36,7 +36,7 @@ tinyllama_scale_estimation_per_channel_backend_OV:
   num_int4: 188
   num_int8: 124
 tinyllama_scale_estimation_per_channel_backend_TORCH:
-  metric_value: 0.81389
+  metric_value: 0.80799
   num_int4: 188
   num_int8: 124
 tinyllama_data_aware_lora_stateful_backend_OV:
