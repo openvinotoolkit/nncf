@@ -12,7 +12,6 @@
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import torch
-import torch.nn as nn
 
 import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -60,75 +59,59 @@ from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 
 
-class CompressModule(nn.Module):
-    def __init__(self, level_low, level_high):
-        super().__init__()
-        self.level_low = level_low
-        self.level_high = level_high
-
-    def forward(self, tensor, scale, zero_point=None):
-        # Compressed weights: (w / s) + optional zp
-        x = tensor / scale
-        if zero_point is not None:
-            x = x + zero_point
-        x = torch.round(x)
-        x = torch.clamp(x, min=self.level_low, max=self.level_high)
-        return x
+def compress(
+    tensor: torch.Tensor, scale: torch.Tensor, zero_point: torch.Tensor | None, level_low: int, level_high: int
+) -> torch.Tensor:
+    x = tensor / scale
+    if zero_point is not None:
+        x = x + zero_point
+    x = torch.round(x)
+    x = torch.clamp(x, min=level_low, max=level_high)
+    return x
 
 
-class CompressDecompressModule(nn.Module):
-    def __init__(self, compress_mod):
-        super().__init__()
-        self.compress_mod = compress_mod
-
-    def forward(self, tensor, scale, zero_point=None):
-        # Step 1: compress
-        clamp_out = self.compress_mod(tensor, scale, zero_point)
-
-        # Step 2: decompress
-        if zero_point is not None:
-            out = (clamp_out - zero_point) * scale
-        else:
-            out = clamp_out * scale
-        return out
+def decompress(compressed: torch.Tensor, scale: torch.Tensor, zero_point: torch.Tensor | None) -> torch.Tensor:
+    if zero_point is not None:
+        return (compressed - zero_point) * scale
+    return compressed * scale
 
 
-def get_compress_pipeline(mode: CompressWeightsMode, num_bits: int, use_torchscript=False):
+def compress_decompress(
+    tensor: torch.Tensor, scale: torch.Tensor, zero_point: torch.Tensor | None, level_low: int, level_high: int
+) -> torch.Tensor:
+    x = compress(tensor, scale, zero_point, level_low, level_high)
+    # Step 2: decompress
+    if zero_point is not None:
+        x = (x - zero_point) * scale
+    else:
+        x = x * scale
+    return x
+
+
+def get_compress_fn(mode, num_bits: int):
     asym_quant = mode in [CompressWeightsMode.INT4_ASYM]
     level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
     level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
 
-    compress_module = CompressModule(level_low, level_high)
-
-    # Optionally compile with TorchScript
-    if use_torchscript:
-        compress_module = torch.jit.script(compress_module)
-
-    def _forward_fn(tensor, scale, zero_point):
+    def _forward_fn(inputs):
+        tensor, scale, zero_point = inputs
         with torch.no_grad():
-            return compress_module(tensor, scale, zero_point)
+            return compress(tensor, scale, zero_point, level_low, level_high)
 
     return _forward_fn
 
 
-def get_compress_decompress_pipeline(mode, num_bits, use_torchscript=False):
-    compress_module = get_compress_pipeline(
-        mode=mode,
-        num_bits=num_bits,
-        use_torchscript=False,  # We'll handle TorchScript in the final module
-    )
+def get_compress_decompress_fn(mode, num_bits: int):
+    asym_quant = mode in [CompressWeightsMode.INT4_ASYM]
+    level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
+    level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
 
-    cdc_module = CompressDecompressModule(compress_module)
-
-    # Optionally compile entire compress+decompress pipeline with TorchScript
-    if use_torchscript:
-        cdc_module = torch.jit.script(cdc_module)
-
-    # Return a simple callable
-    def _forward_fn(parameters):
-        w, s, zp = parameters
+    def _forward_fn(inputs):
+        tensor, scale, zero_point = inputs
         with torch.no_grad():
-            return cdc_module(w, s, zp)
+            return compress_decompress(
+                tensor=tensor, scale=scale, zero_point=zero_point, level_low=level_low, level_high=level_high
+            )
 
     return _forward_fn
 
@@ -287,11 +270,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_compress_decompress_pipeline(config: WeightCompressionConfig, w_shape, s_shape, z_p_shape=None):
-        return get_compress_decompress_pipeline(config.mode, config.num_bits, True)
+        return get_compress_decompress_fn(config.mode, config.num_bits)
 
     @staticmethod
     def get_compress_pipeline(config: WeightCompressionConfig, w_shape, s_shape, z_p_shape=None, return_nodes=False):
-        return get_compress_pipeline(config.mode, config.num_bits, True)
+        return get_compress_fn(config.mode, config.num_bits)
 
     @staticmethod
     def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
