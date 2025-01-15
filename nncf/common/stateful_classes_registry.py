@@ -10,7 +10,9 @@
 # limitations under the License.
 
 import inspect
-from typing import Callable, Dict
+from typing import Callable, Dict, TypeVar
+
+TObj = TypeVar("TObj", bound=type)
 
 
 class StatefulClassesRegistry:
@@ -24,7 +26,7 @@ class StatefulClassesRegistry:
         self._name_vs_class_map: Dict[str, type] = {}
         self._class_vs_name_map: Dict[type, str] = {}
 
-    def register(self, name: str = None) -> Callable[[type], type]:
+    def register(self, name: str = None) -> Callable[[TObj], TObj]:
         """
         Decorator to map class with some name - specified in the argument or name of the class.
 
@@ -32,7 +34,7 @@ class StatefulClassesRegistry:
         :return: The inner function for registration.
         """
 
-        def decorator(cls: type) -> type:
+        def decorator(cls: TObj) -> TObj:
             registered_name = name if name is not None else cls.__name__
 
             if registered_name in self._name_vs_class_map:
@@ -88,7 +90,7 @@ class CommonStatefulClassesRegistry:
     """
 
     @staticmethod
-    def register(name: str = None) -> Callable[[type], type]:
+    def register(name: str = None) -> Callable[[TObj], TObj]:
         """
         Decorator to map class with some name - specified in the argument or name of the class.
 
@@ -96,7 +98,7 @@ class CommonStatefulClassesRegistry:
         :return: The inner function for registration.
         """
 
-        def decorator(cls: type) -> type:
+        def decorator(cls: TObj) -> TObj:
             PT_STATEFUL_CLASSES.register(name)(cls)
             TF_STATEFUL_CLASSES.register(name)(cls)
             return cls

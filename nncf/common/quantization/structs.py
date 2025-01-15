@@ -11,7 +11,7 @@
 
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import nncf
 from nncf.common.graph import NNCFNode
@@ -24,7 +24,7 @@ from nncf.parameters import TargetDevice
 
 
 @api()
-class QuantizationScheme:
+class QuantizationScheme(StrEnum):
     """
     Basic enumeration for quantization scheme specification.
 
@@ -45,7 +45,7 @@ class QuantizerConfig:
     def __init__(
         self,
         num_bits: int = QUANTIZATION_BITS,
-        mode: Union[QuantizationScheme, str] = QuantizationScheme.SYMMETRIC,  # TODO(AlexanderDokuchaev): use enum
+        mode: QuantizationScheme = QuantizationScheme.SYMMETRIC,
         signedness_to_force: Optional[bool] = None,
         per_channel: bool = QUANTIZATION_PER_CHANNEL,
     ):
@@ -62,10 +62,12 @@ class QuantizerConfig:
         self.signedness_to_force = signedness_to_force
         self.per_channel = per_channel
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, QuantizerConfig):
+            return False
         return self.__dict__ == other.__dict__
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "B:{bits} M:{mode} SGN:{signedness} PC:{per_channel}".format(
             bits=self.num_bits,
             mode="S" if self.mode == QuantizationScheme.SYMMETRIC else "A",
@@ -73,7 +75,7 @@ class QuantizerConfig:
             per_channel="Y" if self.per_channel else "N",
         )
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
     def is_valid_requantization_for(self, other: "QuantizerConfig") -> bool:
@@ -96,7 +98,7 @@ class QuantizerConfig:
             return False
         return True
 
-    def compatible_with_a_unified_scale_linked_qconfig(self, linked_qconfig: "QuantizerConfig"):
+    def compatible_with_a_unified_scale_linked_qconfig(self, linked_qconfig: "QuantizerConfig") -> bool:
         """
         For two configs to be compatible in a unified scale scenario, all of their fundamental parameters
         must be aligned.
@@ -155,7 +157,12 @@ class QuantizerSpec:
     """
 
     def __init__(
-        self, num_bits: int, mode: QuantizationScheme, signedness_to_force: bool, narrow_range: bool, half_range: bool
+        self,
+        num_bits: int,
+        mode: QuantizationScheme,
+        signedness_to_force: Optional[bool],
+        narrow_range: Optional[bool],
+        half_range: bool,
     ):
         """
         :param num_bits: Bitwidth of the quantization.
@@ -174,7 +181,9 @@ class QuantizerSpec:
         self.narrow_range = narrow_range
         self.half_range = half_range
 
-    def __eq__(self, other: "QuantizerSpec"):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, QuantizerSpec):
+            return False
         return self.__dict__ == other.__dict__
 
     @classmethod
@@ -185,7 +194,7 @@ class QuantizerSpec:
 class QuantizationConstraints:
     REF_QCONF_OBJ = QuantizerConfig()
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         """
         Use attribute names of QuantizerConfig as arguments
         to set up constraints.
@@ -220,7 +229,7 @@ class QuantizationConstraints:
         return QuantizationConstraints(**new_dict)
 
     @classmethod
-    def from_config_dict(cls, config_dict: Dict) -> "QuantizationConstraints":
+    def from_config_dict(cls, config_dict: Dict[str, Any]) -> "QuantizationConstraints":
         return cls(
             num_bits=config_dict.get("bits"),
             mode=config_dict.get("mode"),
@@ -264,19 +273,21 @@ class QuantizerId:
     structure.
     """
 
-    def get_base(self):
+    def get_base(self) -> str:
         raise NotImplementedError
 
     def get_suffix(self) -> str:
         raise NotImplementedError
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.get_base()) + self.get_suffix()
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.get_base(), self.get_suffix()))
 
-    def __eq__(self, other: "QuantizerId"):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, QuantizerId):
+            return False
         return (self.get_base() == other.get_base()) and (self.get_suffix() == other.get_suffix())
 
 
@@ -299,7 +310,7 @@ class NonWeightQuantizerId(QuantizerId):
     ordinary activation, function and input
     """
 
-    def __init__(self, target_node_name: NNCFNodeName, input_port_id=None):
+    def __init__(self, target_node_name: NNCFNodeName, input_port_id: Optional[int] = None):
         self.target_node_name = target_node_name
         self.input_port_id = input_port_id
 
@@ -335,7 +346,7 @@ class QuantizationPreset(StrEnum):
     PERFORMANCE = "performance"
     MIXED = "mixed"
 
-    def get_params_configured_by_preset(self, quant_group: QuantizerGroup) -> Dict:
+    def get_params_configured_by_preset(self, quant_group: QuantizerGroup) -> Dict[str, str]:
         if quant_group == QuantizerGroup.ACTIVATIONS and self == QuantizationPreset.MIXED:
             return {"mode": QuantizationScheme.ASYMMETRIC}
         return {"mode": QuantizationScheme.SYMMETRIC}

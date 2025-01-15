@@ -66,5 +66,5 @@ def calculate_asymmetric_level_ranges(num_bits: int, narrow_range: bool = False)
     return level_low, level_high
 
 
-def get_num_levels(level_low: int, level_high: int):
+def get_num_levels(level_low: int, level_high: int) -> int:
     return level_high - level_low + 1
