@@ -12,7 +12,6 @@ import copy
 import operator
 from collections import OrderedDict
 from collections import defaultdict
-from functools import partial
 from functools import reduce
 from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar
 
@@ -812,16 +811,6 @@ class WeightCompression(Algorithm):
         :return: Collected statistics.
         """
 
-        def input_filter_func(point, port_id):
-            # For the floating-point statistics collected in POST_LAYER style,
-            # we also need to determine the output port id.
-            # For the cases when the layer has more than one (0) output port.
-            return (
-                self._algorithm_key in point.algorithm_to_tensor_collectors
-                and point.target_point.type == TargetType.POST_LAYER_OPERATION
-                and point.target_point.port_id == port_id
-            )
-
         # For each node we store statistics in a WCTensorStatistics data-class. It contains the following fields:
         #   mean_values=[mean_value_1, ..., mean_value_n]
         #   shapes=[shape_1, ..., shape_n]
@@ -831,7 +820,9 @@ class WeightCompression(Algorithm):
         for (act_node, output_port_id), matmul_nodes in matmul_input_to_output_nodes_map.items():
             tensor_collectors = list(
                 statistic_points.get_algo_statistics_for_node(
-                    act_node.node_name, partial(input_filter_func, port_id=output_port_id), self._algorithm_key
+                    act_node.node_name,
+                    self._backend_entity.get_filter_fn_for_statistics(output_port_id, self._algorithm_key),
+                    self._algorithm_key,
                 )
             )
             # Statistics could be empty in case when the statistics is registered for another algorithm,

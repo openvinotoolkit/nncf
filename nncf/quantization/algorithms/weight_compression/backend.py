@@ -235,6 +235,17 @@ class WeightCompressionAlgoBackend(ABC):
         :param path: Optional list of the paths.
         """
 
+    @staticmethod
+    @abstractmethod
+    def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
+        """
+        Returns backend-specific callable to filter statistic containers according to its statistic point.
+
+        :param activation_port_id: Activation port id for the statistic collection target node.
+        :param algorithm_key: Current algorithm key.
+        :return: Backend-specific callable to filter statistic containers according to its statistic point.
+        """
+
 
 class AWQAlgoBackend(WeightCompressionAlgoBackend):
     @staticmethod
@@ -279,14 +290,3 @@ class MixedPrecisionAlgoBackend(ABC):
         reduction_axes: Tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
         pass
-
-    @staticmethod
-    @abstractmethod
-    def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
-        """
-        Returns backend-specific callable to filter statistic containers according to its statistic point.
-
-        :param activation_port_id: Activation port id for the statistic collection target node.
-        :param algorithm_key: Current algorithm key.
-        :return: Backend-specific callable to filter statistic containers according to its statistic point.
-        """

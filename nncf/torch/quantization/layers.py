@@ -1094,7 +1094,7 @@ class INT8AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
         """
         super().__init__()
         self.register_buffer("_scale", scale.type(dtype=torch.float16))
-        self.register_buffer("_zero_point", self.pack_weight(zero_point))
+        self.register_buffer("_zero_point", self.pack_weight(zero_point.type(dtype=torch.uint8)))
         self.result_dtype = result_dtype
 
     @property
@@ -1165,7 +1165,7 @@ class INT4AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
         self.register_buffer("_scale", scale.type(dtype=torch.float16))
 
         self.zero_point_shape = zero_point.shape
-        self.register_buffer("_zero_point", self.pack_weight(zero_point))
+        self.register_buffer("_zero_point", self.pack_weight(zero_point.type(dtype=torch.uint8)))
 
         self.compressed_weight_shape = compressed_weight_shape
         self.result_shape = result_shape

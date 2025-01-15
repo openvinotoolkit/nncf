@@ -374,6 +374,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         s = opset.parameter(s_shape, name="s")
         parameters = [w, s]
         compressed_w = w / s
+        compressed_w.get_rt_info()["nonconvertable_divide_0"] = True
         if z_p_shape is not None:
             zp = opset.parameter(z_p_shape, name="zp")
             parameters.append(zp)
@@ -389,6 +390,17 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         compiled_model = ov.compile_model(model, device_name="CPU", config={inference_precision: Type.f32})
 
         return lambda parameters: compiled_model(parameters)[0]
+
+    @staticmethod
+    def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
+        def filter_func(point: StatisticPoint) -> bool:
+            return (
+                algorithm_key in point.algorithm_to_tensor_collectors
+                and point.target_point.type == TargetType.POST_LAYER_OPERATION
+                and point.target_point.port_id == activation_port_id
+            )
+
+        return filter_func
 
 
 class OVAWQAlgoAlgoBackend(AWQAlgoBackend, OVWeightCompressionAlgoBackend):
@@ -433,14 +445,3 @@ class OVMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, OVWeightCompression
         collector = TensorCollector(MeanMagnitudeTensorStatistic)
         collector.register_statistic_branch(MeanMagnitudeTensorStatistic.MEAN_MAGNITUDE_STAT, reducer, aggregator)
         return collector
-
-    @staticmethod
-    def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
-        def filter_func(point: StatisticPoint) -> bool:
-            return (
-                algorithm_key in point.algorithm_to_tensor_collectors
-                and point.target_point.type == TargetType.POST_LAYER_OPERATION
-                and point.target_point.port_id == activation_port_id
-            )
-
-        return filter_func
