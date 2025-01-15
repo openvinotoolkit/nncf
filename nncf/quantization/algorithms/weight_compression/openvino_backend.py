@@ -374,7 +374,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         s = opset.parameter(s_shape, name="s")
         parameters = [w, s]
         compressed_w = w / s
-        compressed_w.get_rt_info()["nonconvertable_divide_0"] = True
         if z_p_shape is not None:
             zp = opset.parameter(z_p_shape, name="zp")
             parameters.append(zp)
