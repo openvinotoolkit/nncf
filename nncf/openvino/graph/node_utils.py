@@ -671,7 +671,6 @@ def create_ov_const_from_tensor(x: Tensor, dtype: ov.Type, name: Optional[str] =
     """
     if x.backend == TensorBackend.ov:
         assert x.data.get_element_type() == dtype
-        # TODO: try shared_memory=True
-        return opset.constant(x.data, name=name, shared_memory=False)
+        return opset.constant(x.data, name=name, shared_memory=True)
     const = opset.constant(x.data, dtype=dtype, name=name)
     return const
