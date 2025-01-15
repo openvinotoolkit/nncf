@@ -237,7 +237,7 @@ class ScaleEstimation:
 
         # normalize importances for every group of weights to make sum of them equal to 1.0
         denum = fns.sum(importance, axis=2, keepdims=True)
-        importance = importance / (denum + eps)  # for each weight in a group
+        importance = importance / (denum + eps)
 
         X, _ = reshape_weight_for_grouped_quantization(X, 0, group_size)
         q_weights, _ = reshape_weight_for_grouped_quantization(q_weights, reduction_axis, group_size)
@@ -278,7 +278,7 @@ class ScaleEstimation:
         if zp is not None:
             input_tensors[2] = zp.data
         # iterative rectification of initial scale
-        for i in range(initial_steps):  # make several iteration of updating scale
+        for i in range(initial_steps):
             near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
             input_tensors[1] = near_to_ideal_scale.data
@@ -406,7 +406,6 @@ def get_target_zero_mask(compressed_weights: Tensor, zp: Optional[Tensor] = None
 
 
 def estimate_scales(weight: Tensor, target: Tensor, zero_mask: Tensor, importance: Tensor) -> Tensor:
-    # ideal scale to determine the importance of the weights
     """
     Estimates scales for the given weight, target, zero mask, and importance.
 
