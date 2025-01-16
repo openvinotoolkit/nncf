@@ -157,11 +157,14 @@ tf_quantized_model.compile(
 
 tf_quantized_model.fit(train_dataset, epochs=3, verbose=1)
 
+# Removes auxiliary layers and operations added during the quantization process,
+# resulting in a clean, fully quantized model ready for deployment.
+stripped_model = nncf.strip(tf_quantized_model)
+
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
 
 ov_model = ov.convert_model(tf_model, share_weights=False)
-stripped_model = nncf.strip(tf_quantized_model)
 ov_quantized_model = ov.convert_model(stripped_model, share_weights=False)
 
 fp32_ir_path = ROOT / "mobilenet_v2_fp32.xml"

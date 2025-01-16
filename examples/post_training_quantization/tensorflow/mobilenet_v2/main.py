@@ -143,6 +143,9 @@ def transform_fn(data_item):
 
 calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
 tf_quantized_model = nncf.quantize(tf_model, calibration_dataset)
+
+# Removes auxiliary layers and operations added during the quantization process,
+# resulting in a clean, fully quantized model ready for deployment.
 tf_quantized_model = nncf.strip(tf_quantized_model)
 
 ###############################################################################
