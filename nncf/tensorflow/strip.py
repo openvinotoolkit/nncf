@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Dict
+
 import tensorflow as tf
 
 from nncf.common.utils.backend import copy_model
@@ -17,6 +19,7 @@ from nncf.tensorflow.graph.transformations.commands import TFOperationWithWeight
 from nncf.tensorflow.graph.transformations.commands import TFRemovalCommand
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import collect_wrapped_layers
+from nncf.tensorflow.layers.operation import NNCFOperation
 from nncf.tensorflow.quantization.quantizers import AsymmetricQuantizer
 from nncf.tensorflow.quantization.quantizers import SymmetricQuantizer
 from nncf.tensorflow.quantization.utils import apply_overflow_fix_to_layer
@@ -41,10 +44,19 @@ def strip(model: tf.keras.Model, do_copy: bool = True) -> tf.keras.Model:
     if do_copy:
         model = copy_model(model)
 
+    op_to_priority: Dict[NNCFOperation, int] = {
+        SymmetricQuantizer: 1,
+        AsymmetricQuantizer: 1,
+        BinaryMask: 2,
+        RBSparsifyingWeight: 2,
+    }
+
+    key_fn = lambda op: op_to_priority.get(op, 0)
+
     transformation_layout = TFTransformationLayout()
     for wrapped_layer in wrapped_layers:
         for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
-            for op in ops.values():
+            for op in sorted(ops.values(), key=key_fn, reverse=True):
                 # quantization
                 if isinstance(op, (SymmetricQuantizer, AsymmetricQuantizer)) and op.half_range:
                     apply_overflow_fix_to_layer(wrapped_layer, weight_attr, op)
