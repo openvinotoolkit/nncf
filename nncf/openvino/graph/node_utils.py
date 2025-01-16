@@ -110,7 +110,7 @@ def get_number_if_op(model: ov.Model) -> int:
     return cnt_if_op(model, 0)
 
 
-def get_const_value(const_node: ov.Node, cast_bf16_to_fp32: Optional[bool] = True) -> np.ndarray:
+def get_const_value(const_node: ov.Node, cast_bf16_to_fp32: bool = True) -> np.ndarray:
     """
     Returns the constant tensor for the node.
     This method is applicable only for the floating-point constant data.
