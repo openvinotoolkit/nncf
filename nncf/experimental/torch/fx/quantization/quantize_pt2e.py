@@ -90,11 +90,9 @@ def quantize_pt2e(
         model = deepcopy(model)
 
     _fuse_conv_bn_(model)
-    # Call ao quantizer transform_for_annotation
-    # before the NNCFGraph creation
-    quantizer.transform_for_annotation(model)
-
     quantizer = TorchAOQuantizerAdapter(quantizer)
+    # Call transform_prior_quantization before the NNCFGraph creation
+    quantizer.transform_prior_quantization(model)
 
     quantization_algorithm = ExperimentalPostTrainingQuantization(
         quantizer=quantizer,

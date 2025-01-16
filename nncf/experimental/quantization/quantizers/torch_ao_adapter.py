@@ -11,7 +11,6 @@
 
 
 from collections import defaultdict
-from copy import deepcopy
 from typing import Dict, List, Tuple, Union
 
 import torch
@@ -45,14 +44,24 @@ class TorchAOQuantizerAdapter(Quantizer):
     def __init__(self, quantizer: TorchAOQuantizer):
         self._quantizer = quantizer
 
-    def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
-        anotated_model = deepcopy(model)
+    def transform_prior_quantization(self, model: torch.fx.GraphModule):
+        self._quantizer.transform_for_annotation(model)
 
-        # self._quantizer.transform_for_annotation is called in the nncf quantize_pt2e method
-        # before the nncf_graph building.
-        self._quantizer.annotate(anotated_model)
-        self._quantizer.validate(anotated_model)
-        return self.get_quantizer_config_from_anotated_model(anotated_model)
+    def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
+        original_meta = model.meta
+
+        self._quantizer.annotate(model)
+        self._quantizer.validate(model)
+        quantizer_setup = self.get_quantizer_config_from_anotated_model(model)
+
+        # Remove quantization annotations from the original model
+        quantization_annotation_key = "quantization_annotation"
+        for n in model.graph.nodes:
+            if hasattr(n, "meta") and quantization_annotation_key in n.meta:
+                del n.meta[quantization_annotation_key]
+
+        model.meta = original_meta
+        return quantizer_setup
 
     @staticmethod
     def _get_quantization_points(

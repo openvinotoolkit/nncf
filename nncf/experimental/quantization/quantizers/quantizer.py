@@ -26,6 +26,14 @@ class Quantizer(ABC):
     """
 
     @abstractmethod
+    def transform_prior_quantization(self, model: TModel):
+        """
+        Transforms the given model in-place with the necessary modifications required prior to quantization.
+
+        :param model: Backend-specific model to be transformed.
+        """
+
+    @abstractmethod
     def get_quantization_setup(self, model: TModel, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         """
         Builds SingleConfigQuantizerSetup for the given model.
