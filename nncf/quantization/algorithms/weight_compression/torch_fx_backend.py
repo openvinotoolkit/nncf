@@ -174,6 +174,17 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     ) -> None:
         pass
 
+    @staticmethod
+    def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
+        def filter_func(point: StatisticPoint) -> bool:
+            return (
+                algorithm_key in point.algorithm_to_tensor_collectors
+                and point.target_point.type
+                == PTWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[TargetType.POST_LAYER_OPERATION]
+            )
+
+        return filter_func
+
     def transform_model(
         self,
         model: torch.fx.GraphModule,

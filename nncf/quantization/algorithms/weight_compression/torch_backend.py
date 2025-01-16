@@ -94,7 +94,11 @@ def get_compress_fn(mode, num_bits: int):
     level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
 
     def _forward_fn(inputs):
-        tensor, scale, zero_point = inputs
+        if len(inputs) == 3:
+            tensor, scale, zero_point = inputs
+        else:
+            tensor, scale = inputs
+            zero_point = None
         with torch.no_grad():
             return compress(tensor, scale, zero_point, level_low, level_high)
 
@@ -107,7 +111,11 @@ def get_compress_decompress_fn(mode, num_bits: int):
     level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
 
     def _forward_fn(inputs):
-        tensor, scale, zero_point = inputs
+        if len(inputs) == 3:
+            tensor, scale, zero_point = inputs
+        else:
+            tensor, scale = inputs
+            zero_point = None
         with torch.no_grad():
             return compress_decompress(
                 tensor=tensor, scale=scale, zero_point=zero_point, level_low=level_low, level_high=level_high

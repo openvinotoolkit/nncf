@@ -274,9 +274,9 @@ class ScaleEstimation:
         zero_scale = 0.001
         zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
-        input_tensors = [original_weight.data, None, None]
+        input_tensors = [original_weight.data, None]
         if zp is not None:
-            input_tensors[2] = zp.data
+            input_tensors.append(zp.data)
         # iterative rectification of initial scale
         for i in range(initial_steps):
             near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
