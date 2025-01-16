@@ -28,6 +28,11 @@ from nncf.tensorflow.sparsity.utils import apply_mask
 def strip(model: tf.keras.Model, do_copy: bool = True) -> tf.keras.Model:
     """
     Implementation of the nncf.strip() function for the TF backend
+
+    :param model: The compressed model.
+    :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
+      will return the currently associated model object "stripped" in-place.
+    :return: The stripped model.
     """
     wrapped_layers = collect_wrapped_layers(model)
     if not wrapped_layers:

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -92,11 +92,7 @@ def center_crop(image: tf.Tensor, image_size: int, crop_padding: int) -> tf.Tens
         target_height=padded_center_crop_size,
         target_width=padded_center_crop_size,
     )
-
-    image = tf.compat.v1.image.resize(
-        image, [image_size, image_size], method=tf.image.ResizeMethod.BILINEAR, align_corners=False
-    )
-
+    image = tf.image.resize(image, [image_size, image_size], method=tf.image.ResizeMethod.BILINEAR)
     return image
 
 
@@ -104,9 +100,7 @@ def preprocess_for_eval(image, label):
     image = center_crop(image, 224, 32)
     image = tf.keras.applications.mobilenet_v2.preprocess_input(image)
     image = tf.image.convert_image_dtype(image, tf.float32)
-
     label = tf.one_hot(label, DATASET_CLASSES)
-
     return image, label
 
 
