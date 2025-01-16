@@ -12,7 +12,6 @@
 import logging
 import sys
 from functools import lru_cache
-from typing import Set
 
 NNCF_LOGGER_NAME = "nncf"
 
@@ -59,16 +58,6 @@ def disable_logging() -> None:
     Disables NNCF logging entirely. `FutureWarning`s are still shown.
     """
     nncf_logger.handlers = []
-
-
-class DuplicateFilter:
-    def __init__(self) -> None:
-        self.msgs: Set[str] = set()
-
-    def filter(self, rec: logging.LogRecord) -> bool:
-        retval = rec.msg not in self.msgs
-        self.msgs.add(rec.msg)
-        return retval
 
 
 NNCFDeprecationWarning = FutureWarning
