@@ -92,11 +92,7 @@ def center_crop(image: tf.Tensor, image_size: int, crop_padding: int) -> tf.Tens
         target_height=padded_center_crop_size,
         target_width=padded_center_crop_size,
     )
-
-    image = tf.compat.v1.image.resize(
-        image, [image_size, image_size], method=tf.image.ResizeMethod.BILINEAR, align_corners=False
-    )
-
+    image = tf.image.resize(image, [image_size, image_size], method=tf.image.ResizeMethod.BILINEAR)
     return image
 
 
@@ -104,11 +100,20 @@ def preprocess_for_eval(image, label):
     image = center_crop(image, 224, 32)
     image = tf.keras.applications.mobilenet_v2.preprocess_input(image)
     image = tf.image.convert_image_dtype(image, tf.float32)
-
     label = tf.one_hot(label, DATASET_CLASSES)
-
     return image, label
 
+
+def preprocess_for_train(image, label):
+    image = tf.image.resize_with_crop_or_pad(image, 256, 256)
+    image = tf.image.random_crop(image, [224, 224, 3])
+    image = tf.image.convert_image_dtype(image, tf.float32)
+    label = tf.one_hot(label, DATASET_CLASSES)
+    return image, label
+
+
+train_dataset = tfds.load("imagenette/320px-v2", split="train", shuffle_files=True, as_supervised=True)
+train_dataset = train_dataset.map(preprocess_for_train).shuffle(1024).batch(128)
 
 val_dataset = tfds.load("imagenette/320px-v2", split="validation", shuffle_files=False, as_supervised=True)
 val_dataset = val_dataset.map(preprocess_for_eval).batch(128)
@@ -144,15 +149,23 @@ def transform_fn(data_item):
 calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
 tf_quantized_model = nncf.quantize(tf_model, calibration_dataset)
 
+tf_quantized_model.compile(
+    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5),
+    loss=tf.keras.losses.CategoricalCrossentropy(),
+    metrics=[tf.keras.metrics.CategoricalAccuracy()],
+)
+
+tf_quantized_model.fit(train_dataset, epochs=3, verbose=1)
+
 # Removes auxiliary layers and operations added during the quantization process,
 # resulting in a clean, fully quantized model ready for deployment.
-tf_quantized_model = nncf.strip(tf_quantized_model)
+stripped_model = nncf.strip(tf_quantized_model)
 
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
 
 ov_model = ov.convert_model(tf_model, share_weights=False)
-ov_quantized_model = ov.convert_model(tf_quantized_model, share_weights=False)
+ov_quantized_model = ov.convert_model(stripped_model, share_weights=False)
 
 fp32_ir_path = ROOT / "mobilenet_v2_fp32.xml"
 ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
