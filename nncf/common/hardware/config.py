@@ -178,8 +178,13 @@ class HWConfig(list[Dict[str, Any]], ABC):
             ), "Invalid value of quantizer parameter `level_high`.\
                          The parameter must be consistent with other parameters!"
 
+        narrow_range = quantization_subdict["narrow_range"]
         return QuantizerConfig(
-            num_bits=bits, mode=mode, per_channel=is_per_channel, signedness_to_force=signedness_to_force
+            num_bits=bits,
+            mode=mode,
+            per_channel=is_per_channel,
+            signedness_to_force=signedness_to_force,
+            narrow_range=narrow_range,
         )
 
     @staticmethod

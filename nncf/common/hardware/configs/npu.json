@@ -7,7 +7,8 @@
                 "mode": [
                     "symmetric"
                 ],
-                "granularity": "pertensor"
+                "granularity": "pertensor",
+                "narrow_range": false
             },
             "q8_a": {
                 "bits": 8,
@@ -15,7 +16,8 @@
                     "symmetric",
                     "asymmetric"
                 ],
-                "granularity": "pertensor"
+                "granularity": "pertensor",
+                "narrow_range": false
             },
             "q8_a_ch": {
                 "bits": 8,
@@ -26,30 +28,35 @@
                 "granularity": [
                     "perchannel",
                     "pertensor"
-                ]
+                ],
+                "narrow_range": false
             },
             "q8_w_sym": {
                 "bits": 8,
                 "mode": "symmetric",
                 "level_low": -128,
                 "level_high": 127,
-                "granularity": ["perchannel", "pertensor"]
+                "granularity": ["perchannel", "pertensor"],
+                "narrow_range": true
             },
             "q8_w_asym": {
                 "bits": 8,
                 "mode": "asymmetric",
-                "granularity": ["perchannel", "pertensor"]
+                "granularity": ["perchannel", "pertensor"],
+                "narrow_range": false
             },
             // 4-bit configs
             "q4_tn": {
                 "bits": 4,
                 "mode": "symmetric",
-                "granularity": "pertensor"
+                "granularity": "pertensor",
+                "narrow_range": false
             },
             "q4_ch": {
                 "bits": 4,
                 "mode": "symmetric",
-                "granularity": "perchannel"
+                "granularity": "perchannel",
+                "narrow_range": false
             },
             "q4_w": {
                 "bits": 4,
@@ -57,13 +64,15 @@
                 "granularity": [
                     "perchannel",
                     "pertensor"
-                ]
+                ],
+                "narrow_range": false
             },
             // 2-bit configs
             "q2_ch": {
                 "bits": 2,
                 "mode": "symmetric",
-                "granularity": "perchannel"
+                "granularity": "perchannel",
+                "narrow_range": false
             },
             "q2_w": {
                 "bits": 2,
@@ -71,7 +80,8 @@
                 "granularity": [
                     "perchannel",
                     "pertensor"
-                ]
+                ],
+                "narrow_range": false
             }
         }
     },

@@ -8,7 +8,8 @@
                     "symmetric",
                     "asymmetric"
                 ],
-                "granularity": "pertensor"
+                "granularity": "pertensor",
+                "narrow_range": false
             },
             "q8_a_ch": {
                 "bits": 8,
@@ -19,7 +20,8 @@
                 "granularity": [
                     "perchannel",
                     "pertensor"
-                ]
+                ],
+                "narrow_range": false
             },
             "q8_w_sym": {
                 "bits": 8,
@@ -29,7 +31,8 @@
                 "granularity":  [
                     "perchannel",
                     "pertensor"
-                ]
+                ],
+                "narrow_range": true
             },
             "q8_w_asym": {
                 "bits": 8,
@@ -37,7 +40,8 @@
                 "granularity":  [
                     "perchannel",
                     "pertensor"
-                ]
+                ],
+                "narrow_range": false
             }
         }
     },
