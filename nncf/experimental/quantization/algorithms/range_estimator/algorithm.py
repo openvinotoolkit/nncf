@@ -15,7 +15,7 @@ from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.quantization.quantizer.quantizer import Quantizer as NNCFQuantizer
+from nncf.experimental.quantization.quantizers.quantizer import Quantizer
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.range_estimator import RangeEstimatorParameters
@@ -26,7 +26,7 @@ TModel = TypeVar("TModel")
 class MinMaxRangeEstimator(Algorithm):
     def __init__(
         self,
-        quantizer: NNCFQuantizer,
+        quantizer: Quantizer,
         subset_size: int = 300,
         inplace_statistics: bool = True,
         batchwise_statistics: bool = False,
@@ -34,7 +34,7 @@ class MinMaxRangeEstimator(Algorithm):
         weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
     ):
         """
-        :param quantizer: Instance of NNCFQuantizer to retrieve a quantization config
+        :param quantizer: Instance of Quantizer to retrieve a quantization config
             for the given model.
         :param subset_size: Size of a subset to calculate activations statistics used
             for quantization, defaults to 300.

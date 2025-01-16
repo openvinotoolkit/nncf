@@ -27,7 +27,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.data import Dataset
 from nncf.experimental.quantization.algorithms.post_training.algorithm import ExperimentalPostTrainingQuantization
-from nncf.experimental.quantization.quantizer.torch_ao_adapter import TorchAOQuantizerAdapter
+from nncf.experimental.quantization.quantizers.torch_ao_adapter import TorchAOQuantizerAdapter
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.transformations import QUANTIZE_NODE_TARGETS
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters

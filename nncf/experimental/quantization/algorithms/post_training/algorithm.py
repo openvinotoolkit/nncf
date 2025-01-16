@@ -17,7 +17,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.quantization.algorithms.post_training.pipeline import experimental_create_ptq_pipeline
-from nncf.experimental.quantization.quantizer.quantizer import Quantizer as NNCFQuantizer
+from nncf.experimental.quantization.quantizers.quantizer import Quantizer
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
@@ -37,7 +37,7 @@ class ExperimentalPostTrainingQuantization(Algorithm):
 
     def __init__(
         self,
-        quantizer: NNCFQuantizer,
+        quantizer: Quantizer,
         subset_size: int = 300,
         fast_bias_correction: Optional[bool] = True,
         smooth_quant: bool = False,
@@ -48,7 +48,7 @@ class ExperimentalPostTrainingQuantization(Algorithm):
         batchwise_statistics: bool = False,
     ):
         """
-        :param quantizer: NNCFQuantizer to use in MiMaxRangeInit algorithm.
+        :param quantizer: Quantizer to use in MiMaxRangeInit algorithm.
         :param subset_size: Size of a subset to calculate activations
             statistics used for quantization.
         :param fast_bias_correction: Setting this option to `False` enables a different

@@ -16,7 +16,7 @@ from typing import Dict, List, Tuple, Union
 
 import torch
 import torch.fx
-from torch.ao.quantization.quantizer import Quantizer
+from torch.ao.quantization.quantizer import Quantizer as TorchAOQuantizer
 from torch.ao.quantization.quantizer.quantizer import QuantizationSpec
 from torch.ao.quantization.quantizer.quantizer import QuantizationSpecBase
 from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec
@@ -31,18 +31,18 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.quantization.quantizer.quantizer import Quantizer as NNCFQuantizer
+from nncf.experimental.quantization.quantizers.quantizer import Quantizer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 
 EdgeOrNode = Union[Tuple[torch.fx.Node, torch.fx.Node]]
 
 
-class TorchAOQuantizerAdapter(NNCFQuantizer):
+class TorchAOQuantizerAdapter(Quantizer):
     """
     Implementation of the NNCF Quantizer interface for any given torch.ao quantizer.
     """
 
-    def __init__(self, quantizer: Quantizer):
+    def __init__(self, quantizer: TorchAOQuantizer):
         self._quantizer = quantizer
 
     def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:

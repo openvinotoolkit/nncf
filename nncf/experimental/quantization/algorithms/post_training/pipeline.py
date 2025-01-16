@@ -12,7 +12,7 @@
 from typing import Optional, TypeVar
 
 from nncf.experimental.quantization.algorithms.range_estimator.algorithm import MinMaxRangeEstimator
-from nncf.experimental.quantization.quantizer.quantizer import Quantizer as NNCFQuantizer
+from nncf.experimental.quantization.quantizers.quantizer import Quantizer
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
@@ -27,7 +27,7 @@ TModel = TypeVar("TModel")
 
 
 def experimental_create_ptq_pipeline(
-    quantizer: NNCFQuantizer,
+    quantizer: Quantizer,
     subset_size: int = 300,
     fast_bias_correction: Optional[bool] = True,
     smooth_quant: bool = False,
@@ -45,7 +45,7 @@ def experimental_create_ptq_pipeline(
         2) MinMaxRangeInit
         3) FastBiasCorrection or BiasCorrection
 
-    :param quantizer: NNCFQuantizer to use in MiMaxRangeInit algorithm.
+    :param quantizer: Quantizer to use in MiMaxRangeInit algorithm.
     :param subset_size: Size of a subset to calculate activations
         statistics used for quantization.
     :param fast_bias_correction: Setting this option to `False` enables a different
