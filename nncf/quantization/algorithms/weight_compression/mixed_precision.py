@@ -211,7 +211,7 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
 
     @property
     def available_backends(self) -> List[BackendType]:
-        return [BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
+        return [BackendType.OPENVINO, BackendType.TORCH]
 
     def _set_backend_entity(self, model: TModel) -> None:
         model_backend = get_backend(model)
@@ -223,10 +223,6 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
             from nncf.quantization.algorithms.weight_compression.torch_backend import PTMixedPrecisionAlgoBackend
 
             self._backend_entity = PTMixedPrecisionAlgoBackend()
-        elif model_backend == BackendType.TORCH_FX:
-            from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXMixedPrecisionAlgoBackend
-
-            self._backend_entity = FXMixedPrecisionAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
