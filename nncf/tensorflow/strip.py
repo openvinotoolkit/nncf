@@ -37,12 +37,12 @@ def strip(model: tf.keras.Model, do_copy: bool = True) -> tf.keras.Model:
       will return the currently associated model object "stripped" in-place.
     :return: The stripped model.
     """
+    if do_copy:
+        model = copy_model(model)
+
     wrapped_layers = collect_wrapped_layers(model)
     if not wrapped_layers:
         return model
-
-    if do_copy:
-        model = copy_model(model)
 
     op_to_priority: Dict[NNCFOperation, int] = {
         SymmetricQuantizer: 1,
