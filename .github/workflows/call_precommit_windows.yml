@@ -65,7 +65,7 @@ jobs:
       - name: Run ONNX precommit test scope
         run: make test-onnx
         env:
-          NUM_WORKERS: 4
+          NUM_WORKERS: 1
 
   openvino:
     timeout-minutes: 40
