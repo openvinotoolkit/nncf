@@ -237,49 +237,34 @@ class TemplateTestReducersAggregators:
             assert fns.allclose(val[i], self.get_nncf_tensor(ref_))
 
     @pytest.mark.parametrize(
-        "axes, np_data, reference",
-        [
-            [None, np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 16.1666],
-            [(0,), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 14.25],
-            [(0, 1), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 15.875],
-            [(0, 1, 2), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 16.1666],
-        ],
+        "axes, reference",
+        [[None, 16.1666], [(0,), 14.25], [(0, 1), 15.875], [(0, 1, 2), 16.1666]],
     )
-    def test_mean_variance_reducer(self, axes, np_data, reference):
+    def test_mean_variance_reducer(self, axes, reference):
         reducer = MeanVarianceReducer(reduction_axes=axes)
-        nncf_data = self.get_nncf_tensor(np_data, dtype=Dtype.FLOAT)
+        nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
         result = reducer._reduce_out_of_place([nncf_data])
         assert len(result) == 1
         assert fns.allclose(result[0], self.get_nncf_tensor(reference))
 
     @pytest.mark.parametrize(
-        "axes, np_data, reference",
-        [
-            [None, np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 10.0],
-            [(0,), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 4.16666],
-            [(0, 1), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 6.33333],
-            [(0, 1, 2), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 10.0],
-        ],
+        "axes, reference",
+        [[None, 10.0], [(0,), 4.16666], [(0, 1), 6.33333], [(0, 1, 2), 10.0]],
     )
-    def test_mean_abs_max_reducer(self, axes, np_data, reference):
+    def test_mean_abs_max_reducer(self, axes, reference):
         reducer = MeanAbsMaxReducer(reduction_axes=axes)
-        nncf_data = self.get_nncf_tensor(np_data, dtype=Dtype.FLOAT)
+        nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
         result = reducer._reduce_out_of_place([nncf_data])
         assert len(result) == 1
         assert fns.allclose(result[0], self.get_nncf_tensor(reference))
 
     @pytest.mark.parametrize(
-        "axes, np_data, reference",
-        [
-            [None, np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 16.1666],
-            [(0,), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 64.0],
-            [(0, 1), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 36.1875],
-            [(0, 1, 2), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 16.1666],
-        ],
+        "axes, reference",
+        [[None, 16.1666], [(0,), 64.0], [(0, 1), 36.1875], [(0, 1, 2), 16.1666]],
     )
-    def test_max_variance_reducer(self, axes, np_data, reference):
+    def test_max_variance_reducer(self, axes, reference):
         reducer = MaxVarianceReducer(reduction_axes=axes)
-        nncf_data = self.get_nncf_tensor(np_data, dtype=Dtype.FLOAT)
+        nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
         result = reducer._reduce_out_of_place([nncf_data])
         assert len(result) == 1
         assert fns.allclose(result[0], self.get_nncf_tensor(reference))
