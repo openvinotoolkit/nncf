@@ -67,7 +67,7 @@ TORCHVISION_TEST_DATA = [
 @pytest.mark.parametrize(
     ("model_to_test", "quantization_parameters"),
     TORCHVISION_TEST_DATA,
-    ids=[model_to_test.model_name for model_to_test in TORCHVISION_TEST_DATA],
+    ids=[model_to_test[0].model_name for model_to_test in TORCHVISION_TEST_DATA],
 )
 def test_min_max_quantization_graph_torchvision_models(tmp_path, mocker, model_to_test, quantization_parameters):
     mock_collect_statistics(mocker)
