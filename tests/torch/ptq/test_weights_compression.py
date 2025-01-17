@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import List
+
 import pytest
 import torch
 import torch.nn as nn
@@ -357,15 +359,15 @@ class SequentialMatmulModel(nn.Module):
 
 class TestPTTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
-    def get_matmul_model():
+    def get_matmul_model() -> torch.nn.Module:
         return IdentityMatmul()
 
     @staticmethod
-    def get_sequential_matmul_model():
+    def get_sequential_matmul_model() -> torch.nn.Module:
         return SequentialMatmulModel()
 
     @staticmethod
-    def to_tensor(t):
+    def to_tensor(t) -> torch.Tensor:
         return torch.tensor(t)
 
     @staticmethod
@@ -373,7 +375,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return cast_to(x, dtype)
 
     @staticmethod
-    def check_weights(model, ref_ids):
+    def check_weights(model: torch.nn.Module, ref_ids: List[int]) -> None:
         for i, op in enumerate(model.layers):
             if i in ref_ids:
                 assert torch.numel(op.weight) == 8  # workaround to detect uint4 weights

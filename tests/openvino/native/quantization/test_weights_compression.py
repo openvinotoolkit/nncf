@@ -874,7 +874,7 @@ def test_number_of_reduced_statistics_for_subset_size(
     mocker, dataset_size, subset_size, ref_size, compression_args, multiplier_of_calls
 ):
     model = IdentityMatmul().ov_model
-    dataset = Dataset([ACTIVATION] * dataset_size)
+    dataset = Dataset([np.array(ACTIVATION)] * dataset_size)
     stats_spy = mocker.spy(AggregatorBase, "register_reduced_input")
 
     compress_weights(model, dataset=dataset, subset_size=subset_size, **compression_args)
@@ -890,7 +890,7 @@ def test_default_subset_value():
 @pytest.mark.parametrize("subset_size", (-1, 0))
 def test_invalid_subset_size(subset_size):
     model = IdentityMatmul().ov_model
-    dataset = Dataset([ACTIVATION])
+    dataset = Dataset([np.array(ACTIVATION)])
     with pytest.raises(nncf.ValidationError):
         compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, dataset=dataset, subset_size=subset_size)
 
@@ -1522,15 +1522,15 @@ def test_compression_with_transposed_activations(kwargs):
 
 class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
-    def get_matmul_model():
+    def get_matmul_model() -> ov.Model:
         return IdentityMatmul().ov_model
 
     @staticmethod
-    def get_sequential_matmul_model():
+    def get_sequential_matmul_model() -> ov.Model:
         return SequentialMatmulModel().ov_model
 
     @staticmethod
-    def to_tensor(x):
+    def to_tensor(x) -> np.ndarray:
         return np.array(x)
 
     @staticmethod
@@ -1542,7 +1542,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         raise NotImplementedError
 
     @staticmethod
-    def check_weights(model, ref_ids):
+    def check_weights(model: ov.Model, ref_ids: List[int]) -> None:
         names = {op.get_friendly_name() for op in model.get_ordered_ops() if op.get_element_type() == ov.Type.i4}
         ref_nf4_nodes = {f"weights_{i}" for i in ref_ids}
         assert ref_nf4_nodes == names

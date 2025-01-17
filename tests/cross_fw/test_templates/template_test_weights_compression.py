@@ -11,7 +11,7 @@
 import math
 from abc import ABC
 from abc import abstractmethod
-from typing import TypeVar
+from typing import List, TypeVar
 
 import numpy as np
 import pytest
@@ -23,6 +23,7 @@ from nncf.quantization import compress_weights
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.tensor import TensorDataType
 
+TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 
 NON_ZERO_ROW = [-4, 1, 2]
@@ -41,8 +42,10 @@ class TemplateWeightCompression(ABC):
         pass
 
     @abstractmethod
-    def get_matmul_model(self):
-        """Returns a model instance."""
+    def get_matmul_model() -> TModel:
+        """
+        Returns a backend model for test_data_based_criterion.
+        """
 
     @pytest.mark.parametrize(
         ("mode", "ref_act_score", "ref_score"),
@@ -76,13 +79,18 @@ class TemplateWeightCompression(ABC):
         assert math.isclose(ref_act_score, act_scores, rel_tol=1e-05, abs_tol=1e-08)
 
     @abstractmethod
-    def get_sequential_matmul_model(self): ...
+    def get_sequential_matmul_model() -> TModel:
+        """
+        Returns a backend model for test_mixed_precision.
+        """
 
     @abstractmethod
-    def to_tensor(): ...
+    def to_tensor(x: TTensor) -> TTensor:
+        pass
 
     @abstractmethod
-    def check_weights(self, model, ref_ids): ...
+    def check_weights(model: TModel, ref_ids: List[int]) -> None:
+        """Checks that only weights with specified ids are compressed in int4 format."""
 
     @pytest.mark.parametrize(
         ("mode", "all_layers", "ratio", "ref_ids"),
