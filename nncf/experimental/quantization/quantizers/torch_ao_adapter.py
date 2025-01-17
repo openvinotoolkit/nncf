@@ -44,23 +44,26 @@ class TorchAOQuantizerAdapter(Quantizer):
     def __init__(self, quantizer: TorchAOQuantizer):
         self._quantizer = quantizer
 
-    def transform_prior_quantization(self, model: torch.fx.GraphModule):
-        self._quantizer.transform_for_annotation(model)
+    def transform_prior_quantization(self, model: torch.fx.GraphModule) -> torch.fx.GraphModule:
+        return self._quantizer.transform_for_annotation(model)
 
     def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
-        original_meta = model.meta
+        # Save model and nodes meta before the annotation
+        original_meta = model.meta.copy()
+        node_name_vs_meta = {}
+        with torch.no_grad():
+            for node in model.graph.nodes:
+                node_name_vs_meta[node.name] = node.meta.copy()
 
-        self._quantizer.annotate(model)
+        model = self._quantizer.annotate(model)
         self._quantizer.validate(model)
         quantizer_setup = self.get_quantizer_config_from_anotated_model(model)
 
-        # Remove quantization annotations from the original model
-        quantization_annotation_key = "quantization_annotation"
-        for n in model.graph.nodes:
-            if hasattr(n, "meta") and quantization_annotation_key in n.meta:
-                del n.meta[quantization_annotation_key]
-
+        # Recover original meta
         model.meta = original_meta
+        for node in model.graph.nodes:
+            node.meta = node_name_vs_meta[node.name]
+
         return quantizer_setup
 
     @staticmethod

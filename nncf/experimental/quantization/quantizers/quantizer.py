@@ -26,11 +26,12 @@ class Quantizer(ABC):
     """
 
     @abstractmethod
-    def transform_prior_quantization(self, model: TModel):
+    def transform_prior_quantization(self, model: TModel) -> TModel:
         """
         Transforms the given model in-place with the necessary modifications required prior to quantization.
 
         :param model: Backend-specific model to be transformed.
+        :return: Transformed backend-specific model.
         """
 
     @abstractmethod
