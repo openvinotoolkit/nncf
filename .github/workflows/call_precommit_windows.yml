@@ -125,7 +125,7 @@ jobs:
           export INCLUDE="${INCLUDE};$(python -c "import sysconfig; print(sysconfig.get_path('include'))")"
           make test-torch-cpu
         env:
-          NUM_WORKERS: 4
+          NUM_WORKERS: 1
 
   tensorflow:
     timeout-minutes: 40
