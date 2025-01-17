@@ -55,6 +55,7 @@ NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE = [
 
 NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE = [[5.0, 4.0, 15.0], [8.0, 25.0, 12.0], [35.0, 16.0, 45.0]]
 
+WEIGHT_COMPRESSION_REDUCERS_DATA = [[[1, 2, 0], [1, -3, 10]], [[-1, 2, -3], [4, 5, -6]]]
 
 default_test_quantile = 0.1
 
@@ -238,10 +239,10 @@ class TemplateTestReducersAggregators:
     @pytest.mark.parametrize(
         "axes, np_data, reference",
         [
-            [None, np.array([[[1, 2, 0], [1, -3, 10]], [[-1, 2, -3], [4, 5, -6]]]), 16.1666],
-            [(0,), np.array([[[1, 2, 0], [1, -3, 10]], [[-1, 2, -3], [4, 5, -6]]]), 14.25],
-            [(0, 1), np.array([[[1, 2, 0], [1, -3, 10]], [[-1, 2, -3], [4, 5, -6]]]), 15.875],
-            [(0, 1, 2), np.array([[[1, 2, 0], [1, -3, 10]], [[-1, 2, -3], [4, 5, -6]]]), 16.1666],
+            [None, np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 16.1666],
+            [(0,), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 14.25],
+            [(0, 1), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 15.875],
+            [(0, 1, 2), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 16.1666],
         ],
     )
     def test_mean_variance_reducer(self, axes, np_data, reference):
@@ -254,10 +255,10 @@ class TemplateTestReducersAggregators:
     @pytest.mark.parametrize(
         "axes, np_data, reference",
         [
-            [None, np.array([[[1, 2, 0], [1, -3, 10]], [[-1, 2, -3], [4, 5, -6]]]), 10.0],
-            [(0,), np.array([[[1, 2, 0], [1, -3, 10]], [[-1, 2, -3], [4, 5, -6]]]), 4.16666],
-            [(0, 1), np.array([[[1, 2, 0], [1, -3, 10]], [[-1, 2, -3], [4, 5, -6]]]), 6.33333],
-            [(0, 1, 2), np.array([[[1, 2, 0], [1, -3, 10]], [[-1, 2, -3], [4, 5, -6]]]), 10.0],
+            [None, np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 10.0],
+            [(0,), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 4.16666],
+            [(0, 1), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 6.33333],
+            [(0, 1, 2), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 10.0],
         ],
     )
     def test_mean_abs_max_reducer(self, axes, np_data, reference):
@@ -270,10 +271,10 @@ class TemplateTestReducersAggregators:
     @pytest.mark.parametrize(
         "axes, np_data, reference",
         [
-            [None, np.array([[[1, 2, 0], [1, -3, 10]], [[-1, 2, -3], [4, 5, -6]]]), 16.1666],
-            [(0,), np.array([[[1, 2, 0], [1, -3, 10]], [[-1, 2, -3], [4, 5, -6]]]), 64.0],
-            [(0, 1), np.array([[[1, 2, 0], [1, -3, 10]], [[-1, 2, -3], [4, 5, -6]]]), 36.1875],
-            [(0, 1, 2), np.array([[[1, 2, 0], [1, -3, 10]], [[-1, 2, -3], [4, 5, -6]]]), 16.1666],
+            [None, np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 16.1666],
+            [(0,), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 64.0],
+            [(0, 1), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 36.1875],
+            [(0, 1, 2), np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), 16.1666],
         ],
     )
     def test_max_variance_reducer(self, axes, np_data, reference):
@@ -582,8 +583,7 @@ class TemplateTestReducersAggregators:
             params["channel_axis"] = [1, 2]
         else:
             raise nncf.ValidationError(
-                "test_min_max_mean_reducer_hash_equal configurated in a wrong way."
-                f" Wrong reducer_name: {reducer_name}"
+                f"test_min_max_mean_reducer_hash_equal configurated in a wrong way. Wrong reducer_name: {reducer_name}"
             )
 
         def product_dict(**kwargs):
