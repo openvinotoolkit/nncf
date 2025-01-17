@@ -55,9 +55,9 @@ class TorchAOQuantizerAdapter(Quantizer):
             for node in model.graph.nodes:
                 node_name_vs_meta[node.name] = node.meta.copy()
 
-        model = self._quantizer.annotate(model)
-        self._quantizer.validate(model)
-        quantizer_setup = self.get_quantizer_config_from_anotated_model(model)
+        annotated_model = self._quantizer.annotate(model)
+        self._quantizer.validate(annotated_model)
+        quantizer_setup = self.get_quantizer_config_from_anotated_model(annotated_model)
 
         # Recover original meta
         model.meta = original_meta

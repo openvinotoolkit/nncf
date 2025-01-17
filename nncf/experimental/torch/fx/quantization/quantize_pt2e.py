@@ -92,7 +92,7 @@ def quantize_pt2e(
     _fuse_conv_bn_(model)
     quantizer = TorchAOQuantizerAdapter(quantizer)
     # Call transform_prior_quantization before the NNCFGraph creation
-    quantizer.transform_prior_quantization(model)
+    transformed_model = quantizer.transform_prior_quantization(model)
 
     quantization_algorithm = ExperimentalPostTrainingQuantization(
         quantizer=quantizer,
@@ -106,8 +106,8 @@ def quantize_pt2e(
         batchwise_statistics=batchwise_statistics,
     )
 
-    nncf_graph = NNCFGraphFactory.create(model)
-    quantized_model = quantization_algorithm.apply(model, nncf_graph, dataset=calibration_dataset)
+    nncf_graph = NNCFGraphFactory.create(transformed_model)
+    quantized_model = quantization_algorithm.apply(transformed_model, nncf_graph, dataset=calibration_dataset)
 
     # Magic. Without this call compiled model
     # is not preformant
