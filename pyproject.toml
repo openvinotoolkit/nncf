@@ -123,13 +123,8 @@ exclude = [
     "nncf/common/quantization/quantizer_propagation/graph.py",
     "nncf/common/quantization/quantizer_propagation/grouping.py",
     "nncf/common/quantization/quantizer_propagation/solver.py",
-    "nncf/common/quantization/quantizer_propagation/structs.py",
-    "nncf/common/quantization/quantizer_propagation/visualizer.py",
     "nncf/common/quantization/quantizer_removal.py",
     "nncf/common/quantization/quantizer_setup.py",
-    "nncf/common/quantization/quantizers.py",
-    "nncf/common/quantization/statistics.py",
-    "nncf/common/quantization/structs.py",
 ]
 
 [tool.ruff]

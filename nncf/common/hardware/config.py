@@ -136,7 +136,7 @@ class HWConfig(list[Dict[str, Any]], ABC):
             return cls.from_dict(json_config)
 
     @staticmethod
-    def get_quantization_mode_from_config_value(str_val: str) -> str:
+    def get_quantization_mode_from_config_value(str_val: str) -> QuantizationMode:
         if str_val == "symmetric":
             return QuantizationMode.SYMMETRIC
         if str_val == "asymmetric":
