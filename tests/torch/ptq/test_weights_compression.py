@@ -11,6 +11,7 @@
 
 import pytest
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 import nncf
@@ -19,6 +20,7 @@ from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.tensor import TensorDataType
 from nncf.torch import wrap_model
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
@@ -28,7 +30,9 @@ from nncf.torch.quantization.quantize_functions import pack_int4
 from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
+from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.test_models.synthetic import ShortTransformer
+from tests.torch.test_tensor import cast_to
 
 ALL_SENSITIVITY_METRICS = list(SensitivityMetric)
 
@@ -318,3 +322,60 @@ def test_pack_int4():
     assert packed_w.numel() * 2 == w_int8.numel()
     unpacked_w = unpack_int4(packed_w).reshape(w_int8.shape)
     assert torch.all(unpacked_w == w_int8)
+
+
+class IdentityMatmul(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.w = torch.nn.Parameter(
+            torch.eye(3, dtype=torch.float32) * 255,
+        )
+
+    def forward(self, input):
+        return input @ self.w
+
+
+class SequentialMatmulModel(nn.Module):
+    def __init__(self):
+        super(SequentialMatmulModel, self).__init__()
+        self.main_values = [10000, 1000, 1, 10, 10000]
+        self.layers = nn.ModuleList()
+
+        for _, main_value in enumerate(self.main_values):
+            weights_data = torch.arange(0, 16, dtype=torch.float32).reshape(4, 4)
+            weights_data[-1, -1] = main_value
+            weight_tensor = torch.tensor(weights_data)
+            layer = nn.Linear(4, 4, bias=False)
+            layer.weight = nn.Parameter(weight_tensor.t())
+            self.layers.append(layer)
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+
+class TestPTTemplateWeightCompression(TemplateWeightCompression):
+    @staticmethod
+    def get_matmul_model():
+        return IdentityMatmul()
+
+    @staticmethod
+    def get_sequential_matmul_model():
+        return SequentialMatmulModel()
+
+    @staticmethod
+    def to_tensor(t):
+        return torch.tensor(t)
+
+    @staticmethod
+    def cast_to(x: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
+        return cast_to(x, dtype)
+
+    @staticmethod
+    def check_weights(model, ref_ids):
+        for i, op in enumerate(model.layers):
+            if i in ref_ids:
+                assert torch.numel(op.weight) == 8  # workaround to detect uint4 weights
+            else:
+                assert torch.numel(op.weight) == 16

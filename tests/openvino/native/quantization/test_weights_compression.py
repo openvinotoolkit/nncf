@@ -47,6 +47,8 @@ from nncf.tensor import TensorDataType
 from tests.cross_fw.shared.comparator import compare_stats
 from tests.cross_fw.shared.json import dump_to_json
 from tests.cross_fw.shared.json import load_json
+from tests.cross_fw.test_templates.template_test_weights_compression import ACTIVATION
+from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
@@ -263,46 +265,6 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
     compare_stats(ref_stats, actual_stats)
 
 
-@pytest.mark.parametrize(
-    ("mode", "all_layers", "ratio", "ref_ids"),
-    (
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 3, 4]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, []),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, []),
-        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2]),
-    ),
-)
-def test_mixed_precision(mode, all_layers, ratio, ref_ids, mocker):
-    model = SequentialMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 3, 3]), np.arange(9).reshape(1, 3, 3)])
-    compressed_model = compress_weights(
-        model,
-        mode=CompressWeightsMode.NF4,
-        ratio=ratio,
-        group_size=1,
-        all_layers=all_layers,
-        sensitivity_metric=mode,
-        dataset=dataset,
-    )
-    names = {
-        op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.nf4
-    }
-    ref_nf4_nodes = {f"weights_{i}" for i in ref_ids}
-    assert ref_nf4_nodes == names
-
-
 @pytest.mark.parametrize("metric", DATA_BASED_SENSITIVITY_METRICS)
 def test_gather_in_4_bit_if_all_layers_with_data(metric):
     dim1 = 2  # sequence length dimension
@@ -428,46 +390,6 @@ def test_gather_in_8_bit_if_not_all_layers(metric):
         node = nodes_map[node_name]
         assert node.get_type_name() == "Constant"
         assert node.get_element_type() == ov.Type.u8
-
-
-MAX_BASELINE_SCORE = 1 / np.finfo(np.float32).eps
-NON_ZERO_ROW = [-4, 1, 2]
-ACTIVATION = np.array([[NON_ZERO_ROW, [0, 0, 0], [0, 0, 0]]])
-MAX_VAR = 3.555555  # np.max(np.var(ACTIVATION, 1))
-MEAN_VAR = 1.555555  # np.mean(np.var(ACTIVATION, 1))
-MEAN_MAX = 2.333333  # np.mean(np.max(np.abs(ACTIVATION), 1))
-HESSIAN_TRACE = (16 + 1 + 4) * 2 / 9  # sum(i*i for i in NON_ZERO_ROW) * 2 / ACTIVATION.size
-
-
-@pytest.mark.parametrize(
-    ("mode", "ref_act_scores", "ref_scores"),
-    (
-        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, HESSIAN_TRACE, 0),
-        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, MEAN_MAX, MEAN_MAX * MAX_BASELINE_SCORE),
-        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, MEAN_VAR, MEAN_VAR * MAX_BASELINE_SCORE),
-        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, MAX_VAR, MAX_VAR * MAX_BASELINE_SCORE),
-    ),
-)
-def test_data_based_criterion(mode, ref_scores, ref_act_scores, mocker):
-    model = IdentityMatmul().ov_model
-    dataset = Dataset([ACTIVATION])
-    criterion_cls = MIXED_PRECISION_CRITERIA.get(mode)
-    scores_spy = mocker.spy(criterion_cls, "_calc_sensitivity")
-    act_scores_spy = mocker.spy(criterion_cls, "_calc_activation_sensitivity")
-
-    compress_weights(
-        model,
-        mode=CompressWeightsMode.NF4,
-        ratio=0.5,
-        group_size=1,
-        dataset=dataset,
-        sensitivity_metric=mode,
-        all_layers=True,
-    )
-    scores = scores_spy.spy_return
-    act_scores = act_scores_spy.spy_return
-    assert np.allclose(scores, ref_scores)
-    assert np.allclose(act_scores, ref_act_scores)
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
@@ -1055,7 +977,7 @@ def test_call_gptq(mode):
 )
 def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
     model = SequentialMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 3, 3]), np.arange(9).reshape(3, 3)])
+    dataset = Dataset([np.ones([1, 4, 4]), np.arange(16).reshape(4, 4)])
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.E2M1,
@@ -1596,3 +1518,31 @@ def test_compression_with_transposed_activations(kwargs):
             all_layers=True,
             **kwargs,
         )
+
+
+class TestOVTemplateWeightCompression(TemplateWeightCompression):
+    @staticmethod
+    def get_matmul_model():
+        return IdentityMatmul().ov_model
+
+    @staticmethod
+    def get_sequential_matmul_model():
+        return SequentialMatmulModel().ov_model
+
+    @staticmethod
+    def to_tensor(x):
+        return np.array(x)
+
+    @staticmethod
+    def cast_to(x: np.ndarray, dtype: TensorDataType) -> np.ndarray:
+        if dtype is TensorDataType.float32:
+            return x.astype(np.float32)
+        if dtype is TensorDataType.float16:
+            return x.astype(np.float16)
+        raise NotImplementedError
+
+    @staticmethod
+    def check_weights(model, ref_ids):
+        names = {op.get_friendly_name() for op in model.get_ordered_ops() if op.get_element_type() == ov.Type.i4}
+        ref_nf4_nodes = {f"weights_{i}" for i in ref_ids}
+        assert ref_nf4_nodes == names

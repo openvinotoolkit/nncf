@@ -798,12 +798,12 @@ class SequentialMatmulModel(OVReferenceModel):
     """
 
     def _create_ov_model(self):
-        input_node = opset.parameter([1, 3, 3], name="Input_1")
+        input_node = opset.parameter([1, 4, 4], name="Input_1")
         main_values = [10000, 1000, 1, 10, 10000]
 
         last_node = input_node
         for i, main_value in enumerate(main_values):
-            weights_data = np.arange(0, 9).reshape(3, 3)
+            weights_data = np.arange(0, 16).reshape(4, 4)
             weights_data[-1, -1] = main_value
             current_weights = opset.constant(weights_data, dtype=np.float32, name=f"weights_{i}")
             current_node = opset.matmul(
