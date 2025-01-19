@@ -530,7 +530,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         external_importance_path: Optional[str],
         weights_normalizer_fn: Optional[Callable[[torch.Tensor], torch.Tensor]],
         node_name_vs_dynamic_input_width_op_map: Dict[NNCFNodeName, ElasticWidthOp],
-        pruned_module_groups_info: Clusterization[ElasticWidthInfo](id_fn=lambda x: x.node_name),
+        pruned_module_groups_info: Clusterization[ElasticWidthInfo],
         transformation_commands: List[TransformationCommand],
         add_dynamic_inputs: Optional[List[str]] = None,
     ):
