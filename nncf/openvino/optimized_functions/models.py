@@ -21,8 +21,8 @@ from openvino._pyopenvino.properties.hint import inference_precision
 from openvino.runtime import Node
 from openvino.runtime import opset13 as opset
 
-from nncf.common.utils.decorators import ResultsCacheContainer
-from nncf.common.utils.decorators import cache_results
+from nncf.common.utils.caching import ResultsCacheContainer
+from nncf.common.utils.caching import cache_results
 from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import non_convertable_divide_op
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -120,6 +120,9 @@ class OVModelParameters:
                 self.convertable_division,
             )
         )
+
+    def clone(self):
+        return copy.deepcopy(self)
 
 
 ModelAsNodes = Tuple[List[Parameter], List[Node], OVModelParameters]

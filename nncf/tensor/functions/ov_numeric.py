@@ -95,17 +95,7 @@ def _astype_ov(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
     :param dtype: Data type to cast to.
     :return: Casted openvino tensor.
     """
-    from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
-    from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_astype_model
 
-    a_dtype = DTYPE_MAP_REV[a.get_element_type()]
+    from nncf.openvino.optimized_functions import astype
 
-    ov_model_params = OVModelParameters(
-        input_dtypes={"input": a_dtype},
-        output_dtypes={"output": dtype},
-        recompile=True,
-        release_memory=False,
-        return_ov_tensors=True,
-    )
-    model = get_astype_model(ov_model_params, tuple(a.shape))
-    return model([Tensor(a)])[0].data
+    return astype(Tensor(a), dtype).data

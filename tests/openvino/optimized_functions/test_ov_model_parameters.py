@@ -12,13 +12,13 @@ import numpy as np
 import pytest
 
 from nncf import CompressWeightsMode
+from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
+from nncf.openvino.optimized_functions.models import OVModelParameters
+from nncf.openvino.optimized_functions.models import _infer_ov_model
+from nncf.openvino.optimized_functions.models import get_astype_model
+from nncf.openvino.optimized_functions.models import get_compress_decompress_weight_model
+from nncf.openvino.optimized_functions.models import get_compress_weight_model
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import OV_MODEL_CACHE
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import _infer_ov_model
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_astype_model
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_decompress_weight_model
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_weight_model
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor.definitions import TensorBackend

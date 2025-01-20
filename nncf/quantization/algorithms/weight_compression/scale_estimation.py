@@ -258,7 +258,7 @@ class ScaleEstimation:
 
         if is_openvino_available():
             # This is required for alignment with a previous OpenVINO models implementation
-            from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
+            from nncf.openvino.optimized_functions import OVModelParameters
 
             ov_model_params = OVModelParameters(dynamic_shapes=False, convertable_division=True)
         else:

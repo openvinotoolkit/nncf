@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import copy
+
 import logging
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
@@ -482,59 +482,11 @@ def do_int_quantization(
         compressed_weights = calculate_quantized_weight(weight, config, scale, zero_point)
         return compressed_weights, scale, zero_point
 
-    from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
-    from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_weight_model
+    from nncf.openvino.optimized_functions import do_int_quantization as do_int_quantization_ov
 
-    weight_shape = weight.shape
-    scale_shape = None if precomputed_scale is None else precomputed_scale.shape
-    zero_point_shape = None if precomputed_zero_point is None else precomputed_zero_point.shape
-
-    ov_model_params = OVModelParameters() if ov_model_params is None else copy.deepcopy(ov_model_params)
-    ov_model_params.input_dtypes["weight"] = weight.dtype
-    if precomputed_scale is not None:
-        ov_model_params.input_dtypes["scale"] = precomputed_scale.dtype
-    if precomputed_zero_point is not None:
-        ov_model_params.input_dtypes["zero_point"] = precomputed_zero_point.dtype
-    if config.num_bits == 4 and weight.backend == TensorBackend.ov:
-        # Return ov tensors in target precision to seamlessly insert them into openvino model later
-        ov_model_params.return_ov_tensors = weight.backend == TensorBackend.ov
-        compressed_weight_dtype = TensorDataType.uint4 if config.is_asym_mode else TensorDataType.int4
-        ov_model_params.output_dtypes.update(
-            {"compressed_weight": compressed_weight_dtype, "zero_point": compressed_weight_dtype}
-        )
-
-    model = get_compress_weight_model(
-        ov_model_params,
-        config,
-        weight_shape,
-        scale_shape,
-        zero_point_shape,
-        reduction_axes,
+    return do_int_quantization_ov(
+        weight, config, reduction_axes, precomputed_scale, precomputed_zero_point, ov_model_params
     )
-
-    if precomputed_scale is None:
-        # weight -> compressed_weight, scale, (zero_point)
-        results = model([weight])
-        if config.is_asym_mode:
-            compressed_weight, scale, zero_point = results
-        else:
-            compressed_weight, scale = results
-            zero_point = None
-
-        # Scale is always in fp32 so there is no need to store it in ov.Tensor
-        if scale.backend == TensorBackend.ov:
-            scale = scale.as_numpy_tensor()
-    else:
-        # weight, scale, (zero_point) -> compressed_weight
-        inputs = (
-            [weight, precomputed_scale]
-            if precomputed_zero_point is None
-            else [weight, precomputed_scale, precomputed_zero_point]
-        )
-        compressed_weight = model(inputs)[0]
-        scale, zero_point = precomputed_scale, precomputed_zero_point
-
-    return compressed_weight, scale, zero_point
 
 
 def quantize_dequantize_weight(
@@ -575,46 +527,14 @@ def quantize_dequantize_weight(
         else:
             return decompressed_weight
 
-    from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
-    from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_decompress_weight_model
+    from nncf.openvino.optimized_functions import quantize_dequantize_weight as quantize_dequantize_weight_ov
 
-    # When reduction axes are not provided, assuming that the weights are already reshaped
-    if config.group_size != -1 and reduction_axes is not None:
-        # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
-        weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
-
-    weight_shape = weight.shape
-    scale_shape = precomputed_scale.shape if precomputed_scale is not None else None
-    zero_point_shape = precomputed_zero_point.shape if precomputed_zero_point is not None else None
-
-    ov_model_params = OVModelParameters() if ov_model_params is None else copy.deepcopy(ov_model_params)
-    ov_model_params.input_dtypes["weight"] = weight.dtype
-    if precomputed_scale is not None:
-        ov_model_params.input_dtypes["scale"] = precomputed_scale.dtype
-    if precomputed_zero_point is not None:
-        ov_model_params.input_dtypes["zero_point"] = precomputed_zero_point.dtype
-
-    model = get_compress_decompress_weight_model(
-        ov_model_params, config, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_compressed_weight
+    return quantize_dequantize_weight_ov(
+        weight,
+        config,
+        reduction_axes,
+        precomputed_scale,
+        precomputed_zero_point,
+        return_compressed_weight,
+        ov_model_params,
     )
-
-    inputs = [weight]
-    if precomputed_scale is not None:
-        inputs.append(precomputed_scale)
-    if precomputed_zero_point is not None:
-        inputs.append(precomputed_zero_point)
-
-    compressed_weight, scale, zero_point = None, precomputed_scale, precomputed_zero_point
-    results = model(inputs)
-    if len(results) == 1:
-        decompressed_weight = results[0]
-    elif len(results) == 2:
-        decompressed_weight, compressed_weight = results
-    elif len(results) == 3:
-        decompressed_weight, compressed_weight, scale = results
-    else:
-        decompressed_weight, compressed_weight, scale, zero_point = results
-    if return_compressed_weight:
-        return decompressed_weight, compressed_weight, scale, zero_point
-    else:
-        return decompressed_weight

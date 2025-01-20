@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
 from collections import defaultdict
 from contextlib import contextmanager
 from enum import Enum
@@ -19,13 +18,11 @@ import numpy as np
 import openvino as ov
 import pytest
 
+import nncf.openvino.optimized_functions as opt_fns
 from nncf import CompressWeightsMode
-from nncf.common.utils.decorators import ResultsCacheContainer
-from nncf.common.utils.decorators import cache_results
+from nncf.common.utils.caching import ResultsCacheContainer
+from nncf.common.utils.caching import cache_results
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import OVModelParameters
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_decompress_weight_model
-from nncf.quantization.algorithms.weight_compression.openvino_modeling import get_compress_weight_model
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import quantize_dequantize_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
@@ -148,20 +145,17 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
 
             if quantization_task == QuantizationTask.Q:
                 fn_to_call = do_int_quantization
-                fn_to_patch = get_compress_weight_model
+                fn_to_patch = opt_fns.do_int_quantization
             else:
                 fn_to_call = quantize_dequantize_weight
-                fn_to_patch = get_compress_decompress_weight_model
-            patch_path = f"{inspect.getmodule(fn_to_patch).__name__}.{fn_to_patch.__name__}"
+                fn_to_patch = opt_fns.quantize_dequantize_weight
+            patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
             with patch(patch_path, side_effect=fn_to_patch) as mock:
                 # When scale (and z.p) are precomputed, all inputs are assumed to be already reshaped and reduction
                 # axes are not needed
                 reduction_axes = None if precompute_s_zp else REDUCTION_AXES
 
                 kwargs = {}
-                if cb == ComputationBackend.OV:
-                    ov_model_params = OVModelParameters()
-                    kwargs["ov_model_params"] = ov_model_params
                 if quantization_task == QuantizationTask.Q_DQ_RQ:
                     kwargs["return_compressed_weight"] = True
 
