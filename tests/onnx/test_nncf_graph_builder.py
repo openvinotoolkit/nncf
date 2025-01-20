@@ -14,7 +14,6 @@ import os
 import onnx
 import pytest
 import torch
-from torchvision import models
 
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
@@ -25,6 +24,7 @@ from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.onnx.models import OneConvolutionalModel
 from tests.onnx.opset_converter import convert_opset_version
 from tests.onnx.quantization.common import ModelToTest
+from tests.onnx.quantization.test_classification_models_graph import model_builder
 from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
 
 REFERENCE_GRAPHS_DIR = ONNX_TEST_ROOT / "data" / "reference_graphs" / "original_nncf_graph"
@@ -39,30 +39,6 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
     compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
-
-
-def model_builder(model_name):
-    if model_name == "resnet18":
-        return models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
-    if model_name == "mobilenet_v2":
-        return models.mobilenet_v2(weights=models.MobileNet_V2_Weights.IMAGENET1K_V1)
-    if model_name == "mobilenet_v3_small":
-        return models.mobilenet_v3_small(weights=models.MobileNet_V3_Small_Weights.IMAGENET1K_V1)
-    if model_name == "inception_v3":
-        return models.inception_v3(weights=models.Inception_V3_Weights.IMAGENET1K_V1)
-    if model_name == "googlenet":
-        return models.googlenet(weights=models.GoogLeNet_Weights.IMAGENET1K_V1)
-    if model_name == "vgg16":
-        return models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1)
-    if model_name == "shufflenet_v2_x1_0":
-        return models.shufflenet_v2_x1_0(weights=models.ShuffleNet_V2_X1_0_Weights.IMAGENET1K_V1)
-    if model_name == "squeezenet1_0":
-        return models.squeezenet1_0(weights=models.SqueezeNet1_0_Weights.IMAGENET1K_V1)
-    if model_name == "densenet121":
-        return models.densenet121(weights=models.DenseNet121_Weights.IMAGENET1K_V1)
-    if model_name == "mnasnet0_5":
-        return models.mnasnet0_5(weights=models.MNASNet0_5_Weights.IMAGENET1K_V1)
-    raise ValueError(f"Unknown model name {model_name}")
 
 
 CLASSIFICATION_MODEL_DEF_AND_OBJ = [
