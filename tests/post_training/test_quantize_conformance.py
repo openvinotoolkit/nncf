@@ -315,6 +315,8 @@ def test_ptq_quantization(
         pipeline.run()
     except Exception as e:
         err_msg = str(e)
+        if not err_msg:
+            err_msg = "Unknown exception"
         traceback.print_exc()
 
     if pipeline is not None:
@@ -380,6 +382,8 @@ def test_weight_compression(
         pipeline.run()
     except Exception as e:
         err_msg = str(e)
+        if not err_msg:
+            err_msg = "Unknown exception"
         traceback.print_exc()
 
     if pipeline is not None:
