@@ -1071,7 +1071,7 @@ class MinMaxQuantization(Algorithm):
         Build statistic point container using already cached target points vs qconfigs cache.
 
         :param model: Model instance.
-        :param graph: NNCFGraph instance corespondent to the passed model.
+        :param graph: NNCFGraph instance correspondent to the passed model.
         :return: Filled statistic point container.
         """
         if self._quantization_target_points_to_qconfig is None:

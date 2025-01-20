@@ -57,7 +57,7 @@ class TorchAOQuantizerAdapter(Quantizer):
 
         annotated_model = self._quantizer.annotate(model)
         self._quantizer.validate(annotated_model)
-        quantizer_setup = self.get_quantizer_config_from_anotated_model(annotated_model)
+        quantizer_setup = self.get_quantizer_config_from_annotated_model(annotated_model)
 
         # Recover original meta
         model.meta = original_meta
@@ -101,7 +101,7 @@ class TorchAOQuantizerAdapter(Quantizer):
         return node.args
 
     @staticmethod
-    def get_quantizer_config_from_anotated_model(anotated_model: torch.fx.GraphModule) -> SingleConfigQuantizerSetup:
+    def get_quantizer_config_from_annotated_model(anotated_model: torch.fx.GraphModule) -> SingleConfigQuantizerSetup:
         edge_or_node_to_qspec = _get_edge_or_node_to_qspec(anotated_model)
 
         q_map = defaultdict(list)
