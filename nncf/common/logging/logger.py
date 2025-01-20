@@ -13,9 +13,24 @@ import logging
 import sys
 from functools import lru_cache
 
+
+class NNCFLogger(logging.Logger):
+    def __init__(self, name: str, level: int = logging.NOTSET):
+        super().__init__(name, level)
+
+    @lru_cache(None)
+    def debug_once(self, msg: str) -> None:
+        self.debug(msg)
+
+    @lru_cache(None)
+    def info_once(self, msg: str) -> None:
+        self.info(msg)
+
+
 NNCF_LOGGER_NAME = "nncf"
 
-nncf_logger = logging.getLogger(NNCF_LOGGER_NAME)
+logging.setLoggerClass(NNCFLogger)
+nncf_logger: NNCFLogger = logging.getLogger(NNCF_LOGGER_NAME)  # type: ignore
 nncf_logger.propagate = False
 
 stdout_handler = logging.StreamHandler(sys.stdout)
@@ -69,13 +84,3 @@ def warn_bkc_version_mismatch(backend: str, bkc_version: str, current_version: s
         f"while current {backend} version is {current_version}. "
         f"If you encounter issues, consider switching to {backend}{bkc_version}"
     )
-
-
-@lru_cache(None)
-def log_once(level: int, message: str) -> None:
-    """
-    Logs a message only once.
-    :param level: Logging level, e.g. logging.WARNING.
-    :param message: The message to log.
-    """
-    nncf_logger.log(level, message)

@@ -12,7 +12,6 @@
 """
 Contains builder and controller class definitions for the quantization algorithm.
 """
-import logging
 from collections import Counter
 from collections import OrderedDict
 from copy import deepcopy
@@ -41,7 +40,6 @@ from nncf.common.hardware.config import HWConfigType
 from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.logging import nncf_logger
-from nncf.common.logging.logger import log_once
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
 from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
@@ -851,7 +849,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             insertion_point = PTTargetPoint(
                 target_type=TargetType.PRE_LAYER_OPERATION, target_node_name=args.module_op_node_name
             )
-            log_once(logging.DEBUG, f"Padding will be adjusted for {args.module_op_node_name}")
+            nncf_logger.debug_once(f"Padding will be adjusted for {args.module_op_node_name}")
             commands.append(PTInsertionCommand(insertion_point, op, TransformationPriority.DEFAULT_PRIORITY))
         return commands
 
@@ -920,8 +918,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if qp.is_weight_quantization_point() and nncf_node.is_shared():
                 layer_name = nncf_node.layer_name
                 if layer_name in already_weight_quantized_shared_layers:
-                    log_once(
-                        logging.DEBUG,
+                    nncf_logger.debug_once(
                         f"Filtering a regular weight quantization point {qp_id} - "
                         f"already quantized as a shared layer {nncf_node.layer_name}",
                     )
@@ -985,8 +982,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                     if nncf_node.layer_name not in observed_shared_layer_names:
                         observed_shared_layer_names.add(nncf_node.layer_name)
                     else:
-                        log_once(
-                            logging.DEBUG,
+                        nncf_logger.debug_once(
                             f"Filtering a unified-scale weight quantization point {us_qp_id} "
                             f"- already quantized as a shared layer {nncf_node.layer_name}",
                         )
@@ -1166,7 +1162,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         external_quantizer_storage_key = ";".join(serialized_insertions_list)
         if len(insertion_points) > 1:
             linked_quantizers_str = "\n".join(serialized_insertions_list)
-            log_once(logging.INFO, f"Scales will be unified for quantizer group:\n{linked_quantizers_str}\n")
+            nncf_logger.info_once(f"Scales will be unified for quantizer group:\n{linked_quantizers_str}\n")
 
         if is_weights(primary_ip):
             primary_qid = WeightQuantizerId(primary_ip.target_node_name)
@@ -1214,8 +1210,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 # - will call one and the same quantizer
                 callable_obj = ExternalQuantizerCallHook(external_quantizer_storage_key, self._debug_interface)
 
-            log_once(
-                logging.DEBUG,
+            nncf_logger.debug_once(
                 f"Performing "
                 f"{'signed' if quantizer.signed else 'unsigned'} "
                 f"{'logarithm_scale' if quantizer.is_using_log_scale_storage else ''} "

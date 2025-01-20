@@ -9,14 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 import numpy as np
 
 import nncf
-from nncf.common.logging.logger import log_once
+from nncf.common.logging.logger import nncf_logger
 from nncf.import_utils import is_openvino_available
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -455,7 +454,7 @@ def do_int_quantization(
 
     accelerate_through_ov = is_openvino_available() and weight.backend != TensorBackend.torch
     if not is_openvino_available() and weight.backend != TensorBackend.torch:
-        log_once(logging.INFO, "Compression time may be improved after installing OpenVINO")
+        nncf_logger.info_once("Compression time may be improved after installing OpenVINO")
 
     # When reduction axes are not provided, assuming that the weights are already reshaped
     if config.group_size != -1 and reduction_axes is not None:
@@ -514,7 +513,7 @@ def quantize_dequantize_weight(
     """
     accelerate_through_ov = is_openvino_available() and weight.backend != TensorBackend.torch
     if not is_openvino_available() and weight.backend != TensorBackend.torch:
-        log_once(logging.INFO, "Compression time may be improved after installing OpenVINO")
+        nncf_logger.info_once("Compression time may be improved after installing OpenVINO")
 
     if not accelerate_through_ov:
         # Reference implementation
