@@ -293,7 +293,7 @@
         {
             "type": "Embedding",
             "quantization": {
-                "weights": ["q8_w_sym", "q8_w_asym"]
+                "weights": ["q8_w_sym", "q8_w_asym", "q8_a", "q8_a_sym", "q8_a_ch"]
             }
         },
         {"type": "EmbeddingBag"}
