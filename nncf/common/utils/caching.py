@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import inspect
+from functools import wraps
 from typing import Any, Callable, Dict
 
 
@@ -31,21 +32,24 @@ class ResultsCacheContainer:
     def is_empty(self) -> bool:
         return len(self._cache) == 0
 
-    def __getitem__(self, item: Any) -> Any:
-        self._access_count[item] += 1
-        return self._cache[item]
+    def __getitem__(self, key: Any) -> Any:
+        self._access_count[key] += 1
+        return self._cache[key]
 
     def __setitem__(self, key: Any, value: Any) -> None:
         self._access_count[key] = 0
         self._cache[key] = value
 
-    def __contains__(self, item: Any) -> bool:
-        return item in self._cache
+    def __contains__(self, key: Any) -> bool:
+        return key in self._cache
 
 
 def cache_results(cache: ResultsCacheContainer) -> Callable:  # type: ignore
     """
-    Decorator to cache the results of a function.
+    Decorator to cache results of a function. When decorated function is called with the same set of arguments, it
+    will return the cached result instead of recomputing it. If it was the first call with such set of arguments, the
+    result will be computed and stored in the cache. The cache is stored in the `cache` object. Function arguments
+    must be hashable.
 
     Decorated function additionally accepts a `disable_caching` argument do disable caching if needed. If it is True,
     the result will not be stored saved to a cache. Also, if there is a corresponding result in the cache, it will be
@@ -54,6 +58,7 @@ def cache_results(cache: ResultsCacheContainer) -> Callable:  # type: ignore
     """
 
     def decorator(func: Callable) -> Callable:  # type: ignore
+        @wraps(func)
         def wrapper(*args, disable_caching: bool = False, **kwargs) -> Any:  # type: ignore
             if disable_caching:
                 return func(*args, **kwargs)

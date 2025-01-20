@@ -16,7 +16,7 @@ import numpy as np
 
 import nncf
 from nncf.common.logging.logger import nncf_logger
-from nncf.import_utils import is_openvino_available
+from nncf.common.utils.backend import is_openvino_available
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
@@ -265,7 +265,9 @@ def calculate_integer_quantization_params(
     :param config: Weight compression configuration.
     :return: Scale and zero point tensors.
     """
-    assert config.is_integer, "The function supports integer quantization only"
+    if not config.is_integer:
+        raise nncf.InternalError("The function supports integer quantization only")
+
     num_bits = config.num_bits
 
     if weight.dtype != TensorDataType.float32:
@@ -445,7 +447,8 @@ def do_int_quantization(
     :param ov_model_params: OpenVINO model parameters for acceleration.
     :return: A tuple containing the compressed weights, scale, and zero point tensors.
     """
-    assert config.is_integer, "The function supports integer quantization only"
+    if not config.is_integer:
+        raise nncf.InternalError("The function supports integer quantization only")
     if config.is_asym_mode and (precomputed_scale is None) != (precomputed_zero_point is None):
         raise ValueError(
             "If precomputed quantization parameters are provided, both scale and zero point are required "

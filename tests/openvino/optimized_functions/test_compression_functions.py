@@ -85,12 +85,12 @@ def get_random_integer_tensor(shape, low, high, dtype, backend, seed=0):
 
 @contextmanager
 def openvino_available(available: bool):
-    import nncf.import_utils
+    import nncf.common.utils.backend
 
-    original_value = nncf.import_utils._openvino_available
-    nncf.import_utils._openvino_available = available
+    original_value = nncf.common.utils.backend._OPENVINO_AVAILABLE
+    nncf.common.utils.backend._OPENVINO_AVAILABLE = available
     yield
-    nncf.import_utils._openvino_available = original_value
+    nncf.common.utils.backend._OPENVINO_AVAILABLE = original_value
 
 
 @pytest.mark.parametrize("weight_shape", [(100000, 4)], ids=[""])

@@ -16,6 +16,13 @@ import nncf
 
 TModel = TypeVar("TModel")
 
+try:
+    import openvino  # type: ignore # noqa: F401
+
+    _OPENVINO_AVAILABLE = True
+except ImportError:
+    _OPENVINO_AVAILABLE = False
+
 
 class BackendType(Enum):
     TORCH = "Torch"
@@ -159,3 +166,11 @@ def copy_model(model: TModel) -> TModel:
         model = TFModelTransformer(model).transform(TFTransformationLayout())
         return model
     return deepcopy(model)
+
+
+def is_openvino_available() -> bool:
+    """
+    Check if OpenVINO is available.
+    :return: True if openvino package is installed, False otherwise.
+    """
+    return _OPENVINO_AVAILABLE
