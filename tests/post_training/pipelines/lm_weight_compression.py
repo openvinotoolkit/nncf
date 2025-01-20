@@ -85,7 +85,9 @@ class LMWeightCompression(BaseTestPipeline):
                 raise RuntimeError(f"is_stateful={is_stateful} is not supported for PyTorch backend.")
 
             self.model_hf = AutoModelForCausalLM.from_pretrained(
-                self.model_id, torch_dtype=torch.float32, device_map="cpu"
+                self.model_id,
+                torch_dtype=torch.float32,
+                device_map="cpu",  # TODO (kshpv): add support of 'cuda', when supported
             )
             self.model = self.model_hf
         elif self.backend == BackendType.OV:
@@ -157,7 +159,7 @@ class LMWeightCompression(BaseTestPipeline):
                     inputs[name] = np.zeros(shape)
             if self.backend == BackendType.TORCH:
                 for input_name in inputs:
-                    inputs[input_name] = torch.from_numpy(inputs[input_name])
+                    inputs[input_name] = torch.from_numpy(inputs[input_name]).to(self.model_hf.device)
             return inputs
 
         return transform_fn
@@ -209,7 +211,13 @@ class LMWeightCompression(BaseTestPipeline):
             ov.serialize(self.model, self.output_model_dir / self.OV_MODEL_NAME)
             self.model_hf._save_config(self.output_model_dir)
         elif self.backend == BackendType.TORCH:
-            export_from_model(self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32")
+            export_from_model(
+                self.model_hf,
+                self.output_model_dir,
+                stateful=False,
+                compression_option="fp32",
+                device=self.model_hf.device,
+            )
 
     def get_num_compressed(self) -> None:
         """
