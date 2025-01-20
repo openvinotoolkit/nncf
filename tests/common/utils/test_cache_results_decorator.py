@@ -8,9 +8,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from nncf.common.utils.decorators import ResultsCacheContainer
-from nncf.common.utils.decorators import cache_results
+from nncf.common.utils.caching import ResultsCacheContainer
+from nncf.common.utils.caching import cache_results
 
 TEST_CACHE_CONTAINER = ResultsCacheContainer()
 
