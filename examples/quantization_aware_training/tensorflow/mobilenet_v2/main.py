@@ -113,7 +113,7 @@ def preprocess_for_train(image, label):
 
 
 train_dataset = tfds.load("imagenette/320px-v2", split="train", shuffle_files=True, as_supervised=True)
-train_dataset = train_dataset.map(preprocess_for_train).shuffle(1024).batch(128)
+train_dataset = train_dataset.map(preprocess_for_train).shuffle(1024).batch(32)
 
 val_dataset = tfds.load("imagenette/320px-v2", split="validation", shuffle_files=False, as_supervised=True)
 val_dataset = val_dataset.map(preprocess_for_eval).batch(128)
