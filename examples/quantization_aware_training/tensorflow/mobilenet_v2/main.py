@@ -155,7 +155,7 @@ tf_quantized_model.compile(
     metrics=[tf.keras.metrics.CategoricalAccuracy()],
 )
 
-tf_quantized_model.fit(train_dataset, epochs=3, verbose=1)
+tf_quantized_model.fit(train_dataset, epochs=1, verbose=1)
 
 # Removes auxiliary layers and operations added during the quantization process,
 # resulting in a clean, fully quantized model ready for deployment.
