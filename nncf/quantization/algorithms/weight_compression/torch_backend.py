@@ -61,30 +61,27 @@ from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 
 
-def get_compress_fn(config):
-    def _forward_fn(inputs):
-        if len(inputs) == 3:
-            tensor, scale, zero_point = inputs
-            tensor, scale, zero_point = Tensor(tensor), Tensor(scale), Tensor(zero_point)
-        else:
-            tensor, scale = inputs
-            tensor, scale = Tensor(tensor), Tensor(scale)
-            zero_point = None
+def _prepare_inputs(
+    tensor: torch.Tensor, scale: torch.Tensor, zero_point=Optional[torch.Tensor]
+) -> Tuple[Tensor, Tensor, Optional[Tensor]]:
+    tensor, scale = Tensor(tensor), Tensor(scale)
+    if zero_point is not None:
+        zero_point = Tensor(zero_point)
+    return tensor, scale, zero_point
+
+
+def get_compress_fn(config: WeightCompressionConfig) -> Callable[[Tuple], Tensor]:
+    def _forward_fn(inputs: Tuple) -> Tensor:
+        tensor, scale, zero_point = _prepare_inputs(*inputs)
         quantized = calculate_quantized_weight(tensor, scale=scale, zero_point=zero_point, config=config)
         return quantized.data
 
     return _forward_fn
 
 
-def get_compress_decompress_fn(config):
-    def _forward_fn(inputs):
-        if len(inputs) == 3:
-            tensor, scale, zero_point = inputs
-            tensor, scale, zero_point = Tensor(tensor), Tensor(scale), Tensor(zero_point)
-        else:
-            tensor, scale = inputs
-            tensor, scale = Tensor(tensor), Tensor(scale)
-            zero_point = None
+def get_compress_decompress_fn(config: WeightCompressionConfig) -> Callable[[Tuple], Tensor]:
+    def _forward_fn(inputs: Tuple) -> Tensor:
+        tensor, scale, zero_point = _prepare_inputs(*inputs)
         quantized = calculate_quantized_weight(tensor, scale=scale, zero_point=zero_point, config=config)
         dequantized = do_int_dequantization(quantized, scale=scale, zero_point=zero_point)
         return dequantized.data

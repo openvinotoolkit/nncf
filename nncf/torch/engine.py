@@ -44,10 +44,9 @@ class PTEngine(Engine):
         :param input_data: Inputs for the model.
         :return: Model outputs.
         """
-        with torch.no_grad():
-            if isinstance(input_data, dict):
-                return self._model(**input_data)
-            if isinstance(input_data, tuple):
-                return self._model(*input_data)
+        if isinstance(input_data, dict):
+            return self._model(**input_data)
+        if isinstance(input_data, tuple):
+            return self._model(*input_data)
 
-            return self._model(input_data)
+        return self._model(input_data)
