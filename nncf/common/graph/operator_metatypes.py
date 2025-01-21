@@ -110,6 +110,10 @@ class OperatorMetatypeRegistry(Registry):
                             f"op name `{name}` maps to multiple metatypes!"
                         )
                     self._op_name_to_op_meta_dict[name] = obj
+                    func_name = [f"{namespace.value}.{func}" for namespace, functions in obj.module_to_function_names.items() if functions for func in functions]
+                    if(len(func_name)):
+                        for func in func_name:
+                            self._func_name_to_op_meta_dict[func] = obj
             return obj
 
         return wrap
@@ -124,6 +128,13 @@ class OperatorMetatypeRegistry(Registry):
         if op_name not in self._op_name_to_op_meta_dict:
             return UnknownMetatype
         return self._op_name_to_op_meta_dict[op_name]
+    
+    def get_operator_metatype_by_func(self, func_name: str) -> Type[OperatorMetatype]:
+        if func_name not in self._func_name_to_op_meta_dict:
+            return UnknownMetatype
+        obj = self._func_name_to_op_meta_dict[func_name]
+        return obj
+
 
 
 NOOP_METATYPES = Registry("noop_metatypes")
