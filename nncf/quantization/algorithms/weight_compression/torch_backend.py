@@ -62,7 +62,7 @@ from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 
 
 def _prepare_inputs(
-    tensor: torch.Tensor, scale: torch.Tensor, zero_point=Optional[torch.Tensor]
+    tensor: torch.Tensor, scale: torch.Tensor, zero_point: Optional[torch.Tensor] = None
 ) -> Tuple[Tensor, Tensor, Optional[Tensor]]:
     tensor, scale = Tensor(tensor), Tensor(scale)
     if zero_point is not None:

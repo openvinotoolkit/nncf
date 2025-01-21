@@ -135,7 +135,7 @@ def compress_weights_impl(
     """
     Implementation of the `compress_weights()` method for the Torch Fx backend.
     """
-    with torch.no_grad():
+    with torch.inference_mode():
         compression_algorithm = WeightCompression(
             mode,
             ratio,
