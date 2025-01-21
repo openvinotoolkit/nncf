@@ -82,9 +82,7 @@ class GraphConverter:
         return metatype
 
     @staticmethod
-    def _get_node_type_and_metatype(
-        node: torch.fx.Node, model: torch.fx.GraphModule
-    ) -> Tuple[str, om.OperatorMetatype]:
+    def get_node_type_and_metatype(node: torch.fx.Node, model: torch.fx.GraphModule) -> Tuple[str, om.OperatorMetatype]:
         """
         Retrieves node's type and metatype.
 
@@ -136,7 +134,7 @@ class GraphConverter:
 
         const_targets_counter = Counter([node.target for node in model.graph.nodes if node.op == "get_attr"])
         for source_node in model.graph.nodes:
-            node_type, node_metatype = GraphConverter._get_node_type_and_metatype(source_node, model)
+            node_type, node_metatype = GraphConverter.get_node_type_and_metatype(source_node, model)
             node_metatype = GraphConverter._map_fx_unique_metatypes(source_node, node_metatype)
             is_shared_node = source_node.op in ("get_attr",) and (
                 const_targets_counter[source_node.target] > 1 or len(source_node.users) > 1
