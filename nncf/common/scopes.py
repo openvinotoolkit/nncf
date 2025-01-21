@@ -90,7 +90,7 @@ def get_not_matched_scopes(scope: Union[List[str], str, IgnoredScope, None], nod
     elif isinstance(scope, IgnoredScope):
         patterns = convert_ignored_scope_to_list(scope)
     else:
-        patterns = scope
+        patterns = list(scope)
 
     if not patterns:
         return []
