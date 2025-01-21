@@ -53,7 +53,6 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
-from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
 from nncf.tensor.functions.ov_numeric import DTYPE_MAP_REV
 
@@ -327,14 +326,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             for target_input in const_node.output(0).get_target_inputs():
                 target_input.replace_source_output(mul_output)
             if lora_correction_algo is not None and lora_correction_algo.is_applicable(wc_params):
-                if weight.backend == TensorBackend.ov:
-                    weight = weight.as_numpy_tensor()
-                if compressed_weight.tensor.backend == TensorBackend.ov:
-                    compressed_weight.tensor = compressed_weight.tensor.as_numpy_tensor()
-                if (
-                    compressed_weight.zero_point is not None
-                    and compressed_weight.zero_point.backend == TensorBackend.ov
-                ):
+                # These tensors can potentially be in ov backend
+                weight = weight.as_numpy_tensor()
+                compressed_weight.tensor = compressed_weight.tensor.as_numpy_tensor()
+                if compressed_weight.zero_point is not None:
                     compressed_weight.zero_point = compressed_weight.zero_point.as_numpy_tensor()
                 adapters = lora_correction_algo.calculate_adapters(weight, compressed_weight, wc_params)
                 self.insert_adapters(wc_params, *adapters, int8_lora=lora_correction_algo.use_int8_adapters)

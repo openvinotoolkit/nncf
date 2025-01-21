@@ -15,11 +15,9 @@ import openvino as ov
 
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
+from nncf.tensor.definitions import TensorBackend
+from nncf.tensor.definitions import TensorDeviceType
 from nncf.tensor.functions import numeric
-
-from ..definitions import TensorBackend
-from ..definitions import TensorDeviceType
-from .numpy_numeric import DTYPE_MAP as DTYPE_MAP_NP
 
 DTYPE_MAP = {
     TensorDataType.float16: ov.Type.f16,
@@ -56,7 +54,7 @@ def _(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
     ]:
         # Cannot cast to/from bfloat16, uint4, int4 directly
         return _astype_ov(a, dtype)
-    return ov.Tensor(a.data.astype(DTYPE_MAP_NP[dtype]))
+    return ov.Tensor(numeric.astype(a.data, dtype))
 
 
 @numeric.dtype.register(ov.Tensor)

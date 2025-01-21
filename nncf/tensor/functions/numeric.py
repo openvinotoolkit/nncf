@@ -935,6 +935,7 @@ def as_numpy_tensor(a: Tensor) -> Tensor:
     """
     Change backend of the tensor to numpy. Leads to data copying when tensor data type is bf16, u4 or i4. Otherwise,
     there is no data copying.
+
     :param a: Tensor to change backend for.
     :return: Tensor in numpy backend.
     """
