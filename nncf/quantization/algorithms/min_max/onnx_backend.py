@@ -97,7 +97,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
-        return {om.ONNXConcatMetatype: self.overflow_fix_metatypes}
+        return {om.ONNXConcatMetatype: self.overflow_fix_metatypes+self.scaled_dot_product_attention_metatypes}
 
     @property
     def hw_config(self) -> HWConfig:
