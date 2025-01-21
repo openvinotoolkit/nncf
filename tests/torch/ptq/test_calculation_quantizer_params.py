@@ -49,7 +49,6 @@ class CaseSymParams:
     narrow_range: bool
 
 
-# TODO(dlyakhov): test cases for every narrow_range conbination
 SYM_CASES = (
     CaseSymParams(
         fq_params=FakeQuantizeParameters(
@@ -143,7 +142,6 @@ class CaseAsymParams:
     ref_inp_range: np.ndarray
 
 
-# TODO(dlyakhov): generate test cases with narrow_range=True
 ASYM_CASES = (
     CaseAsymParams(
         fq_params=FakeQuantizeParameters(
@@ -205,7 +203,7 @@ def test_quantizer_params_asym(case_to_test: CaseSymParams):
     per_ch = case_to_test.per_channel
     fq_params = case_to_test.fq_params
     quant_group = case_to_test.quant_group
-    qconfig = QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=per_ch)
+    qconfig = QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=per_ch, narrow_range=False)
 
     if not per_ch:
         scale_shape = [1]
