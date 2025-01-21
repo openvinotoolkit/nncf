@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`quantizers.torch_ao_adapter`
+=====================================
+
+.. py:module:: quantizers.torch_ao_adapter
+
+

@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`algorithm`
+===================
+
+.. py:module:: algorithm
+
+
