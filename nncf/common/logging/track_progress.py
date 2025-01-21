@@ -69,11 +69,11 @@ class WeightedProgress(Progress):
     def update(self, task_id: TaskID, **kwargs: Any) -> None:
         task = self._tasks[task_id]
 
-        advance = kwargs.get("advance", None)
+        advance = kwargs.get("advance")
         if advance is not None:
             kwargs["advance"] = self.weighted_advance(task, advance)
 
-        completed = kwargs.get("completed", None)
+        completed = kwargs.get("completed")
         if completed is not None:
             kwargs["completed"] = self.get_weighted_completed(task, completed)
 
@@ -88,7 +88,7 @@ class WeightedProgress(Progress):
     def reset(self, task_id: TaskID, **kwargs: Any) -> None:
         task = self._tasks[task_id]
 
-        completed = kwargs.get("completed", None)
+        completed = kwargs.get("completed")
         if completed is not None:
             kwargs["completed"] = self.get_weighted_completed(task, completed)
 
