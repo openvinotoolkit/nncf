@@ -1185,3 +1185,18 @@ class RoPEModel(OVReferenceModel):
 
         model = ov.Model([sin_result, cos_result], [position_ids])
         return model
+
+
+class MLP(OVReferenceModel):
+    def _create_ov_model(self):
+        input_node = opset.parameter([1, 32, 32], name="Input")
+
+        weights_data = np.arange(0, 32 * 32, dtype=np.float32).reshape(32, 32)
+        weights_node = opset.constant(weights_data, dtype=np.float32, name="Weights")
+
+        matmul_node = opset.matmul(input_node, weights_node, transpose_a=False, transpose_b=True, name="MatMul")
+
+        result_node = opset.result(matmul_node, name="Result")
+
+        model = ov.Model([result_node], [input_node], name="MLP_Model")
+        return model

@@ -44,13 +44,43 @@ SUPPORTED_MODES = INT8_MODES + INT4_MODES
 UNSUPPORTED_MODES = (CompressWeightsMode.NF4, CompressWeightsMode.E2M1)
 
 
-class MatMulModel(torch.nn.Module):
+class SequentialMatmulModel(nn.Module):
     def __init__(self):
+        super(SequentialMatmulModel, self).__init__()
+        self.main_values = [10000, 1000, 1, 10, 10000]
+        self.layers = nn.ModuleList()
+
+        for _, main_value in enumerate(self.main_values):
+            weights_data = torch.arange(0, 16, dtype=torch.float32).reshape(4, 4)
+            weights_data[-1, -1] = main_value
+            weight_tensor = torch.tensor(weights_data)
+            layer = nn.Linear(4, 4, bias=False)
+            layer.weight = nn.Parameter(weight_tensor.t())
+            self.layers.append(layer)
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+
+class MatMulModel(torch.nn.Module):
+    def __init__(self, weight: torch.Tensor = torch.ones(size=(256, 256), dtype=torch.float32)):
         super().__init__()
-        self.w = torch.nn.Parameter(torch.ones(size=(256, 256), dtype=torch.float32))
+        self.w = torch.nn.Parameter(weight)
 
     def forward(self, input):
         return input @ self.w
+
+
+class LinearModel(torch.nn.Module):
+    def __init__(self, weight: torch.Tensor = torch.ones(size=(256, 256), dtype=torch.float32)):
+        super().__init__()
+        self.linear = torch.nn.Linear(weight.shape[0], weight.shape[1], False)
+        self.linear.weight = torch.nn.Parameter(weight)
+
+    def forward(self, input):
+        return self.linear(input)
 
 
 class FunctionalModel(torch.nn.Module):
@@ -326,41 +356,10 @@ def test_pack_int4():
     assert torch.all(unpacked_w == w_int8)
 
 
-class IdentityMatmul(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.w = torch.nn.Parameter(
-            torch.eye(3, dtype=torch.float32) * 255,
-        )
-
-    def forward(self, input):
-        return input @ self.w
-
-
-class SequentialMatmulModel(nn.Module):
-    def __init__(self):
-        super(SequentialMatmulModel, self).__init__()
-        self.main_values = [10000, 1000, 1, 10, 10000]
-        self.layers = nn.ModuleList()
-
-        for _, main_value in enumerate(self.main_values):
-            weights_data = torch.arange(0, 16, dtype=torch.float32).reshape(4, 4)
-            weights_data[-1, -1] = main_value
-            weight_tensor = torch.tensor(weights_data)
-            layer = nn.Linear(4, 4, bias=False)
-            layer.weight = nn.Parameter(weight_tensor.t())
-            self.layers.append(layer)
-
-    def forward(self, x):
-        for layer in self.layers:
-            x = layer(x)
-        return x
-
-
 class TestPTTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_matmul_model() -> torch.nn.Module:
-        return IdentityMatmul()
+        return MatMulModel(255 * torch.eye(3, dtype=torch.float32))
 
     @staticmethod
     def get_sequential_matmul_model() -> torch.nn.Module:
@@ -381,3 +380,46 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
                 assert torch.numel(op.weight) == 8  # workaround to detect uint4 weights
             else:
                 assert torch.numel(op.weight) == 16
+
+    @staticmethod
+    def get_model_for_test_scale_estimation():
+        return LinearModel(torch.arange(0, 32 * 32, dtype=torch.float32).reshape(32, 32))
+
+    @staticmethod
+    def get_scale_estimation_ref():
+        return torch.tensor(
+            [
+                [[2.0666666]],
+                [[3.7624271]],
+                [[5.8847833]],
+                [[8.0360603]],
+                [[10.1368332]],
+                [[12.2918606]],
+                [[14.3441496]],
+                [[16.4496689]],
+                [[18.6086369]],
+                [[20.8027000]],
+                [[22.9477024]],
+                [[25.0835018]],
+                [[27.1524105]],
+                [[29.1419849]],
+                [[31.1714401]],
+                [[33.0447121]],
+                [[35.1780472]],
+                [[37.3113823]],
+                [[39.4447136]],
+                [[41.5780487]],
+                [[43.7113838]],
+                [[45.8447189]],
+                [[47.9780464]],
+                [[50.1113815]],
+                [[52.2447128]],
+                [[54.3780441]],
+                [[56.5113831]],
+                [[58.6447144]],
+                [[60.7780533]],
+                [[62.9113808]],
+                [[65.0447083]],
+                [[67.1780548]],
+            ]
+        )

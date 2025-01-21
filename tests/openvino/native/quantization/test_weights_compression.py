@@ -50,6 +50,7 @@ from tests.cross_fw.shared.json import load_json
 from tests.cross_fw.test_templates.template_test_weights_compression import ACTIVATION
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
+from tests.openvino.native.models import MLP
 from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
@@ -1546,3 +1547,46 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         names = {op.get_friendly_name() for op in model.get_ordered_ops() if op.get_element_type() == ov.Type.i4}
         ref_nf4_nodes = {f"weights_{i}" for i in ref_ids}
         assert ref_nf4_nodes == names
+
+    @staticmethod
+    def get_model_for_test_scale_estimation():
+        return MLP().ov_model
+
+    @staticmethod
+    def get_scale_estimation_ref():
+        return np.array(
+            [
+                [[2.0666666]],
+                [[3.7624273]],
+                [[5.884783]],
+                [[8.03606]],
+                [[10.136832]],
+                [[12.291862]],
+                [[14.34415]],
+                [[16.449669]],
+                [[18.608639]],
+                [[20.802698]],
+                [[22.9477]],
+                [[25.083504]],
+                [[27.152409]],
+                [[29.141987]],
+                [[31.171442]],
+                [[33.044716]],
+                [[35.178047]],
+                [[37.31138]],
+                [[39.444714]],
+                [[41.578045]],
+                [[43.71138]],
+                [[45.844715]],
+                [[47.978046]],
+                [[50.11138]],
+                [[52.244713]],
+                [[54.378044]],
+                [[56.511383]],
+                [[58.644714]],
+                [[60.77805]],
+                [[62.91138]],
+                [[65.044716]],
+                [[67.17805]],
+            ]
+        )

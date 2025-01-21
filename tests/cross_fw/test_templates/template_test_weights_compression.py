@@ -16,11 +16,14 @@ from typing import List, TypeVar
 import numpy as np
 import pytest
 
+import nncf.tensor.functions as fns
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.data.dataset import Dataset
 from nncf.quantization import compress_weights
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
+from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
+from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 
 TModel = TypeVar("TModel")
@@ -39,13 +42,11 @@ class TemplateWeightCompression(ABC):
     @staticmethod
     @abstractmethod
     def cast_to(x: TTensor, dtype: TensorDataType) -> TTensor:
-        pass
+        """Casts a backend tensor to backend tensor with specified dtype."""
 
     @abstractmethod
     def get_matmul_model() -> TModel:
-        """
-        Returns a backend model for test_data_based_criterion.
-        """
+        """Returns a backend model for test_data_based_criterion."""
 
     @pytest.mark.parametrize(
         ("mode", "ref_act_score", "ref_score"),
@@ -80,13 +81,11 @@ class TemplateWeightCompression(ABC):
 
     @abstractmethod
     def get_sequential_matmul_model() -> TModel:
-        """
-        Returns a backend model for test_mixed_precision.
-        """
+        """Returns a backend model for test_mixed_precision."""
 
     @abstractmethod
     def to_tensor(x: TTensor) -> TTensor:
-        pass
+        """Returns a backend tensor."""
 
     @abstractmethod
     def check_weights(model: TModel, ref_ids: List[int]) -> None:
@@ -128,3 +127,39 @@ class TemplateWeightCompression(ABC):
             dataset=dataset,
         )
         self.check_weights(compressed_model, ref_ids)
+
+    @staticmethod
+    @abstractmethod
+    def get_model_for_test_scale_estimation():
+        """
+        Returns a backend model for test_scale_estimation.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_scale_estimation_ref():
+        """
+        Returns the reference output of calculate_quantization_params of ScaleEstimation.
+        """
+
+    def test_scale_estimation(self, mocker):
+        calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
+        model = self.get_model_for_test_scale_estimation()
+
+        # prepare dataset with one input tensor
+        input = np.arange(0, 32 * 32, dtype=np.float32).reshape(1, 32, 32)
+        input[0, 15] *= 100  # make one channel relatively higher.
+        input = self.to_tensor(input)
+        dataset = Dataset([input])
+
+        _ = compress_weights(
+            model,
+            mode=CompressWeightsMode.INT4_ASYM,
+            ratio=1.0,
+            group_size=32,
+            scale_estimation=True,
+            all_layers=True,
+            dataset=dataset,
+        )
+        reference = self.get_scale_estimation_ref()
+        assert fns.allclose(Tensor(reference), calc_q_params_spy.spy_return[0])
