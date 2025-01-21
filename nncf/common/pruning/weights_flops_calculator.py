@@ -13,6 +13,7 @@ from typing import Dict, List, Sequence, Tuple, Type
 
 import numpy as np
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -112,7 +113,7 @@ class WeightsFlopsCalculator:
                 continue
             layer_attr = node.layer_attributes
             if not isinstance(layer_attr, ConvolutionLayerAttributes):
-                continue
+                raise nncf.InternalError(f"Unexpected layer attributes type for convolution layer: {type(layer_attr)}")
             num_in_channels = input_channels.get(name, layer_attr.in_channels)
             num_out_channels = output_channels.get(name, layer_attr.out_channels)
             kernel_size = kernel_sizes.get(name, layer_attr.kernel_size)
@@ -144,7 +145,7 @@ class WeightsFlopsCalculator:
 
             layer_attr = node.layer_attributes
             if not isinstance(layer_attr, LinearLayerAttributes):
-                continue
+                raise nncf.InternalError(f"Unexpected layer attributes type for linear layer: {type(layer_attr)}")
             num_in_features = input_channels.get(name, layer_attr.in_features)
             num_out_features = output_channels.get(name, layer_attr.out_features)
 
