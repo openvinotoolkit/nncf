@@ -113,7 +113,7 @@ def preprocess_for_train(image, label):
 
 
 train_dataset = tfds.load("imagenette/320px-v2", split="train", shuffle_files=True, as_supervised=True)
-train_dataset = train_dataset.map(preprocess_for_train).shuffle(1024).batch(32)
+train_dataset = train_dataset.map(preprocess_for_train).batch(64)
 
 val_dataset = tfds.load("imagenette/320px-v2", split="validation", shuffle_files=False, as_supervised=True)
 val_dataset = val_dataset.map(preprocess_for_eval).batch(128)
@@ -150,7 +150,7 @@ calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
 tf_quantized_model = nncf.quantize(tf_model, calibration_dataset)
 
 tf_quantized_model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5),
+    optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-4),
     loss=tf.keras.losses.CategoricalCrossentropy(),
     metrics=[tf.keras.metrics.CategoricalAccuracy()],
 )
