@@ -109,10 +109,6 @@ exclude = [
     "nncf/common/composite_compression.py",
     "nncf/common/compression.py",
     "nncf/common/quantization/config_assignment.py",
-    "nncf/common/quantization/initialization/range.py",
-    "nncf/common/quantization/quantizer_propagation/graph.py",
-    "nncf/common/quantization/quantizer_propagation/grouping.py",
-    "nncf/common/quantization/quantizer_propagation/solver.py",
     "nncf/common/quantization/quantizer_removal.py",
     "nncf/common/quantization/quantizer_setup.py",
 ]
