@@ -147,8 +147,9 @@ class TemplateWeightCompression(ABC):
         model = self.get_model_for_test_scale_estimation()
 
         # prepare dataset with one input tensor
-        input = np.arange(0, 32 * 32, dtype=np.float32).reshape(1, 32, 32)
-        input[0, 15] *= 100  # make one channel relatively higher.
+        input = np.arange(0, 8 * 8, dtype=np.float32).reshape(1, 8, 8)
+        input[0, 4] *= 100  # make one channel relatively higher.
+
         input = self.to_tensor(input)
         dataset = Dataset([input])
 
@@ -156,7 +157,7 @@ class TemplateWeightCompression(ABC):
             model,
             mode=CompressWeightsMode.INT4_ASYM,
             ratio=1.0,
-            group_size=32,
+            group_size=4,
             scale_estimation=True,
             all_layers=True,
             dataset=dataset,
