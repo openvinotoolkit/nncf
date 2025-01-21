@@ -238,7 +238,10 @@ class QuantizationConstraints:
         )
 
     def constrain_qconfig_list(
-        self, node_name: NNCFNodeName, target_device: TargetDevice, quantizer_config_list: List[QuantizerConfig]
+        self,
+        node_name: NNCFNodeName,
+        target_device: Optional[TargetDevice],
+        quantizer_config_list: List[QuantizerConfig],
     ) -> List[QuantizerConfig]:
         assert quantizer_config_list is not None
 

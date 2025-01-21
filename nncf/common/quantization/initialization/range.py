@@ -8,8 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.initialization.dataloader import NNCFDataLoader
@@ -26,7 +27,12 @@ class RangeInitConfig:
     parameters.
     """
 
-    def __init__(self, init_type: str, num_init_samples: int, init_type_specific_params: Dict = None):
+    def __init__(
+        self,
+        init_type: str,
+        num_init_samples: int,
+        init_type_specific_params: Optional[Dict[str, int]] = None,
+    ):
         """
         Initializes the quantization range initialization parameters.
 
@@ -43,11 +49,11 @@ class RangeInitConfig:
         if self.init_type_specific_params is None:
             self.init_type_specific_params = {}
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return self.__dict__ == other.__dict__
 
     @classmethod
-    def from_dict(cls, dct: Dict) -> "RangeInitConfig":
+    def from_dict(cls, dct: Dict[str, Any]) -> RangeInitConfig:
         num_init_samples = dct.get("num_init_samples", NUM_INIT_SAMPLES)
         if num_init_samples < 0:
             raise ValueError("Number of initialization samples must be >= 0")
@@ -94,10 +100,10 @@ class PerLayerRangeInitConfig(RangeInitConfig):
         self.target_group = target_quantizer_group
 
     @classmethod
-    def from_dict(cls, dct: Dict) -> "PerLayerRangeInitConfig":
+    def from_dict(cls, dct: Dict[str, Any]) -> PerLayerRangeInitConfig:
         base_config = RangeInitConfig.from_dict(dct)
 
-        def get_list(dct: Dict, attr_name: str) -> Optional[List[str]]:
+        def get_list(dct: Dict[str, Any], attr_name: str) -> Optional[List[str]]:
             str_or_list = dct.get(attr_name)
             if str_or_list is None:
                 return None
@@ -185,7 +191,7 @@ class RangeInitCollectorParams:
         """
         return self._is_per_channel
 
-    def use_per_sample_stats(self, per_sample_stats) -> bool:
+    def use_per_sample_stats(self, per_sample_stats: bool) -> bool:
         """
         For activations, if per_sample_stats is True, statistics will be collected per-sample.
         For weights statistics are always collected per-batch.
@@ -213,7 +219,7 @@ class RangeInitCollectorParams:
         shape_to_reduce: Union[Tuple[int, ...], List[int]],
         quantization_axes: Union[Tuple[int, ...], List[int]],
         aggregation_axes: Union[Tuple[int, ...], List[int]],
-    ):
+    ) -> Tuple[int, ...]:
         """
         Returns axes for a reducer regarding aggregation axes. As aggregator takes axes counting from stacked tensors,
         from these axes only tensor related axes should be used for reducer.
@@ -225,7 +231,7 @@ class RangeInitCollectorParams:
         """
         axes_to_keep = set(el - 1 for el in aggregation_axes if el != 0)
         axes_to_keep.update(quantization_axes)
-        return get_reduction_axes(axes_to_keep, shape_to_reduce)
+        return get_reduction_axes(list(axes_to_keep), shape_to_reduce)
 
     def _get_aggregation_axes(self, batchwise_statistics: bool) -> Tuple[int, ...]:
         """
