@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,7 +16,7 @@ from nncf.common.utils.api_marker import api
 
 class StrEnum(str, Enum):
     def __str__(self) -> str:
-        return self.value
+        return str(self.value)
 
 
 @api(canonical_alias="nncf.TargetDevice")

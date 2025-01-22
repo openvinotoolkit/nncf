@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,7 +12,7 @@
 import math
 from enum import Enum
 from functools import partial
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 
@@ -22,7 +22,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
-from nncf.common.tensor import NNCFTensor
+from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.utils.registry import Registry
 
 
@@ -142,7 +142,9 @@ def get_rounded_pruned_element_number(total: int, sparsity_rate: float, multiple
     return max(total - remaining_elems, 0)
 
 
-def traverse_function(node: NNCFNode, output: List[NNCFNode], type_check_fn, visited) -> Tuple[bool, List[NNCFNode]]:
+def traverse_function(
+    node: NNCFNode, output: List[NNCFNode], type_check_fn: Callable[[str], bool], visited: Dict[int, bool]
+) -> Tuple[bool, List[NNCFNode]]:
     if visited[node.node_id]:
         return True, output
     visited[node.node_id] = True
@@ -209,22 +211,24 @@ def get_prunable_layers_in_out_channels(graph: NNCFGraph) -> Tuple[Dict[NNCFNode
     return in_channels, out_channels
 
 
-class PruningOperationsMetatypeRegistry(Registry):
-    def __init__(self, name):
-        super().__init__(name)
-        self._op_name_to_op_class = {}
+TObj = TypeVar("TObj", bound=type)
 
-    def register(self, name=None):
+
+class PruningOperationsMetatypeRegistry(Registry):
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+        self._op_name_to_op_class: Dict[str, type] = {}
+
+    def register(self, name: Optional[str] = None) -> Callable[[TObj], TObj]:
         name_ = name
         super_register = super()._register
 
-        def wrap(obj):
+        def wrap(obj: TObj) -> TObj:
             cls_name = name_
             if cls_name is None:
                 cls_name = obj.__name__
-
             super_register(obj, cls_name)
-            op_names = obj.get_all_op_aliases()
+            op_names = obj.get_all_op_aliases()  # type: ignore
             for name in op_names:
                 if name not in self._op_name_to_op_class:
                     self._op_name_to_op_class[name] = obj
@@ -236,7 +240,7 @@ class PruningOperationsMetatypeRegistry(Registry):
 
         return wrap
 
-    def get_operator_metatype_by_op_name(self, op_name: str):
+    def get_operator_metatype_by_op_name(self, op_name: str) -> Optional[type]:
         if op_name in self._op_name_to_op_class:
             return self._op_name_to_op_class[op_name]
         return None
@@ -260,7 +264,7 @@ class PruningAnalysisReason(Enum):
     INCOMPATIBLE_DIMS_IN_CLUSTER = "channels in cluster nodes have different values"
 
     @classmethod
-    def message(cls, node_name: str, decision: Optional["PruningAnalysisDecision"]) -> str:
+    def message(cls, node_name: str, decision: "PruningAnalysisDecision") -> str:
         """
         Returns the node pruning analysis decisions in a human-readable format.
 
@@ -294,11 +298,13 @@ class PruningAnalysisDecision:
         possible_reasons: Optional[Union[List[PruningAnalysisReason], PruningAnalysisReason]] = None,
     ):
         self.decision = decision
+        self._reasons: Optional[List[PruningAnalysisReason]] = None
+        if possible_reasons is None:
+            return
         if not isinstance(possible_reasons, list):
             possible_reasons = [possible_reasons]
-        self._reasons: Optional[List[PruningAnalysisReason]] = (
-            possible_reasons if not decision and possible_reasons else None
-        )
+        if not decision:
+            self._reasons = possible_reasons
 
     def __repr__(self) -> str:
         representation = f"Prunable: {self.decision}"
@@ -306,7 +312,9 @@ class PruningAnalysisDecision:
             representation += "; Reasons: " + str(self._reasons)
         return representation
 
-    def __eq__(self, other: "PruningAnalysisDecision") -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, PruningAnalysisDecision):
+            return False
         eq = self.decision == other.decision
         if self._reasons is None:
             return eq and other._reasons is None
@@ -359,7 +367,7 @@ def is_conv_with_downsampling(node: NNCFNode) -> bool:
     return False
 
 
-def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTensor]]:
+def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[SymbolicMask]]:
     """
     Returns input masks for all inputs of given NNCFNode.
 
@@ -381,7 +389,7 @@ def get_input_channels(node: NNCFNode) -> int:
     :param node: Given prunable node.
     :return: Count of input channels of the given node.
     """
-    layer_attrs: Union[ConvolutionLayerAttributes, LinearLayerAttributes] = node.layer_attributes
+    layer_attrs = node.layer_attributes
     if isinstance(layer_attrs, ConvolutionLayerAttributes):
         return layer_attrs.in_channels
     if isinstance(layer_attrs, LinearLayerAttributes):
@@ -396,7 +404,7 @@ def get_output_channels(node: NNCFNode) -> int:
     :param node: Given prunable node.
     :return: Count of output channels of the given node.
     """
-    layer_attrs: Union[ConvolutionLayerAttributes, LinearLayerAttributes] = node.layer_attributes
+    layer_attrs = node.layer_attributes
     if isinstance(layer_attrs, ConvolutionLayerAttributes):
         return layer_attrs.out_channels
     if isinstance(layer_attrs, LinearLayerAttributes):

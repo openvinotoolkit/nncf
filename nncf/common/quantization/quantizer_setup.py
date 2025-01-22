@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,7 +13,7 @@ from abc import ABC
 from collections import Counter
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Union
 
 import nncf
 from nncf.common.graph import NNCFNodeName
@@ -444,13 +444,13 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
 
 
 class MultiConfigQuantizerSetup(QuantizerSetupBase):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.quantization_points: Dict[QuantizationPointId, MultiConfigQuantizationPoint] = {}
         self._unified_scale_qpid_vs_type: Dict[QuantizationPointId, UnifiedScaleType] = {}
 
     def register_unified_scale_group_with_types(
-        self, qp_group: List[QuantizationPointId], us_types: List[UnifiedScaleType]
+        self, qp_group: List[QuantizationPointId], us_types: List[Union[UnifiedScaleType, None]]
     ) -> int:
         assert len(qp_group) == len(us_types)
         gid = super().register_unified_scale_group(qp_group)

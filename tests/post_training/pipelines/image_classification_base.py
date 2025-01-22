@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -62,7 +62,7 @@ class ImageClassificationBase(PTQTestPipeline):
                 output_data = request.get_output_tensor().data
                 predicted_label = np.argmax(output_data, axis=1)
                 predictions[userdata] = predicted_label
-                pbar.progress.update(pbar.task, advance=1)
+                pbar.update(advance=1)
 
             infer_queue.set_callback(process_result)
 

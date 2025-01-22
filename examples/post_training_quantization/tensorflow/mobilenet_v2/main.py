@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -143,6 +143,10 @@ def transform_fn(data_item):
 
 calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
 tf_quantized_model = nncf.quantize(tf_model, calibration_dataset)
+
+# Removes auxiliary layers and operations added during the quantization process,
+# resulting in a clean, fully quantized model ready for deployment.
+tf_quantized_model = nncf.strip(tf_quantized_model)
 
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy

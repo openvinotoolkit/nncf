@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -215,14 +215,20 @@ def test_min_max_caching():
     Checks that the _get_quantization_target_points(...) of MinMaxQuantization called once utilizing the cache.
     Checks that after _reset_cache() it called one more time.
     """
-    called = 0
+    find_called = 0
+    fill_called = 0
 
-    def foo(self, *args):
+    def find_qsetup_mock(self, *args):
+        nonlocal find_called
+        find_called += 1
+        return None
+
+    def fill_qsetup_mock(self, *args):
         """
         Mocked _find_quantization_target_points.
         """
-        nonlocal called
-        called += 1
+        nonlocal fill_called
+        fill_called += 1
         # Set up cache
         self._quantization_target_points_to_qconfig = collections.OrderedDict()
         self._unified_scale_groups = []
@@ -230,11 +236,12 @@ def test_min_max_caching():
 
     run_nums = 2
     algo = MinMaxQuantization()
-    algo._find_quantization_target_points = types.MethodType(foo, algo)
+    algo.find_quantization_setup = types.MethodType(find_qsetup_mock, algo)
+    algo.fill_quantization_target_points = types.MethodType(fill_qsetup_mock, algo)
     for _ in range(run_nums):
         algo._get_quantization_target_points(None, None)
-    assert called == 1
+    assert find_called == fill_called == 1
     algo._reset_cache()
     for _ in range(run_nums):
         algo._get_quantization_target_points(None, None)
-    assert called == 2
+    assert find_called == fill_called == 2

@@ -38,7 +38,7 @@ dependencies = [
     "natsort>=7.1.0",
     "networkx>=2.6, <=3.3",
     "ninja>=1.10.0.post2, <1.12",
-    "numpy>=1.19.1, <2.2.0",
+    "numpy>=1.24.0, <2.2.0",
     "openvino-telemetry>=2023.2.0",
     "packaging>=20.0",
     "pandas>=1.1.5,<2.3",
@@ -93,17 +93,24 @@ strict = true
 # https://github.com/hauntsaninja/no_implicit_optional
 implicit_optional = true
 files = [
-    "nncf/common/sparsity",
-    "nncf/common/graph",
-    "nncf/common/accuracy_aware_training/",
-    "nncf/common/utils/",
-    "nncf/common/tensor_statistics",
+    "nncf/api",
+    "nncf/data",
+    "nncf/common",
+    "nncf/config",
     "nncf/experimental/torch2",
     "nncf/quantization/passes.py",
     "nncf/quantization/advanced_parameters.py",
     "nncf/quantization/range_estimator.py",
     "nncf/quantization/telemetry_extractors.py",
     "nncf/telemetry/",
+    "nncf/*py",
+]
+exclude = [
+    "nncf/common/composite_compression.py",
+    "nncf/common/compression.py",
+    "nncf/common/quantization/config_assignment.py",
+    "nncf/common/quantization/quantizer_removal.py",
+    "nncf/common/quantization/quantizer_setup.py",
 ]
 
 [tool.ruff]

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -121,18 +121,22 @@ def get_const_value(const_node: ov.Node) -> np.ndarray:
     return const_node.data
 
 
-def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
+def get_bias_value(
+    node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model, node_mapping: Dict[str, ov.Node] = None
+) -> np.ndarray:
     """
     Returns the bias tensor for the biased node.
 
     :param node_with_bias: The node that corresponds to the operation with bias.
     :param nncf_graph: NNCFGraph instance.
     :param model: The model that contains this operation.
+    :param node_mapping: Original nodes mapping cache.
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
-    ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
+    if node_mapping is None:
+        node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
     bias_constant = get_node_with_bias_value(get_add_bias_node(node_with_bias, nncf_graph), nncf_graph)
-    ov_bias_constant = ops_dict[bias_constant.node_name]
+    ov_bias_constant = node_mapping[bias_constant.node_name]
     return get_const_value(ov_bias_constant)
 
 

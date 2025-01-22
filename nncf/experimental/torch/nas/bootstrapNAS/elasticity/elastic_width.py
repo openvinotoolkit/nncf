@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -530,7 +530,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         external_importance_path: Optional[str],
         weights_normalizer_fn: Optional[Callable[[torch.Tensor], torch.Tensor]],
         node_name_vs_dynamic_input_width_op_map: Dict[NNCFNodeName, ElasticWidthOp],
-        pruned_module_groups_info: Clusterization[ElasticWidthInfo](id_fn=lambda x: x.node_name),
+        pruned_module_groups_info: Clusterization[ElasticWidthInfo],
         transformation_commands: List[TransformationCommand],
         add_dynamic_inputs: Optional[List[str]] = None,
     ):
