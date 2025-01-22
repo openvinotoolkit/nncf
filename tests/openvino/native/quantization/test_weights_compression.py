@@ -1545,8 +1545,8 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def check_weights(model: ov.Model, ref_ids: List[int]) -> None:
         names = {op.get_friendly_name() for op in model.get_ordered_ops() if op.get_element_type() == ov.Type.i4}
-        ref_nf4_nodes = {f"weights_{i}" for i in ref_ids}
-        assert ref_nf4_nodes == names
+        low_precision_nodes = {f"weights_{i}" for i in ref_ids}
+        assert low_precision_nodes == names
 
     @staticmethod
     def get_model_for_test_scale_estimation():

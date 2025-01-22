@@ -375,11 +375,11 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def check_weights(model: torch.nn.Module, ref_ids: List[int]) -> None:
-        for i, op in enumerate(model.layers):
-            if i in ref_ids:
-                assert torch.numel(op.weight) == 8  # workaround to detect uint4 weights
-            else:
-                assert torch.numel(op.weight) == 16
+        low_precision_nodes = {f"{i}_weight" for i in ref_ids}
+        for op_name, op in model.nncf.external_op.items():
+            for name in low_precision_nodes:
+                if name in op_name:
+                    assert isinstance(op, INT4SymmetricWeightsDecompressor)
 
     @staticmethod
     def get_model_for_test_scale_estimation():
