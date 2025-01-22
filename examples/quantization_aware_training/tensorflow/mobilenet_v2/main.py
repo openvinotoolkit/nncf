@@ -150,11 +150,14 @@ calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
 tf_quantized_model = nncf.quantize(tf_model, calibration_dataset)
 
 tf_quantized_model.compile(
-    optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-4),
+    optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-5),
     loss=tf.keras.losses.CategoricalCrossentropy(),
     metrics=[tf.keras.metrics.CategoricalAccuracy()],
 )
 
+# To minimize the example's runtime, we train for only 1 epoch. This is sufficient to demonstrate
+# that the quantized model produced by QAT is more accurate than the one produced by PTQ.
+# However, training for more than 1 epoch would further improve the quantized model's accuracy.
 tf_quantized_model.fit(train_dataset, epochs=1, verbose=1)
 
 # Removes auxiliary layers and operations added during the quantization process,
