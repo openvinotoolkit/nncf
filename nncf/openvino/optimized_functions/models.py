@@ -360,7 +360,7 @@ def _build_compress_model(
 
             levels = level_high - level_low + 1
             scale = divide_op(max_values - min_values, opset.constant(levels - 1, ov.Type.f32))
-            scale = opset.select(opset.abs(scale) < eps, eps, scale)
+            scale = opset.select(opset.less(opset.abs(scale), eps), eps, scale)
         else:
             w_abs_min = opset.abs(opset.reduce_min(weight, reduction_axes=reduction_axes, keep_dims=True))
             w_max = opset.reduce_max(weight, reduction_axes=reduction_axes, keep_dims=True)
@@ -368,7 +368,7 @@ def _build_compress_model(
 
             scale = opset.select(w_abs_min >= w_max, w_abs_min, opset.negative(w_max))
             scale = divide_op(scale, opset.constant(-level_low, ov.Type.f32))
-            scale = opset.select(opset.abs(scale) < eps, eps, scale)
+            scale = opset.select(opset.less(opset.abs(scale), eps), eps, scale)
 
     zero_point = None
     if zero_point_shape is not None:
