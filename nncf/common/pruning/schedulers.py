@@ -9,10 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Any, Dict, Optional, Tuple, cast
 
 import numpy as np
-import scipy.optimize
+import scipy.optimize  # type: ignore[import-untyped]
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.schedulers import BaseCompressionScheduler
@@ -42,18 +42,18 @@ class PruningScheduler(BaseCompressionScheduler):
       section of the NNCF config file .json section (https://openvinotoolkit.github.io/nncf/schema).
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: dict):
+    def __init__(self, controller: CompressionAlgorithmController, params: Dict[str, Any]):
         super().__init__()
         self._controller = controller
-        self.initial_level = self._controller.pruning_init
+        self.initial_level = self._controller.pruning_init  # type: ignore[attr-defined]
 
-        if self._controller.prune_flops:
-            self.target_level = params.get("pruning_flops_target")
+        if self._controller.prune_flops:  # type: ignore[attr-defined]
+            self.target_level = cast(float, params.get("pruning_flops_target"))
         else:
-            self.target_level = params.get("pruning_target", PRUNING_TARGET)
+            self.target_level = cast(float, params.get("pruning_target", PRUNING_TARGET))
 
-        self.num_warmup_epochs = params.get("num_init_steps", PRUNING_NUM_INIT_STEPS)
-        self.num_pruning_epochs = params.get("pruning_steps", PRUNING_STEPS)
+        self.num_warmup_epochs = cast(int, params.get("num_init_steps", PRUNING_NUM_INIT_STEPS))
+        self.num_pruning_epochs = cast(int, params.get("pruning_steps", PRUNING_STEPS))
         self.freeze_epoch = self.num_warmup_epochs + self.num_pruning_epochs
 
     def _calculate_pruning_level(self) -> float:
@@ -74,9 +74,9 @@ class PruningScheduler(BaseCompressionScheduler):
             will update the state of the pruning method.
         """
         super().epoch_step(next_epoch)
-        self._controller.set_pruning_level(self.current_pruning_level)
+        self._controller.set_pruning_level(self.current_pruning_level)  # type: ignore[attr-defined]
         if self.current_epoch >= self.freeze_epoch:
-            self._controller.freeze()
+            self._controller.freeze()  # type: ignore[attr-defined]
 
     def step(self, next_step: Optional[int] = None) -> None:
         """
@@ -87,7 +87,7 @@ class PruningScheduler(BaseCompressionScheduler):
             will update the state of the pruning method.
         """
         super().step(next_step)
-        self._controller.step(next_step)
+        self._controller.step(next_step)  # type: ignore[attr-defined]
 
     @property
     def current_pruning_level(self) -> float:
@@ -110,7 +110,7 @@ class BaselinePruningScheduler(PruningScheduler):
     Then scheduler sets `target_level` and freezes the algorithm.
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: dict):
+    def __init__(self, controller: CompressionAlgorithmController, params: Dict[str, Any]):
         super().__init__(controller, params)
         self.freeze_epoch = self.num_warmup_epochs
 
@@ -130,7 +130,7 @@ class ExponentialPruningScheduler(PruningScheduler):
         current_density = 1.0 - current_level
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: dict):
+    def __init__(self, controller: CompressionAlgorithmController, params: Dict[str, Any]):
         """
         Initializes a pruning scheduler with an exponential decay schedule.
 
@@ -160,7 +160,7 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
     where a, b, k is a params.
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: dict):
+    def __init__(self, controller: CompressionAlgorithmController, params: Dict[str, Any]):
         """
         Initializes a pruning scheduler with an exponential (with bias) decay schedule.
 
@@ -172,11 +172,11 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
         self.a, self.b, self.k = self._init_exp(target_epoch, self.initial_level, self.target_level)
 
     def _calculate_pruning_level(self) -> float:
-        current_level = self.a * np.exp(-self.k * (self.current_epoch - self.num_warmup_epochs)) + self.b
+        current_level = self.a * float(np.exp(-self.k * (self.current_epoch - self.num_warmup_epochs))) + self.b
         return min(current_level, self.target_level)
 
     @staticmethod
-    def _init_exp(epoch_idx, p_min, p_max, factor=0.125):
+    def _init_exp(epoch_idx: int, p_min: float, p_max: float, factor: float = 0.125) -> Tuple[float, float, float]:
         """
         Finds parameters a, b, k from the system:
             p_min = a + b
@@ -190,18 +190,18 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
         :param factor: Hyperparameter.
         """
 
-        def get_b(a):
+        def get_b(a: float) -> float:
             return p_min - a
 
-        def get_a(k):
-            return (p_max - p_min) / (np.exp(-k * epoch_idx) - 1)
+        def get_a(k: float) -> float:
+            return (p_max - p_min) / (float(np.exp(-k * epoch_idx)) - 1)
 
-        def f_to_solve(x):
+        def f_to_solve(x: float) -> float:
             c = (0.75 * p_max - p_min) / (p_max - p_min)
-            y = np.exp(-x * epoch_idx)
-            return y**factor - c * y + c - 1
+            y = float(np.exp(-x * epoch_idx))
+            return float(y**factor) - c * y + c - 1
 
-        k = scipy.optimize.fsolve(f_to_solve, [1])[0]
+        k = float(scipy.optimize.fsolve(f_to_solve, [1])[0])
         a = get_a(k)
         b = get_b(a)
         return a, b, k

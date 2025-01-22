@@ -12,6 +12,7 @@
 import pytest
 import tensorflow as tf
 
+import nncf
 from tests.tensorflow.helpers import TFTensorListComparator
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_two_conv_test_model
@@ -52,3 +53,39 @@ def test_do_copy(do_copy):
         assert id(inference_model) != id(compression_model)
     else:
         assert id(inference_model) == id(compression_model)
+
+
+def test_strip_api():
+    model = get_basic_two_conv_test_model()
+    config = get_basic_quantization_config()
+    config["compression"] = {
+        "algorithm": "quantization",
+        "preset": "mixed",
+    }
+
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+
+    input_tensor = tf.ones([1, 4, 4, 1])
+    x_a = compressed_model(input_tensor)
+
+    stripped_model = nncf.strip(compressed_model)
+    x_b = stripped_model(input_tensor)
+
+    TFTensorListComparator.check_equal(x_a, x_b)
+
+
+@pytest.mark.parametrize("do_copy", (True, False))
+def test_strip_api_do_copy(do_copy):
+    model = get_basic_two_conv_test_model()
+    config = get_basic_quantization_config()
+    config["compression"] = {
+        "algorithm": "quantization",
+        "preset": "mixed",
+    }
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
+    stripped_model = nncf.strip(compressed_model, do_copy=do_copy)
+
+    if do_copy:
+        assert id(stripped_model) != id(compressed_model)
+    else:
+        assert id(stripped_model) == id(compressed_model)

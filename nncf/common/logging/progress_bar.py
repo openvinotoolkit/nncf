@@ -9,10 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from logging import Logger
+from typing import Generic, Iterable, Iterator, Optional, TypeVar
+
 from nncf.common.logging import nncf_logger
 
+TObj = TypeVar("TObj")
 
-class ProgressBar:
+
+class ProgressBar(Generic[TObj]):
     """
     A basic progress bar specifically for the logging.
     It does not print at the same line, instead it logs multiple lines intentionally to avoid multiprocessing issues.
@@ -24,13 +29,20 @@ class ProgressBar:
     :param total: the expected total number of iterations
     """
 
-    def __init__(self, iterable, logger=nncf_logger, desc="", num_lines=10, total=None):
+    def __init__(
+        self,
+        iterable: Iterable[TObj],
+        logger: Logger = nncf_logger,
+        desc: str = "",
+        num_lines: int = 10,
+        total: Optional[int] = None,
+    ):
         self._logger = logger
         self._iterable = iterable
         self._desc = desc
         self._num_lines = num_lines
 
-        self._index = 0
+        self._index: int = 0
         self._width = 16
         self._is_enabled = False
         self._total = None
@@ -45,7 +57,7 @@ class ProgressBar:
 
         if iterable is not None and self._total is None:
             try:
-                self._total = len(iterable)
+                self._total = len(iterable)  # type: ignore[arg-type]
             except (TypeError, AttributeError):
                 logger.error(
                     "Progress bar is disabled because the given iterable is invalid: "
@@ -63,15 +75,15 @@ class ProgressBar:
         self._step = max(1, self._total // (self._num_lines - 1))
         self._is_enabled = True
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[TObj]:
         for obj in self._iterable:
             yield obj
             if self._is_enabled:
                 self._print_next()
 
-    def _print_next(self):
+    def _print_next(self) -> None:
         self._index += 1
-        if self._index > self._total:
+        if self._total is None or self._index > self._total:
             return
 
         if self._index % self._step == 0 or self._index == self._total:

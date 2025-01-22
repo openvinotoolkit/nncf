@@ -15,7 +15,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Type
 
-import jstyleson as json
+import jstyleson as json  # type: ignore[import-untyped]
 
 import nncf
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -60,7 +60,7 @@ def get_hw_config_type(target_device: str) -> Optional[HWConfigType]:
     return HWConfigType(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
 
 
-class HWConfig(list, ABC):
+class HWConfig(list[Dict[str, Any]], ABC):
     QUANTIZATION_ALGORITHM_NAME = "quantization"
     ATTRIBUTES_NAME = "attributes"
     SCALE_ATTRIBUTE_NAME = "scales"
@@ -69,9 +69,9 @@ class HWConfig(list, ABC):
 
     TYPE_TO_CONF_NAME_DICT = {HWConfigType.CPU: "cpu.json", HWConfigType.NPU: "npu.json", HWConfigType.GPU: "gpu.json"}
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.registered_algorithm_configs = {}
+        self.registered_algorithm_configs: Dict[str, Any] = {}
         self.target_device = None
 
     @abstractmethod
@@ -79,13 +79,13 @@ class HWConfig(list, ABC):
         pass
 
     @staticmethod
-    def get_path_to_hw_config(hw_config_type: HWConfigType):
+    def get_path_to_hw_config(hw_config_type: HWConfigType) -> str:
         return "/".join(
             [NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR, HWConfig.TYPE_TO_CONF_NAME_DICT[hw_config_type]]
         )
 
     @classmethod
-    def from_dict(cls, dct: dict):
+    def from_dict(cls, dct: Dict[str, Any]) -> "HWConfig":
         hw_config = cls()
         hw_config.target_device = dct["target_device"]
 
@@ -104,7 +104,7 @@ class HWConfig(list, ABC):
             for algorithm_name in op_dict:
                 if algorithm_name not in hw_config.registered_algorithm_configs:
                     continue
-                tmp_config = {}
+                tmp_config: Dict[str, List[Dict[str, Any]]] = {}
                 for algo_and_op_specific_field_name, algorithm_configs in op_dict[algorithm_name].items():
                     if not isinstance(algorithm_configs, list):
                         algorithm_configs = [algorithm_configs]
@@ -129,14 +129,14 @@ class HWConfig(list, ABC):
         return hw_config
 
     @classmethod
-    def from_json(cls, path):
+    def from_json(cls: type["HWConfig"], path: str) -> List[Dict[str, Any]]:
         file_path = Path(path).resolve()
         with safe_open(file_path) as f:
             json_config = json.load(f, object_pairs_hook=OrderedDict)
             return cls.from_dict(json_config)
 
     @staticmethod
-    def get_quantization_mode_from_config_value(str_val: str):
+    def get_quantization_mode_from_config_value(str_val: str) -> QuantizationMode:
         if str_val == "symmetric":
             return QuantizationMode.SYMMETRIC
         if str_val == "asymmetric":
@@ -144,7 +144,7 @@ class HWConfig(list, ABC):
         raise nncf.ValidationError("Invalid quantization type specified in HW config")
 
     @staticmethod
-    def get_is_per_channel_from_config_value(str_val: str):
+    def get_is_per_channel_from_config_value(str_val: str) -> bool:
         if str_val == "perchannel":
             return True
         if str_val == "pertensor":
@@ -152,7 +152,7 @@ class HWConfig(list, ABC):
         raise nncf.ValidationError("Invalid quantization granularity specified in HW config")
 
     @staticmethod
-    def get_qconf_from_hw_config_subdict(quantization_subdict: Dict):
+    def get_qconf_from_hw_config_subdict(quantization_subdict: Dict[str, Any]) -> QuantizerConfig:
         bits = quantization_subdict["bits"]
         mode = HWConfig.get_quantization_mode_from_config_value(quantization_subdict["mode"])
         is_per_channel = HWConfig.get_is_per_channel_from_config_value(quantization_subdict["granularity"])
@@ -181,20 +181,22 @@ class HWConfig(list, ABC):
         )
 
     @staticmethod
-    def is_qconf_list_corresponding_to_unspecified_op(qconf_list: Optional[List[QuantizerConfig]]):
+    def is_qconf_list_corresponding_to_unspecified_op(qconf_list: Optional[List[QuantizerConfig]]) -> bool:
         return qconf_list is None
 
     @staticmethod
-    def is_wildcard_quantization(qconf_list: Optional[List[QuantizerConfig]]):
+    def is_wildcard_quantization(qconf_list: Optional[List[QuantizerConfig]]) -> bool:
         # Corresponds to an op itself being specified in the HW config, but having no associated quantization
         # configs specified
         return qconf_list is not None and len(qconf_list) == 0
 
     def get_metatype_vs_quantizer_configs_map(
-        self, for_weights=False
+        self, for_weights: bool = False
     ) -> Dict[Type[OperatorMetatype], Optional[List[QuantizerConfig]]]:
         # 'None' for ops unspecified in HW config, empty list for wildcard quantization ops
-        retval = {k: None for k in self._get_available_operator_metatypes_for_matching()}
+        retval: Dict[Type[OperatorMetatype], Optional[List[QuantizerConfig]]] = {
+            k: None for k in self._get_available_operator_metatypes_for_matching()
+        }
         config_key = "weights" if for_weights else "activations"
         for op_dict in self:
             hw_config_op_name = op_dict["type"]

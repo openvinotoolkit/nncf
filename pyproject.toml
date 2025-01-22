@@ -38,7 +38,7 @@ dependencies = [
     "natsort>=7.1.0",
     "networkx>=2.6, <=3.3",
     "ninja>=1.10.0.post2, <1.12",
-    "numpy>=1.19.1, <2.2.0",
+    "numpy>=1.24.0, <2.2.0",
     "openvino-telemetry>=2023.2.0",
     "packaging>=20.0",
     "pandas>=1.1.5,<2.3",
@@ -95,23 +95,7 @@ implicit_optional = true
 files = [
     "nncf/api",
     "nncf/data",
-    "nncf/common/collector.py",
-    "nncf/common/engine.py",
-    "nncf/common/hook_handle.py",
-    "nncf/common/insertion_point_graph.py",
-    "nncf/common/logging/logger.py",
-    "nncf/common/plotting.py",
-    "nncf/common/schedulers.py",
-    "nncf/common/scopes.py",
-    "nncf/common/stateful_classes_registry.py",
-    "nncf/common/strip.py",
-    "nncf/common/tensor.py",
-    "nncf/common/accuracy_aware_training",
-    "nncf/common/graph",
-    "nncf/common/initialization",
-    "nncf/common/sparsity",
-    "nncf/common/tensor_statistics",
-    "nncf/common/utils",
+    "nncf/common",
     "nncf/config",
     "nncf/experimental/torch2",
     "nncf/quantization/passes.py",
@@ -120,6 +104,13 @@ files = [
     "nncf/quantization/telemetry_extractors.py",
     "nncf/telemetry/",
     "nncf/*py",
+]
+exclude = [
+    "nncf/common/composite_compression.py",
+    "nncf/common/compression.py",
+    "nncf/common/quantization/config_assignment.py",
+    "nncf/common/quantization/quantizer_removal.py",
+    "nncf/common/quantization/quantizer_setup.py",
 ]
 
 [tool.ruff]

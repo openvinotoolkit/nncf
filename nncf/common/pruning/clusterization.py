@@ -9,26 +9,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, Generic, Hashable, List, TypeVar
+from typing import Callable, Dict, Generic, Hashable, List, Optional, TypeVar
 
 T = TypeVar("T")
 
 
 class Cluster(Generic[T]):
     """
-    Represents element of Сlusterization. Groups together elements.
+    Represents element of Clusterization. Groups together elements.
     """
 
-    def __init__(self, cluster_id: int, elements: List[T], nodes_orders: List[int]):
+    def __init__(self, cluster_id: int, elements: List[T], nodes_orders: List[int]) -> None:
         self.id = cluster_id
         self.elements = list(elements)
         self.importance = max(nodes_orders)
 
-    def clean_cluster(self):
+    def clean_cluster(self) -> None:
         self.elements = []
         self.importance = 0
 
-    def add_elements(self, elements: List[T], importance: int):
+    def add_elements(self, elements: List[T], importance: int) -> None:
         self.elements.extend(elements)
         self.importance = max(self.importance, importance)
 
@@ -39,7 +39,7 @@ class Clusterization(Generic[T]):
     delete existing one or merge existing clusters.
     """
 
-    def __init__(self, id_fn: Callable[[T], Hashable] = None):
+    def __init__(self, id_fn: Optional[Callable[[T], Hashable]] = None) -> None:
         self.clusters: Dict[int, Cluster[T]] = {}
         self._element_to_cluster: Dict[Hashable, int] = {}
         if id_fn is None:
@@ -78,7 +78,7 @@ class Clusterization(Generic[T]):
         """
         return node_id in self._element_to_cluster
 
-    def add_cluster(self, cluster: Cluster[T]):
+    def add_cluster(self, cluster: Cluster[T]) -> None:
         """
         Adds provided cluster to clusterization.
 
@@ -89,9 +89,9 @@ class Clusterization(Generic[T]):
             raise IndexError("Cluster with index = {} already exist".format(cluster_id))
         self.clusters[cluster_id] = cluster
         for elt in cluster.elements:
-            self._element_to_cluster[self._id_fn(elt)] = cluster_id
+            self._element_to_cluster[self._id_fn(elt)] = cluster_id  # type: ignore[no-untyped-call]
 
-    def delete_cluster(self, cluster_id: int):
+    def delete_cluster(self, cluster_id: int) -> None:
         """
         Removes cluster with `cluster_id` from clusterization.
 
@@ -100,7 +100,7 @@ class Clusterization(Generic[T]):
         if cluster_id not in self.clusters:
             raise IndexError("No cluster with index = {} to delete".format(cluster_id))
         for elt in self.clusters[cluster_id].elements:
-            node_id = self._id_fn(elt)
+            node_id = self._id_fn(elt)  # type: ignore[no-untyped-call]
             self._element_to_cluster.pop(node_id)
         self.clusters.pop(cluster_id)
 
@@ -123,7 +123,7 @@ class Clusterization(Generic[T]):
             all_elements.extend(cluster.elements)
         return all_elements
 
-    def merge_clusters(self, first_id: int, second_id: int):
+    def merge_clusters(self, first_id: int, second_id: int) -> None:
         """
         Merges two clusters with provided ids.
 
@@ -135,15 +135,15 @@ class Clusterization(Generic[T]):
         if cluster_1.importance > cluster_2.importance:
             cluster_1.add_elements(cluster_2.elements, cluster_2.importance)
             for elt in cluster_2.elements:
-                self._element_to_cluster[self._id_fn(elt)] = first_id
+                self._element_to_cluster[self._id_fn(elt)] = first_id  # type: ignore[no-untyped-call]
             self.clusters.pop(second_id)
         else:
             cluster_2.add_elements(cluster_1.elements, cluster_1.importance)
             for elt in cluster_1.elements:
-                self._element_to_cluster[self._id_fn(elt)] = second_id
+                self._element_to_cluster[self._id_fn(elt)] = second_id  # type: ignore[no-untyped-call]
             self.clusters.pop(first_id)
 
-    def merge_list_of_clusters(self, clusters: List[int]):
+    def merge_list_of_clusters(self, clusters: List[int]) -> None:
         """
         Merges provided clusters.
 
