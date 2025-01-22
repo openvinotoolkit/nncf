@@ -10,23 +10,22 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Optional, Union
+from typing import Dict, List, Optional, Union
 
 import torch.fx
 from torch.ao.quantization.observer import HistogramObserver
 from torch.ao.quantization.observer import PerChannelMinMaxObserver
-from torch.ao.quantization.quantizer.quantizer import QuantizationAnnotation as InductorQAnotation
-from torch.ao.quantization.quantizer.quantizer import QuantizationSpec as InductorQuantizationSpec
+from torch.ao.quantization.quantizer.quantizer import QuantizationAnnotation as TorchAOQuantizationAnnotation
+from torch.ao.quantization.quantizer.quantizer import QuantizationSpec as TorchAOQuantizationSpec
 from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuantizer
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationRule
-from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig as NNCFQuantizerConfig
-from nncf.experimental.quantization.quantizers.quantizer import Quantizer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.transformations import fold_constant_except_qdq
@@ -105,7 +104,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
     def annotate(self, model: torch.fx.GraphModule) -> torch.fx.GraphModule:
         nncf_grpah = GraphConverter.create_nncf_graph(model)
         quantization_setup = self.get_quantization_setup(model, nncf_grpah)
-        target_node_vs_qp = defaultdict(list)
+        target_node_vs_qp: Dict[str, List[QuantizationPointBase]] = defaultdict(list)
         graph = model.graph
         for qp in quantization_setup.quantization_points.values():
             target_node_vs_qp[qp.insertion_point.target_node_name].append(qp)
@@ -116,7 +115,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
             target_node = get_graph_node_by_name(graph, target_node_name)
             for qp in qps:
                 ip = qp.insertion_point
-                if isinstance(ip, ActivationQuantizationInsertionPoint):
+                if qp.is_activation_quantization_point():
                     inductor_qspec = self._convert_nncf_qspec_to_inductor_qspec(qp.qconfig, is_weight=False)
                     if ip.input_port_id is None:
                         output_qspec = inductor_qspec
@@ -128,13 +127,16 @@ class OpenVINOQuantizer(TorchAOQuantizer):
                     weight_node = target_node.all_input_nodes[1]
                     input_qspec_map[weight_node] = inductor_qspec
 
-            annotation = InductorQAnotation(input_qspec_map=input_qspec_map, output_qspec=output_qspec)
+            annotation = TorchAOQuantizationAnnotation(input_qspec_map=input_qspec_map, output_qspec=output_qspec)
             assert QUANT_ANNOTATION_KEY not in target_node.meta
             target_node.meta[QUANT_ANNOTATION_KEY] = annotation
 
     def _convert_nncf_qspec_to_inductor_qspec(
         self, qspec: NNCFQuantizerConfig, is_weight: bool
-    ) -> InductorQuantizationSpec:
+    ) -> TorchAOQuantizationSpec:
+        # Eps value is borrowed from
+        # https://github.com/pytorch/pytorch/blob/main/torch/ao/quantization/quantizer/x86_inductor_quantizer.py
+        # get_default_x86_inductor_quantization_config
         extra_args = {"eps": 2**-12}
         if qspec.per_channel:
             torch_qscheme = (
@@ -160,7 +162,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
             quant_max = 255
             dtype = torch.int8 if qspec.signedness_to_force else torch.uint8
             channel_axis = 1  # channel dim for activations
-        return InductorQuantizationSpec(
+        return TorchAOQuantizationSpec(
             dtype=dtype,
             observer_or_fake_quant_ctr=observer.with_args(**extra_args),
             quant_min=quant_min,
@@ -176,14 +178,3 @@ class OpenVINOQuantizer(TorchAOQuantizer):
     def transform_for_annotation(self, model: torch.fx.GraphModule) -> torch.fx.GraphModule:
         fold_constant_except_qdq(model)
         return model
-
-
-class OpenVINOQuantizerAdapter(Quantizer):
-    def __init__(self, quantizer: OpenVINOQuantizer):
-        self._quantizer = quantizer
-
-    def transform_prior_quantization(self, model: torch.fx.GraphModule) -> torch.fx.GraphModule:
-        return self._quantizer.transform_for_annotation(model)
-
-    def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
-        return self._quantizer.get_quantization_setup(model, nncf_graph)
