@@ -58,7 +58,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         quantize_outputs: bool = False,
         activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
         weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
-        quantizer_propagation_rule: Optional[QuantizerPropagationRule] = None,
+        quantizer_propagation_rule: QuantizerPropagationRule = QuantizerPropagationRule.MERGE_ALL_IN_ONE,
     ):
         """
         :param mode: Defines optimization mode for the algorithm. None by default.
@@ -83,6 +83,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
             activations.
         :param weights_quantization_params: Quantization parameters for model weights.
         :param quantizer_propagation_rule: The strategy to be used while propagating and merging quantizers.
+        MERGE_ALL_IN_ONE by default.
         """
         self._min_max_algo = MinMaxQuantization(
             mode=mode,
