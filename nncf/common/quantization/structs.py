@@ -58,6 +58,8 @@ class QuantizerConfig:
             None if the signed/unsigned attribute should be determined based on the incoming activation
             statistics during range initialization.
         :param per_channel: True for per-channel quantization, False for per-tensor.
+        :param narrow_range: True if the range of quantized values should be narrowed as compared to the
+            naive case, False if all 2^`num_bits` quantizations should be used.
         """
         self.num_bits = num_bits
         self.mode = mode

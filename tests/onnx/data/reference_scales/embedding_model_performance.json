@@ -1,7 +1,7 @@
 {
     "QuantizeLinear_Identity_Y_1": {
-        "scale": 0.007821254432201385,
-        "zero_point": -1
+        "scale": 0.007852046750485897,
+        "zero_point": 0
     },
     "QuantizeLinear_W_1": {
         "scale": [
