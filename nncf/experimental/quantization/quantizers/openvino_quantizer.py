@@ -58,8 +58,8 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         ignored_scope: Optional[IgnoredScope] = None,
         overflow_fix: Optional[OverflowFix] = None,
         quantize_outputs: bool = False,
-        activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
-        weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
+        activations_quantization_params: Optional[Union[QuantizationParameters, FP8QuantizationParameters]] = None,
+        weights_quantization_params: Optional[Union[QuantizationParameters, FP8QuantizationParameters]] = None,
         quantizer_propagation_rule: QuantizerPropagationRule = QuantizerPropagationRule.MERGE_ALL_IN_ONE,
     ):
         """
@@ -236,10 +236,8 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         :param qp: An instance of QuantizationPointBase.
         :return: A TorchAOQuantizationSpec retrieved and converted from the quantization point.
         """
-        # Eps value is borrowed from
-        # https://github.com/pytorch/pytorch/blob/main/torch/ao/quantization/quantizer/x86_inductor_quantizer.py
-        # get_default_x86_inductor_quantization_config
-        extra_args = {"eps": 2**-12}
+        # Eps value is copied from nncf/torch/quantization/layers.py
+        extra_args = {"eps": 1e-16}
         qconfig = qp.qconfig
         is_weight = qp.is_weight_quantization_point()
 
