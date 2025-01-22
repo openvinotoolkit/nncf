@@ -11,6 +11,7 @@
 
 import copy
 from dataclasses import dataclass
+from dataclasses import field
 from functools import partial
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
@@ -21,7 +22,7 @@ from openvino._pyopenvino.properties.hint import inference_precision
 from openvino.runtime import Node
 from openvino.runtime import opset13 as opset
 
-from nncf.common.utils.caching import ResultsCacheContainer
+from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
 from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import non_convertable_divide_op
@@ -35,57 +36,41 @@ ModelCallable = Callable[[TensorList], TensorList]
 ReductionAxes = Union[int, Tuple[int, ...]]
 
 
-OV_MODEL_CACHE = ResultsCacheContainer()
+OV_MODEL_CACHE = ResultsCache()
 
 
-@dataclass(init=False)
+@dataclass
 class OVModelParameters:
     """
     A class to hold parameters for building and inferring an OpenVINO model.
+
+    :param input_dtypes: Optional dictionary mapping input names to their data types.
+    :param output_dtypes: Optional dictionary mapping output names to their data types.
+    :param dynamic_shapes: Whether to use dynamic shapes for the model. When dynamic shapes are used and
+        models are cached, it allows to save on the number of models stored in a model cache.
+    :param release_memory: Whether to release memory after every inference. If memory is released, it will be
+        reallocated during every inference, reducing performance to some extent.
+    :param share_inputs: Whether to share input tensors. Avoids cloning inputs for inference.
+    :param share_outputs: Whether to share output tensors. Avoids cloning outputs after the inference.
+    :param return_ov_tensors: Whether to return results as OpenVINO tensors or NumPy arrays.
+    :param convertable_division: Whether to use convertable division for division operations. If True, division a/b
+        will be transformed at runtime to a*(1/b).
     """
 
-    def __init__(
-        self,
-        input_dtypes: Optional[Dict[str, TensorDataType]] = None,
-        output_dtypes: Optional[Dict[str, TensorDataType]] = None,
-        dynamic_shapes: bool = True,
-        recompile: bool = False,
-        release_memory: bool = True,
-        share_inputs: bool = True,
-        share_outputs: bool = True,
-        return_ov_tensors: bool = False,
-        convertable_division: bool = False,
-    ):
-        """
-        :param input_dtypes: Optional dictionary mapping input names to their data types.
-        :param output_dtypes: Optional dictionary mapping output names to their data types.
-        :param dynamic_shapes: Whether to use dynamic shapes for the model. When dynamic shapes are used and
-            recompile is False, it allows to save on the number of models stored in a model cache.
-        :param recompile: Whether to recompile the model before every inference. Otherwise, compiled models are cached.
-        :param release_memory: Whether to release memory after every inference. If memory is released, it will be
-            reallocated during every inference, reducing performance to some extent.
-        :param share_inputs: Whether to share input tensors. Avoids cloning inputs for inference.
-        :param share_outputs: Whether to share output tensors. Avoids cloning outputs after the inference.
-        :param return_ov_tensors: Whether to return results as OpenVINO tensors or NumPy arrays.
-        :param convertable_division: Whether to use convertable division for division operations. If True, division a/b
-            will be transformed at runtime to a*(1/b).
-        """
-        self.input_dtypes = input_dtypes or {}
-        self.output_dtypes = output_dtypes or {}
-        self.dynamic_shapes = dynamic_shapes
-        self.recompile = recompile
-        self.release_memory = release_memory
-        self.share_inputs = share_inputs
-        self.share_outputs = share_outputs
-        self.return_ov_tensors = return_ov_tensors
-        self.convertable_division = convertable_division
+    input_dtypes: Dict[str, TensorDataType] = field(default_factory=dict)
+    output_dtypes: Dict[str, TensorDataType] = field(default_factory=dict)
+    dynamic_shapes: bool = True
+    release_memory: bool = True
+    share_inputs: bool = True
+    share_outputs: bool = True
+    return_ov_tensors: bool = False
+    convertable_division: bool = False
 
     def __copy__(self):
         return OVModelParameters(
             input_dtypes=self.input_dtypes.copy(),
             output_dtypes=self.output_dtypes.copy(),
             dynamic_shapes=self.dynamic_shapes,
-            recompile=self.recompile,
             release_memory=self.release_memory,
             share_inputs=self.share_inputs,
             share_outputs=self.share_outputs,
@@ -98,7 +83,6 @@ class OVModelParameters:
             input_dtypes=copy.deepcopy(self.input_dtypes, memo),
             output_dtypes=copy.deepcopy(self.output_dtypes, memo),
             dynamic_shapes=self.dynamic_shapes,
-            recompile=self.recompile,
             release_memory=self.release_memory,
             share_inputs=self.share_inputs,
             share_outputs=self.share_outputs,
@@ -112,7 +96,6 @@ class OVModelParameters:
                 frozenset(self.input_dtypes.items()),
                 frozenset(self.output_dtypes.items()),
                 self.dynamic_shapes,
-                self.recompile,
                 self.release_memory,
                 self.share_inputs,
                 self.share_outputs,
@@ -236,7 +219,6 @@ def get_compress_weight_model(
         zero_point_shape,
         reduction_axes,
         return_nodes=return_nodes,
-        disable_caching=ov_model_params.recompile,
     )
 
 
@@ -279,7 +261,6 @@ def get_compress_decompress_weight_model(
         zero_point_shape,
         reduction_axes,
         return_compressed_weight,
-        disable_caching=ov_model_params.recompile,
     )
 
 
@@ -496,7 +477,7 @@ def get_astype_model(ov_model_params: OVModelParameters, input_shape: Tuple) -> 
     """
     if ov_model_params.dynamic_shapes:
         input_shape = (-1,) * len(input_shape)
-    return _build_astype_model(ov_model_params, input_shape, disable_caching=ov_model_params.recompile)
+    return _build_astype_model(ov_model_params, input_shape)
 
 
 @cache_results(OV_MODEL_CACHE)

@@ -8,10 +8,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from nncf.common.utils.caching import ResultsCacheContainer
+from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
+from nncf.common.utils.caching import disable_results_caching
 
-TEST_CACHE_CONTAINER = ResultsCacheContainer()
+TEST_CACHE_CONTAINER = ResultsCache()
 
 
 @cache_results(TEST_CACHE_CONTAINER)
@@ -121,11 +122,18 @@ CALL_SEQUENCE = [
 
 
 def test_caching_results():
+    def check_fn():
+        assert cached_addition(*inputs) == output
+        assert len(TEST_CACHE_CONTAINER._cache) == cache_size
+        assert TEST_CACHE_CONTAINER._cache == ref_cache
+        assert TEST_CACHE_CONTAINER.access_count() == ref_access_count
+
     for inputs, disable_caching, output, clear_cache, cache_size, ref_cache, ref_access_count in CALL_SEQUENCE:
         if clear_cache:
             TEST_CACHE_CONTAINER.clear()
-        kwargs = {"disable_caching": True} if disable_caching else {}
-        assert cached_addition(*inputs, **kwargs) == output
-        assert len(TEST_CACHE_CONTAINER._cache) == cache_size
-        assert TEST_CACHE_CONTAINER._cache == ref_cache
-        assert TEST_CACHE_CONTAINER._access_count == ref_access_count
+
+        if disable_caching:
+            with disable_results_caching(TEST_CACHE_CONTAINER):
+                check_fn()
+        else:
+            check_fn()

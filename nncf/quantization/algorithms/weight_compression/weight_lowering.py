@@ -356,7 +356,6 @@ def compress_weight(
     config: WeightCompressionConfig,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-    ov_model_params: Optional = None,
 ):
     """
     Compress weight using compression configuration.
@@ -366,7 +365,6 @@ def compress_weight(
     :param config: Compression configuration.
     :param precomputed_scale: Precomputed scale.
     :param precomputed_zero_point: Precomputed zero point.
-    :param ov_model_params: OpenVINO model parameters for acceleration.
     :return: The compressed weight and decompression parameters as instance of CompressedWeight
     """
     if not config.is_integer:
@@ -378,7 +376,7 @@ def compress_weight(
         )
         return CompressedWeight(compressed_weight, scale)
     compressed_weight, scale, zero_point = do_int_quantization(
-        weight, config, reduction_axes, precomputed_scale, precomputed_zero_point, ov_model_params
+        weight, config, reduction_axes, precomputed_scale, precomputed_zero_point
     )
 
     return CompressedWeight(compressed_weight, scale, zero_point)
@@ -433,7 +431,7 @@ def do_int_quantization(
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-    ov_model_params: Optional = None,
+    **kwargs,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
     Performs integer quantization on the given weight tensor.
@@ -444,7 +442,6 @@ def do_int_quantization(
         precomputed scale (and zero point) are provided.
     :param precomputed_scale: Optional precomputed scale tensor.
     :param precomputed_zero_point: Optional precomputed zero point tensor.
-    :param ov_model_params: OpenVINO model parameters for acceleration.
     :return: A tuple containing the compressed weights, scale, and zero point tensors.
     """
     if not config.is_integer:
@@ -455,40 +452,39 @@ def do_int_quantization(
             "for asymmetric quantization."
         )
 
-    accelerate_through_ov = is_openvino_available() and weight.backend != TensorBackend.torch
-    if not is_openvino_available() and weight.backend != TensorBackend.torch:
-        nncf_logger.info_once("Compression time may be improved after installing OpenVINO")
-
     # When reduction axes are not provided, assuming that the weights are already reshaped
     if config.group_size != -1 and reduction_axes is not None:
         # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
 
-    if not accelerate_through_ov:
-        # Reference implementation
-        if weight.backend == TensorBackend.ov:
-            weight = weight.as_numpy_tensor()
-        if weight.dtype != TensorDataType.float32:
-            weight = weight.astype(TensorDataType.float32)
+    # Optimized implementation
+    if is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy]:
+        from nncf.openvino.optimized_functions import do_int_quantization as do_int_quantization_ov
 
-        scale, zero_point = None, None
-        if precomputed_scale is None or (config.is_asym_mode and precomputed_zero_point is None):
-            if reduction_axes is None:
-                raise ValueError("Reduction axes are required for computing the scale and (zero point) vectors.")
-            scale, zero_point = calculate_integer_quantization_params(weight, reduction_axes, config)
-        if precomputed_scale is not None:
-            scale = precomputed_scale
-        if precomputed_zero_point is not None:
-            zero_point = precomputed_zero_point
+        return do_int_quantization_ov(
+            weight, config, reduction_axes, precomputed_scale, precomputed_zero_point, **kwargs
+        )
+    if not is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy]:
+        nncf_logger.info_once("Compression time may be improved after installing OpenVINO")
 
-        compressed_weights = calculate_quantized_weight(weight, config, scale, zero_point)
-        return compressed_weights, scale, zero_point
+    # Reference implementation
+    if weight.backend == TensorBackend.ov:
+        weight = weight.as_numpy_tensor()
+    if weight.dtype != TensorDataType.float32:
+        weight = weight.astype(TensorDataType.float32)
 
-    from nncf.openvino.optimized_functions import do_int_quantization as do_int_quantization_ov
+    scale, zero_point = None, None
+    if precomputed_scale is None or (config.is_asym_mode and precomputed_zero_point is None):
+        if reduction_axes is None:
+            raise ValueError("Reduction axes are required for computing the scale and (zero point) vectors.")
+        scale, zero_point = calculate_integer_quantization_params(weight, reduction_axes, config)
+    if precomputed_scale is not None:
+        scale = precomputed_scale
+    if precomputed_zero_point is not None:
+        zero_point = precomputed_zero_point
 
-    return do_int_quantization_ov(
-        weight, config, reduction_axes, precomputed_scale, precomputed_zero_point, ov_model_params
-    )
+    compressed_weights = calculate_quantized_weight(weight, config, scale, zero_point)
+    return compressed_weights, scale, zero_point
 
 
 def quantize_dequantize_weight(
@@ -498,7 +494,7 @@ def quantize_dequantize_weight(
     precomputed_scale: Optional[Tensor] = None,
     precomputed_zero_point: Optional[Tensor] = None,
     return_compressed_weight: Optional[bool] = False,
-    ov_model_params: Optional = None,
+    **kwargs,
 ) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor, Tensor]]:
     """
     First quantizes the given weight tensor and then dequantizes it back to obtain float32 values.
@@ -510,33 +506,31 @@ def quantize_dequantize_weight(
     :param precomputed_zero_point: Optional precomputed zero point tensor.
     :param return_compressed_weight: If True, besides decompressed weight will also return compressed weight, scale,
         (and zero point).
-    :param ov_model_params: OpenVINO model parameters for acceleration.
     :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight, scale,
         (and zero point).
     """
-    accelerate_through_ov = is_openvino_available() and weight.backend != TensorBackend.torch
-    if not is_openvino_available() and weight.backend != TensorBackend.torch:
+    # Optimized implementation
+    if is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy]:
+        from nncf.openvino.optimized_functions import quantize_dequantize_weight as quantize_dequantize_weight_ov
+
+        return quantize_dequantize_weight_ov(
+            weight,
+            config,
+            reduction_axes,
+            precomputed_scale,
+            precomputed_zero_point,
+            return_compressed_weight,
+            **kwargs,
+        )
+    if not is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy]:
         nncf_logger.info_once("Compression time may be improved after installing OpenVINO")
 
-    if not accelerate_through_ov:
-        # Reference implementation
-        compressed_weight, scale, zero_point = do_int_quantization(
-            weight, config, reduction_axes, precomputed_scale, precomputed_zero_point
-        )
-        decompressed_weight = do_int_dequantization(compressed_weight, scale, zero_point)
-        if return_compressed_weight:
-            return decompressed_weight, compressed_weight, scale, zero_point
-        else:
-            return decompressed_weight
-
-    from nncf.openvino.optimized_functions import quantize_dequantize_weight as quantize_dequantize_weight_ov
-
-    return quantize_dequantize_weight_ov(
-        weight,
-        config,
-        reduction_axes,
-        precomputed_scale,
-        precomputed_zero_point,
-        return_compressed_weight,
-        ov_model_params,
+    # Reference implementation
+    compressed_weight, scale, zero_point = do_int_quantization(
+        weight, config, reduction_axes, precomputed_scale, precomputed_zero_point
     )
+    decompressed_weight = do_int_dequantization(compressed_weight, scale, zero_point)
+    if return_compressed_weight:
+        return decompressed_weight, compressed_weight, scale, zero_point
+    else:
+        return decompressed_weight

@@ -11,6 +11,8 @@
 
 from typing import Optional, Tuple, Union
 
+from nncf.common.utils.caching import disable_results_caching
+from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.optimized_functions.models import OVModelParameters
 from nncf.openvino.optimized_functions.models import get_astype_model
 from nncf.openvino.optimized_functions.models import get_compress_decompress_weight_model
@@ -30,7 +32,7 @@ def do_int_quantization(
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-    ov_model_params: Optional = None,
+    **kwargs,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
     Quantizes the given weight tensor.
@@ -41,14 +43,16 @@ def do_int_quantization(
         precomputed scale (and zero point) are provided.
     :param precomputed_scale: Optional precomputed scale tensor.
     :param precomputed_zero_point: Optional precomputed zero point tensor.
-    :param ov_model_params: OpenVINO model parameters for acceleration.
     :return: A tuple containing the compressed weights, scale, and zero point tensors.
     """
     weight_shape = weight.shape
     scale_shape = None if precomputed_scale is None else precomputed_scale.shape
     zero_point_shape = None if precomputed_zero_point is None else precomputed_zero_point.shape
 
-    ov_model_params = OVModelParameters() if ov_model_params is None else ov_model_params.clone()
+    ov_model_params = OVModelParameters(
+        dynamic_shapes=kwargs.get("dynamic_shapes") is True,
+        convertable_division=kwargs.get("convertable_division") is True,
+    )
     ov_model_params.input_dtypes["weight"] = weight.dtype
     if precomputed_scale is not None:
         ov_model_params.input_dtypes["scale"] = precomputed_scale.dtype
@@ -56,7 +60,7 @@ def do_int_quantization(
         ov_model_params.input_dtypes["zero_point"] = precomputed_zero_point.dtype
     if config.num_bits == 4 and weight.backend == TensorBackend.ov:
         # Return ov tensors in target precision to seamlessly insert them into openvino model later
-        ov_model_params.return_ov_tensors = weight.backend == TensorBackend.ov
+        ov_model_params.return_ov_tensors = True
         compressed_weight_dtype = TensorDataType.uint4 if config.is_asym_mode else TensorDataType.int4
         ov_model_params.output_dtypes.update(
             {"compressed_weight": compressed_weight_dtype, "zero_point": compressed_weight_dtype}
@@ -103,7 +107,7 @@ def quantize_dequantize_weight(
     precomputed_scale: Optional[Tensor] = None,
     precomputed_zero_point: Optional[Tensor] = None,
     return_compressed_weight: Optional[bool] = False,
-    ov_model_params: Optional = None,
+    **kwargs,
 ) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor, Tensor]]:
     """
     Quantizes the given weight tensor and then dequantizes it back to obtain float32 values.
@@ -116,7 +120,6 @@ def quantize_dequantize_weight(
     :param precomputed_zero_point: Optional precomputed zero point tensor.
     :param return_compressed_weight: If True, besides decompressed weight will also return compressed weight, scale,
         (and zero point).
-    :param ov_model_params: OpenVINO model parameters for acceleration.
     :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight, scale,
         (and zero point).
     """
@@ -129,7 +132,10 @@ def quantize_dequantize_weight(
     scale_shape = precomputed_scale.shape if precomputed_scale is not None else None
     zero_point_shape = precomputed_zero_point.shape if precomputed_zero_point is not None else None
 
-    ov_model_params = OVModelParameters() if ov_model_params is None else ov_model_params.clone()
+    ov_model_params = OVModelParameters(
+        dynamic_shapes=kwargs.get("dynamic_shapes") is True,
+        convertable_division=kwargs.get("convertable_division") is True,
+    )
     ov_model_params.input_dtypes["weight"] = weight.dtype
     if precomputed_scale is not None:
         ov_model_params.input_dtypes["scale"] = precomputed_scale.dtype
@@ -176,9 +182,9 @@ def astype(a: Tensor, dtype: TensorDataType) -> Tensor:
     ov_model_params = OVModelParameters(
         input_dtypes={"input": a.dtype},
         output_dtypes={"output": dtype},
-        recompile=True,
         release_memory=False,
         return_ov_tensors=True,
     )
-    model = get_astype_model(ov_model_params, tuple(a.shape))
+    with disable_results_caching(OV_MODEL_CACHE):
+        model = get_astype_model(ov_model_params, tuple(a.shape))
     return model([Tensor(a)])[0]

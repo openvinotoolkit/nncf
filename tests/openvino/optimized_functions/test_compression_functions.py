@@ -20,7 +20,7 @@ import pytest
 
 import nncf.openvino.optimized_functions as opt_fns
 from nncf import CompressWeightsMode
-from nncf.common.utils.caching import ResultsCacheContainer
+from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
@@ -56,7 +56,7 @@ COMPRESSION_CONFIGS = [
 
 REDUCTION_AXES = (1,)
 
-RANDOM_TENSOR_CACHE_CONTAINER = ResultsCacheContainer()
+RANDOM_TENSOR_CACHE_CONTAINER = ResultsCache()
 
 
 @cache_results(RANDOM_TENSOR_CACHE_CONTAINER)

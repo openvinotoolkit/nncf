@@ -19,6 +19,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_reduction_axes
+from nncf.common.utils.caching import disable_results_caching
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
@@ -35,8 +36,8 @@ from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
-from nncf.openvino.optimized_functions import OVModelParameters
 from nncf.openvino.optimized_functions import clear_ov_model_cache
+from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.rt_info import dump_parameters
 from nncf.openvino.statistics.collectors import OVMaxVarianceReducer
 from nncf.openvino.statistics.collectors import OVMeanAbsMaxReducer
@@ -238,14 +239,14 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             raise nncf.ParameterNotSupportedError(f"{compression_config.mode.value} is not supported.")
 
         original_shape = weight.shape
-        compressed_weight = compress_weight(
-            weight,
-            reduction_axes,
-            compression_config,
-            layer_scales,
-            layer_zero_points,
-            OVModelParameters(recompile=True, release_memory=False),
-        )
+        with disable_results_caching(OV_MODEL_CACHE):
+            compressed_weight = compress_weight(
+                weight,
+                reduction_axes,
+                compression_config,
+                layer_scales,
+                layer_zero_points,
+            )
 
         compressed_const = create_ov_const_from_tensor(
             compressed_weight.tensor, compression_dtype, name=const_node_name
@@ -337,6 +338,8 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         # reset name_to_node_mapping
         self.name_to_node_mapping = None
 
+        clear_ov_model_cache()
+
         return model
 
     @staticmethod
@@ -344,9 +347,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: ov.Model, parameters: Dict, algo_name: Optional[str] = "quantization", path: Optional[List] = None
     ) -> None:
         dump_parameters(model, parameters, algo_name, path)
-
-    def __del__(self):
-        clear_ov_model_cache()
 
 
 class OVAWQAlgoAlgoBackend(AWQAlgoBackend, OVWeightCompressionAlgoBackend):

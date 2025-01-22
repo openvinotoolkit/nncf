@@ -20,7 +20,6 @@ from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.common.utils.backend import is_openvino_available
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
@@ -256,13 +255,9 @@ class ScaleEstimation:
         zero_scale = 0.001
         zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
-        if is_openvino_available():
-            # This is required for alignment with a previous OpenVINO models implementation
-            from nncf.openvino.optimized_functions import OVModelParameters
-
-            ov_model_params = OVModelParameters(dynamic_shapes=False, convertable_division=True)
-        else:
-            ov_model_params = None
+        # This is required for alignment with a previous OpenVINO models implementation
+        # TODO(Nikita Savelyev): remove this
+        opt_fns_kwargs = dict(dynamic_shapes=False, convertable_division=True)
 
         # iterative rectification of initial scale
         for i in range(initial_steps):
@@ -278,7 +273,7 @@ class ScaleEstimation:
                     config,
                     precomputed_scale=near_to_ideal_scale,
                     precomputed_zero_point=zp,
-                    ov_model_params=ov_model_params,
+                    **opt_fns_kwargs,
                 )
 
             q_weights_ = fns.zeros_like(original_weight) + out
@@ -313,7 +308,7 @@ class ScaleEstimation:
                         config,
                         precomputed_scale=near_to_ideal_scale,
                         precomputed_zero_point=zp,
-                        ov_model_params=ov_model_params,
+                        **opt_fns_kwargs,
                     )
                 compressed_weights = fns.zeros_like(original_weight) + out
                 target, zero_mask = get_target_zero_mask(compressed_weights, zp)
@@ -332,7 +327,7 @@ class ScaleEstimation:
                     config,
                     precomputed_scale=scaled_scale,
                     precomputed_zero_point=zp,
-                    ov_model_params=ov_model_params,
+                    **opt_fns_kwargs,
                 )
             compressed_weights = fns.zeros_like(original_weight) + out
 
@@ -350,7 +345,7 @@ class ScaleEstimation:
                     config,
                     precomputed_scale=near_to_ideal_scale,
                     precomputed_zero_point=zp,
-                    ov_model_params=ov_model_params,
+                    **opt_fns_kwargs,
                 )
             q_weights_ = fns.zeros_like(original_weight) + out
 

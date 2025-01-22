@@ -12,6 +12,7 @@
 import logging
 import sys
 from functools import lru_cache
+from typing import cast
 
 
 class NNCFLogger(logging.Logger):
@@ -19,18 +20,32 @@ class NNCFLogger(logging.Logger):
         super().__init__(name, level)
 
     @lru_cache(None)
-    def debug_once(self, msg: str) -> None:
-        self.debug(msg)
+    def _log_once(self, level: int, msg: str) -> None:
+        self.log(level, msg)
 
-    @lru_cache(None)
+    def debug_once(self, msg: str) -> None:
+        """
+        Log a message at the DEBUG level, ensuring the message is logged only once.
+        """
+        self._log_once(logging.DEBUG, msg)
+
     def info_once(self, msg: str) -> None:
-        self.info(msg)
+        """
+        Log a message at the INFO level, ensuring the message is logged only once.
+        """
+        self._log_once(logging.INFO, msg)
+
+    def warning_once(self, msg: str) -> None:
+        """
+        Log a message at the WARNING level, ensuring the message is logged only once.
+        """
+        self._log_once(logging.WARNING, msg)
 
 
 NNCF_LOGGER_NAME = "nncf"
 
 logging.setLoggerClass(NNCFLogger)
-nncf_logger: NNCFLogger = logging.getLogger(NNCF_LOGGER_NAME)  # type: ignore
+nncf_logger = cast(NNCFLogger, logging.getLogger(NNCF_LOGGER_NAME))
 nncf_logger.propagate = False
 
 stdout_handler = logging.StreamHandler(sys.stdout)
