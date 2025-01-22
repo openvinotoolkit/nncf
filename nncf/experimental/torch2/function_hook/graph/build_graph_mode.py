@@ -192,9 +192,11 @@ class GraphBuilderMode(FunctionHookMode):
             if output.grad_fn.name() == "TransposeBackward0":
                 fn_name = "transpose"
                 # grad_fn collect arguments as _saved_dim0=18446744073709551614
+                # Use static arguments for .mT
+                # https://pytorch.org/docs/stable/tensors.html#torch.Tensor.mT
                 fn_kwargs = {
-                    "dim0": -(2**64 - output.grad_fn._saved_dim0),  # type: ignore[attr-defined]
-                    "dim1": -(2**64 - output.grad_fn._saved_dim1),  # type: ignore[attr-defined]
+                    "dim0": -2,
+                    "dim1": -1,
                 }
             if output.grad_fn.name() == "PermuteBackward0":
                 fn_name = "permute"

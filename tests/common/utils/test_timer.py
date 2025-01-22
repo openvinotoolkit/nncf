@@ -17,7 +17,7 @@ from nncf.common.utils.timer import timer
 
 def test_timer(nncf_caplog):
     with timer() as t:
-        time.sleep(1)
+        time.sleep(1.2)
 
     t()
 
