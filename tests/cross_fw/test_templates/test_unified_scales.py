@@ -47,6 +47,5 @@ class TemplateTestUnifiedScales:
         nncf_graph = NNCFGraphFactory.create(backend_model)
         algo = MinMaxQuantization()
         algo._set_backend_entity(backend_model)
-        algo._init_cache()
-        _, groups = algo._find_quantization_target_points(backend_model, nncf_graph)
+        _, groups = algo._get_quantization_target_points(backend_model, nncf_graph)
         assert [[target.target_node_name for target in groups] for groups in groups] == unified_group
