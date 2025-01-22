@@ -44,7 +44,6 @@ jobs:
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
           python-version: 3.10.14
-          cache: pip
       - name: cpuinfo
         run: cat /proc/cpuinfo
       - name: Install test requirements
@@ -96,7 +95,6 @@ jobs:
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
           python-version: "3.10"
-          cache: pip
       - uses: ilammy/msvc-dev-cmd@ed94116c4d30d2091601b81f339a2eaa1c2ba0a6 # v1.4.1
       - name: Install NNCF and test requirements
         run: |
