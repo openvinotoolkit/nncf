@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import openvino as ov
@@ -239,14 +240,13 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             raise nncf.ParameterNotSupportedError(f"{compression_config.mode.value} is not supported.")
 
         original_shape = weight.shape
-        with disable_results_caching(OV_MODEL_CACHE):
-            compressed_weight = compress_weight(
-                weight,
-                reduction_axes,
-                compression_config,
-                layer_scales,
-                layer_zero_points,
-            )
+        compressed_weight = compress_weight(
+            weight,
+            reduction_axes,
+            compression_config,
+            layer_scales,
+            layer_zero_points,
+        )
 
         compressed_const = create_ov_const_from_tensor(
             compressed_weight.tensor, compression_dtype, name=const_node_name
@@ -293,7 +293,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             const_node = self.name_to_node_mapping[const_node_name]
             const_node_output = const_node.output(0)
             const_dtype = const_node_output.get_element_type()
-            weight = get_const_value(const_node, cast_bf16_to_fp32=False)
+            weight = get_const_value(const_node, cast_bf16_to_fp32=bool(int(os.environ.get("NUMPY_COMPRESSION", "0"))))
             # Creation of ov.Tensor is required for two reasons:
             #   1. To be able to process BF16 weight properly
             #   2. To indicate that it is allowed for the compressed constant to be returned as int4/uint4 if needed

@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
@@ -458,7 +458,7 @@ def do_int_quantization(
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
 
     # Optimized implementation
-    if is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy]:
+    if is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy] and not bool(int(os.environ.get("NUMPY_COMPRESSION", "0"))):
         from nncf.openvino.optimized_functions import do_int_quantization as do_int_quantization_ov
 
         return do_int_quantization_ov(
@@ -512,7 +512,7 @@ def quantize_dequantize_weight(
         (and zero point).
     """
     # Optimized implementation
-    if is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy]:
+    if is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy] and not bool(int(os.environ.get("NUMPY_COMPRESSION", "0"))):
         from nncf.openvino.optimized_functions import quantize_dequantize_weight as quantize_dequantize_weight_ov
 
         return quantize_dequantize_weight_ov(

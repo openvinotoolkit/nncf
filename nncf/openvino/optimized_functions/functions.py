@@ -66,7 +66,13 @@ def do_int_quantization(
             {"compressed_weight": compressed_weight_dtype, "zero_point": compressed_weight_dtype}
         )
 
-    model = get_compress_weight_model(
+    import os
+    recompile = bool(int(os.environ.get("RECOMPILE", "0")))
+    ov_model_params.dynamic_shapes = bool(int(os.environ.get("DYNAMIC_COMPRESSION", "0")))
+    ov_model_params.release_memory = bool(int(os.environ.get("RELEASE_MEMORY", "0")))
+    ov_model_params.share_outputs = bool(int(os.environ.get("SHARE_OUTPUTS", "0")))
+
+    get_model_fn = lambda: get_compress_weight_model(
         ov_model_params,
         config,
         weight_shape,
@@ -74,6 +80,12 @@ def do_int_quantization(
         zero_point_shape,
         reduction_axes,
     )
+
+    if recompile:
+        with disable_results_caching(OV_MODEL_CACHE):
+            model = get_model_fn()
+    else:
+        model = get_model_fn()
 
     if precomputed_scale is None:
         # weight -> compressed_weight, scale, (zero_point)
