@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 
 from nncf import CompressWeightsMode
+from nncf.common.utils.caching import disable_results_caching
 from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.optimized_functions.models import OVModelParameters
 from nncf.openvino.optimized_functions.models import _infer_ov_model
@@ -204,7 +205,11 @@ def test_dynamic_shapes(model_getter, input_shapes, ref_cache_size, dynamic_shap
 def test_recompile(model_getter, recompile):
     # Check that with recompilation ov models are not cached
     OV_MODEL_CACHE.clear()
-    model_getter.get(ov_model_params_kwargs=dict(recompile=recompile))
+    if recompile:
+        with disable_results_caching(OV_MODEL_CACHE):
+            model_getter.get()
+    else:
+        model_getter.get()
     ref_size = 0 if recompile else (2 if model_getter._get_model_fn == get_compress_decompress_weight_model else 1)
     assert len(OV_MODEL_CACHE._cache) == ref_size
 
