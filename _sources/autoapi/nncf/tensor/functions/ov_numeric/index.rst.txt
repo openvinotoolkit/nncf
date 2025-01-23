@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.tensor.functions.ov_numeric`
+==========================================
+
+.. py:module:: nncf.tensor.functions.ov_numeric
+
+

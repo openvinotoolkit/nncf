@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.openvino.optimized_functions`
+===========================================
+
+.. py:module:: nncf.openvino.optimized_functions
+
+
