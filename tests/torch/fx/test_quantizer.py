@@ -24,17 +24,21 @@ import torch.utils.data.distributed
 import torchvision.models as models
 from torch.ao.quantization.quantize_pt2e import convert_pt2e
 from torch.ao.quantization.quantize_pt2e import prepare_pt2e
+from torch.ao.quantization.quantizer.quantizer import QuantizationSpec as TorchAOQuantizationSpec
 from torch.ao.quantization.quantizer.quantizer import Quantizer
+from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
 from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQuantizer
 from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x86_inductor_quantization_config
 
 import nncf
 from nncf.experimental.quantization.quantizers.openvino_quantizer import OpenVINOQuantizer
+from nncf.experimental.quantization.quantizers.torch_ao_adapter import _get_edge_or_node_to_qspec
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.quantization.quantize_pt2e import quantize_pt2e
 from tests.torch import test_models
 from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.test_compressed_graph import check_graph
+from tests.torch.test_models.synthetic import ModelForGraphBuildingTest
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
 
@@ -190,3 +194,32 @@ def test_openvino_quantizer_with_torch_ao_convert_pt2e(model_case: ModelCase, qu
         FX_QUANTIZED_DIR_NAME / "ao_export_quantization_OpenVINOQuantizer",
         extended=True,
     )
+
+
+TorchAOSharedQuantizationSpecTestCases = (
+    (
+        ModelCase(ModelForGraphBuildingTest, "unified_scales_test_model", ModelForGraphBuildingTest.INPUT_SHAPES[0]),
+        ("relu", "conv_transpose2d"),
+    ),
+)
+
+
+@pytest.mark.parametrize(
+    "model_case,unified_scale_node_names",
+    TorchAOSharedQuantizationSpecTestCases,
+    ids=[m[0].model_id for m in TorchAOSharedQuantizationSpecTestCases],
+)
+def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(model_case, unified_scale_node_names):
+    fx_model, _ = _build_torch_fx_model(model_case)
+    quantizer = OpenVINOQuantizer()
+    fx_model = quantizer.transform_for_annotation(fx_model)
+    quantizer.annotate(fx_model)
+
+    actual_annotation = _get_edge_or_node_to_qspec(fx_model)
+    for edge_or_node, annotation in actual_annotation.items():
+        if isinstance(edge_or_node, torch.fx.Node) and edge_or_node.name == unified_scale_node_names[1]:
+            assert isinstance(annotation, TorchAOSharedQuantizationSpec)
+            assert annotation.edge_or_node.name == unified_scale_node_names[0]
+            assert isinstance(actual_annotation[annotation.edge_or_node], TorchAOQuantizationSpec)
+            return
+    raise RuntimeError(f"Node {unified_scale_node_names[1]} should be annotated as quantizable")

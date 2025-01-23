@@ -22,6 +22,7 @@ from torch.ao.quantization.quantizer.quantizer import QuantizationSpecBase as To
 from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuantizer
 from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationRule
 from nncf.common.quantization.quantizer_setup import QuantizationPointBase
@@ -51,6 +52,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
 
     def __init__(
         self,
+        *,
         mode: Optional[QuantizationMode] = None,
         preset: Optional[QuantizationPreset] = None,
         target_device: TargetDevice = TargetDevice.ANY,
@@ -117,9 +119,19 @@ class OpenVINOQuantizer(TorchAOQuantizer):
             root_quantizer_id = self._get_unified_scales_root_quantizer_id(
                 nncf_graph, quantizer_ids, quantization_setup
             )
-            qp = quantization_setup.quantization_points[root_quantizer_id]
-            root_edge_or_node, annotation = self._get_edge_or_node_and_annotation(graph, qp, node_vs_torch_annotation)
-            qspec = self._get_inductor_qspec_from_qp(qp)
+            root_qp = quantization_setup.quantization_points[root_quantizer_id]
+
+            if any(root_qp.qconfig != quantization_setup.quantization_points[q_id].qconfig for q_id in quantizer_ids):
+                qps = [quantization_setup.quantization_points[q_id] for q_id in quantizer_ids]
+                raise nncf.InternalError(
+                    "Different quantization configs are set to one unified scale group:"
+                    f"{[(qp.insertion_point.__dict__, str(qp.qconfig)) for qp in qps]}"
+                )
+
+            root_edge_or_node, annotation = self._get_edge_or_node_and_annotation(
+                graph, root_qp, node_vs_torch_annotation
+            )
+            qspec = self._get_torch_ao_qspec_from_qp(root_qp)
             self._fill_torch_ao_annotation(root_edge_or_node, qspec, annotation)
 
             while quantizer_ids:
@@ -137,7 +149,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
 
         for qp in non_unified_quantization_points.values():
             edge_or_node, annotation = self._get_edge_or_node_and_annotation(graph, qp, node_vs_torch_annotation)
-            qspec = self._get_inductor_qspec_from_qp(qp)
+            qspec = self._get_torch_ao_qspec_from_qp(qp)
             self._fill_torch_ao_annotation(edge_or_node, qspec, annotation)
 
         for node, annotation in node_vs_torch_annotation.items():
@@ -228,7 +240,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
             annotation_to_update.input_qspec_map[edge_or_node[0]] = qspec
 
     @staticmethod
-    def _get_inductor_qspec_from_qp(qp: QuantizationPointBase) -> TorchAOQuantizationSpec:
+    def _get_torch_ao_qspec_from_qp(qp: QuantizationPointBase) -> TorchAOQuantizationSpec:
         """
         Retrieves the quantization configuration from the given quantization point and
         converts it into a TorchAOQuantizationSpec.
