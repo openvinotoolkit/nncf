@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TypeVar
+from typing import TypeVar, cast
 
 import nncf
 from nncf.common.engine import Engine
@@ -35,19 +35,27 @@ class NNCFGraphFactory:
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
-            from nncf.onnx.graph.nncf_graph_builder import GraphConverter
+            from onnx import ModelProto  # type: ignore
 
-            return GraphConverter.create_nncf_graph(model)
+            from nncf.onnx.graph.nncf_graph_builder import GraphConverter as ONNXGraphConverter
+
+            return ONNXGraphConverter.create_nncf_graph(cast(ModelProto, model))
         if model_backend == BackendType.OPENVINO:
-            from nncf.openvino.graph.nncf_graph_builder import GraphConverter
+            from openvino import Model  # type: ignore
 
-            return GraphConverter.create_nncf_graph(model)
+            from nncf.openvino.graph.nncf_graph_builder import GraphConverter as OVGraphConverter
+
+            return OVGraphConverter.create_nncf_graph(cast(Model, model))
         if model_backend == BackendType.TORCH_FX:
-            from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
+            from torch.fx import GraphModule
 
-            return GraphConverter.create_nncf_graph(model)
+            from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter as FXGraphConverter
+
+            return FXGraphConverter.create_nncf_graph(cast(GraphModule, model))
         if model_backend == BackendType.TORCH:
-            return model.nncf.get_graph()
+            from nncf.torch.nncf_network import NNCFNetwork
+
+            return cast(NNCFNetwork, model).nncf.get_graph()
         raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific graph because {} is not supported!".format(model_backend.value)
         )
@@ -65,21 +73,28 @@ class ModelTransformerFactory:
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
+            from onnx import ModelProto
+
             from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 
-            return ONNXModelTransformer(model)
+            return ONNXModelTransformer(cast(ModelProto, model))
         if model_backend == BackendType.OPENVINO:
+            from openvino import Model
+
             from nncf.openvino.graph.model_transformer import OVModelTransformer
 
-            return OVModelTransformer(model, inplace=inplace)
+            return OVModelTransformer(cast(Model, model), inplace=inplace)
         if model_backend == BackendType.TORCH:
             from nncf.torch.model_transformer import PTModelTransformer
+            from nncf.torch.nncf_network import NNCFNetwork
 
-            return PTModelTransformer(model)
+            return PTModelTransformer(cast(NNCFNetwork, model))
         if model_backend == BackendType.TORCH_FX:
+            from torch.fx import GraphModule
+
             from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 
-            return FXModelTransformer(model)
+            return FXModelTransformer(cast(GraphModule, model))
         raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific model transformer because {} is not supported!".format(model_backend.value)
         )
@@ -96,17 +111,23 @@ class EngineFactory:
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
+            from onnx import ModelProto
+
             from nncf.onnx.engine import ONNXEngine
 
-            return ONNXEngine(model)
+            return ONNXEngine(cast(ModelProto, model))
         if model_backend == BackendType.OPENVINO:
+            from openvino import Model
+
             from nncf.openvino.engine import OVNativeEngine
 
-            return OVNativeEngine(model)
+            return OVNativeEngine(cast(Model, model))
         if model_backend in (BackendType.TORCH, BackendType.TORCH_FX):
+            from torch.nn import Module
+
             from nncf.torch.engine import PTEngine
 
-            return PTEngine(model)
+            return PTEngine(cast(Module, model))
         raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific engine because {} is not supported!".format(model_backend.value)
         )

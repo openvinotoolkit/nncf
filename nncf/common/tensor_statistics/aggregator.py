@@ -78,7 +78,7 @@ class StatisticsAggregator(ABC):
         engine = factory.EngineFactory.create(model_with_outputs)
         iterations_number = self._get_iterations_number()
         processed_samples = 0
-        for input_data in track(  # type: ignore
+        for input_data in track(
             islice(self.dataset.get_inference_data(), iterations_number),
             total=iterations_number,
             description="Statistics collection",

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import re
-from typing import List, Optional, Set, Union
+from typing import Iterable, List, Optional, Sequence, Union
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -22,7 +22,7 @@ from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
 
 
-def matches_any(tested_str: str, strs_to_match_to: Union[List[str], Set[str], str]) -> bool:
+def matches_any(tested_str: str, strs_to_match_to: Union[Iterable[str], str, None]) -> bool:
     """
     Return True if tested_str matches at least one element in strs_to_match_to.
 
@@ -52,8 +52,8 @@ def matches_any(tested_str: str, strs_to_match_to: Union[List[str], Set[str], st
 
 def should_consider_scope(
     serializable_id: Union[QuantizerId, NNCFNodeName],
-    ignored_scopes: Union[List[str], Set[str]],
-    target_scopes: Optional[List[str]] = None,
+    ignored_scopes: Optional[Sequence[str]],
+    target_scopes: Optional[Sequence[str]] = None,
 ) -> bool:
     """
     Used when an entity arising during compression has to be compared to an allowlist or a denylist of strings.
@@ -90,7 +90,7 @@ def get_not_matched_scopes(scope: Union[List[str], str, IgnoredScope, None], nod
     elif isinstance(scope, IgnoredScope):
         patterns = convert_ignored_scope_to_list(scope)
     else:
-        patterns = scope
+        patterns = list(scope)
 
     if not patterns:
         return []

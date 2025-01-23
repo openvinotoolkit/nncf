@@ -1,0 +1,9 @@
+strict digraph  {
+"0 Parameter_Conv.0" [id=0, type=Parameter];
+"1 Convolution_72" [id=1, type=Convolution];
+"2 Result_Conv.0" [id=2, type=Result];
+"3 Conv/Constant_39" [id=3, type=Constant];
+"0 Parameter_Conv.0" -> "1 Convolution_72"  [label="[99, 3, 4, 2]", style=solid];
+"1 Convolution_72" -> "2 Result_Conv.0"  [label="[99, 3, 4, 2]", style=solid];
+"3 Conv/Constant_39" -> "1 Convolution_72"  [label="[3, 3, 1, 1]", style=solid];
+}

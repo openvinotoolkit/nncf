@@ -230,19 +230,6 @@ QUANTIZATION_MODELS = [
         "batch_size": 64,
     },
     {
-        "reported_name": "timm/levit_128",
-        "model_id": "levit_128",
-        "pipeline_cls": ImageClassificationTimm,
-        "compression_params": {
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=0.05)
-            ),
-        },
-        "backends": NNCF_PTQ_BACKENDS,
-    },
-    {
         "reported_name": "timm/mobilenetv2_050",
         "model_id": "mobilenetv2_050",
         "pipeline_cls": ImageClassificationTimm,

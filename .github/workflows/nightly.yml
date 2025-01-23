@@ -39,7 +39,6 @@ jobs:
       - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
           python-version: 3.10.14
-          cache: pip
       - name: Install NNCF and test requirements
         run: pip install -e . -r tests/tensorflow/requirements.txt
       - name: Print installed modules
@@ -48,4 +47,11 @@ jobs:
         run:  pytest tests/tensorflow -m 'nightly'
 
   weight-compression:
+    if: github.repository_owner == 'openvinotoolkit'
     uses: ./.github/workflows/conformance_weight_compression.yml
+
+  precommit-windows:
+    if: github.repository_owner == 'openvinotoolkit'
+    uses: ./.github/workflows/call_precommit_windows.yml
+    with:
+      python_version: "3.10"

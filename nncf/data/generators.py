@@ -81,7 +81,7 @@ def generate_text_data(
     step_num = max(1, vocab_size // dataset_size)
     ids_counter = 0
 
-    with track(total=dataset_size, description="Generating text data") as pbar:
+    with track[None](total=dataset_size, description="Generating text data") as pbar:
         while len(generated_data) < dataset_size:
             # Creating the input for pre-generate step
             input_ids = torch.tensor([[ids_counter % vocab_size]]).to(model.device)
@@ -97,7 +97,7 @@ def generate_text_data(
 
             ids_counter += step_num
 
-            pbar.progress.update(pbar.task, advance=1)
+            pbar.update(advance=1)
             generated_data.extend(gen_text)
 
     return generated_data
