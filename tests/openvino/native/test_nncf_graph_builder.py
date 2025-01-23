@@ -101,6 +101,7 @@ def test_parallel_edges():
         (ov.Type.f16, Dtype.FLOAT),
         (ov.Type.f32, Dtype.FLOAT),
         (ov.Type.f64, Dtype.FLOAT),
+        (ov.Type.nf4, Dtype.FLOAT),
         (ov.Type.i4, Dtype.INTEGER),
         (ov.Type.i8, Dtype.INTEGER),
         (ov.Type.i16, Dtype.INTEGER),
@@ -124,7 +125,6 @@ def test_convert_to_nncf_dtype_supported_types(ov_type: ov.Type, expected_nncf_d
 @pytest.mark.parametrize(
     "ov_type",
     [
-        ov.Type.nf4,
         ov.Type.undefined,
         ov.Type.f8e4m3,
         ov.Type.f8e5m2,
