@@ -113,7 +113,7 @@ def preprocess_for_train(image, label):
 
 
 train_dataset = tfds.load("imagenette/320px-v2", split="train", shuffle_files=True, as_supervised=True)
-train_dataset = train_dataset.map(preprocess_for_train).shuffle(1024).batch(128)
+train_dataset = train_dataset.map(preprocess_for_train).batch(64)
 
 val_dataset = tfds.load("imagenette/320px-v2", split="validation", shuffle_files=False, as_supervised=True)
 val_dataset = val_dataset.map(preprocess_for_eval).batch(128)
@@ -150,12 +150,15 @@ calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
 tf_quantized_model = nncf.quantize(tf_model, calibration_dataset)
 
 tf_quantized_model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5),
+    optimizer=tf.keras.optimizers.RMSprop(learning_rate=1e-5),
     loss=tf.keras.losses.CategoricalCrossentropy(),
     metrics=[tf.keras.metrics.CategoricalAccuracy()],
 )
 
-tf_quantized_model.fit(train_dataset, epochs=3, verbose=1)
+# To minimize the example's runtime, we train for only 1 epoch. This is sufficient to demonstrate
+# that the quantized model produced by QAT is more accurate than the one produced by PTQ.
+# However, training for more than 1 epoch would further improve the quantized model's accuracy.
+tf_quantized_model.fit(train_dataset, epochs=1, verbose=1)
 
 # Removes auxiliary layers and operations added during the quantization process,
 # resulting in a clean, fully quantized model ready for deployment.
