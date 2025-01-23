@@ -117,7 +117,7 @@ def get_module_by_name(module_name: str, model: torch.nn.Module) -> torch.nn.Mod
 
 def get_const_data(const_node: NNCFNode, model: NNCFNetwork) -> torch.Tensor:
     """
-    Retrieves a constant tensor associated with a given node.
+    Retrieves a detached constant tensor associated with a given node.
 
     :param const_node: The node associated with const data.
     :param model: The NNCFNetwork object.
@@ -128,8 +128,8 @@ def get_const_data(const_node: NNCFNode, model: NNCFNetwork) -> torch.Tensor:
     module = get_module_by_name(module_name, model)
     data = getattr(module, const_attr_name)
     if isinstance(data, torch.nn.Parameter):
-        return data.data
-    return data
+        return data.data.detach()
+    return data.detach()
 
 
 def get_const_data_on_port(node: NNCFNode, port_id: int, model: NNCFNetwork) -> torch.Tensor:

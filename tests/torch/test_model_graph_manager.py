@@ -239,10 +239,15 @@ def test_get_set_const_data():
     graph = model.nncf.get_graph()
     const_node = graph.get_node_by_name("conv.bias")
 
+    assert model.conv.bias.requires_grad
+
     data = get_const_data(const_node, model)
+    assert not data.requires_grad
     assert torch.all(model.conv.bias.data == data)
+
     set_const_data(torch.ones_like(data), const_node, model)
     assert torch.all(model.conv.bias.data == torch.ones_like(data))
+    assert model.conv.bias.requires_grad
 
 
 @pytest.mark.parametrize(
