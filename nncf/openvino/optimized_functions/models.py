@@ -134,20 +134,16 @@ def _infer_ov_model(
             raise ValueError(f"Expected input '{input_name}' to be {expected_dtype}. But found: {actual_dtype}.")
 
     # Infer the model
-    # TODO (Nikita Savelyev): Investigate the approach when we always infer via infer request creation
+    if compiled_model._infer_request is None:
+        compiled_model._infer_request = compiled_model.create_infer_request()
+    infer_request = compiled_model._infer_request
+
     inputs = [inp.data for inp in inputs]
-    if ov_model_params.return_ov_tensors:
-        infer_request = compiled_model.create_infer_request()
-        infer_request.infer(
-            inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs
-        )
-        outputs = [infer_request.get_output_tensor(i) for i in range(len(infer_request.results))]
-    else:
-        outputs = compiled_model(
-            inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs
-        )
-        outputs = [outputs[i] for i in range(len(outputs))]
-    outputs = [Tensor(it) for it in outputs]
+    outputs = infer_request.infer(
+        inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs
+    )
+    outputs = [infer_request.get_output_tensor(i) for i in range(len(outputs))]
+    outputs = [Tensor(it if ov_model_params.return_ov_tensors else it.data) for it in outputs]
 
     if ov_model_params.release_memory:
         compiled_model.release_memory()
