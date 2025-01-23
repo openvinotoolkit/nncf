@@ -110,10 +110,14 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         nncf_graph = GraphConverter.create_nncf_graph(model)
         quantization_setup = self.get_quantization_setup(model, nncf_graph)
 
-        non_unified_quantization_points = quantization_setup.quantization_points.copy()
-
         graph = model.graph
         node_vs_torch_annotation = defaultdict(TorchAOQuantizationAnnotation)
+
+        for qp in quantization_setup.quantization_points.values():
+            edge_or_node, annotation = self._get_edge_or_node_and_annotation(graph, qp, node_vs_torch_annotation)
+            qspec = self._get_torch_ao_qspec_from_qp(qp)
+            self._fill_torch_ao_annotation(edge_or_node, qspec, annotation)
+
         for quantizer_ids in quantization_setup.unified_scale_groups.values():
 
             root_quantizer_id = self._get_unified_scales_root_quantizer_id(
@@ -128,15 +132,11 @@ class OpenVINOQuantizer(TorchAOQuantizer):
                     f"{[(qp.insertion_point.__dict__, str(qp.qconfig)) for qp in qps]}"
                 )
 
-            root_edge_or_node, annotation = self._get_edge_or_node_and_annotation(
-                graph, root_qp, node_vs_torch_annotation
-            )
-            qspec = self._get_torch_ao_qspec_from_qp(root_qp)
-            self._fill_torch_ao_annotation(root_edge_or_node, qspec, annotation)
+            root_target_node = get_graph_node_by_name(graph, root_qp.insertion_point.target_node_name)
+            root_edge_or_node = self._get_edge_or_node(root_target_node, root_qp)
 
             while quantizer_ids:
                 quantizer_id = quantizer_ids.pop()
-                del non_unified_quantization_points[quantizer_id]
 
                 if quantizer_id == root_quantizer_id:
                     continue
@@ -144,13 +144,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
                 qspec = TorchAOSharedQuantizationSpec(root_edge_or_node)
                 qp = quantization_setup.quantization_points[quantizer_id]
                 edge_or_node, annotation = self._get_edge_or_node_and_annotation(graph, qp, node_vs_torch_annotation)
-
                 self._fill_torch_ao_annotation(edge_or_node, qspec, annotation)
-
-        for qp in non_unified_quantization_points.values():
-            edge_or_node, annotation = self._get_edge_or_node_and_annotation(graph, qp, node_vs_torch_annotation)
-            qspec = self._get_torch_ao_qspec_from_qp(qp)
-            self._fill_torch_ao_annotation(edge_or_node, qspec, annotation)
 
         for node, annotation in node_vs_torch_annotation.items():
             assert QUANT_ANNOTATION_KEY not in node.meta
