@@ -17,12 +17,16 @@ from tests.cross_fw.test_templates.test_unified_scales import TemplateTestUnifie
 
 class TestUnifiedScales(TemplateTestUnifiedScales):
     def get_backend_specific_model(self, model: torch.nn.Module) -> ov.Model:
-        input_shape = model.INPUT_SHAPE
+        q_input_shape = model.Q_INPUT_SHAPE
+        kv_input_shape = model.KV_INPUT_SHAPE
+
         backend_model = ov.convert_model(
             model,
             example_input=(
-                torch.randn(input_shape),
-                torch.randn(input_shape),
+                torch.ones(q_input_shape),
+                torch.ones(q_input_shape),
+                torch.ones(kv_input_shape),
+                torch.ones(kv_input_shape),
             ),
         )
 
