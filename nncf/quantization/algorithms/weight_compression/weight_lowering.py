@@ -465,7 +465,9 @@ def do_int_quantization(
             weight, config, reduction_axes, precomputed_scale, precomputed_zero_point, **kwargs
         )
     if not is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy]:
-        nncf_logger.info_once("Compression time may be improved after installing OpenVINO")
+        nncf_logger.info_once(
+            "OpenVINO optimizations are disabled. Install OpenVINO to enable them and improve the performance."
+        )
 
     # Reference implementation
     if weight.backend == TensorBackend.ov:
@@ -523,7 +525,9 @@ def quantize_dequantize_weight(
             **kwargs,
         )
     if not is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy]:
-        nncf_logger.info_once("Compression time may be improved after installing OpenVINO")
+        nncf_logger.info_once(
+            "OpenVINO optimizations are disabled. Install OpenVINO to enable them and improve the performance."
+        )
 
     # Reference implementation
     compressed_weight, scale, zero_point = do_int_quantization(

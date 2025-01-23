@@ -92,6 +92,7 @@ def cache_results(cache: ResultsCache) -> Callable[[TFunc], TFunc]:
 def disable_results_caching(cache: ResultsCache) -> Iterator[None]:
     """
     Context manager to disable caching of results for a block of code.
+
     :param cache: A cache container where results are stored.
     """
     if cache.enabled():
