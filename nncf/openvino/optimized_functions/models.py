@@ -134,6 +134,7 @@ def _infer_ov_model(
             raise ValueError(f"Expected input '{input_name}' to be {expected_dtype}. But found: {actual_dtype}.")
 
     # Infer the model
+    # TODO (Nikita Savelyev): Investigate the approach when we always infer via infer request creation
     inputs = [inp.data for inp in inputs]
     if ov_model_params.return_ov_tensors:
         infer_request = compiled_model.create_infer_request()
