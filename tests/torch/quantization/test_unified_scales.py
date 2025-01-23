@@ -718,12 +718,15 @@ def test_unified_scales_with_shared_nodes():
 
 class TestUnifiedScales(TemplateTestUnifiedScales):
     def get_backend_specific_model(self, model: torch.nn.Module) -> NNCFNetwork:
-        input_shape = model.INPUT_SHAPE
+        q_input_shape = model.Q_INPUT_SHAPE
+        kv_input_shape = model.KV_INPUT_SHAPE
         backend_model = wrap_model(
             model,
             (
-                torch.randn(input_shape),
-                torch.randn(input_shape),
+                torch.ones(q_input_shape),
+                torch.ones(q_input_shape),
+                torch.ones(kv_input_shape),
+                torch.ones(kv_input_shape),
             ),
             trace_parameters=True,
         )

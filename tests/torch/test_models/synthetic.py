@@ -665,16 +665,17 @@ class YOLO11N_SDPABlock(torch.nn.Module):
 
 
 class ConcatSDPABlock(torch.nn.Module):
-    INPUT_SHAPE = (2, 10, 6)
+    Q_INPUT_SHAPE = [2, 10, 6]
+    KV_INPUT_SHAPE = [2, 10, 12]
 
     def __init__(self):
         super().__init__()
 
-    def forward(self, x, y):
+    def forward(self, x, y, z, w):
         concatenated_input = torch.cat((x, y), dim=-1)
         query = concatenated_input
-        key = concatenated_input
-        value = concatenated_input
-        attn_output = torch.nn.functional.scaled_dot_product_attention(query, key, value, dropout_p=0.2)
+        key = z
+        value = w
+        attn_output = torch.nn.functional.scaled_dot_product_attention(query, key, value)
 
         return attn_output
