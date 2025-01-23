@@ -38,8 +38,8 @@ from nncf.experimental.torch.fx.quantization.quantize_pt2e import quantize_pt2e
 from tests.torch import test_models
 from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.test_compressed_graph import check_graph
-from tests.torch.test_models.synthetic import ModelForGraphBuildingTest
 from tests.torch.test_models.synthetic import ShortTransformer
+from tests.torch.test_models.synthetic import SimpleConcatModel
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
 
 FX_QUANTIZED_DIR_NAME = Path("fx") / "experimental"
@@ -198,8 +198,8 @@ def test_openvino_quantizer_with_torch_ao_convert_pt2e(model_case: ModelCase, qu
 
 TorchAOSharedQuantizationSpecTestCases = (
     (
-        ModelCase(ModelForGraphBuildingTest, "unified_scales_test_model", ModelForGraphBuildingTest.INPUT_SHAPES[0]),
-        ("relu", "conv_transpose2d"),
+        ModelCase(SimpleConcatModel, "unified_scales_test_model", SimpleConcatModel.INPUT_SHAPE),
+        ("conv2d", "conv2d_1"),
     ),
 )
 
@@ -209,11 +209,12 @@ TorchAOSharedQuantizationSpecTestCases = (
     TorchAOSharedQuantizationSpecTestCases,
     ids=[m[0].model_id for m in TorchAOSharedQuantizationSpecTestCases],
 )
-def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(model_case, unified_scale_node_names):
-    fx_model, _ = _build_torch_fx_model(model_case)
+def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(model_case: ModelCase, unified_scale_node_names):
+    model_case.model_builder()(torch.ones(model_case.input_shape))
+    fx_model, example_input = _build_torch_fx_model(model_case)
+
     quantizer = OpenVINOQuantizer()
-    fx_model = quantizer.transform_for_annotation(fx_model)
-    quantizer.annotate(fx_model)
+    prepared_model = prepare_pt2e(fx_model, quantizer)
 
     actual_annotation = _get_edge_or_node_to_qspec(fx_model)
     for edge_or_node, annotation in actual_annotation.items():
@@ -221,5 +222,21 @@ def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(model_case, unified_
             assert isinstance(annotation, TorchAOSharedQuantizationSpec)
             assert annotation.edge_or_node.name == unified_scale_node_names[0]
             assert isinstance(actual_annotation[annotation.edge_or_node], TorchAOQuantizationSpec)
-            return
-    raise RuntimeError(f"Node {unified_scale_node_names[1]} should be annotated as quantizable")
+            break
+    else:
+        raise RuntimeError(f"Node {unified_scale_node_names[1]} should be annotated as quantizable")
+
+    prepared_model(example_input)
+    ao_quantized_model = convert_pt2e(prepared_model)
+
+    nodes_visited = 0
+    for node in ao_quantized_model.graph.nodes:
+        if node.name in unified_scale_node_names:
+            dequantize_args = list(node.users)[0].args
+            assert abs(dequantize_args[1] - 0.01176275312) < torch.finfo(torch.float32).eps
+            assert dequantize_args[2:] == (127, 0, 255, torch.uint8)
+            nodes_visited += 1
+            if nodes_visited == 2:
+                break
+    else:
+        raise RuntimeError(f"Quantizers was not found for the unified scales pair {unified_scale_node_names}")

@@ -679,3 +679,24 @@ class ConcatSDPABlock(torch.nn.Module):
         attn_output = torch.nn.functional.scaled_dot_product_attention(query, key, value)
 
         return attn_output
+
+
+class SimpleConcatModel(torch.nn.Module):
+    INPUT_SHAPE = (1, 3, 3, 3)
+
+    def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(3, 1, 1, bias=False)
+        self.conv.weight.data = 0.5 * torch.ones_like(self.conv.weight.data)
+
+        self.conv1 = torch.nn.Conv2d(3, 1, 1, bias=False)
+        self.conv1.weight.data = 0.33 * torch.ones_like(self.conv1.weight.data)
+
+        self.conv2 = torch.nn.Conv2d(2, 1, 1, bias=False)
+        self.conv2.weight.data = 0.25 * torch.ones_like(self.conv2.weight.data)
+
+    def forward(self, x):
+        a = self.conv(x)
+        b = self.conv1(x)
+        c = torch.cat([a, b], dim=1)
+        return self.conv2(c)
