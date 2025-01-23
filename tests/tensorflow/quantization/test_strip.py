@@ -17,6 +17,8 @@ from tests.tensorflow.helpers import TFTensorListComparator
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_two_conv_test_model
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
+from tests.tensorflow.test_models.mobilenet_v2 import MobileNetV2
+from tests.tensorflow.test_models.retinanet import RetinaNet
 
 
 def test_strip():
@@ -89,3 +91,10 @@ def test_strip_api_do_copy(do_copy):
         assert id(stripped_model) != id(compressed_model)
     else:
         assert id(stripped_model) == id(compressed_model)
+
+
+@pytest.mark.parametrize("model_fn", (MobileNetV2, RetinaNet))
+def test_strip_api_no_compression(model_fn):
+    model = model_fn()
+    stripped_model = nncf.strip(model)
+    assert id(stripped_model) == id(model)
