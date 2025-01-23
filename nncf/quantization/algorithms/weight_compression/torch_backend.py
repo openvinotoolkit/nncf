@@ -37,12 +37,9 @@ from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatis
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
-from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
 from nncf.torch.dynamic_graph.scope import Scope
@@ -59,34 +56,6 @@ from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
-
-
-def _prepare_inputs(
-    tensor: torch.Tensor, scale: torch.Tensor, zero_point: Optional[torch.Tensor] = None
-) -> Tuple[Tensor, Tensor, Optional[Tensor]]:
-    tensor, scale = Tensor(tensor), Tensor(scale)
-    if zero_point is not None:
-        zero_point = Tensor(zero_point)
-    return tensor, scale, zero_point
-
-
-def get_compress_fn(config: WeightCompressionConfig) -> Callable[[Tuple], Tensor]:
-    def _forward_fn(inputs: Tuple) -> Tensor:
-        tensor, scale, zero_point = _prepare_inputs(*inputs)
-        quantized = calculate_quantized_weight(tensor, scale=scale, zero_point=zero_point, config=config)
-        return quantized.data
-
-    return _forward_fn
-
-
-def get_compress_decompress_fn(config: WeightCompressionConfig) -> Callable[[Tuple], Tensor]:
-    def _forward_fn(inputs: Tuple) -> Tensor:
-        tensor, scale, zero_point = _prepare_inputs(*inputs)
-        quantized = calculate_quantized_weight(tensor, scale=scale, zero_point=zero_point, config=config)
-        dequantized = do_int_dequantization(quantized, scale=scale, zero_point=zero_point)
-        return dequantized.data
-
-    return _forward_fn
 
 
 class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
@@ -240,14 +209,6 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
     ) -> None:
         pass
-
-    @staticmethod
-    def get_compress_decompress_pipeline(config: WeightCompressionConfig, w_shape, s_shape, z_p_shape=None):
-        return get_compress_decompress_fn(config)
-
-    @staticmethod
-    def get_compress_pipeline(config: WeightCompressionConfig, w_shape, s_shape, z_p_shape=None, return_nodes=False):
-        return get_compress_fn(config)
 
     @staticmethod
     def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:

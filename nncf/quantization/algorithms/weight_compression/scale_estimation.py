@@ -13,15 +13,14 @@ from copy import deepcopy
 from typing import Dict, List, Optional, Tuple, TypeVar
 
 import nncf
-from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging.track_progress import track
-from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
+from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight_and_fp4_scale
@@ -94,8 +93,6 @@ class ScaleEstimation:
         graph: NNCFGraph,
         all_weight_params: List[WeightCompressionParameters],
         statistics: Dict[str, WCTensorStatistic],
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
     ) -> Tuple[Dict[str, Tensor], Dict[str, Tensor]]:
         """
