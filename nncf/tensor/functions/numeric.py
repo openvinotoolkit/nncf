@@ -927,3 +927,16 @@ def tensor(
     :return: A tensor created from the given data.
     """
     return Tensor(get_numeric_backend_fn("tensor", backend)(data, dtype=dtype, device=device))
+
+
+@functools.singledispatch
+@tensor_guard
+def as_numpy_tensor(a: Tensor) -> Tensor:
+    """
+    Change backend of the tensor to numpy. Leads to data copying when tensor data type is bf16, u4 or i4. Otherwise,
+    there is no data copying.
+
+    :param a: Tensor to change backend for.
+    :return: Tensor in numpy backend.
+    """
+    return Tensor(as_numpy_tensor(a.data))

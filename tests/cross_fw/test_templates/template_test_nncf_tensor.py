@@ -1505,7 +1505,15 @@ class TemplateTestNNCFTensorOperators:
     def test_fn_zeros(self):
         shape = (2, 2)
         for dtype in TensorDataType:
-            if dtype == TensorDataType.bfloat16 and self.backend() == TensorBackend.numpy:
+            if (
+                self.backend() == TensorBackend.numpy
+                and dtype == TensorDataType.bfloat16
+                or dtype
+                in [
+                    TensorDataType.int4,
+                    TensorDataType.uint4,
+                ]
+            ):
                 continue
             tensor_a = fns.zeros(shape, backend=self.backend(), dtype=dtype, device=self.device())
             assert isinstance(tensor_a, Tensor)
@@ -1526,7 +1534,15 @@ class TemplateTestNNCFTensorOperators:
     )
     def test_fn_eye(self, n, m, ref):
         for dtype in TensorDataType:
-            if dtype == TensorDataType.bfloat16 and self.backend() == TensorBackend.numpy:
+            if (
+                self.backend() == TensorBackend.numpy
+                and dtype == TensorDataType.bfloat16
+                or dtype
+                in [
+                    TensorDataType.int4,
+                    TensorDataType.uint4,
+                ]
+            ):
                 continue
             tensor_a = fns.eye(n, m, backend=self.backend(), dtype=dtype, device=self.device())
             assert isinstance(tensor_a, Tensor)

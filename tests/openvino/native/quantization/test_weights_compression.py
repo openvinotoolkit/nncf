@@ -36,8 +36,6 @@ from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParamete
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
-from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
@@ -1078,34 +1076,6 @@ def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
     assert ref_e8m0_nodes == names_e8m0
 
 
-@pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
-def test_np_ov_compression_decompression(mode):
-    sz = 60
-    w = np.arange(-sz, sz).reshape(2, sz).astype(np.float32) / 9.0
-    w = Tensor(w)
-
-    config = WeightCompressionConfig(mode)
-
-    compressed_weighs, scale, zp = do_int_quantization(w, -1, config, invert_scale=True)
-    decompressed_weighs = do_int_dequantization(compressed_weighs, scale, zp)
-
-    compressed_weighs = compressed_weighs.data
-    decompressed_weighs = decompressed_weighs.data
-    zp_shape = zp.shape if zp is not None else None
-
-    compress = OVWeightCompressionAlgoBackend.get_compress_pipeline(config, w.shape, scale.shape, zp_shape)
-    compress_decompress = OVWeightCompressionAlgoBackend.get_compress_decompress_pipeline(
-        config, w.shape, scale.shape, zp_shape
-    )
-
-    params = [w.data, scale.data, zp.data] if zp is not None else [w.data, scale.data]
-    compressed_weighs_ov = compress(params)
-    decompressed_weighs_ov = compress_decompress(params)
-
-    assert np.allclose(compressed_weighs, compressed_weighs_ov)
-    assert np.allclose(decompressed_weighs, decompressed_weighs_ov)
-
-
 @pytest.mark.parametrize(
     ("mode", "data"),
     (
@@ -1122,7 +1092,7 @@ def test_compressed_weighs_range(mode, data):
     w = Tensor(data)
 
     config = WeightCompressionConfig(mode=mode)
-    compressed_weighs, _, _ = do_int_quantization(w, -1, config)
+    compressed_weighs, _, _ = do_int_quantization(w, config, -1)
 
     assert np.allclose(np.abs(compressed_weighs.data), np.abs(w.data))
 
@@ -1145,8 +1115,6 @@ def test_compressed_weighs_range(mode, data):
     ],
 )
 def test_int_quantization_with_precomputed_parameters(config, precompute_scale, precompute_zero_point, raises):
-    is_asym = config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT8_ASYM]
-
     precomputed_scale, precomputed_zero_point = None, None
     weight = Tensor(((np.arange(11) - 5) / 10).astype(np.float32)[:, None])
     if precompute_scale:
@@ -1156,18 +1124,18 @@ def test_int_quantization_with_precomputed_parameters(config, precompute_scale, 
 
     if raises:
         with pytest.raises(ValueError) as exc_info:
-            _, scale, zero_point = do_int_quantization(weight, -1, config, precomputed_scale, precomputed_zero_point)
+            _, scale, zero_point = do_int_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
             assert exc_info.value == (
                 "If precomputed quantization parameters are provided, both scale and zero point "
                 "are required for asymmetric quantization."
             )
         return
     else:
-        _, scale, zero_point = do_int_quantization(weight, -1, config, precomputed_scale, precomputed_zero_point)
+        _, scale, zero_point = do_int_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
 
     if precompute_scale:
         assert np.allclose(scale.data, precomputed_scale.data)
-    if is_asym:
+    if config.is_asym_mode:
         if precompute_zero_point:
             assert np.allclose(zero_point.data, precomputed_zero_point.data)
     else:

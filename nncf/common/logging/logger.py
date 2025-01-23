@@ -11,11 +11,41 @@
 
 import logging
 import sys
-from typing import Set
+from functools import lru_cache
+from typing import cast
+
+
+class NNCFLogger(logging.Logger):
+    def __init__(self, name: str, level: int = logging.NOTSET):
+        super().__init__(name, level)
+
+    @lru_cache(None)
+    def _log_once(self, level: int, msg: str) -> None:
+        self.log(level, msg)
+
+    def debug_once(self, msg: str) -> None:
+        """
+        Log a message at the DEBUG level, ensuring the message is logged only once.
+        """
+        self._log_once(logging.DEBUG, msg)
+
+    def info_once(self, msg: str) -> None:
+        """
+        Log a message at the INFO level, ensuring the message is logged only once.
+        """
+        self._log_once(logging.INFO, msg)
+
+    def warning_once(self, msg: str) -> None:
+        """
+        Log a message at the WARNING level, ensuring the message is logged only once.
+        """
+        self._log_once(logging.WARNING, msg)
+
 
 NNCF_LOGGER_NAME = "nncf"
 
-nncf_logger = logging.getLogger(NNCF_LOGGER_NAME)
+logging.setLoggerClass(NNCFLogger)
+nncf_logger = cast(NNCFLogger, logging.getLogger(NNCF_LOGGER_NAME))
 nncf_logger.propagate = False
 
 stdout_handler = logging.StreamHandler(sys.stdout)
@@ -58,16 +88,6 @@ def disable_logging() -> None:
     Disables NNCF logging entirely. `FutureWarning`s are still shown.
     """
     nncf_logger.handlers = []
-
-
-class DuplicateFilter:
-    def __init__(self) -> None:
-        self.msgs: Set[str] = set()
-
-    def filter(self, rec: logging.LogRecord) -> bool:
-        retval = rec.msg not in self.msgs
-        self.msgs.add(rec.msg)
-        return retval
 
 
 NNCFDeprecationWarning = FutureWarning
