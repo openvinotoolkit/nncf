@@ -363,7 +363,7 @@ def _build_compress_model(
             w_max = opset.reduce_max(weight, reduction_axes=reduction_axes, keep_dims=True)
             w_abs_min, w_max = opset.convert(w_abs_min, ov.Type.f32), opset.convert(w_max, ov.Type.f32)
 
-            scale = opset.select(w_abs_min >= w_max, w_abs_min, opset.negative(w_max))
+            scale = opset.select(opset.greater_equal(w_abs_min, w_max, w_abs_min), opset.negative(w_max))
             scale = divide_op(scale, opset.constant(-level_low, ov.Type.f32))
             scale = opset.select(opset.less(opset.abs(scale), eps), eps, scale)
 
