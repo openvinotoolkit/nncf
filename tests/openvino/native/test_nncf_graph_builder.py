@@ -21,6 +21,7 @@ from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import convert_torch_model
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import SYNTHETIC_MODELS
+from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import ParallelEdgesModel
 from tests.openvino.native.models import get_torch_model_info
 
@@ -30,6 +31,17 @@ REFERENCE_GRAPHS_DIR = Path("reference_graphs") / "original_nncf_graph"
 @pytest.mark.parametrize("model_cls_to_test", SYNTHETIC_MODELS.values())
 def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
     model_to_test = model_cls_to_test()
+    path_to_dot = get_actual_reference_for_current_openvino(REFERENCE_GRAPHS_DIR / model_to_test.ref_graph_name)
+    compare_nncf_graphs(model_to_test.ov_model, path_to_dot)
+
+
+PRECISION_SPECIFIC_MODELS = [
+    FPModel(const_dtype=ov.Type.nf4),
+]
+
+
+@pytest.mark.parametrize("model_to_test", PRECISION_SPECIFIC_MODELS)
+def test_compare_nncf_graph_precision_synthetic_models(model_to_test):
     path_to_dot = get_actual_reference_for_current_openvino(REFERENCE_GRAPHS_DIR / model_to_test.ref_graph_name)
     compare_nncf_graphs(model_to_test.ov_model, path_to_dot)
 
