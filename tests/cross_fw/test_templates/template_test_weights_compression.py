@@ -22,8 +22,10 @@ from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.data.dataset import Dataset
 from nncf.quantization import compress_weights
+from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
+from nncf.quantization.algorithms.weight_compression.weight_lowering import quantize_dequantize_weight
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 
@@ -37,6 +39,11 @@ MEAN_VAR = 1.555555  # np.mean(np.var(ACTIVATION, 1))
 MEAN_MAX = 2.333333  # np.mean(np.max(np.abs(ACTIVATION), 1))
 HESSIAN_TRACE = (16 + 1 + 4) * 2 / 9  # sum(i*i for i in NON_ZERO_ROW) * 2 / ACTIVATION.size
 MAX_BASELINE_SCORE = 1 / 1.1920928955078125e-07
+
+
+def get_realtive_error(weight_1: Tensor, weight_2: Tensor, axis: int = 0) -> Tensor:
+    diff = (weight_1 - weight_2) ** 2
+    return fns.mean(diff, axis=axis) / fns.mean(weight_1**2, axis=axis)
 
 
 class TemplateWeightCompression(ABC):
@@ -180,9 +187,7 @@ class TemplateWeightCompression(ABC):
 
         # prepare dataset with one input tensor
         input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
-        input[
-            :, :, OUTLIER_CHANNEL
-        ] *= 1000  # make one channel relatively higher. This channel should have lowest error.
+        input[:, :, OUTLIER_CHANNEL] *= 1000  # make one channel relatively higher, should have lowest error.
         input = self.to_tensor(input)
         dataset = Dataset([input])
 
@@ -196,8 +201,12 @@ class TemplateWeightCompression(ABC):
             dataset=dataset,
         )
 
-        decompressed_weight = self.get_decompressed_weight(compressed_model, input)
         original_weight = self.get_orig_weight(model)
-        diff = (decompressed_weight - original_weight) ** 2
-        layer_err = fns.mean(diff, axis=0) / fns.mean(original_weight**2, axis=0)
-        assert fns.argsort(layer_err)[0] == OUTLIER_CHANNEL
+        decompressed_weight_before_se = quantize_dequantize_weight(
+            original_weight, config=WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, -1), reduction_axes=1
+        )
+        decompressed_weight_after_se = self.get_decompressed_weight(compressed_model, input)
+        error_before_se = get_realtive_error(original_weight, decompressed_weight_before_se)
+        error_after_se = get_realtive_error(original_weight, decompressed_weight_after_se)
+        assert fns.argsort(error_after_se)[0] == OUTLIER_CHANNEL  # the smallest error on the outlier channel
+        assert error_before_se[OUTLIER_CHANNEL] > error_after_se[OUTLIER_CHANNEL]
