@@ -29,7 +29,7 @@ from nncf.openvino.graph.node_utils import non_convertable_divide_op
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
-from nncf.tensor.functions.ov_numeric import DTYPE_MAP as DTYPE_MAP_OV
+from nncf.tensor.functions.openvino_numeric import DTYPE_MAP as DTYPE_MAP_OV
 
 TensorList = List[Tensor]
 ModelCallable = Callable[[TensorList], TensorList]
@@ -142,8 +142,11 @@ def _infer_ov_model(
     outputs = infer_request.infer(
         inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs
     )
-    outputs = [infer_request.get_output_tensor(i) for i in range(len(outputs))]
-    outputs = [Tensor(it if ov_model_params.return_ov_tensors else it.data) for it in outputs]
+    if ov_model_params.return_ov_tensors:
+        outputs = [infer_request.get_output_tensor(i) for i in range(len(outputs))]
+    else:
+        outputs = [outputs[i] for i in range(len(outputs))]
+    outputs = [Tensor(it) for it in outputs]
 
     if ov_model_params.release_memory:
         compiled_model.release_memory()
