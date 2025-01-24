@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,6 +21,7 @@ from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import convert_torch_model
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import SYNTHETIC_MODELS
+from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import ParallelEdgesModel
 from tests.openvino.native.models import get_torch_model_info
 
@@ -32,6 +33,19 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
     model_to_test = model_cls_to_test()
     path_to_dot = get_actual_reference_for_current_openvino(REFERENCE_GRAPHS_DIR / model_to_test.ref_graph_name)
     compare_nncf_graphs(model_to_test.ov_model, path_to_dot)
+
+
+@pytest.mark.parametrize(
+    "model,precision",
+    [
+        (FPModel(const_dtype=ov.Type.nf4), "nf4"),
+    ],
+)
+def test_compare_nncf_graph_precision_synthetic_models(model, precision):
+    path_to_dot = get_actual_reference_for_current_openvino(
+        REFERENCE_GRAPHS_DIR / f"{precision}_{model.ref_graph_name}"
+    )
+    compare_nncf_graphs(model.ov_model, path_to_dot)
 
 
 @pytest.mark.parametrize(
@@ -101,6 +115,7 @@ def test_parallel_edges():
         (ov.Type.f16, Dtype.FLOAT),
         (ov.Type.f32, Dtype.FLOAT),
         (ov.Type.f64, Dtype.FLOAT),
+        (ov.Type.nf4, Dtype.FLOAT),
         (ov.Type.i4, Dtype.INTEGER),
         (ov.Type.i8, Dtype.INTEGER),
         (ov.Type.i16, Dtype.INTEGER),
@@ -124,7 +139,6 @@ def test_convert_to_nncf_dtype_supported_types(ov_type: ov.Type, expected_nncf_d
 @pytest.mark.parametrize(
     "ov_type",
     [
-        ov.Type.nf4,
         ov.Type.undefined,
         ov.Type.f8e4m3,
         ov.Type.f8e5m2,

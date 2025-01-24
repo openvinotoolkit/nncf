@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -158,7 +158,7 @@ def _check_pre_post_ops(modified_model, recovered_model):
 
 
 def _check_hook_are_equal(hook, recovered_hook):
-    assert type(hook) == type(recovered_hook)
+    assert type(hook) is type(recovered_hook)
     if isinstance(hook, DummyOpWithState):
         assert hook.get_config() == recovered_hook.get_config()
         return

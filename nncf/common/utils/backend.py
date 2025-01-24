@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,13 @@ from typing import Any, Callable, TypeVar
 import nncf
 
 TModel = TypeVar("TModel")
+
+try:
+    import openvino  # type: ignore # noqa: F401
+
+    _OPENVINO_AVAILABLE = True
+except ImportError:
+    _OPENVINO_AVAILABLE = False
 
 
 class BackendType(Enum):
@@ -175,3 +182,11 @@ def copy_model(model: TModel) -> TModel:
         model = TFModelTransformer(model).transform(TFTransformationLayout())
         return model
     return deepcopy(model)
+
+
+def is_openvino_available() -> bool:
+    """
+    Check if OpenVINO is available.
+    :return: True if openvino package is installed, False otherwise.
+    """
+    return _OPENVINO_AVAILABLE

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,7 +16,7 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.helpers import create_table
 
 
-def _proportion_str(num: int, total_count: int):
+def _proportion_str(num: int, total_count: int) -> str:
     percentage = 100 * (num / max(total_count, 1))
     return f"{percentage:.2f} % ({num} / {total_count})"
 
@@ -170,12 +170,12 @@ class QuantizationStatistics(Statistics):
         q_total_num = wq_total_num + aq_total_num
 
         bitwidths = self.num_wq_per_bitwidth.keys() | self.num_aq_per_bitwidth.keys()  # union of all bitwidths
-        bitwidths = sorted(bitwidths, reverse=True)
+        bitwidths_sorted = sorted(bitwidths, reverse=True)
 
         # Table creation
         header = ["Num bits (N)", "N-bits WQs / Placed WQs", "N-bits AQs / Placed AQs", "N-bits Qs / Placed Qs"]
         rows = []
-        for bitwidth in bitwidths:
+        for bitwidth in bitwidths_sorted:
             wq_num = self.num_wq_per_bitwidth.get(bitwidth, 0)  # for current bitwidth
             aq_num = self.num_aq_per_bitwidth.get(bitwidth, 0)  # for current bitwidth
             q_num = wq_num + aq_num  # for current bitwidth

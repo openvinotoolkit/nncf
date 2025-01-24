@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,12 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Sequence, Tuple, Type
 
 import numpy as np
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.utils import get_output_channels
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
@@ -27,7 +30,9 @@ class WeightsFlopsCalculator:
     compression algorithms execution.
     """
 
-    def __init__(self, conv_op_metatypes: List[OperatorMetatype], linear_op_metatypes: List[OperatorMetatype]):
+    def __init__(
+        self, conv_op_metatypes: List[Type[OperatorMetatype]], linear_op_metatypes: List[Type[OperatorMetatype]]
+    ):
         """
         Constructor.
 
@@ -40,7 +45,7 @@ class WeightsFlopsCalculator:
     def count_flops_and_weights(
         self,
         graph: NNCFGraph,
-        output_shapes: Dict[NNCFNodeName, int],
+        output_shapes: Dict[NNCFNodeName, Sequence[int]],
         input_channels: Dict[NNCFNodeName, int] = None,
         output_channels: Dict[NNCFNodeName, int] = None,
         kernel_sizes: Dict[NNCFNodeName, Tuple[int, int]] = None,
@@ -72,7 +77,7 @@ class WeightsFlopsCalculator:
     def count_flops_and_weights_per_node(
         self,
         graph: NNCFGraph,
-        output_shapes: Dict[NNCFNodeName, int],
+        output_shapes: Dict[NNCFNodeName, Sequence[int]],
         input_channels: Dict[NNCFNodeName, int] = None,
         output_channels: Dict[NNCFNodeName, int] = None,
         kernel_sizes: Dict[NNCFNodeName, Tuple[int, int]] = None,
@@ -106,9 +111,12 @@ class WeightsFlopsCalculator:
             name = node.node_name
             if name in op_addresses_to_skip:
                 continue
-            num_in_channels = input_channels.get(name, node.layer_attributes.in_channels)
-            num_out_channels = output_channels.get(name, node.layer_attributes.out_channels)
-            kernel_size = kernel_sizes.get(name, node.layer_attributes.kernel_size)
+            layer_attr = node.layer_attributes
+            if not isinstance(layer_attr, ConvolutionLayerAttributes):
+                raise nncf.InternalError(f"Unexpected layer attributes type for convolution layer: {type(layer_attr)}")
+            num_in_channels = input_channels.get(name, layer_attr.in_channels)
+            num_out_channels = output_channels.get(name, layer_attr.out_channels)
+            kernel_size = kernel_sizes.get(name, layer_attr.kernel_size)
             if is_prunable_depthwise_conv(node):
                 # Prunable depthwise conv processed in special way
                 # because common way to calculate filters per
@@ -116,25 +124,32 @@ class WeightsFlopsCalculator:
                 # some of the output channels are pruned.
                 filters_per_channel = 1
             else:
-                filters_per_channel = num_out_channels // node.layer_attributes.groups
+                filters_per_channel = num_out_channels // layer_attr.groups
 
             flops_numpy = (
-                2 * np.prod(kernel_size) * num_in_channels * filters_per_channel * np.prod(output_shapes[name])
+                2
+                * int(np.prod(kernel_size))
+                * num_in_channels
+                * filters_per_channel
+                * int(np.prod(output_shapes[name]))
             )
-            weights_numpy = np.prod(kernel_size) * num_in_channels * filters_per_channel
+            weights_numpy = int(np.prod(kernel_size)) * num_in_channels * filters_per_channel
 
-            flops[name] = flops_numpy.astype(int).item()
-            weights[name] = weights_numpy.astype(int).item()
+            flops[name] = flops_numpy
+            weights[name] = weights_numpy
 
         for node in graph.get_nodes_by_metatypes(self._linear_op_metatypes):
             name = node.node_name
             if name in op_addresses_to_skip:
                 continue
 
-            num_in_features = input_channels.get(name, node.layer_attributes.in_features)
-            num_out_features = output_channels.get(name, node.layer_attributes.out_features)
+            layer_attr = node.layer_attributes
+            if not isinstance(layer_attr, LinearLayerAttributes):
+                raise nncf.InternalError(f"Unexpected layer attributes type for linear layer: {type(layer_attr)}")
+            num_in_features = input_channels.get(name, layer_attr.in_features)
+            num_out_features = output_channels.get(name, layer_attr.out_features)
 
-            flops_numpy = 2 * num_in_features * num_out_features * np.prod(output_shapes[name][:-1])
+            flops_numpy = 2 * num_in_features * num_out_features * int(np.prod(output_shapes[name][:-1]))
             weights_numpy = num_in_features * num_out_features
             flops[name] = flops_numpy
             weights[name] = weights_numpy

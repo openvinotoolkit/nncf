@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,6 +20,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS_REDUCED
+from nncf.openvino.graph.model_builder import OVModelBuilder
 from nncf.openvino.graph.node_utils import get_activation_channel_axis
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -33,6 +34,12 @@ from nncf.tensor import Tensor
 
 
 class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
+
+    def __init__(self, model):
+        # Node mapping caching to reduce time for calculations
+        self._node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
+        self._model_builder = OVModelBuilder()
+
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
         return OVTargetPoint(target_type, target_node_name, port_id)
@@ -73,9 +80,8 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         input_data = {input_name: blob}
         return input_data
 
-    @staticmethod
-    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> Tensor:
-        return Tensor(get_bias_value(node, nncf_graph, model))
+    def get_bias_value(self, node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> Tensor:
+        return Tensor(get_bias_value(node, nncf_graph, model, node_mapping=self._node_mapping))
 
     @staticmethod
     def get_activation_port_ids_for_bias_node(node: NNCFNode) -> Tuple[int, int]:
@@ -113,3 +119,11 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
         return get_activation_channel_axis(node, port_id, input_shape)
+
+    def extract_submodel(self, model_transformer, input_id, output_id):
+
+        return self._model_builder.build(
+            input_ids=[input_id],
+            output_ids=[output_id],
+            node_mapping=self._node_mapping,
+        )

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -160,7 +160,7 @@ BASIC_RANGE_INIT_CONFIG_PROPERTIES = {
 PER_LAYER_RANGE_INIT_CONFIG_PROPERTIES = {
     "type": "object",
     "properties": {
-        **BASIC_RANGE_INIT_CONFIG_PROPERTIES["properties"],
+        **BASIC_RANGE_INIT_CONFIG_PROPERTIES["properties"],  # type: ignore[dict-item]
         **SCOPING_PROPERTIES,
         "target_quantizer_group": with_attributes(
             STRING,
@@ -338,7 +338,7 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
     "parameters have a better chance to get fine-tuned to values that result in good accuracy.",
     "properties": {
         "batchnorm_adaptation": BATCHNORM_ADAPTATION_SCHEMA,
-        **RANGE_INIT_CONFIG_PROPERTIES["initializer"]["properties"],
+        **RANGE_INIT_CONFIG_PROPERTIES["initializer"]["properties"],  # type: ignore[dict-item]
         "precision": PRECISION_INITIALIZER_SCHEMA,
     },
     "additionalProperties": False,

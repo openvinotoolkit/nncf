@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Set, Tuple
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -21,6 +21,7 @@ from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.pruning.symbolic_mask import SymbolicMaskProcessor
+from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import get_next_nodes_of_types
 from nncf.common.pruning.utils import get_output_channels
@@ -35,7 +36,7 @@ class ShapePruningProcessor:
     compression algorithms execution.
     """
 
-    def __init__(self, prunable_types: List[str], pruning_operations_metatype: List[str]):
+    def __init__(self, prunable_types: List[str], pruning_operations_metatype: PruningOperationsMetatypeRegistry):
         """
         Constructor.
 
@@ -48,7 +49,7 @@ class ShapePruningProcessor:
     def calculate_in_out_channels_by_masks(
         self,
         graph: NNCFGraph,
-        pruning_groups: List[Cluster[PrunedLayerInfoBase]],
+        pruning_groups: Clusterization[PrunedLayerInfoBase],
         pruning_groups_next_nodes: Dict[int, List[Dict[str, Any]]],
         num_of_sparse_elements_by_node: Dict[NNCFNodeName, int],
     ) -> Tuple[Dict[str, int], Dict[str, int]]:
@@ -63,8 +64,8 @@ class ShapePruningProcessor:
         :return Dictionary of new input channels number {node_name: channels_num}
         """
 
-        def get_sparser(full_output_channels):
-            def get_num_of_sparse_elements_by_node(node_name: str) -> int:
+        def get_sparser(_: Any) -> Callable[[NNCFNodeName], int]:
+            def get_num_of_sparse_elements_by_node(node_name: NNCFNodeName) -> int:
                 return num_of_sparse_elements_by_node[node_name]
 
             return get_num_of_sparse_elements_by_node
@@ -74,7 +75,7 @@ class ShapePruningProcessor:
     def calculate_in_out_channels_in_uniformly_pruned_model(
         self,
         graph: NNCFGraph,
-        pruning_groups: List[Cluster[PrunedLayerInfoBase]],
+        pruning_groups: Clusterization[PrunedLayerInfoBase],
         pruning_groups_next_nodes: Dict[int, List[Dict[str, Any]]],
         pruning_level: float,
     ) -> Tuple[Dict[str, int], Dict[str, int]]:
@@ -86,11 +87,11 @@ class ShapePruningProcessor:
         :param pruning_groups: A list of pruning groups.
         :param pruning_groups_next_nodes: A dictionary of next nodes of each pruning group.
         :param pruning_level: Target pruning level.
-        :return Tuple of dictionarise of new input and output channels number {node_name: channels_num}
+        :return Tuple of dictionaries of new input and output channels number {node_name: channels_num}
         """
 
-        def get_sparser(full_output_channels):
-            def get_num_of_sparse_elements_by_node(node_name: str) -> int:
+        def get_sparser(full_output_channels: Dict[NNCFNodeName, int]) -> Callable[[NNCFNodeName], int]:
+            def get_num_of_sparse_elements_by_node(node_name: NNCFNodeName) -> int:
                 old_out_channels = full_output_channels[node_name]
                 return get_rounded_pruned_element_number(old_out_channels, pruning_level)
 
@@ -135,7 +136,7 @@ class ShapePruningProcessor:
         self,
         sparse_elements_counter_getter: Callable[[Dict[NNCFNodeName, int]], Callable[[NNCFNodeName], int]],
         graph: NNCFGraph,
-        pruning_groups: List[Cluster[PrunedLayerInfoBase]],
+        pruning_groups: Clusterization[PrunedLayerInfoBase],
         pruning_groups_next_nodes: Dict[int, List[Dict[str, Any]]],
     ) -> Tuple[Dict[str, int], Dict[str, int]]:
         full_input_channels, full_output_channels = get_prunable_layers_in_out_channels(graph)
@@ -159,11 +160,11 @@ class ShapePruningProcessor:
         return tmp_in_channels, tmp_out_channels
 
     def _get_next_node_sparse_multiplier(
-        self, graph: NNCFGraph, next_node: NNCFNode, cluster: Clusterization[PrunedLayerInfoBase]
+        self, graph: NNCFGraph, next_node: NNCFNode, cluster: Cluster[PrunedLayerInfoBase]
     ) -> int:
         cluster_nodes_idxs = {node.nncf_node_id for node in cluster.elements}
         for input_mask in get_input_masks(next_node, graph):
-            if not input_mask:
+            if input_mask is None:
                 continue
             for mask_producer in input_mask.mask_producers:
                 if mask_producer.id in cluster_nodes_idxs:
@@ -173,7 +174,7 @@ class ShapePruningProcessor:
 
     def get_next_nodes(
         self, graph: NNCFGraph, pruning_groups: Clusterization[PrunedLayerInfoBase]
-    ) -> Dict[int, Dict[str, Any]]:
+    ) -> Dict[int, List[Dict[str, Any]]]:
         """
         Finds nodes of `prunable_types` types that receive the output of a pruned cluster as input
         and collects all info specified in NextNode.
@@ -190,10 +191,10 @@ class ShapePruningProcessor:
         MaskPropagationAlgorithm(graph, self._pruning_operations_metatype, SymbolicMaskProcessor).mask_propagation()
 
         # 2. Find next nodes and correspondent sparse multipliers
-        next_nodes = {}
+        next_nodes: Dict[int, List[Dict[str, Any]]] = {}
         for cluster in pruning_groups.get_all_clusters():
-            next_nodes_cluster = set()
-            cluster_nodes = set()
+            next_nodes_cluster: Set[NNCFNode] = set()
+            cluster_nodes: Set[NNCFNode] = set()
             for pruned_layer_info in cluster.elements:
                 nncf_cluster_node = graph.get_node_by_id(pruned_layer_info.nncf_node_id)
                 cluster_nodes.add(nncf_cluster_node)

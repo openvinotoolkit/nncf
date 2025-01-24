@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
+from typing import Dict, List, Optional, Type, cast
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -23,14 +23,16 @@ from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
 
 
-def get_position(nodes_list: List[NNCFNode], idx: int):
+def get_position(nodes_list: List[NNCFNode], idx: int) -> Optional[int]:
     for i, node in enumerate(nodes_list):
         if node.node_id == idx:
             return i
     return None
 
 
-def merge_clusters_for_nodes(nodes_to_merge: List[NNCFNode], clusterization: Clusterization):
+def merge_clusters_for_nodes(
+    nodes_to_merge: List[NNCFNode], clusterization: Clusterization  # type:ignore[type-arg]
+) -> None:
     """
     Merges clusters to which nodes from nodes_to_merge belongs.
 
@@ -75,7 +77,7 @@ def cluster_special_ops(
     # 0. Initially all nodes is a separate clusters
     clusterization = Clusterization[NNCFNode](lambda x: x.node_id)
     for i, node in enumerate(all_special_nodes):
-        cluster = Cluster[NNCFNode](i, [node], [get_position(topologically_sorted_nodes, node.node_id)])
+        cluster = Cluster[NNCFNode](i, [node], [get_position(topologically_sorted_nodes, node.node_id)])  # type: ignore
         clusterization.add_cluster(cluster)
 
     for node in topologically_sorted_nodes:
@@ -125,7 +127,9 @@ class ModelAnalyzer:
         self._pruning_operator_metatypes = pruning_operator_metatypes
         self._prune_operations_types = prune_operations_types
         pruning_op_metatypes_dict = self._pruning_operator_metatypes.registry_dict
-        self._stop_propagation_op_metatype = pruning_op_metatypes_dict["stop_propagation_ops"]
+        self._stop_propagation_op_metatype = cast(
+            Type[BasePruningOp], pruning_op_metatypes_dict["stop_propagation_ops"]
+        )
         self._concat_op_metatype = pruning_op_metatypes_dict["concat"]
 
         self.can_prune = {idx: True for idx in self.graph.get_all_node_ids()}
@@ -151,7 +155,7 @@ class ModelAnalyzer:
         """
         return nncf_node.node_type in self._concat_op_metatype.get_all_op_aliases()
 
-    def get_meta_operation_by_type_name(self, type_name: str) -> BasePruningOp:
+    def get_meta_operation_by_type_name(self, type_name: str) -> Type[BasePruningOp]:
         """
         Returns class of metaop that corresponds to `type_name` type.
 
@@ -162,7 +166,7 @@ class ModelAnalyzer:
             cls = self._stop_propagation_op_metatype
         return cls
 
-    def propagate_can_prune_attr_up(self):
+    def propagate_can_prune_attr_up(self) -> None:
         """
         Propagating can_prune attribute in reversed topological order.
         This attribute depends on accept_pruned_input and can_prune attributes of output nodes.
@@ -181,7 +185,7 @@ class ModelAnalyzer:
             )
             self.can_prune[node.node_id] = outputs_accept_pruned_input and outputs_will_be_pruned
 
-    def propagate_can_prune_attr_down(self):
+    def propagate_can_prune_attr_down(self) -> None:
         """
         Propagating can_prune attribute down to fix all branching cases with one pruned and one not pruned
         branches.
@@ -199,7 +203,7 @@ class ModelAnalyzer:
                 ):
                     self.can_prune[node.node_id] = can_prune
 
-    def set_accept_pruned_input_attr(self):
+    def set_accept_pruned_input_attr(self) -> None:
         for nncf_node in self.graph.get_all_nodes():
             cls = self.get_meta_operation_by_type_name(nncf_node.node_type)
             self.accept_pruned_input[nncf_node.node_id] = cls.accept_pruned_input(nncf_node)

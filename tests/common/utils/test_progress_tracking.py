@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -83,4 +83,4 @@ def test_track_context_manager(n, is_weighted):
     with track(total=n, description="Progress...", weights=weights if is_weighted else None) as pbar:
         for i in range(n):
             assert pbar.progress._tasks[pbar.task].completed == (sum(weights[:i]) if is_weighted else i)
-            pbar.progress.update(pbar.task, advance=1)
+            pbar.update(advance=1)

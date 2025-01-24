@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -107,7 +107,7 @@ def test_execute_post_hooks(example_outputs: Union[torch.Tensor, List[torch.Tens
     ctx = FunctionHookMode(nn.Identity(), hook_storage)
     op_meta = OpMeta("/relu/0", torch.relu)
     ret_val = ctx.execute_post_hooks(example_outputs, op_meta)
-    assert type(example_outputs) == type(ret_val)
+    assert type(example_outputs) is type(ret_val)
 
     assert hook_port_0.call_count == 1
     if isinstance(example_outputs, torch.Tensor):

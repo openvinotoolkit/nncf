@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,7 +11,7 @@
 """
 Structures for passing live Python objects into NNCF algorithms.
 """
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.utils.api_marker import api
@@ -47,7 +47,7 @@ class QuantizationRangeInitArgs(NNCFExtraConfigStruct):
         return self._data_loader
 
     @property
-    def device(self) -> str:
+    def device(self) -> Optional[str]:
         return self._device
 
     @classmethod
@@ -74,7 +74,7 @@ class BNAdaptationInitArgs(NNCFExtraConfigStruct):
         return self._data_loader
 
     @property
-    def device(self) -> str:
+    def device(self) -> Optional[str]:
         return self._device
 
     @classmethod
@@ -91,7 +91,7 @@ class ModelEvaluationArgs(NNCFExtraConfigStruct):
         the evaluation split of the dataset corresponding to the model.
     """
 
-    def __init__(self, eval_fn: Callable):
+    def __init__(self, eval_fn: Callable[..., Any]):
         self.eval_fn = eval_fn
 
     @classmethod
