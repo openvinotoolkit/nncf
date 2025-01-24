@@ -240,7 +240,9 @@ def test_release_memory(mocker, release_memory):
     compiled_model.inputs = [input_mock]
 
     output_mock = mocker.Mock()
-    compiled_model.return_value = [output_mock]
+    infer_request = mocker.Mock()
+    infer_request.infer.return_value = [output_mock]
+    compiled_model._infer_request = infer_request
 
     ov_model_params = OVModelParameters(input_dtypes={"input": TensorDataType.float32}, release_memory=release_memory)
     input_tensor = mocker.Mock()
@@ -267,16 +269,11 @@ def test_share_inputs_outputs(mocker, share_inputs, share_outputs, return_ov_ten
 
     output_mock = mocker.Mock()
 
+    infer_request = mocker.Mock()
+    infer_request.infer.return_value = [output_mock]
     if return_ov_tensors:
-        infer_request = mocker.Mock()
-        compiled_model.create_infer_request.return_value = infer_request
-
-        infer_request.infer = mocker.Mock()
-        infer_request.results = [output_mock]
-
         infer_request.get_output_tensor.return_value = output_mock
-    else:
-        compiled_model.return_value = [output_mock]
+    compiled_model._infer_request = infer_request
 
     ov_model_params = OVModelParameters(
         input_dtypes={"input": TensorDataType.float32},
@@ -292,14 +289,9 @@ def test_share_inputs_outputs(mocker, share_inputs, share_outputs, return_ov_ten
 
     _infer_ov_model(ov_model_params, compiled_model, inputs=inputs)
 
-    if return_ov_tensors:
-        infer_request.infer.assert_called_once_with(
-            [input_tensor.data], share_inputs=share_inputs, share_outputs=share_outputs
-        )
-    else:
-        compiled_model.assert_called_once_with(
-            [input_tensor.data], share_inputs=share_inputs, share_outputs=share_outputs
-        )
+    infer_request.infer.assert_called_once_with(
+        [input_tensor.data], share_inputs=share_inputs, share_outputs=share_outputs
+    )
 
 
 @pytest.mark.parametrize(
