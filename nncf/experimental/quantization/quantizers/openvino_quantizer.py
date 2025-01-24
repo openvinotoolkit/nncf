@@ -135,9 +135,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
             root_target_node = get_graph_node_by_name(graph, root_qp.insertion_point.target_node_name)
             root_edge_or_node = self._get_edge_or_node(root_target_node, root_qp)
 
-            while quantizer_ids:
-                quantizer_id = quantizer_ids.pop()
-
+            for quantizer_id in quantizer_ids:
                 if quantizer_id == root_quantizer_id:
                     continue
 

@@ -200,16 +200,21 @@ TorchAOSharedQuantizationSpecTestCases = (
     (
         ModelCase(SimpleConcatModel, "unified_scales_test_model", SimpleConcatModel.INPUT_SHAPE),
         ("conv2d", "conv2d_1"),
+        (0.01176275312, 127, 0, 255, torch.uint8),
     ),
 )
 
 
 @pytest.mark.parametrize(
-    "model_case,unified_scale_node_names",
+    "model_case,unified_scale_node_names,ref_fq_params",
     TorchAOSharedQuantizationSpecTestCases,
     ids=[m[0].model_id for m in TorchAOSharedQuantizationSpecTestCases],
 )
-def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(model_case: ModelCase, unified_scale_node_names):
+def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(
+    model_case: ModelCase,
+    unified_scale_node_names: Tuple[str, str],
+    ref_fq_params: Tuple[float, int, int, int, torch.dtype],
+):
     model_case.model_builder()(torch.ones(model_case.input_shape))
     fx_model, example_input = _build_torch_fx_model(model_case)
 
@@ -233,8 +238,8 @@ def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(model_case: ModelCas
     for node in ao_quantized_model.graph.nodes:
         if node.name in unified_scale_node_names:
             dequantize_args = list(node.users)[0].args
-            assert abs(dequantize_args[1] - 0.01176275312) < torch.finfo(torch.float32).eps
-            assert dequantize_args[2:] == (127, 0, 255, torch.uint8)
+            assert abs(dequantize_args[1] - ref_fq_params[0]) < torch.finfo(torch.float32).eps
+            assert dequantize_args[2:] == ref_fq_params[1:]
             nodes_visited += 1
             if nodes_visited == 2:
                 break
