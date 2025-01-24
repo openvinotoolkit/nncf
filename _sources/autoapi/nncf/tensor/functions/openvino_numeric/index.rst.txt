@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.tensor.functions.openvino_numeric`
+================================================
+
+.. py:module:: nncf.tensor.functions.openvino_numeric
+
+
