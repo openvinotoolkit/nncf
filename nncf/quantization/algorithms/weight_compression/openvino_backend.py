@@ -56,7 +56,7 @@ from nncf.quantization.algorithms.weight_compression.lora_correction import Lora
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
-from nncf.tensor.functions.ov_numeric import DTYPE_MAP_REV
+from nncf.tensor.functions.openvino_numeric import DTYPE_MAP_REV
 
 
 class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
