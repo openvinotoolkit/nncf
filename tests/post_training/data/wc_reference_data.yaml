@@ -65,4 +65,3 @@ tinyllama_scale_estimation_group_size_64_backend_TORCH:
   metric_value: 0.8566
   num_int4: 94
   num_int8: 124
-  

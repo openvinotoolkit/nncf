@@ -137,14 +137,14 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_model_for_test_scale_estimation():
+    def get_model_for_test_scale_estimation() -> TModel:
         """
         Returns a backend model for test_scale_estimation.
         """
 
     @staticmethod
     @abstractmethod
-    def get_scale_estimation_ref():
+    def get_scale_estimation_ref() -> TTensor:
         """
         Returns the reference output of calculate_quantization_params of ScaleEstimation.
         """
