@@ -48,5 +48,4 @@ class PTEngine(Engine):
             return self._model(**input_data)
         if isinstance(input_data, tuple):
             return self._model(*input_data)
-
         return self._model(input_data)

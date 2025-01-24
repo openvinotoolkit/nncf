@@ -1189,9 +1189,9 @@ class RoPEModel(OVReferenceModel):
 
 class MatMul(OVReferenceModel):
     def _create_ov_model(self):
-        input_node = opset.parameter([1, 8, 8], name="Input")
+        input_node = opset.parameter([1, 4, 8], name="Input")
 
-        weights_data = np.arange(0, 8 * 8, dtype=np.float32).reshape(8, 8)
+        weights_data = np.arange(0, 16 * 8, dtype=np.float32).reshape(16, 8)
         weights_node = opset.constant(weights_data, dtype=np.float32, name="Weights")
 
         matmul_node = opset.matmul(input_node, weights_node, transpose_a=False, transpose_b=True, name="MatMul")

@@ -22,6 +22,7 @@ from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.torch import wrap_model
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
@@ -62,6 +63,9 @@ class SequentialMatmulModel(nn.Module):
         for layer in self.layers:
             x = layer(x)
         return x
+
+    def get_weight_names_in_exec_order(self):
+        return [f"{i}_weight" for i in range(len(self.main_values))]
 
 
 class MatMulModel(torch.nn.Module):
@@ -375,7 +379,8 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def check_weights(model: torch.nn.Module, ref_ids: List[int]) -> None:
-        low_precision_nodes = {f"{i}_weight" for i in ref_ids}
+        all_names = model.get_weight_names_in_exec_order()
+        low_precision_nodes = list(map(lambda i: all_names[i], ref_ids))
         for op_name, op in model.nncf.external_op.items():
             for name in low_precision_nodes:
                 if name in op_name:
@@ -383,19 +388,37 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_model_for_test_scale_estimation():
-        return LinearModel(torch.arange(0, 8 * 8, dtype=torch.float32).reshape(8, 8))
+        return LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
 
     @staticmethod
     def get_scale_estimation_ref():
         return torch.tensor(
             [
-                [[0.200000], [0.413544]],
-                [[0.678224], [0.947037]],
-                [[1.169177], [1.435573]],
-                [[1.702510], [1.968907]],
-                [[2.272218], [2.543369]],
-                [[2.814644], [3.085842]],
-                [[3.302510], [3.568907]],
-                [[3.835843], [4.102240]],
+                [[0.473328]],
+                [[0.929023]],
+                [[1.446527]],
+                [[1.920595]],
+                [[2.517054]],
+                [[3.030102]],
+                [[3.584279]],
+                [[4.043509]],
+                [[4.620008]],
+                [[5.165322]],
+                [[5.710637]],
+                [[6.122581]],
+                [[6.655914]],
+                [[7.237174]],
+                [[7.722580]],
+                [[8.255914]],
             ]
         )
+
+    @staticmethod
+    def get_orig_weight(model: torch.nn.Module) -> Tensor:
+        return Tensor(model.linear.weight)
+
+    @staticmethod
+    def get_decompressed_weight(compressed_model: torch.nn.Module, input: torch.Tensor) -> Tensor:
+        weight = compressed_model.linear.weight
+        unpacked_w = compressed_model.nncf.external_op.weights_decompressor_linear_weight(weight)
+        return Tensor(unpacked_w)

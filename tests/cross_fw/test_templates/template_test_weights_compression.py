@@ -11,6 +11,7 @@
 import math
 from abc import ABC
 from abc import abstractmethod
+from copy import deepcopy
 from typing import List, TypeVar
 
 import numpy as np
@@ -143,13 +144,12 @@ class TemplateWeightCompression(ABC):
         """
 
     def test_scale_estimation(self, mocker):
+        """Checks that scales match the reference."""
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
         model = self.get_model_for_test_scale_estimation()
 
         # prepare dataset with one input tensor
-        input = np.arange(0, 8 * 8, dtype=np.float32).reshape(1, 8, 8)
-        input[0, 4] *= 100  # make one channel relatively higher.
-
+        input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
         input = self.to_tensor(input)
         dataset = Dataset([input])
 
@@ -157,10 +157,47 @@ class TemplateWeightCompression(ABC):
             model,
             mode=CompressWeightsMode.INT4_ASYM,
             ratio=1.0,
-            group_size=4,
+            group_size=8,
             scale_estimation=True,
             all_layers=True,
             dataset=dataset,
         )
         reference = self.get_scale_estimation_ref()
         assert fns.allclose(Tensor(reference), calc_q_params_spy.spy_return[0])
+
+    @abstractmethod
+    def get_orig_weight(model: TModel) -> Tensor:
+        """Returns original weight."""
+
+    @abstractmethod
+    def get_decompressed_weight(compressed_model: TModel, input: TTensor) -> Tensor:
+        """Returns decompressed weight"""
+
+    def test_scale_estimation_outlier_channel_has_lowest_error(self):
+        """Checks that outlier channel has a lowest error after quantization."""
+        OUTLIER_CHANNEL = 4
+        model = self.get_model_for_test_scale_estimation()
+
+        # prepare dataset with one input tensor
+        input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
+        input[
+            :, :, OUTLIER_CHANNEL
+        ] *= 1000  # make one channel relatively higher. This channel should have lowest error.
+        input = self.to_tensor(input)
+        dataset = Dataset([input])
+
+        compressed_model = compress_weights(
+            deepcopy(model),
+            mode=CompressWeightsMode.INT4_ASYM,
+            ratio=1.0,
+            group_size=-1,
+            scale_estimation=True,
+            all_layers=True,
+            dataset=dataset,
+        )
+
+        decompressed_weight = self.get_decompressed_weight(compressed_model, input)
+        original_weight = self.get_orig_weight(model)
+        diff = (decompressed_weight - original_weight) ** 2
+        layer_err = fns.mean(diff, axis=0) / fns.mean(original_weight**2, axis=0)
+        assert fns.argsort(layer_err)[0] == OUTLIER_CHANNEL

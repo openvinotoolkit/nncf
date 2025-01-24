@@ -26,6 +26,7 @@ from nncf import SensitivityMetric
 from nncf.common.utils.debug import nncf_debug
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
+from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.parameters import BackupMode
 from nncf.quantization import compress_weights
@@ -1524,13 +1525,39 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     def get_scale_estimation_ref():
         return np.array(
             [
-                [[0.2], [0.41354424]],
-                [[0.6782236], [0.9470368]],
-                [[1.1691767], [1.4355733]],
-                [[1.7025099], [1.9689066]],
-                [[2.2722175], [2.543369]],
-                [[2.8146443], [3.0858421]],
-                [[3.3025098], [3.5689068]],
-                [[3.8358433], [4.1022396]],
+                [[0.473328]],
+                [[0.929023]],
+                [[1.446527]],
+                [[1.920595]],
+                [[2.517053]],
+                [[3.030101]],
+                [[3.584278]],
+                [[4.04351]],
+                [[4.620007]],
+                [[5.165322]],
+                [[5.710637]],
+                [[6.122580]],
+                [[6.655914]],
+                [[7.237173]],
+                [[7.722581]],
+                [[8.255914]],
             ]
         )
+
+    @staticmethod
+    def get_orig_weight(model: ov.Model) -> Tensor:
+        for op in model.get_ordered_ops():
+            op_name = op.get_friendly_name()
+            if op.get_type_name() == "Constant" and op_name == "Weights":
+                return Tensor(op.data)
+
+    @staticmethod
+    def get_decompressed_weight(compressed_model: ov.Model, input: np.ndarray) -> Tensor:
+        # Insert extra output to get the compressed weights.
+        node = [op for op in compressed_model.get_ops() if op.get_friendly_name() == "Weights/fq_weights_1/convert"][0]
+        output = node.output(0)
+        extra_outputs = [(output, 0, None)]
+        model = OVModelTransformer._insert_outputs(compressed_model, extra_outputs)
+        compiled_model = ov.compile_model(model, device_name="CPU")
+        weight_output = compiled_model(input)[1]
+        return Tensor(weight_output)
