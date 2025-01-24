@@ -11,7 +11,6 @@
 import math
 from abc import ABC
 from abc import abstractmethod
-from copy import deepcopy
 from typing import List, TypeVar
 
 import numpy as np
@@ -41,7 +40,7 @@ HESSIAN_TRACE = (16 + 1 + 4) * 2 / 9  # sum(i*i for i in NON_ZERO_ROW) * 2 / ACT
 MAX_BASELINE_SCORE = 1 / 1.1920928955078125e-07
 
 
-def get_realtive_error(weight_1: Tensor, weight_2: Tensor, axis: int = 0) -> Tensor:
+def get_relative_error(weight_1: Tensor, weight_2: Tensor, axis: int = 0) -> Tensor:
     diff = (weight_1 - weight_2) ** 2
     return fns.mean(diff, axis=axis) / fns.mean(weight_1**2, axis=axis)
 
@@ -184,6 +183,7 @@ class TemplateWeightCompression(ABC):
         """Checks that outlier channel has a lowest error after quantization."""
         OUTLIER_CHANNEL = 4
         model = self.get_model_for_test_scale_estimation()
+        original_weight = self.get_orig_weight(model)
 
         # prepare dataset with one input tensor
         input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
@@ -192,7 +192,7 @@ class TemplateWeightCompression(ABC):
         dataset = Dataset([input])
 
         compressed_model = compress_weights(
-            deepcopy(model),
+            model,
             mode=CompressWeightsMode.INT4_ASYM,
             ratio=1.0,
             group_size=-1,
@@ -201,12 +201,11 @@ class TemplateWeightCompression(ABC):
             dataset=dataset,
         )
 
-        original_weight = self.get_orig_weight(model)
         decompressed_weight_before_se = quantize_dequantize_weight(
             original_weight, config=WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, -1), reduction_axes=1
         )
         decompressed_weight_after_se = self.get_decompressed_weight(compressed_model, input)
-        error_before_se = get_realtive_error(original_weight, decompressed_weight_before_se)
-        error_after_se = get_realtive_error(original_weight, decompressed_weight_after_se)
+        error_before_se = get_relative_error(original_weight, decompressed_weight_before_se)
+        error_after_se = get_relative_error(original_weight, decompressed_weight_after_se)
         assert fns.argsort(error_after_se)[0] == OUTLIER_CHANNEL  # the smallest error on the outlier channel
         assert error_before_se[OUTLIER_CHANNEL] > error_after_se[OUTLIER_CHANNEL]
