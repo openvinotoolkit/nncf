@@ -10,11 +10,9 @@
 # limitations under the License.
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Callable
+from typing import Any, Callable, TypeVar, cast
 
 import nncf
-
-TModel = Any
 
 try:
     import openvino  # type: ignore # noqa: F401
@@ -22,6 +20,8 @@ try:
     _OPENVINO_AVAILABLE = True
 except ImportError:
     _OPENVINO_AVAILABLE = False
+
+TModel = TypeVar("TModel")
 
 
 class BackendType(Enum):
@@ -32,7 +32,7 @@ class BackendType(Enum):
     OPENVINO = "OpenVINO"
 
 
-def result_verifier(func: Callable[[TModel], bool]) -> Callable[..., None]:
+def result_verifier(func: Callable[[Any], bool]) -> Callable[..., None]:
     def verify_result(*args: Any, **kwargs: Any):  # type: ignore
         try:
             return func(*args, **kwargs)
@@ -43,7 +43,7 @@ def result_verifier(func: Callable[[TModel], bool]) -> Callable[..., None]:
 
 
 @result_verifier
-def is_torch_model(model: TModel) -> bool:
+def is_torch_model(model: Any) -> bool:
     """
     Returns True if the model is an instance of torch.nn.Module and not a torch.fx.GraphModule, otherwise False.
 
@@ -57,7 +57,7 @@ def is_torch_model(model: TModel) -> bool:
 
 
 @result_verifier
-def is_torch_fx_model(model: TModel) -> bool:
+def is_torch_fx_model(model: Any) -> bool:
     """
     Returns True if the model is an instance of torch.fx.GraphModule, otherwise False.
 
@@ -70,7 +70,7 @@ def is_torch_fx_model(model: TModel) -> bool:
 
 
 @result_verifier
-def is_tensorflow_model(model: TModel) -> bool:
+def is_tensorflow_model(model: Any) -> bool:
     """
     Returns True if the model is an instance of tensorflow.Module, otherwise False.
 
@@ -83,7 +83,7 @@ def is_tensorflow_model(model: TModel) -> bool:
 
 
 @result_verifier
-def is_onnx_model(model: TModel) -> bool:
+def is_onnx_model(model: Any) -> bool:
     """
     Returns True if the model is an instance of onnx.ModelProto, otherwise False.
 
@@ -96,7 +96,7 @@ def is_onnx_model(model: TModel) -> bool:
 
 
 @result_verifier
-def is_openvino_model(model: TModel) -> bool:
+def is_openvino_model(model: Any) -> bool:
     """
     Returns True if the model is an instance of openvino.runtime.Model, otherwise False.
 
@@ -109,7 +109,7 @@ def is_openvino_model(model: TModel) -> bool:
 
 
 @result_verifier
-def is_openvino_compiled_model(model: TModel) -> bool:
+def is_openvino_compiled_model(model: Any) -> bool:
     """
     Returns True if the model is an instance of openvino.runtime.CompiledModel, otherwise False.
 
@@ -121,7 +121,7 @@ def is_openvino_compiled_model(model: TModel) -> bool:
     return isinstance(model, ov.CompiledModel)
 
 
-def get_backend(model: TModel) -> BackendType:
+def get_backend(model: Any) -> BackendType:
     """
     Returns the NNCF backend name string inferred from the type of the model object passed into this function.
 
@@ -157,7 +157,10 @@ def copy_model(model: TModel) -> TModel:
     model_backend = get_backend(model)
     if model_backend == BackendType.OPENVINO:
         # TODO(l-bat): Remove after fixing ticket: 100919
-        return model.clone()  # type: ignore
+        from openvino import Model as OVModel
+
+        ov_model = cast(OVModel, model)
+        return cast(TModel, ov_model.clone())
     if model_backend == BackendType.TENSORFLOW:
         # deepcopy and tensorflow.keras.models.clone_model does not work correctly on 2.8.4 version
         from nncf.tensorflow.graph.model_transformer import TFModelTransformer
@@ -171,6 +174,7 @@ def copy_model(model: TModel) -> TModel:
 def is_openvino_available() -> bool:
     """
     Check if OpenVINO is available.
+
     :return: True if openvino package is installed, False otherwise.
     """
     return _OPENVINO_AVAILABLE

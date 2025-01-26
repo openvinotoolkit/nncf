@@ -105,9 +105,6 @@ files = [
     "nncf/telemetry/",
     "nncf/*py",
 ]
-exclude = [
-    "nncf/common/quantization/quantizer_setup.py",
-]
 
 [tool.ruff]
 line-length = 120
