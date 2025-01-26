@@ -662,3 +662,20 @@ class YOLO11N_SDPABlock(torch.nn.Module):
         kq /= 2**-2
         kq = torch.softmax(kq, -1)
         return torch.matmul(torch.transpose(kq, 1, 2), v)
+
+
+class ConcatSDPABlock(torch.nn.Module):
+    Q_INPUT_SHAPE = [2, 10, 6]
+    KV_INPUT_SHAPE = [2, 10, 12]
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x, y, z, w):
+        concatenated_input = torch.cat((x, y), dim=-1)
+        query = concatenated_input
+        key = z
+        value = w
+        attn_output = torch.nn.functional.scaled_dot_product_attention(query, key, value)
+
+        return attn_output

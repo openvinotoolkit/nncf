@@ -9,10 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict
+from typing import Any, Dict
 
 import numpy as np
 import onnxruntime as rt
+from onnx import ModelProto
 
 from nncf.common.engine import Engine
 
@@ -22,7 +23,7 @@ class ONNXEngine(Engine):
     Engine for ONNX backend using ONNXRuntime to infer the model.
     """
 
-    def __init__(self, model, **rt_session_options):
+    def __init__(self, model: ModelProto, **rt_session_options: Any):
         self.input_names = set()
         rt_session_options["providers"] = ["CPUExecutionProvider"]
         serialized_model = model.SerializeToString()

@@ -10,6 +10,7 @@
 # limitations under the License.
 import pytest
 
+from nncf.common.deprecation import _generate_deprecation_message
 from nncf.common.deprecation import deprecated
 from nncf.common.logging.logger import NNCFDeprecationWarning
 
@@ -50,3 +51,23 @@ def test_warnings_are_shown_for_deprecated_function_call_with_versions():
 def test_warnings_are_shown_for_deprecated_class_instantiation():
     with pytest.warns(NNCFDeprecationWarning, match=EXAMPLE_MSG):
         DeprecatedClass()
+
+
+def test_generate_deprecation_message():
+    ret = _generate_deprecation_message("foo", "text", "1.2.3", "4.5.6")
+    assert ret == "Usage of foo is deprecated starting from NNCF v1.2.3 and will be removed in NNCF v4.5.6.\ntext"
+
+    ret = _generate_deprecation_message("foo", "text", "1.2.3", None)
+    assert (
+        ret
+        == "Usage of foo is deprecated starting from NNCF v1.2.3 and will be removed in a future NNCF version.\ntext"
+    )
+
+    ret = _generate_deprecation_message("foo", "text", None, None)
+    assert ret == "Usage of foo is deprecated and will be removed in a future NNCF version.\ntext"
+
+    ret = _generate_deprecation_message("foo", "text", None, "4.5.6")
+    assert ret == "Usage of foo is deprecated and will be removed in NNCF v4.5.6.\ntext"
+
+    ret = _generate_deprecation_message("foo", None, None, None)
+    assert ret == "Usage of foo is deprecated and will be removed in a future NNCF version."

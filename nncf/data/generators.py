@@ -13,6 +13,10 @@ from typing import List, TypeVar
 
 import nncf
 from nncf.common.logging.track_progress import track
+from nncf.common.utils.api_marker import api
+from nncf.telemetry import tracked_function
+from nncf.telemetry.events import NNCF_CATEGORY
+from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
 
 BASE_VOCAB_SIZE = 12000
 
@@ -20,6 +24,13 @@ TModel = TypeVar("TModel")
 TTokenizer = TypeVar("TTokenizer")
 
 
+@api(canonical_alias="nncf.data.generate_text_data")
+@tracked_function(
+    category=NNCF_CATEGORY,
+    extractors=[
+        FunctionCallTelemetryExtractor("nncf.data.generate_text_data"),
+    ],
+)
 def generate_text_data(
     model: TModel, tokenizer: TTokenizer, seq_len: int = 32, dataset_size: int = 128, unique_tokens_lower_limit: int = 5
 ) -> List[str]:
@@ -43,9 +54,9 @@ def generate_text_data(
         raise nncf.ModuleNotFoundError("torch is required in order to generate text data: `pip install torch`.")
 
     try:
-        from transformers import PreTrainedModel
+        from transformers import PreTrainedModel  # type: ignore
         from transformers import PreTrainedTokenizerBase
-        from transformers.utils import logging
+        from transformers.utils import logging  # type: ignore
 
         logging.set_verbosity_error()
     except ImportError:
@@ -59,7 +70,7 @@ def generate_text_data(
     if not isinstance(tokenizer, PreTrainedTokenizerBase.__bases__):
         raise nncf.ValidationError("tokenizer should be instance of the `transformers.PreTrainedTokenizerBase`.")
 
-    generated_data = []
+    generated_data: List[str] = []
 
     vocab_size_names = ["padded_vocab_size", "vocab_size"]
     vocab_size = BASE_VOCAB_SIZE
@@ -70,7 +81,7 @@ def generate_text_data(
     step_num = max(1, vocab_size // dataset_size)
     ids_counter = 0
 
-    with track(total=dataset_size, description="Generating text data") as pbar:
+    with track[None](total=dataset_size, description="Generating text data") as pbar:
         while len(generated_data) < dataset_size:
             # Creating the input for pre-generate step
             input_ids = torch.tensor([[ids_counter % vocab_size]]).to(model.device)
@@ -86,7 +97,7 @@ def generate_text_data(
 
             ids_counter += step_num
 
-            pbar.progress.update(pbar.task, advance=1)
+            pbar.update(advance=1)
             generated_data.extend(gen_text)
 
     return generated_data

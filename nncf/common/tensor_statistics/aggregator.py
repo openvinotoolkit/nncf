@@ -27,9 +27,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.tensor_statistics.statistics_serializer import dump_statistics
 from nncf.common.tensor_statistics.statistics_serializer import load_statistics
 from nncf.common.utils.backend import BackendType
-from nncf.data.dataset import DataItem
 from nncf.data.dataset import Dataset
-from nncf.data.dataset import ModelInput
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 
 TensorType = TypeVar("TensorType")
@@ -47,7 +45,7 @@ class StatisticsAggregator(ABC):
 
     BACKEND: BackendType
 
-    def __init__(self, dataset: Dataset[DataItem, ModelInput]):
+    def __init__(self, dataset: Dataset):
         self.dataset = dataset
         self.stat_subset_size = None
         self.statistic_points = StatisticPointsContainer()
@@ -80,7 +78,7 @@ class StatisticsAggregator(ABC):
         engine = factory.EngineFactory.create(model_with_outputs)
         iterations_number = self._get_iterations_number()
         processed_samples = 0
-        for input_data in track(  # type: ignore
+        for input_data in track(
             islice(self.dataset.get_inference_data(), iterations_number),
             total=iterations_number,
             description="Statistics collection",

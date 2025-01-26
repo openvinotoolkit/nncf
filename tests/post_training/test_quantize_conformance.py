@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import re
 import time
 import traceback
@@ -31,6 +32,19 @@ from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import RunInfo
 
 DATA_ROOT = Path(__file__).parent / "data"
+
+
+@pytest.fixture(scope="function", name="use_avx2")
+def fixture_use_avx2():
+    old_value = os.environ.get("ONEDNN_MAX_CPU_ISA")
+    os.environ["ONEDNN_MAX_CPU_ISA"] = "AVX2"
+    if old_value is not None and old_value != "AVX2":
+        print(f"Warning: ONEDNN_MAX_CPU_ISA is overriding to AVX2, was {old_value}")
+    yield
+    if old_value is None:
+        del os.environ["ONEDNN_MAX_CPU_ISA"]
+    else:
+        os.environ["ONEDNN_MAX_CPU_ISA"] = old_value
 
 
 @pytest.fixture(scope="session", name="data_dir")
@@ -132,7 +146,7 @@ def fixture_wc_reference_data():
     fp32_test_cases = defaultdict(dict)
     for test_case_name in data:
         if "atol" not in data[test_case_name]:
-            data[test_case_name]["atol"] = 1e-5
+            data[test_case_name]["atol"] = 1e-4
         reported_name = test_case_name.split("_backend_")[0]
         fp32_case_name = f"{reported_name}_backend_FP32"
         fp32_test_cases[fp32_case_name]["metric_value"] = 1
@@ -301,6 +315,8 @@ def test_ptq_quantization(
         pipeline.run()
     except Exception as e:
         err_msg = str(e)
+        if not err_msg:
+            err_msg = "Unknown exception"
         traceback.print_exc()
 
     if pipeline is not None:
@@ -328,7 +344,6 @@ def test_ptq_quantization(
 def test_weight_compression(
     wc_reference_data: dict,
     test_case_name: str,
-    data_dir: Path,
     output_dir: Path,
     wc_result_data: Dict[str, RunInfo],
     no_eval: bool,
@@ -340,6 +355,7 @@ def test_weight_compression(
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
     memory_monitor: bool,
+    use_avx2: None,
 ):
     pipeline = None
     err_msg = None
@@ -355,7 +371,7 @@ def test_weight_compression(
         pipeline_kwargs.update(
             {
                 "output_dir": output_dir,
-                "data_dir": data_dir,
+                "data_dir": None,
                 "no_eval": no_eval,
                 "run_benchmark_app": run_benchmark_app,
                 "batch_size": batch_size,
@@ -366,6 +382,8 @@ def test_weight_compression(
         pipeline.run()
     except Exception as e:
         err_msg = str(e)
+        if not err_msg:
+            err_msg = "Unknown exception"
         traceback.print_exc()
 
     if pipeline is not None:

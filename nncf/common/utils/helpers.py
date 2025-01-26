@@ -12,12 +12,14 @@ import datetime
 import itertools
 import os
 import os.path as osp
-import pathlib
-from typing import Any, Dict, Hashable, Iterable, List, Optional, Union
+from pathlib import Path
+from typing import Any, Dict, Hashable, Iterable, List, Optional, TypeVar, Union
 
 from tabulate import tabulate
 
 from nncf.common.utils.os import is_windows
+
+TKey = TypeVar("TKey", bound=Hashable)
 
 
 def create_table(
@@ -44,7 +46,7 @@ def create_table(
     return tabulate(tabular_data=rows, headers=header, tablefmt=table_fmt, maxcolwidths=max_col_widths, floatfmt=".3f")
 
 
-def configure_accuracy_aware_paths(log_dir: Union[str, pathlib.Path]) -> Union[str, pathlib.Path]:
+def configure_accuracy_aware_paths(log_dir: Union[str, Path]) -> Union[str, Path]:
     """
     Create a subdirectory inside of the passed log directory
     to save checkpoints from the accuracy-aware training loop to.
@@ -59,7 +61,7 @@ def configure_accuracy_aware_paths(log_dir: Union[str, pathlib.Path]) -> Union[s
     return acc_aware_log_dir
 
 
-def product_dict(d: Dict[Hashable, List[str]]) -> Iterable[Dict[Hashable, str]]:
+def product_dict(d: Dict[TKey, List[Any]]) -> Iterable[Dict[TKey, Any]]:
     """
     Generates dicts which enumerate the options for keys given in the input dict;
     options are represented by list values in the input dict.

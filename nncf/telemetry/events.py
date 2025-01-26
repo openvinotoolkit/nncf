@@ -15,6 +15,9 @@ from typing import Generator, Optional, TypeVar
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 
+# General categories
+NNCF_CATEGORY = "nncf"
+
 # Backend categories
 NNCF_TF_CATEGORY = "nncf_tf"
 NNCF_PT_CATEGORY = "nncf_pt"

@@ -15,6 +15,7 @@ import numpy as np
 import tensorflow as tf
 
 from nncf import NNCFConfig
+from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.schedulers import StubCompressionScheduler
@@ -190,3 +191,6 @@ class RBSparsityController(BaseSparsityController):
 
     def disable_scheduler(self):
         self._scheduler = StubCompressionScheduler()
+
+    def compression_stage(self) -> CompressionStage:
+        return None  # Issue-160174

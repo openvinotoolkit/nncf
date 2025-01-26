@@ -13,6 +13,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
 import openvino.runtime as ov
+import openvino.runtime.op as op
 import openvino.runtime.opset13 as opset
 
 import nncf
@@ -41,6 +42,8 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
+from nncf.tensor import Tensor
+from nncf.tensor import TensorBackend
 
 InplaceInsertionFnType = Callable[[ov.Node, int, str], ov.Node]
 
@@ -97,42 +100,47 @@ def get_number_if_op(model: ov.Model) -> int:
     """
 
     def cnt_if_op(model: ov.Model, cnt: int) -> int:
-        for op in model.get_ops():
-            if get_node_metatype(op) == OVIfMetatype:
+        for model_op in model.get_ops():
+            if get_node_metatype(model_op) == OVIfMetatype:
                 cnt += 1
-                cnt = cnt_if_op(op.get_function(0), cnt)
-                cnt = cnt_if_op(op.get_function(1), cnt)
+                cnt = cnt_if_op(model_op.get_function(0), cnt)
+                cnt = cnt_if_op(model_op.get_function(1), cnt)
         return cnt
 
     return cnt_if_op(model, 0)
 
 
-def get_const_value(const_node: ov.Node) -> np.ndarray:
+def get_const_value(const_node: ov.Node, cast_bf16_to_fp32: bool = True) -> np.ndarray:
     """
     Returns the constant tensor for the node.
     This method is applicable only for the floating-point constant data.
 
     :param const_node: OpenVINO node.
+    :param cast_bf16_to_fp32: Whether to cast bf16 node data to fp32 or not. If False and the node contains bf16 data,
+        the resulting bf16 value will be returned encoded inside a numpy.float16 array.
     :return: The constant value.
     """
-    if const_node.get_element_type() == ov.Type.bf16:
-        # Fixed FP32 data type as the result for BF16 constant
+    if const_node.get_element_type() == ov.Type.bf16 and cast_bf16_to_fp32:
         return const_node.get_data(dtype=np.float32)
     return const_node.data
 
 
-def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
+def get_bias_value(
+    node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model, node_mapping: Dict[str, ov.Node] = None
+) -> np.ndarray:
     """
     Returns the bias tensor for the biased node.
 
     :param node_with_bias: The node that corresponds to the operation with bias.
     :param nncf_graph: NNCFGraph instance.
     :param model: The model that contains this operation.
+    :param node_mapping: Original nodes mapping cache.
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
-    ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
+    if node_mapping is None:
+        node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
     bias_constant = get_node_with_bias_value(get_add_bias_node(node_with_bias, nncf_graph), nncf_graph)
-    ov_bias_constant = ops_dict[bias_constant.node_name]
+    ov_bias_constant = node_mapping[bias_constant.node_name]
     return get_const_value(ov_bias_constant)
 
 
@@ -631,3 +639,42 @@ def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple
         channel_axis = activations_layout.index(OVLayoutElem.C_IN)
 
     return channel_axis
+
+
+def convert_op(node: ov.Node, target_dtype: ov.Type) -> ov.Node:
+    """
+    Return a subgraph which converts the given node output to the target data type. If the output is already in the
+    target data type then the given node is returned.
+
+    :param node: The input node to convert.
+    :param target_dtype: The target data type to convert the input node to.
+    :return: The converted node.
+    """
+    if node.get_element_type() == target_dtype:
+        return node
+    return opset.convert(node, target_dtype)
+
+
+def non_convertable_divide_op(a: ov.Node, b: ov.Node) -> ov.Node:
+    """
+    Creates a "non-convertable" divide operation. It won't be converted to a*(1/b).
+    """
+    divide_node = a / b
+    divide_node.get_rt_info()["nonconvertable_divide_0"] = True
+    return divide_node
+
+
+def create_ov_const_from_tensor(x: Tensor, dtype: ov.Type, name: Optional[str] = None) -> op.Constant:
+    """
+    Create an OpenVINO Constant node from the given tensor.
+    :param x: Data tensor. Supports NumPy and OV tensor backends. If x backend is OV, the constant node is created
+        directly from underlying OV tensor.
+    :param dtype: Data type of the constant.
+    :param name: Optional name of the constant.
+    :return: OpenVINO Constant node.
+    """
+    if x.backend == TensorBackend.ov:
+        assert x.data.get_element_type() == dtype
+        return opset.constant(x.data, name=name, shared_memory=True)
+    const = opset.constant(x.data, dtype=dtype, name=name)
+    return const

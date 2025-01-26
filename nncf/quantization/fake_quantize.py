@@ -341,7 +341,11 @@ def _calculate_scaled_parameters(
 
 
 def calculate_scale_zero_point(
-    input_low: Tensor, input_high: Tensor, level_low: int, level_high: int, narrow_range: bool
+    input_low: Tensor,
+    input_high: Tensor,
+    level_low: int,
+    level_high: int,
+    narrow_range: bool,
 ) -> Tuple[Tensor, Tensor]:
     """
     Calculates scale and zero_point values for the quantizer.

@@ -11,12 +11,12 @@
 import copy
 import pathlib
 from collections import defaultdict
-from typing import Dict
+from typing import Dict, Union
 
 import networkx as nx  # type: ignore
 
 
-def write_dot_graph(G: nx.DiGraph, path: pathlib.Path) -> None:
+def write_dot_graph(G: nx.DiGraph, path: Union[pathlib.Path, str]) -> None:
     # NOTE: writing dot files with colons even in labels or other node/edge/graph attributes leads to an
     # error. See https://github.com/networkx/networkx/issues/5962. If `relabel` is True in this function,
     # then the colons (:) will be replaced with (^) symbols.
