@@ -219,14 +219,12 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
 
         :return: The compression stage of the target model.
         """
-
-        result = CompressionStage.UNCOMPRESSED
-        for ctrl in self.child_ctrls:
+        if not self.child_ctrls:
+            return CompressionStage.UNCOMPRESSED
+        result = self.child_ctrls[0].compression_stage()
+        for ctrl in self.child_ctrls[1:]:
             current_level = ctrl.compression_stage()
-            if result is None:
-                result = current_level
-            else:
-                result += current_level
+            result += current_level
         return result
 
     def load_state(self, state: Dict[str, Dict[str, Any]]) -> None:

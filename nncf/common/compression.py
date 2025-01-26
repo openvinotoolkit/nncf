@@ -72,11 +72,11 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
 
     @property
     def compression_rate(self) -> float:
-        raise NotImplementedError
+        return None  # type: ignore
 
     @compression_rate.setter
     def compression_rate(self) -> float:
-        raise NotImplementedError
+        pass
 
     def export_model(
         self,

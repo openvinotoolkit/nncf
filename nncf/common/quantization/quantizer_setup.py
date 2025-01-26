@@ -261,7 +261,7 @@ class QuantizerSetupBase:
 
     def register_shared_inputs_group(self, qp_group: List[QuantizationPointId]) -> int:
         for qp_id in qp_group:
-            usg_id = self.get_unified_scale_group_id(qp_id)
+            usg_id = self.get_shared_inputs_group_id(qp_id)
             if usg_id is not None:
                 raise nncf.InternalError(f"QP id {qp_id} is already in unified scale group {usg_id}")
         gid = self._next_shared_inputs_gid
