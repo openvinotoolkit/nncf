@@ -10,11 +10,11 @@
 # limitations under the License.
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable
 
 import nncf
 
-TModel = TypeVar("TModel")
+TModel = Any
 
 try:
     import openvino  # type: ignore # noqa: F401
