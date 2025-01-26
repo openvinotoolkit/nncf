@@ -31,7 +31,7 @@ from nncf.torch.graph.operator_metatypes import OPERATIONS_OUTPUT_HAS_NO_BATCH_A
 
 def quantize_impl(
     model: torch.nn.Module,
-    calibration_dataset: Dataset,  # type: ignore[type-arg]
+    calibration_dataset: Dataset,
     mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,

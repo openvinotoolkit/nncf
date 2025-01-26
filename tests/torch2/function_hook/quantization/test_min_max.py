@@ -16,7 +16,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
-from nncf.quantization.algorithms.min_max.torch2_backend import PT2MinMaxAlgoBackend
+from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PTConstNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
@@ -32,7 +32,7 @@ from tests.cross_fw.test_templates.test_min_max import TemplateTestMinMaxAlgorit
 class TestTorchMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
     @property
     def backend(self) -> MinMaxAlgoBackend:
-        return PT2MinMaxAlgoBackend
+        return PTMinMaxAlgoBackend
 
     @property
     def conv_metatype(self):

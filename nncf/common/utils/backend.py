@@ -13,6 +13,7 @@ from enum import Enum
 from typing import Any, Callable, TypeVar
 
 import nncf
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 
 TModel = TypeVar("TModel")
 
@@ -26,7 +27,6 @@ except ImportError:
 
 class BackendType(Enum):
     TORCH = "Torch"
-    TORCH2 = "Torch2"
     TORCH_FX = "TorchFX"
     TENSORFLOW = "Tensorflow"
     ONNX = "ONNX"
@@ -54,21 +54,12 @@ def is_torch_model(model: TModel) -> bool:
     import torch
     import torch.fx
 
-    return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
-
-
-@result_verifier
-def is_torch2_model(model: TModel) -> bool:
-    """
-    Returns True if the model is an instance of GraphModelWrapper, otherwise False.
-
-    :param model: A target model.
-    :return: True if the model is an instance of GraphModelWrapper, otherwise False.
-    """
-
     from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
-    return isinstance(model, GraphModelWrapper)
+    if is_experimental_torch_tracing_enabled():
+        return isinstance(model, (GraphModelWrapper, torch.nn.Module)) and not isinstance(model, torch.fx.GraphModule)
+
+    return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
 
 
 @result_verifier
@@ -147,7 +138,6 @@ def get_backend(model: TModel) -> BackendType:
     verify_map = {
         is_torch_fx_model: BackendType.TORCH_FX,
         is_torch_model: BackendType.TORCH,
-        is_torch2_model: BackendType.TORCH2,
         is_tensorflow_model: BackendType.TENSORFLOW,
         is_onnx_model: BackendType.ONNX,
         is_openvino_model: BackendType.OPENVINO,

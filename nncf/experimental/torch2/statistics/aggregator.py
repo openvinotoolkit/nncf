@@ -45,7 +45,7 @@ class PT2StatisticsAggregator(StatisticsAggregator):
     BACKEND: BackendType = BackendType.TORCH
     HOOKS_GROUP_NAME = "statistics_hooks"
 
-    def __init__(self, dataset: Dataset):  # type: ignore[type-arg]
+    def __init__(self, dataset: Dataset):
         super().__init__(dataset)
         self.hook_handles: List[RemovableHookHandle] = []
 
