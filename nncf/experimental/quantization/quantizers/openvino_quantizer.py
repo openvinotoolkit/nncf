@@ -24,6 +24,7 @@ from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec as 
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationRule
 from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
@@ -40,6 +41,7 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.scopes import IgnoredScope
+from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 
 QUANT_ANNOTATION_KEY = "quantization_annotation"
 
@@ -114,7 +116,9 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         node_vs_torch_annotation = defaultdict(TorchAOQuantizationAnnotation)
 
         for qp in quantization_setup.quantization_points.values():
-            edge_or_node, annotation = self._get_edge_or_node_and_annotation(graph, qp, node_vs_torch_annotation)
+            edge_or_node, annotation = self._get_edge_or_node_and_annotation(
+                graph, nncf_graph, qp, node_vs_torch_annotation
+            )
             qspec = self._get_torch_ao_qspec_from_qp(qp)
             self._fill_torch_ao_annotation(edge_or_node, qspec, annotation)
 
@@ -133,7 +137,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
                 )
 
             root_target_node = get_graph_node_by_name(graph, root_qp.insertion_point.target_node_name)
-            root_edge_or_node = self._get_edge_or_node(root_target_node, root_qp)
+            root_edge_or_node = self._get_edge_or_node(root_target_node, root_qp, nncf_graph)
 
             for quantizer_id in quantizer_ids:
                 if quantizer_id == root_quantizer_id:
@@ -141,7 +145,9 @@ class OpenVINOQuantizer(TorchAOQuantizer):
 
                 qspec = TorchAOSharedQuantizationSpec(root_edge_or_node)
                 qp = quantization_setup.quantization_points[quantizer_id]
-                edge_or_node, annotation = self._get_edge_or_node_and_annotation(graph, qp, node_vs_torch_annotation)
+                edge_or_node, annotation = self._get_edge_or_node_and_annotation(
+                    graph, nncf_graph, qp, node_vs_torch_annotation
+                )
                 self._fill_torch_ao_annotation(edge_or_node, qspec, annotation)
 
         for node, annotation in node_vs_torch_annotation.items():
@@ -175,6 +181,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
     @staticmethod
     def _get_edge_or_node_and_annotation(
         graph: torch.fx.Graph,
+        nncf_graph: NNCFGraph,
         qp: QuantizationPointBase,
         node_vs_torch_annotation: Dict[torch.fx.Node, TorchAOQuantizationAnnotation],
     ) -> Tuple[EdgeOrNode, TorchAOQuantizationAnnotation]:
@@ -183,6 +190,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         quantization point, and node-to-annotation mapping.
 
         :param graph: torch.fx.Graph instance.
+        :param nncf_graph: NNCFGraph instance.
         :param qp: QuantizationPointBase instance.
         :param node_vs_torch_annotation: A dictionary mapping torch.fx.GraphNode objects to their respective
             TorchAOQuantizationAnnotations.
@@ -190,21 +198,32 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         """
         target_node = get_graph_node_by_name(graph, qp.insertion_point.target_node_name)
         annotation = node_vs_torch_annotation[target_node]
-        edge_or_node = OpenVINOQuantizer._get_edge_or_node(target_node, qp)
+        edge_or_node = OpenVINOQuantizer._get_edge_or_node(target_node, qp, nncf_graph)
         return edge_or_node, annotation
 
     @staticmethod
-    def _get_edge_or_node(target_node: torch.fx.Node, qp: QuantizationPointBase) -> EdgeOrNode:
+    def _get_edge_or_node(target_node: torch.fx.Node, qp: QuantizationPointBase, nncf_graph: NNCFGraph) -> EdgeOrNode:
         """
         Returns the edge or node based on the given target node and quantization point.
 
-        :param target_node: The target node instance.
-        :param qp: The QuantizationPointBase instance.
+        :param target_node: Target node instance.
+        :param qp: QuantizationPointBase instance.
+        :param graph: NNCFGraph instance.
         :return: The corresponding EdgeOrNode derived from the target node and quantization point.
         """
         ip = qp.insertion_point
         if qp.is_weight_quantization_point():
-            weight_node = target_node.all_input_nodes[1]
+            nncf_node = nncf_graph.get_node_by_name(target_node.name)
+            weights_ports_ids = get_weight_tensor_port_ids(nncf_node, nncf_graph)
+            if len(weights_ports_ids) > 1:
+                # TODO(dlyakhov): support quantization for nodes with several weights
+                nncf_logger.warning(
+                    f"Quantization of the weighted node {target_node.name}"
+                    " is not yet supported by the OpenVINOQuantizer."
+                    f" Only the weight on port ID {weights_ports_ids[0]} will be quantized."
+                    f" Quantizable weights are located on ports: {weights_ports_ids}."
+                )
+            weight_node = target_node.all_input_nodes[weights_ports_ids[0]]
             return (weight_node, target_node)
 
         if ip.input_port_id is None:
