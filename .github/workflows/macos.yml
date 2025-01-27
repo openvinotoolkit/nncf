@@ -28,8 +28,7 @@ jobs:
           python-version: "3.10"
       - name: Install dependencies
         run: |
-          pip install .
-          pip install -r tests/common/requirements.txt
+          pip install . -r tests/common/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run pre-commit
@@ -53,8 +52,7 @@ jobs:
           python-version: "3.10"
       - name: Install dependencies
         run: |
-          pip install .
-          pip install -r tests/openvino/requirements.txt
+          pip install . -r tests/openvino/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run pre-commit
