@@ -207,7 +207,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 node_with_weight.metatype, len(input_shape), target_point.input_port_id
             )
         else:
-            input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
             channel_axes = (1,)  # channel dim for activations
 
         if len(channel_axes):
