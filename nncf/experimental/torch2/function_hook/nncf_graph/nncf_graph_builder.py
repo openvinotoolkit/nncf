@@ -111,6 +111,7 @@ def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> PTNNCFGraph:
             node_name=node_name,
             node_type=node_type,
             node_metatype=meta_type,  # type: ignore[arg-type]
+            layer_name=node_name,
         )
         map_nx_node_to_nncf_node[node] = nncf_node
 
@@ -165,7 +166,7 @@ class GraphModelWrapper:
         self.model = model
         self.example_input = example_input
 
-    def build_nncf_graph(self) -> PTNNCFGraph:
+    def build_graph(self) -> PTNNCFGraph:
         """
         Constructs a computational graph of the given model.
 

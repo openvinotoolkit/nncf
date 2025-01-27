@@ -53,17 +53,17 @@ class NNCFGraphFactory:
             from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter as FXGraphConverter
 
             return FXGraphConverter.create_nncf_graph(cast(GraphModule, model))
-        if model_backend == BackendType.TORCH and not is_experimental_torch_tracing_enabled():
+        if model_backend == BackendType.TORCH:
+            from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
             from nncf.torch.nncf_network import NNCFNetwork
 
-            return cast(NNCFNetwork, model).nncf.get_graph()
-        if model_backend == BackendType.TORCH and is_experimental_torch_tracing_enabled():
-            from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
-
-            return cast(GraphModelWrapper, model).build_nncf_graph()
-
+            if isinstance(model, GraphModelWrapper):
+                return model.build_graph()
+            if isinstance(model, NNCFNetwork):
+                return model.nncf.get_graph()
+            raise nncf.InternalError(f"Unexpected type of model {type(model)} for TORCH backend")
         raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific graph because {} is not supported!".format(model_backend.value)
+            f"Cannot create backend-specific graph because {model_backend.value} is not supported!"
         )
 
 

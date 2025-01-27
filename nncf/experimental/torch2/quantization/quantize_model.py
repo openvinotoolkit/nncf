@@ -66,7 +66,7 @@ def quantize_impl(
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
     )
-    graph = model_wrapper.build_nncf_graph()
+    graph = model_wrapper.build_graph()
 
     warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
     quantized_model = quantization_algorithm.apply(model_wrapper, graph, dataset=calibration_dataset)

@@ -171,8 +171,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> str:
-        if is_experimental_torch_tracing_enabled():
-            return target_point.target_node_name
         return nncf_graph.get_node_by_name(target_point.target_node_name).layer_name
 
     @staticmethod
