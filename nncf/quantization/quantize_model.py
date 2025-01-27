@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, TypeVar, Union
 
 import nncf
 from nncf.api.compression import TModel
@@ -59,7 +59,7 @@ def warning_model_no_batchwise_support(
     graph: NNCFGraph,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
     model_type: Optional[ModelType],
-    no_batchwise_support_metatypes: Sequence[Type[OperatorMetatype]],
+    no_batchwise_support_metatypes: Iterable[Type[OperatorMetatype]],
 ) -> None:
     """
     Logs when is_model_no_batchwise_support(...) returns True.
@@ -79,7 +79,7 @@ def is_model_no_batchwise_support(
     graph: NNCFGraph,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
     model_type: Optional[ModelType],
-    no_batchwise_support_metatypes: Sequence[Type[OperatorMetatype]],
+    no_batchwise_support_metatypes: Iterable[Type[OperatorMetatype]],
 ) -> bool:
     """
     Returns True if batchwise statistics could lead to a significant accuracy drop.

@@ -135,11 +135,6 @@ class EngineFactory:
             from nncf.openvino.engine import OVNativeEngine
 
             return OVNativeEngine(cast(Model, model))
-        if model_backend == BackendType.TORCH and is_experimental_torch_tracing_enabled():
-            from nncf.experimental.torch2.engine import PT2Engine
-            from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
-
-            return PT2Engine(cast(GraphModelWrapper, model))
         if model_backend in (BackendType.TORCH, BackendType.TORCH_FX):
             from torch.nn import Module
 

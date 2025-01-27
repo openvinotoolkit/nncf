@@ -14,7 +14,7 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -291,8 +291,6 @@ class PTQuantizerSetup(QuantizerSetupBase):
 
 
 class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
-
-    eps: float
 
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__()
@@ -850,8 +848,6 @@ class AsymmetricQuantizer(BaseQuantizer):
     INPUT_RANGE_PARAM_NAME = "input_range"
     _INPUT_RANGE_PARAM_STORAGE_ATTR = "_input_range_param_storage"
 
-    input_low: CompressionParameter
-
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__(qspec)
         self.input_low = CompressionParameter(
@@ -1032,7 +1028,7 @@ class AsymmetricQuantizer(BaseQuantizer):
         )
 
 
-def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None):
+def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: Optional[int] = None) -> List[int]:
     scale_shape = [1 for _ in input_shape]
     if channel_idx is None:
         if is_weights:
@@ -1044,7 +1040,7 @@ def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None
 
 
 def get_scale_shape(
-    input_shape: Sequence[int], is_weights: bool, per_channel: bool, channel_idx: int = None
+    input_shape: Iterable[int], is_weights: bool, per_channel: bool, channel_idx: Optional[int] = None
 ) -> List[int]:
     """
     Assumes that input_shape is supplied in either [B, C, H, W] or [N_out, N_in, H, W] format,

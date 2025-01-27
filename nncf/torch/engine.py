@@ -17,6 +17,7 @@ from torch import nn
 from nncf.common.engine import Engine
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
 
 class PTEngine(Engine):
@@ -24,14 +25,18 @@ class PTEngine(Engine):
     Engine for the Pytorch backend.
     """
 
-    def __init__(self, model: nn.Module):
+    def __init__(self, model: Union[nn.Module, GraphModelWrapper]):
         """
         Constructor.
 
         :param model: Pytorch module to infer.
         """
 
-        self._model = model
+        if isinstance(model, GraphModelWrapper):
+            self._model = model.model
+        else:
+            self._model = model
+
         if get_backend(model) == BackendType.TORCH:
             self._model.eval()
 
