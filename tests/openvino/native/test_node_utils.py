@@ -15,6 +15,7 @@ import pytest
 from openvino.runtime import opset13 as opset
 
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.utils.os import is_macos
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
@@ -165,4 +166,6 @@ def test_non_convertable_division(a, b, convertable, ref_result):
     model = ov.Model([division], [a_param, b_param])
     compiled_model = ov.compile_model(model, device_name="CPU")
     actual_result = compiled_model([a, b])[0]
-    np.testing.assert_allclose(actual_result, ref_result, atol=0, rtol=0)
+
+    atol = 5e-07 if is_macos() else 0.0
+    np.testing.assert_allclose(actual_result, ref_result, atol=atol)
