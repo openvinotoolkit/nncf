@@ -8,32 +8,33 @@ on:
       pull_request_number:
         description: 'The pull request number'
         default: ''
+  pull_request:
 
 jobs:
-  precommit-common:
-    runs-on: macos-14
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
-        with:
-          lfs: true
-          fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
-      - name: Fetch and Checkout the Pull Request Branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
-        run: |
-          git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
-          git checkout pr-${{ github.event.inputs.pull_request_number }}
-      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
-        with:
-          python-version: "3.10"
-      - name: Install dependencies
-        run: |
-          pip install .
-          pip install -r tests/common/requirements.txt
-      - name: Print installed modules
-        run: pip list
-      - name: Run pre-commit
-        run: pytest -n 2 -ra tests/common
+  # precommit-common:
+  #   runs-on: macos-14
+  #   timeout-minutes: 40
+  #   steps:
+  #     - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+  #       with:
+  #         lfs: true
+  #         fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
+  #     - name: Fetch and Checkout the Pull Request Branch
+  #       if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
+  #       run: |
+  #         git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
+  #         git checkout pr-${{ github.event.inputs.pull_request_number }}
+  #     - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+  #       with:
+  #         python-version: "3.10"
+  #     - name: Install dependencies
+  #       run: |
+  #         pip install .
+  #         pip install -r tests/common/requirements.txt
+  #     - name: Print installed modules
+  #       run: pip list
+  #     - name: Run pre-commit
+  #       run: pytest -n 2 -ra tests/common
 
   precommit-openvino:
     runs-on: macos-14
@@ -53,11 +54,14 @@ jobs:
           python-version: "3.10"
       - name: Install dependencies
         run: |
-          pip install .
-          pip install -r tests/openvino/requirements.txt
+          pip install . -r tests/openvino/requirements.txt
       - name: Print installed modules
         run: pip list
+      # - name: Run pre-commit
+      #   run: pytest -n 3 -ra tests/openvino --dist loadscope
+      #   env:
+      #     ONEDNN_MAX_CPU_ISA: AVX2
       - name: Run pre-commit
-        run: pytest -n 3 -ra tests/openvino --dist loadscope
+        run: pytest tests/openvino/native/test_node_utils.py::test_non_convertable_division -s
         env:
           ONEDNN_MAX_CPU_ISA: AVX2

@@ -15,7 +15,6 @@ import pytest
 from openvino.runtime import opset13 as opset
 
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.utils.os import is_macos
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
@@ -154,18 +153,25 @@ def test_get_weight_channel_axes_for_matmul(weights_port_id, transpose, shape, d
 @pytest.mark.parametrize(
     "a,b,convertable,ref_result",
     [
-        (0.058599039912223816, 15, True, 0.003906603),
-        (0.058599039912223816, 15, False, 0.003906602505594492),
+        (0.0585990399, 15, True, 0.003906603),
+        (0.0585990399, 15, False, 0.0039066025),
     ],
 )
 def test_non_convertable_division(a, b, convertable, ref_result):
     a, b, ref_result = tuple(map(lambda x: np.array([x], np.float32), [a, b, ref_result]))
+    np.set_printoptions(precision=10, suppress=False, floatmode="fixed")
+    print("-----------------")
+    print(f"convertable: {convertable}")
+    print(f"a = {a}")
+    print(f"b = {b}")
+    print(f"ref = {ref_result}")
     a_param = opset.parameter((-1,), ov.Type.f32)
     b_param = opset.parameter((-1,), ov.Type.f32)
     division = (a_param / b_param) if convertable else non_convertable_divide_op(a_param, b_param)
     model = ov.Model([division], [a_param, b_param])
     compiled_model = ov.compile_model(model, device_name="CPU")
     actual_result = compiled_model([a, b])[0]
-
-    atol = 5e-07 if is_macos() else 0.0
-    np.testing.assert_allclose(actual_result, ref_result, atol=atol)
+    print(f"res = {actual_result}")
+    # from nncf.common.utils.os import is_macos
+    # atol = 5e-07 if is_macos() else 0.0
+    np.testing.assert_allclose(actual_result, ref_result, atol=0, rtol=0)
