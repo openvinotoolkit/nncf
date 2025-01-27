@@ -158,7 +158,7 @@ def test_get_weight_channel_axes_for_matmul(weights_port_id, transpose, shape, d
         (0.0585990399, 15, False, 0.0039066025),
     ],
 )
-@pytest.mark.skipif(is_macos(), reason="Not actual for MacOS, returns 0.0039062500 in both case.")
+@pytest.mark.skipif(is_macos(), reason="Not relevant for MacOS, returns 0.0039062500 in both cases.")
 def test_non_convertable_division(a, b, convertable, ref_result):
     a, b, ref_result = tuple(map(lambda x: np.array([x], np.float32), [a, b, ref_result]))
     a_param = opset.parameter((-1,), ov.Type.f32)
