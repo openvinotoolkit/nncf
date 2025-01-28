@@ -17,7 +17,14 @@ Post-training Quantization:
 - Deprecations/Removals:
   - ...
 - Tutorials:
-  - ...
+  - [Post-Training Optimization of GLM-Edge-V Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/glm-edge-v/glm-edge-v.ipynb)
+  - [Post-Training Optimization of OmniGen Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/omnigen/omnigen.ipynb)
+  - [Post-Training Optimization of Sana Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/sana-image-generation/sana-image-generation.ipynb)
+  - [Post-Training Optimization of BGE Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-rag-langchain/llm-rag-langchain-genai.ipynb)
+  - [Post-Training Optimization of Stable Diffusion Inpainting Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/inpainting-genai/inpainting-genai.ipynb)
+  - [Post-Training Optimization of LTX Video Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/ltx-video/ltx-video.ipynb)
+  - [Post-Training Optimization of DeepSeek-R1-Distill Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-chatbot/llm-chatbot-generate-api.ipynb)
+  - [Post-Training Optimization of Janus DeepSeek-LLM-1.3b Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/janus-multimodal-generation/janus-multimodal-generation.ipynb)
 - Known issues:
   - ...
 
