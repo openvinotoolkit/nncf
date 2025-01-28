@@ -42,7 +42,7 @@ REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "nncf_graph"
     [
         [NodeType.input, InOutMeta(torch.float32, (1), "input"), "nncf_model_input"],
         [NodeType.output, InOutMeta(torch.float32, (1), "output"), "nncf_model_output"],
-        [NodeType.output, FunctionMeta("op", "fn_name_ref", [], {}), "fn_name_ref"],
+        [NodeType.output, FunctionMeta("op", torch.relu, [], {}), "relu"],
         [NodeType.output, ConstMeta(torch.float32, (1), "model.bias"), "nncf_model_const"],
     ],
 )
