@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
 from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, TypeVar, Union
 
 import nncf
@@ -22,6 +21,7 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
@@ -230,10 +230,11 @@ def quantize(
         )
 
     if backend == BackendType.TORCH:
-        if os.getenv("NNCF_EXPERIMENTAL_TORCH_TRACING") is None:
-            from nncf.torch.quantization.quantize_model import quantize_impl
-        else:
+        if is_experimental_torch_tracing_enabled():
             from nncf.experimental.torch2.quantization.quantize_model import quantize_impl
+        else:
+            from nncf.torch.quantization.quantize_model import quantize_impl
+
         return quantize_impl(
             model=model,
             calibration_dataset=calibration_dataset,
