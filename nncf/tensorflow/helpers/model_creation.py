@@ -64,10 +64,10 @@ def create_compression_algorithm_builder(config: NNCFConfig, should_init: bool) 
     ],
 )
 @deprecated(
-    msg="The `create_compressed_model()` method is deprecated and will be removed in a 2.14.3 release. "
-    "Consider using the 'nncf.quantize()' method instead. "
+    msg="Consider using the 'nncf.quantize()' method instead. "
     "Please refer to the documentation for guidance on migration.",
     start_version="2.14.2",
+    end_version="2.14.3",
 )
 def create_compressed_model(
     model: tf.keras.Model, config: NNCFConfig, compression_state: Optional[Dict[str, Any]] = None
