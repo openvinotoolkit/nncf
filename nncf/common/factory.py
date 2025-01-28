@@ -142,8 +142,10 @@ class EngineFactory:
             from nncf.torch.engine import PTEngine
 
             if isinstance(model, GraphModelWrapper):
-                model = model.model
-            return PTEngine(cast(Module, model))
+                pt_model = model.model
+            else:
+                pt_model = cast(Module, model)
+            return PTEngine(pt_model)
         raise nncf.UnsupportedBackendError(
             f"Cannot create backend-specific engine because {model_backend.value} is not supported!"
         )
