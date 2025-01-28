@@ -9,7 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 from typing import Dict, List, Tuple
+
+import networkx as nx
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -114,3 +117,24 @@ class PTNNCFGraph(NNCFGraph):
                     # that was disconected from an activation input.
                     input_nodes.add(node)
         return list(input_nodes)
+
+    def __deepcopy__(self, memo):
+        copied_graph = type(self)()
+
+        copied_graph._node_id_to_key_dict = copy.deepcopy(self._node_id_to_key_dict, memo)
+        copied_graph._nodes = copy.deepcopy(self._nodes, memo)
+        copied_graph._input_nncf_nodes = copy.deepcopy(self._input_nncf_nodes, memo)
+        copied_graph._output_nncf_nodes = copy.deepcopy(self._output_nncf_nodes, memo)
+        copied_graph._node_ids_vs_layer_names = copy.deepcopy(self._node_ids_vs_layer_names, memo)
+        copied_graph._layer_name_vs_shared_nodes = copy.deepcopy(self._layer_name_vs_shared_nodes, memo)
+        copied_graph._node_name_to_node_id_map = copy.deepcopy(self._node_name_to_node_id_map, memo)
+
+        copied_graph._nx_graph = nx.DiGraph()
+
+        for node_key, node_data in self._nx_graph.nodes(data=True):
+            copied_graph._nx_graph.add_node(node_key, **copy.deepcopy(node_data, memo))
+
+        for u, v, edge_data in self._nx_graph.edges(data=True):
+            copied_graph._nx_graph.add_edge(u, v, **edge_data)
+
+        return copied_graph
