@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`quantizers.openvino_adapter`
+=====================================
+
+.. py:module:: quantizers.openvino_adapter
+
+
