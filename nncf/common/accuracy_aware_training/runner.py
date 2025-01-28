@@ -21,7 +21,6 @@ from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionStage
 from nncf.common.logging import nncf_logger
 from nncf.common.plotting import noninteractive_plotting
-from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.helpers import configure_accuracy_aware_paths
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.schemata.defaults import AA_COMPRESSION_RATE_STEP_REDUCTION_FACTOR
@@ -294,7 +293,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.cumulative_epoch_count += 1
 
     def dump_statistics(self, model: TModel, compression_controller: CompressionAlgorithmController) -> None:
-        statistics = cast(NNCFStatistics, compression_controller.statistics())
+        statistics = compression_controller.statistics()
 
         if self.verbose:
             nncf_logger.info(statistics.to_str())

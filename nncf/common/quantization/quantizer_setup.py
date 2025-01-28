@@ -13,7 +13,7 @@ from abc import ABC
 from collections import Counter
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import nncf
 from nncf.common.graph import NNCFNodeName
@@ -68,13 +68,13 @@ class QuantizationInsertionPointBase(ABC):
 
 @CommonStatefulClassesRegistry.register()
 class WeightQuantizationInsertionPoint(QuantizationInsertionPointBase):
-    def __eq__(self, other: "WeightQuantizationInsertionPoint"):
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, WeightQuantizationInsertionPoint) and self.target_node_name == other.target_node_name
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(WeightQuantizerId(self.target_node_name))
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
 
@@ -85,23 +85,23 @@ class AQIPointStateNames:
 
 @CommonStatefulClassesRegistry.register()
 class ActivationQuantizationInsertionPoint(QuantizationInsertionPointBase):
-    _state_names = AQIPointStateNames
+    _state_names = AQIPointStateNames  # type: ignore[assignment]
 
     def __init__(self, target_node_name: NNCFNodeName, input_port_id: Optional[int] = None):
         super().__init__(target_node_name)
         self.input_port_id = input_port_id
 
-    def __eq__(self, other: "ActivationQuantizationInsertionPoint"):
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, ActivationQuantizationInsertionPoint)
             and self.target_node_name == other.target_node_name
             and self.input_port_id == other.input_port_id
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(NonWeightQuantizerId(self.target_node_name, self.input_port_id))
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
     def get_state(self) -> Dict[str, Any]:
@@ -112,8 +112,8 @@ class ActivationQuantizationInsertionPoint(QuantizationInsertionPointBase):
         :return: state of the object
         """
         return {
-            self._state_names.TARGET_NODE_NAME: self.target_node_name,
-            self._state_names.INPUT_PORT_ID: self.input_port_id,
+            AQIPointStateNames.TARGET_NODE_NAME: self.target_node_name,
+            AQIPointStateNames.INPUT_PORT_ID: self.input_port_id,
         }
 
 
@@ -135,8 +135,8 @@ class QuantizationPointBase:
     def get_all_configs_list(self) -> List[QuantizerConfig]:
         raise NotImplementedError
 
-    def __eq__(self, other):
-        return self.__dict__ == other.__dict__
+    def __eq__(self, other: object) -> bool:
+        return bool(self.__dict__ == other.__dict__)
 
 
 class SCQPointStateNames:
@@ -158,7 +158,7 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
         super().__init__(qip, directly_quantized_operator_node_names)
         self.qconfig = deepcopy(qconfig)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.insertion_point) + " " + str(self.qconfig)
 
     def get_all_configs_list(self) -> List[QuantizerConfig]:
@@ -187,7 +187,7 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
         """
         insertion_point_cls_name = state[cls._state_names.INSERTION_POINT_CLASS_NAME]
         insertion_point_cls = CommonStatefulClassesRegistry.get_registered_class(insertion_point_cls_name)
-        insertion_point = insertion_point_cls.from_state(state[cls._state_names.INSERTION_POINT])
+        insertion_point = insertion_point_cls.from_state(state[cls._state_names.INSERTION_POINT])  # type: ignore
         kwargs = {
             cls._state_names.INSERTION_POINT: insertion_point,
             cls._state_names.QCONFIG: QuantizerConfig.from_state(state[cls._state_names.QCONFIG]),
@@ -207,11 +207,11 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
         self.possible_qconfigs = possible_qconfigs
 
     @property
-    def possible_qconfigs(self):
+    def possible_qconfigs(self) -> List[QuantizerConfig]:
         return deepcopy(self._possible_qconfigs)
 
     @possible_qconfigs.setter
-    def possible_qconfigs(self, qconfigs: List[QuantizerConfig]):
+    def possible_qconfigs(self, qconfigs: List[QuantizerConfig]) -> None:
         self._possible_qconfigs = deepcopy(qconfigs)
 
     def select_qconfig(self, qconfig: QuantizerConfig) -> SingleConfigQuantizationPoint:
@@ -227,7 +227,7 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
             qconfig = qconfig_any
         return SingleConfigQuantizationPoint(self.insertion_point, qconfig, self.directly_quantized_operator_node_names)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.insertion_point) + " " + ";".join([str(qc) for qc in self.possible_qconfigs])
 
     def get_all_configs_list(self) -> List[QuantizerConfig]:
@@ -235,14 +235,14 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
 
 
 class QuantizerSetupBase:
-    def __init__(self):
+    def __init__(self) -> None:
         self.quantization_points: Dict[QuantizationPointId, QuantizationPointBase] = {}
         self.unified_scale_groups: Dict[int, Set[QuantizationPointId]] = {}
         self.shared_input_operation_set_groups: Dict[int, Set[QuantizationPointId]] = {}
         self._next_unified_scale_gid = 0
         self._next_shared_inputs_gid = 0
 
-    def add_independent_quantization_point(self, qp: QuantizationPointBase):
+    def add_independent_quantization_point(self, qp: QuantizationPointBase) -> None:
         if self.quantization_points.keys():
             new_id = max(self.quantization_points.keys()) + 1
         else:
@@ -251,9 +251,9 @@ class QuantizerSetupBase:
 
     def register_unified_scale_group(self, qp_group: List[QuantizationPointId]) -> int:
         for qp_id in qp_group:
-            gid = self.get_unified_scale_group_id(qp_id) is not None
-            if gid:
-                raise nncf.InternalError("QP id {} is already in unified scale group {}".format(qp_id, gid))
+            usg_id = self.get_unified_scale_group_id(qp_id)
+            if usg_id is not None:
+                raise nncf.InternalError(f"QP id {qp_id} is already in unified scale group {usg_id}")
         gid = self._next_unified_scale_gid
         self.unified_scale_groups[self._next_unified_scale_gid] = set(qp_group)
         self._next_unified_scale_gid += 1
@@ -261,21 +261,21 @@ class QuantizerSetupBase:
 
     def register_shared_inputs_group(self, qp_group: List[QuantizationPointId]) -> int:
         for qp_id in qp_group:
-            gid = self.get_shared_inputs_group_id(qp_id) is not None
-            if gid:
-                raise nncf.InternalError("QP id {} is already in shared input group {}".format(qp_id, gid))
+            usg_id = self.get_shared_inputs_group_id(qp_id)
+            if usg_id is not None:
+                raise nncf.InternalError(f"QP id {qp_id} is already in unified scale group {usg_id}")
         gid = self._next_shared_inputs_gid
         self.shared_input_operation_set_groups[self._next_shared_inputs_gid] = set(qp_group)
         self._next_shared_inputs_gid += 1
         return gid
 
-    def __discard_independent(self, id_: QuantizationPointId):
+    def __discard_independent(self, id_: QuantizationPointId) -> None:
         if id_ in self.quantization_points:
             self.quantization_points.pop(id_)
         for unified_scale_group in self.unified_scale_groups.values():
             unified_scale_group.discard(id_)
 
-    def discard(self, id_: QuantizationPointId, keep_shared_input_qps: bool = False):
+    def discard(self, id_: QuantizationPointId, keep_shared_input_qps: bool = False) -> None:
         if id_ in self.quantization_points:
             self.__discard_independent(id_)
 
@@ -306,19 +306,21 @@ class QuantizerSetupBase:
                 return gid
         return None
 
-    def register_existing_qp_id_in_unified_scale_group(self, qp_id: QuantizationPointId, unified_scale_gid: int):
+    def register_existing_qp_id_in_unified_scale_group(
+        self, qp_id: QuantizationPointId, unified_scale_gid: int
+    ) -> None:
         gid = self.get_unified_scale_group_id(qp_id)
         if gid is not None:
             raise nncf.InternalError("QP id {} is already in unified scale group {}".format(qp_id, gid))
         self.unified_scale_groups[unified_scale_gid].add(qp_id)
 
-    def register_existing_qp_id_in_shared_input_group(self, qp_id: QuantizationPointId, shared_inputs_gid: int):
+    def register_existing_qp_id_in_shared_input_group(self, qp_id: QuantizationPointId, shared_inputs_gid: int) -> None:
         gid = self.get_shared_inputs_group_id(qp_id)
         if gid is not None:
             raise nncf.InternalError("QP id {} is already in shared inputs group {}".format(qp_id, gid))
         self.shared_input_operation_set_groups[shared_inputs_gid].add(qp_id)
 
-    def remove_unified_scale_from_point(self, qp_id: QuantizationPointId):
+    def remove_unified_scale_from_point(self, qp_id: QuantizationPointId) -> None:
         gid = self.get_unified_scale_group_id(qp_id)
         if gid is None:
             nncf_logger.debug(
@@ -394,11 +396,11 @@ class SCQSetupStateNames:
 class SingleConfigQuantizerSetup(QuantizerSetupBase):
     _state_names = SCQSetupStateNames
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.quantization_points: Dict[QuantizationPointId, SingleConfigQuantizationPoint] = {}
+        self.quantization_points: Dict[QuantizationPointId, SingleConfigQuantizationPoint] = {}  # type: ignore
 
-    def get_state(self) -> Dict:
+    def get_state(self) -> Dict[str, Any]:
         """
         Returns a dictionary with Python data structures (dict, list, tuple, str, int, float, True, False, None) that
         represents state of the object.
@@ -406,7 +408,7 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
         :return: state of the object
         """
 
-        def set2list(pair):
+        def set2list(pair: Tuple[int, Set[QuantizationPointId]]) -> Tuple[int, List[QuantizationPointId]]:
             i, qp_id_set = pair
             return i, list(qp_id_set)
 
@@ -420,7 +422,7 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
         }
 
     @classmethod
-    def from_state(cls, state: Dict) -> "SingleConfigQuantizerSetup":
+    def from_state(cls, state: Dict[str, Any]) -> "SingleConfigQuantizerSetup":
         """
         Creates the object from its state.
 
@@ -428,11 +430,11 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
         """
         setup = SingleConfigQuantizerSetup()
 
-        def decode_qp(pair):
+        def decode_qp(pair: Tuple[str, Dict[str, Any]]) -> Tuple[int, SingleConfigQuantizationPoint]:
             str_qp_id, qp_state = pair
             return int(str_qp_id), SingleConfigQuantizationPoint.from_state(qp_state)
 
-        def list2set(pair):
+        def list2set(pair: Tuple[str, List[int]]) -> Tuple[int, Set[int]]:
             str_idx, qp_id_list = pair
             return int(str_idx), set(qp_id_list)
 
@@ -446,11 +448,11 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
 class MultiConfigQuantizerSetup(QuantizerSetupBase):
     def __init__(self) -> None:
         super().__init__()
-        self.quantization_points: Dict[QuantizationPointId, MultiConfigQuantizationPoint] = {}
+        self.quantization_points: Dict[QuantizationPointId, MultiConfigQuantizationPoint] = {}  # type: ignore
         self._unified_scale_qpid_vs_type: Dict[QuantizationPointId, UnifiedScaleType] = {}
 
     def register_unified_scale_group_with_types(
-        self, qp_group: List[QuantizationPointId], us_types: List[Union[UnifiedScaleType, None]]
+        self, qp_group: List[QuantizationPointId], us_types: List[UnifiedScaleType]
     ) -> int:
         assert len(qp_group) == len(us_types)
         gid = super().register_unified_scale_group(qp_group)
