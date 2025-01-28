@@ -18,7 +18,7 @@ import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
-from nncf.common.deprecation import deprecated
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.utils.api_marker import api
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
@@ -63,12 +63,6 @@ def create_compression_algorithm_builder(config: NNCFConfig, should_init: bool) 
         CompressionStartedFromConfig(argname="config"),
     ],
 )
-@deprecated(
-    msg="Consider using the 'nncf.quantize()' method instead. "
-    "Please refer to the documentation for guidance on migration.",
-    start_version="2.14.2",
-    end_version="2.14.3",
-)
 def create_compressed_model(
     model: tf.keras.Model, config: NNCFConfig, compression_state: Optional[Dict[str, Any]] = None
 ) -> Tuple[CompressionAlgorithmController, tf.keras.Model]:
@@ -87,6 +81,19 @@ def create_compressed_model(
     :return: A tuple of the compression controller for the requested algorithm(s) and the model object with additional
      modifications necessary to enable algorithm-specific compression during fine-tuning.
     """
+
+    warning_deprecated(
+        "The 'nncf.tensorflow.create_compressed_model' function is deprecated and will be removed in a "
+        "future release.\n"
+        "To perform post training quantization (PTQ) or quantization aware training (QAT),"
+        " use the new nncf.quantize() API:\n"
+        " - https://github.com/openvinotoolkit/nncf?tab=readme-ov-file#post-training-quantization\n"
+        " - https://github.com/openvinotoolkit/nncf?tab=readme-ov-file#training-time-quantization\n"
+        "Examples:\n"
+        " - https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/tensorflow\n"
+        " - https://github.com/openvinotoolkit/nncf/tree/develop/examples/quantization_aware_training/tensorflow"
+    )
+
     if is_experimental_quantization(config):
         if is_keras_layer_model(model):
             raise ValueError(

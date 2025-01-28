@@ -132,4 +132,4 @@ In the example above, the NNCF-compressed models that contain instances of `MyMo
 ## Examples
 
 - See a PyTorch [example](/examples/quantization_aware_training/torch/resnet18/README.md) for **Quantization** Compression scenario on Tiny ImageNet-200 dataset.
-- See a TensorFlow [example](/examples/quantization_aware_training/tensorflow/mobilenet_v2/README.md) for **Quantization** Compression scenario on `imagenette/320px-v2` dataset.
+- See a TensorFlow [example](/examples/quantization_aware_training/tensorflow/mobilenet_v2/README.md) for **Quantization** Compression scenario on imagenette/320px-v2 dataset.
