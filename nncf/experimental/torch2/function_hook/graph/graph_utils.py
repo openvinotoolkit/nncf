@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import torch
 
@@ -75,9 +75,13 @@ class InOutMeta:
 @dataclass
 class FunctionMeta:
     op_name: str
-    fn_name: str
+    func: Callable[..., Any]
     args: Tuple[Any, ...]
     kwargs: Dict[str, Any]
+
+    @property
+    def func_name(self) -> str:
+        return self.func.__name__
 
 
 @dataclass
