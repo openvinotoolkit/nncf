@@ -268,9 +268,14 @@
 </dl>
 <dl class="py property">
 <dt class="sig sig-object py" id="nncf.common.compression.BaseCompressionAlgorithmController.name">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.common.compression.BaseCompressionAlgorithmController.name" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.common.compression.BaseCompressionAlgorithmController.name" title="Permalink to this definition">#</a></dt>
 <dd><p>Name of the compression algorithm that is being controlled.
 Should be unique to identify the controller and its state among other controllers and their states.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py property">
@@ -351,8 +356,11 @@ state and registered algorithm key.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>name</strong> (<em>str</em>) – algorithm name, the string that was used to register the builder</p></li>
-<li><p><strong>builder_state</strong> (<em>Dict</em>) – state of the builder</p></li>
+<li><p><strong>builder_state</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – state of the builder</p></li>
 </ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
 </dd>
 </dl>
 </dd></dl>

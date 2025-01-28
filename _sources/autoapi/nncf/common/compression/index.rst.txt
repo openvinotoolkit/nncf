@@ -22,6 +22,7 @@ Classes
    Contains the implementation of the basic functionality of the compression controller.
 
    .. py:property:: name
+      :type: str
 
       Name of the compression algorithm that is being controlled.
       Should be unique to identify the controller and its state among other controllers and their states.

@@ -591,7 +591,7 @@ compressed models.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.api.compression.CompressionAlgorithmController.statistics">
 <em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">statistics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">quickly_collected_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/api/compression.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.api.compression.CompressionAlgorithmController.statistics" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns a <cite>Statistics</cite> class instance that contains compression algorithm statistics.</p>
+<dd><p>Returns a <cite>NNCFStatistics</cite> class instance that contains compression algorithm statistics.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>quickly_collected_only</strong> (<em>bool</em>) – Enables collection of the statistics that
@@ -599,7 +599,7 @@ don’t take too much time to compute. Can be helpful for the case when
 need to keep track of statistics on each training batch/step/iteration.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="../statistics/index.html#nncf.api.statistics.Statistics" title="nncf.api.statistics.Statistics">nncf.api.statistics.Statistics</a></p>
+<dd class="field-even"><p><a class="reference internal" href="../../common/statistics/index.html#nncf.common.statistics.NNCFStatistics" title="nncf.common.statistics.NNCFStatistics">nncf.common.statistics.NNCFStatistics</a></p>
 </dd>
 </dl>
 </dd></dl>

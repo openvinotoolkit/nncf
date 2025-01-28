@@ -228,7 +228,7 @@ Classes
    .. py:method:: statistics(quickly_collected_only = False)
       :abstractmethod:
 
-      Returns a `Statistics` class instance that contains compression algorithm statistics.
+      Returns a `NNCFStatistics` class instance that contains compression algorithm statistics.
 
       :param quickly_collected_only: Enables collection of the statistics that
           don't take too much time to compute. Can be helpful for the case when
