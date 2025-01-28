@@ -18,6 +18,7 @@ import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
+from nncf.common.deprecation import deprecated
 from nncf.common.utils.api_marker import api
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
@@ -61,6 +62,12 @@ def create_compression_algorithm_builder(config: NNCFConfig, should_init: bool) 
     [
         CompressionStartedFromConfig(argname="config"),
     ],
+)
+@deprecated(
+    msg="The `create_compressed_model()` method is deprecated and will be removed in a 2.14.3 release. "
+    "Consider using the 'nncf.quantize()' method instead. "
+    "Please refer to the documentation for guidance on migration.",
+    start_version="2.14.2",
 )
 def create_compressed_model(
     model: tf.keras.Model, config: NNCFConfig, compression_state: Optional[Dict[str, Any]] = None
