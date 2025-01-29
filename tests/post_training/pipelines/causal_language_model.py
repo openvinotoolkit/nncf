@@ -57,6 +57,3 @@ class CausalLMHF(PTQTestPipeline):
 
         if self.backend == BackendType.OPTIMUM:
             self.calibration_dataset = calibration_dataset
-
-    def _validate(self):
-        pass
