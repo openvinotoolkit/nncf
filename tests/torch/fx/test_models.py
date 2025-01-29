@@ -25,6 +25,7 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
+from torch.export.dynamic_shapes import Dim
 
 import nncf
 from nncf.common.graph.graph import NNCFNodeName
@@ -44,7 +45,6 @@ from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
-from torch.export.dynamic_shapes import Dim
 
 FX_DIR_NAME = Path("fx")
 FX_QUANTIZED_DIR_NAME = FX_DIR_NAME / "quantized"
@@ -175,6 +175,7 @@ TEST_MODELS_QUANIZED = (
     ),
 )
 
+
 @pytest.mark.parametrize("enable_dynamic_shapes", [True, False])
 @pytest.mark.parametrize("compress_weights", [True, False])
 @pytest.mark.parametrize(
@@ -182,15 +183,21 @@ TEST_MODELS_QUANIZED = (
     TEST_MODELS_QUANIZED,
     ids=[m[0].model_id for m in TEST_MODELS_QUANIZED],
 )
-def test_quantized_model(model_case: ModelCase, quantization_parameters, compress_weights: bool, compress_n_qdq: int, enable_dynamic_shapes: bool):
+def test_quantized_model(
+    model_case: ModelCase,
+    quantization_parameters,
+    compress_weights: bool,
+    compress_n_qdq: int,
+    enable_dynamic_shapes: bool,
+):
     model = model_case.model_builder()
     dtype = torch.int32 if model_case.model_id == "synthetic_transformer" else torch.float32
     example_input = torch.ones(model_case.input_shape, dtype=dtype)
     dynamic_shapes = None
     enable_dynamic_shapes = model_case.model_id == "synthetic_transformer" and enable_dynamic_shapes
-    if(enable_dynamic_shapes):
+    if enable_dynamic_shapes:
         dynamic_shapes = [(Dim.AUTO,)]
-    
+
     fx_model = get_torch_fx_model(model, example_input, dynamic_shapes=dynamic_shapes)
 
     def transform_fn(data_item):
