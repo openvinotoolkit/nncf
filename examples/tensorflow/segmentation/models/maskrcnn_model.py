@@ -324,7 +324,7 @@ class MaskrcnnModel(base_model.Model):
         for field in required_output_fields:
             if field not in outputs:
                 raise ValueError(
-                    '"%s" is missing in outputs, requried %s found %s' % (field, required_output_fields, outputs.keys())
+                    f'"{field}" is missing in outputs, required {required_output_fields} found {outputs.keys()}'
                 )
 
         predictions = {

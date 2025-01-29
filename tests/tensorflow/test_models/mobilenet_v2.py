@@ -96,7 +96,7 @@ def MobileNetV2(input_shape=None, alpha=1.0):
     x = layers.Dense(NUM_CLASSES, activation="softmax", name="predictions")(x)
 
     # Create model.
-    model = tf.keras.Model(img_input, x, name="mobilenetv2_%0.2f_%s" % (alpha, rows))
+    model = tf.keras.Model(img_input, x, name="mobilenetv2_{:0.2f}_{}".format(alpha, rows))
 
     return model
 

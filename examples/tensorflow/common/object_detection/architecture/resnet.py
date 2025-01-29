@@ -58,7 +58,7 @@ class Resnet:
         if resnet_depth not in model_params:
             valid_resnet_depths = ", ".join([str(depth) for depth in sorted(model_params.keys())])
             raise ValueError(
-                "The resnet_depth should be in [%s]. Not a valid resnet_depth:" % (valid_resnet_depths),
+                "The resnet_depth should be in [{}]. Not a valid resnet_depth:".format(valid_resnet_depths),
                 self._resnet_depth,
             )
 
@@ -78,7 +78,7 @@ class Resnet:
           The values are corresponding feature hierarchy in ResNet with shape
           [batch_size, height_l, width_l, num_filters].
         """
-        with tf.name_scope("resnet%s" % self._resnet_depth):
+        with tf.name_scope("resnet{}".format(self._resnet_depth)):
             return self._resnet_fn(inputs, is_training)
 
     def fixed_padding(self, inputs, kernel_size):

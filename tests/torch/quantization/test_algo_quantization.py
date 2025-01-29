@@ -229,7 +229,7 @@ def activation_quantizers_dumping_worker(current_gpu, config, tmp_path):
     print(path)
     with open(path, "w", encoding="utf8") as f:
         for aq_id in qctrl.non_weight_quantizers:
-            f.writelines("%s\n" % str(aq_id))
+            f.writelines("{}\n".format(str(aq_id)))
 
 
 @pytest.mark.cuda

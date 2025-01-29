@@ -103,7 +103,7 @@ def run_profile(layer, input_size_, device, runs, forward_only=False, dtype=torc
 def run_worker(gpu, world_size, layer, input_size_, runs, dtype=torch.float, output: List[Dict[str, int]] = None):
     dist.init_process_group(backend="nccl", init_method="tcp://127.0.0.1:8899", world_size=world_size, rank=gpu)
 
-    device = torch.device("cuda:%d" % gpu)
+    device = torch.device(f"cuda:{gpu}")
     torch.cuda.set_device(gpu)
 
     batch = (int)(input_size_[0] / world_size)

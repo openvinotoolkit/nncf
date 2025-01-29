@@ -72,10 +72,10 @@ class Fpn:
 
         for level in range(self._min_level, self._max_level + 1):
             if self._use_batch_norm:
-                self._norm_activations[level] = norm_activation(use_activation=False, name="p%d-bn" % level)
+                self._norm_activations[level] = norm_activation(use_activation=False, name=f"p{level}-bn")
 
             self._lateral_conv2d_op[level] = self._conv2d_op(
-                filters=self._fpn_feat_dims, kernel_size=(1, 1), padding="same", name="l%d" % level
+                filters=self._fpn_feat_dims, kernel_size=(1, 1), padding="same", name=f"l{level}"
             )
 
             self._post_hoc_conv2d_op[level] = self._conv2d_op(
@@ -83,11 +83,11 @@ class Fpn:
                 strides=(1, 1),
                 kernel_size=(3, 3),
                 padding="same",
-                name="post_hoc_d%d" % level,
+                name=f"post_hoc_d{level}",
             )
 
             self._coarse_conv2d_op[level] = self._conv2d_op(
-                filters=self._fpn_feat_dims, strides=(2, 2), kernel_size=(3, 3), padding="same", name="p%d" % level
+                filters=self._fpn_feat_dims, strides=(2, 2), kernel_size=(3, 3), padding="same", name=f"p{level}"
             )
 
     def __call__(self, multilevel_features, is_training=None):

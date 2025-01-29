@@ -195,9 +195,9 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
         for i in range(len(self._ks_set) - 1):
             ks_small = self._ks_set[i]
             ks_larger = self._ks_set[i + 1]
-            param_name = "%dto%d" % (ks_larger, ks_small)
+            param_name = f"{ks_larger}to{ks_small}"
             # noinspection PyArgumentList
-            scale_params["%s_matrix" % param_name] = Parameter(torch.eye(ks_small**2))
+            scale_params["{}_matrix".format(param_name)] = Parameter(torch.eye(ks_small**2))
         for name, param in scale_params.items():
             self.register_parameter(name, param)
 
@@ -284,7 +284,7 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
                 _input_filter = _input_filter.view(-1, _input_filter.size(2))
                 _input_filter = F.linear(
                     _input_filter,
-                    self.__getattr__("%dto%d_matrix" % (src_ks, target_ks)),
+                    self.__getattr__(f"{src_ks}to{target_ks}_matrix"),
                 )
                 _input_filter = _input_filter.view(filters.size(0), filters.size(1), target_ks**2)
                 _input_filter = _input_filter.view(filters.size(0), filters.size(1), target_ks, target_ks)
