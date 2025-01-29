@@ -44,10 +44,15 @@ from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
+from torch.export.dynamic_shapes import Dim
 
 FX_DIR_NAME = Path("fx")
-FX_QUANTIZED_DIR_NAME = Path("fx") / "quantized"
-FX_QUANTIZED_COMPRESSED_DIR_NAME = Path("fx") / "post_quantization_compressed"
+FX_QUANTIZED_DIR_NAME = FX_DIR_NAME / "quantized"
+FX_QUANTIZED_COMPRESSED_DIR_NAME = FX_DIR_NAME / "post_quantization_compressed"
+
+FX_DYNAMIC_DIR = FX_DIR_NAME / "dynamic_shapes"
+FX_DYNAMIC_QUANTIZED_DIR_NAME = FX_DYNAMIC_DIR / "quantized"
+FX_DYNAMIC_QUANTIZED_COMPRESSED_DIR_NAME = FX_DYNAMIC_DIR / "post_quantization_compressed"
 
 
 @dataclass
@@ -170,19 +175,23 @@ TEST_MODELS_QUANIZED = (
     ),
 )
 
-
+@pytest.mark.parametrize("enable_dynamic_shapes", [True, False])
 @pytest.mark.parametrize("compress_weights", [True, False])
 @pytest.mark.parametrize(
     ("model_case", "quantization_parameters", "compress_n_qdq"),
     TEST_MODELS_QUANIZED,
     ids=[m[0].model_id for m in TEST_MODELS_QUANIZED],
 )
-def test_quantized_model(model_case: ModelCase, quantization_parameters, compress_weights: bool, compress_n_qdq: int):
+def test_quantized_model(model_case: ModelCase, quantization_parameters, compress_weights: bool, compress_n_qdq: int, enable_dynamic_shapes: bool):
     model = model_case.model_builder()
     dtype = torch.int32 if model_case.model_id == "synthetic_transformer" else torch.float32
     example_input = torch.ones(model_case.input_shape, dtype=dtype)
-
-    fx_model = get_torch_fx_model(model, example_input)
+    dynamic_shapes = None
+    enable_dynamic_shapes = model_case.model_id == "synthetic_transformer" and enable_dynamic_shapes
+    if(enable_dynamic_shapes):
+        dynamic_shapes = [(Dim.AUTO)]
+    
+    fx_model = get_torch_fx_model(model, example_input, dynamic_shapes=dynamic_shapes)
 
     def transform_fn(data_item):
         return data_item.to("cpu")
@@ -198,7 +207,11 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters, compres
     # Uncomment to visualize torch fx graph
     # from tests.torch.fx.helpers import visualize_fx_model
     # visualize_fx_model(quantized_model, f"{model_case.model_id}_int8.svg")
-    save_dir = FX_QUANTIZED_COMPRESSED_DIR_NAME if compress_weights else FX_QUANTIZED_DIR_NAME
+    if dynamic_shapes:
+        save_dir = FX_DYNAMIC_QUANTIZED_COMPRESSED_DIR_NAME if compress_weights else FX_DYNAMIC_QUANTIZED_DIR_NAME
+    else:
+        save_dir = FX_QUANTIZED_COMPRESSED_DIR_NAME if compress_weights else FX_QUANTIZED_DIR_NAME
+
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     check_graph(nncf_graph, get_dot_filename(model_case.model_id), save_dir, extended=True)
     q_nodes, dq_nodes = count_q_dq(quantized_model)

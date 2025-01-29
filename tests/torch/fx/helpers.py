@@ -124,7 +124,7 @@ def visualize_fx_model(model: torch.fx.GraphModule, output_svg_path: str):
 
 
 def get_torch_fx_model(
-    model: torch.nn.Module, ex_input: Union[torch.Tensor, Tuple[torch.Tensor, ...]]
+    model: torch.nn.Module, ex_input: Union[torch.Tensor, Tuple[torch.Tensor, ...]], dynamic_shapes=None
 ) -> torch.fx.GraphModule:
     """
     Converts given module to GraphModule.
@@ -151,7 +151,7 @@ def get_torch_fx_model(
     model.eval()
     with torch.no_grad():
         with disable_patching():
-            return torch.export.export_for_training(model, args=device_ex_input).module()
+            return torch.export.export_for_training(model, args=device_ex_input, dynamic_shapes=dynamic_shapes).module()
 
 
 def get_torch_fx_model_q_transformed(model: torch.nn.Module, ex_input: torch.Tensor) -> torch.fx.GraphModule:
