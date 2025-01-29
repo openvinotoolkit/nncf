@@ -136,6 +136,7 @@ select = [
     "CPY001", # copyright check
     "NPY", # numpy rules
     "UP", # pyupgrade
+    "EM"  # flake8-errmsg
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
