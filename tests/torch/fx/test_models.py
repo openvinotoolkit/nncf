@@ -227,6 +227,21 @@ def test_quantized_model(
     check_fq_values(quantized_model)
     check_compressed_post_quantized(quantized_model)
 
+def test_dynamic_edge():
+    model = MultiBranchesConnectedModel()
+    ex_inputs = torch.ones((1, 3, 3, 3))
+    dynamic_shapes = [(Dim.AUTO,Dim.AUTO,Dim.AUTO,Dim.AUTO,)]
+    fx_model = get_torch_fx_model(model, ex_inputs, dynamic_shapes=dynamic_shapes)
+    nncf_graph = GraphConverter.create_nncf_graph(fx_model)
+
+    for edge in nncf_graph.get_all_edges():
+        edge_shape = edge.tensor_shape
+        assert isinstance(edge_shape, tuple)
+        for dim in edge_shape:
+            assert isinstance(dim, (int, str))
+            assert not isinstance(dim, torch.SymInt)
+
+    print("All edges have valid shape types (int or str).")
 
 def check_fq_values(quantized_model):
     for node in quantized_model.graph.nodes:
