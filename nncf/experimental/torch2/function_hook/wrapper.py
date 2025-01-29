@@ -39,7 +39,7 @@ class ForwardWithHooks:
         if isinstance(orig_forward, ForwardWithHooks):
             raise TypeError("Func already wrapped")
 
-        self = super(ForwardWithHooks, cls).__new__(cls)
+        self = super().__new__(cls)
 
         self._func = orig_forward
         return self
@@ -106,7 +106,7 @@ class ReplicateForDataParallel:
         if isinstance(func, ReplicateForDataParallel):
             raise TypeError("Func already wrapped")
 
-        self = super(ReplicateForDataParallel, cls).__new__(cls)
+        self = super().__new__(cls)
 
         self._func = func
         return self

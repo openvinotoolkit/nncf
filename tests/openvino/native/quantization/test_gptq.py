@@ -36,7 +36,7 @@ def quantize(x, scale, zero, minq, maxq):
 
 class GPTQQuantizer(torch.nn.Module):
     def __init__(self, shape=1):
-        super(GPTQQuantizer, self).__init__()
+        super().__init__()
         self.register_buffer("maxq", torch.tensor(0))
         self.register_buffer("scale", torch.zeros(shape))
         self.register_buffer("zero", torch.zeros(shape))
