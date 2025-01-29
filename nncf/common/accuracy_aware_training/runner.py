@@ -265,7 +265,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
                 [
                     TModel,
                     CompressionAlgorithmController,
-                    "TrainingRunner",
+                    TrainingRunner,
                     Optional[Union[str, pathlib.Path]],
                 ],
                 None,
