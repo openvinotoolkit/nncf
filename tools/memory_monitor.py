@@ -13,9 +13,9 @@ import atexit
 import logging
 import queue
 import subprocess
+import sys
 import threading
 import time
-import sys
 from enum import Enum
 from functools import lru_cache
 from functools import partial
