@@ -13,6 +13,7 @@ from enum import Enum
 from typing import Any, Callable, TypeVar, cast
 
 import nncf
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 
 try:
     import openvino  # type: ignore # noqa: F401
@@ -52,6 +53,11 @@ def is_torch_model(model: Any) -> bool:
     """
     import torch
     import torch.fx
+
+    from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+
+    if is_experimental_torch_tracing_enabled():
+        return isinstance(model, (GraphModelWrapper, torch.nn.Module)) and not isinstance(model, torch.fx.GraphModule)
 
     return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
 

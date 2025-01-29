@@ -60,10 +60,6 @@ class TestTorchGetChannelAxes(TemplateTestGetChannelAxes, TestTorchMinMaxAlgorit
     def matmul_metatype(self):
         return PTLinearMetatype
 
-    @property
-    def target_point_cls(self):
-        return PTTargetPoint
-
     @staticmethod
     def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> BaseLayerAttributes:
         # This method isn't needed for Torch backend
