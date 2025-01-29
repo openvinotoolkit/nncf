@@ -395,9 +395,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             }
 
             # Save nncf compression cfg
-            episode_cfgfile = "{0}/{1:03d}_nncfcfg.json".format(
-                str(self._init_args.config["episodic_nncfcfg"]), episode
-            )
+            episode_cfgfile = "{}/{:03d}_nncfcfg.json".format(str(self._init_args.config["episodic_nncfcfg"]), episode)
 
             with safe_open(Path(episode_cfgfile), "w") as outfile:
                 json.dump(current_episode_nncfcfg, outfile, indent=4, sort_keys=False)

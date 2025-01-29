@@ -58,7 +58,7 @@ def _read_coco_annotation(annotation_file, images_folder):
     annotation = json_annotation["annotations"]
 
     for imgAnnotation in annotation:
-        img_path = images_folder / "{0:012d}.jpg".format(imgAnnotation["image_id"])
+        img_path = images_folder / "{:012d}.jpg".format(imgAnnotation["image_id"])
 
         name = str(imgAnnotation["category_id"])
         label_idx = COCO_NAMES.index(name)

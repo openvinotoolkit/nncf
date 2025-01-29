@@ -35,7 +35,7 @@ def save_checkpoint(model, compression_ctrl, optimizer, epoch, miou, config):
     name = config.name
     save_dir = config.checkpoint_save_dir
 
-    assert os.path.isdir(save_dir), 'The directory "{0}" doesn\'t exist.'.format(save_dir)
+    assert os.path.isdir(save_dir), 'The directory "{}" doesn\'t exist.'.format(save_dir)
 
     # Save model
     checkpoint_path = os.path.join(save_dir, name) + "_last.pth"

@@ -46,7 +46,7 @@ def run_wall(layer, input_size_, device, runs, is_print=True, dtype=torch.float)
     fbtime = elapsed / runs * scale
 
     if is_print:
-        print("Forward&Backward: {0:.3f} {1}".format(fbtime, ctime))
+        print("Forward&Backward: {:.3f} {}".format(fbtime, ctime))
     return {"forward + backward": fbtime}
 
 

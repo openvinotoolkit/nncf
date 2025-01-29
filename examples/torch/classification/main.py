@@ -391,7 +391,7 @@ def train(
             make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
 
             for key, value in prepare_for_tensorboard(statistics).items():
-                config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
+                config.tb.add_scalar("compression/statistics/{}".format(key), value, len(train_loader) * epoch)
 
 
 def get_dataset(dataset_config, config, transform, is_train):

@@ -705,5 +705,5 @@ class QuantizationEnv:
             )
 
         os.makedirs(self.dump_dir / "bw_alignment", exist_ok=True)
-        with safe_open(self.dump_dir / "bw_alignment/{0:03d}_bw_alignment.json".format(self._n_eval), "w") as DUMP_FH:
+        with safe_open(self.dump_dir / "bw_alignment/{:03d}_bw_alignment.json".format(self._n_eval), "w") as DUMP_FH:
             json.dump(list_of_dump_dict, DUMP_FH, indent=4)

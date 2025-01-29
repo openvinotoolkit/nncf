@@ -148,7 +148,7 @@ def get_dataset(dataset_name: str) -> torch.utils.data.Dataset:
         from examples.torch.semantic_segmentation.datasets import Mapillary as dataset
     else:
         # Should never happen...but just in case it does
-        raise nncf.UnsupportedDatasetError('"{0}" is not a supported dataset.'.format(dataset_name))
+        raise nncf.UnsupportedDatasetError('"{}" is not a supported dataset.'.format(dataset_name))
     return dataset
 
 
@@ -331,7 +331,7 @@ def train(
         start_epoch = resuming_checkpoint["epoch"]
         best_miou = resuming_checkpoint["miou"]
 
-        logger.info("Resuming from model: Start epoch = {0} | Best mean IoU = {1:.4f}".format(start_epoch, best_miou))
+        logger.info("Resuming from model: Start epoch = {} | Best mean IoU = {:.4f}".format(start_epoch, best_miou))
         config.start_epoch = start_epoch
 
     # Start Training
@@ -340,7 +340,7 @@ def train(
 
     for epoch in range(config.start_epoch, config.epochs):
         compression_ctrl.scheduler.epoch_step()
-        logger.info(">>>> [Epoch: {0:d}] Training".format(epoch))
+        logger.info(">>>> [Epoch: {:d}] Training".format(epoch))
 
         if config.distributed:
             train_loader.sampler.set_epoch(epoch)
@@ -350,7 +350,7 @@ def train(
             # Learning rate scheduling should be applied after optimizer’s update
             lr_scheduler.step(epoch)
 
-        logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f}".format(epoch, epoch_loss, miou))
+        logger.info(">>>> [Epoch: {:d}] Avg. loss: {:.4f} | Mean IoU: {:.4f}".format(epoch, epoch_loss, miou))
 
         if is_main_process():
             config.tb.add_scalar("train/loss", epoch_loss, epoch)
@@ -360,14 +360,14 @@ def train(
 
             statistics = compression_ctrl.statistics(quickly_collected_only=True)
             for key, value in prepare_for_tensorboard(statistics).items():
-                config.tb.add_scalar("compression/statistics/{0}".format(key), value, epoch)
+                config.tb.add_scalar("compression/statistics/{}".format(key), value, epoch)
 
         if (epoch + 1) % config.save_freq == 0 or epoch + 1 == config.epochs:
-            logger.info(">>>> [Epoch: {0:d}] Validation".format(epoch))
+            logger.info(">>>> [Epoch: {:d}] Validation".format(epoch))
 
             loss, (iou, miou) = val_obj.run_epoch(config.print_step)
 
-            logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f}".format(epoch, loss, miou))
+            logger.info(">>>> [Epoch: {:d}] Avg. loss: {:.4f} | Mean IoU: {:.4f}".format(epoch, loss, miou))
 
             if is_main_process():
                 config.tb.add_scalar("val/mIoU", miou, epoch)
@@ -392,7 +392,7 @@ def train(
             # Print per class IoU on last epoch or if best iou
             if epoch + 1 == config.epochs or is_best:
                 for key, class_iou in zip(class_encoding.keys(), iou):
-                    logger.info("{0}: {1:.4f}".format(key, class_iou))
+                    logger.info("{}: {:.4f}".format(key, class_iou))
 
             # Save the model if it's the best thus far
             if is_main_process():
@@ -424,13 +424,13 @@ def test(model, test_loader, criterion, class_encoding, config):
     loss, (iou, miou) = test_obj.run_epoch(config.print_step)
     class_iou = dict(zip(class_encoding.keys(), iou))
 
-    logger.info(">>>> Avg. loss: {0:.4f} | Mean IoU: {1:.4f}".format(loss, miou))
+    logger.info(">>>> Avg. loss: {:.4f} | Mean IoU: {:.4f}".format(loss, miou))
     if config.metrics_dump is not None:
         write_metrics(miou, config.metrics_dump)
 
     # Print per class IoU
     for key, class_iou in zip(class_encoding.keys(), iou):
-        logger.info("{0}: {1:.4f}".format(key, class_iou))
+        logger.info("{}: {:.4f}".format(key, class_iou))
 
     # Show a batch of samples and labels
     if config.imshow_batch:

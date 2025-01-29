@@ -307,7 +307,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         for key, value in prepare_for_tensorboard(statistics).items():
             if isinstance(value, (int, float)):
                 self.add_tensorboard_scalar(
-                    "compression/statistics/{0}".format(key),
+                    "compression/statistics/{}".format(key),
                     value,
                     self.cumulative_epoch_count,
                 )

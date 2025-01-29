@@ -208,7 +208,7 @@ def train(
         if config.distributed:
             datasets.train_data_loader.sampler.set_epoch(epoch)
 
-        logger.info(">>>> [Epoch: {0:d}] Validation".format(epoch))
+        logger.info(">>>> [Epoch: {:d}] Validation".format(epoch))
         _, (_, current_miou) = val_obj.run_epoch(config.print_step)
         # best_metric = max(current_miou, best_metric)
         acc_drop = original_metric - current_miou
@@ -224,10 +224,10 @@ def train(
             logger.info("Training pipeline is finished, accuracy was not recovered.")
             return acc_drop
 
-        logger.info(">>>> [Epoch: {0:d}] Training".format(epoch))
+        logger.info(">>>> [Epoch: {:d}] Training".format(epoch))
         epoch_loss, (_, miou) = train_obj.run_epoch(config.print_step)
 
-        logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f}".format(epoch, epoch_loss, miou))
+        logger.info(">>>> [Epoch: {:d}] Avg. loss: {:.4f} | Mean IoU: {:.4f}".format(epoch, epoch_loss, miou))
 
         lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_miou)
 
