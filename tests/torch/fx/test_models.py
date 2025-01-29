@@ -241,8 +241,6 @@ def test_dynamic_edge():
             assert isinstance(dim, (int, str))
             assert not isinstance(dim, torch.SymInt)
 
-    print("All edges have valid shape types (int or str).")
-
 def check_fq_values(quantized_model):
     for node in quantized_model.graph.nodes:
         if node.target not in DEQUANTIZE_NODE_TARGETS:
