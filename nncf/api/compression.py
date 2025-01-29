@@ -15,8 +15,8 @@ from abc import abstractmethod
 from enum import IntEnum
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
-from nncf.api.statistics import Statistics
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import copy_model
 
@@ -227,9 +227,9 @@ class CompressionAlgorithmController(ABC):
         """
 
     @abstractmethod
-    def statistics(self, quickly_collected_only: bool = False) -> Statistics:
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         """
-        Returns a `Statistics` class instance that contains compression algorithm statistics.
+        Returns a `NNCFStatistics` class instance that contains compression algorithm statistics.
 
         :param quickly_collected_only: Enables collection of the statistics that
             don't take too much time to compute. Can be helpful for the case when

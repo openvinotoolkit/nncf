@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,7 +14,7 @@ import re
 import shutil
 import time
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 import openvino as ov
@@ -31,6 +31,8 @@ import nncf
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import ErrorReason
+from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import StatsFromOutput
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
@@ -257,7 +259,8 @@ class LMWeightCompression(BaseTestPipeline):
             **self.compression_params,
         )
 
-    def _validate(self):
+    def _validate(self) -> List[ErrorReport]:
+        errors = []
         is_stateful = self.params.get("is_stateful", False)
         core = ov.Core()
 
@@ -309,12 +312,11 @@ class LMWeightCompression(BaseTestPipeline):
         num_int4_value = self.run_info.num_compress_nodes.num_int4
         num_int8_value = self.run_info.num_compress_nodes.num_int8
 
+        template = "Regression: The number of int{} ops is different than reference {} != {}"
         if num_int4_reference != num_int4_value:
-            status_msg = f"Regression: The number of int4 ops is different \
-                than reference {num_int4_reference} != {num_int4_value}"
-            raise ValueError(status_msg)
-
+            status_msg = template.format(4, num_int4_reference, num_int4_value)
+            errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
         if num_int8_reference != num_int8_value:
-            status_msg = f"Regression: The number of int8 ops is different \
-                than reference {num_int8_reference} != {num_int8_value}"
-            raise ValueError(status_msg)
+            status_msg = template.format(8, num_int8_reference, num_int8_value)
+            errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+        return errors

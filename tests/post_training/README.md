@@ -152,3 +152,11 @@ To mark a test as expected to fail (xfail) when a validation metric does not mee
   ...
   metrics_xfail_reason: "Issue-<jira ticket number>"
 ```
+
+To mark a test as expected to fail (xfail) when a number of compression operations do not meet expectations, add the following line to the reference data:
+
+```yml
+<Name from model scopes>_backend_<BACKEND>:
+  ...
+  num_compressed_xfail_reason: "Issue-<jira ticket number>"
+```

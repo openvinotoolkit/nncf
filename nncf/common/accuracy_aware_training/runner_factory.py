@@ -59,7 +59,7 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
 
         :return: AccuracyAwareTrainingRunner object
         """
-        nncf_backend = get_backend(self.compression_controller.model)  # type: ignore
+        nncf_backend = get_backend(self.compression_controller.model)
         if nncf_backend is BackendType.TORCH:
             from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
 
@@ -114,7 +114,7 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
 
         :return: AdaptiveCompressionLevelTrainingRunner object
         """
-        nncf_backend = get_backend(self.compression_controller.model)  # type: ignore
+        nncf_backend = get_backend(self.compression_controller.model)
 
         if nncf_backend is BackendType.TORCH:
             from nncf.torch.accuracy_aware_training.runner import PTAdaptiveCompressionLevelTrainingRunner

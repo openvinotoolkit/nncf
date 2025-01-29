@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from functools import partial
 from typing import List, Tuple, Union
 
 import networkx as nx
@@ -18,7 +17,6 @@ import pytest
 import torch
 import torchvision.models as models
 
-from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
 from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
@@ -34,27 +32,9 @@ from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch2.function_hook import helpers
 from tests.torch2.utils import compare_with_reference_file
+from tests.torch2.utils import get_reference_graph
 
 REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "nncf_graph"
-
-
-def get_reference_graph(graph: NNCFGraph) -> nx.DiGraph:
-    out_graph = nx.DiGraph()
-    for node in sorted(graph.get_all_nodes(), key=lambda x: x.node_id):
-        attrs_node = {
-            "id": node.node_id,
-            "type": node.node_type,
-            "metatype": node.metatype.__name__,
-        }
-        out_graph.add_node(node.node_name, **attrs_node)
-
-    for edge in graph.get_all_edges():
-        attrs_edge = {"dtype": edge.dtype.value, "shape": edge.tensor_shape}
-        if edge.parallel_input_port_ids:
-            attrs_edge["parallel_input_port_ids"] = edge.parallel_input_port_ids
-
-        out_graph.add_edge(edge.from_node.node_name, edge.to_node.node_name, **attrs_edge)
-    return out_graph
 
 
 @pytest.mark.parametrize(
@@ -62,7 +42,7 @@ def get_reference_graph(graph: NNCFGraph) -> nx.DiGraph:
     [
         [NodeType.input, InOutMeta(torch.float32, (1), "input"), "nncf_model_input"],
         [NodeType.output, InOutMeta(torch.float32, (1), "output"), "nncf_model_output"],
-        [NodeType.output, FunctionMeta("op", "fn_name_ref", [], {}), "fn_name_ref"],
+        [NodeType.output, FunctionMeta("op", torch.relu, [], {}), "relu"],
         [NodeType.output, ConstMeta(torch.float32, (1), "model.bias"), "nncf_model_const"],
     ],
 )
@@ -137,24 +117,24 @@ class ModelDesc:
 
 
 TEST_MODELS_DESC = [
-    ModelDesc("convnext_small", partial(models.convnext_small, weights=None), [1, 3, 64, 64]),
-    ModelDesc("densenet121", partial(models.densenet121, weights=None), [1, 3, 64, 64]),
-    ModelDesc("efficientnet_b0", partial(models.efficientnet_b0, weights=None), [1, 3, 64, 64]),
-    ModelDesc("inception_v3", partial(models.inception_v3, weights=None), [1, 3, 300, 300]),
-    ModelDesc("mobilenet_v2", partial(models.mobilenet_v2, weights=None), [1, 3, 64, 64]),
-    ModelDesc("mobilenet_v3_small", partial(models.mobilenet_v3_small, weights=None), [1, 3, 64, 64]),
-    ModelDesc("resnet18", partial(models.resnet18, weights=None), [1, 3, 64, 64]),
-    ModelDesc("resnext50_32x4d", partial(models.resnext50_32x4d, weights=None), [1, 3, 64, 64]),
-    ModelDesc("shufflenet_v2_x0_5", partial(models.shufflenet_v2_x0_5, weights=None), [1, 3, 224, 224]),
-    ModelDesc("squeezenet1_0", partial(models.squeezenet1_0, weights=None), [1, 3, 64, 64]),
-    ModelDesc("swin_v2_b", partial(models.swin_v2_b, weights=None), [1, 3, 64, 64]),
-    ModelDesc("vgg16", partial(models.vgg16, weights=None), [1, 3, 32, 32]),
+    ModelDesc("convnext_small", models.convnext_small, [1, 3, 64, 64]),
+    ModelDesc("densenet121", models.densenet121, [1, 3, 64, 64]),
+    ModelDesc("efficientnet_b0", models.efficientnet_b0, [1, 3, 64, 64]),
+    ModelDesc("inception_v3", models.inception_v3, [1, 3, 300, 300]),
+    ModelDesc("mobilenet_v2", models.mobilenet_v2, [1, 3, 64, 64]),
+    ModelDesc("mobilenet_v3_small", models.mobilenet_v3_small, [1, 3, 64, 64]),
+    ModelDesc("resnet18", models.resnet18, [1, 3, 64, 64]),
+    ModelDesc("resnext50_32x4d", models.resnext50_32x4d, [1, 3, 64, 64]),
+    ModelDesc("shufflenet_v2_x0_5", models.shufflenet_v2_x0_5, [1, 3, 224, 224]),
+    ModelDesc("squeezenet1_0", models.squeezenet1_0, [1, 3, 64, 64]),
+    ModelDesc("swin_v2_b", models.swin_v2_b, [1, 3, 64, 64]),
+    ModelDesc("vgg16", models.vgg16, [1, 3, 32, 32]),
 ]
 
 
 @pytest.mark.parametrize("desc", TEST_MODELS_DESC, ids=str)
 def test_model_graph(desc: ModelDesc, regen_ref_data: bool):
-    model: torch.nn.Module = desc.model_builder()
+    model: torch.nn.Module = desc.model_builder(weights=None)
     model = model.eval()
     inputs = [torch.randn(desc.inputs_info)]
     model = wrap_model(model)
