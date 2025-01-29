@@ -559,27 +559,27 @@ class RangeInitTestCase:
                 collector_name="min_max",
                 weights_refs_symmetric=GranularityQuantizerRefs(
                     per_channel=SymQuantizerScaleRef(
-                        scale=torch.tensor((10000.0, 20000.0, 30000.0)).view(((3, 1, 1, 1)))
+                        scale=torch.tensor((10000.0, 20000.0, 30000.0)).view((3, 1, 1, 1))
                     ),
                     per_tensor=SymQuantizerScaleRef(scale=30000.0),
                 ),
                 weights_refs_assymetric=GranularityQuantizerRefs(
                     per_channel=AsymQuantizerScaleRef(
-                        input_low=torch.tensor((1.0, -20000.0, 3.0)).view(((3, 1, 1, 1))),
-                        input_range=torch.tensor((9999.0, 19998.0, 29997.0)).view(((3, 1, 1, 1))),
+                        input_low=torch.tensor((1.0, -20000.0, 3.0)).view((3, 1, 1, 1)),
+                        input_range=torch.tensor((9999.0, 19998.0, 29997.0)).view((3, 1, 1, 1)),
                     ),
                     per_tensor=AsymQuantizerScaleRef(input_low=-20000.0, input_range=50000.0),
                 ),
                 activations_refs_symmetric=GranularityQuantizerRefs(
                     per_channel=SymQuantizerScaleRef(
-                        scale=torch.tensor((20000.0, 40000.0, 60000.0)).view(((1, 3, 1, 1)))
+                        scale=torch.tensor((20000.0, 40000.0, 60000.0)).view((1, 3, 1, 1))
                     ),
                     per_tensor=SymQuantizerScaleRef(scale=60000.0),
                 ),
                 activations_refs_assymetric=GranularityQuantizerRefs(
                     per_channel=AsymQuantizerScaleRef(
-                        input_low=torch.tensor((1.0, -40000.0, 3.0)).view(((1, 3, 1, 1))),
-                        input_range=torch.tensor((19999.0, 39998.0, 59997.0)).view(((1, 3, 1, 1))),
+                        input_low=torch.tensor((1.0, -40000.0, 3.0)).view((1, 3, 1, 1)),
+                        input_range=torch.tensor((19999.0, 39998.0, 59997.0)).view((1, 3, 1, 1)),
                     ),
                     per_tensor=AsymQuantizerScaleRef(input_low=-40000.0, input_range=100000.0),
                 ),
@@ -588,27 +588,27 @@ class RangeInitTestCase:
                 collector_name="mixed_min_max",
                 weights_refs_symmetric=GranularityQuantizerRefs(
                     per_channel=SymQuantizerScaleRef(
-                        scale=torch.tensor((10000.0, 20000.0, 30000.0)).view(((3, 1, 1, 1)))
+                        scale=torch.tensor((10000.0, 20000.0, 30000.0)).view((3, 1, 1, 1))
                     ),
                     per_tensor=SymQuantizerScaleRef(scale=30000.0),
                 ),
                 weights_refs_assymetric=GranularityQuantizerRefs(
                     per_channel=AsymQuantizerScaleRef(
-                        input_low=torch.tensor((1.0, -20000.0, 3.0)).view(((3, 1, 1, 1))),
-                        input_range=torch.tensor((9999.0, 19998.0, 29997.0)).view(((3, 1, 1, 1))),
+                        input_low=torch.tensor((1.0, -20000.0, 3.0)).view((3, 1, 1, 1)),
+                        input_range=torch.tensor((9999.0, 19998.0, 29997.0)).view((3, 1, 1, 1)),
                     ),
                     per_tensor=AsymQuantizerScaleRef(input_low=-20000.0, input_range=50000.0),
                 ),
                 activations_refs_symmetric=GranularityQuantizerRefs(
                     per_channel=SymQuantizerScaleRef(
-                        scale=torch.tensor((20000.0, 40000.0, 60000.0)).view(((1, 3, 1, 1)))
+                        scale=torch.tensor((20000.0, 40000.0, 60000.0)).view((1, 3, 1, 1))
                     ),
                     per_tensor=SymQuantizerScaleRef(scale=45000.0),
                 ),
                 activations_refs_assymetric=GranularityQuantizerRefs(
                     per_channel=AsymQuantizerScaleRef(
-                        input_low=torch.tensor((1.0, -40000.0, 3.0)).view(((1, 3, 1, 1))),
-                        input_range=torch.tensor((19999.0, 39998.0, 59997.0)).view(((1, 3, 1, 1))),
+                        input_low=torch.tensor((1.0, -40000.0, 3.0)).view((1, 3, 1, 1)),
+                        input_range=torch.tensor((19999.0, 39998.0, 59997.0)).view((1, 3, 1, 1)),
                     ),
                     per_tensor=AsymQuantizerScaleRef(input_low=-30000.0, input_range=75000.0),
                 ),
@@ -617,27 +617,27 @@ class RangeInitTestCase:
                 collector_name="mean_min_max",
                 weights_refs_symmetric=GranularityQuantizerRefs(
                     per_channel=SymQuantizerScaleRef(
-                        scale=torch.tensor((10000.0, 20000.0, 30000.0)).view(((3, 1, 1, 1)))
+                        scale=torch.tensor((10000.0, 20000.0, 30000.0)).view((3, 1, 1, 1))
                     ),
                     per_tensor=SymQuantizerScaleRef(scale=30000.0),
                 ),
                 weights_refs_assymetric=GranularityQuantizerRefs(
                     per_channel=AsymQuantizerScaleRef(
-                        input_low=torch.tensor((1.0, -20000.0, 3.0)).view(((3, 1, 1, 1))),
-                        input_range=torch.tensor((9999.0, 19998.0, 29997.0)).view(((3, 1, 1, 1))),
+                        input_low=torch.tensor((1.0, -20000.0, 3.0)).view((3, 1, 1, 1)),
+                        input_range=torch.tensor((9999.0, 19998.0, 29997.0)).view((3, 1, 1, 1)),
                     ),
                     per_tensor=AsymQuantizerScaleRef(input_low=-20000.0, input_range=50000.0),
                 ),
                 activations_refs_symmetric=GranularityQuantizerRefs(
                     per_channel=SymQuantizerScaleRef(
-                        scale=torch.tensor((15000.0, 30000.0, 45000.0)).view(((1, 3, 1, 1)))
+                        scale=torch.tensor((15000.0, 30000.0, 45000.0)).view((1, 3, 1, 1))
                     ),
                     per_tensor=SymQuantizerScaleRef(scale=45000.0),
                 ),
                 activations_refs_assymetric=GranularityQuantizerRefs(
                     per_channel=AsymQuantizerScaleRef(
-                        input_low=torch.tensor((1.5, -30000.0, 4.5)).view(((1, 3, 1, 1))),
-                        input_range=torch.tensor((14998.5000, 29997.0000, 44995.5000)).view(((1, 3, 1, 1))),
+                        input_low=torch.tensor((1.5, -30000.0, 4.5)).view((1, 3, 1, 1)),
+                        input_range=torch.tensor((14998.5000, 29997.0000, 44995.5000)).view((1, 3, 1, 1)),
                     ),
                     per_tensor=AsymQuantizerScaleRef(input_low=-30000.0, input_range=75000.0),
                 ),
@@ -646,27 +646,27 @@ class RangeInitTestCase:
                 collector_name="threesigma",
                 weights_refs_symmetric=GranularityQuantizerRefs(
                     per_channel=SymQuantizerScaleRef(
-                        scale=torch.tensor((16120.1719, 32240.3438, 48360.5156)).view(((3, 1, 1, 1)))
+                        scale=torch.tensor((16120.1719, 32240.3438, 48360.5156)).view((3, 1, 1, 1))
                     ),
                     per_tensor=SymQuantizerScaleRef(scale=33780.2891),
                 ),
                 weights_refs_assymetric=GranularityQuantizerRefs(
                     per_channel=AsymQuantizerScaleRef(
-                        input_low=torch.tensor((-6119.1719, -32240.3438, -18357.5156)).view(((3, 1, 1, 1))),
-                        input_range=torch.tensor((22239.3438, 44478.6875, 66718.0312)).view(((3, 1, 1, 1))),
+                        input_low=torch.tensor((-6119.1719, -32240.3438, -18357.5156)).view((3, 1, 1, 1)),
+                        input_range=torch.tensor((22239.3438, 44478.6875, 66718.0312)).view((3, 1, 1, 1)),
                     ),
                     per_tensor=AsymQuantizerScaleRef(input_low=-26279.2871, input_range=60059.5781),
                 ),
                 activations_refs_symmetric=GranularityQuantizerRefs(
                     per_channel=SymQuantizerScaleRef(
-                        scale=torch.tensor((21494.4707, 42988.9414, 64483.4141)).view(((1, 3, 1, 1)))
+                        scale=torch.tensor((21494.4707, 42988.9414, 64483.4141)).view((1, 3, 1, 1))
                     ),
                     per_tensor=SymQuantizerScaleRef(scale=52662.1367),
                 ),
                 activations_refs_assymetric=GranularityQuantizerRefs(
                     per_channel=AsymQuantizerScaleRef(
-                        input_low=torch.tensor((-8159.4707, -42988.9414, -24478.4141)).view(((1, 3, 1, 1))),
-                        input_range=torch.tensor((29653.9414, 59307.8828, 88961.8281)).view(((1, 3, 1, 1))),
+                        input_low=torch.tensor((-8159.4707, -42988.9414, -24478.4141)).view((1, 3, 1, 1)),
+                        input_range=torch.tensor((29653.9414, 59307.8828, 88961.8281)).view((1, 3, 1, 1)),
                     ),
                     per_tensor=AsymQuantizerScaleRef(input_low=-42660.1367, input_range=95322.2734),
                 ),
@@ -675,27 +675,27 @@ class RangeInitTestCase:
                 collector_name="percentile",
                 weights_refs_symmetric=GranularityQuantizerRefs(
                     per_channel=SymQuantizerScaleRef(
-                        scale=torch.tensor((6789.3213, 13580.6416, 20367.9629)).view(((3, 1, 1, 1)))
+                        scale=torch.tensor((6789.3213, 13580.6416, 20367.9629)).view((3, 1, 1, 1))
                     ),
                     per_tensor=SymQuantizerScaleRef(scale=7776.0),
                 ),
                 weights_refs_assymetric=GranularityQuantizerRefs(
                     per_channel=AsymQuantizerScaleRef(
-                        input_low=torch.tensor((3210.6790, -13580.6416, 9632.0371)).view(((3, 1, 1, 1))),
-                        input_range=torch.tensor((3578.6423, 7157.2837, 10735.9258)).view(((3, 1, 1, 1))),
+                        input_low=torch.tensor((3210.6790, -13580.6416, 9632.0371)).view((3, 1, 1, 1)),
+                        input_range=torch.tensor((3578.6423, 7157.2837, 10735.9258)).view((3, 1, 1, 1)),
                     ),
                     per_tensor=AsymQuantizerScaleRef(input_low=-740.6420, input_range=8516.6416),
                 ),
                 activations_refs_symmetric=GranularityQuantizerRefs(
                     per_channel=SymQuantizerScaleRef(
-                        scale=torch.tensor((9052.3213, 18108.0000, 27156.9629)).view(((1, 3, 1, 1)))
+                        scale=torch.tensor((9052.3213, 18108.0000, 27156.9629)).view((1, 3, 1, 1))
                     ),
                     per_tensor=SymQuantizerScaleRef(scale=10734.6426),
                 ),
                 activations_refs_assymetric=GranularityQuantizerRefs(
                     per_channel=AsymQuantizerScaleRef(
-                        input_low=torch.tensor((4280.6792, -18108.0000, 12842.0371)).view(((1, 3, 1, 1))),
-                        input_range=torch.tensor((4771.6421, 9544.0000, 14314.9258)).view(((1, 3, 1, 1))),
+                        input_low=torch.tensor((4280.6792, -18108.0000, 12842.0371)).view((1, 3, 1, 1)),
+                        input_range=torch.tensor((4771.6421, 9544.0000, 14314.9258)).view((1, 3, 1, 1)),
                     ),
                     per_tensor=AsymQuantizerScaleRef(input_low=-988.0, input_range=11722.6426),
                 ),
@@ -704,27 +704,27 @@ class RangeInitTestCase:
                 collector_name="mean_percentile",
                 weights_refs_symmetric=GranularityQuantizerRefs(
                     per_channel=SymQuantizerScaleRef(
-                        scale=torch.tensor((9990.0010, 19980.0020, 29970.0039)).view(((3, 1, 1, 1)))
+                        scale=torch.tensor((9990.0010, 19980.0020, 29970.0039)).view((3, 1, 1, 1))
                     ),
                     per_tensor=SymQuantizerScaleRef(scale=29910.0039),
                 ),
                 weights_refs_assymetric=GranularityQuantizerRefs(
                     per_channel=AsymQuantizerScaleRef(
-                        input_low=torch.tensor((10.999, -19980.0, 32.997)).view(((3, 1, 1, 1))),
-                        input_range=torch.tensor((9979.0020, 19958.0039, 29937.0078)).view(((3, 1, 1, 1))),
+                        input_low=torch.tensor((10.999, -19980.0, 32.997)).view((3, 1, 1, 1)),
+                        input_range=torch.tensor((9979.0020, 19958.0039, 29937.0078)).view((3, 1, 1, 1)),
                     ),
                     per_tensor=AsymQuantizerScaleRef(input_low=-19940.0020, input_range=49850.0078),
                 ),
                 activations_refs_symmetric=GranularityQuantizerRefs(
                     per_channel=SymQuantizerScaleRef(
-                        scale=torch.tensor((14985.0020, 29970.0039, 44955.0078)).view(((1, 3, 1, 1)))
+                        scale=torch.tensor((14985.0020, 29970.0039, 44955.0078)).view((1, 3, 1, 1))
                     ),
                     per_tensor=SymQuantizerScaleRef(scale=44865.0078),
                 ),
                 activations_refs_assymetric=GranularityQuantizerRefs(
                     per_channel=AsymQuantizerScaleRef(
-                        input_low=torch.tensor((16.498, -2.9970e04, 49.496)).view(((1, 3, 1, 1))),
-                        input_range=torch.tensor((14968.5039, 29937.0078, 44905.5117)).view(((1, 3, 1, 1))),
+                        input_low=torch.tensor((16.498, -2.9970e04, 49.496)).view((1, 3, 1, 1)),
+                        input_range=torch.tensor((14968.5039, 29937.0078, 44905.5117)).view((1, 3, 1, 1)),
                     ),
                     per_tensor=AsymQuantizerScaleRef(input_low=-29910.0039, input_range=74775.0156),
                 ),

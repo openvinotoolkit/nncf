@@ -25,4 +25,4 @@ class TestStatisticsCaching(TemplateTestStatisticsCaching):
         return OVStatisticsAggregator(None)
 
     def _create_dummy_min_max_tensor(self) -> Tensor:
-        return Tensor(np.zeros((3))), Tensor(np.ones((3)))
+        return Tensor(np.zeros(3)), Tensor(np.ones(3))

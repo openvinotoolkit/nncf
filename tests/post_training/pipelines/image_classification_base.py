@@ -40,8 +40,8 @@ class ImageClassificationBase(PTQTestPipeline):
         dataset_size = len(val_loader)
 
         # Initialize result tensors for async inference support.
-        predictions = np.zeros((dataset_size))
-        references = -1 * np.ones((dataset_size))
+        predictions = np.zeros(dataset_size)
+        references = -1 * np.ones(dataset_size)
 
         core = ov.Core()
 

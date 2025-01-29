@@ -158,7 +158,7 @@ def gnmt_forward_fn(seq_len, batch_size, vocab_size):
 
         def gen_packed_sequence():
             seq_list = []
-            seq_lens = torch.LongTensor((batch_size_)).random_(1, seq_len_ + 1).type(torch.int32).to(device)
+            seq_lens = torch.LongTensor(batch_size_).random_(1, seq_len_ + 1).type(torch.int32).to(device)
             seq_lens = torch.sort(seq_lens, descending=True).values
             for seq_size in seq_lens:
                 seq_list.append(torch.LongTensor(seq_size.item()).random_(1, vocab_size_).to(device))

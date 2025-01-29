@@ -482,9 +482,9 @@ class LSTMSequenceModel(OVReferenceModel):
         initial_cell_state = opset.parameter([1, 1, 128], name="initial_cell_state")
         seq_len = opset.constant(np.array([2]), dtype=np.int32)
 
-        W = opset.constant(np.zeros(([1, 512, 16])), dtype=np.float32)
-        R = opset.constant(np.zeros(([1, 512, 128])), dtype=np.float32)
-        B = opset.constant(np.zeros(([1, 512])), dtype=np.float32)
+        W = opset.constant(np.zeros([1, 512, 16]), dtype=np.float32)
+        R = opset.constant(np.zeros([1, 512, 128]), dtype=np.float32)
+        B = opset.constant(np.zeros([1, 512]), dtype=np.float32)
 
         lstm = opset.lstm_sequence(
             x, initial_hidden_state, initial_cell_state, seq_len, W, R, B, 128, "FORWARD", name="LSTMSequence"
@@ -507,9 +507,9 @@ class GRUSequenceModel(OVReferenceModel):
         seq_len = opset.constant(np.array([1, 2, 3]), dtype=np.int32)
 
         scale_factor = 4 if linear_before_reset else 3
-        W = opset.constant(np.zeros(([1, 3 * hidden_size, 16])), dtype=np.float32)
-        R = opset.constant(np.zeros(([1, 3 * hidden_size, hidden_size])), dtype=np.float32)
-        B = opset.constant(np.zeros(([1, scale_factor * hidden_size])), dtype=np.float32)
+        W = opset.constant(np.zeros([1, 3 * hidden_size, 16]), dtype=np.float32)
+        R = opset.constant(np.zeros([1, 3 * hidden_size, hidden_size]), dtype=np.float32)
+        B = opset.constant(np.zeros([1, scale_factor * hidden_size]), dtype=np.float32)
 
         gru = opset.gru_sequence(
             x,

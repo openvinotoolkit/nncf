@@ -126,10 +126,8 @@ class SmoothQuant(Algorithm):
                     break
                 if len(activations_value) != 1:
                     raise RuntimeError(
-                        (
-                            "More than one statistic is collected for one node during"
-                            f"Smooth Quanti algorithm: {node_to_smooth.node_name}"
-                        )
+                        "More than one statistic is collected for one node during"
+                        f"Smooth Quanti algorithm: {node_to_smooth.node_name}"
                     )
 
                 activations_value = self._clip_statistics(activations_value)
