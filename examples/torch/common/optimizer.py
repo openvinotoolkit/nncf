@@ -53,7 +53,8 @@ def make_optimizer(params_to_optimize, config):
         optim_params = optim_config.get("optimizer_params", {"momentum": 0.9})
         optim = SGD(params_to_optimize, **optim_params)
     else:
-        raise KeyError(f"Unknown optimizer type: {optim_type}")
+        msg = f"Unknown optimizer type: {optim_type}"
+        raise KeyError(msg)
 
     scheduler_type = optim_config.get("schedule_type", "step").lower()
     scheduler_params = optim_config.get("schedule_params", optim_config.get("scheduler_params", {}))
@@ -76,7 +77,8 @@ def make_optimizer(params_to_optimize, config):
     elif scheduler_type == "exponential":
         scheduler = ExponentialLR(optim, gamma)
     else:
-        raise KeyError(f"Unknown scheduler type: {scheduler_type}")
+        msg = f"Unknown scheduler type: {scheduler_type}"
+        raise KeyError(msg)
 
     return optim, scheduler
 

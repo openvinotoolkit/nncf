@@ -154,7 +154,8 @@ class MagnitudeSparsityController(BaseSparsityController):
         scheduler_type = params.get("schedule", "polynomial")
 
         if scheduler_type == "adaptive":
-            raise ValueError("Magnitude sparsity algorithm do not support adaptive scheduler")
+            msg = "Magnitude sparsity algorithm do not support adaptive scheduler"
+            raise ValueError(msg)
 
         scheduler_cls = SPARSITY_SCHEDULERS.get(scheduler_type)
         self._scheduler: SparsityScheduler = scheduler_cls(self, params)
@@ -187,9 +188,8 @@ class MagnitudeSparsityController(BaseSparsityController):
         """
         if not self._frozen:
             if sparsity_level >= 1 or sparsity_level < 0:
-                raise AttributeError(
-                    f"Sparsity level should be within interval [0,1), actual value to set is: {sparsity_level}"
-                )
+                msg = f"Sparsity level should be within interval [0,1), actual value to set is: {sparsity_level}"
+                raise AttributeError(msg)
 
             self._threshold = self._select_threshold(sparsity_level)
             self._set_masks_for_threshold(self._threshold)

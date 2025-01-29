@@ -38,18 +38,19 @@ class StatefulClassesRegistry:
             registered_name = name if name is not None else cls.__name__
 
             if registered_name in self._name_vs_class_map:
-                raise ValueError(
-                    f"{registered_name} has already been registered to {self._name_vs_class_map[registered_name]}"
-                )
+                msg = f"{registered_name} has already been registered to {self._name_vs_class_map[registered_name]}"
+                raise ValueError(msg)
 
             if cls in self._class_vs_name_map:
-                raise ValueError(f"{cls} has already been registered to {self._class_vs_name_map[cls]}")
+                msg = f"{cls} has already been registered to {self._class_vs_name_map[cls]}"
+                raise ValueError(msg)
 
             if inspect.isclass(cls) and not hasattr(cls, self.REQUIRED_METHOD_NAME):
-                raise ValueError(
+                msg = (
                     f"Cannot register a class ({registered_name}) that does not have"
                     f" {self.REQUIRED_METHOD_NAME}() method."
                 )
+                raise ValueError(msg)
 
             self._class_vs_name_map[cls] = registered_name
             self._name_vs_class_map[registered_name] = cls
@@ -67,7 +68,8 @@ class StatefulClassesRegistry:
         """
         if registered_name in self._name_vs_class_map:
             return self._name_vs_class_map[registered_name]
-        raise KeyError(f"No registered stateful classes with {registered_name} name")
+        msg = f"No registered stateful classes with {registered_name} name"
+        raise KeyError(msg)
 
     def get_registered_name(self, stateful_cls: type) -> str:
         """
@@ -78,7 +80,8 @@ class StatefulClassesRegistry:
         """
         if stateful_cls in self._class_vs_name_map:
             return self._class_vs_name_map[stateful_cls]
-        raise KeyError(f"The class {stateful_cls.__name__} was not registered.")
+        msg = f"The class {stateful_cls.__name__} was not registered."
+        raise KeyError(msg)
 
 
 class CommonStatefulClassesRegistry:

@@ -112,7 +112,8 @@ def load_checkpoint(checkpoint, ckpt_path):
     if not path_to_checkpoint:
         logger.info("No checkpoint detected.")
         if ckpt_path:
-            raise nncf.ValidationError(f"ckpt_path was given, but no checkpoint detected in path: {ckpt_path}")
+            msg = f"ckpt_path was given, but no checkpoint detected in path: {ckpt_path}"
+            raise nncf.ValidationError(msg)
 
     logger.info(f"Checkpoint file {path_to_checkpoint} found and restoring from checkpoint")
 

@@ -141,10 +141,11 @@ def get_backend(model: Any) -> BackendType:
         if backend_call(model):
             return backend
 
-    raise nncf.UnsupportedBackendError(
+    msg = (
         "Could not infer the backend framework from the model type because "
         "the framework is not available or corrupted, or the model type is unsupported. "
     )
+    raise nncf.UnsupportedBackendError(msg)
 
 
 def copy_model(model: TModel) -> TModel:

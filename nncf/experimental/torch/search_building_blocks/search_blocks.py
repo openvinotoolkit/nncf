@@ -372,10 +372,11 @@ def get_building_blocks(
       does not lead to duplicate activation layers
     """
     if min_block_size > max_block_size:
-        raise AttributeError(
+        msg = (
             f"Minimal value for block size {min_block_size} can not be more than maximum one "
             f"{max_block_size}. Change max_block_size or min_block_size."
         )
+        raise AttributeError(msg)
     orig_graph = compressed_model.nncf.get_original_graph()  # PTNNCFGraph
     blocks = get_potential_building_blocks(orig_graph, hw_fused_ops, min_block_size, max_block_size)
     sorted_blocks = sorted(blocks, key=cmp_to_key(compare_for_building_block))

@@ -201,7 +201,8 @@ def asymmetric_range(
     level_high = fns.where(level_high > 0.0, level_high, 0.0)
 
     if unify_zp and q_group == QuantizerGroup.ACTIVATIONS:
-        raise NotImplementedError("Unified zero point is not supported for activations.")
+        msg = "Unified zero point is not supported for activations."
+        raise NotImplementedError(msg)
 
     level_low, level_high = tune_range(level_low, level_high, quantizer_config.num_bits, unify_zp=unify_zp)
     level_low = level_low.astype(TensorDataType.float32)
@@ -321,9 +322,11 @@ def _calculate_scaled_parameters(
         levels: Number of quantization levels.
     """
     if quantizer_config.mode == QuantizationMode.ASYMMETRIC:
-        raise nncf.ValidationError("half_range is only applied to symmetric quantization mode.")
+        msg = "half_range is only applied to symmetric quantization mode."
+        raise nncf.ValidationError(msg)
     if quant_group != QuantizerGroup.WEIGHTS:
-        raise nncf.ValidationError("half_range is only applied to weight quantizers.")
+        msg = "half_range is only applied to weight quantizers."
+        raise nncf.ValidationError(msg)
 
     num_bits = quantizer_config.num_bits
     level_low, level_high = calculate_symmetric_level_ranges(num_bits - 1, signed=True, narrow_range=False)

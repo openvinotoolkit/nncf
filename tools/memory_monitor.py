@@ -96,7 +96,8 @@ class MemoryMonitor:
             if include_child_processes is None:
                 include_child_processes = True
         else:
-            raise ValueError("Unknown memory type to log")
+            msg = "Unknown memory type to log"
+            raise ValueError(msg)
         self.memory_unit = memory_unit
         self.include_child_processes = include_child_processes
 
@@ -118,7 +119,8 @@ class MemoryMonitor:
             ```
         """
         if self._monitoring_in_progress:
-            raise Exception("Monitoring already in progress")
+            msg = "Monitoring already in progress"
+            raise Exception(msg)
 
         self._memory_values_queue = queue.Queue()
         self._monitoring_thread_should_stop = False
@@ -251,7 +253,8 @@ class MemoryMonitor:
             elif self.memory_type == MemoryType.SYSTEM:
                 bytes_used = psutil.virtual_memory().total - psutil.virtual_memory().available
             else:
-                raise Exception("Unknown memory type to log")
+                msg = "Unknown memory type to log"
+                raise Exception(msg)
             if self._monitoring_thread_should_stop:
                 break
             self._memory_values_queue.put((time.perf_counter(), bytes_used))

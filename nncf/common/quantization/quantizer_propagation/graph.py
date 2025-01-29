@@ -223,7 +223,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
             return QuantizerPropagationStateGraphNodeType.POST_HOOK
         if ipg_node_type == InsertionPointGraphNodeType.OPERATOR:
             return QuantizerPropagationStateGraphNodeType.OPERATOR
-        raise nncf.ValidationError("Invalid insertion point graph node type.")
+        msg = "Invalid insertion point graph node type."
+        raise nncf.ValidationError(msg)
 
     @staticmethod
     def get_barrier_node_key(node_key: str) -> str:
@@ -255,10 +256,11 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
             pq in self._pqs_after_weight_dependent_output_quantized_nodes
             and self._pqs_after_weight_dependent_output_quantized_nodes[pq] != operator_node_key
         ):
-            raise nncf.InternalError(
+            msg = (
                 f"Propagating quantizer {pq.id} is already marked as depending on node "
                 f"{operator_node_key} weight quantization!"
             )
+            raise nncf.InternalError(msg)
         self._pqs_after_weight_dependent_output_quantized_nodes[pq] = operator_node_key
 
     @staticmethod
@@ -337,9 +339,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                     affecting_quantizers.append(pq)
             self.remove_propagating_quantizer(prop_quantizer)
         else:
-            raise nncf.InternalError(
-                "Surviving_quantizers not found !" f" Nodes quantized with quantizer #{prop_quantizer.id} will be lost"
-            )
+            msg = f"Surviving_quantizers not found! Nodes quantized with quantizer #{prop_quantizer.id} will be lost"
+            raise nncf.InternalError(msg)
 
     @staticmethod
     def _get_major_unified_scale_type(type_list: List[Optional[UnifiedScaleType]]) -> Optional[UnifiedScaleType]:
@@ -377,7 +378,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                 pre_hook_ip = edge_from_pre_hook_ip_to_op[0]
                 target_ip_node_keys.append(pre_hook_ip)
         else:
-            raise nncf.InternalError(f"Unsupported branching QPSG node type: {branching_node_type}")
+            msg = f"Unsupported branching QPSG node type: {branching_node_type}"
+            raise nncf.InternalError(msg)
 
         if not target_ip_node_keys:
             return []
@@ -427,7 +429,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                 if merge_gid is not None:
                     self._unified_scale_group_manager.add_to_group(merge_gid, merge_pq)
             else:
-                raise nncf.InternalError(f"Unsupported target type for merge PQ insertion: {target_type}")
+                msg = f"Unsupported target type for merge PQ insertion: {target_type}"
+                raise nncf.InternalError(msg)
 
             merge_pqs.append(merge_pq)
 
@@ -437,7 +440,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
             if branch_qconf_list is None and pq.unified_scale_type is not None:
                 gid = self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(pq.id)
                 if gid is None:
-                    raise nncf.InternalError("gid is None")
+                    msg = "gid is None"
+                    raise nncf.InternalError(msg)
                 unified_scale_gids_to_merge.add(gid)
 
         if unified_scale_gids_to_merge:
@@ -574,7 +578,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
         if ip_type != QuantizerPropagationStateGraphNodeType.PRE_HOOK:
             # The insertion point key should immediately precede a quantizable op,
             # otherwise it is hard to determine affected node here (although possible)
-            raise nncf.InternalError("Can only add propagating quantizers into pre-hook spots!")
+            msg = "Can only add propagating quantizers into pre-hook spots!"
+            raise nncf.InternalError(msg)
 
         prop_quantizer = PropagatingQuantizer(
             self._get_next_prop_quantizer_id(), qconf_list, ip_node_key, unified_scale_type
@@ -614,15 +619,13 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
 
         for node_key in node_keys_to_verify:
             if node_key not in self.nodes:
-                raise nncf.InternalError(
-                    f"Unknown node referenced by propagating quantizer to be registered: {node_key}"
-                )
+                msg = f"Unknown node referenced by propagating quantizer to be registered: {node_key}"
+                raise nncf.InternalError(msg)
         edge_keys_to_verify = list(prop_quantizer.affected_edges) + list(prop_quantizer.propagation_path)
         for edge_key in edge_keys_to_verify:
             if edge_key not in self.edges:
-                raise nncf.InternalError(
-                    f"Unknown edge referenced by propagating quantizer to be registered: {edge_key}"
-                )
+                msg = f"Unknown edge referenced by propagating quantizer to be registered: {edge_key}"
+                raise nncf.InternalError(msg)
 
     @staticmethod
     def _verify_qconfig_matching(
@@ -630,35 +633,39 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
     ) -> None:
         for existing_pq in existing_prop_quantizers:
             if existing_pq.potential_quant_configs != prop_quantizer.potential_quant_configs:
-                raise nncf.InternalError(
+                msg = (
                     "Configurations of the quantizer to be registered are conflicting with "
                     f"existing quantizer {existing_pq.id}"
                 )
+                raise nncf.InternalError(msg)
 
     def register_propagating_quantizer(self, prop_quantizer: PropagatingQuantizer) -> None:
         """Will only succeed if the new quantizer information is consistent with the rest of the graph state."""
         all_pqs = self.collect_all_propagating_quantizers()
         for existing_pq_id in all_pqs:
             if prop_quantizer.id == existing_pq_id:
-                raise nncf.InternalError(
+                msg = (
                     "The propagating quantizer to be registered has an ID that is already assigned to "
                     "an existing propagating quantizer!"
                 )
+                raise nncf.InternalError(msg)
         target_node = self.nodes[prop_quantizer.current_location_node_key]
         pq_in_target_node = target_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR]
         if pq_in_target_node is not None:
-            raise nncf.InternalError(
+            msg = (
                 "The propagating quantizer to be registered is occupying the same position "
                 f"as an existing propagating quantizer {pq_in_target_node.id}!"
             )
+            raise nncf.InternalError(msg)
         target_node_affecting_quantizers = target_node[
             QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR
         ]
         if target_node_affecting_quantizers:
-            raise nncf.InternalError(
+            msg = (
                 "Cannot register a propagating quantizer into a node that is already affected by existing"
                 f" propagating quantizers (ids: {[pq.id for pq in target_node_affecting_quantizers]})!"
             )
+            raise nncf.InternalError(msg)
 
         self._verify_nodes_and_edges_for_pq(prop_quantizer)
 
@@ -1008,7 +1015,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
             elif node_type == QuantizerPropagationStateGraphNodeType.AUXILIARY_BARRIER:
                 out_graph.add_node(node_key, color="green", label=node["label"])
             else:
-                raise nncf.InternalError("Invalid QuantizerPropagationStateGraph node!")
+                msg = "Invalid QuantizerPropagationStateGraph node!"
+                raise nncf.InternalError(msg)
         for u, v in self.edges:
             edge = self.edges[u, v]
             attrs = {}

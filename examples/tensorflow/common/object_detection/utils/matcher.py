@@ -36,9 +36,11 @@ class Match:
             integer int32 scalar tensor
         """
         if match_results.shape.ndims != 1:
-            raise ValueError("match_results should have rank 1")
+            msg = "match_results should have rank 1"
+            raise ValueError(msg)
         if match_results.dtype != tf.int32:
-            raise ValueError("match_results should be an int32 or int64 scalar tensor")
+            msg = "match_results should be an int32 or int64 scalar tensor"
+            raise ValueError(msg)
         self._match_results = match_results
 
     @property

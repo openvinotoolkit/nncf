@@ -236,7 +236,8 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         elif compression_config.mode == CompressWeightsMode.INT8_ASYM:
             compression_dtype = ov.Type.u8
         else:
-            raise nncf.ParameterNotSupportedError(f"{compression_config.mode.value} is not supported.")
+            msg = f"{compression_config.mode.value} is not supported."
+            raise nncf.ParameterNotSupportedError(msg)
 
         original_shape = weight.shape
         with disable_results_caching(OV_MODEL_CACHE):

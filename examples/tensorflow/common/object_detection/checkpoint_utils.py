@@ -119,7 +119,8 @@ def make_restore_checkpoint_fn(checkpoint_path, prefix="", skip_regex=None):
         )
 
         if not vars_to_load:
-            raise ValueError("Variables to load is empty.")
+            msg = "Variables to load is empty."
+            raise ValueError(msg)
 
         tf.compat.v1.train.init_from_checkpoint(checkpoint_path, vars_to_load)
 

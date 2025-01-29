@@ -141,7 +141,8 @@ def get_sample_fn(sample_type, modes):
             variants.append(key)
 
     if len(variants) != 1:
-        raise Exception("Can not choose a function for given arguments")
+        msg = "Can not choose a function for given arguments"
+        raise Exception(msg)
 
     return SAMPLES[sample_type][variants[0]]
 

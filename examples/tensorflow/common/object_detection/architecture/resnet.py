@@ -40,7 +40,8 @@ class Resnet:
         elif activation == "swish":
             self._activation_op = tf.nn.swish
         else:
-            raise ValueError(f"Unsupported activation `{activation}`.")
+            msg = f"Unsupported activation `{activation}`."
+            raise ValueError(msg)
 
         self._norm_activation = norm_activation
         self._data_format = data_format
@@ -57,8 +58,9 @@ class Resnet:
 
         if resnet_depth not in model_params:
             valid_resnet_depths = ", ".join([str(depth) for depth in sorted(model_params.keys())])
+            msg = f"The resnet_depth should be in [{valid_resnet_depths}]. Not a valid resnet_depth:"
             raise ValueError(
-                f"The resnet_depth should be in [{valid_resnet_depths}]. Not a valid resnet_depth:",
+                msg,
                 self._resnet_depth,
             )
 

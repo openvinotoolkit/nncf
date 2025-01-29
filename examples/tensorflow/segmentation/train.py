@@ -201,7 +201,8 @@ def train(
             train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
 
             if np.isnan(train_metric_result["total_loss"]):
-                raise ValueError("total loss is NaN")
+                msg = "total loss is NaN"
+                raise ValueError(msg)
 
             train_metric_result.update({"learning_rate": get_learning_rate(optimizer, optimizer.iterations)})
 
@@ -325,7 +326,8 @@ def main(argv):
     create_code_snapshot(nncf_root, os.path.join(config.log_dir, "snapshot.tar.gz"))
 
     if config.dataset_type != "tfrecords":
-        raise nncf.ValidationError("The train.py does not support TensorFlow Datasets (TFDS). Please use TFRecords.")
+        msg = "The train.py does not support TensorFlow Datasets (TFDS). Please use TFRecords."
+        raise nncf.ValidationError(msg)
 
     run_train(config)
 

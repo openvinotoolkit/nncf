@@ -183,7 +183,8 @@ class OVModelTransformer(ModelTransformer):
                 output = node.input_value(port_id)
                 extra_model_outputs.append((output, output.get_index(), output_dtype))
             else:
-                raise NotImplementedError(f"Unsupported target point type {transformation.target_point.type}")
+                msg = f"Unsupported target point type {transformation.target_point.type}"
+                raise NotImplementedError(msg)
 
         return extra_model_outputs
 
@@ -414,7 +415,8 @@ class OVModelTransformer(ModelTransformer):
             for inp_node in target_inputs:
                 inp_node.replace_source_output(fq.output(0))
         else:
-            raise nncf.InternalError(f"Incorrect target point type {transform_type}")
+            msg = f"Incorrect target point type {transform_type}"
+            raise nncf.InternalError(msg)
 
     @staticmethod
     def _insert_fake_convert_op(
@@ -468,7 +470,8 @@ class OVModelTransformer(ModelTransformer):
             for inp_node in target_inputs:
                 inp_node.replace_source_output(fc.output(0))
         else:
-            raise nncf.InternalError(f"Incorrect target point type {transform_type}")
+            msg = f"Incorrect target point type {transform_type}"
+            raise nncf.InternalError(msg)
 
     @staticmethod
     def _apply_bias_correction_transformations(model, transformations: List[OVBiasCorrectionCommand]) -> ov.Model:
@@ -513,7 +516,8 @@ class OVModelTransformer(ModelTransformer):
             queue.append((curr_node.input(0), curr_node.input_value(0).get_node()))
 
         if const_node is None:
-            raise nncf.InternalError("Constant node was expected but could not find it.")
+            msg = "Constant node was expected but could not find it."
+            raise nncf.InternalError(msg)
 
         const_value = np.reshape(const_value, const_node.data.shape)
 
@@ -668,7 +672,8 @@ class OVModelTransformer(ModelTransformer):
                     for target_in in op_output.get_target_inputs():
                         target_in.replace_source_output(op_input_values[0])
             else:
-                raise RuntimeError("ReadValue has no initial value.")
+                msg = "ReadValue has no initial value."
+                raise RuntimeError(msg)
 
         return extracted_model
 
@@ -713,7 +718,8 @@ class OVModelTransformer(ModelTransformer):
                 output.get_node(), output.get_index(), transformation.last_inplace_node_name
             )
             return (new_node.output(fn_output_port_id), fn_output_port_id, output_dtype)
-        raise nncf.InternalError(f"Transform type {transform_type} is not supported")
+        msg = f"Transform type {transform_type} is not supported"
+        raise nncf.InternalError(msg)
 
     @staticmethod
     def _apply_bias_insertion_transformations(

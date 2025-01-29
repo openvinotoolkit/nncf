@@ -108,9 +108,8 @@ class RetinanetModel(base_model.Model):
 
         for field in required_output_fields:
             if field not in outputs:
-                raise ValueError(
-                    f'"{field}" is missing in outputs, requried {required_output_fields} found {outputs.keys()}'
-                )
+                msg = f'"{field}" is missing in outputs, requried {required_output_fields} found {outputs.keys()}'
+                raise ValueError(msg)
 
         boxes, scores, classes, valid_detections = self._generate_detections_fn(
             outputs["box_outputs"], outputs["cls_outputs"], labels["anchor_boxes"], labels["image_info"][:, 1:2, :]

@@ -212,7 +212,8 @@ def get_stochastic_depth_rate(init_rate, i, n):
     """
     if init_rate is not None:
         if init_rate < 0 or init_rate > 1:
-            raise ValueError("Initial drop rate must be within 0 and 1.")
+            msg = "Initial drop rate must be within 0 and 1."
+            raise ValueError(msg)
         rate = init_rate * float(i) / n
     else:
         rate = None
@@ -909,7 +910,8 @@ class ResNet(tf.keras.Model):
             x = self._norm(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon, trainable=bn_trainable)(x)
             x = get_activation(activation, use_keras_layer=True)(x)
         else:
-            raise ValueError(f"Stem type {stem_type} not supported.")
+            msg = f"Stem type {stem_type} not supported."
+            raise ValueError(msg)
 
         if replace_stem_max_pool:
             x = tf.keras.layers.Conv2D(
@@ -934,7 +936,8 @@ class ResNet(tf.keras.Model):
             elif spec[0] == "bottleneck":
                 block_fn = BottleneckBlock
             else:
-                raise ValueError(f"Block fn `{spec[0]}` is not supported.")
+                msg = f"Block fn `{spec[0]}` is not supported."
+                raise ValueError(msg)
             x = self._block_group(
                 inputs=x,
                 filters=int(spec[1] * self._depth_multiplier),

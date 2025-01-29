@@ -177,7 +177,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         module = get_module_by_name(module_name, model)
         weight = getattr(module, weight_attr_name)
         if weight is None or not isinstance(weight, torch.nn.Parameter):
-            raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
+            msg = f"Could not find a torch.nn.Parameter in the model by name {weight_name}."
+            raise nncf.InternalError(msg)
 
         return Tensor(weight)
 
@@ -218,7 +219,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 CompressWeightsMode.NF4,
                 CompressWeightsMode.E2M1,
             ]:
-                raise nncf.ParameterNotSupportedError(f"{compression_config.mode.value} is not supported.")
+                msg = f"{compression_config.mode.value} is not supported."
+                raise nncf.ParameterNotSupportedError(msg)
 
             weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
             weight_name = weight_node.layer_attributes.name
@@ -226,7 +228,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             module = get_module_by_name(module_name, model)
             weight = getattr(module, weight_attr_name)
             if weight is None or not isinstance(weight, torch.nn.Parameter):
-                raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
+                msg = f"Could not find a torch.nn.Parameter in the model by name {weight_name}."
+                raise nncf.InternalError(msg)
 
             # calculates compressed weights and decompression parameters
             compressed_weight = compress_weight(

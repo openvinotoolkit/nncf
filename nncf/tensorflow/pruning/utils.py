@@ -38,7 +38,8 @@ def get_filter_axis(layer: NNCFWrapper, weight_attr: str) -> int:
 def get_filters_num(layer: NNCFWrapper):
     layer_metatype = get_keras_layer_metatype(layer)
     if len(layer_metatype.weight_definitions) != 1:
-        raise ValueError(f"Could not calculate the number of filters for the layer {layer.layer.name}.")
+        msg = f"Could not calculate the number of filters for the layer {layer.layer.name}."
+        raise ValueError(msg)
 
     weight_def = layer_metatype.weight_definitions[0]
     weight_attr = weight_def.weight_attr_name
@@ -95,7 +96,8 @@ def collect_output_shapes(model: "NNCFNetwork", graph: NNCFGraph) -> Dict[NNCFNo
         out_shape = layer.get_output_shape_at(node_index)[dims_slice]
 
         if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
-            raise nncf.ValidationError(f"Input/output shape is not defined for layer `{layer.name}` ")
+            msg = f"Input/output shape is not defined for layer `{layer.name}` "
+            raise nncf.ValidationError(msg)
 
         layers_out_shapes[node.node_name] = out_shape
 
@@ -107,7 +109,8 @@ def collect_output_shapes(model: "NNCFNetwork", graph: NNCFGraph) -> Dict[NNCFNo
         out_shape = layer.get_output_shape_at(node_index)[1:]
 
         if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
-            raise nncf.ValidationError(f"Input/output shape is not defined for layer `{layer.name}` ")
+            msg = f"Input/output shape is not defined for layer `{layer.name}` "
+            raise nncf.ValidationError(msg)
 
         layers_out_shapes[node.node_name] = out_shape
     return layers_out_shapes

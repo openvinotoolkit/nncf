@@ -361,7 +361,8 @@ def test_net(net, device, data_loader, distributed=False, loss_inference=False, 
         if distributed:
             raise NotImplementedError
         if criterion is None:
-            raise ValueError("Missing loss inference function (criterion)")
+            msg = "Missing loss inference function (criterion)"
+            raise ValueError(msg)
         output = eval_net_loss(data_loader, device, net, criterion)
         net.apply(restore_bn_module_mode)
         return output

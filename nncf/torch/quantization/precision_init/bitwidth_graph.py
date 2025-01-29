@@ -88,9 +88,8 @@ class BitwidthGraph:
         for wq_id, wq_info in algo_ctrl.weight_quantizers.items():
             nodes = [nncf_graph.get_node_by_name(tp.target_node_name) for tp in wq_info.affected_insertions]
             if not nodes:
-                raise AttributeError(
-                    f"Failed to get affected nodes for quantized module node: {wq_id.target_node_name}"
-                )
+                msg = f"Failed to get affected nodes for quantized module node: {wq_id.target_node_name}"
+                raise AttributeError(msg)
             preds = [nncf_graph.get_previous_nodes(node) for node in nodes]
             wq_nodes = []
             for pred_list in preds:

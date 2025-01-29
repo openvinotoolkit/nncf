@@ -51,9 +51,8 @@ class SymmetricQuantizerV2(SymmetricQuantizer):
         :return: Quantizer variables.
         """
         if self.per_channel and (self.input_shape is None or self.channel_axes is None):
-            raise ValueError(
-                "The `input_shape` and `channel_axes` arguments are required when using per-channel quantization."
-            )
+            msg = "The `input_shape` and `channel_axes` arguments are required when using per-channel quantization."
+            raise ValueError(msg)
         prefix = self.name
         return self._create_variables(layer, self.input_shape, self.channel_axes, prefix)
 
@@ -86,9 +85,8 @@ class AsymmetricQuantizerV2(AsymmetricQuantizer):
         :return: Quantizer variables.
         """
         if self.per_channel and (self.input_shape is None or self.channel_axes is None):
-            raise ValueError(
-                "The `input_shape` and `channel_axes` arguments are required when using per-channel quantization."
-            )
+            msg = "The `input_shape` and `channel_axes` arguments are required when using per-channel quantization."
+            raise ValueError(msg)
         prefix = self.name
         return self._create_variables(layer, self.input_shape, self.channel_axes, prefix)
 

@@ -91,7 +91,8 @@ def load_checkpoint(checkpoint, ckpt_path):
     if not path_to_checkpoint:
         logger.info("No checkpoint detected.")
         if ckpt_path:
-            raise nncf.ValidationError(f"ckpt_path was given, but no checkpoint detected in path: {ckpt_path}")
+            msg = f"ckpt_path was given, but no checkpoint detected in path: {ckpt_path}"
+            raise nncf.ValidationError(msg)
 
     logger.info(f"Checkpoint file {path_to_checkpoint} found and restoring from checkpoint")
     status = checkpoint.restore(path_to_checkpoint)
@@ -193,7 +194,8 @@ def train_epoch(
         train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
 
         if np.isnan(train_metric_result["total_loss"]):
-            raise ValueError("total loss is NaN")
+            msg = "total loss is NaN"
+            raise ValueError(msg)
 
         train_metric_result.update({"learning_rate": get_learning_rate(optimizer, optimizer.iterations)})
 

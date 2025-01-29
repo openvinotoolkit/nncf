@@ -28,7 +28,8 @@ class NNCFTensor:
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, NNCFTensor):
-            raise nncf.InternalError("Attempt to compare NNCFTensor with a non-NNCFTensor object")
+            msg = "Attempt to compare NNCFTensor with a non-NNCFTensor object"
+            raise nncf.InternalError(msg)
         return self._tensor == other.tensor
 
     @property
@@ -38,7 +39,8 @@ class NNCFTensor:
     @property
     def shape(self) -> List[int]:
         if self._tensor is None:
-            raise nncf.InternalError("Attempt to get shape of empty NNCFTensor")
+            msg = "Attempt to get shape of empty NNCFTensor"
+            raise nncf.InternalError(msg)
         return self._tensor.shape  # type: ignore
 
     @property

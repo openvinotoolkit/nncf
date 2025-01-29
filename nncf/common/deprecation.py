@@ -67,7 +67,8 @@ def deprecated(
 
             return cast(TObj, obj)
 
-        raise TypeError("The @deprecated decorator can only be used on functions or classes.")
+        msg = "The @deprecated decorator can only be used on functions or classes."
+        raise TypeError(msg)
 
     return decorator
 

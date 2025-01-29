@@ -258,7 +258,8 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
                         input_graphdef_node_name = splits[0]
                         output_port_id = int(splits[1])
                     else:
-                        raise nncf.InternalError("Could not parse NodeDef's input field!")
+                        msg = "Could not parse NodeDef's input field!"
+                        raise nncf.InternalError(msg)
 
                     pretty_input_node_name = custom_layer_info.graphdef_node_name_to_pretty_node_name[
                         input_graphdef_node_name
@@ -360,7 +361,8 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
             # Filter control inputs, whatever these are
             previous_node_names = list(filter(lambda x: "^" not in x, previous_node_names))
         if weight_node_name is None:
-            raise nncf.InternalError(f"Could not find a weight node for a weighted node {weighted_node.name}")
+            msg = f"Could not find a weight node for a weighted node {weighted_node.name}"
+            raise nncf.InternalError(msg)
         return weight_node_name
 
     @staticmethod
@@ -407,7 +409,8 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
                 if layer.name == layer_name:
                     return layer
 
-        raise ValueError(f"No such layer: {layer_name}.")
+        msg = f"No such layer: {layer_name}."
+        raise ValueError(msg)
 
     def _add_custom_layer_subgraph(self, nncf_graph: NNCFGraph, custom_layer_name: str) -> NNCFGraph:
         # TODO (vshampor): filter meaningless ops such as Identity, resource read etc.

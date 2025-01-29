@@ -141,7 +141,8 @@ class HWConfig(list[Dict[str, Any]], ABC):
             return QuantizationMode.SYMMETRIC
         if str_val == "asymmetric":
             return QuantizationMode.ASYMMETRIC
-        raise nncf.ValidationError("Invalid quantization type specified in HW config")
+        msg = "Invalid quantization type specified in HW config"
+        raise nncf.ValidationError(msg)
 
     @staticmethod
     def get_is_per_channel_from_config_value(str_val: str) -> bool:
@@ -149,7 +150,8 @@ class HWConfig(list[Dict[str, Any]], ABC):
             return True
         if str_val == "pertensor":
             return False
-        raise nncf.ValidationError("Invalid quantization granularity specified in HW config")
+        msg = "Invalid quantization granularity specified in HW config"
+        raise nncf.ValidationError(msg)
 
     @staticmethod
     def get_qconf_from_hw_config_subdict(quantization_subdict: Dict[str, Any]) -> QuantizerConfig:

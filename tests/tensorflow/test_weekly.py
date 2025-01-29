@@ -244,7 +244,8 @@ def _params(request, tmp_path_factory, dataset_dir, models_dir, weekly_tests):
         if models_dir:
             args["weights"] = os.path.join(models_dir, args["weights"])
         if not os.path.exists(args["weights"]):
-            raise FileExistsError("Weights file does not exist: {}".format(args["weights"]))
+            msg = "Weights file does not exist: {}".format(args["weights"])
+            raise FileExistsError(msg)
     else:
         del args["weights"]
     if execution_arg:

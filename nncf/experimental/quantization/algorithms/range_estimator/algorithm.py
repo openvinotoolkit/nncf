@@ -69,10 +69,11 @@ class MinMaxRangeEstimator(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         if self._min_max_algo._quantization_target_points_to_qconfig is None:
-            raise RuntimeError(
+            msg = (
                 "Statistic points are not available."
                 " Please call `get_statistic_points` before calling the `apply` method."
             )
+            raise RuntimeError(msg)
         return self._min_max_algo.apply(model=model, graph=graph, statistic_points=statistic_points)
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:

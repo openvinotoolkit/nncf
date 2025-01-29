@@ -265,6 +265,7 @@ def get_tensor_backend(backend: BackendType) -> TensorBackend:
         BackendType.TORCH: TensorBackend.torch,
     }
     if backend not in BACKEND_TO_TENSOR_BACKEND:
-        raise nncf.ValidationError(f"Unsupported backend type: {backend}")
+        msg = f"Unsupported backend type: {backend}"
+        raise nncf.ValidationError(msg)
 
     return BACKEND_TO_TENSOR_BACKEND[backend]

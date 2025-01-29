@@ -476,7 +476,8 @@ class TemplateTestChannelAlignment:
                 _class = weights_update_cls
                 _attr = "weight_value"
             else:
-                raise nncf.ValidationError(f"Wrong type of transformation: {type(transformation)}")
+                msg = f"Wrong type of transformation: {type(transformation)}"
+                raise nncf.ValidationError(msg)
 
             target_names[tp.target_node_name].append(_class)
             assert ref_values[tp.target_node_name][_attr] == getattr(transformation, _attr)

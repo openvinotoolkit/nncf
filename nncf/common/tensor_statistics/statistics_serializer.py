@@ -62,7 +62,8 @@ def load_metadata(dir_path: Path) -> Dict[str, Any]:
     if metadata_file.exists():
         with safe_open(metadata_file, "r") as f:
             return cast(Dict[str, Any], json.load(f))
-    raise nncf.StatisticsCacheError(f"Metadata file does not exist in the following path: {dir_path}")
+    msg = f"Metadata file does not exist in the following path: {dir_path}"
+    raise nncf.StatisticsCacheError(msg)
 
 
 def save_metadata(metadata: Dict[str, Any], dir_path: Path) -> None:

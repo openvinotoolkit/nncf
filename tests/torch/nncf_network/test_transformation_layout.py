@@ -162,7 +162,8 @@ def test_all_possible_combinations_of_commands_for_get_applied_commands(
             for applied_command in applied_commands.transformations
         )
         if sum(map(int, eq_commands)) != 1:
-            raise RuntimeError(f"Command {command} has no pair in recovered commands")
+            msg = f"Command {command} has no pair in recovered commands"
+            raise RuntimeError(msg)
 
 
 @pytest.mark.parametrize("target_type", (TargetType.OPERATION_WITH_WEIGHTS, TargetType.OPERATOR_PRE_HOOK))

@@ -48,7 +48,8 @@ def get_node_type(type: NodeType, meta: Union[ConstMeta, FunctionMeta, InOutMeta
         return "nncf_model_const"
     if isinstance(meta, FunctionMeta):
         return meta.func_name
-    raise nncf.InternalError("Unexpected metadata type")
+    msg = "Unexpected metadata type"
+    raise nncf.InternalError(msg)
 
 
 def get_name_of_node(meta: Union[ConstMeta, FunctionMeta, InOutMeta]) -> str:
@@ -64,7 +65,8 @@ def get_name_of_node(meta: Union[ConstMeta, FunctionMeta, InOutMeta]) -> str:
         return meta.op_name
     if isinstance(meta, InOutMeta):
         return meta.name
-    raise nncf.InternalError("Unexpected metadata type")
+    msg = "Unexpected metadata type"
+    raise nncf.InternalError(msg)
 
 
 def get_dtype(dtype: torch.dtype) -> Dtype:
@@ -172,7 +174,8 @@ def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> NNCFGraph:
     for node, data in nx_graph.nodes(data=True):
         meta = data["meta"]
         if not isinstance(meta, (ConstMeta, FunctionMeta, InOutMeta)):
-            raise nncf.InternalError(f"Unknown metadata type: {type(meta)}")
+            msg = f"Unknown metadata type: {type(meta)}"
+            raise nncf.InternalError(msg)
         node_name = get_name_of_node(meta)
         node_type = get_node_type(data["type"], meta)
         meta_type = get_meta_type(node_type, meta)

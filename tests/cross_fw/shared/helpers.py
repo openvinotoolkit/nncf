@@ -48,7 +48,8 @@ def find_file_by_extension(directory: Path, extension: str) -> str:
         file_path_str = str(file_path)
         if file_path_str.endswith(extension):
             return file_path_str
-    raise FileNotFoundError("NNCF package not found")
+    msg = "NNCF package not found"
+    raise FileNotFoundError(msg)
 
 
 def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, backends: Set[str] = None):
@@ -94,7 +95,8 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, bac
     elif package_type == "build_w":
         run_cmd_line = f"{python_executable_with_venv} -m build -w --outdir {dist_path}"
     else:
-        raise ValueError(f"Invalid package type: {package_type}")
+        msg = f"Invalid package type: {package_type}"
+        raise ValueError(msg)
 
     subprocess.run(run_cmd_line, check=True, shell=True, cwd=PROJECT_ROOT)
 

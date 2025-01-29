@@ -28,7 +28,8 @@ def NASNet(
     default_size=None,
 ):
     if backend.image_data_format() != "channels_last":
-        raise AttributeError('The input data format "channels_last" is only supported.')
+        msg = 'The input data format "channels_last" is only supported.'
+        raise AttributeError(msg)
 
     if default_size is None:
         default_size = 331
@@ -44,10 +45,11 @@ def NASNet(
     img_input = layers.Input(shape=input_shape)
 
     if penultimate_filters % (24 * (filter_multiplier**2)) != 0:
-        raise ValueError(
+        msg = (
             "For NASNet-A models, the `penultimate_filters` must be a multiple "
             f"of 24 * (`filter_multiplier` ** 2). Current value: {penultimate_filters}"
         )
+        raise ValueError(msg)
 
     channel_dim = -1
     filters = penultimate_filters // 24

@@ -289,7 +289,8 @@ class BaseTestPipeline(ABC):
         print("Preparing...")
         self.prepare_model()
         if self.model is None:
-            raise nncf.ValidationError("self.model is None")
+            msg = "self.model is None"
+            raise nncf.ValidationError(msg)
         self.prepare_preprocessor()
         self.prepare_calibration_dataset()
 

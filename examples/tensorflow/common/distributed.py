@@ -28,12 +28,13 @@ def get_distribution_strategy(config):
         if "CUDA_VISIBLE_DEVICES" not in os.environ or _gpu_id in os.environ["CUDA_VISIBLE_DEVICES"].split(","):
             os.environ["CUDA_VISIBLE_DEVICES"] = _gpu_id
         else:
-            raise nncf.ValidationError(
+            msg = (
                 f"GPU with id = {_gpu_id} was not found in the specified "
                 "CUDA_VISIBLE_DEVICES environment variable. "
                 "Please do not export the CUDA_VISIBLE_DEVICES environment variable "
                 f"or specify GPU with id = {_gpu_id} in it"
             )
+            raise nncf.ValidationError(msg)
 
     gpus = tf.config.list_physical_devices("GPU")
 

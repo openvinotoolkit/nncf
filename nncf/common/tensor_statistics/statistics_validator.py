@@ -22,12 +22,12 @@ def validate_backend(metadata: Dict[str, Any], backend: BackendType) -> None:
     :param backend: Provided backend.
     """
     if "backend" not in metadata:
-        raise ValueError("The provided metadata has no information about backend.")
+        msg = "The provided metadata has no information about backend."
+        raise ValueError(msg)
     data_backend = metadata["backend"]
     if data_backend != backend.value:
-        raise ValueError(
-            f"Backend in loaded statistics {data_backend} does not match the expected backend {backend.value}."
-        )
+        msg = f"Backend in loaded statistics {data_backend} does not match the expected backend {backend.value}."
+        raise ValueError(msg)
 
 
 def validate_statistics_files_exist(metadata: Dict[str, Any], dir_path: Path) -> None:
@@ -40,7 +40,8 @@ def validate_statistics_files_exist(metadata: Dict[str, Any], dir_path: Path) ->
     for file_name in metadata["mapping"]:
         file_path = dir_path / file_name
         if not file_path.exists():
-            raise FileNotFoundError(f"One of the statistics file: {file_path} does not exist.")
+            msg = f"One of the statistics file: {file_path} does not exist."
+            raise FileNotFoundError(msg)
 
 
 def validate_cache(metadata: Dict[str, Any], dir_path: Path, backend: BackendType) -> None:

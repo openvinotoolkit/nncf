@@ -30,9 +30,8 @@ def get_preprocessing(dataset_name, model_name, preset=None):
     if not preset:
         preset = dataset_name
     if preset not in PREPROCESSING_FN_MAP:
-        raise nncf.ValidationError(
-            f"Preprocessing for dataset {dataset_name} and model {model_name} was not recognized"
-        )
+        msg = f"Preprocessing for dataset {dataset_name} and model {model_name} was not recognized"
+        raise nncf.ValidationError(msg)
 
     ext_kwargs = {}
     if preset == "imagenet2012":

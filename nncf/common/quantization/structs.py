@@ -204,7 +204,8 @@ class QuantizationConstraints:
         """
         for attr_name in kwargs:
             if not hasattr(QuantizationConstraints.REF_QCONF_OBJ, attr_name):
-                raise nncf.ValidationError(f"Invalid constraint - QuantizerConfig has no attribute '{attr_name}'")
+                msg = f"Invalid constraint - QuantizerConfig has no attribute '{attr_name}'"
+                raise nncf.ValidationError(msg)
         self.qconf_attr_vs_constraint_dict = kwargs
 
     def apply_constraints_to(self, qconfig: QuantizerConfig) -> QuantizerConfig:

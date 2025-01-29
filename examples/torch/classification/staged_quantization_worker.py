@@ -186,9 +186,8 @@ def staged_quantization_main_worker(current_gpu, config):
         load_state(model, model_state_dict, is_resume=True)
 
     if not isinstance(compression_ctrl, QuantizationController):
-        raise nncf.InternalError(
-            "The stage quantization sample worker may only be run with the quantization algorithms!"
-        )
+        msg = "The stage quantization sample worker may only be run with the quantization algorithms!"
+        raise nncf.InternalError(msg)
 
     model, _ = prepare_model_for_execution(model, config)
     original_model.to(config.device)

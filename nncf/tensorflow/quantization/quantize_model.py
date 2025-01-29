@@ -148,20 +148,25 @@ def quantize_impl(
     Implementation of the `quantize()` method for the TensorFlow backend.
     """
     if model_type is not None:
-        raise ValueError(f"model_type={model_type} is not supported")
+        msg = f"model_type={model_type} is not supported"
+        raise ValueError(msg)
     if fast_bias_correction is False:
-        raise ValueError(f"fast_bias_correction={fast_bias_correction} is not supported")
+        msg = f"fast_bias_correction={fast_bias_correction} is not supported"
+        raise ValueError(msg)
     if ignored_scope is not None and ignored_scope.types:
-        raise nncf.InternalError(
+        msg = (
             "Quantization algorithm form the TensorFlow backend "
             "does not support operation types in the ignored "
             "scopes yet"
         )
+        raise nncf.InternalError(msg)
     if target_device == TargetDevice.CPU_SPR:
-        raise nncf.InternalError("target_device == CPU_SPR is not supported.")
+        msg = "target_device == CPU_SPR is not supported."
+        raise nncf.InternalError(msg)
 
     if mode is not None:
-        raise ValueError(f"mode={mode} is not supported")
+        msg = f"mode={mode} is not supported"
+        raise ValueError(msg)
 
     if preset is None:
         preset = QuantizationPreset.PERFORMANCE

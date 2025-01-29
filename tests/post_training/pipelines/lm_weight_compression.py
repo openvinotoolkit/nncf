@@ -82,7 +82,8 @@ class LMWeightCompression(BaseTestPipeline):
         # load model
         if self.backend == BackendType.TORCH:
             if is_stateful:
-                raise RuntimeError(f"is_stateful={is_stateful} is not supported for PyTorch backend.")
+                msg = f"is_stateful={is_stateful} is not supported for PyTorch backend."
+                raise RuntimeError(msg)
 
             self.model_hf = AutoModelForCausalLM.from_pretrained(
                 self.model_id, torch_dtype=torch.float32, device_map="cpu"
@@ -103,7 +104,8 @@ class LMWeightCompression(BaseTestPipeline):
                 )
             self.model = self.model_hf.model
         else:
-            raise RuntimeError(f"backend={self.backend.value} is not supported.")
+            msg = f"backend={self.backend.value} is not supported."
+            raise RuntimeError(msg)
 
         # dump FP32 model
         if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():

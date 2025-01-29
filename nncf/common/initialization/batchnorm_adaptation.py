@@ -70,7 +70,8 @@ class BatchnormAdaptationAlgorithm:
             of the model parameters will be used.
         """
         if num_bn_adaptation_samples < 0:
-            raise ValueError("Number of adaptation samples must be >= 0")
+            msg = "Number of adaptation samples must be >= 0"
+            raise ValueError(msg)
 
         self._device = device
         self._data_loader = data_loader

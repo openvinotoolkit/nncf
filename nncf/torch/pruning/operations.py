@@ -573,7 +573,8 @@ class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
         node_module = model.nncf.get_containing_module(node.node_name)
 
         if prun_type == PrunType.CUT_WEIGHTS:
-            raise nncf.InternalError("LayerNorm does not support pruning by cutting channels")
+            msg = "LayerNorm does not support pruning by cutting channels"
+            raise nncf.InternalError(msg)
 
         node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.weight))
         node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.bias))

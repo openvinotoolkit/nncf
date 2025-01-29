@@ -185,7 +185,8 @@ class TestInsertionCommands:
             module = model.nncf.get_module_by_scope(insertion_point.module_scope)
             assert module.post_ops["0"] is hook
         else:
-            raise Exception(f"Not check order for {insertion_point.insertion_type}")
+            msg = f"Not check order for {insertion_point.insertion_type}"
+            raise Exception(msg)
 
         assert len(model.nncf._groups_vs_hooks_handlers[test_hook_group]) == 1
 
@@ -251,7 +252,8 @@ class TestInsertionCommands:
             module = model.nncf.get_module_by_scope(insertion_point.module_scope)
             assert module.post_ops["0"] is hook
         else:
-            raise Exception(f"Not check order for {insertion_point.insertion_type}")
+            msg = f"Not check order for {insertion_point.insertion_type}"
+            raise Exception(msg)
 
         if isinstance(hook, nn.Module) and not multidevice:
             assert hook.to_device == get_model_device(model)
@@ -365,7 +367,8 @@ class TestInsertionCommands:
                 module = model.nncf.get_containing_module(point.target_node_name)
                 self.check_order(list(module.post_ops.values()), hook_list, order)
         else:
-            raise Exception(f"Not check order for {target_type}")
+            msg = f"Not check order for {target_type}"
+            raise Exception(msg)
 
 
 MERGE_PATTERN_TEST_CASES = (

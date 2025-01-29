@@ -152,9 +152,8 @@ class MobileNetV2For32x32(nn.Module):
 
         # only check the first element, assuming user knows t,c,n,s are required
         if len(inverted_residual_setting) == 0 or len(inverted_residual_setting[0]) != 4:
-            raise ValueError(
-                "inverted_residual_setting should be non-empty " f"or a 4-element list, got {inverted_residual_setting}"
-            )
+            msg = f"inverted_residual_setting should be non-empty or a 4-element list, got {inverted_residual_setting}"
+            raise ValueError(msg)
 
         # building first layer
         input_channel = _make_divisible(input_channel * width_mult, round_nearest)

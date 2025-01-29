@@ -88,10 +88,11 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         params.setdefault("prune_first_conv", True)
         params.setdefault("prune_downsample_convs", True)
         if params.get("all_weights") is False:
-            raise Exception(
+            msg = (
                 "For LeGR pruning the `all_weights` config parameter be set to `true`."
                 "Adjust the config accordingly if you want to proceed."
             )
+            raise Exception(msg)
         params.setdefault("all_weights", True)
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
@@ -236,7 +237,8 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         pruning_target = params.get("pruning_target", None)
         pruning_flops_target = params.get("pruning_flops_target", None)
         if pruning_target and pruning_flops_target:
-            raise ValueError("Only one parameter from 'pruning_target' and 'pruning_flops_target' can be set.")
+            msg = "Only one parameter from 'pruning_target' and 'pruning_flops_target' can be set."
+            raise ValueError(msg)
         if pruning_flops_target:
             self.prune_flops = True
 

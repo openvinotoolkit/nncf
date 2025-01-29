@@ -94,7 +94,8 @@ class PTExporter(Exporter):
                 opset = int(split_format[1])
 
             if opset is not None and opset <= 0:
-                raise ValueError("Incorrect save_format, expected 'onnx' or 'onnx_<opset_version>'.")
+                msg = "Incorrect save_format, expected 'onnx' or 'onnx_<opset_version>'."
+                raise ValueError(msg)
 
             if opset != PTExporter._ONNX_DEFAULT_OPSET:
                 nncf_logger.warning(
@@ -131,7 +132,8 @@ class PTExporter(Exporter):
 
         if export_fn is None:
             available_formats = list(format_to_export_fn.keys())
-            raise ValueError(f"Unsupported saving format: '{save_format}'. Available formats: {available_formats}")
+            msg = f"Unsupported saving format: '{save_format}'. Available formats: {available_formats}"
+            raise ValueError(msg)
 
         export_fn(**fn_args)
 

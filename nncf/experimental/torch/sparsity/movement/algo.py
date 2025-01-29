@@ -70,7 +70,8 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
                 sparse_cfg = configs_per_scopes.sparse_config
                 matched_scopes.append(target_scopes)
         if len(matched_scopes) >= 2:
-            raise nncf.InternalError(f'"{node_name}" is matched by multiple items in `sparse_structure_by_scopes`.')
+            msg = f'"{node_name}" is matched by multiple items in `sparse_structure_by_scopes`.'
+            raise nncf.InternalError(msg)
 
         return MovementSparsifier(
             target_module_node,
@@ -110,7 +111,8 @@ class MovementSparsityBuilder(BaseSparsityAlgoBuilder):
             self._sparsified_module_info.append(SparseModuleInfo(node_name, sparsified_module, sparsifying_operation))
 
         if not insertion_commands:
-            raise nncf.InternalError("No sparsifiable layer found for movement sparsity algorithm.")
+            msg = "No sparsifiable layer found for movement sparsity algorithm."
+            raise nncf.InternalError(msg)
         return insertion_commands
 
     def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
@@ -150,10 +152,11 @@ class MovementSparsityController(BaseSparsityAlgoController):
 
         if self._scheduler.enable_structured_masking:
             if not is_supported_model_family(self.model):
-                raise nncf.UnsupportedModelError(
+                msg = (
                     "You set `enable_structured_masking=True`, but no supported model is detected. "
                     f"Supported model families: {MODEL_FAMILIES}."
                 )
+                raise nncf.UnsupportedModelError(msg)
             self._structured_mask_handler = StructuredMaskHandler(self.model, self.sparsified_module_info)
 
     @property
@@ -191,10 +194,11 @@ class MovementSparsityController(BaseSparsityAlgoController):
 
     def distributed(self):
         if not dist.is_initialized():
-            raise KeyError(
+            msg = (
                 "Could not set distributed mode for the compression algorithm "
                 "because the default process group has not been initialized."
             )
+            raise KeyError(msg)
 
         if next(self._model.parameters()).is_cuda:
             state = torch.cuda.get_rng_state()

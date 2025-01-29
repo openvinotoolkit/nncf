@@ -29,7 +29,8 @@ class Registry:
 
     def _register(self, obj: Any, name: str) -> None:
         if name in self._registry_dict:
-            raise KeyError(f"{name} is already registered in {self._name}")
+            msg = f"{name} is already registered in {self._name}"
+            raise KeyError(msg)
         self._registry_dict[name] = obj
 
     def register(self, name: str = None) -> Callable[[Any], Any]:
@@ -50,7 +51,8 @@ class Registry:
         return self._registry_dict[name]
 
     def _key_not_found(self, name: str) -> None:
-        raise KeyError(f"{name} is unknown type of {self._name} ")
+        msg = f"{name} is unknown type of {self._name} "
+        raise KeyError(msg)
 
     def __contains__(self, item: Any) -> bool:
         return item in self._registry_dict.values()

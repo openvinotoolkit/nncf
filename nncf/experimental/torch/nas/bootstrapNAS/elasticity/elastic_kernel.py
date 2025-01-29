@@ -129,10 +129,11 @@ class ElasticKernelOp:
         :param kernel_size: kernel size value
         """
         if kernel_size is None or kernel_size > self.max_kernel_size or kernel_size < 1:
-            raise AttributeError(
+            msg = (
                 f"Invalid kernel size={kernel_size} in scope={self.node_name}.\n"
                 f"It should be within the range: [1, {self.max_kernel_size}]"
             )
+            raise AttributeError(msg)
 
         self._active_kernel_size = kernel_size
 
@@ -254,7 +255,8 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
         nncf_logger.debug(f"set active elastic_kernel={kernel_size} in scope={self.node_name}")
         assert kernel_size % 2 > 0, "kernel size should be odd number"
         if kernel_size not in self.kernel_size_list and kernel_size != self.max_kernel_size:
-            raise ValueError(f"invalid kernel size to set. Should be a number in {self.kernel_size_list}")
+            msg = f"invalid kernel size to set. Should be a number in {self.kernel_size_list}"
+            raise ValueError(msg)
         super().set_active_kernel_size(kernel_size)
 
     @staticmethod

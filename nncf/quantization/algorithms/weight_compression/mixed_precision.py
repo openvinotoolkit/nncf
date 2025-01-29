@@ -151,9 +151,8 @@ class DataFreeCriterion(MixedPrecisionCriterion):
 
             self._backend_entity = FXWeightCompressionAlgoBackend()
         else:
-            raise nncf.UnsupportedBackendError(
-                f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
-            )
+            msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
+            raise nncf.UnsupportedBackendError(msg)
 
     def _calc_weight_sensitivity(
         self,
@@ -198,7 +197,8 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         graph: NNCFGraph,
         nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
     ) -> StatisticPointsContainer:
-        raise RuntimeError("No statistics collection intended for data-free mixed precision criterion")
+        msg = "No statistics collection intended for data-free mixed precision criterion"
+        raise RuntimeError(msg)
 
 
 class DataBasedCriterion(DataFreeCriterion, ABC):
@@ -220,9 +220,8 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
 
             self._backend_entity = OVMixedPrecisionAlgoBackend(model)
         else:
-            raise nncf.UnsupportedBackendError(
-                f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
-            )
+            msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
+            raise nncf.UnsupportedBackendError(msg)
 
     def _calc_activation_sensitivity(
         self,
@@ -264,10 +263,11 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
         for act_node, output_port_id in nodes_and_port_ids:
             n_dims = len(graph.get_output_edges_by_port_id(act_node, output_port_id)[0].tensor_shape)
             if n_dims < 2:
-                raise RuntimeError(
+                msg = (
                     f"Data-aware mixed precision criteria are not supported for MatMuls with 1D inputs. "
                     f"Node: {act_node.node_name}, number of dimensions: {n_dims}."
                 )
+                raise RuntimeError(msg)
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, act_node.node_name, port_id=output_port_id
             )

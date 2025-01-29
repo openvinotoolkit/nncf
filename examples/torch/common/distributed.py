@@ -43,11 +43,13 @@ class DistributedSampler(Sampler):
         super().__init__(dataset)
         if world_size is None:
             if not dist.is_available():
-                raise nncf.ValidationError("Requires distributed package to be available")
+                msg = "Requires distributed package to be available"
+                raise nncf.ValidationError(msg)
             world_size = dist.get_world_size()
         if rank is None:
             if not dist.is_available():
-                raise nncf.ValidationError("Requires distributed package to be available")
+                msg = "Requires distributed package to be available"
+                raise nncf.ValidationError(msg)
             rank = dist.get_rank()
         self.world_size = world_size
         self.rank = rank

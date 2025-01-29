@@ -104,9 +104,8 @@ class QuantizationDebugInterface(DebugInterface):
                 if tracker.get_never_called_keys():
                     # This will always trigger for DataParallel - disregard or disable debug mode
                     # for DataParallel runs
-                    raise nncf.InternalError(
-                        f"{tracker.name} has never called modules: {tracker.get_never_called_keys()}!"
-                    )
+                    msg = f"{tracker.name} has never called modules: {tracker.get_never_called_keys()}!"
+                    raise nncf.InternalError(msg)
 
     def dump_scale(self, quantizer_scale_params: Dict[str, torch.Tensor], quantizer_name: str):
         import re
@@ -166,7 +165,8 @@ class QuantizationDebugInterface(DebugInterface):
             elif node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
                 out_graph.add_node(node_key)
             else:
-                raise nncf.InternalError("Invalid InsertionPointGraph node!")
+                msg = "Invalid InsertionPointGraph node!"
+                raise nncf.InternalError(msg)
         for u, v in insertion_point_graph.edges:
             out_graph.add_edge(u, v)
 

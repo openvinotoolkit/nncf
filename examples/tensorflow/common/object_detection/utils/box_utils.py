@@ -30,7 +30,8 @@ def yxyx_to_xywh(boxes):
       ValueError: If the last dimension of boxes is not 4.
     """
     if boxes.shape[-1] != 4:
-        raise ValueError(f"boxes.shape[-1] is {boxes.shape[-1]:d}, but must be 4.")
+        msg = f"boxes.shape[-1] is {boxes.shape[-1]:d}, but must be 4."
+        raise ValueError(msg)
 
     boxes_ymin = boxes[..., 0]
     boxes_xmin = boxes[..., 1]
@@ -60,7 +61,8 @@ def normalize_boxes(boxes, image_shape):
     """
 
     if boxes.shape[-1] != 4:
-        raise ValueError(f"boxes.shape[-1] is {boxes.shape[-1]:d}, but must be 4.")
+        msg = f"boxes.shape[-1] is {boxes.shape[-1]:d}, but must be 4."
+        raise ValueError(msg)
 
     with tf.name_scope("normalize_boxes"):
         if isinstance(image_shape, (list, tuple)):
@@ -131,7 +133,8 @@ def clip_boxes(boxes, image_shape):
       ValueError: If the last dimension of boxes is not 4.
     """
     if boxes.shape[-1] != 4:
-        raise ValueError(f"boxes.shape[-1] is {boxes.shape[-1]:d}, but must be 4.")
+        msg = f"boxes.shape[-1] is {boxes.shape[-1]:d}, but must be 4."
+        raise ValueError(msg)
 
     with tf.name_scope("clip_boxes"):
         if isinstance(image_shape, (list, tuple)):
@@ -165,7 +168,8 @@ def encode_boxes(boxes, anchors, weights=None):
     """
 
     if boxes.shape[-1] != 4:
-        raise ValueError(f"boxes.shape[-1] is {boxes.shape[-1]:d}, but must be 4.")
+        msg = f"boxes.shape[-1] is {boxes.shape[-1]:d}, but must be 4."
+        raise ValueError(msg)
 
     with tf.name_scope("encode_boxes"):
         boxes = tf.cast(boxes, anchors.dtype)
@@ -218,7 +222,8 @@ def decode_boxes(encoded_boxes, anchors, weights=None):
         decoded box targets.
     """
     if encoded_boxes.shape[-1] != 4:
-        raise ValueError(f"encoded_boxes.shape[-1] is {encoded_boxes.shape[-1]:d}, but must be 4.")
+        msg = f"encoded_boxes.shape[-1] is {encoded_boxes.shape[-1]:d}, but must be 4."
+        raise ValueError(msg)
 
     with tf.name_scope("decode_boxes"):
         encoded_boxes = tf.cast(encoded_boxes, anchors.dtype)
@@ -280,7 +285,8 @@ def filter_boxes(boxes, scores, image_shape, min_size_threshold):
         the positinon of the filtered boxes filled with 0.
     """
     if boxes.shape[-1] != 4:
-        raise ValueError(f"boxes.shape[1] is {boxes.shape[-1]:d}, but must be 4.")
+        msg = f"boxes.shape[1] is {boxes.shape[-1]:d}, but must be 4."
+        raise ValueError(msg)
 
     with tf.name_scope("filter_boxes"):
         if isinstance(image_shape, (list, tuple)):
@@ -333,7 +339,8 @@ def filter_boxes_by_scores(boxes, scores, min_score_threshold):
         the
     """
     if boxes.shape[-1] != 4:
-        raise ValueError(f"boxes.shape[1] is {boxes.shape[-1]:d}, but must be 4.")
+        msg = f"boxes.shape[1] is {boxes.shape[-1]:d}, but must be 4."
+        raise ValueError(msg)
 
     with tf.name_scope("filter_boxes_by_scores"):
         filtered_mask = tf.math.greater(scores, min_score_threshold)

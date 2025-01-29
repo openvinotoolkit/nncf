@@ -37,13 +37,15 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         :param kwargs: additional keyword arguments to be passed to the keras layer.
         """
         if layer is None:
-            raise ValueError("`layer` cannot be None.")
+            msg = "`layer` cannot be None."
+            raise ValueError(msg)
 
         if not isinstance(layer, tf.keras.layers.Layer) or isinstance(layer, tf.keras.Model):
-            raise ValueError(
+            msg = (
                 "`layer` can only be a `tf.keras.layers.Layer` instance. "
                 f"You passed an instance of type: {layer.__class__.__name__}."
             )
+            raise ValueError(msg)
 
         if "name" not in kwargs:
             kwargs["name"] = layer.name
@@ -202,9 +204,8 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
             self.weights_attr_ops[weights_attr] = OrderedDict()
 
         if op.name in self.weights_attr_ops[weights_attr]:
-            raise nncf.InternalError(
-                f"Attempt to apply an operation with the same name {op.name} on layer weight twice"
-            )
+            msg = f"Attempt to apply an operation with the same name {op.name} on layer weight twice"
+            raise nncf.InternalError(msg)
 
         self.weights_attr_ops[weights_attr][op.name] = op
 

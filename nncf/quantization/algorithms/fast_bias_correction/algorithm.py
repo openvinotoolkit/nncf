@@ -88,7 +88,8 @@ class FastBiasCorrection(Algorithm):
         self._algorithm_key = f"FBC_{hash(self)}"
 
         if self.apply_for_all_nodes:
-            raise nncf.InternalError("FastBiasCorrection algorithm does not support apply_for_all_nodes=True yet")
+            msg = "FastBiasCorrection algorithm does not support apply_for_all_nodes=True yet"
+            raise nncf.InternalError(msg)
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -122,9 +123,8 @@ class FastBiasCorrection(Algorithm):
 
             self._backend_entity = FXFastBiasCorrectionAlgoBackend()
         else:
-            raise nncf.UnsupportedBackendError(
-                f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
-            )
+            msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
+            raise nncf.UnsupportedBackendError(msg)
 
     def apply(
         self,

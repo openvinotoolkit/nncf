@@ -198,7 +198,7 @@ def train(
         acc_drop = original_metric - current_metric
         logger.info(f"Metric: {current_metric}, FP32 diff: {acc_drop}")
         if accuracy_drop_is_acceptable(acc_drop):
-            logger.info(f"Accuracy is within 1 percent drop," f" pipeline is making early exit on epoch {epoch - 1}")
+            logger.info(f"Accuracy is within 1 percent drop, pipeline is making early exit on epoch {epoch - 1}")
             logger.info(
                 f"Epochs in config: {config.epochs}, epochs trained: {epoch}, epochs saved: {config.epochs - epoch}"
             )

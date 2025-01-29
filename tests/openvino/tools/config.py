@@ -79,15 +79,19 @@ class Config(Dict):
             nncf_logger.warning("Cascade is defined with single model")
 
         if not models:
-            raise nncf.ValidationError("Path to input model xml and bin is required.")
+            msg = "Path to input model xml and bin is required."
+            raise nncf.ValidationError(msg)
 
         for model in models:
             if len(models) > 1 and not model.name:
-                raise nncf.ValidationError("Name of input model is required.")
+                msg = "Name of input model is required."
+                raise nncf.ValidationError(msg)
             if not model.model:
-                raise nncf.ValidationError("Path to input model xml is required.")
+                msg = "Path to input model xml is required."
+                raise nncf.ValidationError(msg)
             if not model.weights:
-                raise nncf.ValidationError("Path to input model bin is required.")
+                msg = "Path to input model bin is required."
+                raise nncf.ValidationError(msg)
 
     def validate_algo_config(self):
         """
@@ -252,11 +256,13 @@ class Config(Dict):
             self.engine.type = "accuracy_checker"
         elif engine.type == "simplified":
             if engine.data_source is None:
-                raise KeyError("Missed data dir for simplified engine")
+                msg = "Missed data dir for simplified engine"
+                raise KeyError(msg)
             self.engine.device = engine.device if engine.device else "CPU"
             engine.data_source = Path(engine.data_source)
         else:
-            raise KeyError("Unsupported engine type")
+            msg = "Unsupported engine type"
+            raise KeyError(msg)
 
     def _configure_ac_params(self):
         """Converts engine config into accuracy checker config"""
@@ -341,7 +347,8 @@ def read_config_from_file(path):
             return yaml.load(f, Loader=yaml.SafeLoader)
         if extension in (".json",):
             return json.load(f)
-        raise nncf.InternalError(f'Unknown file extension for the file "{path}"')
+        msg = f'Unknown file extension for the file "{path}"'
+        raise nncf.InternalError(msg)
 
 
 def check_params(algo_name, config, supported_params):
@@ -352,9 +359,11 @@ def check_params(algo_name, config, supported_params):
     """
     for key, value in config.items():
         if key not in supported_params:
-            raise nncf.InternalError(f"Algorithm {algo_name}. Unknown parameter: {key}")
+            msg = f"Algorithm {algo_name}. Unknown parameter: {key}"
+            raise nncf.InternalError(msg)
         if isinstance(value, dict):
             if isinstance(supported_params[key], dict):
                 check_params(algo_name, value, supported_params[key])
             else:
-                raise nncf.InternalError(f"Algorithm {algo_name}. Wrong structure for parameter: {key}")
+                msg = f"Algorithm {algo_name}. Wrong structure for parameter: {key}"
+                raise nncf.InternalError(msg)

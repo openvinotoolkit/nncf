@@ -151,7 +151,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: PTTargetPoint,
         parameters: FakeConvertParameters,
     ) -> TransformationCommand:
-        raise nncf.InternalError("FakeConvert insertion not implemented in PyTorch backend!")
+        msg = "FakeConvert insertion not implemented in PyTorch backend!"
+        raise nncf.InternalError(msg)
 
     @staticmethod
     def get_target_point_shape(nncf_graph: PTNNCFGraph, node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int, ...]:

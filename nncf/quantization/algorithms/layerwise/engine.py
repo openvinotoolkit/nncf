@@ -66,9 +66,8 @@ class LayerwiseEngine:
 
             self._backend_entity = OVLayerwiseEngineBackend()
         else:
-            raise UnsupportedBackendError(
-                f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
-            )
+            msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
+            raise UnsupportedBackendError(msg)
 
     def _get_statistics(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> List[Tensor]:
         """
@@ -112,7 +111,8 @@ class LayerwiseEngine:
         for out in outputs:
             x = self._get_statistics(statistic_points, out.node_name, out.output_port)
             if not x:
-                raise RuntimeError(f"Statistics for {out.node_name} node on {out.output_port} port is not provided.")
+                msg = f"Statistics for {out.node_name} node on {out.output_port} port is not provided."
+                raise RuntimeError(msg)
             cache[out] = x
         return cache
 

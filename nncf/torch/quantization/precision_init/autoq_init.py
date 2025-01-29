@@ -255,9 +255,11 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
                 # Replay Buffer Management
                 if agent.memory.nb_entries % (len(env.master_df) + 1) > 0:
-                    raise ValueError("logical bug in buffer management, uneven episode length")
+                    msg = "logical bug in buffer management, uneven episode length"
+                    raise ValueError(msg)
                 if agent.memory.limit % (len(env.master_df) + 1) > 0:
-                    raise ValueError("replay buffer size must be divisible by episode step length")
+                    msg = "replay buffer size must be divisible by episode step length"
+                    raise ValueError(msg)
 
                 if agent.memory.nb_entries + len(transition_buffer) >= agent.memory.limit:
                     step_reward_per_episode = agent.memory.rewards.data[:: (len(transition_buffer) + 1)]

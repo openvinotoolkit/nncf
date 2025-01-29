@@ -85,7 +85,8 @@ class PriorBoxFunction(torch.autograd.Function):
     def forward(ctx, input_fm, img_tensor, priorbox_params):
         for v in priorbox_params.variance:
             if v <= 0:
-                raise ValueError("Variances must be greater than 0")
+                msg = "Variances must be greater than 0"
+                raise ValueError(msg)
 
         mean = []
         variance_channel = []

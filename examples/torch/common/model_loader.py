@@ -50,7 +50,8 @@ def load_model(
     elif model == "mobilenet_v2_32x32":
         load_model_fn = partial(MobileNetV2For32x32, num_classes=100)
     else:
-        raise Exception("Undefined model name")
+        msg = "Undefined model name"
+        raise Exception(msg)
     loaded_model = safe_thread_call(load_model_fn)
     if not pretrained and weights_path is not None:
         # Check if provided path is a url and download the checkpoint if yes
@@ -72,7 +73,8 @@ def load_resuming_checkpoint(resuming_checkpoint_path: str):
         logger.info(f"=> loading checkpoint '{resuming_checkpoint_path}'")
         checkpoint = torch.load(resuming_checkpoint_path, map_location="cpu", pickle_module=restricted_pickle_module)
         return checkpoint
-    raise FileNotFoundError(f"no checkpoint found at '{resuming_checkpoint_path}'")
+    msg = f"no checkpoint found at '{resuming_checkpoint_path}'"
+    raise FileNotFoundError(msg)
 
 
 def extract_model_and_compression_states(resuming_checkpoint: Optional[Dict] = None):

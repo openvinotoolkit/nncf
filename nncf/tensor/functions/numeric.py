@@ -340,7 +340,8 @@ def stack(x: List[Tensor], axis: int = 0) -> Tensor:
     """
     if isinstance(x, (list, deque)):
         return Tensor(dispatch_list(stack, x, axis=axis))
-    raise NotImplementedError(f"Function `stack` is not implemented for {type(x)}")
+    msg = f"Function `stack` is not implemented for {type(x)}"
+    raise NotImplementedError(msg)
 
 
 @functools.singledispatch
@@ -354,7 +355,8 @@ def concatenate(x: List[Tensor], axis: int = 0) -> Tensor:
     """
     if isinstance(x, (list, deque)):
         return Tensor(dispatch_list(concatenate, x, axis=axis))
-    raise NotImplementedError(f"Function `concatenate` is not implemented for {type(x)}")
+    msg = f"Function `concatenate` is not implemented for {type(x)}"
+    raise NotImplementedError(msg)
 
 
 @functools.singledispatch

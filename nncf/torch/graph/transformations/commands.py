@@ -48,7 +48,8 @@ class PTTargetPoint(TargetPoint):
         self.target_node_name = target_node_name
         self.target_type = target_type
         if self.target_type not in self._OPERATION_TYPES + self._HOOK_TYPES + self._LAYER_TYPE:
-            raise NotImplementedError(f"Unsupported target type: {target_type}")
+            msg = f"Unsupported target type: {target_type}"
+            raise NotImplementedError(msg)
 
         self.input_port_id = input_port_id
 

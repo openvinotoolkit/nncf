@@ -92,9 +92,8 @@ class SmoothQuant(Algorithm):
 
             self._backend_entity = FXSmoothQuantAlgoBackend()
         else:
-            raise nncf.UnsupportedBackendError(
-                f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
-            )
+            msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
+            raise nncf.UnsupportedBackendError(msg)
 
     def apply(
         self,
@@ -125,10 +124,11 @@ class SmoothQuant(Algorithm):
                     empty_statistic = True
                     break
                 if len(activations_value) != 1:
-                    raise RuntimeError(
+                    msg = (
                         "More than one statistic is collected for one node during"
                         f"Smooth Quanti algorithm: {node_to_smooth.node_name}"
                     )
+                    raise RuntimeError(msg)
 
                 activations_value = self._clip_statistics(activations_value)
 
@@ -329,7 +329,8 @@ class SmoothQuant(Algorithm):
         channel_axis = channel_axes[0]
 
         if not all(axis == channel_axis for axis in channel_axes):
-            raise nncf.InternalError(f"Channel axes for nodes {[n.node_name for n in nodes]} are not identical")
+            msg = f"Channel axes for nodes {[n.node_name for n in nodes]} are not identical"
+            raise nncf.InternalError(msg)
 
         activations_size = len(activations_shape)
         activation_scale = scale_value ** (-1)

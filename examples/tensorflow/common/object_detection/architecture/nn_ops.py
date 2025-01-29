@@ -69,7 +69,8 @@ class NormActivation(tf.keras.layers.Layer):
         elif activation == "swish":
             self._activation_op = tf.nn.swish
         else:
-            raise ValueError(f"Unsupported activation `{activation}`.")
+            msg = f"Unsupported activation `{activation}`."
+            raise ValueError(msg)
 
     def __call__(self, inputs, is_training=None):
         """Builds the normalization layer followed by an optional activation layer.

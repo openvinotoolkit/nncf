@@ -89,7 +89,8 @@ class PTNNCFGraph(NNCFGraph):
                 matches.append(Scope.from_str(scope_str))
         assert len(matches) <= 1
         if not matches:
-            raise nncf.InternalError(f"Node name {node_name} not found in the node-vs-scope dict!")
+            msg = f"Node name {node_name} not found in the node-vs-scope dict!"
+            raise nncf.InternalError(msg)
         return matches[0]
 
     def get_nodes_with_missed_input_edges(self) -> List[NNCFNode]:

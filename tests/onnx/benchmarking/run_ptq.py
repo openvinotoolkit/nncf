@@ -40,7 +40,8 @@ def process_fn(data_item, model_evaluator: ModelEvaluator, has_batch_dim: Option
     if len(filled_inputs) == 1:
         return {k: np.squeeze(v, axis=0) if has_batch_dim else v for k, v in filled_inputs[0].items()}
 
-    raise Exception("len(filled_inputs) should be one.")
+    msg = "len(filled_inputs) should be one."
+    raise Exception(msg)
 
 
 def run(

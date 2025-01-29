@@ -65,7 +65,8 @@ def calc_learning_rate(
     elif lr_schedule_type is None:
         lr = init_lr
     else:
-        raise ValueError(f"do not support: {lr_schedule_type}")
+        msg = f"do not support: {lr_schedule_type}"
+        raise ValueError(msg)
     return lr
 
 

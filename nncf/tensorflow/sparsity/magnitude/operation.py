@@ -22,7 +22,8 @@ from nncf.tensorflow.sparsity.magnitude.functions import apply_mask
 class BinaryMask(NNCFOperation):
     def build(self, input_shape, input_type, name, layer):
         if input_type is not InputType.WEIGHTS:
-            raise ValueError(f"Binary Mask operation could not be applied to input of the layer: {layer.name}")
+            msg = f"Binary Mask operation could not be applied to input of the layer: {layer.name}"
+            raise ValueError(msg)
 
         mask = layer.add_weight(
             name + "_mask",

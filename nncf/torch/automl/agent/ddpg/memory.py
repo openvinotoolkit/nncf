@@ -238,7 +238,8 @@ class SequentialMemory(Memory):
 
     def discard(self, subscript):
         if not isinstance(subscript, slice):
-            raise ValueError("discard function only supports input of type slice")
+            msg = "discard function only supports input of type slice"
+            raise ValueError(msg)
 
         del self.observations[subscript]
         del self.actions[subscript]

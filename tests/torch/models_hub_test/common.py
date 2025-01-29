@@ -118,9 +118,8 @@ def get_models_list(path: Path) -> List[ModelInfo]:
                     model_link = None
                 assert mark in ["skip", "xfail"], f"Incorrect failure mark for model info {model_info}"
             else:
-                raise nncf.ValidationError(
-                    f"Incorrect model info `{model_info}`. It must contain either 1, 2 or 3 fields."
-                )
+                msg = f"Incorrect model info `{model_info}`. It must contain either 1, 2 or 3 fields."
+                raise nncf.ValidationError(msg)
             models.append(ModelInfo(model_name, model_link, mark, reason))
 
     return models

@@ -91,7 +91,8 @@ def get_sample_config(quantization_config_path: Path, data_dir: Path, weights_di
             meta = datset_meta
             break
     else:
-        raise RuntimeError(f"Dataset for the config {str(quantization_config_path)} is unknown.")
+        msg = f"Dataset for the config {str(quantization_config_path)} is unknown."
+        raise RuntimeError(msg)
 
     weights_path = (
         weights_dir / "segmentation" / meta["name"] / (quantization_config_path.stem.split("_int8")[0] + ".pth")
@@ -215,7 +216,7 @@ def train(
         best_miou = max(current_miou, best_miou)
         logger.info(f"Metric: {current_miou}, FP32 diff: {acc_drop}")
         if accuracy_drop_is_acceptable(acc_drop):
-            logger.info(f"Accuracy is within 1 percent drop," f" pipeline is making early exit on epoch {epoch - 1}")
+            logger.info(f"Accuracy is within 1 percent drop, pipeline is making early exit on epoch {epoch - 1}")
             logger.info(
                 f"Epochs in config: {config.epochs}, epochs trained: {epoch}, epochs saved: {config.epochs - epoch}"
             )

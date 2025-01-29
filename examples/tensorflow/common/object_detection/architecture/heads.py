@@ -254,7 +254,8 @@ class RpnHead(tf.keras.layers.Layer):
         elif activation == "swish":
             self._activation_op = tf.nn.swish
         else:
-            raise ValueError(f"Unsupported activation `{activation}`.")
+            msg = f"Unsupported activation `{activation}`."
+            raise ValueError(msg)
         self._use_batch_norm = use_batch_norm
 
         if use_separable_conv:
@@ -372,7 +373,8 @@ class FastrcnnHead(tf.keras.layers.Layer):
         elif activation == "swish":
             self._activation_op = tf.nn.swish
         else:
-            raise ValueError(f"Unsupported activation `{activation}`.")
+            msg = f"Unsupported activation `{activation}`."
+            raise ValueError(msg)
         self._use_batch_norm = use_batch_norm
         self._norm_activation = norm_activation
 
@@ -511,7 +513,8 @@ class MaskrcnnHead(tf.keras.layers.Layer):
         elif activation == "swish":
             self._activation_op = tf.nn.swish
         else:
-            raise ValueError(f"Unsupported activation `{activation}`.")
+            msg = f"Unsupported activation `{activation}`."
+            raise ValueError(msg)
         self._use_batch_norm = use_batch_norm
         self._norm_activation = norm_activation
         self._conv2d_ops = []

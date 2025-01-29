@@ -101,7 +101,8 @@ def merge_configs(configs: List[NNCFConfig], use_algo_list: bool = True) -> NNCF
 
     if not use_algo_list:
         if len(algorithms) > 1:
-            raise Exception("If there is more than one algorithm you could use only use_algo_list=True")
+            msg = "If there is more than one algorithm you could use only use_algo_list=True"
+            raise Exception(msg)
         res_config["compression"] = algorithms[0]
     else:
         res_config["compression"] = algorithms
@@ -275,7 +276,8 @@ def create_initialized_one_parameter_model_and_dataloader(
         elif parameter_cls is CompressionParameter:
             param = parameter_cls(data, requires_grad=init_requires_grad, compression_lr_multiplier=multiplier)
         else:
-            raise Exception(f"Unsupported parameter type: {parameter_cls}")
+            msg = f"Unsupported parameter type: {parameter_cls}"
+            raise Exception(msg)
 
     for setting_type, requires_grad in requires_grad_settings:
         if setting_type == "attr":
@@ -283,7 +285,8 @@ def create_initialized_one_parameter_model_and_dataloader(
         elif setting_type == "fn":
             param.requires_grad_(requires_grad)
         else:
-            raise Exception(f"Unsupported setting type: {setting_type}")
+            msg = f"Unsupported setting type: {setting_type}"
+            raise Exception(msg)
 
     model = OneParameterModel(param)
     train_loader = DataLoader(

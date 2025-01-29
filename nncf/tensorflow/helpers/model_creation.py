@@ -82,10 +82,11 @@ def create_compressed_model(
     """
     if is_experimental_quantization(config):
         if is_keras_layer_model(model):
-            raise ValueError(
+            msg = (
                 "Experimental quantization algorithm has not supported models with "
                 "`tensorflow_hub.KerasLayer` layer yet."
             )
+            raise ValueError(msg)
 
         from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 
@@ -118,7 +119,8 @@ def get_input_signature(config: NNCFConfig):
             sample_size = info["sample_size"]
             samples_sizes.append(sample_size)
     else:
-        raise nncf.ValidationError("sample_size must be provided in configuration file")
+        msg = "sample_size must be provided in configuration file"
+        raise nncf.ValidationError(msg)
 
     input_signature = []
     for sample_size in samples_sizes:
