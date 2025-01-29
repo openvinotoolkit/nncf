@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -31,6 +31,12 @@ class PT2InsertionCommand(Command):
         *,
         handle_storage: Optional[List[RemovableHookHandle]] = None,
     ):
+        """
+        :param target_points: The list of target points for the command.
+        :param hook_module: The hook module for the command that will be inserted into the model
+          to execute at the target points.
+        :param handle_storage: The handle storage for the command to collect RemovableHookHandle. Defaults to None.
+        """
         super().__init__(TransformationType.INSERT)
         self.target_points = target_points
         self.hook_module = hook_module
