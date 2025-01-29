@@ -9,8 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import division
-
 from itertools import product
 from math import sqrt
 from typing import Any
