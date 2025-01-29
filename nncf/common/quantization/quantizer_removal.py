@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Tuple, TypeVar
+from typing import Callable, List, Set, Tuple, Type, TypeVar, cast
 
 from nncf.common.factory import CommandCreatorFactory
 from nncf.common.factory import ModelTransformerFactory
@@ -25,10 +25,10 @@ TModel = TypeVar("TModel")
 def find_quantizer_nodes_to_cut(
     graph: NNCFGraph,
     quantizer_node: NNCFNode,
-    quantizer_metatypes: List[OperatorMetatype],
-    const_metatypes: List[OperatorMetatype],
-    quantizable_metatypes: List[OperatorMetatype],
-    quantize_agnostic_metatypes: List[OperatorMetatype],
+    quantizer_metatypes: List[Type[OperatorMetatype]],
+    const_metatypes: List[Type[OperatorMetatype]],
+    quantizable_metatypes: List[Type[OperatorMetatype]],
+    quantize_agnostic_metatypes: List[Type[OperatorMetatype]],
 ) -> Tuple[List[NNCFNode], List[NNCFNode]]:
     """
     Finds quantizer nodes that should be removed in addition to `quantizer_node` to get
@@ -49,7 +49,7 @@ def find_quantizer_nodes_to_cut(
         if `quantizer_nodes` are removed.
     """
 
-    def _parse_node_relatives(node: NNCFNode, is_parents: bool):
+    def _parse_node_relatives(node: NNCFNode, is_parents: bool) -> None:
         relatives = graph.get_previous_nodes(node) if is_parents else graph.get_next_nodes(node)
         for relative in relatives:
             if relative.metatype in quantizable_metatypes:
@@ -90,10 +90,12 @@ def find_quantizer_nodes_to_cut(
         seen_list = seen_parents if is_parents else seen_children
         seen_list.append(node)
 
-    seen_children, seen_parents = [], []
-    to_see_children, to_see_parents = [quantizer_node], []
+    seen_children: List[NNCFNode] = []
+    seen_parents: List[NNCFNode] = []
+    to_see_children: List[NNCFNode] = [quantizer_node]
+    to_see_parents: List[NNCFNode] = []
     to_cut = [quantizer_node]
-    ops_to_return_in_orig_prec = set()
+    ops_to_return_in_orig_prec: Set[NNCFNode] = set()
 
     while to_see_parents or to_see_children:
         if to_see_children:
@@ -110,7 +112,7 @@ def revert_operations_to_floating_point_precision(
     quantized_model: TModel,
     quantized_model_graph: NNCFGraph,
     restore_mode: RestoreMode,
-    op_with_weights_metatypes: List[OperatorMetatype],
+    op_with_weights_metatypes: List[Type[OperatorMetatype]],
     is_node_with_weight_fn: Callable[[NNCFNode], bool],
     get_weight_tensor_port_ids_fn: Callable[[NNCFNode], List[int]],
 ) -> TModel:
@@ -144,10 +146,10 @@ def revert_operations_to_floating_point_precision(
             if (
                 node.metatype in op_with_weights_metatypes
                 and node.layer_attributes
-                and node.layer_attributes.constant_attributes
+                and node.layer_attributes.constant_attributes  # type: ignore[attr-defined]
             ):
                 input_edges = quantized_model_graph.get_input_edges(node)
-                for port_id in node.layer_attributes.get_const_port_ids():
+                for port_id in node.layer_attributes.get_const_port_ids():  # type: ignore[attr-defined]
                     fq_weight = input_edges[port_id].from_node
                     should_remove_fq[fq_weight.node_name] = False
                     should_revert_weights_to_fp32[node.node_name] = False
@@ -176,6 +178,6 @@ def revert_operations_to_floating_point_precision(
                     )
 
     model_transformer = ModelTransformerFactory.create(quantized_model)
-    transformed_model = model_transformer.transform(transformation_layout)
+    transformed_model = model_transformer.transform(transformation_layout)  # type: ignore[var-annotated]
 
-    return transformed_model
+    return cast(TModel, transformed_model)
