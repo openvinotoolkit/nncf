@@ -84,12 +84,11 @@ def multi_head_attention_forward(
     )
 
     if is_causal and attn_mask is None:
-        msg = (
+        raise RuntimeError(
             "Need attn_mask if specifying the is_causal hint. "
             "You may use the Transformer module method "
             "`generate_square_subsequent_mask` to create this mask."
         )
-        raise RuntimeError(msg)
 
     if is_causal and key_padding_mask is None and not need_weights:
 
@@ -140,17 +139,18 @@ def multi_head_attention_forward(
         if attn_mask.dim() == 2:
             correct_2d_size = (tgt_len, src_len)
             if attn_mask.shape != correct_2d_size:
-                msg = f"The shape of the 2D attn_mask is {attn_mask.shape}, but should be {correct_2d_size}."
-                raise RuntimeError(msg)
+                raise RuntimeError(
+                    f"The shape of the 2D attn_mask is {attn_mask.shape}, but should be {correct_2d_size}."
+                )
             attn_mask = attn_mask.unsqueeze(0)
         elif attn_mask.dim() == 3:
             correct_3d_size = (bsz * num_heads, tgt_len, src_len)
             if attn_mask.shape != correct_3d_size:
-                msg = f"The shape of the 3D attn_mask is {attn_mask.shape}, but should be {correct_3d_size}."
-                raise RuntimeError(msg)
+                raise RuntimeError(
+                    f"The shape of the 3D attn_mask is {attn_mask.shape}, but should be {correct_3d_size}."
+                )
         else:
-            msg = f"attn_mask's dimension {attn_mask.dim()} is not supported"
-            raise RuntimeError(msg)
+            raise RuntimeError(f"attn_mask's dimension {attn_mask.dim()} is not supported")
 
     if bias_k is not None and bias_v is not None:
         assert static_k is None, "bias cannot be added to static key."
