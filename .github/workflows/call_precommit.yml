@@ -138,7 +138,7 @@ jobs:
 
   pytorch-cuda:
     timeout-minutes: 40
-    runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4
+    runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4-staging
     if: ${{ inputs.gpu_enabled == true }}
     defaults:
       run:
