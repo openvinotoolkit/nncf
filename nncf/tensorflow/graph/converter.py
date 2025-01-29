@@ -360,7 +360,7 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
             # Filter control inputs, whatever these are
             previous_node_names = list(filter(lambda x: "^" not in x, previous_node_names))
         if weight_node_name is None:
-            raise nncf.InternalError("Could not find a weight node for a weighted node {}".format(weighted_node.name))
+            raise nncf.InternalError(f"Could not find a weight node for a weighted node {weighted_node.name}")
         return weight_node_name
 
     @staticmethod

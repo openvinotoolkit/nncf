@@ -334,7 +334,7 @@ class ICNet(nn.Module):
         for bin_dim in self.ppm.bin_dimensions:
             required_alignment = lcm(required_alignment, bin_dim)
         if (input_size_hw[0] % required_alignment) or (input_size_hw[1] % required_alignment):
-            raise ValueError("ICNet may only operate on {}-aligned input resolutions".format(required_alignment))
+            raise ValueError(f"ICNet may only operate on {required_alignment}-aligned input resolutions")
         # Weight initialization
         # for module in self.modules():
         #     if isinstance(module, nn.Conv2d):

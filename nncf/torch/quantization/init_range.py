@@ -81,16 +81,14 @@ class PTRangeInitParams(RangeInitParams):
                 )
         if len(matches) > 1:
             raise ValueError(
-                "Location {} matches more than one per-layer initialization parameter definition!".format(str(qid))
+                f"Location {str(qid)} matches more than one per-layer initialization parameter definition!"
             )
         if len(matches) == 1:
             return matches[0]
         if not matches and self.global_init_config is not None:
             return deepcopy(self.global_init_config)
 
-        raise ValueError(
-            "Location {} does not match any per-layer initialization parameter definition!".format(str(qid))
-        )
+        raise ValueError(f"Location {str(qid)} does not match any per-layer initialization parameter definition!")
 
 
 class PTRangeInitCollectorParams(RangeInitCollectorParams):
@@ -155,7 +153,7 @@ class StatCollectorGenerator:
         if num_samples_to_collect_override is not None:
             num_samples = num_samples_to_collect_override
         if init_config.init_type not in RANGE_INIT_TYPES_VS_DESCRIPTIONS:
-            raise nncf.InternalError("Unknown range init type: {}".format(init_config.init_type))
+            raise nncf.InternalError(f"Unknown range init type: {init_config.init_type}")
 
         use_per_sample_stats = collector_params.use_per_sample_stats(init_config.init_type == "mixed_min_max")
         reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(use_per_sample_stats)

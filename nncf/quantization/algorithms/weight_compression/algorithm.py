@@ -297,7 +297,7 @@ class WeightCompression(Algorithm):
             self._backend_entity = FXWeightCompressionAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
+                f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             )
 
     def get_nodes_to_compress(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:

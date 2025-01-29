@@ -127,7 +127,7 @@ class BoxList:
           ValueError: if the box_list does not have specified field.
         """
         if not self.has_field(field):
-            raise ValueError("field {} does not exist".format(field))
+            raise ValueError(f"field {field} does not exist")
         self.data[field] = value
 
     def get_center_coordinates_and_sizes(self, scope=None):

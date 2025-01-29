@@ -354,8 +354,7 @@ class FilterPruningController(BasePruningAlgoController):
             self.current_params_num = params_num
             return right
         raise nncf.InternalError(
-            "Can't prune the model to get the required "
-            "pruning level in flops = {}".format(target_flops_pruning_level)
+            "Can't prune the model to get the required " f"pruning level in flops = {target_flops_pruning_level}"
         )
 
     def set_pruning_level(

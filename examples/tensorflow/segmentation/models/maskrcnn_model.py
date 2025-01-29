@@ -44,7 +44,7 @@ def _restore_baseline_weights(keras_model, checkpoint_path):
                 match_names.append(x)
 
         if len(match_names) != 1:
-            raise Exception("More than one matches for {}: {}".format(v, match_names))
+            raise Exception(f"More than one matches for {v}: {match_names}")
 
         assignment_map[match_names[0]] = v
 
@@ -314,7 +314,7 @@ class MaskrcnnModel(base_model.Model):
             init_checkpoint_fn(keras_model)
 
         if weights:
-            logger.info("Loaded pretrained weights from {}".format(weights))
+            logger.info(f"Loaded pretrained weights from {weights}")
             _restore_baseline_weights(keras_model, weights)
 
         return keras_model

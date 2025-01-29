@@ -28,7 +28,7 @@ def is_linux() -> bool:
 def get_cli_dict_args(args):
     cli_args = {}
     for key, val in args.items():
-        cli_key = "--{}".format(str(key))
+        cli_key = f"--{str(key)}"
         cli_args[cli_key] = None
         if val is not None:
             cli_args[cli_key] = str(val)

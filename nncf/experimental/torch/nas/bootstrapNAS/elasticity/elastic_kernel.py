@@ -130,9 +130,8 @@ class ElasticKernelOp:
         """
         if kernel_size is None or kernel_size > self.max_kernel_size or kernel_size < 1:
             raise AttributeError(
-                "Invalid kernel size={} in scope={}.\nIt should be within the range: [1, {}]".format(
-                    kernel_size, self.node_name, self.max_kernel_size
-                )
+                f"Invalid kernel size={kernel_size} in scope={self.node_name}.\n"
+                f"It should be within the range: [1, {self.max_kernel_size}]"
             )
 
         self._active_kernel_size = kernel_size
@@ -197,7 +196,7 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
             ks_larger = self._ks_set[i + 1]
             param_name = f"{ks_larger}to{ks_small}"
             # noinspection PyArgumentList
-            scale_params["{}_matrix".format(param_name)] = Parameter(torch.eye(ks_small**2))
+            scale_params[f"{param_name}_matrix"] = Parameter(torch.eye(ks_small**2))
         for name, param in scale_params.items():
             self.register_parameter(name, param)
 
@@ -255,7 +254,7 @@ class ElasticKernelConv2DOp(ElasticKernelOp, nn.Module):
         nncf_logger.debug(f"set active elastic_kernel={kernel_size} in scope={self.node_name}")
         assert kernel_size % 2 > 0, "kernel size should be odd number"
         if kernel_size not in self.kernel_size_list and kernel_size != self.max_kernel_size:
-            raise ValueError("invalid kernel size to set. Should be a number in {}".format(self.kernel_size_list))
+            raise ValueError(f"invalid kernel size to set. Should be a number in {self.kernel_size_list}")
         super().set_active_kernel_size(kernel_size)
 
     @staticmethod

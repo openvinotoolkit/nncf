@@ -919,7 +919,7 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph, quantizer_setup: Singl
         node_name = nncf_node.node_name
         if node_name in pre_hooked_quantizers_activations_attr:
             input_port_id, qconf_str = pre_hooked_quantizers_activations_attr[node_name]
-            label = "Quantizer: {}".format(qconf_str)
+            label = f"Quantizer: {qconf_str}"
             additional_node_attrs = dict(label=label, color="purple", id=nncf_node.node_id)
 
             pre_hook_quantizer_node_key = node_name + "|IN" + str(input_port_id)
@@ -943,7 +943,7 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph, quantizer_setup: Singl
 
         if node_name in post_hooked_quantizers_activations_attr:
             qconf_str = post_hooked_quantizers_activations_attr[node_name]
-            label = "Quantizer: {}".format(qconf_str)
+            label = f"Quantizer: {qconf_str}"
             additional_node_attrs = dict(label=label, color="purple", id=nncf_node.node_id)
 
             post_hook_quantizer_node_key = node_name + "|OUT"
@@ -957,7 +957,7 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph, quantizer_setup: Singl
             nx_graph.add_edge(node_key, post_hook_quantizer_node_key)
 
         if node_name in quantizers_weights_attr:
-            label = "Quantizer: {}".format(quantizers_weights_attr[node_name])
+            label = f"Quantizer: {quantizers_weights_attr[node_name]}"
             weight_quantizer_node_key = node_name + "|WEIGHT"
             nx_graph.add_node(weight_quantizer_node_key, label=label, color="purple", id=nncf_node.node_id)
             nx_graph.add_edge(weight_quantizer_node_key, node_key)

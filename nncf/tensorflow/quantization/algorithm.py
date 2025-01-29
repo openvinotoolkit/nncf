@@ -707,7 +707,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
     def _get_fake_quantize_name(self, node_name: NNCFNodeName, input_port_id: int = None) -> str:
         original_node_name, instance_idx = get_original_name_and_instance_idx(node_name)
-        fq_name = "{}/fake_quantize".format(original_node_name)
+        fq_name = f"{original_node_name}/fake_quantize"
         if instance_idx != 0:
             fq_name += f"_{instance_idx}"
         if input_port_id is not None:

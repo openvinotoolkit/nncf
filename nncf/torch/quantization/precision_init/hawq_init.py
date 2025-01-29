@@ -305,9 +305,8 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         max_ratio = max(compression_ratio_per_qconfig)
         if not min_ratio <= self._compression_ratio <= max_ratio:
             raise AttributeError(
-                "Invalid compression ratio={}. Should be within range [{:.3f}, {:.3f}]".format(
-                    self._compression_ratio, min_ratio, max_ratio
-                )
+                f"Invalid compression ratio={self._compression_ratio}."
+                f" Should be within range [{min_ratio:.3f}, {max_ratio:.3f}]"
             )
 
         perturbations, weight_observers = self.calc_quantization_noise(covering_qconfig_sequences, traces_order)

@@ -75,7 +75,7 @@ def MobileNet(input_shape=None, alpha=1.0, depth_multiplier=1, dropout=1e-3):
     x = layers.Activation(activation="softmax", name="predictions")(x)
 
     # Create model.
-    model = tf.keras.Model(img_input, x, name="mobilenet_{:0.2f}_{}".format(alpha, rows))
+    model = tf.keras.Model(img_input, x, name=f"mobilenet_{alpha:0.2f}_{rows}")
 
     return model
 

@@ -78,7 +78,7 @@ class BuildingBlock:
         return str(self)
 
     def __str__(self) -> str:
-        return "[START NODE: {}, END_NODE: {}]".format(self.start_node_name, self.end_node_name)
+        return f"[START NODE: {self.start_node_name}, END_NODE: {self.end_node_name}]"
 
     def get_state(self) -> Dict[str, Any]:
         """

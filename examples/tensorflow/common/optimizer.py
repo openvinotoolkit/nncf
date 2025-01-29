@@ -62,6 +62,6 @@ def build_optimizer(config, scheduler):
         else:
             optimizer = tf.keras.optimizers.Adam(**common_params)
     else:
-        raise ValueError("Unknown optimizer {}".format(optimizer_type))
+        raise ValueError(f"Unknown optimizer {optimizer_type}")
 
     return optimizer

@@ -276,7 +276,7 @@ def run_sample(tc, args):
         actual_acc = get_actual_acc(args["metrics-dump"])
         ref_acc = tc["expected_accuracy"]
         assert actual_acc == approx(
-            ref_acc, abs=tc["absolute_tolerance_{}".format(mode)]
+            ref_acc, abs=tc[f"absolute_tolerance_{mode}"]
         ), "Test accuracy doesn't meet the expected accuracy within threshold."
 
 

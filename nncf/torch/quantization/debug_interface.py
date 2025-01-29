@@ -113,7 +113,7 @@ class QuantizationDebugInterface(DebugInterface):
 
         quantizer_normalized_name = re.sub(r"[^\w\-_\. ]", "_", quantizer_name)
         for scale_param_name, scale_param in quantizer_scale_params.items():
-            fname = "{}_{}.txt".format(quantizer_normalized_name, scale_param_name)
+            fname = f"{quantizer_normalized_name}_{scale_param_name}.txt"
             with safe_open(self.scale_dump_dir / fname, "ab") as file:
                 np.savetxt(file, scale_param.cpu().numpy().flatten())
 
@@ -161,7 +161,7 @@ class QuantizationDebugInterface(DebugInterface):
                 InsertionPointGraphNodeType.POST_HOOK,
             ]:
                 target_point_data = node[InsertionPointGraph.INSERTION_POINT_NODE_ATTR]
-                label = "TP: {}".format(str(target_point_data))
+                label = f"TP: {str(target_point_data)}"
                 out_graph.add_node(node_key, label=label, color="red")
             elif node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
                 out_graph.add_node(node_key)

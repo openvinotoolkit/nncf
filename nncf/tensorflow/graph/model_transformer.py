@@ -139,7 +139,7 @@ class TFModelTransformer(ModelTransformer):
         elif transformation.type == TransformationType.REMOVE:
             self._remove(transformation.target_point)
         else:
-            raise TypeError("Transformation type {} does not support".format(transformation.type))
+            raise TypeError(f"Transformation type {transformation.type} does not support")
 
     def _insert(self, target_point: Union[TargetPoint, TFMultiLayerPoint], insertion_objects: List[Callable]):
         if isinstance(target_point, TFMultiLayerPoint):
@@ -156,7 +156,7 @@ class TFModelTransformer(ModelTransformer):
                 target_point.layer_name, target_point.instance_idx, target_point.output_port_id, insertion_objects
             )
         else:
-            raise TypeError("Insertion transform does not support {} target point type".format(target_point.type))
+            raise TypeError(f"Insertion transform does not support {target_point.type} target point type")
 
     def _shared_insert_layers(self, target_points: List[TargetPoint], layers_to_insert: List[Callable]):
         functional_model = is_functional_model(self._model)
@@ -212,7 +212,7 @@ class TFModelTransformer(ModelTransformer):
                     )
                     if len(layer_out_ports) > 1:
                         raise nncf.InternalError(
-                            "Insertion after layer ({}) with multiple ports is not supported".format(tp.layer_name)
+                            f"Insertion after layer ({tp.layer_name}) with multiple ports is not supported"
                         )
 
             layer_name = target_points[0].layer_name
@@ -220,16 +220,14 @@ class TFModelTransformer(ModelTransformer):
 
     def _multi_insertion(self, target_point: TargetPoint, commands: List[TransformationCommand]):
         if not isinstance(target_point, TFLayer):
-            raise TypeError(
-                "Multiple insertion transform does not support {} target point type".format(target_point.type)
-            )
+            raise TypeError(f"Multiple insertion transform does not support {target_point.type} target point type")
 
         weight_operations = []
         for cmd in commands:
             if cmd.type != TransformationType.INSERT or cmd.target_point.type != TargetType.OPERATION_WITH_WEIGHTS:
                 raise TypeError(
                     "Multiple insertion transform does not support command: "
-                    "command type - {}; target point type - {}".format(cmd.type, cmd.target_point.type)
+                    f"command type - {cmd.type}; target point type - {cmd.target_point.type}"
                 )
             weight_operations.append(WeightOperations(cmd.target_point.weights_attr_name, cmd.insertion_objects))
 
@@ -242,7 +240,7 @@ class TFModelTransformer(ModelTransformer):
                 target_layer_name, target_point.weights_attr_name, target_point.operation_name
             )
         else:
-            raise TypeError("{} removal does not support".format(target_point.type))
+            raise TypeError(f"{target_point.type} removal does not support")
 
     def _remove_weight_operation(self, layer_name: str, weights_attr_name: str, operation_name: str):
         _, layer_config = self._find_layer_config(layer_name)
@@ -326,7 +324,7 @@ class TFModelTransformer(ModelTransformer):
         if functional_model:
             for layer in self._model_config["input_layers"]:
                 if layer_name == layer[0]:
-                    raise nncf.InternalError("Insertion before input layer: {} is not supported".format(layer_name))
+                    raise nncf.InternalError(f"Insertion before input layer: {layer_name} is not supported")
 
         layer_configs = []
         idx, downstream_layer_cfg = self._find_layer_config(layer_name)
@@ -411,15 +409,13 @@ class TFModelTransformer(ModelTransformer):
 
         self._insert_after_model_outputs(layer_name, instance_idx, layer_out_ports, replace_layer_name)
         if len(layer_out_ports) > 1:
-            raise nncf.InternalError(
-                "Insertion after layer ({}) with multiple ports is not supported".format(layer_name)
-            )
+            raise nncf.InternalError(f"Insertion after layer ({layer_name}) with multiple ports is not supported")
         self._insert_layer_after_sequential(layer_name, layer_to_insert_config)
 
     def _insert_layer_after_sequential(self, layer_name: str, layer_configs):
         idx, _ = self._find_layer_config(layer_name)
         if idx is None:
-            raise nncf.InternalError("Layer is not found: {}".format(layer_name))
+            raise nncf.InternalError(f"Layer is not found: {layer_name}")
         self._model_config["layers"].insert(idx + 1, layer_configs)
 
     @staticmethod

@@ -36,7 +36,7 @@ def get_files(folder, name_filter=None, extension_filter=None):
 
     """
     if not os.path.isdir(folder):
-        raise nncf.InvalidPathError('"{}" is not a folder.'.format(folder))
+        raise nncf.InvalidPathError(f'"{folder}" is not a folder.')
 
     # Filename filter: if not specified don't filter (condition always true);
     # otherwise, use a lambda expression to filter out files that do not
@@ -233,10 +233,10 @@ class LongTensorToRGBPIL:
         """
         # Check if label_tensor is a LongTensor
         if not isinstance(tensor, torch.LongTensor):
-            raise TypeError("label_tensor should be torch.LongTensor. Got {}".format(type(tensor)))
+            raise TypeError(f"label_tensor should be torch.LongTensor. Got {type(tensor)}")
         # Check if encoding is a ordered dictionary
         if not isinstance(self.rgb_encoding, OrderedDict):
-            raise TypeError("encoding should be an OrderedDict. Got {}".format(type(self.rgb_encoding)))
+            raise TypeError(f"encoding should be an OrderedDict. Got {type(self.rgb_encoding)}")
 
         # label_tensor might be an image without a channel dimension, in this
         # case unsqueeze it

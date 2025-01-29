@@ -82,8 +82,8 @@ def forward_trace_only(operator: Callable, *args, **kwargs):
                 result[out_idx] = TracedTensor.from_torch_tensor(result[out_idx], forwarded_meta)
         elif len(input_traced_tensor_indices) != len(output_tensors_to_be_traced_indices):
             raise nncf.ValidationError(
-                "Unable to forward trace through operator {} - "
-                "input and output tensor count mismatch!".format(operator.__name__)
+                f"Unable to forward trace through operator {operator.__name__} - "
+                "input and output tensor count mismatch!"
             )
         else:
             # Assume that output tensor order corresponds to input tensor order
@@ -96,8 +96,7 @@ def forward_trace_only(operator: Callable, *args, **kwargs):
             result = tuple(result)
     elif len(input_traced_tensor_indices) > 1:
         raise nncf.ValidationError(
-            "Unable to forward trace through operator {} - "
-            "input and output tensor count mismatch!".format(operator.__name__)
+            f"Unable to forward trace through operator {operator.__name__} - " "input and output tensor count mismatch!"
         )
     elif input_traced_tensor_indices:
         forwarded_meta = deepcopy(fargs[input_traced_tensor_indices[0]].tensor_meta)

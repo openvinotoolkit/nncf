@@ -553,8 +553,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         elif precision_init_type == "autoq":
             if self.hw_config is not None and self.hw_config.target_device != HWConfigType.NPU.value:
                 raise ValueError(
-                    "Unsupported device ({}). Automatic Precision Initialization only supports for "
-                    "target_device NONE or NPU".format(self.hw_config.target_device)
+                    f"Unsupported device ({self.hw_config.target_device})."
+                    f" Automatic Precision Initialization only supports for target_device NONE or NPU"
                 )
             try:
                 precision_init_args = self.config.get_extra_struct(AutoQPrecisionInitArgs)
@@ -1191,7 +1191,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         insertion_commands = []
         for curr_insertion_point in insertion_points:
             if curr_insertion_point in self._processed_insertion_points:
-                raise nncf.InternalError("Insertion point {} already quantized!".format(str(curr_insertion_point)))
+                raise nncf.InternalError(f"Insertion point {str(curr_insertion_point)} already quantized!")
             self._processed_insertion_points.add(curr_insertion_point)
 
             if is_weights(curr_insertion_point):

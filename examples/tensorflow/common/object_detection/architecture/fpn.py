@@ -60,7 +60,7 @@ class Fpn:
         elif activation == "swish":
             self._activation_op = tf.nn.swish
         else:
-            raise ValueError("Unsupported activation `{}`.".format(activation))
+            raise ValueError(f"Unsupported activation `{activation}`.")
 
         self._use_batch_norm = use_batch_norm
         self._norm_activation = norm_activation
@@ -108,8 +108,8 @@ class Fpn:
         input_levels = list(multilevel_features.keys())
         if min(input_levels) > self._min_level:
             raise ValueError(
-                "The minimum backbone level {} should be ".format(min(input_levels))
-                + "less or equal to FPN minimum level {}.".format(self._min_level)
+                f"The minimum backbone level {min(input_levels)} should be "
+                + f"less or equal to FPN minimum level {self._min_level}."
             )
 
         backbone_max_level = min(max(input_levels), self._max_level)

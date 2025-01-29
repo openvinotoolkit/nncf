@@ -93,7 +93,7 @@ class SmoothQuant(Algorithm):
             self._backend_entity = FXSmoothQuantAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
+                f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             )
 
     def apply(

@@ -204,9 +204,7 @@ class QuantizationConstraints:
         """
         for attr_name in kwargs:
             if not hasattr(QuantizationConstraints.REF_QCONF_OBJ, attr_name):
-                raise nncf.ValidationError(
-                    "Invalid constraint - QuantizerConfig has no attribute '{}'".format(attr_name)
-                )
+                raise nncf.ValidationError(f"Invalid constraint - QuantizerConfig has no attribute '{attr_name}'")
         self.qconf_attr_vs_constraint_dict = kwargs
 
     def apply_constraints_to(self, qconfig: QuantizerConfig) -> QuantizerConfig:
@@ -321,7 +319,7 @@ class NonWeightQuantizerId(QuantizerId):
         return self.target_node_name
 
     def get_suffix(self) -> str:
-        return "|OUTPUT" if self.input_port_id is None else "|INPUT{}".format(self.input_port_id)
+        return "|OUTPUT" if self.input_port_id is None else f"|INPUT{self.input_port_id}"
 
 
 class UnifiedScaleType(Enum):

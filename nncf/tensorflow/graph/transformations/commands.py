@@ -450,7 +450,7 @@ class TFInsertionCommand(TFTransformationCommand):
             )
 
         if not self.check_command_compatibility(other):
-            raise ValueError("{} and {} commands could not be united".format(type(self).__name__, type(other).__name__))
+            raise ValueError(f"{type(self).__name__} and {type(other).__name__} commands could not be united")
 
         com = TFInsertionCommand(self.target_point)
         com.callable_objects = self.callable_objects + other.callable_objects
@@ -510,7 +510,7 @@ class TFMultipleInsertionCommands(TFTransformationCommand):
 
     def add_insertion_command(self, command: TFTransformationCommand) -> None:
         if not self.check_insertion_command(command):
-            raise ValueError("{} command could not be added".format(type(command).__name__))
+            raise ValueError(f"{type(command).__name__} command could not be added")
 
         for idx, cmd in enumerate(self.commands):
             if cmd.target_point == command.target_point:
@@ -521,7 +521,7 @@ class TFMultipleInsertionCommands(TFTransformationCommand):
 
     def union(self, other: TFTransformationCommand) -> "TFMultipleInsertionCommands":
         if not self.check_command_compatibility(other):
-            raise ValueError("{} and {} commands could not be united".format(type(self).__name__, type(other).__name__))
+            raise ValueError(f"{type(self).__name__} and {type(other).__name__} commands could not be united")
 
         def make_check_target_points_fn(fn1, fn2):
             def check_target_points(tp0, tp1):

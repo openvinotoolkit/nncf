@@ -23,7 +23,7 @@ class ScopeElement:
     def __str__(self):
         if self.calling_field_name is None:
             return self.calling_module_class_name
-        return "{cls}[{name}]".format(cls=self.calling_module_class_name, name=self.calling_field_name)
+        return f"{self.calling_module_class_name}[{self.calling_field_name}]"
 
     def __eq__(self, other: "ScopeElement"):
         return (self.calling_module_class_name == other.calling_module_class_name) and (

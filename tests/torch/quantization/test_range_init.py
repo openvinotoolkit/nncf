@@ -88,9 +88,9 @@ def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     for layer in get_all_modules_by_type(quant_model, "SymmetricQuantizer").values():
         act_sum += layer.scale.sum()
     ref_sum = 3720.864
-    assert act_sum.item() == approx(ref_sum, 0.01), "sum of scales is not expected {} vs {} rank {}".format(
-        act_sum.item(), ref_sum, config.rank
-    )
+    assert act_sum.item() == approx(
+        ref_sum, 0.01
+    ), f"sum of scales is not expected {act_sum.item()} vs {ref_sum} rank {config.rank}"
 
     out_file_path = get_path_after_broadcast(tmp_path, config.rank)
     save_params(quant_model, out_file_path)
@@ -112,12 +112,12 @@ def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
 
 
 def get_path_path_after_train_iters(tmp_path, rank):
-    out_file_path = tmp_path / "scale_signed_after_1_train_iter_gpu{}.pt".format(rank)
+    out_file_path = tmp_path / f"scale_signed_after_1_train_iter_gpu{rank}.pt"
     return out_file_path
 
 
 def get_path_after_broadcast(tmp_path, rank):
-    out_file_path = tmp_path / "scale_signed_after_broadcast_gpu{}.pt".format(rank)
+    out_file_path = tmp_path / f"scale_signed_after_broadcast_gpu{rank}.pt"
     return out_file_path
 
 
@@ -204,8 +204,8 @@ class TestRangeInit:
                 match = re.search(pattern, str(scope))
                 if match:
                     assert isinstance(module, SymmetricQuantizer)
-                    assert module.signed == ref_values[0], "sign is not matched for {}".format(str(scope))
-                    assert all(module.scale == ref_values[1]), "scale is not matched for {}".format(str(scope))
+                    assert module.signed == ref_values[0], f"sign is not matched for {str(scope)}"
+                    assert all(module.scale == ref_values[1]), f"scale is not matched for {str(scope)}"
 
     @pytest.mark.parametrize("config_creator", (create_config, create_empty_config_without_init_section))
     def test_scale_and_sign_init_for_quant_algo__without_init_section(self, wrap_dataloader, config_creator):

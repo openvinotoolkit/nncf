@@ -558,9 +558,7 @@ class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
         ln.bias.data = torch.index_select(ln.bias.data, 0, reorder_indexes)
 
         nncf_logger.debug(
-            "Reordered channels (first 10 reorder indexes {}) of LayerNorm: {} ".format(
-                reorder_indexes[:10], node.node_key
-            )
+            f"Reordered channels (first 10 reorder indexes {reorder_indexes[:10]}) of LayerNorm: {node.node_key} "
         )
 
     @classmethod

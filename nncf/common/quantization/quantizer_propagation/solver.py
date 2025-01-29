@@ -914,9 +914,9 @@ class QuantizerPropagationSolver:
         if self._active_propagating_quantizers_queue:
             next_id_str = str(self._active_propagating_quantizers_queue[-1].id)
         out_graph.graph["graph"] = {
-            "label": "Propagating quantizers: {}\n"
-            "Next quantizer to be propagated: {}\n"
-            "Finished quantizers: {}".format(active_ids_str, next_id_str, finished_ids_str),
+            "label": f"Propagating quantizers: {active_ids_str}\n"
+            f"Next quantizer to be propagated: {next_id_str}\n"
+            f"Finished quantizers: {finished_ids_str}",
             "labelloc": "t",
         }
         pth = deepcopy(dump_path)
@@ -1009,16 +1009,14 @@ class QuantizerPropagationSolver:
                 )
                 if len(matching_indices) == 0:
                     raise nncf.ValidationError(
-                        "No match for linked quantizer entry {} among activation quantizers!".format(
-                            group_member_node_name
-                        )
+                        f"No match for linked quantizer entry {group_member_node_name} among activation quantizers!"
                     )
 
                 for target_idx in matching_indices:
                     if target_idx in insertion_point_indices_vs_group_id:
                         raise nncf.InternalError(
-                            "Linked activation quantizer groups {} and {} "
-                            "overlap!".format(group_idx, insertion_point_indices_vs_group_id[target_idx])
+                            f"Linked activation quantizer groups {group_idx} and "
+                            f" {insertion_point_indices_vs_group_id[target_idx]} overlap!"
                         )
                 for target_idx in matching_indices:
                     insertion_point_indices_vs_group_id[target_idx] = group_idx
@@ -1119,8 +1117,8 @@ class QuantizerPropagationSolver:
                 if not per_tensor_qconf_list:
                     raise nncf.InternalError(
                         "Unified scales currently do not support per-channel configuration - dropping"
-                        "per-channel configuration options for {} resulted in no valid quantization "
-                        "configs!".format(op_meta_name)
+                        f"per-channel configuration options for {op_meta_name} resulted in no valid quantization "
+                        "configs!"
                     )
                 nncf_logger.warning(
                     f"Unified scales currently do not support per-channel configuration - dropping"

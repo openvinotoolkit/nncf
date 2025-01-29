@@ -50,7 +50,7 @@ class UpdateParameter(BaseOp):
 
     def __call__(self, module, _):
         if not hasattr(module, self._param_name):
-            raise TypeError("{} should have {} attribute".format(type(module), self._param_name))
+            raise TypeError(f"{type(module)} should have {self._param_name} attribute")
         value = getattr(module, self._param_name)
         result = super().__call__(value)
         setattr(module, self._param_name, result)
@@ -86,7 +86,7 @@ class UpdateParameterList(BaseOp):
                 if is_optional:
                     param_values.append(None)
                     continue
-                raise TypeError("{} should have {} attribute".format(type(module), param_name))
+                raise TypeError(f"{type(module)} should have {param_name} attribute")
             param_values.append(getattr(module, param_name))
         updated_kwargs = dict(zip(self._param_names, param_values))
         updated_values = super().__call__(**updated_kwargs)

@@ -55,7 +55,7 @@ class Clusterization(Generic[T]):
         :return: Cluster according to provided `cluster_id`.
         """
         if cluster_id not in self.clusters:
-            raise IndexError("No cluster with id = {}".format(cluster_id))
+            raise IndexError(f"No cluster with id = {cluster_id}")
         return self.clusters[cluster_id]
 
     def get_cluster_containing_element(self, element_id: Hashable) -> Cluster[T]:
@@ -66,7 +66,7 @@ class Clusterization(Generic[T]):
         :return: Cluster containing element with provided `element_id`.
         """
         if element_id not in self._element_to_cluster:
-            raise IndexError("No cluster for node with id = {}".format(element_id))
+            raise IndexError(f"No cluster for node with id = {element_id}")
         return self.get_cluster_by_id(self._element_to_cluster[element_id])
 
     def is_node_in_clusterization(self, node_id: int) -> bool:
@@ -86,7 +86,7 @@ class Clusterization(Generic[T]):
         """
         cluster_id = cluster.id
         if cluster_id in self.clusters:
-            raise IndexError("Cluster with index = {} already exist".format(cluster_id))
+            raise IndexError(f"Cluster with index = {cluster_id} already exist")
         self.clusters[cluster_id] = cluster
         for elt in cluster.elements:
             self._element_to_cluster[self._id_fn(elt)] = cluster_id  # type: ignore[no-untyped-call]
@@ -98,7 +98,7 @@ class Clusterization(Generic[T]):
         :param cluster_id: Id of a cluster to delete.
         """
         if cluster_id not in self.clusters:
-            raise IndexError("No cluster with index = {} to delete".format(cluster_id))
+            raise IndexError(f"No cluster with index = {cluster_id} to delete")
         for elt in self.clusters[cluster_id].elements:
             node_id = self._id_fn(elt)  # type: ignore[no-untyped-call]
             self._element_to_cluster.pop(node_id)

@@ -211,7 +211,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         nncf_logger.info(f"[AutoQ] best_reward: {best_reward}")
         nncf_logger.info(f"[AutoQ] best_policy: {best_policy}")
         nncf_logger.info("[AutoQ] Search completed.")
-        nncf_logger.info("[AutoQ] Elapsed time of AutoQ Precision Initialization (): {}".format(end_ts - start_ts))
+        nncf_logger.info(f"[AutoQ] Elapsed time of AutoQ Precision Initialization (): {end_ts - start_ts}")
         return final_quantizer_setup
 
     def _search(self, agent: DDPG, env: "QuantizationEnv") -> Tuple[pd.Series, float]:  # noqa: F821
@@ -451,9 +451,9 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         episode, reward, accuracy, model_ratio, bop_ratio = info_tuple
 
         text_string = bit_stats_df.to_markdown() + "\n\n\n"
-        text_string += "Episode: {:>4}, Reward: {:.3f}, ".format(episode, reward)
-        text_string += "Accuracy: {:.3f}, Model_Size_Ratio: {:.3f}, BOP_Ratio: {:.3f}\n\n\n".format(
-            accuracy, model_ratio, bop_ratio
+        text_string += f"Episode: {episode:>4}, Reward: {reward:.3f}, "
+        text_string += (
+            f"Accuracy: {accuracy:.3f}, Model_Size_Ratio: {model_ratio:.3f}, BOP_Ratio: {bop_ratio:.3f}\n\n\n"
         )
 
         for _, row_id in enumerate(qdf.index.tolist()):

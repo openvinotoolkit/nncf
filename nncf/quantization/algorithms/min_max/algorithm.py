@@ -398,7 +398,7 @@ class MinMaxQuantization(Algorithm):
             self._backend_entity = PTMinMaxAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
+                f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             )
 
     def _get_range_estimator_parameters(

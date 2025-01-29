@@ -690,7 +690,7 @@ class NNCFGraph:
     def get_node_by_name(self, name: NNCFNodeName) -> NNCFNode:
         node_ids = self._node_name_to_node_id_map.get(name, None)
         if node_ids is None:
-            raise nncf.InternalError("Could not find a node {} in NNCFGraph!".format(name))
+            raise nncf.InternalError(f"Could not find a node {name} in NNCFGraph!")
         if len(node_ids) > 1:
             raise nncf.InternalError(f"More than one node in NNCFGraph matches name {name}")
 

@@ -168,7 +168,7 @@ def get_tensor(model: onnx.ModelProto, tensor_name: str) -> onnx.TensorProto:
     for tensor in _get_all_tensors(model):
         if tensor.name == tensor_name:
             return tensor
-    raise nncf.ValidationError("There is no tensor with the name {}".format(tensor_name))
+    raise nncf.ValidationError(f"There is no tensor with the name {tensor_name}")
 
 
 def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray:

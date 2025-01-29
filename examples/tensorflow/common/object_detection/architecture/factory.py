@@ -37,14 +37,14 @@ def backbone_generator(params):
                 norm_activation=norm_activation_generator(params.model_params.norm_activation),
             )
         else:
-            raise ValueError("Backbone {} is not supported for {} model.".format(backbone_name, params.model))
+            raise ValueError(f"Backbone {backbone_name} is not supported for {params.model} model.")
     elif params.model == "YOLOv4":
         if backbone_name == "darknet":
             backbone_fn = darknet.CSPDarknet53()
         else:
-            raise ValueError("Backbone {} is not supported for {} model.".format(backbone_name, params.model))
+            raise ValueError(f"Backbone {backbone_name} is not supported for {params.model} model.")
     else:
-        raise ValueError("Model {} is not supported.".format(params.model))
+        raise ValueError(f"Model {params.model} is not supported.")
 
     return backbone_fn
 

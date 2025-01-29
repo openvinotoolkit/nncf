@@ -72,7 +72,7 @@ class BitwidthGraph:
                         operator_name += "(shared among nodes {})".format(
                             ",".join([str(node_id) for node_id in node_ids])
                         )
-            operator_name += "_#{}".format(node.node_id)
+            operator_name += f"_#{node.node_id}"
             target_node_to_draw = self._nx_graph.nodes[node_key]
             target_node_to_draw["label"] = operator_name
             target_node_to_draw["style"] = "filled"
@@ -89,7 +89,7 @@ class BitwidthGraph:
             nodes = [nncf_graph.get_node_by_name(tp.target_node_name) for tp in wq_info.affected_insertions]
             if not nodes:
                 raise AttributeError(
-                    "Failed to get affected nodes for quantized module node: {}".format(wq_id.target_node_name)
+                    f"Failed to get affected nodes for quantized module node: {wq_id.target_node_name}"
                 )
             preds = [nncf_graph.get_previous_nodes(node) for node in nodes]
             wq_nodes = []
@@ -105,7 +105,7 @@ class BitwidthGraph:
             nx_node_to_draw_upon = self._nx_graph.nodes[key]
             quantizer = wq_info.quantizer_module_ref
             bitwidths = quantizer.num_bits
-            nx_node_to_draw_upon["label"] = "WFQ_[{}]_#{}".format(quantizer.get_quantizer_config(), str(node_id))
+            nx_node_to_draw_upon["label"] = f"WFQ_[{quantizer.get_quantizer_config()}]_#{str(node_id)}"
             if grouped_mode:
                 group_id_str = "UNDEFINED"
                 group_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(wq_id)
@@ -160,8 +160,8 @@ class BitwidthGraph:
             activation_fq_node["style"] = "filled"
             node_id = activation_fq_node[NNCFNode.ID_NODE_ATTR]
 
-            activation_fq_node["label"] = "AFQ_[{}]_#{}".format(
-                quantizer_info.quantizer_module_ref.get_quantizer_config(), str(node_id)
+            activation_fq_node["label"] = (
+                f"AFQ_[{quantizer_info.quantizer_module_ref.get_quantizer_config()}]_#{str(node_id)}"
             )
             grouped_mode = bool(groups_of_adjacent_quantizers)
             if grouped_mode:

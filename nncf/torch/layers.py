@@ -457,7 +457,7 @@ def register_module(
     # customly named attributes if it becomes necessary
     def wrap(cls):
         UNWRAPPED_USER_MODULES.registry_dict[cls.__name__] = cls
-        nncf_wrapped_module_class_name = "NNCFUser{}".format(cls.__name__)
+        nncf_wrapped_module_class_name = f"NNCFUser{cls.__name__}"
         NNCF_WRAPPED_USER_MODULES_DICT[cls] = type(nncf_wrapped_module_class_name, (_NNCFModuleMixin, cls), {})
         get_base_attributes_fn = lambda self: GenericWeightedLayerAttributes(
             self.weight.requires_grad, self.weight.shape
@@ -510,22 +510,18 @@ class RNNCellBaseNNCF(nn.Module):
     def check_forward_input(self, input_):
         if input_.size(1) != self.input_size:
             raise nncf.ValidationError(
-                "input_ has inconsistent input_size: got {}, expected {}".format(input_.size(1), self.input_size)
+                f"input_ has inconsistent input_size: got {input_.size(1)}, expected {self.input_size}"
             )
 
     def check_forward_hidden(self, input_: torch.Tensor, hx: torch.Tensor, hidden_label: str = ""):
         if input_.size(0) != hx.size(0):
             raise nncf.ValidationError(
-                "Input batch size {} doesn't match hidden{} batch size {}".format(
-                    input_.size(0), hidden_label, hx.size(0)
-                )
+                f"Input batch size {input_.size(0)} doesn't match hidden{hidden_label} batch size {hx.size(0)}"
             )
 
         if hx.size(1) != self.hidden_size:
             raise nncf.ValidationError(
-                "hidden{} has inconsistent hidden_size: got {}, expected {}".format(
-                    hidden_label, hx.size(1), self.hidden_size
-                )
+                f"hidden{hidden_label} has inconsistent hidden_size: got {hx.size(1)}, expected {self.hidden_size}"
             )
 
     def reset_parameters(self):
@@ -856,14 +852,10 @@ class NNCF_RNN(nn.Module):
         is_input_packed = batch_sizes is not None
         expected_input_dim = 2 if is_input_packed else 3
         if input_.dim() != expected_input_dim:
-            raise nncf.ValidationError(
-                "input_ must have {} dimensions, got {}".format(expected_input_dim, input_.dim())
-            )
+            raise nncf.ValidationError(f"input_ must have {expected_input_dim} dimensions, got {input_.dim()}")
         if self.input_size != input_.size(-1):
             raise nncf.ValidationError(
-                "input_.size(-1) must be equal to input_size. Expected {}, got {}".format(
-                    self.input_size, input_.size(-1)
-                )
+                f"input_.size(-1) must be equal to input_size. Expected {self.input_size}, got {input_.size(-1)}"
             )
 
         if is_input_packed:
@@ -876,7 +868,7 @@ class NNCF_RNN(nn.Module):
         def check_hidden_size(hx, expected_hidden_size, msg="Expected hidden size {}, got {}"):
             expected_size = self.num_layers * self.num_directions
             if expected_size != len(hx):
-                raise nncf.InternalError("Expected number of hidden states {}, got {}".format(expected_size, len(hx)))
+                raise nncf.InternalError(f"Expected number of hidden states {expected_size}, got {len(hx)}")
             for element in hx:
                 if tuple(element.size()) != expected_hidden_size:
                     raise nncf.InternalError(msg.format(expected_hidden_size, tuple(element.size())))

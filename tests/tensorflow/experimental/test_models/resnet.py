@@ -909,7 +909,7 @@ class ResNet(tf.keras.Model):
             x = self._norm(axis=bn_axis, momentum=norm_momentum, epsilon=norm_epsilon, trainable=bn_trainable)(x)
             x = get_activation(activation, use_keras_layer=True)(x)
         else:
-            raise ValueError("Stem type {} not supported.".format(stem_type))
+            raise ValueError(f"Stem type {stem_type} not supported.")
 
         if replace_stem_max_pool:
             x = tf.keras.layers.Conv2D(
@@ -934,7 +934,7 @@ class ResNet(tf.keras.Model):
             elif spec[0] == "bottleneck":
                 block_fn = BottleneckBlock
             else:
-                raise ValueError("Block fn `{}` is not supported.".format(spec[0]))
+                raise ValueError(f"Block fn `{spec[0]}` is not supported.")
             x = self._block_group(
                 inputs=x,
                 filters=int(spec[1] * self._depth_multiplier),
@@ -942,7 +942,7 @@ class ResNet(tf.keras.Model):
                 block_fn=block_fn,
                 block_repeats=spec[2],
                 stochastic_depth_drop_rate=get_stochastic_depth_rate(self._init_stochastic_depth_rate, i + 2, 5),
-                name="block_group_l{}".format(i + 2),
+                name=f"block_group_l{i + 2}",
             )
             endpoints[str(i + 2)] = x
 

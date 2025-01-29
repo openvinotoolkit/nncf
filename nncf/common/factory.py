@@ -57,7 +57,7 @@ class NNCFGraphFactory:
 
             return cast(NNCFNetwork, model).nncf.get_graph()
         raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific graph because {} is not supported!".format(model_backend.value)
+            f"Cannot create backend-specific graph because {model_backend.value} is not supported!"
         )
 
 
@@ -96,7 +96,7 @@ class ModelTransformerFactory:
 
             return FXModelTransformer(cast(GraphModule, model))
         raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific model transformer because {} is not supported!".format(model_backend.value)
+            f"Cannot create backend-specific model transformer because {model_backend.value} is not supported!"
         )
 
 
@@ -129,7 +129,7 @@ class EngineFactory:
 
             return PTEngine(cast(Module, model))
         raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific engine because {} is not supported!".format(model_backend.value)
+            f"Cannot create backend-specific engine because {model_backend.value} is not supported!"
         )
 
 
@@ -154,7 +154,7 @@ class CommandCreatorFactory:
             return ONNXCommandCreator()
 
         raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific command creator because {} is not supported!".format(model_backend.value)
+            f"Cannot create backend-specific command creator because {model_backend.value} is not supported!"
         )
 
 
@@ -185,7 +185,5 @@ class StatisticsAggregatorFactory:
 
             return FXStatisticsAggregator(dataset)
         raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific statistics aggregator because {} is not supported!".format(
-                model_backend.value
-            )
+            f"Cannot create backend-specific statistics aggregator because {model_backend.value} is not supported!"
         )

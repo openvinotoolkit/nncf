@@ -338,8 +338,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
             self.remove_propagating_quantizer(prop_quantizer)
         else:
             raise nncf.InternalError(
-                "Surviving_quantizers not found !"
-                " Nodes quantized with quantizer #{} will be lost".format(prop_quantizer.id)
+                "Surviving_quantizers not found !" f" Nodes quantized with quantizer #{prop_quantizer.id} will be lost"
             )
 
     @staticmethod
@@ -378,7 +377,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                 pre_hook_ip = edge_from_pre_hook_ip_to_op[0]
                 target_ip_node_keys.append(pre_hook_ip)
         else:
-            raise nncf.InternalError("Unsupported branching QPSG node type: {}".format(branching_node_type))
+            raise nncf.InternalError(f"Unsupported branching QPSG node type: {branching_node_type}")
 
         if not target_ip_node_keys:
             return []
@@ -428,7 +427,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                 if merge_gid is not None:
                     self._unified_scale_group_manager.add_to_group(merge_gid, merge_pq)
             else:
-                raise nncf.InternalError("Unsupported target type for merge PQ insertion: {}".format(target_type))
+                raise nncf.InternalError(f"Unsupported target type for merge PQ insertion: {target_type}")
 
             merge_pqs.append(merge_pq)
 
@@ -616,13 +615,13 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
         for node_key in node_keys_to_verify:
             if node_key not in self.nodes:
                 raise nncf.InternalError(
-                    "Unknown node referenced by propagating quantizer to be registered: {}".format(node_key)
+                    f"Unknown node referenced by propagating quantizer to be registered: {node_key}"
                 )
         edge_keys_to_verify = list(prop_quantizer.affected_edges) + list(prop_quantizer.propagation_path)
         for edge_key in edge_keys_to_verify:
             if edge_key not in self.edges:
                 raise nncf.InternalError(
-                    "Unknown edge referenced by propagating quantizer to be registered: {}".format(edge_key)
+                    f"Unknown edge referenced by propagating quantizer to be registered: {edge_key}"
                 )
 
     @staticmethod
@@ -633,7 +632,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
             if existing_pq.potential_quant_configs != prop_quantizer.potential_quant_configs:
                 raise nncf.InternalError(
                     "Configurations of the quantizer to be registered are conflicting with "
-                    "existing quantizer {}".format(existing_pq.id)
+                    f"existing quantizer {existing_pq.id}"
                 )
 
     def register_propagating_quantizer(self, prop_quantizer: PropagatingQuantizer) -> None:
@@ -650,17 +649,15 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
         if pq_in_target_node is not None:
             raise nncf.InternalError(
                 "The propagating quantizer to be registered is occupying the same position "
-                "as an existing propagating quantizer {}!".format(pq_in_target_node.id)
+                f"as an existing propagating quantizer {pq_in_target_node.id}!"
             )
         target_node_affecting_quantizers = target_node[
             QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR
         ]
         if target_node_affecting_quantizers:
             raise nncf.InternalError(
-                "Cannot register a propagating quantizer into a node that is already "
-                "affected by existing propagating quantizers (ids: {})!".format(
-                    [pq.id for pq in target_node_affecting_quantizers]
-                )
+                "Cannot register a propagating quantizer into a node that is already affected by existing"
+                f" propagating quantizers (ids: {[pq.id for pq in target_node_affecting_quantizers]})!"
             )
 
         self._verify_nodes_and_edges_for_pq(prop_quantizer)
@@ -973,19 +970,19 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                 insertion_point_data: TargetPoint = node[
                     QuantizerPropagationStateGraph.QUANT_INSERTION_POINT_DATA_NODE_ATTR
                 ]
-                label = "TP: {}".format(str(insertion_point_data))
+                label = f"TP: {str(insertion_point_data)}"
                 out_graph.add_node(node_key, label=label, color="red")
                 if node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] is not None:
                     prop_quantizer: PropagatingQuantizer = node[
                         QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR
                     ]
-                    quant_node_key = "Quantizer #{}".format(prop_quantizer.id)
+                    quant_node_key = f"Quantizer #{prop_quantizer.id}"
                     if prop_quantizer.potential_quant_configs:
                         quant_configs_str_list = [str(conf) for conf in prop_quantizer.potential_quant_configs]
                     else:
                         quant_configs_str_list = ["!!! NONE !!!]"]
                     sub_label = "[" + ",\n".join(quant_configs_str_list) + "]"
-                    quant_node_label = quant_node_key + "\n" + "T: {}\n".format(sub_label)
+                    quant_node_label = quant_node_key + "\n" + f"T: {sub_label}\n"
                     quant_node_label += "Q-input sink ops: {}".format(
                         "\n".join(prop_quantizer.quantized_input_sink_operator_nodes)
                     )
@@ -1043,7 +1040,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                     next_pq_node_key,
                     arrowhead="none",
                     style="dotted",
-                    label="Unified group {}".format(gid),
+                    label=f"Unified group {gid}",
                 )
 
         return out_graph
@@ -1362,7 +1359,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                 # has information on which operation accepts recurrent inputs.
                 nncf_logger.debug(
                     "Could not find an associated input activation quantizer "
-                    "for a weighted node with quantizable weights: {}\n".format(weighted_node_name)
+                    f"for a weighted node with quantizable weights: {weighted_node_name}\n"
                 )
             else:
                 associated_same_op_gid = qm_node_vs_same_op_gid[weighted_node_name]

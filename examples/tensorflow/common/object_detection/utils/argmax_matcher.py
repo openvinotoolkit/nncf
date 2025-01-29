@@ -79,7 +79,7 @@ class ArgMaxMatcher(matcher.Matcher):
             raise ValueError(
                 "When negatives are in between matched and "
                 "unmatched thresholds, these cannot be of equal "
-                "value. matched: {}, unmatched: {}".format(self._matched_threshold, self._unmatched_threshold)
+                f"value. matched: {self._matched_threshold}, unmatched: {self._unmatched_threshold}"
             )
 
         self._force_match_for_each_row = force_match_for_each_row

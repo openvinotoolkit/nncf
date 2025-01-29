@@ -317,9 +317,7 @@ class MovementSparsifier(nn.Module):
 
         if sparse_config.mode == SparseStructure.PER_DIM:
             if sparse_config.sparse_axis < 0 or sparse_config.sparse_axis >= len(weight_shape):
-                raise ValueError(
-                    "Invalid axis id {}, axes range is [0, {}]".format(sparse_config.sparse_axis, len(weight_shape))
-                )
+                raise ValueError(f"Invalid axis id {sparse_config.sparse_axis}, axes range is [0, {len(weight_shape)}]")
             sparse_factors = deepcopy(weight_shape)
             sparse_factors[sparse_config.sparse_axis] = 1
             sparse_factors = tuple(sparse_factors)

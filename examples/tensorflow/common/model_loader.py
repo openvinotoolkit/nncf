@@ -21,7 +21,7 @@ def get_model(model_name, input_shape=None, pretrained=True, num_classes=1000, w
     if model_name in AVAILABLE_MODELS:
         model = AVAILABLE_MODELS[model_name]
     else:
-        raise Exception("Undefined model name: {}".format(model_name))
+        raise Exception(f"Undefined model name: {model_name}")
 
     model_params = {"classes": num_classes}
     if weights is not None:

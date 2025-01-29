@@ -42,7 +42,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         if not isinstance(layer, tf.keras.layers.Layer) or isinstance(layer, tf.keras.Model):
             raise ValueError(
                 "`layer` can only be a `tf.keras.layers.Layer` instance. "
-                "You passed an instance of type: {input}.".format(input=layer.__class__.__name__)
+                f"You passed an instance of type: {layer.__class__.__name__}."
             )
 
         if "name" not in kwargs:

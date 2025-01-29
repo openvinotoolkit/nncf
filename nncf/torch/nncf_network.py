@@ -134,7 +134,7 @@ class PTInsertionPoint:
             map_target_types = TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT_FOR_REPLACED_MODULES
 
         if not isinstance(target_type, TargetType) or target_type not in map_target_types:
-            raise nncf.InternalError("Unsupported target type for PyTorch: {}".format(target_type))
+            raise nncf.InternalError(f"Unsupported target type for PyTorch: {target_type}")
         return map_target_types[target_type]
 
     def __eq__(self, other: "PTInsertionPoint"):
@@ -470,7 +470,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             elif point.insertion_type == PTInsertionType.NNCF_MODULE_POST_OP:
                 handle = nncf_module.register_post_forward_operation(fn)
         else:
-            raise nncf.ValidationError("Unsupported insertion type: {}".format(point.insertion_type))
+            raise nncf.ValidationError(f"Unsupported insertion type: {point.insertion_type}")
         self._groups_vs_hooks_handlers[hooks_group_name].append(handle)
         return handle
 
@@ -617,7 +617,7 @@ class NNCFNetworkInterface(torch.nn.Module):
     def sort_compression_modules(self, compression_module_type: ExtraCompressionModuleType):
         attr_name = compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
-            raise nncf.InternalError("Module type {} was not registered".format(compression_module_type))
+            raise nncf.InternalError(f"Module type {compression_module_type} was not registered")
         module_dict = self.__getattr__(attr_name)
 
         module_dict._modules = OrderedDict(sorted(module_dict._modules.items()))

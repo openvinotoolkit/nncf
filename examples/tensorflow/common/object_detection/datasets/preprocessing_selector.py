@@ -23,6 +23,6 @@ def get_preprocess_input_fn(config, is_train):
     elif model_name == "YOLOv4":
         tfds_decoder, preprocess_input_fn = YOLOv4Preprocessor(config, is_train).create_preprocess_input_fn()
     else:
-        raise ValueError("Unknown model name {}".format(model_name))
+        raise ValueError(f"Unknown model name {model_name}")
 
     return tfds_decoder, preprocess_input_fn

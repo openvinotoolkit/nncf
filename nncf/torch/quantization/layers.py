@@ -544,7 +544,7 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
         raise nncf.InternalError("Unknown export mode")
 
     def extra_repr(self):
-        return "bit={}, ch={}".format(self.num_bits, self.per_channel)
+        return f"bit={self.num_bits}, ch={self.per_channel}"
 
     @abstractmethod
     def get_quantizer_config(self) -> QuantizerConfig:

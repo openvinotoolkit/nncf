@@ -89,9 +89,9 @@ def evaluate_detections(box_list, dataset, use_07=True):
             class_boxes, dataset, cls, cachedir, ovthresh=0.5, use_07_metric=use_07_metric
         )
         aps += [ap]
-        logger.info("AP for {} = {:.4f}".format(cls, ap))
+        logger.info(f"AP for {cls} = {ap:.4f}")
     mAp = np.mean(aps)
-    logger.info("Mean AP = {:.4f}".format(mAp))
+    logger.info(f"Mean AP = {mAp:.4f}")
     return mAp
 
 
@@ -193,7 +193,7 @@ def extract_gt_bboxes(classname, dataset, gt, imagenames):
 
 
 def load_detection_annotations(cachedir, dataset):
-    cachefile = os.path.join(cachedir, "annots_{}.json".format(dataset.name))
+    cachefile = os.path.join(cachedir, f"annots_{dataset.name}.json")
     imagenames = dataset.get_img_names()
     if is_main_process() and not os.path.isfile(cachefile):
         # load annots
@@ -202,9 +202,9 @@ def load_detection_annotations(cachedir, dataset):
             _, gt[imagename] = dataset.pull_anno(i)
 
             if i % 100 == 0:
-                logger.info("Reading annotation for {:d}/{:d}".format(i + 1, len(imagenames)))
+                logger.info(f"Reading annotation for {i + 1:d}/{len(imagenames):d}")
         # save
-        logger.info("Saving cached annotations to {:s}".format(cachefile))
+        logger.info(f"Saving cached annotations to {cachefile:s}")
         pathlib.Path(cachedir).mkdir(parents=True, exist_ok=True)
         with open(cachefile, "w", encoding="utf8") as f:
             json.dump(gt, f)
@@ -291,7 +291,7 @@ def predict_detections(data_loader, device, net):
         batch_detections[..., 6] *= hs
 
         all_detections.append(batch_detections.cpu())
-        logger.info("Detect for batch: {:d}/{:d} {:.3f}s".format(batch_ind + 1, num_batches, detect_time))
+        logger.info(f"Detect for batch: {batch_ind + 1:d}/{num_batches:d} {detect_time:.3f}s")
     if all_detections:
         return torch.cat(all_detections)
     return None  # No predictions
@@ -329,17 +329,10 @@ def eval_net_loss(data_loader, device, net, criterion):
 
         if batch_ind % print_freq == 0:
             logger.info(
-                "Loss_inference: [{}/{}] || Time: {elapsed.val:.4f}s ({elapsed.avg:.4f}s)"
-                " || Conf Loss: {conf_loss.val:.3f} ({conf_loss.avg:.3f})"
-                " || Loc Loss: {loc_loss.val:.3f} ({loc_loss.avg:.3f})"
-                " || Model Loss: {model_loss.val:.3f} ({model_loss.avg:.3f})".format(
-                    batch_ind,
-                    num_batches,
-                    elapsed=t_elapsed,
-                    conf_loss=batch_loss_c,
-                    loc_loss=batch_loss_l,
-                    model_loss=batch_loss,
-                )
+                f"Loss_inference: [{batch_ind}/{num_batches}] || Time: {t_elapsed.val:.4f}s ({t_elapsed.avg:.4f}s)"
+                f" || Conf Loss: {batch_loss_c.val:.3f} ({batch_loss_c.avg:.3f})"
+                f" || Loc Loss: {batch_loss_l.val:.3f} ({batch_loss_l.avg:.3f})"
+                f" || Model Loss: {batch_loss.val:.3f} ({batch_loss.avg:.3f})"
             )
 
     model_loss = batch_loss_l.avg + batch_loss_c.avg

@@ -65,7 +65,7 @@ def _read_coco_annotation(annotation_file, images_folder):
         bbox = imgAnnotation["bbox"]
 
         if bbox is None or bbox == "":
-            raise ValueError("No annotation for {}".format(img_path))
+            raise ValueError(f"No annotation for {img_path}")
 
         bbox[2] = bbox[0] + bbox[2]
         bbox[3] = bbox[1] + bbox[3]

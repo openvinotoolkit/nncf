@@ -246,9 +246,7 @@ class QuantizationBuilderV2(QuantizationBuilder):
         # Find out which metatypes unsupported by the quantization algorithm
         for node in nncf_graph.get_all_nodes():
             if node.metatype in UNSUPPORTED_TF_OP_METATYPES:
-                nncf_logger.warning(
-                    "The operation {} is unsupported by the quantization algorithm.".format(node.node_name)
-                )
+                nncf_logger.warning(f"The operation {node.node_name} is unsupported by the quantization algorithm.")
 
         # Possible configurations of quantizer for nodes with weights.
         possible_qconfigs_for_nodes_with_weight = self._get_quantizable_weighted_layer_nodes(nncf_graph)

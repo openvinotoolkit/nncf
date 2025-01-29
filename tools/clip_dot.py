@@ -43,7 +43,7 @@ def main(argv):
                 break
 
     if start_key is None:
-        raise nncf.InternalError("Could not find the node with ID {} to start from!".format(args.start_id))
+        raise nncf.InternalError(f"Could not find the node with ID {args.start_id} to start from!")
 
     for edge in nx.edge_bfs(graph, start_key, orientation="ignore"):
         from_key, to_key, _ = edge

@@ -254,9 +254,8 @@ def _replace_module_by_scope(base_model: torch.nn.Module, scope: Scope, replaced
         child_module = curr_module._modules.get(scope_element.calling_field_name)
         if child_module is None:
             raise nncf.InternalError(
-                "Could not find a {} module member in {} module of scope {} during module replacement".format(
-                    scope_element.calling_field_name, scope_element.calling_module_class_name, str(scope)
-                )
+                f"Could not find a {scope_element.calling_field_name} module member in"
+                f" {scope_element.calling_module_class_name} module of scope {str(scope)} during module replacement"
             )
         owning_module = curr_module
         curr_module = child_module

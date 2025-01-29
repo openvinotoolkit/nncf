@@ -46,7 +46,7 @@ def run_wall(layer, input_size_, device, runs, is_print=True, dtype=torch.float)
     fbtime = elapsed / runs * scale
 
     if is_print:
-        print("Forward&Backward: {:.3f} {}".format(fbtime, ctime))
+        print(f"Forward&Backward: {fbtime:.3f} {ctime}")
     return {"forward + backward": fbtime}
 
 
@@ -87,9 +87,8 @@ def run_profile(layer, input_size_, device, runs, forward_only=False, dtype=torc
     backward_average = backward_time / runs * scale
 
     print(
-        "Forward: min {0:.3f}{4} / avg {1:.3f}{4} | Backward: min {2:.3f}{4} / avg {3:.3f}{4}".format(
-            forward_min, forward_average, backward_min, backward_average, ctime
-        )
+        f"Forward: min {forward_min:.3f}{ctime} / avg {forward_average:.3f}{ctime} |"
+        f" Backward: min {backward_min:.3f}{ctime} / avg {backward_average:.3f}{ctime}"
     )
 
     return {

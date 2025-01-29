@@ -36,7 +36,7 @@ def load_model(
     arbitrary code execution during unpickling. Only load the data you trust.
 
     """
-    logger.info("Loading model: {}".format(model))
+    logger.info(f"Loading model: {model}")
     if model_params is None:
         model_params = {}
     if model in torchvision.models.__dict__:
@@ -69,10 +69,10 @@ COMPRESSION_STATE_ATTR = "compression_state"
 
 def load_resuming_checkpoint(resuming_checkpoint_path: str):
     if osp.isfile(resuming_checkpoint_path):
-        logger.info("=> loading checkpoint '{}'".format(resuming_checkpoint_path))
+        logger.info(f"=> loading checkpoint '{resuming_checkpoint_path}'")
         checkpoint = torch.load(resuming_checkpoint_path, map_location="cpu", pickle_module=restricted_pickle_module)
         return checkpoint
-    raise FileNotFoundError("no checkpoint found at '{}'".format(resuming_checkpoint_path))
+    raise FileNotFoundError(f"no checkpoint found at '{resuming_checkpoint_path}'")
 
 
 def extract_model_and_compression_states(resuming_checkpoint: Optional[Dict] = None):

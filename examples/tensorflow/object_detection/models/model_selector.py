@@ -23,7 +23,7 @@ def get_predefined_config(model_name):
     elif model_name == "YOLOv4":
         predefined_config = YOLOV4_CONFIG
     else:
-        raise ValueError("Model {} is not supported.".format(model_name))
+        raise ValueError(f"Model {model_name} is not supported.")
 
     return copy.deepcopy(predefined_config)
 
@@ -36,6 +36,6 @@ def get_model_builder(config):
     elif model_name == "YOLOv4":
         model_builder = YOLOv4Model(config)
     else:
-        raise ValueError("Model {} is not supported.".format(model_name))
+        raise ValueError(f"Model {model_name} is not supported.")
 
     return model_builder

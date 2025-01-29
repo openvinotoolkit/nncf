@@ -311,13 +311,13 @@ class QuantizerSetupBase:
     ) -> None:
         gid = self.get_unified_scale_group_id(qp_id)
         if gid is not None:
-            raise nncf.InternalError("QP id {} is already in unified scale group {}".format(qp_id, gid))
+            raise nncf.InternalError(f"QP id {qp_id} is already in unified scale group {gid}")
         self.unified_scale_groups[unified_scale_gid].add(qp_id)
 
     def register_existing_qp_id_in_shared_input_group(self, qp_id: QuantizationPointId, shared_inputs_gid: int) -> None:
         gid = self.get_shared_inputs_group_id(qp_id)
         if gid is not None:
-            raise nncf.InternalError("QP id {} is already in shared inputs group {}".format(qp_id, gid))
+            raise nncf.InternalError(f"QP id {qp_id} is already in shared inputs group {gid}")
         self.shared_input_operation_set_groups[shared_inputs_gid].add(qp_id)
 
     def remove_unified_scale_from_point(self, qp_id: QuantizationPointId) -> None:

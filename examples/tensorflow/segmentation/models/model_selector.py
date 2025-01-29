@@ -19,7 +19,7 @@ def get_predefined_config(model_name):
     if model_name == "MaskRCNN":
         predefined_config = MASKRCNN_CONFIG
     else:
-        raise ValueError("Model {} is not supported.".format(model_name))
+        raise ValueError(f"Model {model_name} is not supported.")
 
     return copy.deepcopy(predefined_config)
 
@@ -30,6 +30,6 @@ def get_model_builder(config):
     if model_name == "MaskRCNN":
         model_builder = MaskrcnnModel(config)
     else:
-        raise ValueError("Model {} is not supported.".format(model_name))
+        raise ValueError(f"Model {model_name} is not supported.")
 
     return model_builder

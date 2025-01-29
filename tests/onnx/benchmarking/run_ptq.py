@@ -72,7 +72,7 @@ def run(
     )
     # Save the quantized model.
     onnx.save(quantized_model, output_model_path)
-    print("The quantized model is saved to: {}".format(output_model_path))
+    print(f"The quantized model is saved to: {output_model_path}")
 
 
 if __name__ == "__main__":

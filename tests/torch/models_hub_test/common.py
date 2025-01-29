@@ -116,7 +116,7 @@ def get_models_list(path: Path) -> List[ModelInfo]:
                 model_name, model_link, mark, reason = splitted
                 if model_link == "none":
                     model_link = None
-                assert mark in ["skip", "xfail"], "Incorrect failure mark for model info {}".format(model_info)
+                assert mark in ["skip", "xfail"], f"Incorrect failure mark for model info {model_info}"
             else:
                 raise nncf.ValidationError(
                     f"Incorrect model info `{model_info}`. It must contain either 1, 2 or 3 fields."

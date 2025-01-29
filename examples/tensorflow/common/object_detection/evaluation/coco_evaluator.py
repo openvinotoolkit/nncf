@@ -214,7 +214,7 @@ class COCOEvaluator:
 
         for k in self._required_prediction_fields:
             if k not in predictions:
-                raise ValueError("Missing the required key `{}` in predictions!".format(k))
+                raise ValueError(f"Missing the required key `{k}` in predictions!")
 
         if self._need_rescale_bboxes:
             self._process_predictions(predictions)
@@ -235,7 +235,7 @@ class COCOEvaluator:
 
             for k in self._required_groundtruth_fields:
                 if k not in groundtruths:
-                    raise ValueError("Missing the required key `{}` in groundtruths!".format(k))
+                    raise ValueError(f"Missing the required key `{k}` in groundtruths!")
 
             for k, v in groundtruths.items():
                 if k not in self._groundtruths:

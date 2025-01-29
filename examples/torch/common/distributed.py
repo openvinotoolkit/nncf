@@ -31,7 +31,7 @@ def configure_distributed(config):
         # default device (E.g. NMS kernel - https://github.com/facebookresearch/maskrcnn-benchmark/issues/74)
         torch.cuda.set_device(config.current_gpu)
 
-    logger.info("| distributed init (rank {}): {}".format(config.rank, config.dist_url))
+    logger.info(f"| distributed init (rank {config.rank}): {config.dist_url}")
     dist.init_process_group(
         backend=config.dist_backend, init_method=config.dist_url, world_size=config.world_size, rank=config.rank
     )

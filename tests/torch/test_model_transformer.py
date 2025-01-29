@@ -575,7 +575,7 @@ class TestInsertionPointGraph:
 
         data_dir: Path = TEST_ROOT / "torch/data/reference_graphs/pattern_merging"
 
-        path_to_dot_file = data_dir / "{}.dot".format(dot_file_name)
+        path_to_dot_file = data_dir / f"{dot_file_name}.dot"
 
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
             if not os.path.exists(str(data_dir)):

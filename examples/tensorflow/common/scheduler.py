@@ -75,7 +75,7 @@ class MultiStepLearningRate(tf.keras.optimizers.schedules.LearningRateSchedule):
 def schedule_base_lr_check(schedule_type, base_lr):
     schedules_with_base_lr = ["exponential", "multistep", "step", "cosine"]
     if schedule_type in schedules_with_base_lr and base_lr is None:
-        raise ValueError("`base_lr` parameter must be specified for the {} scheduler".format(schedule_type))
+        raise ValueError(f"`base_lr` parameter must be specified for the {schedule_type} scheduler")
 
 
 def build_scheduler(config, steps_per_epoch):

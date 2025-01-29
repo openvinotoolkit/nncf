@@ -43,9 +43,7 @@ class RBSparsifyingWeight(NNCFOperation):
         :param layer: Layer which needs to be sparsifyed.
         """
         if input_type is not InputType.WEIGHTS:
-            raise ValueError(
-                "RB Sparsity mask operation could not be applied to input of the layer: {}".format(layer.name)
-            )
+            raise ValueError(f"RB Sparsity mask operation could not be applied to input of the layer: {layer.name}")
 
         mask = layer.add_weight(
             name + "_mask",

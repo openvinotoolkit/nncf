@@ -129,9 +129,8 @@ class ElasticWidthOp:
         """
         if width is None or width > self._max_width or width < 1:
             raise AttributeError(
-                "Invalid width={} in scope={}.\nIt should be within the range: [1, {}]".format(
-                    width, self._node_name, self._max_width
-                )
+                f"Invalid width={width} in scope={self._node_name}.\n"
+                f"It should be within the range: [1, {self._max_width}]"
             )
 
         self._active_width = width

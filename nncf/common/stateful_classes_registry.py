@@ -39,19 +39,16 @@ class StatefulClassesRegistry:
 
             if registered_name in self._name_vs_class_map:
                 raise ValueError(
-                    "{} has already been registered to {}".format(
-                        registered_name, self._name_vs_class_map[registered_name]
-                    )
+                    f"{registered_name} has already been registered to {self._name_vs_class_map[registered_name]}"
                 )
 
             if cls in self._class_vs_name_map:
-                raise ValueError("{} has already been registered to {}".format(cls, self._class_vs_name_map[cls]))
+                raise ValueError(f"{cls} has already been registered to {self._class_vs_name_map[cls]}")
 
             if inspect.isclass(cls) and not hasattr(cls, self.REQUIRED_METHOD_NAME):
                 raise ValueError(
-                    "Cannot register a class ({}) that does not have {}() method.".format(
-                        registered_name, self.REQUIRED_METHOD_NAME
-                    )
+                    f"Cannot register a class ({registered_name}) that does not have"
+                    f" {self.REQUIRED_METHOD_NAME}() method."
                 )
 
             self._class_vs_name_map[cls] = registered_name
@@ -70,7 +67,7 @@ class StatefulClassesRegistry:
         """
         if registered_name in self._name_vs_class_map:
             return self._name_vs_class_map[registered_name]
-        raise KeyError("No registered stateful classes with {} name".format(registered_name))
+        raise KeyError(f"No registered stateful classes with {registered_name} name")
 
     def get_registered_name(self, stateful_cls: type) -> str:
         """
@@ -81,7 +78,7 @@ class StatefulClassesRegistry:
         """
         if stateful_cls in self._class_vs_name_map:
             return self._class_vs_name_map[stateful_cls]
-        raise KeyError("The class {} was not registered.".format(stateful_cls.__name__))
+        raise KeyError(f"The class {stateful_cls.__name__} was not registered.")
 
 
 class CommonStatefulClassesRegistry:

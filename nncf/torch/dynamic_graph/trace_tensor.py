@@ -48,7 +48,7 @@ class TensorMeta:
         return hash((self.creator_id, self.index, self.shape))
 
     def __str__(self):
-        return "C{}_I{}_".format(self.creator_id, self.index) + "S" + "x".join([str(s) for s in self.shape])
+        return f"C{self.creator_id}_I{self.index}_" + "S" + "x".join([str(s) for s in self.shape])
 
 
 class TracedTensorMixin:

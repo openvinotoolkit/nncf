@@ -152,7 +152,7 @@ class DataFreeCriterion(MixedPrecisionCriterion):
             self._backend_entity = FXWeightCompressionAlgoBackend()
         else:
             raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
+                f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             )
 
     def _calc_weight_sensitivity(
@@ -221,7 +221,7 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
             self._backend_entity = OVMixedPrecisionAlgoBackend(model)
         else:
             raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
+                f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             )
 
     def _calc_activation_sensitivity(

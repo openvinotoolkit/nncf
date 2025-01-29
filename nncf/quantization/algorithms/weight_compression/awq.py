@@ -119,7 +119,7 @@ class AWQ(Algorithm):
             self._patterns = self._backend_entity.get_awq_patterns()
         else:
             raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific AWQ entity because {} is not supported!".format(model_backend.value)
+                f"Cannot return backend-specific AWQ entity because {model_backend.value} is not supported!"
             )
 
     def apply(

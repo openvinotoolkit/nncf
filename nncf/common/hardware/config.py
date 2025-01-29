@@ -204,8 +204,8 @@ class HWConfig(list[Dict[str, Any]], ABC):
             metatypes = self._get_metatypes_for_hw_config_op(hw_config_op_name)
             if not metatypes:
                 nncf_logger.debug(
-                    "Operation name {} in HW config is not registered in NNCF under any supported operation "
-                    "metatype - will be ignored".format(hw_config_op_name)
+                    f"Operation name {hw_config_op_name} in HW config is not registered in NNCF"
+                    " under any supported operation metatype - will be ignored"
                 )
 
             if self.QUANTIZATION_ALGORITHM_NAME in op_dict:
@@ -239,8 +239,8 @@ class HWConfig(list[Dict[str, Any]], ABC):
                     metatypes = self._get_metatypes_for_hw_config_op(hw_config_op_name)
                     if not metatypes:
                         nncf_logger.debug(
-                            "Operation name {} in HW config is not registered in NNCF under any supported "
-                            "operation metatype - will be ignored".format(hw_config_op_name)
+                            f"Operation name {hw_config_op_name} in HW config is not registered in NNCF"
+                            " under any supported operation metatype - will be ignored"
                         )
                     result.update(metatypes)
         return result
@@ -258,7 +258,7 @@ class HWConfig(list[Dict[str, Any]], ABC):
                 metatypes.add(op_meta)
         if not metatypes:
             nncf_logger.debug(
-                "Operation name {} in HW config is not registered in NNCF under any supported "
-                "operation metatype - will be ignored".format(hw_config_op)
+                f"Operation name {hw_config_op} in HW config is not registered in NNCF under any supported "
+                "operation metatype - will be ignored"
             )
         return metatypes

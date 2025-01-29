@@ -46,7 +46,7 @@ class Patterns:
         :param match: whether should the pattern used as fussing pattern
         """
         if name in self._patterns_dict:
-            raise KeyError("{} is already registered".format(name))
+            raise KeyError(f"{name} is already registered")
         self._patterns_dict[name] = pattern
         if match:
             self._full_pattern_graph.add_pattern_alternative(pattern)

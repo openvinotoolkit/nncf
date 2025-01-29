@@ -142,7 +142,7 @@ class RpnBoxLoss:
     """Region Proposal Network box regression loss function."""
 
     def __init__(self, params):
-        logger.info("RpnBoxLoss huber_loss_delta {}".format(params.huber_loss_delta))
+        logger.info(f"RpnBoxLoss huber_loss_delta {params.huber_loss_delta}")
         # The delta is typically around the mean value of regression target.
         # for instances, the regression targets of 512x512 input with 6 anchors on
         # P2-P6 pyramid is about [0.1, 0.1, 0.2, 0.2].
@@ -230,7 +230,7 @@ class FastrcnnBoxLoss:
     """Fast R-CNN box regression loss function."""
 
     def __init__(self, params):
-        logger.info("FastrcnnBoxLoss huber_loss_delta {}".format(params.huber_loss_delta))
+        logger.info(f"FastrcnnBoxLoss huber_loss_delta {params.huber_loss_delta}")
         # The delta is typically around the mean value of regression target.
         # for instances, the regression targets of 512x512 input with 6 anchors on
         # P2-P6 pyramid is about [0.1, 0.1, 0.2, 0.2].

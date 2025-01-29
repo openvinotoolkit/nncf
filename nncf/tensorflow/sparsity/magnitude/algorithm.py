@@ -188,7 +188,7 @@ class MagnitudeSparsityController(BaseSparsityController):
         if not self._frozen:
             if sparsity_level >= 1 or sparsity_level < 0:
                 raise AttributeError(
-                    "Sparsity level should be within interval [0,1), actual value to set is: {}".format(sparsity_level)
+                    f"Sparsity level should be within interval [0,1), actual value to set is: {sparsity_level}"
                 )
 
             self._threshold = self._select_threshold(sparsity_level)

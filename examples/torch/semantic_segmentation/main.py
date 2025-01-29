@@ -113,7 +113,7 @@ def get_joint_transforms(is_train, config):
 
 def get_class_weights(train_set, num_classes, config):
     # Get class weights from the selected weighing technique
-    logger.info("\nWeighing technique: {}".format(config.weighing))
+    logger.info(f"\nWeighing technique: {config.weighing}")
     weighing = config.get("weighing", "none")
     if isinstance(weighing, list):
         # Class weights were directly specified in config
@@ -148,15 +148,15 @@ def get_dataset(dataset_name: str) -> torch.utils.data.Dataset:
         from examples.torch.semantic_segmentation.datasets import Mapillary as dataset
     else:
         # Should never happen...but just in case it does
-        raise nncf.UnsupportedDatasetError('"{}" is not a supported dataset.'.format(dataset_name))
+        raise nncf.UnsupportedDatasetError(f'"{dataset_name}" is not a supported dataset.')
     return dataset
 
 
 def load_dataset(dataset, config):
     logger.info("\nLoading dataset...\n")
 
-    logger.info("Selected dataset: {}".format(config.dataset))
-    logger.info("Dataset directory: {}".format(config.dataset_dir))
+    logger.info(f"Selected dataset: {config.dataset}")
+    logger.info(f"Dataset directory: {config.dataset_dir}")
 
     transforms_train = get_joint_transforms(is_train=True, config=config)
     transforms_val = get_joint_transforms(is_train=False, config=config)
@@ -222,18 +222,18 @@ def load_dataset(dataset, config):
     num_classes = len(class_encoding)
 
     # Print information for debugging
-    logger.info("Number of classes to predict: {}".format(num_classes))
-    logger.info("Train dataset size: {}".format(len(train_set)))
-    logger.info("Validation dataset size: {}".format(len(val_set)))
+    logger.info(f"Number of classes to predict: {num_classes}")
+    logger.info(f"Train dataset size: {len(train_set)}")
+    logger.info(f"Validation dataset size: {len(val_set)}")
 
     # Get a batch of samples to display
     if "test" in config.mode and "train" not in config.mode:
         images, labels = next(iter(val_loader))
     else:
         images, labels = next(iter(train_loader))
-    logger.info("Image size: {}".format(images.size()))
-    logger.info("Label size: {}".format(labels.size()))
-    logger.info("Class-color encoding: {}".format(class_encoding))
+    logger.info(f"Image size: {images.size()}")
+    logger.info(f"Label size: {labels.size()}")
+    logger.info(f"Class-color encoding: {class_encoding}")
 
     # Show a batch of samples and labels
     if config.imshow_batch and "test" not in config.mode:
@@ -252,7 +252,7 @@ def load_dataset(dataset, config):
             ignore_index = list(class_encoding).index("unlabeled")
             class_weights[ignore_index] = 0
 
-    logger.info("Class weights: {}".format(class_weights))
+    logger.info(f"Class weights: {class_weights}")
 
     return (train_loader, val_loader, init_loader), class_weights
 
@@ -331,7 +331,7 @@ def train(
         start_epoch = resuming_checkpoint["epoch"]
         best_miou = resuming_checkpoint["miou"]
 
-        logger.info("Resuming from model: Start epoch = {} | Best mean IoU = {:.4f}".format(start_epoch, best_miou))
+        logger.info(f"Resuming from model: Start epoch = {start_epoch} | Best mean IoU = {best_miou:.4f}")
         config.start_epoch = start_epoch
 
     # Start Training
@@ -340,7 +340,7 @@ def train(
 
     for epoch in range(config.start_epoch, config.epochs):
         compression_ctrl.scheduler.epoch_step()
-        logger.info(">>>> [Epoch: {:d}] Training".format(epoch))
+        logger.info(f">>>> [Epoch: {epoch:d}] Training")
 
         if config.distributed:
             train_loader.sampler.set_epoch(epoch)
@@ -350,7 +350,7 @@ def train(
             # Learning rate scheduling should be applied after optimizer’s update
             lr_scheduler.step(epoch)
 
-        logger.info(">>>> [Epoch: {:d}] Avg. loss: {:.4f} | Mean IoU: {:.4f}".format(epoch, epoch_loss, miou))
+        logger.info(f">>>> [Epoch: {epoch:d}] Avg. loss: {epoch_loss:.4f} | Mean IoU: {miou:.4f}")
 
         if is_main_process():
             config.tb.add_scalar("train/loss", epoch_loss, epoch)
@@ -360,20 +360,20 @@ def train(
 
             statistics = compression_ctrl.statistics(quickly_collected_only=True)
             for key, value in prepare_for_tensorboard(statistics).items():
-                config.tb.add_scalar("compression/statistics/{}".format(key), value, epoch)
+                config.tb.add_scalar(f"compression/statistics/{key}", value, epoch)
 
         if (epoch + 1) % config.save_freq == 0 or epoch + 1 == config.epochs:
-            logger.info(">>>> [Epoch: {:d}] Validation".format(epoch))
+            logger.info(f">>>> [Epoch: {epoch:d}] Validation")
 
             loss, (iou, miou) = val_obj.run_epoch(config.print_step)
 
-            logger.info(">>>> [Epoch: {:d}] Avg. loss: {:.4f} | Mean IoU: {:.4f}".format(epoch, loss, miou))
+            logger.info(f">>>> [Epoch: {epoch:d}] Avg. loss: {loss:.4f} | Mean IoU: {miou:.4f}")
 
             if is_main_process():
                 config.tb.add_scalar("val/mIoU", miou, epoch)
                 config.tb.add_scalar("val/loss", loss, epoch)
                 for i, (key, class_iou) in enumerate(zip(class_encoding.keys(), iou)):
-                    config.tb.add_scalar("{}/mIoU_Cls{}_{}".format(config.dataset, i, key), class_iou, epoch)
+                    config.tb.add_scalar(f"{config.dataset}/mIoU_Cls{i}_{key}", class_iou, epoch)
 
             compression_stage = compression_ctrl.compression_stage()
             is_best_by_miou = miou > best_miou and compression_stage == best_compression_stage
@@ -392,7 +392,7 @@ def train(
             # Print per class IoU on last epoch or if best iou
             if epoch + 1 == config.epochs or is_best:
                 for key, class_iou in zip(class_encoding.keys(), iou):
-                    logger.info("{}: {:.4f}".format(key, class_iou))
+                    logger.info(f"{key}: {class_iou:.4f}")
 
             # Save the model if it's the best thus far
             if is_main_process():
@@ -424,13 +424,13 @@ def test(model, test_loader, criterion, class_encoding, config):
     loss, (iou, miou) = test_obj.run_epoch(config.print_step)
     class_iou = dict(zip(class_encoding.keys(), iou))
 
-    logger.info(">>>> Avg. loss: {:.4f} | Mean IoU: {:.4f}".format(loss, miou))
+    logger.info(f">>>> Avg. loss: {loss:.4f} | Mean IoU: {miou:.4f}")
     if config.metrics_dump is not None:
         write_metrics(miou, config.metrics_dump)
 
     # Print per class IoU
     for key, class_iou in zip(class_encoding.keys(), iou):
-        logger.info("{}: {:.4f}".format(key, class_iou))
+        logger.info(f"{key}: {class_iou:.4f}")
 
     # Show a batch of samples and labels
     if config.imshow_batch:
@@ -610,7 +610,7 @@ def main_worker(current_gpu, config):
         val_model = model
         model_parameters = filter(lambda p: p.requires_grad, val_model.parameters())
         params = sum(np.prod(p.size()) for p in model_parameters)
-        logger.info("Trainable argument count:{params}".format(params=params))
+        logger.info(f"Trainable argument count:{params}")
         val_model = val_model.to(config.device)
         test(val_model, val_loader, criterion, color_encoding, config)
 
@@ -630,7 +630,7 @@ def main(argv):
 
     config.log_dir = str(config.log_dir)
     configure_paths(config, get_run_name(config))
-    logger.info("Save directory: {}".format(config.log_dir))
+    logger.info(f"Save directory: {config.log_dir}")
 
     config.execution_mode = get_execution_mode(config)
     start_worker(main_worker, config)

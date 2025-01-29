@@ -100,7 +100,7 @@ class ScaleEstimation:
             self._backend_entity = OVWeightCompressionAlgoBackend(model, self.name_to_node_mapping)
         else:
             raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific AWQ entity because {} is not supported!".format(model_backend.value)
+                f"Cannot return backend-specific AWQ entity because {model_backend.value} is not supported!"
             )
 
     def apply(

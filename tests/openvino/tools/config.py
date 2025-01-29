@@ -276,9 +276,7 @@ class Config(Dict):
                     if not dataset.preprocessing:
                         dataset["preprocessing"] = preprocessing_config
                     else:
-                        nncf_logger.debug(
-                            "Local preprocessing configuration is used for {} dataset".format(dataset_name)
-                        )
+                        nncf_logger.debug(f"Local preprocessing configuration is used for {dataset_name} dataset")
             ConfigReader.check_local_config(ac_conf)
             ac_conf = ConfigReader.convert_paths(ac_conf)
             ConfigReader._filter_launchers(ac_conf, filtering_params, mode=mode)
@@ -320,7 +318,7 @@ class Config(Dict):
         if "optimizer" in self:
             log_algo_name = "{}_{}".format(log_algo_name, self["optimizer"]["name"])
         for algo in self["compression"]["algorithms"]:
-            log_algo_name = ("{}_{}".format(log_algo_name, algo.name)) if log_algo_name else algo.name
+            log_algo_name = (f"{log_algo_name}_{algo.name}") if log_algo_name else algo.name
         self.model.log_algo_name = log_algo_name
 
     def get_model_paths(self):
@@ -343,7 +341,7 @@ def read_config_from_file(path):
             return yaml.load(f, Loader=yaml.SafeLoader)
         if extension in (".json",):
             return json.load(f)
-        raise nncf.InternalError('Unknown file extension for the file "{}"'.format(path))
+        raise nncf.InternalError(f'Unknown file extension for the file "{path}"')
 
 
 def check_params(algo_name, config, supported_params):
@@ -354,9 +352,9 @@ def check_params(algo_name, config, supported_params):
     """
     for key, value in config.items():
         if key not in supported_params:
-            raise nncf.InternalError("Algorithm {}. Unknown parameter: {}".format(algo_name, key))
+            raise nncf.InternalError(f"Algorithm {algo_name}. Unknown parameter: {key}")
         if isinstance(value, dict):
             if isinstance(supported_params[key], dict):
                 check_params(algo_name, value, supported_params[key])
             else:
-                raise nncf.InternalError("Algorithm {}. Wrong structure for parameter: {}".format(algo_name, key))
+                raise nncf.InternalError(f"Algorithm {algo_name}. Wrong structure for parameter: {key}")

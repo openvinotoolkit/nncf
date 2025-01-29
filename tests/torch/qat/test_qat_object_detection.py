@@ -120,7 +120,7 @@ def get_datasets(config: SampleConfig) -> DatasetSet:
     test_data_loader, train_data_loader, _ = create_dataloaders(config)
 
     test_dataset = get_testing_dataset(config.dataset, config.test_anno, config.test_imgs, config)
-    logger.info("Loaded {} testing images".format(len(test_dataset)))
+    logger.info(f"Loaded {len(test_dataset)} testing images")
     if config.distributed:
         test_sampler = torch.utils.data.DistributedSampler(test_dataset, config.rank, config.world_size)
     else:

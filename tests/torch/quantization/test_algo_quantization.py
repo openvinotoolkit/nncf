@@ -219,7 +219,7 @@ def test_can_create_quant_loss_and_scheduler():
 
 
 def get_path_to_keys(tmp_path, rank):
-    return "{}_{}".format(tmp_path, str(rank))
+    return f"{tmp_path}_{str(rank)}"
 
 
 def activation_quantizers_dumping_worker(current_gpu, config, tmp_path):
@@ -229,7 +229,7 @@ def activation_quantizers_dumping_worker(current_gpu, config, tmp_path):
     print(path)
     with open(path, "w", encoding="utf8") as f:
         for aq_id in qctrl.non_weight_quantizers:
-            f.writelines("{}\n".format(str(aq_id)))
+            f.writelines(f"{str(aq_id)}\n")
 
 
 @pytest.mark.cuda
