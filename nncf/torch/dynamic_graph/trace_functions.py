@@ -39,8 +39,7 @@ def flatten(items):
     it = items.items() if hasattr(items, "items") else iter(items)
     for item in it:
         if is_iterable(item):
-            for i in flatten(item):
-                yield i
+            yield from flatten(item)
         else:
             yield item
 

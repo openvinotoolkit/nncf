@@ -135,8 +135,7 @@ def _get_all_tensors(model: onnx.ModelProto) -> Iterator[onnx.TensorProto]:
     :param model: ONNX model.
     :yield: tensors of ONNX model.
     """
-    for initializer in model.graph.initializer:
-        yield initializer
+    yield from model.graph.initializer
     for node in model.graph.node:
         for attribute in node.attribute:
             if attribute.HasField("t"):
