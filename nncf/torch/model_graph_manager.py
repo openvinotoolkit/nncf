@@ -88,7 +88,7 @@ def split_const_name(const_name: str) -> Tuple[str, str]:
     """
     index = const_name.rfind(".")
     if index == -1:
-        return str(), const_name
+        return "", const_name
     module_name = const_name[:index]
     weight_attr_name = const_name[index + 1 :]
     return module_name, weight_attr_name
