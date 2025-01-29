@@ -54,7 +54,8 @@ class PT2ModelTransformer(ModelTransformer[GraphModelWrapper]):
         for transformation in transformations:
             transformation_cls = transformation.__class__
             if transformation_cls not in [x[0] for x in self._command_transformation_ordered_pairs]:
-                raise ValueError(f"Unsupported transformation: {transformation_cls}")
+                msg = f"Unsupported transformation: {transformation_cls}"
+                raise ValueError(msg)
             aggregated_transformations[transformation.__class__].append(transformation)
 
         model = self._model.model

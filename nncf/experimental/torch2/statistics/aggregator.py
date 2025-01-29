@@ -100,6 +100,7 @@ class PT2StatisticsAggregator(StatisticsAggregator):
         :return: Statistics key.
         """
         if not isinstance(target_point, PTTargetPoint):
-            raise nncf.InternalError(f"Unexpected target point type: {type(target_point)}")
+            msg = f"Unexpected target point type: {type(target_point)}"
+            raise nncf.InternalError(msg)
         target_point_id = f"{target_point.target_node_name}_{target_point.type}_{target_point.input_port_id}"
         return f"{statistics.__class__.__name__}_{target_point_id}"
