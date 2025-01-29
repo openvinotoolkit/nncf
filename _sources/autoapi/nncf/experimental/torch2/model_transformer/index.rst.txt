@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.experimental.torch2.model_transformer`
+====================================================
+
+.. py:module:: nncf.experimental.torch2.model_transformer
+
+
