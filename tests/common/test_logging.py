@@ -48,7 +48,7 @@ def test_set_log_file(messages, expected):
             writer = level_to_fn_map[message_level]
             writer(message)
 
-        with open(log_file, "r", encoding="utf8") as f:
+        with open(log_file, encoding="utf8") as f:
             lines = f.readlines()
 
         for actual_line, expected_line in zip(lines, expected):

@@ -216,7 +216,7 @@ class MemoryMonitor:
         :param plot_title: A title to give to a plot.
         :param filename_suffix: A string suffix to give to the saved figure.
         """
-        with open(log_filepath, "r") as f:
+        with open(log_filepath) as f:
             lines = f.readlines()
             time_values, memory_values = [], []
             for line in lines[:-2]:

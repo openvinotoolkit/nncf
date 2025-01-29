@@ -210,7 +210,7 @@ def load_detection_annotations(cachedir, dataset):
             json.dump(gt, f)
     if is_dist_avail_and_initialized():
         dist.barrier()
-    with open(cachefile, "r", encoding="utf8") as f:
+    with open(cachefile, encoding="utf8") as f:
         gt = json.load(f)
     return gt, imagenames
 

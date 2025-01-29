@@ -113,7 +113,7 @@ def get_bitwidth_per_scope(model, all_quantizations=None):
 
 def compare_with_ref_if_exists(actual_state, path_to_ref):
     if os.path.exists(path_to_ref):
-        with open(path_to_ref, "r", encoding="utf8") as f:
+        with open(path_to_ref, encoding="utf8") as f:
             assert json.load(f) == actual_state
     else:
         with open(path_to_ref, "w", encoding="utf8") as f:

@@ -245,10 +245,10 @@ def test_activation_quantizers_order_is_the_same__for_resnet50(tmp_path, runs_su
         activation_quantizers_dumping_worker, nprocs=ngpus_per_node, args=(config, tmp_path), join=True
     )
 
-    with open(get_path_to_keys(tmp_path, 0), "r", encoding="utf8") as f:
+    with open(get_path_to_keys(tmp_path, 0), encoding="utf8") as f:
         ref_list = f.readlines()
     for i in range(1, ngpus_per_node):
-        with open(get_path_to_keys(tmp_path, i), "r", encoding="utf8") as f:
+        with open(get_path_to_keys(tmp_path, i), encoding="utf8") as f:
             curr_list = f.readlines()
             assert curr_list == ref_list
 
