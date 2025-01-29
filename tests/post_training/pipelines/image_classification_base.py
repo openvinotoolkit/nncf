@@ -11,6 +11,7 @@
 
 import copy
 import os
+from typing import List
 
 import numpy as np
 import openvino as ov
@@ -21,6 +22,7 @@ from torchvision import datasets
 import nncf
 from nncf.common.logging.track_progress import track
 from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
+from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import PTQTestPipeline
 
 
@@ -33,7 +35,7 @@ class ImageClassificationBase(PTQTestPipeline):
 
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
 
-    def _validate(self):
+    def _validate(self) -> List[ErrorReport]:
         val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
         val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=2, shuffle=False)
 
@@ -78,3 +80,4 @@ class ImageClassificationBase(PTQTestPipeline):
 
         self.run_info.metric_name = "Acc@1"
         self.run_info.metric_value = acc_top1
+        return []

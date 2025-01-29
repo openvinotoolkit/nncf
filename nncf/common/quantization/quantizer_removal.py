@@ -178,6 +178,6 @@ def revert_operations_to_floating_point_precision(
                     )
 
     model_transformer = ModelTransformerFactory.create(quantized_model)
-    transformed_model = model_transformer.transform(transformation_layout)  # type: ignore[var-annotated]
+    transformed_model = model_transformer.transform(transformation_layout)
 
     return cast(TModel, transformed_model)
