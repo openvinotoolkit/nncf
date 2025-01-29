@@ -189,7 +189,7 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters, compres
     dynamic_shapes = None
     enable_dynamic_shapes = model_case.model_id == "synthetic_transformer" and enable_dynamic_shapes
     if(enable_dynamic_shapes):
-        dynamic_shapes = [(Dim.AUTO)]
+        dynamic_shapes = [(Dim.AUTO,)]
     
     fx_model = get_torch_fx_model(model, example_input, dynamic_shapes=dynamic_shapes)
 
