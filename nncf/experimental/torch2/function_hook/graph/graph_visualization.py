@@ -108,7 +108,7 @@ def get_label_from_node_data(node_data: Dict[str, Any], style: PydotStyleTemplat
             rows = [
                 f"type: {node_type}",
                 f"op_name: {meta.op_name}",
-                f"fn_name: {meta.fn_name}",
+                f"fn_name: {meta.func_name}",
                 f"args: {args_to_label(meta.args)}",
                 f"kwargs: {kwargs_to_label(meta.kwargs)}",
             ]
@@ -195,7 +195,7 @@ def get_style(node: Dict[str, Any], style: PydotStyleTemplate) -> Dict[str, str]
         }
     if isinstance(meta, FunctionMeta):
         return {
-            "fillcolor": color_picker(meta.fn_name),
+            "fillcolor": color_picker(meta.func_name),
             "fontcolor": "#000000",
             "shape": "record",
             "style": '"filled,rounded"',

@@ -20,7 +20,7 @@ from nncf.tensor import TensorDataType
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDeviceType
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP as DTYPE_MAP_NP
-from nncf.tensor.functions.ov_numeric import DTYPE_MAP as DTYPE_MAP_OV
+from nncf.tensor.functions.openvino_numeric import DTYPE_MAP as DTYPE_MAP_OV
 
 
 class TestOVNNCFTensorOperators:

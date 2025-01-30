@@ -37,6 +37,9 @@ def strip(model: tf.keras.Model, do_copy: bool = True) -> tf.keras.Model:
       will return the currently associated model object "stripped" in-place.
     :return: The stripped model.
     """
+    if not isinstance(model, tf.keras.Model):
+        return model
+
     # Check to understand if the model is after NNCF or not.
     wrapped_layers = collect_wrapped_layers(model)
     if not wrapped_layers:

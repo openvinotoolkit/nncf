@@ -29,7 +29,7 @@ from nncf.openvino.graph.node_utils import non_convertable_divide_op
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
-from nncf.tensor.functions.ov_numeric import DTYPE_MAP as DTYPE_MAP_OV
+from nncf.tensor.functions.openvino_numeric import DTYPE_MAP as DTYPE_MAP_OV
 
 TensorList = List[Tensor]
 ModelCallable = Callable[[TensorList], TensorList]
@@ -134,18 +134,17 @@ def _infer_ov_model(
             raise ValueError(f"Expected input '{input_name}' to be {expected_dtype}. But found: {actual_dtype}.")
 
     # Infer the model
-    # TODO (Nikita Savelyev): Investigate the approach when we always infer via infer request creation
+    if compiled_model._infer_request is None:
+        compiled_model._infer_request = compiled_model.create_infer_request()
+    infer_request = compiled_model._infer_request
+
     inputs = [inp.data for inp in inputs]
+    outputs = infer_request.infer(
+        inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs
+    )
     if ov_model_params.return_ov_tensors:
-        infer_request = compiled_model.create_infer_request()
-        infer_request.infer(
-            inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs
-        )
-        outputs = [infer_request.get_output_tensor(i) for i in range(len(infer_request.results))]
+        outputs = [infer_request.get_output_tensor(i) for i in range(len(outputs))]
     else:
-        outputs = compiled_model(
-            inputs, share_inputs=ov_model_params.share_inputs, share_outputs=ov_model_params.share_outputs
-        )
         outputs = [outputs[i] for i in range(len(outputs))]
     outputs = [Tensor(it) for it in outputs]
 
@@ -367,7 +366,7 @@ def _build_compress_model(
             w_max = opset.reduce_max(weight, reduction_axes=reduction_axes, keep_dims=True)
             w_abs_min, w_max = opset.convert(w_abs_min, ov.Type.f32), opset.convert(w_max, ov.Type.f32)
 
-            scale = opset.select(w_abs_min >= w_max, w_abs_min, opset.negative(w_max))
+            scale = opset.select(opset.greater_equal(w_abs_min, w_max), w_abs_min, opset.negative(w_max))
             scale = divide_op(scale, opset.constant(-level_low, ov.Type.f32))
             scale = opset.select(opset.less(opset.abs(scale), eps), eps, scale)
 

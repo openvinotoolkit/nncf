@@ -84,7 +84,7 @@ class PTOperatorMetatype(OperatorMetatype):
     @classmethod
     def determine_subtype(
         cls, layer_attributes: Optional[BaseLayerAttributes] = None, function_args=None, functions_kwargs=None
-    ) -> Optional["PTOperatorSubtype"]:
+    ) -> Optional["type[PTOperatorSubtype]"]:
         matches = []
         for subtype in cls.get_subtypes():
             if subtype.matches(layer_attributes, function_args, functions_kwargs):

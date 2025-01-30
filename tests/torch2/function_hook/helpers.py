@@ -103,3 +103,36 @@ class ModelMultiEdge(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x + x
         return x
+
+
+class MatMulLeft(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.w = torch.nn.Parameter(torch.tensor([1], dtype=torch.float32))
+
+    @staticmethod
+    def get_example_inputs():
+        return torch.ones([1, 1])
+
+    def forward(self, x):
+        return torch.matmul(x, self.w)
+
+
+class MatMulRight(MatMulLeft):
+    def forward(self, x):
+        return torch.matmul(self.w, x)
+
+
+class QuantizedConvModel(nn.Module):
+    @staticmethod
+    def get_example_inputs():
+        return torch.ones([1, 1, 3, 3])
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.conv = nn.Conv2d(1, 1, 1)
+
+    def forward(self, x: torch.Tensor):
+        x = self.conv(x)
+        x = torch.relu(x)
+        return x
