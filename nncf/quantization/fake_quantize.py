@@ -148,7 +148,7 @@ def symmetric_range(
     max_values: Tensor,
     levels: int,
     quantizer_config: QuantizerConfig,
-    q_group: QuantizerGroup,
+    narrow_range: bool,
 ) -> Tuple[Tensor, Tensor]:
     """
     Calculates the numbers of the low and high quant for the symmetric quantization scheme.
@@ -157,20 +157,22 @@ def symmetric_range(
     :param max_values: Collected max values for the quantized insertion.
     :param levels: Number of quantization levels.
     :param quantizer_config: Config of the quantization configuration.
+    :param narrow_range: True if the range of quantized values is reduced by 1 compared to the
+        naive case, False otherwise.
     :return: A Tuple
         level_low - the low quant number
         level_high - the high quant number
     """
     level_high = fix_zero_filters_symmetric(max_values)
-    if q_group == QuantizerGroup.WEIGHTS:
-        level_low = -level_high
+
+    signed = quantizer_config.signedness_to_force is True
+    signed = signed or fns.any(min_values < 0)
+
+    if signed:
+        level_low_scale = 1 if narrow_range else levels / (levels - 2)
+        level_low = -level_high * level_low_scale
     else:
-        signed = quantizer_config.signedness_to_force is True
-        level_low = (
-            fns.zeros_like(level_high)
-            if fns.all(min_values >= 0) and not signed
-            else -level_high * levels / (levels - 2)
-        )
+        level_low = fns.zeros_like(level_high)
 
     level_low = level_low.astype(TensorDataType.float32)
     level_high = level_high.astype(TensorDataType.float32)
@@ -181,8 +183,6 @@ def asymmetric_range(
     min_values: Tensor,
     max_values: Tensor,
     quantizer_config: QuantizerConfig,
-    q_group: QuantizerGroup,
-    unify_zp: bool = False,
 ) -> Tuple[Tensor, Tensor]:
     """
     Calculates the numbers of the low and high quant for the asymmetric quantization scheme.
@@ -190,8 +190,6 @@ def asymmetric_range(
     :param min_values: Collected min values for the quantized insertion.
     :param max_values: Collected max values for the quantized insertion.
     :param quantizer_config: Config of the quantization configuration.
-    :param unify_zp: Whether to unify the zero point.
-        It is `True` for the per-tensor zero point constrain on KMB.
     :return: A Tuple
         level_low - the low quant number
         level_high - the high quant number
@@ -200,10 +198,7 @@ def asymmetric_range(
     level_low = fns.where(level_low < 0.0, level_low, 0.0)
     level_high = fns.where(level_high > 0.0, level_high, 0.0)
 
-    if unify_zp and q_group == QuantizerGroup.ACTIVATIONS:
-        raise NotImplementedError("Unified zero point is not supported for activations.")
-
-    level_low, level_high = tune_range(level_low, level_high, quantizer_config.num_bits, unify_zp=unify_zp)
+    level_low, level_high = tune_range(level_low, level_high, quantizer_config.num_bits, unify_zp=False)
     level_low = level_low.astype(TensorDataType.float32)
     level_high = level_high.astype(TensorDataType.float32)
     return level_low, level_high
@@ -254,11 +249,11 @@ def calculate_quantizer_parameters(
         if quantizer_config.mode == QuantizationMode.SYMMETRIC:
             level_low, level_high = calculate_symmetric_level_ranges(num_bits, signed=True, narrow_range=narrow_range)
             levels = get_num_levels(level_low, level_high)
-            input_low, input_high = symmetric_range(min_values, max_values, levels, quantizer_config, quant_group)
+            input_low, input_high = symmetric_range(min_values, max_values, levels, quantizer_config, narrow_range)
         else:
             level_low, level_high = calculate_asymmetric_level_ranges(num_bits, narrow_range=narrow_range)
             levels = get_num_levels(level_low, level_high)
-            input_low, input_high = asymmetric_range(min_values, max_values, quantizer_config, quant_group)
+            input_low, input_high = asymmetric_range(min_values, max_values, quantizer_config)
 
     if not quantizer_config.per_channel:
         input_low = fns.squeeze(input_low)
@@ -328,7 +323,8 @@ def _calculate_scaled_parameters(
     num_bits = quantizer_config.num_bits
     level_low, level_high = calculate_symmetric_level_ranges(num_bits - 1, signed=True, narrow_range=False)
     levels = get_num_levels(level_low, level_high)
-    input_low, input_high = symmetric_range(min_values, max_values, levels, quantizer_config, quant_group)
+    # TODO: confirm that hardcoded narrow_range=True is a correct value
+    input_low, input_high = symmetric_range(min_values, max_values, levels, quantizer_config, narrow_range=True)
 
     export_level_low, export_level_high = calculate_symmetric_level_ranges(
         num_bits, signed=True, narrow_range=narrow_range
