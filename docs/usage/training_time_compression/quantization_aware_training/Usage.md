@@ -120,7 +120,7 @@ checkpoint = tf.train.Checkpoint(model=quantized_model,
 callbacks = []
 callbacks.append(CheckpointManagerCallback(checkpoint, path_to_checkpoint))
 ...
-model.fit(..., callbacks=callbacks)
+quantized_model.fit(..., callbacks=callbacks)
 ```
 
 To restore the model from checkpoint, use the following API:
