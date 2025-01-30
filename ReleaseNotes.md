@@ -13,7 +13,9 @@ Post-training Quantization:
 - Fixes:
   - ...
 - Improvements:
-  - ...
+  - Significantly faster data-free weight compression for OpenVINO models: INT4 compression is now up to 10x faster, while INT8 compression is up to 3x faster. The larger the model the higher the time reduction.
+  - AWQ weight compression is now up to 2x faster, improving overall runtime efficiency.
+  - Peak memory usage during INT4 data-free weight compression in the OpenVINO backend is reduced up to 50% for certain models.
 - Deprecations/Removals:
   - ...
 - Tutorials:
