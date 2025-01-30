@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -61,18 +61,18 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
             by the `CompressionAlgorithmBuilder`.
         """
         super().__init__(target_model)
-        self._name = None
-        self._builder_state = None
+        self._name: Optional[str] = None
+        self._builder_state: Optional[Dict[str, Any]] = None
 
     @property
-    def name(self):
+    def name(self) -> str:
         if self._name is None:
             raise nncf.InternalError("Internal error: name of the controller is not set!")
         return self._name
 
     @property
     def compression_rate(self) -> float:
-        return None
+        return None  # type: ignore
 
     @compression_rate.setter
     def compression_rate(self) -> float:
@@ -111,12 +111,12 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
         if backend is BackendType.TENSORFLOW:
             from nncf.tensorflow.exporter import TFExporter
 
-            exporter = TFExporter(self.model, input_names, output_names, model_args)
+            exporter = TFExporter(self.model, input_names, output_names, model_args)  # type: ignore
         else:
             assert backend is BackendType.TORCH
             from nncf.torch.exporter import PTExporter
 
-            exporter = PTExporter(self.model, input_names, output_names, model_args)
+            exporter = PTExporter(self.model, input_names, output_names, model_args)  # type: ignore
         if save_format is not None:
             exporter.export_model(save_path, save_format)
         else:
@@ -125,7 +125,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
     def disable_scheduler(self) -> None:
         self._scheduler = StubCompressionScheduler()
 
-    def set_builder_state_with_name(self, name: str, builder_state: Dict):
+    def set_builder_state_with_name(self, name: str, builder_state: Dict[str, Any]) -> None:
         """
         Sets state of the builder and the corresponding algorithm name. Should be called by the builder to set its
         state and registered algorithm key.
@@ -146,7 +146,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
             algo_state = state[self.name]
             if self._state_names.COMPRESSION_STAGE in state:
                 compression_stage = state[self._state_names.COMPRESSION_STAGE]
-                if self.compression_stage() != compression_stage:
+                if self.compression_stage() != compression_stage:  # type: ignore
                     nncf_logger.warning(
                         f"Current CompressionStage ({self.compression_stage()}) of the compression controller "
                         f"does not correspond to the value found in the checkpoint ({compression_stage})"
@@ -223,7 +223,7 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
             if self.target_scopes is None:
                 self.target_scopes = algo_target_scopes
 
-    def _get_algo_specific_config_section(self) -> Dict:
+    def _get_algo_specific_config_section(self) -> Dict[str, Any]:
         return extract_algo_specific_config(self.config, self.name)
 
     @property
@@ -273,7 +273,7 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         return ctrl
 
     @abstractmethod
-    def _load_state_without_name(self, state_without_name: Dict[str, Any]):
+    def _load_state_without_name(self, state_without_name: Dict[str, Any]) -> None:
         """
         Implementation of load state that takes state without builder name.
 
@@ -289,7 +289,7 @@ class BaseCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
             (dict, list, tuple, str, int, float, True, False, None) that represents state of the object.
         """
 
-    def _parse_bn_adapt_params(self) -> Optional[Dict]:
+    def _parse_bn_adapt_params(self) -> Optional[Dict[str, Any]]:
         try:
             return extract_bn_adaptation_init_params(self.config, self.name)
         except BNAdaptDataLoaderNotFoundError as e:

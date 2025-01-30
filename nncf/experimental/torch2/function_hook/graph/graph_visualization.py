@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -108,7 +108,7 @@ def get_label_from_node_data(node_data: Dict[str, Any], style: PydotStyleTemplat
             rows = [
                 f"type: {node_type}",
                 f"op_name: {meta.op_name}",
-                f"fn_name: {meta.fn_name}",
+                f"fn_name: {meta.func_name}",
                 f"args: {args_to_label(meta.args)}",
                 f"kwargs: {kwargs_to_label(meta.kwargs)}",
             ]
@@ -195,7 +195,7 @@ def get_style(node: Dict[str, Any], style: PydotStyleTemplate) -> Dict[str, str]
         }
     if isinstance(meta, FunctionMeta):
         return {
-            "fillcolor": color_picker(meta.fn_name),
+            "fillcolor": color_picker(meta.func_name),
             "fontcolor": "#000000",
             "shape": "record",
             "style": '"filled,rounded"',

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,8 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
+from nncf.experimental.torch2.commands import PT2InsertionCommand
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
@@ -54,6 +56,9 @@ def create_command_to_update_weight(node: NNCFNode, weight_value: Tensor) -> PTW
 def create_quantizer_insertion_command(
     target_point: PTTargetPoint, quantizer: BaseQuantizer
 ) -> Union[PTInsertionCommand, PTSharedFnInsertionCommand]:
+    if is_experimental_torch_tracing_enabled():
+        return PT2InsertionCommand(target_points=[target_point], hook_module=quantizer)
+
     quantizer_id = NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id)
     storage_key = str(quantizer_id)
     return PTSharedFnInsertionCommand(
@@ -68,6 +73,8 @@ def create_quantizer_insertion_command(
 def create_shared_quantizer_insertion_command(
     target_points: List[PTTargetPoint], quantizer: BaseQuantizer
 ) -> PTSharedFnInsertionCommand:
+    if is_experimental_torch_tracing_enabled():
+        return PT2InsertionCommand(target_points=target_points, hook_module=quantizer)
     quantizers_ids = []
     for target_point in target_points:
         quantizers_ids.append(NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id))

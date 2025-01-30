@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -176,7 +176,6 @@ def quantize_impl(
         ]
     )
 
-    compression_ctrl, compressed_model = create_compressed_model(model=model, config=nncf_config)
-    stripped_model = compression_ctrl.strip_model(compressed_model)
+    _, compressed_model = create_compressed_model(model=model, config=nncf_config)
 
-    return stripped_model
+    return compressed_model

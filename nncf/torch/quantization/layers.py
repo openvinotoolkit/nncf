@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,12 +14,13 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
 from torch import distributed
 from torch import nn
+from torch._C import DisableTorchFunction
 
 import nncf
 from nncf.common.graph import NNCFNodeName
@@ -95,7 +96,7 @@ class PTQuantizerSpec(QuantizerSpec):
         scale_shape: Tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool = False,
-        compression_lr_multiplier: float = None,
+        compression_lr_multiplier: Optional[float] = None,
     ):
         """
         :param scale_shape: Shape of quantizer scale parameters
@@ -117,10 +118,10 @@ class PTQuantizerSpec(QuantizerSpec):
         qconfig: QuantizerConfig,
         narrow_range: bool,
         half_range: bool,
-        scale_shape: Tuple[int],
+        scale_shape: Tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool,
-        compression_lr_multiplier: float,
+        compression_lr_multiplier: Optional[float],
     ) -> "PTQuantizerSpec":
         return cls(
             qconfig.num_bits,
@@ -290,6 +291,7 @@ class PTQuantizerSetup(QuantizerSetupBase):
 
 
 class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
+
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__()
         self._qspec = qspec
@@ -341,7 +343,8 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
 
     @property
     def level_low(self) -> int:
-        return self._level_low.item()
+        with DisableTorchFunction():
+            return self._level_low.item()
 
     @level_low.setter
     def level_low(self, val: int):
@@ -349,7 +352,8 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
 
     @property
     def level_high(self) -> int:
-        return self._level_high.item()
+        with DisableTorchFunction():
+            return self._level_high.item()
 
     @level_high.setter
     def level_high(self, val: int):
@@ -369,7 +373,8 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
 
     def is_enabled_quantization(self):
         with no_jit_trace():
-            return self.enabled[0].item() == 1
+            with DisableTorchFunction():
+                return self.enabled[0].item() == 1
 
     def enable_quantization(self):
         self.enabled[0] = 1
@@ -464,7 +469,8 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
     @property
     def num_bits(self):
         with no_jit_trace():
-            return self._num_bits.item()
+            with DisableTorchFunction():
+                return self._num_bits.item()
 
     @num_bits.setter
     def num_bits(self, num_bits: int):
@@ -724,7 +730,8 @@ class SymmetricQuantizer(BaseQuantizer):
     @property
     def signed(self):
         with no_jit_trace():
-            return self.signed_tensor.item() == 1
+            with DisableTorchFunction():
+                return self.signed_tensor.item() == 1
 
     @signed.setter
     def signed(self, signed: bool):
@@ -1021,7 +1028,7 @@ class AsymmetricQuantizer(BaseQuantizer):
         )
 
 
-def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None):
+def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: Optional[int] = None) -> List[int]:
     scale_shape = [1 for _ in input_shape]
     if channel_idx is None:
         if is_weights:
@@ -1032,7 +1039,9 @@ def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None
     return scale_shape
 
 
-def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool, channel_idx: int = None) -> List[int]:
+def get_scale_shape(
+    input_shape: Iterable[int], is_weights: bool, per_channel: bool, channel_idx: Optional[int] = None
+) -> List[int]:
     """
     Assumes that input_shape is supplied in either [B, C, H, W] or [N_out, N_in, H, W] format,
     or derivatives.

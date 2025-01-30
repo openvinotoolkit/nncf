@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -114,7 +114,7 @@ def test_jit_script_exception_preserves_patching():
     run_pytest_case_function_in_separate_process(test_jit_script_exception_preserves_patching_isolated)
 
 
-@pytest.mark.xfail(is_windows(), reason="https://github.com/pytorch/pytorch/issues/122094")
+@pytest.mark.skipif(is_windows(), reason="https://github.com/pytorch/pytorch/issues/122094")
 @pytest.mark.parametrize("compile_forward", [False, True])
 def test_torch_compile(compile_forward):
     # Run test case in a separate process to track patching of torch by NNCF

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -8,8 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, TypeVar, Union
 
 import nncf
 from nncf.api.compression import TModel
@@ -22,6 +21,7 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
@@ -58,8 +58,8 @@ BATCHWISE_STATISTICS_WARNING = (
 def warning_model_no_batchwise_support(
     graph: NNCFGraph,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
-    model_type: ModelType,
-    no_batchwise_support_metatypes: List[OperatorMetatype],
+    model_type: Optional[ModelType],
+    no_batchwise_support_metatypes: Iterable[Type[OperatorMetatype]],
 ) -> None:
     """
     Logs when is_model_no_batchwise_support(...) returns True.
@@ -78,8 +78,8 @@ def warning_model_no_batchwise_support(
 def is_model_no_batchwise_support(
     graph: NNCFGraph,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
-    model_type: ModelType,
-    no_batchwise_support_metatypes: List[OperatorMetatype],
+    model_type: Optional[ModelType],
+    no_batchwise_support_metatypes: Iterable[Type[OperatorMetatype]],
 ) -> bool:
     """
     Returns True if batchwise statistics could lead to a significant accuracy drop.
@@ -230,7 +230,10 @@ def quantize(
         )
 
     if backend == BackendType.TORCH:
-        from nncf.torch.quantization.quantize_model import quantize_impl
+        if is_experimental_torch_tracing_enabled():
+            from nncf.experimental.torch2.quantization.quantize_model import quantize_impl
+        else:
+            from nncf.torch.quantization.quantize_model import quantize_impl
 
         return quantize_impl(
             model=model,
@@ -244,6 +247,7 @@ def quantize(
             ignored_scope=ignored_scope,
             advanced_parameters=advanced_parameters,
         )
+
     if backend == BackendType.TORCH_FX:
         from nncf.experimental.torch.fx.quantization.quantize_model import quantize_impl
 

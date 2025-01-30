@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -70,7 +70,7 @@ def test_wrap_model_with_example_input(example_input, model_cls):
     nncf_network = wrap_model(model, example_input)
 
     def check_type(x):
-        assert type(x) == torch.Tensor
+        assert type(x) is torch.Tensor
         return x
 
     objwalk(example_input, lambda x: True, check_type)

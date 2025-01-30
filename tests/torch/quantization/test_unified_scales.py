@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -27,7 +27,10 @@ from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropa
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.model_creation import wrap_model
+from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import AsymmetricQuantizer
+from tests.cross_fw.test_templates.test_unified_scales import TemplateTestUnifiedScales
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import get_nodes_by_type
 from tests.torch.helpers import register_bn_adaptation_init_args
@@ -711,3 +714,21 @@ def test_unified_scales_with_shared_nodes():
 
     assert len(compression_ctrl.weight_quantizers) == 1  # The two embedding nodes point to a single shared layer
     assert len(compression_ctrl.non_weight_quantizers) == 0  # The "add" operation has its inputs already quantized
+
+
+class TestUnifiedScales(TemplateTestUnifiedScales):
+    def get_backend_specific_model(self, model: torch.nn.Module) -> NNCFNetwork:
+        q_input_shape = model.Q_INPUT_SHAPE
+        kv_input_shape = model.KV_INPUT_SHAPE
+        backend_model = wrap_model(
+            model,
+            (
+                torch.ones(q_input_shape),
+                torch.ones(q_input_shape),
+                torch.ones(kv_input_shape),
+                torch.ones(kv_input_shape),
+            ),
+            trace_parameters=True,
+        )
+
+        return backend_model

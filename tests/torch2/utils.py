@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,6 +10,10 @@
 # limitations under the License.
 
 from pathlib import Path
+
+import networkx as nx
+
+from nncf.common.graph.graph import NNCFGraph
 
 
 def compare_with_reference_file(text_data: str, ref_path: Path, regen_ref_data: bool):
@@ -37,3 +41,22 @@ def compare_with_reference_file(text_data: str, ref_path: Path, regen_ref_data: 
         f"Data mismatch between actual data and reference file: {ref_path}\n"
         f"Actual data and reference data differ. Please review the file contents."
     )
+
+
+def get_reference_graph(graph: NNCFGraph) -> nx.DiGraph:
+    out_graph = nx.DiGraph()
+    for node in sorted(graph.get_all_nodes(), key=lambda x: x.node_id):
+        attrs_node = {
+            "id": node.node_id,
+            "type": node.node_type,
+            "metatype": node.metatype.__name__,
+        }
+        out_graph.add_node(node.node_name, **attrs_node)
+
+    for edge in graph.get_all_edges():
+        attrs_edge = {"dtype": edge.dtype.value, "shape": edge.tensor_shape}
+        if edge.parallel_input_port_ids:
+            attrs_edge["parallel_input_port_ids"] = edge.parallel_input_port_ids
+
+        out_graph.add_edge(edge.from_node.node_name, edge.to_node.node_name, **attrs_edge)
+    return out_graph

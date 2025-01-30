@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 
 from nncf.common.graph import NNCFNode
 from nncf.common.hardware.config import HWConfig
@@ -19,7 +19,7 @@ from nncf.common.scopes import matches_any
 
 
 def get_scoped_quantizer_config(
-    base_config: QuantizerConfig, scope_str: str, scope_overrides: Dict = None
+    base_config: QuantizerConfig, scope_str: str, scope_overrides: Optional[Dict[str, Any]] = None
 ) -> QuantizerConfig:
     """
     Returns a QuantizerConfig which is based on a given config, which will have overrides
@@ -54,8 +54,8 @@ def assign_qconfig_lists_to_modules(
     nodes_with_weights: List[NNCFNode],
     default_weight_qconfig: QuantizerConfig,
     global_weight_constraints: QuantizationConstraints = None,
-    scope_overrides_dict: Dict = None,
-    hw_config: HWConfig = None,
+    scope_overrides_dict: Optional[Dict[str, Any]] = None,
+    hw_config: Optional[HWConfig] = None,
 ) -> Dict[NNCFNode, List[QuantizerConfig]]:
     """
     Assigns a list of possible quantizer configurations (as determined by HW config, defaults and overrides)
@@ -89,7 +89,7 @@ def assign_qconfig_lists_to_modules(
             qconfig_list = [qconfig_for_current_scope]
         else:
             metatype = node.metatype
-            qconfig_list = meta_vs_qconfig_map[metatype]
+            qconfig_list = meta_vs_qconfig_map[metatype]  # type: ignore
             if HWConfig.is_wildcard_quantization(qconfig_list):  # Empty list = wildcard quantization
                 qconfig_list = [default_qconfig]
             elif HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconfig_list):
@@ -99,8 +99,8 @@ def assign_qconfig_lists_to_modules(
             for overridden_scope, scoped_override_dict in scope_overrides_dict.items():
                 if matches_any(node.node_name, overridden_scope):
                     scope_constraints = QuantizationConstraints.from_config_dict(scoped_override_dict)
-                    local_constraints = local_constraints.get_updated_constraints(scope_constraints)
-            qconfig_list = local_constraints.constrain_qconfig_list(
+                    local_constraints = local_constraints.get_updated_constraints(scope_constraints)  # type: ignore
+            qconfig_list = local_constraints.constrain_qconfig_list(  # type: ignore
                 node.node_name, hw_config.target_device, qconfig_list
             )
 

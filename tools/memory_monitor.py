@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ import atexit
 import logging
 import queue
 import subprocess
+import sys
 import threading
 import time
 from enum import Enum
@@ -362,6 +363,7 @@ if __name__ == "__main__":
 
     with subprocess.Popen(" ".join(args.executable), shell=True) as p:
         p.wait()
+        exit_code = p.returncode
 
         # Stop addition of new values as soon as possible
         for mm in memory_monitors:
@@ -380,3 +382,5 @@ if __name__ == "__main__":
             summary_data.append([mm.memory_type.value, fz, f"{int(max(memory_values))} {mm.memory_unit.value}"])
     print("\nMemory summary:")
     print(tabulate(summary_data, headers=["Memory type", "From zero", "Peak value"]))
+
+    sys.exit(exit_code)

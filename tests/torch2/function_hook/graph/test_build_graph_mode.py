@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -101,7 +101,7 @@ def test_execute_pre_hooks():
         "type": NodeType.fn_call,
         "meta": FunctionMeta(
             op_name="/relu/0",
-            fn_name="relu",
+            func=torch.relu,
             args=(
                 TensorMeta(dtype=torch.float32, shape=(1,), requires_grad=False),
                 TensorMeta(dtype=torch.float32, shape=(1, 1, 1, 1), requires_grad=True),
@@ -190,14 +190,14 @@ def test_tensor_attributes(attr):
     if attr == ".T":
         ref_meta = FunctionMeta(
             op_name="/__get__/0",
-            fn_name="permute",
+            func=torch.permute,
             args=(TensorMeta(dtype=torch.float32, shape=(2, 3), requires_grad=True),),
             kwargs={"dims": (1, 0)},
         )
     else:
         ref_meta = FunctionMeta(
             op_name="/__get__/0",
-            fn_name="transpose",
+            func=torch.transpose,
             args=(TensorMeta(dtype=torch.float32, shape=(2, 3), requires_grad=True),),
             kwargs={"dim0": -2, "dim1": -1},
         )

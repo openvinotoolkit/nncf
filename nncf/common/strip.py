@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,11 +16,15 @@ import nncf
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.telemetry.decorator import tracked_function
+from nncf.telemetry.events import MODEL_BASED_CATEGORY
+from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
 
 TModel = TypeVar("TModel")
 
 
 @api(canonical_alias="nncf.strip")
+@tracked_function(category=MODEL_BASED_CATEGORY, extractors=[FunctionCallTelemetryExtractor("nncf.strip")])
 def strip(model: TModel, do_copy: bool = True) -> TModel:
     """
     Returns the model object with as much custom NNCF additions as possible removed
@@ -33,8 +37,12 @@ def strip(model: TModel, do_copy: bool = True) -> TModel:
     """
     model_backend = get_backend(model)
     if model_backend == BackendType.TORCH:
-        from nncf.torch import strip as strip_pt
+        from nncf.torch.strip import strip as strip_pt
 
-        return strip_pt(model, do_copy)
+        return strip_pt(model, do_copy)  # type: ignore
+    elif model_backend == BackendType.TENSORFLOW:
+        from nncf.tensorflow.strip import strip as strip_tf
+
+        return strip_tf(model, do_copy)  # type: ignore
 
     raise nncf.UnsupportedBackendError(f"Method `strip` does not support for {model_backend.value} backend.")

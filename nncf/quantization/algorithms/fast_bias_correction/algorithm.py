@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,7 +17,6 @@ from nncf import Dataset
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -111,7 +110,7 @@ class FastBiasCorrection(Algorithm):
                 OVFastBiasCorrectionAlgoBackend,
             )
 
-            self._backend_entity = OVFastBiasCorrectionAlgoBackend()
+            self._backend_entity = OVFastBiasCorrectionAlgoBackend(model)
         elif model_backend == BackendType.TORCH:
             from nncf.quantization.algorithms.fast_bias_correction.torch_backend import PTFastBiasCorrectionAlgoBackend
 
@@ -167,7 +166,7 @@ class FastBiasCorrection(Algorithm):
             # Outputs of the subgraphs for the FastBiasCorrection are the same across the backends.
             output_id = (out_node_name, 0)
 
-            extracted_model = self._extract_submodel(model_transformer, input_id, output_id)
+            extracted_model = self._backend_entity.extract_submodel(model_transformer, input_id, output_id)
             if extracted_model is None:
                 nncf_logger.debug(f"Skipping node {node_name} because cant extract submodel")
                 continue
@@ -286,23 +285,6 @@ class FastBiasCorrection(Algorithm):
         ):
             output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
-
-    def _extract_submodel(
-        self, model_transformer: ModelTransformer, input_id: Tuple[str, int], output_id: Tuple[str, int]
-    ) -> TModel:
-        """
-        Extracts sub-model using backend-specific ModelTransformer.
-
-        :param model_transformer: Backend-specific ModelTransformer.
-        :param input_id: Input ID.
-        :param output_id: Output ID.
-        :return: Backend-specific sub-model.
-        """
-        model_extraction_command = self._backend_entity.model_extraction_command([input_id], [output_id])
-        me_transformation_layout = TransformationLayout()
-        me_transformation_layout.register(model_extraction_command)
-        extracted_model = model_transformer.transform(me_transformation_layout)
-        return extracted_model
 
     def _add_statistic_point(self, container: StatisticPointsContainer, point: TargetPoint, axis: int) -> None:
         """

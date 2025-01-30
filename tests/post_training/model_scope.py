@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -228,19 +228,6 @@ QUANTIZATION_MODELS = [
         "compression_params": {},
         "backends": NNCF_PTQ_BACKENDS,
         "batch_size": 64,
-    },
-    {
-        "reported_name": "timm/levit_128",
-        "model_id": "levit_128",
-        "pipeline_cls": ImageClassificationTimm,
-        "compression_params": {
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=0.05)
-            ),
-        },
-        "backends": NNCF_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/mobilenetv2_050",

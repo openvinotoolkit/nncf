@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -8,14 +8,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 from abc import ABC
 from abc import abstractmethod
 from enum import IntEnum
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
-from nncf.api.statistics import Statistics
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import copy_model
 
@@ -33,7 +34,7 @@ class CompressionLoss(ABC):
     """
 
     @abstractmethod
-    def calculate(self, *args, **kwargs) -> Any:
+    def calculate(self, *args: Any, **kwargs: Any) -> Any:
         """
         Calculates and returns the compression loss value.
         """
@@ -53,7 +54,7 @@ class CompressionLoss(ABC):
         Returns the compression loss state.
         """
 
-    def __call__(self, *args, **kwargs) -> Any:
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """
         Calculates and returns the compression loss value. Same as `.calculate()`.
         """
@@ -127,7 +128,7 @@ class CompressionStage(IntEnum):
     PARTIALLY_COMPRESSED = 1
     FULLY_COMPRESSED = 2
 
-    def __add__(self, other: "CompressionStage") -> "CompressionStage":
+    def __add__(self, other: int) -> CompressionStage:
         """
         Defines compression stage of a composite compression controller, consist of
         two algorithms, where `self` is the compression stage of the first algorithm
@@ -162,7 +163,7 @@ class CompressionAlgorithmController(ABC):
         self._model = target_model
 
     @property
-    def model(self) -> TModel:
+    def model(self) -> TModel:  # type: ignore[type-var]
         """
         The compressed model object with which this controller is associated.
         """
@@ -215,6 +216,7 @@ class CompressionAlgorithmController(ABC):
         :return: Compression state of the model to  resume compression from it.
         """
 
+    @abstractmethod
     def compression_stage(self) -> CompressionStage:
         """
         Returns the compression stage. Should be used on saving best checkpoints
@@ -225,9 +227,9 @@ class CompressionAlgorithmController(ABC):
         """
 
     @abstractmethod
-    def statistics(self, quickly_collected_only: bool = False) -> Statistics:
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         """
-        Returns a `Statistics` class instance that contains compression algorithm statistics.
+        Returns a `NNCFStatistics` class instance that contains compression algorithm statistics.
 
         :param quickly_collected_only: Enables collection of the statistics that
             don't take too much time to compute. Can be helpful for the case when
@@ -254,7 +256,7 @@ class CompressionAlgorithmController(ABC):
         """
         self._model = self.strip_model(self._model)
 
-    def strip(self, do_copy: bool = True) -> TModel:
+    def strip(self, do_copy: bool = True) -> TModel:  # type: ignore[type-var]
         """
         Returns the model object with as much custom NNCF additions as possible removed
         while still preserving the functioning of the model object as a compressed model.
@@ -263,7 +265,7 @@ class CompressionAlgorithmController(ABC):
           will return the currently associated model object "stripped" in-place.
         :return: The stripped model.
         """
-        return self.strip_model(self.model, do_copy)
+        return self.strip_model(self.model, do_copy)  # type: ignore
 
     @abstractmethod
     def export_model(
@@ -413,7 +415,7 @@ class CompressionLevel(IntEnum):
     FULL = 2
 
     @classmethod
-    def map_legacy_level_to_stage(cls):
+    def map_legacy_level_to_stage(cls) -> Dict[CompressionLevel, CompressionStage]:
         return {
             CompressionLevel.NONE: CompressionStage.UNCOMPRESSED,
             CompressionLevel.PARTIAL: CompressionStage.PARTIALLY_COMPRESSED,

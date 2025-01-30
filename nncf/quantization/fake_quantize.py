@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -341,7 +341,11 @@ def _calculate_scaled_parameters(
 
 
 def calculate_scale_zero_point(
-    input_low: Tensor, input_high: Tensor, level_low: int, level_high: int, narrow_range: bool
+    input_low: Tensor,
+    input_high: Tensor,
+    level_low: int,
+    level_high: int,
+    narrow_range: bool,
 ) -> Tuple[Tensor, Tensor]:
     """
     Calculates scale and zero_point values for the quantizer.

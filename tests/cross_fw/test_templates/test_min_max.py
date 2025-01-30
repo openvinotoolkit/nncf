@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -98,6 +98,11 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
     ) -> BaseLayerAttributes:
         "Returns backend specific layer attributes for MatMul."
 
+    @property
+    @abstractmethod
+    def target_point_cls(self):
+        "Backend specific TargetPoint class."
+
     @pytest.mark.parametrize(
         "conv_shape, weight_port_id, ref_axes", ((CONV_WEIGHT_SHAPE, 0, (0,)), (CONV_WEIGHT_SHAPE, 1, (0,)))
     )
@@ -165,9 +170,5 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
         """
         matmul_node = NNCFNode({"metatype": self.matmul_metatype})
 
-        class DummyTargetPoint:
-            input_port_id = 0
-
-        assert (
-            self.backend().get_weight_quantization_axes(matmul_node, DummyTargetPoint(), len(weight_shape)) == ref_axes
-        )
+        target_point = self.create_target_point(TargetType.PRE_LAYER_OPERATION, None, 0)
+        assert self.backend().get_weight_quantization_axes(matmul_node, target_point, len(weight_shape)) == ref_axes

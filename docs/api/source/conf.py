@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -145,6 +145,7 @@ mock_modules = [
     "nncf.tensor.functions.torch_linalg",
     "nncf.tensor.functions.torch_io",
     "nncf.tensor.functions.numpy_io",
+    "nncf.tensor.functions.openvino_numeric",
 ]
 
 with mock(mock_modules):

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -389,6 +389,11 @@ def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
 @register_numpy_types(numeric.searchsorted)
 def _(a: np.ndarray, v: np.ndarray, side: str = "left", sorter: Optional[np.ndarray] = None) -> np.ndarray:
     return np.searchsorted(a, v, side, sorter)
+
+
+@register_numpy_types(numeric.as_numpy_tensor)
+def _(a: np.ndarray) -> np.ndarray:
+    return a
 
 
 def zeros(

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,7 +11,7 @@
 
 from typing import List
 
-from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.graph.transformations.commands import Command
 
 
 class TransformationLayout:
@@ -27,13 +27,13 @@ class TransformationLayout:
         """
         Initialize Transformation Layout.
         """
-        self._transformations: List[TransformationCommand] = []
+        self._transformations: List[Command] = []
 
     @property
-    def transformations(self) -> List[TransformationCommand]:
+    def transformations(self) -> List[Command]:
         return self._transformations
 
-    def register(self, transformation: TransformationCommand) -> None:
+    def register(self, transformation: Command) -> None:
         """
         Registers the transformation command in the transformation layout.
 

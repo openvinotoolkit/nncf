@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,15 +11,16 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, List, Optional, Set, Tuple, TypeVar
+from typing import Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
+from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.parameters import ModelType
@@ -34,7 +35,7 @@ TModel = TypeVar("TModel")
 class MinMaxAlgoBackend(ABC):
     @property
     @abstractmethod
-    def preserved_metatypes(self) -> List[OperatorMetatype]:
+    def preserved_metatypes(self) -> List[Type[OperatorMetatype]]:
         """
         Property for backend-specific metatypes that require preserving float subgraphs
         when removing the ShapeOf subgraph.
@@ -42,91 +43,91 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def mat_mul_metatypes(self) -> List[OperatorMetatype]:
+    def mat_mul_metatypes(self) -> List[Type[OperatorMetatype]]:
         """
         Property for the backend-specific MatMul metatypes.
         """
 
     @property
     @abstractmethod
-    def post_processing_metatypes(self) -> List[OperatorMetatype]:
+    def post_processing_metatypes(self) -> List[Type[OperatorMetatype]]:
         """
         Property for the backend-specific post-processing metatypes (NonMaximumSupression, TopK, etc.).
         """
 
     @property
     @abstractmethod
-    def conv_metatypes(self) -> List[OperatorMetatype]:
+    def conv_metatypes(self) -> List[Type[OperatorMetatype]]:
         """
         Property for the backend-specific Convolution metatypes.
         """
 
     @property
     @abstractmethod
-    def shapeof_metatypes(self) -> List[OperatorMetatype]:
+    def shapeof_metatypes(self) -> List[Type[OperatorMetatype]]:
         """
         Property for the backend-specific ShapeOf metatypes.
         """
 
     @property
     @abstractmethod
-    def dropout_metatypes(self) -> List[OperatorMetatype]:
+    def dropout_metatypes(self) -> List[Type[OperatorMetatype]]:
         """
         Property for the backend-specific Dropout metatypes.
         """
 
     @property
     @abstractmethod
-    def elementwise_metatypes(self) -> List[OperatorMetatype]:
+    def elementwise_metatypes(self) -> List[Type[OperatorMetatype]]:
         """
         Property for the backend-specific Elementwises metatypes.
         """
 
     @property
     @abstractmethod
-    def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
+    def overflow_fix_metatypes(self) -> List[Type[OperatorMetatype]]:
         """
         Property for the backend-specific metatypes for which overflow_fix is applicable.
         """
 
     @property
     @abstractmethod
-    def add_metatypes(self) -> List[OperatorMetatype]:
+    def add_metatypes(self) -> List[Type[OperatorMetatype]]:
         """
         Property for the backend-specific metatypes that also can be interpreted as Add layer.
         """
 
     @property
     @abstractmethod
-    def group_conv_metatypes(self) -> List[OperatorMetatype]:
+    def group_conv_metatypes(self) -> List[Type[OperatorMetatype]]:
         """
         Property for the backend-specific Grouped Convolution metatypes.
         """
 
     @property
     @abstractmethod
-    def scaled_dot_product_attention_metatypes(self) -> List[OperatorMetatype]:
+    def scaled_dot_product_attention_metatypes(self) -> List[Type[OperatorMetatype]]:
         """
         Property for the backend-specific Scaled Dot Product Attention metatypes.
         """
 
     @property
     @abstractmethod
-    def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
+    def scales_unification_map(self) -> Dict[Type[OperatorMetatype], List[Type[OperatorMetatype]]]:
         """
         Property for the backend-specific metatypes that produces quantizers that might be unified.
         """
 
     @property
     @abstractmethod
-    def hw_config(self) -> HWConfig:
+    def hw_config(self) -> Type[HWConfig]:
         """
         Property for the hardware backend-specific configuration.
         """
 
     @property
     @abstractmethod
-    def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
+    def quant_trait_op_dict(self) -> Dict[QuantizationTrait, List[Type[OperatorMetatype]]]:
         """
         Property for the backend-specific dictionary that contains QuantizationTrait-specific metatypes.
         """
@@ -164,7 +165,7 @@ class MinMaxAlgoBackend(ABC):
         target_point: TargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ) -> TransformationCommand:
+    ) -> Command:
         """
         Returns backend-specific quantizer insertion command.
 
@@ -172,7 +173,7 @@ class MinMaxAlgoBackend(ABC):
         :param target_point: Target location for the quantizer insertion.
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
-        :return: Backend-specific TransformationCommand for the quantizer insertion operation.
+        :return: Backend-specific Command for the quantizer insertion operation.
         """
 
     @staticmethod
@@ -182,7 +183,7 @@ class MinMaxAlgoBackend(ABC):
         target_points: List[TargetPoint],
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ) -> List[TransformationCommand]:
+    ) -> List[Command]:
         """
         Returns backend-specific unified scales quantizers insertion commands.
 
@@ -190,7 +191,7 @@ class MinMaxAlgoBackend(ABC):
         :param target_points: List of target locations for the quantizers insertion.
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
-        :return: List of backend-specific TransformationCommands
+        :return: List of backend-specific Commands
             for the quantizers with unified scales insertion operations.
         """
 
@@ -199,13 +200,13 @@ class MinMaxAlgoBackend(ABC):
     def create_convert_insertion_command(
         target_point: TargetPoint,
         parameters: FakeConvertParameters,
-    ) -> TransformationCommand:
+    ) -> Command:
         """
         Returns backend-specific convert insertion command.
 
         :param target_point: Target location for the correction.
         :param parameters: FakeConvertParameters to calculate activation quantization parameters.
-        :return: Backend-specific TransformationCommand for the quantizer insertion operation.
+        :return: Backend-specific Command for the quantizer insertion operation.
         """
 
     @staticmethod
@@ -276,7 +277,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
+    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[Type[OperatorMetatype]]:
         """
         Returns ignored metatypes based on a model type and device parameters.
 

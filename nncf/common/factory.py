@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TypeVar
+from typing import Any, TypeVar, cast
 
 import nncf
 from nncf.common.engine import Engine
@@ -20,6 +20,7 @@ from nncf.common.tensor_statistics import aggregator
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data.dataset import Dataset
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 
 TModel = TypeVar("TModel")
 
@@ -35,27 +36,40 @@ class NNCFGraphFactory:
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
-            from nncf.onnx.graph.nncf_graph_builder import GraphConverter
+            from onnx import ModelProto  # type: ignore
 
-            return GraphConverter.create_nncf_graph(model)
+            from nncf.onnx.graph.nncf_graph_builder import GraphConverter as ONNXGraphConverter
+
+            return ONNXGraphConverter.create_nncf_graph(cast(ModelProto, model))
         if model_backend == BackendType.OPENVINO:
-            from nncf.openvino.graph.nncf_graph_builder import GraphConverter
+            from openvino import Model  # type: ignore
 
-            return GraphConverter.create_nncf_graph(model)
+            from nncf.openvino.graph.nncf_graph_builder import GraphConverter as OVGraphConverter
+
+            return OVGraphConverter.create_nncf_graph(cast(Model, model))
         if model_backend == BackendType.TORCH_FX:
-            from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
+            from torch.fx import GraphModule
 
-            return GraphConverter.create_nncf_graph(model)
+            from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter as FXGraphConverter
+
+            return FXGraphConverter.create_nncf_graph(cast(GraphModule, model))
         if model_backend == BackendType.TORCH:
-            return model.nncf.get_graph()
+            from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+            from nncf.torch.nncf_network import NNCFNetwork
+
+            if isinstance(model, GraphModelWrapper):
+                return model.build_graph()
+            if isinstance(model, NNCFNetwork):
+                return model.nncf.get_graph()
+            raise nncf.InternalError(f"Unexpected type of model {type(model)} for TORCH backend")
         raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific graph because {} is not supported!".format(model_backend.value)
+            f"Cannot create backend-specific graph because {model_backend.value} is not supported!"
         )
 
 
 class ModelTransformerFactory:
     @staticmethod
-    def create(model: TModel, inplace: bool = False) -> ModelTransformer:
+    def create(model: TModel, inplace: bool = False) -> ModelTransformer[Any]:
         """
         Factory method to create backend-specific ModelTransformer instance based on the input model.
 
@@ -65,21 +79,35 @@ class ModelTransformerFactory:
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
+            from onnx import ModelProto
+
             from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 
-            return ONNXModelTransformer(model)
+            return ONNXModelTransformer(cast(ModelProto, model))
         if model_backend == BackendType.OPENVINO:
+            from openvino import Model
+
             from nncf.openvino.graph.model_transformer import OVModelTransformer
 
-            return OVModelTransformer(model, inplace=inplace)
-        if model_backend == BackendType.TORCH:
-            from nncf.torch.model_transformer import PTModelTransformer
+            return OVModelTransformer(cast(Model, model), inplace=inplace)
+        if model_backend == BackendType.TORCH and is_experimental_torch_tracing_enabled():
+            from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+            from nncf.experimental.torch2.model_transformer import PT2ModelTransformer
 
-            return PTModelTransformer(model)
+            return PT2ModelTransformer(cast(GraphModelWrapper, model))
+
+        if model_backend == BackendType.TORCH and not is_experimental_torch_tracing_enabled():
+            from nncf.torch.model_transformer import PTModelTransformer
+            from nncf.torch.nncf_network import NNCFNetwork
+
+            return PTModelTransformer(cast(NNCFNetwork, model))
+
         if model_backend == BackendType.TORCH_FX:
+            from torch.fx import GraphModule
+
             from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 
-            return FXModelTransformer(model)
+            return FXModelTransformer(cast(GraphModule, model))
         raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific model transformer because {} is not supported!".format(model_backend.value)
         )
@@ -96,19 +124,30 @@ class EngineFactory:
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
+            from onnx import ModelProto
+
             from nncf.onnx.engine import ONNXEngine
 
-            return ONNXEngine(model)
+            return ONNXEngine(cast(ModelProto, model))
         if model_backend == BackendType.OPENVINO:
+            from openvino import Model
+
             from nncf.openvino.engine import OVNativeEngine
 
-            return OVNativeEngine(model)
+            return OVNativeEngine(cast(Model, model))
         if model_backend in (BackendType.TORCH, BackendType.TORCH_FX):
+            from torch.nn import Module
+
+            from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
             from nncf.torch.engine import PTEngine
 
-            return PTEngine(model)
+            if isinstance(model, GraphModelWrapper):
+                pt_model = model.model
+            else:
+                pt_model = cast(Module, model)
+            return PTEngine(pt_model)
         raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific engine because {} is not supported!".format(model_backend.value)
+            f"Cannot create backend-specific engine because {model_backend.value} is not supported!"
         )
 
 
@@ -155,10 +194,14 @@ class StatisticsAggregatorFactory:
             from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 
             return OVStatisticsAggregator(dataset)
-        if model_backend == BackendType.TORCH:
+        if model_backend == BackendType.TORCH and not is_experimental_torch_tracing_enabled():
             from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 
             return PTStatisticsAggregator(dataset)
+        if model_backend == BackendType.TORCH and is_experimental_torch_tracing_enabled():
+            from nncf.experimental.torch2.statistics.aggregator import PT2StatisticsAggregator
+
+            return PT2StatisticsAggregator(dataset)
         if model_backend == BackendType.TORCH_FX:
             from nncf.experimental.torch.fx.statistics.aggregator import FXStatisticsAggregator
 

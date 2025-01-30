@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -354,7 +354,7 @@ class HAWQCriterion(DataBasedCriterion):
         if weight.dtype != TensorDataType.float32:
             weight = weight.astype(TensorDataType.float32)
 
-        compressed_weights, scale, zero_point = do_int_quantization(weight, reduction_axes, backup_config)
+        compressed_weights, scale, zero_point = do_int_quantization(weight, backup_config, reduction_axes)
         decompressed_weight = do_int_dequantization(compressed_weights, scale, zero_point)
         decompressed_weight = decompressed_weight.reshape(orig_shape)
         return fns.linalg.norm(decompressed_weight - weight, ord="fro").item()
