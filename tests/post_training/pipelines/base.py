@@ -438,6 +438,7 @@ class PTQTestPipeline(BaseTestPipeline):
         elif self.backend == BackendType.FX_TORCH:
             exported_model = torch.export.export(self.compressed_model, (self.dummy_tensor,))
             ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor.cpu(), input=self.input_size)
+            ov_model.reshape(self.input_size)
             self.path_compressed_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend == BackendType.ONNX:
