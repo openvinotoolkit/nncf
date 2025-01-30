@@ -10,11 +10,12 @@
 # limitations under the License.
 
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import tensorflow as tf
 
 from nncf.common.compression import BaseCompressionAlgorithmController
+from nncf.tensorflow.quantization.algorithm import TFQuantizationSetup
 
 # TODO(achurkin): remove pylint ignore after 120296 ticked is fixed
 
@@ -86,3 +87,44 @@ class TFCompressionStateLoader(tf.train.experimental.PythonState):
         :param string_value: A serialized compression state.
         """
         self._state = json.loads(string_value)
+
+
+class ModelConfig(tf.train.experimental.PythonState):
+    """
+    TODO(TF)
+    """
+
+    def __init__(self, quantizer_setup: Optional[TFQuantizationSetup] = None):
+        """ """
+        self.quantizer_setup = quantizer_setup
+
+    def serialize(self) -> str:
+        """
+        Callback to serialize the model config.
+
+        :return: A serialized model config.
+        """
+        data = {"quantizer_setup": self.quantizer_setup.get_state()}
+        return json.dumps(data)
+
+    def deserialize(self, string_value: str) -> None:
+        """
+        Callback to deserialize the model config.
+
+        :param string_value: A serialized model config.
+        """
+        data = json.loads(string_value)
+        self.quantizer_setup = TFQuantizationSetup.from_state(data["quantizer_setup"])
+
+
+def get_config(model: tf.keras.Model) -> ModelConfig:
+    """
+    TODO(TF)
+
+    :param model:
+    :return:
+    """
+    data = getattr(model, "_nncf_model_config")
+    delattr(model, "_nncf_model_config")
+    quantizer_setup = TFQuantizationSetup.from_state(data["quantizer_setup"])
+    return ModelConfig(quantizer_setup)

@@ -176,6 +176,9 @@ def quantize_impl(
         ]
     )
 
-    _, compressed_model = create_compressed_model(model=model, config=nncf_config)
+    compression_ctrl, compressed_model = create_compressed_model(model=model, config=nncf_config)
+
+    nncf_model_config = compression_ctrl.get_compression_state()["builder_state"]["quantization"]
+    setattr(compressed_model, "_nncf_model_config", nncf_model_config)
 
     return compressed_model

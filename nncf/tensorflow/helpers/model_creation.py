@@ -30,8 +30,12 @@ from nncf.tensorflow.algorithm_selector import NoCompressionAlgorithmBuilder
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
+from nncf.tensorflow.graph.model_transformer import TFModelTransformer
+from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import is_keras_layer_model
 from nncf.tensorflow.helpers.utils import get_built_model
+from nncf.tensorflow.quantization.algorithm import QuantizationBuilder
+from nncf.tensorflow.utils.state import ModelConfig
 
 
 def create_compression_algorithm_builder(config: NNCFConfig, should_init: bool) -> TFCompressionAlgorithmBuilder:
@@ -140,3 +144,20 @@ def get_input_signature(config: NNCFConfig):
         input_signature.append(tf.TensorSpec(shape=shape, dtype=tf.float32))
 
     return input_signature if len(input_signature) > 1 else input_signature[0]
+
+
+def load_from_config(model: tf.keras.Model, config: ModelConfig) -> tf.keras.Model:
+    """
+    TODO(TF)
+
+    :param model:
+    :parem config:
+    :return:
+    """
+    transformation_layout = TFTransformationLayout()
+    # pylint: disable=protected-access
+    insertion_commands, _ = QuantizationBuilder._build_insertion_commands_for_quantizer_setup(config.quantizer_setup)
+    for command in insertion_commands:
+        transformation_layout.register(command)
+    model_transformer = TFModelTransformer(model)
+    return model_transformer.transform(transformation_layout)
