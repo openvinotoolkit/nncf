@@ -101,21 +101,20 @@ def compress_weights_impl(
     """
     Implementation of the `compress_weights()` method for the PyTorch backend.
     """
-    with torch.inference_mode():
-        compression_algorithm = WeightCompression(
-            mode,
-            ratio,
-            group_size,
-            ignored_scope,
-            all_layers,
-            sensitivity_metric,
-            awq,
-            subset_size,
-            scale_estimation,
-            gptq,
-            lora_correction,
-            backup_mode,
-            advanced_parameters,
-        )
-        graph = NNCFGraphFactory.create(model)
-        return compression_algorithm.apply(model, graph, dataset=dataset)
+    compression_algorithm = WeightCompression(
+        mode,
+        ratio,
+        group_size,
+        ignored_scope,
+        all_layers,
+        sensitivity_metric,
+        awq,
+        subset_size,
+        scale_estimation,
+        gptq,
+        lora_correction,
+        backup_mode,
+        advanced_parameters,
+    )
+    graph = NNCFGraphFactory.create(model)
+    return compression_algorithm.apply(model, graph, dataset=dataset)
