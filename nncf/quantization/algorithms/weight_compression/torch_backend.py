@@ -38,6 +38,7 @@ from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import find_const_node_in_constant_subgraph
+from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
@@ -173,10 +174,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     ) -> Tensor:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
         weight_name = weight_node.layer_attributes.name
-        module_name, weight_attr_name = split_const_name(weight_name)
-        module = get_module_by_name(module_name, model)
-        weight = getattr(module, weight_attr_name)
-        if weight is None or not isinstance(weight, torch.nn.Parameter):
+        weight = get_const_data(weight_node, model)
+        if weight is None:
             raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
 
         return Tensor(weight)
@@ -222,10 +221,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
             weight_name = weight_node.layer_attributes.name
-            module_name, weight_attr_name = split_const_name(weight_name)
-            module = get_module_by_name(module_name, model)
-            weight = getattr(module, weight_attr_name)
-            if weight is None or not isinstance(weight, torch.nn.Parameter):
+            weight = get_const_data(weight_node, model)
+            if weight is None:
                 raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
 
             # calculates compressed weights and decompression parameters
@@ -264,7 +261,14 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             packed_tensor = decompressor.pack_weight(compressed_weight.tensor.data)
 
             # sets compressed tensor
+            # TODO:(AlexanderDokuchaev): update set_const_data
             compressed_parameter = torch.nn.Parameter(packed_tensor, requires_grad=False)
+            module_name, weight_attr_name = split_const_name(weight_name)
+            module = get_module_by_name(module_name, model)
+            weight = getattr(module, weight_attr_name)
+            if not isinstance(weight, torch.nn.Parameter):
+                raise nncf.InternalError(f"Weight is not a torch.nn.Parameter in the model by name {weight_name}.")
+
             setattr(module, weight_attr_name, compressed_parameter)
 
             consumer_nodes = graph.get_next_nodes(weight_node)
