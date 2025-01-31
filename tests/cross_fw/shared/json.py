@@ -15,6 +15,13 @@ from typing import Dict
 
 import numpy as np
 
+from nncf.tensor import Tensor
+
+try:
+    import torch
+except ModuleNotFoundError:
+    torch = None
+
 
 def load_json(stats_path: Path):
     with open(stats_path, encoding="utf8") as json_file:
@@ -25,12 +32,16 @@ class NumpyEncoder(json.JSONEncoder):
     """Special json encoder for numpy types"""
 
     def default(self, o):
+        if isinstance(o, Tensor):
+            o = o.data
         if isinstance(o, np.integer):
             return int(o)
         if isinstance(o, np.floating):
             return float(o)
         if isinstance(o, np.ndarray):
             return o.tolist()
+        if isinstance(o, torch.Tensor):
+            return o.cpu().detach().numpy().tolist()
         return json.JSONEncoder.default(self, o)
 
 
