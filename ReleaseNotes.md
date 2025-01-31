@@ -10,6 +10,7 @@ Post-training Quantization:
   - ...
 - Features:
   - (TorchFX, Experimental) Preview support for the new `quantize_pt2e` API has been introduced, enabling quantization of `torch.fx.GraphModule` models with the `OpenVINOQuantizer` and the `X86InductorQuantizer` quantizers. `quantize_pt2e` API utilizes `MinMax` algorithm statistic collectors, as well as `SmoothQuant`, `BiasCorrection` and `FastBiasCorrection` Post-Training Quantization algorithms.
+  - (TensorFlow) The `nncf.quantize()` method is now the recommended way for the quantization initialization for Quantization-Aware Training. Please refer to an [example](examples/quantization_aware_training/tensorflow/mobilenet_v2) for more details about how to use new approach.
 - Fixes:
   - ...
 - Improvements:
@@ -17,7 +18,7 @@ Post-training Quantization:
   - AWQ weight compression is now up to 2x faster, improving overall runtime efficiency.
   - Peak memory usage during INT4 data-free weight compression in the OpenVINO backend is reduced up to 50% for certain models.
 - Deprecations/Removals:
-  - ...
+  - (TensorFlow) The `nncf.tensorflow.create_compressed_model()` method is now marked as deprecated. Please use the `nncf.quantize()` method for the quantization initialization.
 - Tutorials:
   - [Post-Training Optimization of GLM-Edge-V Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/glm-edge-v/glm-edge-v.ipynb)
   - [Post-Training Optimization of OmniGen Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/omnigen/omnigen.ipynb)
