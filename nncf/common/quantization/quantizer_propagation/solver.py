@@ -51,6 +51,7 @@ from nncf.common.scopes import should_consider_scope
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
+from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
 
 
 class TransitionStatus(Enum):
@@ -303,7 +304,11 @@ class QuantizerPropagationSolver:
 
     DEFAULT_QUANTIZATION_TYPES = [
         QuantizerConfig(
-            num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None, per_channel=False, narrow_range=False
+            num_bits=8,
+            mode=QuantizationMode.SYMMETRIC,
+            signedness_to_force=None,
+            per_channel=False,
+            narrow_range=QUANTIZATION_NARROW_RANGE,
         )
     ]
 
