@@ -24,7 +24,7 @@ from openvino.runtime import opset13 as opset
 
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
-from nncf.common.utils.cpu_info import IS_LNL_CPU
+from nncf.common.utils.cpu_info import is_lnl_cpu
 from nncf.common.utils.helpers import set_env_variable
 from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import non_convertable_divide_op
@@ -118,8 +118,8 @@ def clear_ov_model_cache():
 
 
 def _compile_ov_model(model: ov.Model, device_name: str, config: Dict[str, str]) -> ov.CompiledModel:
-    # TODO (Nikita Savelyev): Remove this in NNCF 2.16
-    if IS_LNL_CPU:
+    if is_lnl_cpu():
+        # TODO (Nikita Savelyev): Remove this in NNCF 2.16
         with set_env_variable("DNNL_MAX_CPU_ISA", "AVX2_VNNI"):
             compiled_model = ov.compile_model(model, device_name=device_name, config=config)
     else:
