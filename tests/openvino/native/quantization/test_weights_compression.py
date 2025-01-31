@@ -56,7 +56,7 @@ from tests.openvino.native.models import ModelNamedConsts
 from tests.openvino.native.models import OVReferenceModel
 from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import WeightsModel
-from tests.openvino.native.quantization.test_fq_params_calculation import REFERENCE_SCALES_DIR
+from tests.openvino.native.quantization.test_calculation_quantizer_params import REFERENCE_SCALES_DIR
 
 TEST_MODELS = {
     IntegerModel: ["matmul_2_data", "gather_2_data", "matmul_1_data"],
