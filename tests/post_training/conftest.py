@@ -20,9 +20,9 @@ def pytest_addoption(parser):
     parser.addoption("--cuda", action="store_true", help="Enable CUDA_TORCH backend")
     parser.addoption("--benchmark", action="store_true", help="Run benchmark_app")
     parser.addoption(
-        "--validate-in-backend",
+        "--torch-compile-validation",
         action="store_true",
-        help="Validate quantized model in native backend, not in openvino.",
+        help='Validate TorchFX quantized models via torch.compile(..., backend="openvino")',
     )
     parser.addoption(
         "--extra-columns",

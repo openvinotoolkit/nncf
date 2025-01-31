@@ -548,8 +548,9 @@ def test_constant_folding():
     check_graph(nncf_graph, "folded_model.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="Cuda is not available")
-def test_constant_folding_scalar_clone():
+def test_constant_folding_scalar_clone(use_cuda):
+    if not use_cuda:
+        pytest.skip("Cuda-only test")
     model = ScalarCloneTestModel().cuda()
     captured_model = get_torch_fx_model(model, torch.ones(model.INPUT_SIZE))
     assert captured_model.lifted_tensor_0.device == torch.device("cpu")

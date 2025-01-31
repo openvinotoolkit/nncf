@@ -15,6 +15,8 @@ from typing import Any, Callable, Dict, List, Optional
 import torch.fx
 import torch.utils._pytree as pytree
 
+from nncf.torch.utils import get_model_device
+
 aten = torch.ops.aten
 
 
@@ -233,20 +235,6 @@ def _is_impure(node: torch.fx.Node) -> bool:
 
     """
     return node.op in {"placeholder", "output"}
-
-
-def get_model_device(model: torch.fx.GraphModule) -> torch.device:
-    """
-    Returns device of the first model parameter of torch.device("cpu").
-
-    :param model: GraphModule instance.
-    :return: Device of the first model parameter of torch.device("cpu").
-    """
-    try:
-        device = next(model.parameters()).device
-    except StopIteration:
-        return torch.device("cpu")
-    return device
 
 
 def constant_fold(
