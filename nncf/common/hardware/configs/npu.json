@@ -408,7 +408,7 @@
             "type": "EmbeddingBag",
             "quantization": {
                 "weights": [
-                    "q8_w_sym", "q8_w_asym"
+                    "q8_w_sym_any_nr", "q8_w_asym"
                 ]
             }
         },
