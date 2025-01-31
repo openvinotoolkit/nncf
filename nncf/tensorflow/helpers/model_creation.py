@@ -25,6 +25,7 @@ from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.config.utils import is_experimental_quantization
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_TF_CATEGORY
+from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
 from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
 from nncf.tensorflow.algorithm_selector import NoCompressionAlgorithmBuilder
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
@@ -146,13 +147,20 @@ def get_input_signature(config: NNCFConfig):
     return input_signature if len(input_signature) > 1 else input_signature[0]
 
 
+@tracked_function(
+    NNCF_TF_CATEGORY,
+    [
+        FunctionCallTelemetryExtractor("nncf.tensorflow.load_from_config"),
+    ],
+)
 def load_from_config(model: tf.keras.Model, config: Dict[str, Any]) -> tf.keras.Model:
     """
-    TODO(TF)
+    Recovers additional modules from given config.
+    Does not recover additional modules weights as they are located in a corresponded checkpoint file.
 
-    :param model:
-    :parem config:
-    :return:
+    :param model: TensorFlow model.
+    :parem config: Config.
+    :return: tf.keras.Model builded from given model with additional layers recovered from given config.
     """
     quantizer_setup_state = config["quantization"]["quantizer_setup"]
     quantizer_setup = TFQuantizationSetup.from_state(quantizer_setup_state)

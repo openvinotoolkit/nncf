@@ -90,11 +90,13 @@ class TFCompressionStateLoader(tf.train.experimental.PythonState):
 
 class ConfigState(tf.train.experimental.PythonState):
     """
-    TODO(TF)
+    Used to save/load a config into the tf.train.Checkpoint.
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """ """
+        """
+        :param config: Config.
+        """
         self.config = config
 
     def serialize(self) -> str:
@@ -116,10 +118,10 @@ class ConfigState(tf.train.experimental.PythonState):
 
 def get_config(model: tf.keras.Model) -> Dict[str, Any]:
     """
-    TODO(TF)
+    Extracts the config from the model.
 
-    :param model:
-    :return:
+    :param model: Model.
+    :return: Config.
     """
     config = getattr(model, "_nncf_config")
     delattr(model, "_nncf_config")

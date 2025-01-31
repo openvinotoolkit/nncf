@@ -178,6 +178,9 @@ def quantize_impl(
 
     compression_ctrl, compressed_model = create_compressed_model(model=model, config=nncf_config)
 
+    # NOTE: We set the config here to properly save/load the quantized model during training into tf.train.Checkpoint.
+    # You can obtain that config via the nncf.tensorflow.get_config() method and save/load it to/from
+    # tf.train.Checkpoint using the nncf.tensorflow.ConfigState class.
     config = compression_ctrl.get_compression_state()["builder_state"]["quantization"]
     setattr(compressed_model, "_nncf_config", config)
 
