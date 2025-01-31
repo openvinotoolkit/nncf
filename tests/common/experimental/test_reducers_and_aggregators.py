@@ -567,9 +567,10 @@ class TemplateTestReducersAggregators:
             params["inplace"] = [False, True]
             params["channel_axis"] = [1, 2]
         else:
-            raise nncf.ValidationError(
+            msg = (
                 f"test_min_max_mean_reducer_hash_equal configurated in a wrong way. Wrong reducer_name: {reducer_name}"
             )
+            raise nncf.ValidationError(msg)
 
         def product_dict(**kwargs):
             keys = kwargs.keys()

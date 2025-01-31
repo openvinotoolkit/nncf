@@ -136,7 +136,8 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         graph_weight_node = get_graph_node_by_name(model.graph, weight_node.node_name)
         weight = get_tensor_constant_from_node(graph_weight_node, model).data
         if weight is None:
-            raise nncf.InternalError(f"Could not find a node in the model by name {weight_node}.")
+            msg = f"Could not find a node in the model by name {weight_node}."
+            raise nncf.InternalError(msg)
 
         return Tensor(weight)
 
@@ -194,12 +195,14 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 CompressWeightsMode.NF4,
                 CompressWeightsMode.E2M1,
             ]:
-                raise nncf.ParameterNotSupportedError(f"{compression_config.mode.value} is not supported.")
+                msg = f"{compression_config.mode.value} is not supported."
+                raise nncf.ParameterNotSupportedError(msg)
             weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
             weight_name = weight_node.node_name
             weight = self.get_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph)
             if weight is None or not isinstance(weight, Tensor):
-                raise nncf.InternalError(f"Could not find a nncf.tensor in the model by name {weight_name}.")
+                msg = f"Could not find a nncf.tensor in the model by name {weight_name}."
+                raise nncf.InternalError(msg)
 
             # calculates compressed weights and decompression parameters
             compressed_weight = compress_weight(

@@ -110,7 +110,7 @@ class RMNetBody(nn.Module):
                 stage.append(block(w, wb, w))
             stages.append(nn.Sequential(*stage))
 
-        self.stages = nn.Sequential(OrderedDict([("stage_{}".format(i), stage) for i, stage in enumerate(stages)]))
+        self.stages = nn.Sequential(OrderedDict([(f"stage_{i}", stage) for i, stage in enumerate(stages)]))
 
         self.init_weights()
 

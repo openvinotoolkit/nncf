@@ -10,22 +10,17 @@
 # limitations under the License.
 import os
 import os.path
-import sys
 from pathlib import Path
 from pathlib import PurePath
 from typing import Callable, Dict, Optional, Tuple
 
 import cv2
+import defusedxml.ElementTree as ET
 from PIL.Image import Image
 from torch.utils import data
 from torchvision import datasets
 
 from examples.torch.object_detection.utils.augmentations import Compose
-
-if sys.version_info[0] == 2:
-    import defusedxml.cElementTree as ET
-else:
-    import defusedxml.ElementTree as ET
 
 VOC_CLASSES = (  # always index 0
     "aeroplane",

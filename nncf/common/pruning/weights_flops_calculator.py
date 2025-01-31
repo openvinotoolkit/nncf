@@ -113,7 +113,8 @@ class WeightsFlopsCalculator:
                 continue
             layer_attr = node.layer_attributes
             if not isinstance(layer_attr, ConvolutionLayerAttributes):
-                raise nncf.InternalError(f"Unexpected layer attributes type for convolution layer: {type(layer_attr)}")
+                msg = f"Unexpected layer attributes type for convolution layer: {type(layer_attr)}"
+                raise nncf.InternalError(msg)
             num_in_channels = input_channels.get(name, layer_attr.in_channels)
             num_out_channels = output_channels.get(name, layer_attr.out_channels)
             kernel_size = kernel_sizes.get(name, layer_attr.kernel_size)
@@ -145,7 +146,8 @@ class WeightsFlopsCalculator:
 
             layer_attr = node.layer_attributes
             if not isinstance(layer_attr, LinearLayerAttributes):
-                raise nncf.InternalError(f"Unexpected layer attributes type for linear layer: {type(layer_attr)}")
+                msg = f"Unexpected layer attributes type for linear layer: {type(layer_attr)}"
+                raise nncf.InternalError(msg)
             num_in_features = input_channels.get(name, layer_attr.in_features)
             num_out_features = output_channels.get(name, layer_attr.out_features)
 

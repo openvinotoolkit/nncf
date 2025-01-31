@@ -57,4 +57,5 @@ class Unpickler(pickle.Unpickler):
                 return getattr(module, class_name)
 
         # Forbid everything else.
-        raise pickle.UnpicklingError("global '%s.%s' is forbidden" % (module_name, class_name))
+        msg = f"global '{module_name}.{class_name}' is forbidden"
+        raise pickle.UnpicklingError(msg)

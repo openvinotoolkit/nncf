@@ -49,18 +49,19 @@ def convert_fq_params_to_onnx_params(
     :return: Quantizer layer attributes.
     """
     if num_bits != 8:
-        raise ValueError("Can only export to INT8/UIN8 8 bits ONNX Quantize/Dequantize pairs.")
+        msg = "Can only export to INT8/UIN8 8 bits ONNX Quantize/Dequantize pairs."
+        raise ValueError(msg)
 
     levels = parameters.levels
     if levels not in [255, 256]:
-        raise ValueError("Can only export to INT8/UIN8 256-level ONNX Quantize/Dequantize pairs.")
+        msg = "Can only export to INT8/UIN8 256-level ONNX Quantize/Dequantize pairs."
+        raise ValueError(msg)
 
     input_low, input_high = parameters.input_low, parameters.input_high
     output_low, output_high = parameters.output_low, parameters.output_high
     if not fns.allclose(input_high, output_high) or not fns.allclose(input_low, output_low):
-        raise ValueError(
-            "ONNX Quantize/Dequantize pairs only support input_high == output_high and input_low == output_low."
-        )
+        msg = "ONNX Quantize/Dequantize pairs only support input_high == output_high and input_low == output_low."
+        raise ValueError(msg)
 
     level_low, level_high = get_level_low_level_high(tensor_type)
     narrow_range = levels == 2**num_bits - 1

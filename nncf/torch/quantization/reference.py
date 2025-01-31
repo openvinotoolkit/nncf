@@ -33,7 +33,8 @@ class ReferenceQuantize:
         elif backend_type is ReferenceBackendType.TORCH:
             self.backend = torch
         else:
-            raise nncf.UnsupportedBackendError("Unknown backend for ReferenceQuantize")
+            msg = "Unknown backend for ReferenceQuantize"
+            raise nncf.UnsupportedBackendError(msg)
 
     def _astype(self, tensor: GeneralizedTensor, dtype) -> GeneralizedTensor:
         if self.backend is np:

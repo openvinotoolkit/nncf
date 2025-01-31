@@ -54,7 +54,8 @@ class TensorStatistic:
             if isinstance(value, Tensor):
                 serialized_data[key] = value
             else:
-                raise nncf.InternalError(f"Unsupported type of value: {type(value)}")
+                msg = f"Unsupported type of value: {type(value)}"
+                raise nncf.InternalError(msg)
         return serialized_data
 
     def load_data(self, data: Dict[str, Tensor]) -> None:

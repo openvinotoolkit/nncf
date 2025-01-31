@@ -36,7 +36,8 @@ def get_files(folder, name_filter=None, extension_filter=None):
 
     """
     if not os.path.isdir(folder):
-        raise nncf.InvalidPathError('"{0}" is not a folder.'.format(folder))
+        msg = f'"{folder}" is not a folder.'
+        raise nncf.InvalidPathError(msg)
 
     # Filename filter: if not specified don't filter (condition always true);
     # otherwise, use a lambda expression to filter out files that do not
@@ -233,10 +234,12 @@ class LongTensorToRGBPIL:
         """
         # Check if label_tensor is a LongTensor
         if not isinstance(tensor, torch.LongTensor):
-            raise TypeError("label_tensor should be torch.LongTensor. Got {}".format(type(tensor)))
+            msg = f"label_tensor should be torch.LongTensor. Got {type(tensor)}"
+            raise TypeError(msg)
         # Check if encoding is a ordered dictionary
         if not isinstance(self.rgb_encoding, OrderedDict):
-            raise TypeError("encoding should be an OrderedDict. Got {}".format(type(self.rgb_encoding)))
+            msg = f"encoding should be an OrderedDict. Got {type(self.rgb_encoding)}"
+            raise TypeError(msg)
 
         # label_tensor might be an image without a channel dimension, in this
         # case unsqueeze it
@@ -365,9 +368,11 @@ def downsample_labels(labels, target_size=None, downsample_factor=None):
     H = labels.size()[1]
     W = labels.size()[2]
     if target_size is None and downsample_factor is None:
-        raise ValueError("Either target_size or downsample_factor must be specified")
+        msg = "Either target_size or downsample_factor must be specified"
+        raise ValueError(msg)
     if target_size is not None and downsample_factor is not None:
-        raise ValueError("Only one of the target_size and downsample_factor must be specified")
+        msg = "Only one of the target_size and downsample_factor must be specified"
+        raise ValueError(msg)
 
     if downsample_factor is None:
         h = target_size[0]

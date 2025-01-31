@@ -149,7 +149,7 @@ class PropagationGroup:
         consumers: Optional[Set[ConsumerInfo]] = None,
     ) -> None:
         self.block = block
-        self._children: List["PropagationGroup"] = []
+        self._children: List[PropagationGroup] = []
         self._is_invalid = False
         self._producers = set() if producers is None else producers
         self._consumers = set() if consumers is None else consumers

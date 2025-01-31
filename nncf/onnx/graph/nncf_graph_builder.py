@@ -225,11 +225,12 @@ class GraphConverter:
         name_counter = Counter([node.name for node in model.graph.node])
 
         if max(name_counter.values()) > 1:
-            raise nncf.ValidationError(
+            msg = (
                 f"Nodes {[(name, cnt) for name, cnt in name_counter.items() if cnt > 1]} "
                 "(name, counts) occurred more than once. "
                 "NNCF expects every node to have a unique name."
             )
+            raise nncf.ValidationError(msg)
 
         return model
 

@@ -131,7 +131,8 @@ class CustomJSONEncoder(json.JSONEncoder):
             return o.value
         if isinstance(o, (IgnoredScope, AdvancedQuantizationParameters, AdvancedAccuracyRestorerParameters)):
             return asdict(o)
-        raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
+        msg = f"Object of type {o.__class__.__name__} is not JSON serializable"
+        raise TypeError(msg)
 
 
 class ACValidationFunction:
@@ -237,9 +238,8 @@ class ACValidationFunction:
 
     def _output_callback(self, raw_predictions, **kwargs):
         if not ("metrics_result" in kwargs and "dataset_indices" in kwargs):
-            raise nncf.ValidationError(
-                "Expected `metrics_result`, `dataset_indices` be passed to output_callback inside accuracy checker"
-            )
+            msg = "Expected `metrics_result`, `dataset_indices` be passed to output_callback inside accuracy checker"
+            raise nncf.ValidationError(msg)
 
         metrics_result = kwargs["metrics_result"]
         if metrics_result is None:
@@ -324,34 +324,39 @@ def set_algorithm_parameters_context(ctx):
 def map_target_device(target_device):
     target_device = target_device.upper()
     if target_device not in [t.value for t in TargetDevice]:
-        raise ValueError(f"{target_device} target device is not supported")
+        msg = f"{target_device} target device is not supported"
+        raise ValueError(msg)
     return {"target_device": TargetDevice(target_device)}
 
 
 def map_model_type(model_type):
     model_type = model_type.lower()
     if model_type not in [m.value for m in ModelType]:
-        raise ValueError(f"{model_type} model type is not supported")
+        msg = f"{model_type} model type is not supported"
+        raise ValueError(msg)
     return {"model_type": ModelType(model_type)}
 
 
 def map_drop_type(drop_type):
     drop_type = drop_type.lower()
     if drop_type not in [m.value for m in DropType]:
-        raise ValueError(f"{drop_type} drop type is not supported")
+        msg = f"{drop_type} drop type is not supported"
+        raise ValueError(msg)
     return {"drop_type": DropType(drop_type)}
 
 
 def map_ignored_scope(ignored):
     if ignored.get("skip_model") is not None:
-        raise ValueError("skip_model attribute in the ignored tag is not supported")
+        msg = "skip_model attribute in the ignored tag is not supported"
+        raise ValueError(msg)
 
     operations = ignored.get("operations")
     ignored_operations = []
     if operations is not None:
         for op in operations:
             if op.get("attributes") is not None:
-                raise ValueError('"attributes" in the ignored operations ' "are not supported")
+                msg = '"attributes" in the ignored operations ' "are not supported"
+                raise ValueError(msg)
             ignored_operations.append(op["type"])
     return {"ignored_scope": IgnoredScope(names=ignored.get("scope", []), types=ignored_operations)}
 
@@ -359,7 +364,8 @@ def map_ignored_scope(ignored):
 def map_preset(preset):
     preset = preset.lower()
     if preset not in [p.value for p in QuantizationPreset]:
-        raise ValueError(f"{preset} preset is not supported")
+        msg = f"{preset} preset is not supported"
+        raise ValueError(msg)
     return {"preset": QuantizationPreset(preset)}
 
 
@@ -376,7 +382,8 @@ def update_statistics_collector_parameters(
 ):
     granularity = pot_config.get("granularity")
     if granularity is not None:
-        raise ValueError('"granularity" parameter in the range estimator is not supported')
+        msg = '"granularity" parameter in the range estimator is not supported'
+        raise ValueError(msg)
 
     stat_collector_names = ["statistics_type", "aggregator_type", "clipping_value", "quantile_outlier_prob"]
     stat_collector_types = [StatisticsType, AggregatorType, float, float]
@@ -400,7 +407,8 @@ def update_range_estimator_parameters(
 ):
     preset = pot_config.get("preset")
     if preset is not None:
-        raise ValueError('"preset" parameter in the range estimator is not supported')
+        msg = '"preset" parameter in the range estimator is not supported'
+        raise ValueError(msg)
 
     min_config = pot_config.get("min")
     max_config = pot_config.get("max")
@@ -442,10 +450,12 @@ def map_range_estmator(range_estimator):
 def update_quantization_parameters(quantization_params, pot_config):
     level_low = pot_config.get("level_low")
     if level_low is not None:
-        raise ValueError('"level_low" parameter is not supported')
+        msg = '"level_low" parameter is not supported'
+        raise ValueError(msg)
     level_high = pot_config.get("level_high")
     if level_high is not None:
-        raise ValueError('"level_high" parameter is not supported')
+        msg = '"level_high" parameter is not supported'
+        raise ValueError(msg)
     num_bits = pot_config.get("bits")
     if num_bits is not None:
         quantization_params.num_bits = num_bits
@@ -456,7 +466,8 @@ def update_quantization_parameters(quantization_params, pot_config):
         elif mode == "asymmetric":
             quantization_params.mode = QuantizationScheme.ASYMMETRIC
         else:
-            raise ValueError(f"mode = {mode} is not supported")
+            msg = f"mode = {mode} is not supported"
+            raise ValueError(msg)
     granularity = pot_config.get("granularity")
     if granularity is not None:
         if granularity == "perchannel":
@@ -464,7 +475,8 @@ def update_quantization_parameters(quantization_params, pot_config):
         elif mode == "pertensor":
             quantization_params.per_channel = False
         else:
-            raise ValueError(f"granularity = {granularity} is not supported")
+            msg = f"granularity = {granularity} is not supported"
+            raise ValueError(msg)
 
 
 def map_weights(weights):
@@ -548,7 +560,8 @@ def map_smooth_quant_alpha(smooth_quant_alpha):
 
 def map_mode(mode):
     if not hasattr(QuantizationMode, mode):
-        raise ValueError(f"{mode} mode is not supported")
+        msg = f"{mode} mode is not supported"
+        raise ValueError(msg)
     return {"mode": getattr(QuantizationMode, mode)}
 
 
@@ -610,7 +623,8 @@ def create_parameters_for_algorithm(
                 if kwarg is not None:
                     ctx.params.update(kwarg)
             else:
-                raise ValueError(f"{name} parameter is not supported")
+                msg = f"{name} parameter is not supported"
+                raise ValueError(msg)
 
         return ctx.params
 
@@ -714,18 +728,21 @@ def map_paramaters(pot_algo_name, nncf_algo_name, pot_parameters, output_dir):
         return map_quantization_parameters(pot_parameters)
     if nncf_algo_name == "quantize_with_accuracy_control":
         return map_quantize_with_accuracy_control_parameters(pot_parameters, output_dir)
-    raise ValueError(f"Mapping POT {pot_algo_name} parameters to NNCF {nncf_algo_name} parameters is not supported")
+    msg = f"Mapping POT {pot_algo_name} parameters to NNCF {nncf_algo_name} parameters is not supported"
+    raise ValueError(msg)
 
 
 def get_model_paths(model_config):
     if model_config.cascade:
-        raise ValueError("Cascade models are not supported yet.")
+        msg = "Cascade models are not supported yet."
+        raise ValueError(msg)
     return model_config.model, model_config.weights
 
 
 def get_accuracy_checker_config(engine_config):
     if engine_config.type != "accuracy_checker":
-        raise ValueError(f"Engine type {engine_config.type} is not supported.")
+        msg = f"Engine type {engine_config.type} is not supported."
+        raise ValueError(msg)
     return engine_config
 
 
@@ -735,7 +752,8 @@ def get_nncf_algorithms_config(compression_config, output_dir):
     for pot_algo in compression_config.algorithms:
         pot_algo_name = pot_algo.name
         if pot_algo_name not in MAP_POT_NNCF_ALGORITHMS:
-            raise ValueError(f"Algorithm {pot_algo_name} is not supported.")
+            msg = f"Algorithm {pot_algo_name} is not supported."
+            raise ValueError(msg)
 
         nncf_algo_name = MAP_POT_NNCF_ALGORITHMS[pot_algo_name]["method"]
         advanced_parameters = MAP_POT_NNCF_ALGORITHMS[pot_algo_name].get("advanced_parameters", None)
@@ -788,23 +806,24 @@ def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
         model_inputs_shapes[input_to_tensor_name[input_node.friendly_name]] = tuple(partial_shape)
 
     if len(dataset_inputs_shapes) != len(model_inputs_shapes):
-        raise nncf.InternalError(
+        msg = (
             f"Model inputs: {list(model_inputs_shapes.keys())}"
             f" and dataset inputs {list(dataset_inputs_shapes.keys())} are not compatible"
         )
+        raise nncf.InternalError(msg)
 
     for name in model_inputs_shapes:
         if name not in dataset_inputs_shapes:
-            raise nncf.ValidationError(
-                f"Model input {name} is not present in dataset inputs: {list(dataset_inputs_shapes.keys())}"
-            )
+            msg = f"Model input {name} is not present in dataset inputs: {list(dataset_inputs_shapes.keys())}"
+            raise nncf.ValidationError(msg)
 
     dynamic_dims = defaultdict(list)
     reshaped_static_dims = defaultdict(list)
     for name, shapes in dataset_inputs_shapes.items():
         shapes = list(shapes)
         if len(set(len(shape) for shape in shapes)) != 1 or len(model_inputs_shapes[name]) != len(shapes[0]):
-            raise nncf.InternalError("calibrate.py does not support dataset with dynamic ranks")
+            msg = "calibrate.py does not support dataset with dynamic ranks"
+            raise nncf.InternalError(msg)
 
         for idx in range(len(shapes[0])):
             if len(shapes) == 1:
@@ -1182,7 +1201,8 @@ def main():
             keys = ["xml_path", "quantization_parameters"]
             dump_to_json(path, quantize_model_arguments, keys)
         else:
-            raise nncf.InternalError(f"Support for {algo_name} is not implemented in the optimize tool.")
+            msg = f"Support for {algo_name} is not implemented in the optimize tool."
+            raise nncf.InternalError(msg)
 
     model_name = config.model.model_name
     output_model_path = os.path.join(output_dir, f"{model_name}.xml")

@@ -79,7 +79,7 @@ def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
 
 
 TARGET_LAYERS = ["Conv1", "BN1", "ReLU1"]
-QUANTIZER_SCALES = [np.array(3.0), 13.2 * np.ones((32)), np.array(17.1)]
+QUANTIZER_SCALES = [np.array(3.0), 13.2 * np.ones(32), np.array(17.1)]
 QUANTIZER_ZERO_POINT = [np.array(1, dtype=np.int32), 2 * np.ones((32), dtype=np.int32), np.array(0, dtype=np.int32)]
 QUANTIZER_ONNX_DTYPE = [np.dtype(np.int8), np.dtype(np.int8), np.dtype(np.uint8)]
 QUANTIZER_ONNX_ATTRIBUTES = [{"axis": 0}, {"axis": 0}, {"axis": 0}]

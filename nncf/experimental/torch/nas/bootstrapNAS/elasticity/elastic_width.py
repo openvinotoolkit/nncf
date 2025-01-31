@@ -128,11 +128,11 @@ class ElasticWidthOp:
         :param width: number of channels
         """
         if width is None or width > self._max_width or width < 1:
-            raise AttributeError(
-                "Invalid width={} in scope={}.\nIt should be within the range: [1, {}]".format(
-                    width, self._node_name, self._max_width
-                )
+            msg = (
+                f"Invalid width={width} in scope={self._node_name}.\n"
+                f"It should be within the range: [1, {self._max_width}]"
             )
+            raise AttributeError(msg)
 
         self._active_width = width
 
@@ -282,11 +282,11 @@ class ElasticOutputWidthOp(ElasticWidthOp):
         if fixed_width_list:
             fixed_width_list.sort(reverse=True)
             if fixed_width_list[0] > max_width:
-                raise nncf.InternalError(
-                    f"Width list for {node_name} contains invalid values: {fixed_width_list}, {max_width}"
-                )
+                msg = f"Width list for {node_name} contains invalid values: {fixed_width_list}, {max_width}"
+                raise nncf.InternalError(msg)
             if fixed_width_list[0] != max_width:
-                raise nncf.ValidationError(f"Max width for {node_name} is not aligned with pre-trained model")
+                msg = f"Max width for {node_name} is not aligned with pre-trained model"
+                raise nncf.ValidationError(msg)
             self._width_list = fixed_width_list
         else:
             self._width_list = self._generate_width_list(self._max_width, params)
@@ -315,10 +315,11 @@ class ElasticOutputWidthOp(ElasticWidthOp):
         :param width: number of output channels
         """
         if width not in self.width_list and width != self.max_width:
-            raise ValueError(
+            msg = (
                 f"Invalid number of output channels to set: {width} in scope={self._node_name}. "
                 f"Should be a number in {self.width_list}"
             )
+            raise ValueError(msg)
         super().set_active_width(width)
 
     @staticmethod
@@ -360,7 +361,8 @@ class ElasticOutputWidthOp(ElasticWidthOp):
                 if p.max_num_widths == len(width_list):
                     break
                 if 0 >= multiplier > 1:
-                    raise nncf.InternalError(f"Wrong value for multiplier: {multiplier}")
+                    msg = f"Wrong value for multiplier: {multiplier}"
+                    raise nncf.InternalError(msg)
                 w = int(max_width * multiplier)
                 w = w - (w % ALIGNMENT_CONSTANT_FOR_MULTIPLIERS)
                 w = max(w, p.min_width)
@@ -579,7 +581,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
     @width_num_params_indicator.setter
     def width_num_params_indicator(self, width_num_params_indicator):
         if width_num_params_indicator == 0 or width_num_params_indicator < -1:
-            raise nncf.InternalError(f"Invalid width indicator: {width_num_params_indicator}")
+            msg = f"Invalid width indicator: {width_num_params_indicator}"
+            raise nncf.InternalError(msg)
         self._width_num_params_indicator = width_num_params_indicator
 
     @property
@@ -909,7 +912,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
         for cluster in self._pruned_module_groups_info.get_all_clusters():
             all_max_out_channels = {el.elastic_op.max_width for el in cluster.elements}
             if len(all_max_out_channels) != 1:
-                raise nncf.InternalError("Invalid grouping of layers with different number of output channels")
+                msg = "Invalid grouping of layers with different number of output channels"
+                raise nncf.InternalError(msg)
 
             first_elastic_width_info = next(iter(cluster.elements))
             op = first_elastic_width_info.elastic_op
@@ -1040,7 +1044,8 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                 list_of_node_ids.append(node.node_id)
                 layer_attrs = node.layer_attributes
                 if metatype not in metatype_vs_elastic_op_creator:
-                    raise nncf.InternalError(f"Elastic width is not supported for {metatype}")
+                    msg = f"Elastic width is not supported for {metatype}"
+                    raise nncf.InternalError(msg)
                 elastic_op_creator = metatype_vs_elastic_op_creator[metatype]
 
                 elastic_width_operation = elastic_op_creator(
@@ -1130,7 +1135,8 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
             self._overwrite_groups_widths = params_from_state[self._state_names.OVERWRITE_GROUP_WIDTHS]
             self._overwriting_pruning_groups = True
             if len(self._grouped_node_names_to_prune) != len(self._overwrite_groups_widths):
-                raise nncf.InternalError("Mismatch between number of groups for pruning and their corresponding widths")
+                msg = "Mismatch between number of groups for pruning and their corresponding widths"
+                raise nncf.InternalError(msg)
         if params_from_state.get(self._state_names.ADD_DYNAMIC_INPUTS, None) is not None:
             self._add_dynamic_inputs = params_from_state[self._state_names.ADD_DYNAMIC_INPUTS]
 

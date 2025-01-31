@@ -81,11 +81,11 @@ class ScaleEstimation:
 
             self._backend_entity = PTWeightCompressionAlgoBackend()
         else:
-            raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific Scale Estimation entity because {} is not supported!".format(
-                    model_backend.value
-                )
+            msg = (
+                "Cannot return backend-specific Scale Estimation entity because"
+                f" {model_backend.value} is not supported!"
             )
+            raise nncf.UnsupportedBackendError(msg)
 
     def apply(
         self,

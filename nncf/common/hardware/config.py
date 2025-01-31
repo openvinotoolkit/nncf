@@ -141,7 +141,8 @@ class HWConfig(list[Dict[str, Any]], ABC):
             return QuantizationMode.SYMMETRIC
         if str_val == "asymmetric":
             return QuantizationMode.ASYMMETRIC
-        raise nncf.ValidationError("Invalid quantization type specified in HW config")
+        msg = "Invalid quantization type specified in HW config"
+        raise nncf.ValidationError(msg)
 
     @staticmethod
     def get_is_per_channel_from_config_value(str_val: str) -> bool:
@@ -149,7 +150,8 @@ class HWConfig(list[Dict[str, Any]], ABC):
             return True
         if str_val == "pertensor":
             return False
-        raise nncf.ValidationError("Invalid quantization granularity specified in HW config")
+        msg = "Invalid quantization granularity specified in HW config"
+        raise nncf.ValidationError(msg)
 
     @staticmethod
     def get_qconf_from_hw_config_subdict(quantization_subdict: Dict[str, Any]) -> QuantizerConfig:
@@ -204,8 +206,8 @@ class HWConfig(list[Dict[str, Any]], ABC):
             metatypes = self._get_metatypes_for_hw_config_op(hw_config_op_name)
             if not metatypes:
                 nncf_logger.debug(
-                    "Operation name {} in HW config is not registered in NNCF under any supported operation "
-                    "metatype - will be ignored".format(hw_config_op_name)
+                    f"Operation name {hw_config_op_name} in HW config is not registered in NNCF"
+                    " under any supported operation metatype - will be ignored"
                 )
 
             if self.QUANTIZATION_ALGORITHM_NAME in op_dict:
@@ -239,8 +241,8 @@ class HWConfig(list[Dict[str, Any]], ABC):
                     metatypes = self._get_metatypes_for_hw_config_op(hw_config_op_name)
                     if not metatypes:
                         nncf_logger.debug(
-                            "Operation name {} in HW config is not registered in NNCF under any supported "
-                            "operation metatype - will be ignored".format(hw_config_op_name)
+                            f"Operation name {hw_config_op_name} in HW config is not registered in NNCF"
+                            " under any supported operation metatype - will be ignored"
                         )
                     result.update(metatypes)
         return result
@@ -258,7 +260,7 @@ class HWConfig(list[Dict[str, Any]], ABC):
                 metatypes.add(op_meta)
         if not metatypes:
             nncf_logger.debug(
-                "Operation name {} in HW config is not registered in NNCF under any supported "
-                "operation metatype - will be ignored".format(hw_config_op)
+                f"Operation name {hw_config_op} in HW config is not registered in NNCF under any supported "
+                "operation metatype - will be ignored"
             )
         return metatypes

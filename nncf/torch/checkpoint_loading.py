@@ -131,7 +131,7 @@ class ProcessedKeys:
         error_msgs = []
 
         def add_error_msg(name, keys_):
-            error_msgs.insert(0, "{} key(s):\n{}. ".format(name, ",\n".join('\t\t"{}"'.format(k) for k in keys_)))
+            error_msgs.insert(0, "{} key(s):\n{}. ".format(name, ",\n".join(f'\t\t"{k}"' for k in keys_)))
 
         for key_status, keys in self._keys.items():
             is_missing = key_status == ProcessedKeyStatus.MISSING

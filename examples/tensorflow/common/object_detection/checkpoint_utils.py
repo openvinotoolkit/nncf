@@ -64,7 +64,7 @@ def _build_assignment_map(keras_model, prefix="", skip_variables_regex=None, var
 
         try:
             if match_names:
-                assert len(match_names) == 1, "more then on matches for {}: {}".format(var_name, match_names)
+                assert len(match_names) == 1, f"more then on matches for {var_name}: {match_names}"
                 checkpoint_names.remove(match_names[0])
                 assignment_map[match_names[0]] = var
             else:
@@ -119,7 +119,8 @@ def make_restore_checkpoint_fn(checkpoint_path, prefix="", skip_regex=None):
         )
 
         if not vars_to_load:
-            raise ValueError("Variables to load is empty.")
+            msg = "Variables to load is empty."
+            raise ValueError(msg)
 
         tf.compat.v1.train.init_from_checkpoint(checkpoint_path, vars_to_load)
 

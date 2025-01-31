@@ -155,9 +155,8 @@ def validate_single_compression_algo_schema(
     algo-specific properties"""
     algo_name = single_compression_algo_dict["algorithm"]
     if algo_name not in ref_vs_algo_schema:
-        raise jsonschema.ValidationError(
-            f"Incorrect algorithm name - must be one of {str(list(ref_vs_algo_schema.keys()))}"
-        )
+        msg = f"Incorrect algorithm name - must be one of {str(list(ref_vs_algo_schema.keys()))}"
+        raise jsonschema.ValidationError(msg)
     try:
         jsonschema.validate(single_compression_algo_dict, schema=ref_vs_algo_schema[algo_name])
     except jsonschema.ValidationError as e:
@@ -181,11 +180,10 @@ def validate_accuracy_aware_training_schema(single_compression_algo_dict: Dict[s
     jsonschema.validate(single_compression_algo_dict, schema=ACCURACY_AWARE_TRAINING_SCHEMA)
     accuracy_aware_mode = single_compression_algo_dict.get("mode")
     if accuracy_aware_mode not in ACCURACY_AWARE_MODES_VS_SCHEMA:
-        raise jsonschema.ValidationError(
-            "Incorrect Accuracy Aware mode - must be one of ({})".format(
-                ", ".join(ACCURACY_AWARE_MODES_VS_SCHEMA.keys())
-            )
+        msg = "Incorrect Accuracy Aware mode - must be one of ({})".format(
+            ", ".join(ACCURACY_AWARE_MODES_VS_SCHEMA.keys())
         )
+        raise jsonschema.ValidationError(msg)
     try:
         jsonschema.validate(single_compression_algo_dict, schema=ACCURACY_AWARE_MODES_VS_SCHEMA[accuracy_aware_mode])
     except Exception as e:

@@ -23,7 +23,7 @@ class ScopeElement:
     def __str__(self):
         if self.calling_field_name is None:
             return self.calling_module_class_name
-        return "{cls}[{name}]".format(cls=self.calling_module_class_name, name=self.calling_field_name)
+        return f"{self.calling_module_class_name}[{self.calling_field_name}]"
 
     def __eq__(self, other: "ScopeElement"):
         return (self.calling_module_class_name == other.calling_module_class_name) and (
@@ -37,12 +37,14 @@ class ScopeElement:
     def from_str(string: str):
         matches = re.search(r"(.*)\[(.*)\]|(.*)", string)
         if matches is None:
-            raise nncf.InternalError("Invalid scope element string")
+            msg = "Invalid scope element string"
+            raise nncf.InternalError(msg)
         if matches.groups()[0] is None and matches.groups()[1] is None:
             return ScopeElement(matches.groups()[2])
         if matches.groups()[0] is not None and matches.groups()[1] is not None:
             return ScopeElement(matches.groups()[0], matches.groups()[1])
-        raise nncf.InternalError("Could not parse the scope element string")
+        msg = "Could not parse the scope element string"
+        raise nncf.InternalError(msg)
 
 
 class Scope:

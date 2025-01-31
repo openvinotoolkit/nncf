@@ -88,7 +88,8 @@ class MultiStepSchedule:
             equal to the number of elements in the `boundaries` list plus one.
         """
         if len(boundaries) + 1 != len(values):
-            raise ValueError("The length of `values` should be 1 more than the length of `boundaries`")
+            msg = "The length of `values` should be 1 more than the length of `boundaries`"
+            raise ValueError(msg)
 
         self.boundaries = boundaries
         self.values = values

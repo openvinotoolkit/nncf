@@ -94,10 +94,11 @@ class ExperimentalPostTrainingQuantization(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         if dataset is None and len(self._pipeline.pipeline_steps) > 1:
-            raise ValueError(
+            msg = (
                 "A dataset is required for the post-training quantization "
                 "algorithm to collect statistics for intermediate models."
             )
+            raise ValueError(msg)
 
         step_index_to_statistics = None
         if statistic_points:

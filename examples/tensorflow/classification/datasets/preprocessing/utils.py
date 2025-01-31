@@ -41,10 +41,12 @@ def mean_image_subtraction(
     :return: the centered image.
     """
     if image.get_shape().ndims != 3:
-        raise nncf.ValidationError("Input must be of size [height, width, C>0]")
+        msg = "Input must be of size [height, width, C>0]"
+        raise nncf.ValidationError(msg)
 
     if len(means) != num_channels:
-        raise nncf.ValidationError("len(means) must match the number of channels")
+        msg = "len(means) must match the number of channels"
+        raise nncf.ValidationError(msg)
 
     means = tf.broadcast_to(means, tf.shape(image))
     if dtype is not None:
@@ -66,10 +68,12 @@ def standardize_image(
     :return: the centered image.
     """
     if image.get_shape().ndims != 3:
-        raise nncf.ValidationError("Input must be of size [height, width, C>0]")
+        msg = "Input must be of size [height, width, C>0]"
+        raise nncf.ValidationError(msg)
 
     if len(stddev) != num_channels:
-        raise nncf.ValidationError("len(stddev) must match the number of channels")
+        msg = "len(stddev) must match the number of channels"
+        raise nncf.ValidationError(msg)
 
     stddev = tf.broadcast_to(stddev, tf.shape(image))
     if dtype is not None:

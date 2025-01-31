@@ -61,10 +61,10 @@ class NNCFGraphFactory:
                 return model.build_graph()
             if isinstance(model, NNCFNetwork):
                 return model.nncf.get_graph()
-            raise nncf.InternalError(f"Unexpected type of model {type(model)} for TORCH backend")
-        raise nncf.UnsupportedBackendError(
-            f"Cannot create backend-specific graph because {model_backend.value} is not supported!"
-        )
+            msg = f"Unexpected type of model {type(model)} for TORCH backend"
+            raise nncf.InternalError(msg)
+        msg = f"Cannot create backend-specific graph because {model_backend.value} is not supported!"
+        raise nncf.UnsupportedBackendError(msg)
 
 
 class ModelTransformerFactory:
@@ -108,9 +108,8 @@ class ModelTransformerFactory:
             from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 
             return FXModelTransformer(cast(GraphModule, model))
-        raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific model transformer because {} is not supported!".format(model_backend.value)
-        )
+        msg = f"Cannot create backend-specific model transformer because {model_backend.value} is not supported!"
+        raise nncf.UnsupportedBackendError(msg)
 
 
 class EngineFactory:
@@ -146,9 +145,8 @@ class EngineFactory:
             else:
                 pt_model = cast(Module, model)
             return PTEngine(pt_model)
-        raise nncf.UnsupportedBackendError(
-            f"Cannot create backend-specific engine because {model_backend.value} is not supported!"
-        )
+        msg = f"Cannot create backend-specific engine because {model_backend.value} is not supported!"
+        raise nncf.UnsupportedBackendError(msg)
 
 
 class CommandCreatorFactory:
@@ -171,9 +169,8 @@ class CommandCreatorFactory:
 
             return ONNXCommandCreator()
 
-        raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific command creator because {} is not supported!".format(model_backend.value)
-        )
+        msg = f"Cannot create backend-specific command creator because {model_backend.value} is not supported!"
+        raise nncf.UnsupportedBackendError(msg)
 
 
 class StatisticsAggregatorFactory:
@@ -206,8 +203,5 @@ class StatisticsAggregatorFactory:
             from nncf.experimental.torch.fx.statistics.aggregator import FXStatisticsAggregator
 
             return FXStatisticsAggregator(dataset)
-        raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific statistics aggregator because {} is not supported!".format(
-                model_backend.value
-            )
-        )
+        msg = f"Cannot create backend-specific statistics aggregator because {model_backend.value} is not supported!"
+        raise nncf.UnsupportedBackendError(msg)

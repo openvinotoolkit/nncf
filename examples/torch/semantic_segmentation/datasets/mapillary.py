@@ -114,7 +114,8 @@ class Mapillary(data.Dataset):
                 os.path.join(self.root_dir, self.test_lbl_folder), extension_filter=self.label_extension
             )
         else:
-            raise nncf.ValidationError("Unexpected dataset mode. Supported modes are: train, val and test")
+            msg = "Unexpected dataset mode. Supported modes are: train, val and test"
+            raise nncf.ValidationError(msg)
 
     def __getitem__(self, index):
         """
@@ -133,7 +134,8 @@ class Mapillary(data.Dataset):
         elif self.mode.lower() == "test":
             data_path, label_path = self.test_data[index], self.test_labels[index]
         else:
-            raise nncf.ValidationError("Unexpected dataset mode. Supported modes are: train, val and test")
+            msg = "Unexpected dataset mode. Supported modes are: train, val and test"
+            raise nncf.ValidationError(msg)
 
         img, color_labels = self.loader(data_path, label_path)
         label = data_utils.color_to_label(color_labels, self.color_encoding)
@@ -152,4 +154,5 @@ class Mapillary(data.Dataset):
         if self.mode.lower() == "test":
             return len(self.test_data)
 
-        raise nncf.ValidationError("Unexpected dataset mode. Supported modes are: train, val and test")
+        msg = "Unexpected dataset mode. Supported modes are: train, val and test"
+        raise nncf.ValidationError(msg)

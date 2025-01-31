@@ -98,4 +98,5 @@ class Model:
 
     def eval_metrics(self):
         """Returns tuple of metric function and its inputs for evaluation."""
-        raise NotImplementedError("Unimplemented eval_metrics")
+        msg = "Unimplemented eval_metrics"
+        raise NotImplementedError(msg)

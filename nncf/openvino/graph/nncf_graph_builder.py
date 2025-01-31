@@ -64,7 +64,8 @@ class GraphConverter:
             "string": "int",
         }
         if type_name not in conversion_map:
-            raise NotImplementedError(f"NNCF is not yet supported OpenVINO data type: {type_name}.")
+            msg = f"NNCF is not yet supported OpenVINO data type: {type_name}."
+            raise NotImplementedError(msg)
         return Dtype(conversion_map[type_name])
 
     @staticmethod

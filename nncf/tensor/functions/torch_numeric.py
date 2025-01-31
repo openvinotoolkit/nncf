@@ -62,7 +62,8 @@ def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> to
         return a.squeeze()
     if isinstance(axis, Tuple) and any(a.shape[i] != 1 for i in axis):
         # Make Numpy behavior, torch.squeeze skips axes that are not equal to one..
-        raise ValueError("Cannot select an axis to squeeze out which has size not equal to one")
+        msg = "Cannot select an axis to squeeze out which has size not equal to one"
+        raise ValueError(msg)
     return a.squeeze(axis)
 
 
@@ -390,14 +391,16 @@ def _(a: torch.Tensor, axis: Union[int, Tuple[int, ...], List[int]]) -> np.ndarr
         axis = (axis,)
 
     if len(set(axis)) != len(axis):
-        raise ValueError("repeated axis")
+        msg = "repeated axis"
+        raise ValueError(msg)
 
     out_ndim = len(axis) + a.dim()
 
     norm_axis = []
     for ax in axis:
         if ax < -out_ndim or ax >= out_ndim:
-            raise ValueError(f"axis {ax} is out of bounds for array of dimension {out_ndim}")
+            msg = f"axis {ax} is out of bounds for array of dimension {out_ndim}"
+            raise ValueError(msg)
         norm_axis.append(ax + out_ndim if ax < 0 else ax)
 
     shape_it = iter(a.shape)
@@ -413,9 +416,11 @@ def _(a: torch.Tensor) -> torch.Tensor:
 @numeric.searchsorted.register(torch.Tensor)
 def _(a: torch.Tensor, v: torch.Tensor, side: str = "left", sorter: Optional[torch.Tensor] = None) -> torch.Tensor:
     if side not in ["right", "left"]:
-        raise ValueError(f"Invalid value for 'side': {side}. Expected 'right' or 'left'.")
+        msg = f"Invalid value for 'side': {side}. Expected 'right' or 'left'."
+        raise ValueError(msg)
     if a.dim() != 1:
-        raise ValueError(f"Input tensor 'a' must be 1-D. Received {a.dim()}-D tensor.")
+        msg = f"Input tensor 'a' must be 1-D. Received {a.dim()}-D tensor."
+        raise ValueError(msg)
     return torch.searchsorted(sorted_sequence=a, input=v, right=(side == "right"), sorter=sorter)
 
 

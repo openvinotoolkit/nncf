@@ -50,11 +50,12 @@ class TFTracingContextState:
         self._wrap_ops = wrap_ops
 
         if model is None and in_call:
-            raise ValueError(
+            msg = (
                 f"Inconsisten values `{in_call}` and `{model}` for `in_call` and `model` parameters. "
                 "The `None` value is specified that model is undefined at this moment. This is only "
                 "possible when `in_call` is equal to `False`."
             )
+            raise ValueError(msg)
 
         self._model = model
 

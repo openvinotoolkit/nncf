@@ -91,8 +91,4 @@ class ProgressBar(Generic[TObj]):
             num_empty = self._width - num_filled
             filled = "█" * num_filled
             empty = " " * num_empty
-            self._logger.info(
-                "{desc} |{filled}{empty}| {index} / {total}".format(
-                    desc=self._desc, filled=filled, empty=empty, index=self._index, total=self._total
-                )
-            )
+            self._logger.info(f"{self._desc} |{filled}{empty}| {self._index} / {self._total}")

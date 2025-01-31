@@ -167,6 +167,7 @@ class PTAdaptiveCompressionLevelTrainingRunner(
         base_path = osp.join(self._checkpoint_save_dir, "acc_aware_checkpoint")
         if is_best:
             if compression_rate is None:
-                raise ValueError("Compression rate cannot be None")
+                msg = "Compression rate cannot be None"
+                raise ValueError(msg)
             return f"{base_path}_best_{compression_rate:.3f}{extension}"
         return f"{base_path}_last{extension}"

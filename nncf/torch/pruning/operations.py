@@ -558,9 +558,7 @@ class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
         ln.bias.data = torch.index_select(ln.bias.data, 0, reorder_indexes)
 
         nncf_logger.debug(
-            "Reordered channels (first 10 reorder indexes {}) of LayerNorm: {} ".format(
-                reorder_indexes[:10], node.node_key
-            )
+            f"Reordered channels (first 10 reorder indexes {reorder_indexes[:10]}) of LayerNorm: {node.node_key} "
         )
 
     @classmethod
@@ -575,7 +573,8 @@ class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
         node_module = model.nncf.get_containing_module(node.node_name)
 
         if prun_type == PrunType.CUT_WEIGHTS:
-            raise nncf.InternalError("LayerNorm does not support pruning by cutting channels")
+            msg = "LayerNorm does not support pruning by cutting channels"
+            raise nncf.InternalError(msg)
 
         node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.weight))
         node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.bias))

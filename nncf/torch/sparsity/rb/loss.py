@@ -44,9 +44,8 @@ class SparseLoss(PTCompressionLoss):
         sparse_prob_sum = 0
         for sparse_layer in self._sparse_layers:
             if not self.disabled and sparse_layer.frozen:
-                raise AssertionError(
-                    "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss"
-                )
+                msg = "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss"
+                raise AssertionError(msg)
             if not sparse_layer.frozen:
                 sw_loss = sparse_layer.loss()
                 params = params + sw_loss.view(-1).size(0)
@@ -61,7 +60,8 @@ class SparseLoss(PTCompressionLoss):
     def target_sparsity_rate(self):
         rate = 1 - self.target
         if rate < 0 or rate > 1:
-            raise IndexError("Target is not within range(0,1)")
+            msg = "Target is not within range(0,1)"
+            raise IndexError(msg)
         return rate
 
     def set_target_sparsity_loss(self, sparsity_level):
@@ -84,9 +84,8 @@ class SparseLossForPerLayerSparsity(SparseLoss):
         sparse_layers_loss = 0
         for sparse_layer in self._sparse_layers:
             if not self.disabled and not sparse_layer.sparsify:
-                raise AssertionError(
-                    "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss"
-                )
+                msg = "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss"
+                raise AssertionError(msg)
             if sparse_layer.sparsify:
                 sw_loss = sparse_layer.loss()
                 params_layer = sw_loss.view(-1).size(0)

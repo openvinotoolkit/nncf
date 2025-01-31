@@ -36,7 +36,8 @@ def convert_quantization_mode(mode: Optional[str]) -> QuantizationScheme:
         return QuantizationScheme.SYMMETRIC
     if mode == "asymmetric":
         return QuantizationScheme.ASYMMETRIC
-    raise RuntimeError(f"Unknown quantization mode: {mode}")
+    msg = f"Unknown quantization mode: {mode}"
+    raise RuntimeError(msg)
 
 
 def convert_quantization_params(conf: Optional[Dict[str, Any]]) -> QuantizationParameters:
@@ -63,7 +64,8 @@ def convert_overflow_fix_param(param: Optional[str]) -> OverflowFix:
         return OverflowFix.DISABLE
     if param == "first_layer_only":
         return OverflowFix.FIRST_LAYER
-    raise RuntimeError(f"Overflow fix param {param} is unknown.")
+    msg = f"Overflow fix param {param} is unknown."
+    raise RuntimeError(msg)
 
 
 def convert_quantization_preset(preset: str) -> QuantizationPreset:
@@ -71,7 +73,8 @@ def convert_quantization_preset(preset: str) -> QuantizationPreset:
         return QuantizationPreset.PERFORMANCE
     if preset == "mixed":
         return QuantizationPreset.MIXED
-    raise RuntimeError(f"Preset {preset} is unknown.")
+    msg = f"Preset {preset} is unknown."
+    raise RuntimeError(msg)
 
 
 def get_range_init_type(config_quantization_params: Dict[str, Any]) -> RangeEstimatorParameters:

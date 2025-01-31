@@ -160,7 +160,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             edges = nncf_graph.get_output_edges_by_port_id(node, target_point.port_id)
             return edges[0].tensor_shape
 
-        raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
+        msg = f"Unsupported target point type {target_point.type}."
+        raise NotImplementedError(msg)
 
     @staticmethod
     def get_weight_quantization_axes(node: NNCFNode, target_point: OVTargetPoint, ndims: int) -> Tuple[int]:

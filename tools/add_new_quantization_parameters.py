@@ -88,7 +88,7 @@ def main(argv):
             files_to_copy.append(pair)
 
     for src_file, dst_file in files_to_copy:
-        print("\nCopying {}".format(dst_file))
+        print(f"\nCopying {dst_file}")
         copyfile(src_file, dst_file)
 
 

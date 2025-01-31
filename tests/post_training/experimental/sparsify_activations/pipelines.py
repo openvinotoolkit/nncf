@@ -190,7 +190,8 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
 
         if self.backend in PT_BACKENDS:
             if is_stateful:
-                raise RuntimeError(f"is_stateful={is_stateful} is not supported for PyTorch backend.")
+                msg = f"is_stateful={is_stateful} is not supported for PyTorch backend."
+                raise RuntimeError(msg)
 
             self.model_hf = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
@@ -219,7 +220,8 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
                 )
             self.model = self.model_hf.model
         else:
-            raise RuntimeError(f"backend={self.backend.value} is not supported.")
+            msg = f"backend={self.backend.value} is not supported."
+            raise RuntimeError(msg)
 
         if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
             self._dump_model_fp32()
@@ -244,9 +246,8 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
                     shape[0] = len(samples)
                     inputs[input_name] = ov.Tensor(sample_value.get_element_type(), shape)
                 else:
-                    raise RuntimeError(
-                        f"Failed to generate calibration set for {input_name} in type {type(sample_value)}"
-                    )
+                    msg = f"Failed to generate calibration set for {input_name} in type {type(sample_value)}"
+                    raise RuntimeError(msg)
             if self.backend == BackendType.CUDA_TORCH:
                 for input_name in inputs:
                     inputs[input_name] = torch.from_numpy(inputs[input_name]).cuda()

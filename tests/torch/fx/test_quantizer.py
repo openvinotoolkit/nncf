@@ -229,7 +229,8 @@ def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(
             assert isinstance(actual_annotation[annotation.edge_or_node], TorchAOQuantizationSpec)
             break
     else:
-        raise RuntimeError(f"Node {unified_scale_node_names[1]} should be annotated as quantizable")
+        msg = f"Node {unified_scale_node_names[1]} should be annotated as quantizable"
+        raise RuntimeError(msg)
 
     prepared_model(example_input)
     ao_quantized_model = convert_pt2e(prepared_model)
@@ -244,4 +245,5 @@ def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(
             if nodes_visited == 2:
                 break
     else:
-        raise RuntimeError(f"Quantizers was not found for the unified scales pair {unified_scale_node_names}")
+        msg = f"Quantizers was not found for the unified scales pair {unified_scale_node_names}"
+        raise RuntimeError(msg)

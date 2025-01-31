@@ -66,4 +66,5 @@ class TestOVFBCAlgorithm(TemplateTestFBCAlgorithm):
             assert np.all(np.isclose(bias_value, ref_bias, atol=atol)), f"{bias_value} != {ref_bias}"
 
             return
-        raise ValueError("Not found node with bias")
+        msg = "Not found node with bias"
+        raise ValueError(msg)

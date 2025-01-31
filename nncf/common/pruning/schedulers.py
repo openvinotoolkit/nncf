@@ -63,7 +63,8 @@ class PruningScheduler(BaseCompressionScheduler):
 
         :return: Pruning level that should be applied to the model.
         """
-        raise NotImplementedError("PruningScheduler implementation must override _calculate_pruning_level method.")
+        msg = "PruningScheduler implementation must override _calculate_pruning_level method."
+        raise NotImplementedError(msg)
 
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         """

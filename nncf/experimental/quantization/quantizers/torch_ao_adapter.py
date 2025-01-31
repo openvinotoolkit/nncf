@@ -123,7 +123,8 @@ class TorchAOQuantizerAdapter(Quantizer):
                 elif qspec.qscheme in [torch.per_tensor_affine, torch.per_tensor_symmetric]:
                     per_channel = False
                 else:
-                    raise nncf.InternalError(f"Unknown qscheme: {qspec.qscheme}")
+                    msg = f"Unknown qscheme: {qspec.qscheme}"
+                    raise nncf.InternalError(msg)
                 signed = qspec.dtype is torch.int8
                 mode = (
                     QuantizationMode.SYMMETRIC
@@ -139,10 +140,11 @@ class TorchAOQuantizerAdapter(Quantizer):
             elif isinstance(qspec, SharedQuantizationSpec):
                 # TODO(dlyakhov): Support SharedQuantizationSpec
                 nncf_logger.warning(
-                    "SharedQuantizationSpec is not supported yet;" f" edges {from_n} -> {to_nodes} won't be quantized."
+                    f"SharedQuantizationSpec is not supported yet; edges {from_n} -> {to_nodes} won't be quantized."
                 )
             else:
-                raise nncf.InternalError(f"Unknown torch.ao quantization spec: {qspec}")
+                msg = f"Unknown torch.ao quantization spec: {qspec}"
+                raise nncf.InternalError(msg)
 
         return q_setup
 

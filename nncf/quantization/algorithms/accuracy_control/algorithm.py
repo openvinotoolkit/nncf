@@ -55,9 +55,8 @@ def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
 
         return ONNXAccuracyControlAlgoBackend()
 
-    raise nncf.UnsupportedBackendError(
-        f"Cannot create the backend for the accuracy control algorithm because {backend} is not supported."
-    )
+    msg = f"Cannot create the backend for the accuracy control algorithm because {backend} is not supported."
+    raise nncf.UnsupportedBackendError(msg)
 
 
 def _create_message(nodes: Iterable[NNCFNode]) -> str:

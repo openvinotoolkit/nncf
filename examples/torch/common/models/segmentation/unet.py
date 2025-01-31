@@ -57,7 +57,8 @@ class UNet(nn.Module):
         super().__init__()
         assert up_mode in ("upconv", "upsample")
         if (input_size_hw[0] % 2 ** (depth - 1)) or (input_size_hw[1] % 2 ** (depth - 1)):
-            raise ValueError("UNet may only operate on input resolutions aligned to 2**(depth - 1)")
+            msg = "UNet may only operate on input resolutions aligned to 2**(depth - 1)"
+            raise ValueError(msg)
         self.padding = padding
         self.depth = depth
         prev_channels = in_channels

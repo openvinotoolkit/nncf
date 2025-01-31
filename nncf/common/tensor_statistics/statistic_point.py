@@ -117,5 +117,4 @@ class StatisticPointsContainer(UserDict):  # type: ignore
         :return: Iterable through all statistic collectors in node with target_node_name.
         """
         for _statistic_point in self.iter_through_statistic_points_in_target_node(target_node_name, filter_fn):
-            for _tensor_collector in _statistic_point.algorithm_to_tensor_collectors[algorithm]:
-                yield _tensor_collector
+            yield from _statistic_point.algorithm_to_tensor_collectors[algorithm]

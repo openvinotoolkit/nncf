@@ -62,7 +62,8 @@ def serialize_command(command: PTTransformationCommand) -> Dict[str, Any]:
     :return: Serialized representation of given command as a dict.
     """
     if not isinstance(command, SUPPORTED_COMMANDS):
-        raise RuntimeError(f"Command type {command.__class__} is not supported.")
+        msg = f"Command type {command.__class__} is not supported."
+        raise RuntimeError(msg)
 
     serialized_transformation = dict()
     serialized_transformation["type"] = command.__class__.__name__
@@ -76,10 +77,11 @@ def serialize_command(command: PTTransformationCommand) -> Dict[str, Any]:
     # Check compression module is registered
     compression_module_name = command.fn.__class__.__name__
     if compression_module_name not in COMPRESSION_MODULES.registry_dict:
-        raise RuntimeError(
+        msg = (
             f"Could not serialize compression module with name {compression_module_name}."
             " Please register your module in the COMPRESSION_MODULES registry."
         )
+        raise RuntimeError(msg)
     serialized_transformation["compression_module_name"] = compression_module_name
     serialized_transformation["fn_config"] = command.fn.get_config()
     serialized_transformation["hooks_group_name"] = command.hooks_group_name
@@ -96,7 +98,8 @@ def deserialize_command(serialized_command: Dict[str, Any]) -> Union[PTInsertion
     :return: The deserialized command.
     """
     if serialized_command["type"] not in (command_cls.__name__ for command_cls in SUPPORTED_COMMANDS):
-        raise RuntimeError(f"Command type {serialized_command['type']} is not supported.")
+        msg = f"Command type {serialized_command['type']} is not supported."
+        raise RuntimeError(msg)
 
     module_cls = COMPRESSION_MODULES.get(serialized_command["compression_module_name"])
     fn = module_cls.from_config(serialized_command["fn_config"])

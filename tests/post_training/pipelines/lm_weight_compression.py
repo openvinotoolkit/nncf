@@ -63,7 +63,7 @@ class WCTimeStats(StatsFromOutput):
         time_regex = r".*•\s(.*)\s•.*"
         for line in stdout.splitlines():
             for attr_name, prefix_regex in zip(self.VAR_NAMES, self.REGEX_PREFIX):
-                match = re.search(r"{}{}".format(prefix_regex, time_regex), line)
+                match = re.search(f"{prefix_regex}{time_regex}", line)
                 if match:
                     setattr(self, attr_name, match.group(1))
                 continue
@@ -84,7 +84,8 @@ class LMWeightCompression(BaseTestPipeline):
         # load model
         if self.backend == BackendType.TORCH:
             if is_stateful:
-                raise RuntimeError(f"is_stateful={is_stateful} is not supported for PyTorch backend.")
+                msg = f"is_stateful={is_stateful} is not supported for PyTorch backend."
+                raise RuntimeError(msg)
 
             self.model_hf = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
@@ -107,7 +108,8 @@ class LMWeightCompression(BaseTestPipeline):
                 )
             self.model = self.model_hf.model
         else:
-            raise RuntimeError(f"backend={self.backend.value} is not supported.")
+            msg = f"backend={self.backend.value} is not supported."
+            raise RuntimeError(msg)
 
         # dump FP32 model
         if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():

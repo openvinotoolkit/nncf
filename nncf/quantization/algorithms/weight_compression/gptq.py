@@ -74,9 +74,8 @@ class GPTQ:
 
             self._backend_entity = OVWeightCompressionAlgoBackend(model)
         else:
-            raise nncf.UnsupportedBackendError(
-                f"Cannot return backend-specific entity because {self._backend.value} is not supported!"
-            )
+            msg = f"Cannot return backend-specific entity because {self._backend.value} is not supported!"
+            raise nncf.UnsupportedBackendError(msg)
 
     def apply(
         self,
@@ -169,9 +168,11 @@ class GPTQ:
         nsamples = 0
 
         if node.metatype in self._backend_entity.convolution_metatypes:
-            raise nncf.UnsupportedModelError("Convolution metatypes are not supported")
+            msg = "Convolution metatypes are not supported"
+            raise nncf.UnsupportedModelError(msg)
         if node.layer_attributes.input_attributes["transpose"]:
-            raise nncf.UnsupportedModelError("Transposed input is not supported")
+            msg = "Transposed input is not supported"
+            raise nncf.UnsupportedModelError(msg)
 
         hessian = fns.zeros(
             (inputs[0].shape[-1], inputs[0].shape[-1]), backend=inputs[0].backend, dtype=TensorDataType.float32
@@ -208,9 +209,11 @@ class GPTQ:
         :return: Scales and zero points used for quantization.
         """
         if wc_params.node_with_weight.metatype in self._backend_entity.convolution_metatypes:
-            raise RuntimeError("Convolution metatypes are not supported")
+            msg = "Convolution metatypes are not supported"
+            raise RuntimeError(msg)
         if not wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]["transpose"]:
-            raise RuntimeError("Transpose is not supported")
+            msg = "Transpose is not supported"
+            raise RuntimeError(msg)
 
         weight_tensor = self._backend_entity.get_weight(
             wc_params.node_with_weight, wc_params.weight_port_id, model, graph

@@ -80,7 +80,8 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
                 self.dump_checkpoints,
                 self.lr_updates_needed,
             )
-        raise nncf.UnsupportedBackendError("Got an unsupported value of nncf_backend")
+        msg = "Got an unsupported value of nncf_backend"
+        raise nncf.UnsupportedBackendError(msg)
 
 
 class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
@@ -140,4 +141,5 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
                 self.minimal_compression_rate,
                 self.maximal_compression_rate,
             )
-        raise nncf.UnsupportedBackendError("Got an unsupported value of nncf_backend")
+        msg = "Got an unsupported value of nncf_backend"
+        raise nncf.UnsupportedBackendError(msg)

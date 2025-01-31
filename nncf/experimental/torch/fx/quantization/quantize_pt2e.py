@@ -81,7 +81,8 @@ def quantize_pt2e(
     nncf_logger.warning("This is an experimental feature and may change in the future without notice.")
 
     if subset_size < 1:
-        raise nncf.ValidationError("Subset size must be positive.")
+        msg = "Subset size must be positive."
+        raise nncf.ValidationError(msg)
 
     batch_size = calibration_dataset.get_batch_size()
     if batchwise_statistics is None:

@@ -190,7 +190,7 @@ def _execute_op(
     result = operator(*args, **kwargs)
     node = None
     if isinstance(result, type(NotImplemented)):
-        nncf_logger.debug("Operation {} returned NotImplemented".format(op_name))
+        nncf_logger.debug(f"Operation {op_name} returned NotImplemented")
     elif ctx.trace_dynamic_graph:
         tensor_metas = make_tensor_metas(processed_input)
         node = ctx.find_operator_node(tensor_metas, op_address)

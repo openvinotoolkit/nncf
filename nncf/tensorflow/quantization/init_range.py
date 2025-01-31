@@ -75,18 +75,15 @@ class TFRangeInitParams(RangeInitParams):
                     )
                 )
         if len(matches) > 1:
-            raise ValueError(
-                "Location {} matches more than one per-layer initialization parameter "
-                "definition!".format(str(node_name))
-            )
+            msg = f"Location {str(node_name)} matches more than one per-layer initialization parameter " "definition!"
+            raise ValueError(msg)
         if len(matches) == 1:
             return matches[0]
         if not matches and self.global_init_config is not None:
             return deepcopy(self.global_init_config)
 
-        raise ValueError(
-            "Location {} does not match any per-layer initialization parameter definition!".format(str(node_name))
-        )
+        msg = f"Location {str(node_name)} does not match any per-layer initialization parameter definition!"
+        raise ValueError(msg)
 
 
 class RangeInitializer:
@@ -137,7 +134,8 @@ class RangeInitializer:
             min_percentile = init_config.init_type_specific_params.get("min_percentile", MIN_PERCENTILE)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", MAX_PERCENTILE)
             return TFMeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
-        raise ValueError(f"Range type {range_type} is not supported.")
+        msg = f"Range type {range_type} is not supported."
+        raise ValueError(msg)
 
     def _register_layer_statistics(self, layer: tf.keras.layers.Layer, layer_statistics: list, handles: list):
         channel_axes = get_channel_axis(InputType.INPUTS, "", layer)

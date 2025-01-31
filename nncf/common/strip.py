@@ -45,4 +45,5 @@ def strip(model: TModel, do_copy: bool = True) -> TModel:
 
         return strip_tf(model, do_copy)  # type: ignore
 
-    raise nncf.UnsupportedBackendError(f"Method `strip` does not support for {model_backend.value} backend.")
+    msg = f"Method `strip` does not support for {model_backend.value} backend."
+    raise nncf.UnsupportedBackendError(msg)

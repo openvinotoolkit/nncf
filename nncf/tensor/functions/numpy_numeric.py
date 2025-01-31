@@ -36,7 +36,8 @@ DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
 def validate_device(device: TensorDeviceType) -> None:
     if device is not None and device != TensorDeviceType.CPU:
-        raise ValueError("numpy_numeric only supports CPU device.")
+        msg = "numpy_numeric only supports CPU device."
+        raise ValueError(msg)
 
 
 def convert_to_numpy_dtype(dtype: TensorDataType) -> np.dtype:

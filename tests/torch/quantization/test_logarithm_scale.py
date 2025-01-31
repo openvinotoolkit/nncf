@@ -96,6 +96,8 @@ def test_logarithm_scale_parameter(logarithm_scale_setting_1, logarithm_scale_se
             for k, v0 in sd0.items():
                 v1 = sd1[k]
                 diff = (v1 - v0).abs().sum().item() / v1.numel()
-                assert diff < 1e-6, "symmetric {} logarithm_scales {} param {} is corrupted mean({}-{})={}".format(
-                    symmetric, logarithm_scales, k, v0, v1, diff
+                err_msg = (
+                    f"symmetric {symmetric} logarithm_scales {logarithm_scales} param {k}"
+                    f" is corrupted mean({v0}-{v1})={diff}"
                 )
+                assert diff < 1e-6, err_msg

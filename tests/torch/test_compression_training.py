@@ -72,9 +72,7 @@ class CompressionTrainingValidator(BaseSampleValidator):
 
     def _create_command_line(self, args):
         executable = self._sample_handler.get_executable()
-        cli_args = " ".join(
-            key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()
-        )
+        cli_args = " ".join(key if (val is None or val is True) else f"{key} {val}" for key, val in args.items())
         return f"{sys.executable} {executable} {cli_args}"
 
 
@@ -168,7 +166,7 @@ class CompressionTrainingTestDescriptor(BaseSampleTestCaseDescriptor):
             )
         self.weights_path = self._get_weight_path(weekly_models_path)
         if self.weights_path is not None:
-            assert os.path.exists(self.weights_path), "Weights file does not exist: {}".format(self.weights_path)
+            assert os.path.exists(self.weights_path), f"Weights file does not exist: {self.weights_path}"
         checkpoint_save_dir = str(tmp_path_factory.mktemp("models"))
         self.checkpoint_save_dir = os.path.join(checkpoint_save_dir, self.execution_arg.replace("-", "_"))
         return self

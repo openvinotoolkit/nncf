@@ -50,7 +50,8 @@ def fixture_use_avx2():
 @pytest.fixture(scope="session", name="data_dir")
 def fixture_data(pytestconfig):
     if pytestconfig.getoption("data") is None:
-        raise ValueError("This test requires the --data argument to be specified.")
+        msg = "This test requires the --data argument to be specified."
+        raise ValueError(msg)
     return Path(pytestconfig.getoption("data"))
 
 
@@ -290,7 +291,8 @@ def test_ptq_quantization(
     start_time = time.perf_counter()
     try:
         if test_case_name not in ptq_reference_data:
-            raise nncf.ValidationError(f"{test_case_name} does not exist in 'reference_data.yaml'")
+            msg = f"{test_case_name} does not exist in 'reference_data.yaml'"
+            raise nncf.ValidationError(msg)
         test_model_param = PTQ_TEST_CASES[test_case_name]
         maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
         pipeline_cls = test_model_param["pipeline_cls"]

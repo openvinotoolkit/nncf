@@ -163,7 +163,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: ONNXTargetPoint,
         parameters: FakeConvertParameters,
     ) -> TransformationCommand:
-        raise nncf.InternalError("FakeConvert insertion not implemented in ONNX backend!")
+        msg = "FakeConvert insertion not implemented in ONNX backend!"
+        raise nncf.InternalError(msg)
 
     @staticmethod
     def _get_input_edges_mapping(nncf_graph: NNCFGraph):

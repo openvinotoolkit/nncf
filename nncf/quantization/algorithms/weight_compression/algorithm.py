@@ -127,15 +127,15 @@ def check_user_compression_configuration(
     """
     if mode in INT8_MODES:
         if (ratio and ratio != 1) or (group_size and group_size != -1):
-            raise nncf.ParameterNotSupportedError(
+            msg = (
                 "INT8 modes require per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) cannot be overridden."
             )
+            raise nncf.ParameterNotSupportedError(msg)
 
         if advanced_parameters and advanced_parameters.statistics_path:
-            raise nncf.ParameterNotSupportedError(
-                "INT8 modes do not support the `statistics_path` option in `AdvancedCompressionParameters`."
-            )
+            msg = "INT8 modes do not support the `statistics_path` option in `AdvancedCompressionParameters`."
+            raise nncf.ParameterNotSupportedError(msg)
 
         unsupported_options = {
             "all_layers": all_layers,
@@ -149,15 +149,16 @@ def check_user_compression_configuration(
         }
         unsupported_for_int8 = [name for name, value in unsupported_options.items() if value is not None]
         if unsupported_for_int8:
-            raise nncf.ParameterNotSupportedError(
-                f"INT8 modes do not support {', '.join(unsupported_for_int8)} option(s). Set them to None."
-            )
+            msg = f"INT8 modes do not support {', '.join(unsupported_for_int8)} option(s). Set them to None."
+            raise nncf.ParameterNotSupportedError(msg)
 
     if ratio is not None and not (0 <= ratio <= 1):
-        raise nncf.ValidationError(f"The ratio should be between 0 and 1, but ratio={ratio} is specified.")
+        msg = f"The ratio should be between 0 and 1, but ratio={ratio} is specified."
+        raise nncf.ValidationError(msg)
 
     if subset_size <= 0:
-        raise nncf.ValidationError(f"The subset_size value should be positive, but subset_size={subset_size} is given.")
+        msg = f"The subset_size value should be positive, but subset_size={subset_size} is given."
+        raise nncf.ValidationError(msg)
 
     if (
         ratio
@@ -165,10 +166,9 @@ def check_user_compression_configuration(
         and sensitivity_metric is not None
         and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR
     ):
-        raise nncf.ValidationError(
-            f"Mixed precision selection with sensitivity metric={sensitivity_metric.value} \
+        msg = f"Mixed precision selection with sensitivity metric={sensitivity_metric.value} \
             requires a dataset, but it's not provided."
-        )
+        raise nncf.ValidationError(msg)
 
 
 class WeightCompression(Algorithm):
@@ -303,9 +303,8 @@ class WeightCompression(Algorithm):
 
             self._backend_entity = FXWeightCompressionAlgoBackend()
         else:
-            raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
-            )
+            msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
+            raise nncf.UnsupportedBackendError(msg)
 
     def get_nodes_to_compress(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
         """

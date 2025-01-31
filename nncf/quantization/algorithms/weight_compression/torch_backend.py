@@ -185,8 +185,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_name = weight_node.layer_attributes.name
         weight = get_const_data(weight_node, model)
         if weight is None:
-            raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
-
+            msg = f"Could not find a torch.nn.Parameter in the model by name {weight_name}."
+            raise nncf.InternalError(msg)
         return Tensor(weight)
 
     def get_weight_dtype(
@@ -237,13 +237,15 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 CompressWeightsMode.NF4,
                 CompressWeightsMode.E2M1,
             ]:
-                raise nncf.ParameterNotSupportedError(f"{compression_config.mode.value} is not supported.")
+                msg = f"{compression_config.mode.value} is not supported."
+                raise nncf.ParameterNotSupportedError(msg)
 
             weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
             weight_name = weight_node.layer_attributes.name
             weight = get_const_data(weight_node, model)
             if weight is None:
-                raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
+                msg = f"Could not find a torch.nn.Parameter in the model by name {weight_name}."
+                raise nncf.InternalError(msg)
 
             # calculates compressed weights and decompression parameters
             compressed_weight = compress_weight(
@@ -287,7 +289,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             module = get_module_by_name(module_name, model)
             weight = getattr(module, weight_attr_name)
             if not isinstance(weight, torch.nn.Parameter):
-                raise nncf.InternalError(f"Weight is not a torch.nn.Parameter in the model by name {weight_name}.")
+                msg = f"Weight is not a torch.nn.Parameter in the model by name {weight_name}."
+                raise nncf.InternalError(msg)
 
             setattr(module, weight_attr_name, compressed_parameter)
 

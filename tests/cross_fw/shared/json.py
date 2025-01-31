@@ -24,7 +24,7 @@ except ModuleNotFoundError:
 
 
 def load_json(stats_path: Path):
-    with open(stats_path, "r", encoding="utf8") as json_file:
+    with open(stats_path, encoding="utf8") as json_file:
         return json.load(json_file)
 
 

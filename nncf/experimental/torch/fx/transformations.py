@@ -200,9 +200,8 @@ def constant_update_fn(
     old_const = _get_node_by_input_port_id(node, input_port_id)
 
     if old_const.op != "get_attr":
-        raise nncf.InternalError(
-            f"Constant on input port {input_port_id} for {node} is expected," f" but node {old_const} is present."
-        )
+        msg = f"Constant on input port {input_port_id} for {node} is expected, but node {old_const} is present."
+        raise nncf.InternalError(msg)
 
     node_name = updated_node_name if updated_node_name else old_const.name + "_updated_constant"
     # Update metadata of the new constant node.
@@ -234,10 +233,11 @@ def qdq_insertion_transformation_builder(
 
     def qdq_insertion_transformation(model: torch.fx.GraphModule):
         if any(tp.target_type != TargetType.OPERATION_WITH_WEIGHTS for tp in target_points) and len(target_points) > 1:
-            raise nncf.InternalError(
+            msg = (
                 "Insertion of shared qdq pair for the weights is not supported."
                 " Please use non shared qdq pairs for the weights quantization."
             )
+            raise nncf.InternalError(msg)
         for target_point in target_points:
             insert_one_qdq(model, target_point, quantizer)
 
@@ -403,7 +403,8 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
 
         target_node.replace_input_with(input_node, dq_node)
     else:
-        raise nncf.InternalError(f"Unexpected target type: {target_point.target_type}")
+        msg = f"Unexpected target type: {target_point.target_type}"
+        raise nncf.InternalError(msg)
 
 
 def _insert_call_module(
@@ -439,7 +440,8 @@ def get_input_node(target_point: PTTargetPoint, target_node: torch.fx.Node) -> t
         TargetType.OPERATOR_POST_HOOK,
         TargetType.OPERATION_WITH_WEIGHTS,
     ]:
-        raise nncf.InternalError(f"Unexpected target type: {target_type}")
+        msg = f"Unexpected target type: {target_type}"
+        raise nncf.InternalError(msg)
     if target_type == TargetType.OPERATOR_POST_HOOK:
         return target_node
 
@@ -474,7 +476,8 @@ def get_ctx_manager(graph: torch.fx.Graph, target_point: PTTargetPoint) -> Calla
         TargetType.OPERATOR_POST_HOOK,
         TargetType.OPERATION_WITH_WEIGHTS,
     ]:
-        raise nncf.InternalError(f"Unexpected target type: {target_point.target_type}")
+        msg = f"Unexpected target type: {target_point.target_type}"
+        raise nncf.InternalError(msg)
 
     if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
         return graph.inserting_after

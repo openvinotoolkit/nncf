@@ -178,7 +178,8 @@ class ModelTensorAttribute(nn.Module):
             return x.T
         if self.attr == ".mT":
             return x.mT
-        raise ValueError(f"Unexpected attribute: {self.attr}")
+        msg = f"Unexpected attribute: {self.attr}"
+        raise ValueError(msg)
 
 
 @pytest.mark.parametrize("attr", [".T", ".mT"])

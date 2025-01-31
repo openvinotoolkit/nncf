@@ -47,7 +47,7 @@ UNSUPPORTED_MODES = (CompressWeightsMode.NF4, CompressWeightsMode.E2M1)
 
 class SequentialMatmulModel(nn.Module):
     def __init__(self):
-        super(SequentialMatmulModel, self).__init__()
+        super().__init__()
         self.main_values = [10000, 1000, 1, 10, 10000]
         self.layers = nn.ModuleList()
 

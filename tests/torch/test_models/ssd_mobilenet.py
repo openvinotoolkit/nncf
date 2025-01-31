@@ -97,7 +97,8 @@ class MobileNetSSD(nn.Module):
 
 def build_ssd_mobilenet(cfg, size, num_classes, config):
     if size != 300:
-        raise ValueError("Only Mobilenet-SSD with input size 300 is supported")
+        msg = "Only Mobilenet-SSD with input size 300 is supported"
+        raise ValueError(msg)
     mobilenet_ssd = MobileNetSSD(num_classes, cfg)
 
     if config.basenet and (config.resuming_checkpoint_path is None) and (config.weights is None):
