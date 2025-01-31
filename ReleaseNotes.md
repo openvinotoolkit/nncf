@@ -56,7 +56,6 @@ Deprecations/Removals:
 Requirements:
 
 - Update minimal versin for `numpy` (>=1.24.0).
-- Added to requarements `safetensors` (>=0.4.1).
 - Removed `tqdm`.
 
 ## New in Release 2.14.1
