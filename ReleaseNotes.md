@@ -11,6 +11,7 @@ Post-training Quantization:
 - Features:
   - (TorchFX, Experimental) Preview support for the new `quantize_pt2e` API has been introduced, enabling quantization of `torch.fx.GraphModule` models with the `OpenVINOQuantizer` and the `X86InductorQuantizer` quantizers. `quantize_pt2e` API utilizes `MinMax` algorithm statistic collectors, as well as `SmoothQuant`, `BiasCorrection` and `FastBiasCorrection` Post-Training Quantization algorithms.
   - (TensorFlow) The `nncf.quantize()` method is now the recommended way for the quantization initialization for Quantization-Aware Training. Please refer to an [example](examples/quantization_aware_training/tensorflow/mobilenet_v2) for more details about how to use new approach.
+  - (TensorFlow) Compression layers placement in the model now can be serialized and restored with new API functions: `nncf.tensorflow.get_config()` and `nncf.tensorflow.load_from_config()`. Please see [documentation](/docs/usage/training_time_compression/quantization_aware_training/Usage.md#saving-and-loading-compressed-models) for the saving/loading of a quantized model for more details.
 - Fixes:
   - ...
 - Improvements:
