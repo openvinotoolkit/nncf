@@ -11,7 +11,7 @@
 
 import re
 
-import cpuinfo
+import cpuinfo  # type: ignore
 
 _IS_LNL_CPU = None
 
