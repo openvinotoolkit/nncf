@@ -92,28 +92,28 @@ class CaseFQParams:
 TO_TEST = [
     # WEIGHT QUANTIZER CONFIGURATIONS
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
+        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True),
         q_group=QuantizerGroup.WEIGHTS,
         narrow_range=True,
         half_range=True,
         should_fail=False,
     ),
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
+        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True),
         q_group=QuantizerGroup.WEIGHTS,
         narrow_range=True,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
+        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True),
         q_group=QuantizerGroup.WEIGHTS,
         narrow_range=False,
         half_range=True,
         should_fail=False,
     ),
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
+        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True),
         q_group=QuantizerGroup.WEIGHTS,
         narrow_range=False,
         half_range=False,
@@ -197,7 +197,11 @@ class TemplateTestFQParams(ABC):
     def to_nncf_tensor(self, t: np.array):
         raise NotImplementedError
 
-    @pytest.mark.parametrize("case_to_test", TO_TEST)
+    @pytest.mark.parametrize(
+        "case_to_test",
+        TO_TEST,
+        ids=[get_test_reference_key(c.q_group, c.q_config, c.narrow_range, c.half_range) for c in TO_TEST],
+    )
     def test_calculate_quantizer_parameters(self, case_to_test):
         q_config = case_to_test.q_config
         quant_group = case_to_test.q_group
