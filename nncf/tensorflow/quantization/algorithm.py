@@ -352,7 +352,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         return quantizer_cls(name, qspec)
 
     @staticmethod
-    def _build_insertion_commands_for_quantizer_setup(
+    def build_insertion_commands_for_quantizer_setup(
         quantizer_setup: TFQuantizationSetup,
     ) -> Tuple[List[TFInsertionCommand], List[str]]:
         insertion_commands = []
@@ -407,7 +407,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         transformations = TFTransformationLayout()
         if self._quantizer_setup is None:
             self._quantizer_setup = self._get_quantizer_setup(model)
-        insertion_commands, self._op_names = QuantizationBuilder._build_insertion_commands_for_quantizer_setup(
+        insertion_commands, self._op_names = QuantizationBuilder.build_insertion_commands_for_quantizer_setup(
             self._quantizer_setup
         )
         for command in insertion_commands:

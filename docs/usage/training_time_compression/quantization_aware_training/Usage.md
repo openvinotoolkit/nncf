@@ -109,12 +109,13 @@ You can save the `compressed_model` object `torch.save` as usual: via `state_dic
 To save a model checkpoint, use the following API:
 
 ```python
+from nncf.tensorflow import ConfigState
 from nncf.tensorflow import get_config
 from nncf.tensorflow.callbacks.checkpoint_callback import CheckpointManagerCallback
 
-config = get_config(quantized_model)
+nncf_config = get_config(quantized_model)
 checkpoint = tf.train.Checkpoint(model=quantized_model,
-                                 config=config,
+                                 nncf_config_state=ConfigState(nncf_config),
                                  ... # the rest of the user-defined objects to save
                                  )
 callbacks = []
@@ -126,13 +127,13 @@ quantized_model.fit(..., callbacks=callbacks)
 To restore the model from checkpoint, use the following API:
 
 ```python
-from nncf.tensorflow import ModelConfig
+from nncf.tensorflow import ConfigState
 from nncf.tensorflow import load_from_config
 
-checkpoint = tf.train.Checkpoint(config=ModelConfig())
+checkpoint = tf.train.Checkpoint(nncf_config_state=ConfigState())
 checkpoint.restore(path_to_checkpoint)
 
-quantized_model = load_from_config(model, checkpoint.config)
+quantized_model = load_from_config(model, checkpoint.nncf_config_state.config)
 
 checkpoint = tf.train.Checkpoint(model=quantized_model
                                  ... # the rest of the user-defined objects to load

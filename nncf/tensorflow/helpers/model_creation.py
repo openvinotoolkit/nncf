@@ -35,7 +35,7 @@ from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import is_keras_layer_model
 from nncf.tensorflow.helpers.utils import get_built_model
 from nncf.tensorflow.quantization.algorithm import QuantizationBuilder
-from nncf.tensorflow.utils.state import ModelConfig
+from nncf.tensorflow.quantization.algorithm import TFQuantizationSetup
 
 
 def create_compression_algorithm_builder(config: NNCFConfig, should_init: bool) -> TFCompressionAlgorithmBuilder:
@@ -146,7 +146,7 @@ def get_input_signature(config: NNCFConfig):
     return input_signature if len(input_signature) > 1 else input_signature[0]
 
 
-def load_from_config(model: tf.keras.Model, config: ModelConfig) -> tf.keras.Model:
+def load_from_config(model: tf.keras.Model, config: Dict[str, Any]) -> tf.keras.Model:
     """
     TODO(TF)
 
@@ -154,9 +154,12 @@ def load_from_config(model: tf.keras.Model, config: ModelConfig) -> tf.keras.Mod
     :parem config:
     :return:
     """
+    quantizer_setup_state = config["quantization"]["quantizer_setup"]
+    quantizer_setup = TFQuantizationSetup.from_state(quantizer_setup_state)
+
     transformation_layout = TFTransformationLayout()
     # pylint: disable=protected-access
-    insertion_commands, _ = QuantizationBuilder._build_insertion_commands_for_quantizer_setup(config.quantizer_setup)
+    insertion_commands, _ = QuantizationBuilder.build_insertion_commands_for_quantizer_setup(quantizer_setup)
     for command in insertion_commands:
         transformation_layout.register(command)
     model_transformer = TFModelTransformer(model)

@@ -15,7 +15,6 @@ from typing import Any, Dict, Optional
 import tensorflow as tf
 
 from nncf.common.compression import BaseCompressionAlgorithmController
-from nncf.tensorflow.quantization.algorithm import TFQuantizationSetup
 
 # TODO(achurkin): remove pylint ignore after 120296 ticked is fixed
 
@@ -89,23 +88,22 @@ class TFCompressionStateLoader(tf.train.experimental.PythonState):
         self._state = json.loads(string_value)
 
 
-class ModelConfig(tf.train.experimental.PythonState):
+class ConfigState(tf.train.experimental.PythonState):
     """
     TODO(TF)
     """
 
-    def __init__(self, quantizer_setup: Optional[TFQuantizationSetup] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         """ """
-        self.quantizer_setup = quantizer_setup
+        self.config = config
 
     def serialize(self) -> str:
         """
-        Callback to serialize the model config.
+        Callback to serialize the config.
 
-        :return: A serialized model config.
+        :return: A serialized config.
         """
-        data = {"quantizer_setup": self.quantizer_setup.get_state()}
-        return json.dumps(data)
+        return json.dumps(self.config)
 
     def deserialize(self, string_value: str) -> None:
         """
@@ -113,18 +111,16 @@ class ModelConfig(tf.train.experimental.PythonState):
 
         :param string_value: A serialized model config.
         """
-        data = json.loads(string_value)
-        self.quantizer_setup = TFQuantizationSetup.from_state(data["quantizer_setup"])
+        self.config = json.loads(string_value)
 
 
-def get_config(model: tf.keras.Model) -> ModelConfig:
+def get_config(model: tf.keras.Model) -> Dict[str, Any]:
     """
     TODO(TF)
 
     :param model:
     :return:
     """
-    data = getattr(model, "_nncf_model_config")
-    delattr(model, "_nncf_model_config")
-    quantizer_setup = TFQuantizationSetup.from_state(data["quantizer_setup"])
-    return ModelConfig(quantizer_setup)
+    config = getattr(model, "_nncf_config")
+    delattr(model, "_nncf_config")
+    return config

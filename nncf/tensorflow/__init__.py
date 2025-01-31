@@ -52,5 +52,5 @@ from nncf.tensorflow.pruning.filter_pruning import algorithm as filter_pruning_a
 from nncf.tensorflow.quantization import algorithm as quantization_algorithm
 from nncf.tensorflow.sparsity.magnitude import algorithm as magnitude_sparsity_algorithm
 from nncf.tensorflow.sparsity.rb import algorithm as rb_sparsity_algorithm
-from nncf.tensorflow.utils.state import ModelConfig
+from nncf.tensorflow.utils.state import ConfigState
 from nncf.tensorflow.utils.state import get_config
