@@ -106,9 +106,10 @@ class ConfigState(tf.train.experimental.PythonState):
 
         :return: A serialized config.
         """
+        quantizer_setup_state = self.config["quantization"]["quantizer_setup"]
         data = {
             "quantization": {
-                "quantizer_setup": TFQuantizationSetup.from_state(self.config["quantizer_setup"]).get_state(),
+                "quantizer_setup": TFQuantizationSetup.from_state(quantizer_setup_state).get_state(),
             }
         }
         return json.dumps(data)
