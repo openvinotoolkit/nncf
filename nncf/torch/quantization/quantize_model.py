@@ -104,7 +104,6 @@ def compress_weights_impl(
     """
     Implementation of the `compress_weights()` method for the PyTorch backend.
     """
-
     compression_algorithm = WeightCompression(
         mode,
         ratio,

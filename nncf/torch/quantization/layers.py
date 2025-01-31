@@ -1148,9 +1148,6 @@ class INT8SymmetricWeightsDecompressor(BaseWeightsDecompressor):
         return QuantizationMode.SYMMETRIC
 
     def pack_weight(self, weight: torch.Tensor) -> torch.Tensor:
-        if torch.is_floating_point(weight):
-            msg = f"Invalid weight dtype {weight.type}. Integer types are supported."
-            raise ValueError(msg)
         if torch.any((weight < -128) | (weight > 127)):
             msg = "Weight values are not in [-128, 127]."
             raise ValueError(msg)
@@ -1193,9 +1190,6 @@ class INT4AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
         return QuantizationMode.ASYMMETRIC
 
     def pack_weight(self, weight: torch.Tensor) -> torch.Tensor:
-        if torch.is_floating_point(weight):
-            msg = f"Invalid weight dtype {weight.type}. Integer types are supported."
-            raise ValueError(msg)
         if torch.any((weight < 0) | (weight > 15)):
             msg = "Weight values are not in [0, 15]."
             raise ValueError(msg)

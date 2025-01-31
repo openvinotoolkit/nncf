@@ -376,7 +376,7 @@ WEIGHT_COMPRESSION_MODELS = [
         "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
         "pipeline_cls": LMWeightCompression,
         "compression_params": {"group_size": 64, "ratio": 0.8, "mode": CompressWeightsMode.INT4_SYM},
-        "backends": [BackendType.OV],
+        "backends": [BackendType.OV, BackendType.TORCH],
     },
     {
         "reported_name": "tinyllama_data_aware_awq_stateful",
@@ -483,7 +483,7 @@ WEIGHT_COMPRESSION_MODELS = [
             "mode": CompressWeightsMode.INT4_ASYM,
             "scale_estimation": True,
         },
-        "backends": [BackendType.OV],
+        "backends": [BackendType.OV, BackendType.TORCH],
     },
     {
         "reported_name": "tinyllama_data_aware_lora_stateful",
@@ -517,6 +517,21 @@ WEIGHT_COMPRESSION_MODELS = [
             "ignored_scope": nncf.IgnoredScope(types=["Gather"]),
         },
         "backends": [BackendType.OV],
+    },
+    {
+        "reported_name": "tinyllama_scale_estimation_group_size_64",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": 64,
+            "ratio": 0.8,
+            "mode": CompressWeightsMode.INT4_SYM,
+            "scale_estimation": True,
+            "advanced_parameters": AdvancedCompressionParameters(
+                scale_estimation_params=AdvancedScaleEstimationParameters(32, 5, 10, 1.0)
+            ),
+        },
+        "backends": [BackendType.OV, BackendType.TORCH],
     },
 ]
 

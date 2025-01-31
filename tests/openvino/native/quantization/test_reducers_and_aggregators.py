@@ -75,12 +75,13 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
     def cast_tensor(self, tensor, dtype: Dtype):
         return tensor
 
+    @pytest.mark.parametrize("inplace", [True, False])
     @pytest.mark.parametrize("reducer_cls,reduction_axes,ref_value", MIXED_PRECISION_REDUCERS_REF_VALUES)
-    def test_mixed_precision_reducers(self, reducer_cls, reduction_axes, ref_value):
+    def test_mixed_precision_reducers(self, reducer_cls, reduction_axes, ref_value, inplace):
         input_ = np.arange(2 * 4 * 8).reshape(2, 4, 8)
         input_[:, :2] *= 2
 
-        reducer = reducer_cls(reduction_axes=reduction_axes, inplace=True)
+        reducer = reducer_cls(reduction_axes=reduction_axes, inplace=inplace)
         inplace_fn = reducer.get_inplace_fn()
 
         ov_model_input = opset.parameter(input_.shape)
