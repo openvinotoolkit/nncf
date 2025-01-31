@@ -323,7 +323,7 @@ def _calculate_scaled_parameters(
     num_bits = quantizer_config.num_bits
     level_low, level_high = calculate_symmetric_level_ranges(num_bits - 1, signed=True, narrow_range=False)
     levels = get_num_levels(level_low, level_high)
-    input_low, input_high = symmetric_range(min_values, max_values, levels, quantizer_config, narrow_range=True)
+    input_low, input_high = symmetric_range(min_values, max_values, levels, quantizer_config, narrow_range)
 
     export_level_low, export_level_high = calculate_symmetric_level_ranges(
         num_bits, signed=True, narrow_range=narrow_range

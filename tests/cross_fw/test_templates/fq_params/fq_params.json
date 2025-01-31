@@ -15,9 +15,9 @@
     },
     "weights_symmetric_sign_True_per_ch_False_narrow_range_False_hf_range_True": {
         "levels": 256,
-        "input_low": -2.0022718596646167,
+        "input_low": -2.0340540409088135,
         "input_high": 2.0022718596646167,
-        "output_low": -2.0022718596646167,
+        "output_low": -2.0340540409088135,
         "output_high": 2.0022718596646167
     },
     "weights_symmetric_sign_True_per_ch_False_narrow_range_False_hf_range_False": {
