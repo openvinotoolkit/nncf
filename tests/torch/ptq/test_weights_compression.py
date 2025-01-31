@@ -9,8 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import List
+
 import pytest
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 import nncf
@@ -19,6 +22,8 @@ from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.tensor import Tensor
+from nncf.tensor import TensorDataType
 from nncf.torch import wrap_model
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
@@ -28,16 +33,11 @@ from nncf.torch.quantization.quantize_functions import pack_int4
 from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
+from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.test_models.synthetic import ShortTransformer
+from tests.torch.test_tensor import cast_to
 
-DATA_BASED_SENSITIVITY_METRICS = (
-    SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
-    SensitivityMetric.MEAN_ACTIVATION_VARIANCE,
-    SensitivityMetric.MAX_ACTIVATION_VARIANCE,
-    SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
-)
-
-ALL_SENSITIVITY_METRICS = DATA_BASED_SENSITIVITY_METRICS + (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,)
+ALL_SENSITIVITY_METRICS = list(SensitivityMetric)
 
 INT8_MODES = (CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM)
 INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
@@ -45,13 +45,46 @@ SUPPORTED_MODES = INT8_MODES + INT4_MODES
 UNSUPPORTED_MODES = (CompressWeightsMode.NF4, CompressWeightsMode.E2M1)
 
 
-class MatMulModel(torch.nn.Module):
+class SequentialMatmulModel(nn.Module):
     def __init__(self):
+        super(SequentialMatmulModel, self).__init__()
+        self.main_values = [10000, 1000, 1, 10, 10000]
+        self.layers = nn.ModuleList()
+
+        for _, main_value in enumerate(self.main_values):
+            weights_data = torch.arange(0, 16, dtype=torch.float32).reshape(4, 4)
+            weights_data[-1, -1] = main_value
+            weight_tensor = torch.tensor(weights_data)
+            layer = nn.Linear(4, 4, bias=False)
+            layer.weight = nn.Parameter(weight_tensor.t())
+            self.layers.append(layer)
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+    def get_weight_names_in_exec_order(self):
+        return [f"{i}_weight" for i in range(len(self.main_values))]
+
+
+class MatMulModel(torch.nn.Module):
+    def __init__(self, weight: torch.Tensor = torch.ones(size=(256, 256), dtype=torch.float32)):
         super().__init__()
-        self.w = torch.nn.Parameter(torch.ones(size=(256, 256), dtype=torch.float32))
+        self.w = torch.nn.Parameter(weight)
 
     def forward(self, input):
         return input @ self.w
+
+
+class LinearModel(torch.nn.Module):
+    def __init__(self, weight: torch.Tensor = torch.ones(size=(256, 256), dtype=torch.float32)):
+        super().__init__()
+        self.linear = torch.nn.Linear(weight.shape[0], weight.shape[1], False)
+        self.linear.weight = torch.nn.Parameter(weight)
+
+    def forward(self, input):
+        return self.linear(input)
 
 
 class FunctionalModel(torch.nn.Module):
@@ -236,10 +269,8 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 @pytest.mark.parametrize(
     "params",
     (
-        *({"sensitivity_metric": metric} for metric in DATA_BASED_SENSITIVITY_METRICS),
         {"gptq": True},
         {"awq": True},
-        {"scale_estimation": True},
         {"lora_correction": True},
     ),
 )
@@ -327,3 +358,67 @@ def test_pack_int4():
     assert packed_w.numel() * 2 == w_int8.numel()
     unpacked_w = unpack_int4(packed_w).reshape(w_int8.shape)
     assert torch.all(unpacked_w == w_int8)
+
+
+class TestPTTemplateWeightCompression(TemplateWeightCompression):
+    @staticmethod
+    def get_matmul_model() -> torch.nn.Module:
+        return MatMulModel(255 * torch.eye(3, dtype=torch.float32))
+
+    @staticmethod
+    def get_sequential_matmul_model() -> torch.nn.Module:
+        return SequentialMatmulModel()
+
+    @staticmethod
+    def to_tensor(t) -> torch.Tensor:
+        return torch.tensor(t)
+
+    @staticmethod
+    def cast_to(x: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
+        return cast_to(x, dtype)
+
+    @staticmethod
+    def check_weights(model: torch.nn.Module, ref_ids: List[int]) -> None:
+        all_names = model.get_weight_names_in_exec_order()
+        low_precision_nodes = list(map(lambda i: all_names[i], ref_ids))
+        for op_name, op in model.nncf.external_op.items():
+            for name in low_precision_nodes:
+                if name in op_name:
+                    assert isinstance(op, INT4SymmetricWeightsDecompressor)
+
+    @staticmethod
+    def get_model_for_test_scale_estimation():
+        return LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
+
+    @staticmethod
+    def get_scale_estimation_ref():
+        return torch.tensor(
+            [
+                [[0.473328]],
+                [[0.929023]],
+                [[1.446527]],
+                [[1.920595]],
+                [[2.517054]],
+                [[3.030102]],
+                [[3.584279]],
+                [[4.043509]],
+                [[4.620008]],
+                [[5.165322]],
+                [[5.710637]],
+                [[6.122581]],
+                [[6.655914]],
+                [[7.237174]],
+                [[7.722580]],
+                [[8.255914]],
+            ]
+        )
+
+    @staticmethod
+    def get_orig_weight(model: torch.nn.Module) -> Tensor:
+        return Tensor(model.linear.weight)
+
+    @staticmethod
+    def get_decompressed_weight(compressed_model: torch.nn.Module, input: torch.Tensor) -> Tensor:
+        weight = compressed_model.linear.weight
+        unpacked_w = compressed_model.nncf.external_op.weights_decompressor_linear_weight(weight)
+        return Tensor(unpacked_w)

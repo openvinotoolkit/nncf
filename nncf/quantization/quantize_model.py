@@ -518,7 +518,6 @@ def compress_weights(
 
         options = {
             "awq": awq,
-            "scale_estimation": scale_estimation,
             "gptq": gptq,
             "lora_correction": lora_correction,
         }
@@ -526,12 +525,6 @@ def compress_weights(
         if unsupported_options:
             raise nncf.ParameterNotSupportedError(
                 f"Torch backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
-            )
-
-        if sensitivity_metric not in [None, SensitivityMetric.WEIGHT_QUANTIZATION_ERROR]:
-            raise nncf.ParameterNotSupportedError(
-                "Torch backend only supports data-free sensitivity metric. "
-                "Set None or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR."
             )
 
         if advanced_parameters and advanced_parameters.statistics_path:
@@ -550,7 +543,8 @@ def compress_weights(
         else:
             example_input = next(iter(dataset.get_inference_data()))
             model = wrap_model(model, example_input=example_input, trace_parameters=True)
-        dataset = None
+        if mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM):
+            dataset = None  # data-aware methods don't support INT8 modes
         compression_weights_impl = pt_compression_weights_impl
 
     if backend == BackendType.TORCH_FX:
@@ -583,7 +577,7 @@ def compress_weights(
 
         if dataset:
             raise nncf.ParameterNotSupportedError(
-                "TorchFX only supports data-free weights compression," "Set the 'dataset' option to None"
+                "TorchFX only supports data-free weights compression. Set the 'dataset' option to None"
             )
         if advanced_parameters and advanced_parameters.statistics_path:
             raise nncf.ParameterNotSupportedError("TorchFX does not supports statistics caching.")
