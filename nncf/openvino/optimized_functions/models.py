@@ -119,7 +119,6 @@ def clear_ov_model_cache():
 
 def _compile_ov_model(model: ov.Model, device_name: str, config: Dict[str, str]) -> ov.CompiledModel:
     if is_lnl_cpu():
-        # TODO (Nikita Savelyev): Remove this in NNCF 2.16
         with set_env_variable("DNNL_MAX_CPU_ISA", "AVX2_VNNI"):
             compiled_model = ov.compile_model(model, device_name=device_name, config=config)
     else:
