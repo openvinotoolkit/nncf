@@ -14,7 +14,7 @@ import os
 import os.path as osp
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Hashable, Iterable, List, Optional, TypeVar, Union
+from typing import Any, Dict, Hashable, Iterable, Iterator, List, Optional, TypeVar, Union
 
 from tabulate import tabulate
 
@@ -79,7 +79,7 @@ def product_dict(d: Dict[TKey, List[Any]]) -> Iterable[Dict[TKey, Any]]:
 
 
 @contextmanager
-def set_env_variable(key: str, value: str):
+def set_env_variable(key: str, value: str) -> Iterator[None]:
     """
     Temporarily sets an environment variable.
 
