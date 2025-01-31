@@ -50,13 +50,45 @@ class ExtractedFunc(nn.Module):
 
 def apply_args_defaults(args: List[Any], kwargs: Dict[str, Any], indexed_args=List[Tuple[int, str]]) -> Dict[str, Any]:
     args_dict: Dict[str, Any] = dict()
-    for idx, arg_name in enumerate(indexed_args):
+    for idx, arg_name in indexed_args:
         if idx < len(args):
             args_dict[arg_name] = args[idx]
         elif arg_name in kwargs:
             args_dict[arg_name] = kwargs[arg_name]
 
     return args_dict
+
+
+# def try_to_fuse_conv(
+#     input_node: NNCFNode, output_node: NNCFNode, model: NNCFNetwork, extracted_module: nn.Module
+# ) -> nn.Module:
+#     """
+#     Fused convolution operation with the next batch norm node if possible,
+
+#     :param input_node: Input subgraph node.
+#     :param output_node: Output subgraph node (fused with input node).
+#     :param model: Source model.
+#     :param extracted_module: Extracted module.
+#     """
+#     next_nodes = model.nncf.get_graph().get_next_nodes(input_node)
+
+#     if len(next_nodes) != 1:
+#         return extracted_module
+
+#     if output_node != next_nodes[0]:
+#         raise nncf.InternalError(f"Output node {output_node} not found after {input_node}")
+
+#     if next_nodes[0].metatype != om.PTBatchNormMetatype:
+#         raise nncf.InternalError("Supported only BatchNorm layers")
+
+#     extracted_bn = extract_bn(next_nodes[0], model)
+#     if extracted_bn is None:
+#         nncf_logger.debug(
+#             f"Can`t extract fused batchnorm module for {input_node.node_name},"
+#             " module that contain batchnorm operator should be inhered from one of {BATCH_NORM_CLASSES}."
+#         )
+#         return None
+#     return nn.Sequential(extracted_module, extracted_bn)
 
 
 def extract_conv(
@@ -94,7 +126,7 @@ def extract_conv(
     )
     conv_kwargs["weight"] = weight
     conv_kwargs["bias"] = bias
-    extracted_module = ExtractedFunc(input_node.node_type, conv_kwargs)
+    extracted_module = ExtractedFunc(layer_attrs.func, conv_kwargs)
 
     # if input_node != output_node:
     #     extracted_module = try_to_fuse_conv(input_node, output_node, model, extracted_module)

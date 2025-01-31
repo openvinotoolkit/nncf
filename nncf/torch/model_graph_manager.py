@@ -18,6 +18,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.graph import operator_metatypes as om
@@ -124,7 +125,10 @@ def get_const_data(const_node: NNCFNode, model: NNCFNetwork) -> torch.Tensor:
     :param model: The NNCFNetwork object.
     :return: A torch.Tensor object containing the constant value.
     """
-    const_name = const_node.layer_attributes.name
+    if is_experimental_torch_tracing_enabled():
+        const_name = const_node.layer_name
+    else:
+        const_name = const_node.layer_attributes.name
     module_name, const_attr_name = split_const_name(const_name)
     module = get_module_by_name(module_name, model)
     data = getattr(module, const_attr_name)
