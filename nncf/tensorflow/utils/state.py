@@ -15,6 +15,7 @@ from typing import Any, Dict, Optional
 import tensorflow as tf
 
 from nncf.common.compression import BaseCompressionAlgorithmController
+from nncf.tensorflow.quantization.algorithm import TFQuantizationSetup
 
 # TODO(achurkin): remove pylint ignore after 120296 ticked is fixed
 
@@ -105,7 +106,12 @@ class ConfigState(tf.train.experimental.PythonState):
 
         :return: A serialized config.
         """
-        return json.dumps(self.config)
+        data = {
+            "quantization": {
+                "quantizer_setup": TFQuantizationSetup.from_state(self.config["quantizer_setup"]).get_state(),
+            }
+        }
+        return json.dumps(data)
 
     def deserialize(self, string_value: str) -> None:
         """
