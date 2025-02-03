@@ -635,8 +635,11 @@ class ScalarCloneTestModel(nn.Module):
         super().__init__()
         self.linear = nn.Linear(3, 3)
 
-    def forward(self, x):
-        y = torch.clone(torch.tensor(1).cpu())
+    def forward(self, x: torch.Tensor):
+        # Emulating part of the torchvision SWIN masks generation impelemntation
+        y = x.new_zeros((3, 3))
+        y[1, :] = 2.0
+        y[2, :] = 3.0
         return self.linear(x) + y
 
 
