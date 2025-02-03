@@ -49,7 +49,6 @@ from tests.cross_fw.shared.json import load_json
 from tests.cross_fw.test_templates.template_test_weights_compression import ACTIVATION
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
-from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
@@ -112,6 +111,10 @@ def get_next_node(node):
     assert len(target_inputs) == 1
     next_node = next(iter(target_inputs)).get_node()
     return next_node
+
+
+def get_shape_for_second_input(op_with_weights: ov.Node) -> List[int]:
+    return list(op_with_weights.inputs()[1].get_shape())
 
 
 def check_int8_node(op: ov.Node, mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM):
@@ -726,23 +729,6 @@ def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
-@pytest.mark.parametrize("with_multiply", (True, False))
-def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(mode, with_multiply):
-    n_layers = 8
-    n_awq_target = n_layers - 1  # first MatMul is always int8
-    model = AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers).ov_model
-    dataset = Dataset([np.ones([1, 8, 8])])
-
-    compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
-
-    awq_num = 0
-    for op in model.get_ops():
-        if op.get_type_name() == "Constant" and "awq" in op.get_friendly_name():
-            awq_num += 1
-    assert awq_num == n_awq_target
-
-
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
     model = AWQMatmulModel(is_int8=True).ov_model
     dataset = Dataset([np.ones([1, 8, 8])])
@@ -1078,49 +1064,6 @@ def test_call_max_var_criterion_with_dataset_gptq_neg_group_size(mode):
         op_name = op.get_friendly_name()
         if op.get_type_name() == "Constant" and ("/zero_point" in op_name or "/scale" in op_name):
             assert op.get_shape() == [sz, 1]
-
-
-@pytest.mark.parametrize("mode", INT4_MODES)
-def test_one_dimentional_samples(mode):
-    model = AWQMatmulModel().ov_model
-    sz = 8
-    n_samples = 10
-    dataset = Dataset([np.ones([1, i + 1, sz]) for i in range(n_samples)])
-
-    compressed_model = compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, awq=True)
-
-    for op in compressed_model.get_ordered_ops():
-        op_name = op.get_friendly_name()
-        if op.get_type_name() == "Constant" and ("/zero_point" in op_name or "/scale" in op_name):
-            assert op.get_shape() == [sz, 1]
-
-
-def test_awq_with_ignored_scope():
-    model = AWQMatmulModel().ov_model
-    sz = 8
-    n_samples = 10
-    dataset = Dataset([np.ones([1, i + 1, sz]) for i in range(n_samples)])
-
-    compressed_model = compress_weights(
-        model,
-        mode=CompressWeightsMode.INT4_ASYM,
-        ratio=1.0,
-        group_size=-1,
-        dataset=dataset,
-        awq=True,
-        ignored_scope=IgnoredScope(names=["MatMul_6"]),
-    )
-
-    act_num = 0
-    num_compressed = 8
-    for op in compressed_model.get_ops():
-        if op.get_type_name() == "Constant" and op.get_element_type() == ov.Type.u4:
-            act_num += 1
-    assert act_num == num_compressed
-
-
-def get_shape_for_second_input(op_with_weights: ov.Node) -> List[int]:
-    return list(op_with_weights.inputs()[1].get_shape())
 
 
 @pytest.mark.parametrize(
@@ -1500,6 +1443,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return SequentialMatmulModel().ov_model
 
     @staticmethod
+    def get_awq_matmul_model() -> ov.Model:
+        return AWQMatmulModel().ov_model
+
+    @staticmethod
     def to_tensor(x) -> np.ndarray:
         return np.array(x)
 
@@ -1561,3 +1508,18 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         compiled_model = ov.compile_model(model, device_name="CPU")
         weight_output = compiled_model(input)[1]
         return Tensor(weight_output)
+
+    @staticmethod
+    def get_ignored_scope_name() -> str:
+        return "MatMul_6"
+
+    @staticmethod
+    def get_num_int4_nodes(compressed_model: ov.Model) -> int:
+        num = 0
+        for op in compressed_model.get_ops():
+            if op.get_type_name() == "Constant" and op.get_element_type() == ov.Type.i4:
+                num += 1
+        return num
+
+    @staticmethod
+    def check_model_2(): ...

@@ -87,6 +87,48 @@ class LinearModel(torch.nn.Module):
         return self.linear(input)
 
 
+class AWQMatmulModel(nn.Module):
+    def __init__(self, is_int8=False):
+        super().__init__()
+        self.is_int8 = is_int8
+
+        self.linear1 = self.get_linear_layer(torch.full((8, 8), 2.0), is_int8)
+        self.linear2 = self.get_linear_layer(torch.full((8, 8), 3.0), is_int8)
+        self.linear3 = self.get_linear_layer(torch.full((8, 8), 4.0), is_int8)
+        self.linear4 = self.get_linear_layer(torch.full((8, 8), 2.0), is_int8)
+        self.linear5 = self.get_linear_layer(torch.full((8, 8), 3.0), is_int8)
+        self.linear6 = self.get_linear_layer(torch.full((8, 8), 4.0), is_int8)
+
+    def get_linear_layer(self, weights_data, is_int8):
+        if not is_int8:
+            linear_layer = nn.Linear(weights_data.shape[1], weights_data.shape[0], bias=False)
+            linear_layer.weight = nn.Parameter(torch.tensor(weights_data, dtype=torch.float32))
+        else:
+            qw = torch.tensor(weights_data, dtype=torch.uint8).float()
+            zp = torch.tensor([2**7], dtype=torch.uint8).float()
+            scale = torch.ones((weights_data.shape[0], 1), dtype=torch.float32)
+            weights = (qw - zp) * scale
+            linear_layer = nn.Linear(weights_data.shape[1], weights_data.shape[0], bias=False)
+            linear_layer.weight = nn.Parameter(weights)
+
+        return linear_layer
+
+    def forward(self, x):
+        x = x.view(1, -1, 8)  # Reshape input to match the expected dimensions
+
+        node1 = self.linear1(x)
+        node2 = self.linear2(x)
+        node_multiply = node1 * node2
+
+        node3 = self.linear3(node_multiply)
+        node4 = self.linear4(node3)
+        node5 = self.linear5(node3)
+        node_multiply_2 = node4 * node5
+
+        node6 = self.linear6(node_multiply_2)
+        return node6
+
+
 class FunctionalModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -248,7 +290,6 @@ class EmptyModel(torch.nn.Module):
         {"all_layers": False},
         *({"sensitivity_metric": metric} for metric in ALL_SENSITIVITY_METRICS),
         {"gptq": True},
-        {"awq": True},
         {"scale_estimation": True},
         {"lora_correction": True},
         {"backup_mode": BackupMode.NONE},
@@ -268,11 +309,7 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 @pytest.mark.parametrize("mode", INT4_MODES)
 @pytest.mark.parametrize(
     "params",
-    (
-        {"gptq": True},
-        {"awq": True},
-        {"lora_correction": True},
-    ),
+    ({"gptq": True}, {"lora_correction": True}),
 )
 def test_raise_error_with_unsupported_params_for_int4(mode, params):
     dummy_torch_model = EmptyModel()
@@ -422,3 +459,21 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         weight = compressed_model.linear.weight
         unpacked_w = compressed_model.nncf.external_op.weights_decompressor_linear_weight(weight)
         return Tensor(unpacked_w)
+
+    @staticmethod
+    def get_awq_matmul_model() -> torch.nn.Module:
+        return AWQMatmulModel()
+
+    @staticmethod
+    def get_ignored_scope_name() -> str:
+        return "AWQMatmulModel/Linear[linear6]/linear_0"
+
+    @staticmethod
+    def get_num_int4_nodes(compressed_model: torch.nn.Module) -> int:
+        num = 0
+        for _, op in compressed_model.nncf.external_op.items():
+            num += isinstance(op, INT4SymmetricWeightsDecompressor)
+        return num
+
+    @staticmethod
+    def check_model_2(): ...
