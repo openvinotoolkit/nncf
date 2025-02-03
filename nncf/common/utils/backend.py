@@ -22,7 +22,7 @@ try:
     import openvino  # type: ignore # noqa: F401
 
     _OPENVINO_AVAILABLE = True
-    _OPENVINO_VERSION = version.parse(version.parse(openvino.__version__).base_version)
+    _OPENVINO_VERSION = version.parse(openvino.__version__.split("-")[0])
 except ImportError:
     _OPENVINO_AVAILABLE = False
     _OPENVINO_VERSION = None
