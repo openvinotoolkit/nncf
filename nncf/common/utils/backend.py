@@ -12,6 +12,8 @@ from copy import deepcopy
 from enum import Enum
 from typing import Any, Callable, TypeVar
 
+from packaging import version
+
 import nncf
 
 TModel = TypeVar("TModel")
@@ -20,8 +22,10 @@ try:
     import openvino  # type: ignore # noqa: F401
 
     _OPENVINO_AVAILABLE = True
+    _OPENVINO_VERSION = version.parse(version.parse(openvino.__version__).base_version)
 except ImportError:
     _OPENVINO_AVAILABLE = False
+    _OPENVINO_VERSION = None
 
 
 class BackendType(Enum):
@@ -174,3 +178,15 @@ def is_openvino_available() -> bool:
     :return: True if openvino package is installed, False otherwise.
     """
     return _OPENVINO_AVAILABLE
+
+
+def is_openvino_at_least(version_str: str) -> bool:
+    """
+    Check if OpenVINO version is at least the specified one.
+    :param version_str: The version string to compare with the installed OpenVINO version. For example "2025.1".
+    :return: True if the installed OpenVINO version is at least the specified one, False otherwise.
+    """
+    if not _OPENVINO_AVAILABLE:
+        return False
+
+    return version.parse(version_str) <= _OPENVINO_VERSION

@@ -22,6 +22,7 @@ from openvino._pyopenvino.properties.hint import inference_precision
 from openvino.runtime import Node
 from openvino.runtime import opset13 as opset
 
+from nncf.common.utils.backend import is_openvino_at_least
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
 from nncf.common.utils.cpu_info import is_lnl_cpu
@@ -118,7 +119,7 @@ def clear_ov_model_cache():
 
 
 def _compile_ov_model(model: ov.Model, device_name: str, config: Dict[str, str]) -> ov.CompiledModel:
-    if is_lnl_cpu():
+    if is_lnl_cpu() and not is_openvino_at_least("2025.1"):
         with set_env_variable("DNNL_MAX_CPU_ISA", "AVX2_VNNI"):
             compiled_model = ov.compile_model(model, device_name=device_name, config=config)
     else:
