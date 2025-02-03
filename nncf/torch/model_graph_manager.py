@@ -52,9 +52,7 @@ def find_const_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> Op
     :return: The constant node found within the subgraph, or None if no constant node is found.
     """
     if node.metatype == om.PTNoopMetatype or node.node_type in om.QUANTIZE_NODE_TYPES:
-        prev_nodes = graph.get_previous_nodes(node)
-        if len(prev_nodes) != 1:
-            return None
+        prev_nodes = [e.from_node for e in graph.get_input_edges(node)]
         return find_const_node_in_constant_subgraph(prev_nodes[0], graph)
     if node.metatype in CONST_NOOP_METATYPES:
         return node
@@ -298,6 +296,21 @@ def set_const_data_to_port_id(data: torch.Tensor, node: NNCFNode, port_id: int, 
     else:
         setattr(module, const_attr_name, data)
 
+
+
+def get_input_fake_quantize_node(nncf_graph: NNCFGraph, node: NNCFNode, port_id: int) -> Optional[NNCFNode]:
+    """
+    Return fake_quantizer node on input port id.
+
+    :param nncf_graph: The NNCF graph.
+    :param node: The target node.
+    :param port_id: The port id number for which to retrieve the quantizer module.
+    :return bool: return `True` if the node is quantized.
+    """
+    for edge in nncf_graph.get_input_edges(node):
+        if edge.input_port_id == port_id and edge.from_node.node_type in om.QUANTIZE_NODE_TYPES:
+            return edge.to_node
+    return None
 
 def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     """

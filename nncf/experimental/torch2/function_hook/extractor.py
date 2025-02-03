@@ -17,9 +17,10 @@ import nncf
 from nncf import nncf_logger
 from nncf.common.graph.graph import NNCFNode
 from nncf.experimental.torch2.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
+from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.model_graph_manager import get_const_data
+from nncf.torch.model_graph_manager import get_const_data, get_input_fake_quantize_node
 from nncf.torch.model_graph_manager import get_const_node
 
 CONV_METATYPES = (
@@ -45,7 +46,7 @@ class ExtractedFunc(nn.Module):
         self.kwargs = kwargs
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.fn(input=x, **self.kwargs)
+        return self.fn(x, **self.kwargs)
 
 
 def apply_args_defaults(args: List[Any], kwargs: Dict[str, Any], indexed_args=List[Tuple[int, str]]) -> Dict[str, Any]:
@@ -59,37 +60,42 @@ def apply_args_defaults(args: List[Any], kwargs: Dict[str, Any], indexed_args=Li
     return args_dict
 
 
-# def try_to_fuse_conv(
-#     input_node: NNCFNode, output_node: NNCFNode, model: NNCFNetwork, extracted_module: nn.Module
-# ) -> nn.Module:
-#     """
-#     Fused convolution operation with the next batch norm node if possible,
+def extract_bn(model: nn.Module, graph: PTNNCFGraph, node: NNCFNode) -> ExtractedFunc:
+    """
+    Extract batch_norm operation.
+    If source modules inhered from nn.BatchNorm1d, nn.BatchNorm2d, or nn.BatchNorm3d return torch BatchNorm module.
 
-#     :param input_node: Input subgraph node.
-#     :param output_node: Output subgraph node (fused with input node).
-#     :param model: Source model.
-#     :param extracted_module: Extracted module.
-#     """
-#     next_nodes = model.nncf.get_graph().get_next_nodes(input_node)
+    :param node: Target batch_norm node.
+    :param model: Source model.
+    :return: BatchNorm module with same attributes and parameters from source module or None.
+    """
+    layer_attr = node.layer_attributes
+    if not isinstance(layer_attr, PT2OpLayerAttributes):
+        msg = f"Expected PT2OpLayerAttributes for input_node.layer_attributes, actual: {type(layer_attr)}"
+        raise nncf.InternalError(msg)
+    
+    weigth_node = get_const_node(node, 1, graph)
+    weight = get_const_data(weigth_node, model)
 
-#     if len(next_nodes) != 1:
-#         return extracted_module
+    bias_node = get_const_node(node, 2, graph)
+    bias = get_const_data(bias_node, model)
 
-#     if output_node != next_nodes[0]:
-#         raise nncf.InternalError(f"Output node {output_node} not found after {input_node}")
+    running_mean_node = get_const_node(node, 3, graph)
+    running_mean = get_const_data(running_mean_node, model)
 
-#     if next_nodes[0].metatype != om.PTBatchNormMetatype:
-#         raise nncf.InternalError("Supported only BatchNorm layers")
+    running_var_node = get_const_node(node, 4, graph)
+    running_var = get_const_data(running_var_node, model)
 
-#     extracted_bn = extract_bn(next_nodes[0], model)
-#     if extracted_bn is None:
-#         nncf_logger.debug(
-#             f"Can`t extract fused batchnorm module for {input_node.node_name},"
-#             " module that contain batchnorm operator should be inhered from one of {BATCH_NORM_CLASSES}."
-#         )
-#         return None
-#     return nn.Sequential(extracted_module, extracted_bn)
+    bn_kwargs = apply_args_defaults(
+        layer_attr.op_args, layer_attr.op_kwargs, [(6, "momentum"), (7, "eps"), (8, "cudnn_enabled")]
+    )
+    bn_kwargs["weight"] = weight
+    bn_kwargs["bias"] = bias
+    bn_kwargs["running_mean"] = running_mean
+    bn_kwargs["running_var"] = running_var
+    bn_kwargs["training"] = False
 
+    return ExtractedFunc(layer_attr.func, bn_kwargs)
 
 def extract_conv(
     model: nn.Module,
@@ -106,19 +112,22 @@ def extract_conv(
     :param output_nodes: The name of output node.
     :return: The extracted convolutional layer as an ExtractedFunc module.
     """
-    weight_node = get_const_node(input_node, input_node.metatype.weight_port_ids[0], graph)
+    weight_node = get_const_node(input_node, 1, graph)
     weight = get_const_data(weight_node, model)
-    # w_fq = get_fake_quantizer(input_node, input_node.metatype.weight_port_ids[0], model)
-    bias_node = get_const_node(input_node, input_node.metatype.bias_port_id, graph)
-    bias = get_const_data(bias_node, model) if bias_node is not None else None
 
-    # with torch.no_grad():
-    #     e_weight = w_fq(weight) if w_fq else weight
+    hook_storage = get_hook_storage(model)
+    with torch.no_grad():
+        # Calculate weight after executuin all hook fro weight data
+        weight = hook_storage.execute_post_function_hooks(weight_node.node_name, 0, weight)
+        weight = hook_storage.execute_pre_function_hooks(input_node.node_name, 1, weight)
+
+    bias_node = get_const_node(input_node, 2, graph)
+    bias = get_const_data(bias_node, model) if bias_node is not None else None
 
     layer_attrs = input_node.layer_attributes
 
     if not isinstance(layer_attrs, PT2OpLayerAttributes):
-        msg = "Expected PT2OpLayerAttributes for input_node.layer_attributes"
+        msg = f"Expected PT2OpLayerAttributes for input_node.layer_attributes, actual: {type(layer_attrs)}"
         raise nncf.InternalError(msg)
 
     conv_kwargs = apply_args_defaults(
@@ -126,12 +135,22 @@ def extract_conv(
     )
     conv_kwargs["weight"] = weight
     conv_kwargs["bias"] = bias
-    extracted_module = ExtractedFunc(layer_attrs.func, conv_kwargs)
+    conv_module = ExtractedFunc(layer_attrs.func, conv_kwargs)
 
-    # if input_node != output_node:
-    #     extracted_module = try_to_fuse_conv(input_node, output_node, model, extracted_module)
-
-    return extracted_module
+    if input_node == output_node:
+        return conv_module
+    
+    if not output_node.metatype is om.PTBatchNormMetatype:
+        msg = f"Support only PTBatchNormMetatype as output node, actual: {output_node.metatype}"
+        raise nncf.InternalError(msg)
+    
+    next_nodes = graph.get_next_nodes(input_node)
+    if output_node not in next_nodes:
+        msg = f"Output node {output_node} not found after {input_node}"
+        raise nncf.InternalError(msg)
+    
+    bn_module = extract_bn(model, graph, output_node)
+    return nn.Sequential(conv_module, bn_module)
 
 
 def extract_model(
@@ -140,6 +159,10 @@ def extract_model(
     """
     Extracts a submodule from a given NNCF network containing only the nodes from the input to the output node.
 
+    Supported subgraph:
+      - Conv
+      - Conv + BatchNorm
+    
     :param model: The NNCF network to extract the submodule from.
     :param input_nodes: List containing names of the input nodes for the submodule.
     :param output_nodes: List containing names of the output nodes for the submodule.

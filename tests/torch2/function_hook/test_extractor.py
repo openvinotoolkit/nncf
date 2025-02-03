@@ -15,53 +15,48 @@ from torch import nn
 
 import tests.cross_fw.test_templates.helpers as helpers
 
-# from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.torch2.function_hook.extractor import extract_model
 
-# from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.experimental.torch2.function_hook.wrapper import wrap_model, register_pre_function_hook
 
-# from nncf.torch.graph.transformations.command_creation import create_quantizer_insertion_command
-# from nncf.torch.graph.transformations.commands import PTTargetPoint
-# from nncf.torch.model_transformer import PTModelTransformer
-# from nncf.torch.model_transformer import PTTransformationLayout
-# from nncf.torch.quantization.layers import PTQuantizerSpec
-# from nncf.torch.quantization.layers import QuantizationMode
-# from nncf.torch.quantization.layers import SymmetricQuantizer
+from nncf.torch.quantization.layers import PTQuantizerSpec
+from nncf.torch.quantization.layers import QuantizationMode
+from nncf.torch.quantization.layers import SymmetricQuantizer
 
 
-@pytest.mark.parametrize(
-    "model_cls, input_node_name, output_node_name",
-    (
-        # (
-        #     helpers.ConvBiasBNTestModel,
-        #     "conv/conv2d/0",
-        #     "bn/batch_norm/0",
-        # ),
-        # (
-        #     helpers.ConvBNTestModel,
-        #     "conv/conv2d/0",
-        #     "bn/batch_norm/0",
-        # ),
+TEST_PARAMS =     (
+        (
+            helpers.ConvBiasBNTestModel,
+            "conv/conv2d/0",
+            "bn/batch_norm/0",
+        ),
+        (
+            helpers.ConvBNTestModel,
+            "conv/conv2d/0",
+            "bn/batch_norm/0",
+        ),
         (
             helpers.ConvTestModel,
             "conv/conv2d/0",
             "conv/conv2d/0",
         ),
-        # (
-        #     helpers.CustomConvBNTestModel,
-        #     "conv/conv2d/0",
-        #     "bn/batch_norm/0",
-        # ),
-        # (
-        #     helpers.CustomConvTestModel,
-        #     "conv/conv2d/0",
-        #     "conv/conv2d/0",
-        # ),
-    ),
+        (
+            helpers.CustomConvBNTestModel,
+            "conv/conv2d/0",
+            "bn/batch_norm/0",
+        ),
+        (
+            helpers.CustomConvTestModel,
+            "conv/conv2d/0",
+            "conv/conv2d/0",
+        ),
+    )
+@pytest.mark.parametrize(
+    "model_cls, input_node_name, output_node_name",
+    TEST_PARAMS
 )
-def test_extract_model(model_cls, input_node_name, output_node_name):
+def test_extract_model(model_cls: type, input_node_name: str, output_node_name: str):
     example_input = torch.ones(model_cls.INPUT_SIZE)
 
     model: nn.Module = wrap_model(model_cls().eval())
@@ -74,68 +69,36 @@ def test_extract_model(model_cls, input_node_name, output_node_name):
         assert torch.any(torch.isclose(ret1, ret2))
 
 
-# @pytest.mark.parametrize(
-#     "model_cls, input_node_name, output_node_name",
-#     (
-#         (
-#             helpers.ConvBiasBNTestModel,
-#             "ConvBiasBNTestModel/Conv2d[conv]/conv2d_0",
-#             "ConvBiasBNTestModel/BatchNorm2d[bn]/batch_norm_0",
-#         ),
-#         (
-#             helpers.ConvBNTestModel,
-#             "ConvBNTestModel/Conv2d[conv]/conv2d_0",
-#             "ConvBNTestModel/BatchNorm2d[bn]/batch_norm_0",
-#         ),
-#         (
-#             helpers.ConvTestModel,
-#             "ConvTestModel/Conv2d[conv]/conv2d_0",
-#             "ConvTestModel/Conv2d[conv]/conv2d_0",
-#         ),
-#         (
-#             helpers.CustomConvBNTestModel,
-#             "CustomConvBNTestModel/CustomConv[conv]/conv2d_0",
-#             "CustomConvBNTestModel/CustomBN2d[bn]/batch_norm_0",
-#         ),
-#         (
-#             helpers.CustomConvTestModel,
-#             "CustomConvTestModel/CustomConv[conv]/conv2d_0",
-#             "CustomConvTestModel/CustomConv[conv]/conv2d_0",
-#         ),
-#     ),
-# )
-# def test_extract_model_for_node_with_fq(model_cls, input_node_name, output_node_name):
-#     example_input = torch.ones(model_cls.INPUT_SIZE)
+@pytest.mark.parametrize(
+    "model_cls, input_node_name, output_node_name",
+    TEST_PARAMS
+)
+def test_extract_model_for_node_with_fq(model_cls, input_node_name, output_node_name):
+    example_input = torch.ones(model_cls.INPUT_SIZE)
 
-#     model = wrap_model(model_cls().eval(), example_input=example_input, trace_parameters=True)
+    model = wrap_model(model_cls().eval())
 
-#     transformer = PTModelTransformer(model)
-#     qspec = PTQuantizerSpec(
-#         num_bits=8,
-#         mode=QuantizationMode.SYMMETRIC,
-#         signedness_to_force=None,
-#         scale_shape=(1,),
-#         narrow_range=False,
-#         half_range=False,
-#         logarithm_scale=False,
-#     )
+    qspec = PTQuantizerSpec(
+        num_bits=8,
+        mode=QuantizationMode.SYMMETRIC,
+        signedness_to_force=None,
+        scale_shape=(1,),
+        narrow_range=False,
+        half_range=False,
+        logarithm_scale=False,
+    )
+    fq = SymmetricQuantizer(qspec)
+    
+    register_pre_function_hook(model, input_node_name, 1, fq)
 
-#     fq = SymmetricQuantizer(qspec)
-#     command = create_quantizer_insertion_command(
-#         PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, input_node_name, input_port_id=1), fq
-#     )
-#     layout = PTTransformationLayout()
-#     layout.register(command)
-#     q_model = transformer.transform(layout)
+    graph = build_nncf_graph(model, example_input)
 
-#     extracted_module = extract_model(model, [input_node_name], [output_node_name])
-#     with torch.no_grad():
-#         ret1 = q_model(example_input)
-#         ret2 = extracted_module(example_input)
-#         assert torch.all(torch.isclose(ret1, ret2))
+    extracted_module = extract_model(model, graph, [input_node_name], [output_node_name])
+    with torch.no_grad():
+        ret1 = model(example_input)
+        ret2 = extracted_module(example_input)
+        assert torch.all(torch.isclose(ret1, ret2))
 
-#     extracted_fn = extracted_module
-#     if isinstance(extracted_fn, nn.Sequential):
-#         extracted_fn = extracted_module[0]
-
-#     assert extracted_fn.fn_name is not None
+    extracted_fn = extracted_module
+    if isinstance(extracted_fn, nn.Sequential):
+        extracted_fn = extracted_module[0]
