@@ -25,7 +25,6 @@ try:
     _OPENVINO_VERSION = version.parse(openvino.__version__.split("-")[0])
 except ImportError:
     _OPENVINO_AVAILABLE = False
-    _OPENVINO_VERSION = version.parse("0.0")
 
 
 class BackendType(Enum):
