@@ -4,20 +4,23 @@
 
 Post-training Quantization:
 
-- Breaking changes:
-  - ...
-- General:
-  - ...
 - Features:
-  - (TorchFX, Experimental) Preview support for the new `quantize_pt2e` API has been introduced, enabling quantization of `torch.fx.GraphModule` models with the `OpenVINOQuantizer` and the `X86InductorQuantizer` quantizers. `quantize_pt2e` API utilizes `MinMax` algorithm statistic collectors, as well as `SmoothQuant`, `BiasCorrection` and `FastBiasCorrection` Post-Training Quantization algorithms.
-  - (TensorFlow) The `nncf.quantize()` method is now the recommended way for the quantization initialization for Quantization-Aware Training. Please refer to an [example](examples/quantization_aware_training/tensorflow/mobilenet_v2) for more details about how to use new approach.
-  - (TensorFlow) Compression layers placement in the model now can be serialized and restored with new API functions: `nncf.tensorflow.get_config()` and `nncf.tensorflow.load_from_config()`. Please see [documentation](/docs/usage/training_time_compression/quantization_aware_training/Usage.md#saving-and-loading-compressed-models) for the saving/loading of a quantized model for more details.
+  - (TensorFlow) The `nncf.quantize()` method is now the recommended API for Quantization-Aware Training. Please refer to an [example](examples/quantization_aware_training/tensorflow/mobilenet_v2) for more details about how to use a new approach.
+  - (TensorFlow) Compression layers placement in the model now can be serialized and restored with new API functions: `nncf.tensorflow.get_config()` and `nncf.tensorflow.load_from_config()`. Please see the [documentation](docs/usage/training_time_compression/quantization_aware_training/Usage.md#saving-and-loading-compressed-models) for the saving/loading of a quantized model for more details.
+  - (OpenVINO) Added [example](examples/llm_compression/openvino/smollm2_360m_fp8) with LLM quantization to FP8 precision.
+  - (TorchFX, Experimental) Preview support for the new `quantize_pt2e` API has been introduced, enabling quantization of `torch.fx.GraphModule` models with the `OpenVINOQuantizer` and the `X86InductorQuantizer` quantizers. `quantize_pt2e` API utilizes `MinMax` algorithm statistic collectors, as well as SmoothQuant, BiasCorrection and FastBiasCorrection Post-Training Quantization algorithms.
+  - Added unification of scales for ScaledDotProductAttention operation.
 - Fixes:
-  - ...
+  - (ONNX) Fixed sporadic accuracy issues with the BiasCorrection algorithm.
+  - (ONNX) Fixed GroupConvolution operation weight quantization, which also improves performance for a number of models.
+  - Fixed AccuracyAwareQuantization algorithm to solve [#3118](https://github.com/openvinotoolkit/nncf/issues/3118) issue.
+  - Fixed issue with NNCF usage with potentially corrupted backend frameworks.
 - Improvements:
+  - (TorchFX, Experimental) Added YoloV11 support.
+  - (OpenvINO) The performance of the FastBiasCorrection algorithm was improved.
   - Significantly faster data-free weight compression for OpenVINO models: INT4 compression is now up to 10x faster, while INT8 compression is up to 3x faster. The larger the model the higher the time reduction.
   - AWQ weight compression is now up to 2x faster, improving overall runtime efficiency.
-  - Peak memory usage during INT4 data-free weight compression in the OpenVINO backend is reduced up to 50% for certain models.
+  - Peak memory usage during INT4 data-free weight compression in the OpenVINO backend is reduced by up to 50% for certain models.
 - Deprecations/Removals:
   - (TensorFlow) The `nncf.tensorflow.create_compressed_model()` method is now marked as deprecated. Please use the `nncf.quantize()` method for the quantization initialization.
 - Tutorials:
@@ -29,36 +32,11 @@ Post-training Quantization:
   - [Post-Training Optimization of LTX Video Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/ltx-video/ltx-video.ipynb)
   - [Post-Training Optimization of DeepSeek-R1-Distill Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-chatbot/llm-chatbot-generate-api.ipynb)
   - [Post-Training Optimization of Janus DeepSeek-LLM-1.3b Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/janus-multimodal-generation/janus-multimodal-generation.ipynb)
-- Known issues:
-  - ...
-
-Compression-aware training:
-
-- Breaking changes:
-  - ...
-- General:
-  - ...
-- Features:
-  - ...
-- Fixes:
-  - ...
-- Improvements:
-  - ...
-- Deprecations/Removals:
-  - ...
-- Tutorials:
-  - ...
-- Known issues:
-  - ...
-
-Deprecations/Removals:
-
-- ...
 
 Requirements:
 
-- Update minimal versin for `numpy` (>=1.24.0).
-- Removed `tqdm`.
+- Updated the minimal version for `numpy` (>=1.24.0).
+- Removed `tqdm` dependency.
 
 ## New in Release 2.14.1
 
