@@ -400,7 +400,7 @@ WEIGHT_COMPRESSION_MODELS = [
                 scale_estimation_params=AdvancedScaleEstimationParameters(32, 5, 10, 1.0)
             ),
         },
-        "backends": [BackendType.OV],
+        "backends": [BackendType.OV, BackendType.TORCH],
     },
     {
         "reported_name": "tinyllama_data_aware_awq_scale_estimation_stateful",
