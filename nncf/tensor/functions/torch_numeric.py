@@ -484,3 +484,8 @@ def tensor(
     device = convert_to_torch_device(device)
     dtype = convert_to_torch_dtype(dtype)
     return torch.tensor(data, dtype=dtype, device=device)
+
+
+@numeric.as_numpy_tensor.register(torch.Tensor)
+def _(a: torch.Tensor) -> np.ndarray:
+    return a.detach().cpu().numpy()
