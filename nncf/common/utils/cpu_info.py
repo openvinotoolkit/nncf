@@ -19,5 +19,5 @@ _IS_LNL_CPU = None
 def is_lnl_cpu() -> bool:
     global _IS_LNL_CPU
     if _IS_LNL_CPU is None:
-        _IS_LNL_CPU = re.search(r"Ultra \d 2\d{2}V", cpuinfo.get_cpu_info()["brand_raw"]) is not None
+        _IS_LNL_CPU = re.search(r"Ultra \d 2\d{2}", cpuinfo.get_cpu_info()["brand_raw"]) is not None
     return _IS_LNL_CPU
