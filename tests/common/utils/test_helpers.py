@@ -15,7 +15,15 @@ from nncf.common.utils.helpers import set_env_variable
 
 
 def test_set_env_variable():
+    # Test the case when the variable is not set
     assert os.environ.get("TEST_VAR") is None
     with set_env_variable("TEST_VAR", "test_value"):
         assert os.environ.get("TEST_VAR") == "test_value"
     assert os.environ.get("TEST_VAR") is None
+
+    # Test the case when the variable is already set
+    os.environ["TEST_VAR"] = "original_value"
+    assert os.environ.get("TEST_VAR") == "original_value"
+    with set_env_variable("TEST_VAR", "test_value"):
+        assert os.environ.get("TEST_VAR") == "test_value"
+    assert os.environ.get("TEST_VAR") == "original_value"
