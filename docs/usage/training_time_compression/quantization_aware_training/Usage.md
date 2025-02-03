@@ -64,7 +64,7 @@ import openvino as ov
 # resulting in a clean, fully quantized model ready for deployment.
 stripped_model = nncf.strip(quantized_model)
 
-ov_quantized_model = ov.convert_model(stripped_model, share_weights=False)
+ov_quantized_model = ov.convert_model(stripped_model)
 ```
 
 </details>
