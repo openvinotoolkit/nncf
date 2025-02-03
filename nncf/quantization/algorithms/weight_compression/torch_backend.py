@@ -35,6 +35,9 @@ from nncf.experimental.common.tensor_statistics.statistics import MeanMagnitudeT
 from nncf.experimental.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressWeightsMode
+from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply  # Should be put somewhere else?
+from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
+from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
@@ -44,6 +47,8 @@ from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph import operator_metatypes as om
+from nncf.torch.graph.operator_metatypes import PTMulMetatype
+from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import find_const_node_in_constant_subgraph
@@ -318,6 +323,37 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         transformed_model = PTModelTransformer(model).transform(transformation_layout)
 
         return transformed_model
+
+
+class PTAWQAlgoAlgoBackend(AWQAlgoBackend, PTWeightCompressionAlgoBackend):
+    @staticmethod
+    def get_awq_patterns():
+        return get_awq_patterns(
+            PTWeightCompressionAlgoBackend.MATMUL_METATYPES, PTMulMetatype, ATOMIC_ACTIVATIONS_OPERATIONS
+        )
+
+    @staticmethod
+    def scale_insertion_command(
+        source_node: NNCFNode,
+        next_nodes,
+        source_output_port_id: int,
+        scale: torch.Tensor,
+    ) -> PTSharedFnInsertionCommand:
+        input_port_id = 0
+        target_points = []
+        for node in next_nodes:
+            target_points.append(
+                PTTargetPoint(
+                    PTWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[TargetType.PRE_LAYER_OPERATION],
+                    node.node_name,
+                    input_port_id=input_port_id,
+                )
+            )
+
+        sq_multiply = SQMultiply(scale.shape)
+        sq_multiply.scale = scale
+        scale_node_name = f"{source_node.node_name}/awq_mul"
+        return PTSharedFnInsertionCommand(target_points, sq_multiply, scale_node_name)
 
 
 class PTMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, PTWeightCompressionAlgoBackend):
