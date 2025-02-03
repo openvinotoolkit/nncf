@@ -8,7 +8,7 @@ Post-training Quantization:
   - (TensorFlow) The `nncf.quantize()` method is now the recommended API for Quantization-Aware Training. Please refer to an [example](examples/quantization_aware_training/tensorflow/mobilenet_v2) for more details about how to use a new approach.
   - (TensorFlow) Compression layers placement in the model now can be serialized and restored with new API functions: `nncf.tensorflow.get_config()` and `nncf.tensorflow.load_from_config()`. Please see the [documentation](docs/usage/training_time_compression/quantization_aware_training/Usage.md#saving-and-loading-compressed-models) for the saving/loading of a quantized model for more details.
   - (OpenVINO) Added [example](examples/llm_compression/openvino/smollm2_360m_fp8) with LLM quantization to FP8 precision.
-  - (TorchFX, Experimental) Preview support for the new `quantize_pt2e` API has been introduced, enabling quantization of `torch.fx.GraphModule` models with the `OpenVINOQuantizer` and the `X86InductorQuantizer` quantizers. `quantize_pt2e` API utilizes `MinMax` algorithm statistic collectors, as well as SmoothQuant, BiasCorrection and FastBiasCorrection Post-Training Quantization algorithms.
+  - (TorchFX, Experimental) Preview support for the new `quantize_pt2e` API has been introduced, enabling quantization of `torch.fx.GraphModule` models with the `OpenVINOQuantizer` and the `X86InductorQuantizer` quantizers. `quantize_pt2e` API utilizes MinMax algorithm statistic collectors, as well as SmoothQuant, BiasCorrection and FastBiasCorrection Post-Training Quantization algorithms.
   - Added unification of scales for ScaledDotProductAttention operation.
 - Fixes:
   - (ONNX) Fixed sporadic accuracy issues with the BiasCorrection algorithm.
