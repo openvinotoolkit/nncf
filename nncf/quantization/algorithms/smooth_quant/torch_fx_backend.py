@@ -28,8 +28,6 @@ from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.experimental.torch.fx.transformations import get_graph_node_by_name
 from nncf.experimental.torch.fx.transformations import module_insertion_transformation_builder
-from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
-from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -104,7 +102,7 @@ class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return Tensor(weight_data.data)
 
     @staticmethod
-    def weight_update_command(node_with_weight: NNCFNode, weight_value: torch.Tensor) -> OVWeightUpdateCommand:
+    def weight_update_command(node_with_weight: NNCFNode, weight_value: torch.Tensor) -> FXApplyTransformationCommand:
         # TODO(dlyakhov): Use input port id depending on the node metatype/attributes.
         return FXApplyTransformationCommand(
             constant_update_transformation_builder(node_with_weight, weight_value.data, input_port_id=1)
@@ -117,7 +115,7 @@ class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         source_output_port_id: int,
         nodes: List[NNCFNode],
         scale_node_name: str,
-    ) -> OVMultiplyInsertionCommand:
+    ) -> FXApplyTransformationCommand:
         input_port_id = 0
         target_points = []
         for node in nodes:
