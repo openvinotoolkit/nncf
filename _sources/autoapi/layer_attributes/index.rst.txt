@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`layer_attributes`
-==========================
-
-.. py:module:: layer_attributes
-
-

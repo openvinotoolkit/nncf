@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf_graph_builder`
-============================
-
-.. py:module:: nncf_graph_builder
-
-

@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder`
+==============================================================================
+
+.. py:module:: nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder
+
+
