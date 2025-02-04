@@ -18,5 +18,5 @@ tensorboard==2.13.0
 tensorflow-io==0.32.0
 timm==0.9.2
 transformers==4.46.3
-git+https://github.com/openvinotoolkit/openvino.genai#subdirectory=tools/who_what_benchmark@8001069db87461417b8f01cbd5e59f9a54cefcde
+whowhatbench @ git+https://github.com/openvinotoolkit/openvino.genai.git@8001069db87461417b8f01cbd5e59f9a54cefcde#subdirectory=tools/who_what_benchmark
 datasets==3.1.0
