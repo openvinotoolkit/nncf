@@ -488,4 +488,4 @@ def tensor(
 
 @numeric.as_numpy_tensor.register(torch.Tensor)
 def _(a: torch.Tensor) -> np.ndarray:
-    return a.detach().cpu().numpy()
+    return a.cpu().detach().numpy()
