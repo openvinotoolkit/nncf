@@ -81,7 +81,7 @@ class SSD_VGG(nn.Module):
             # trust.
             #
             self.load_state_dict(
-                torch.load(base_file, map_location=lambda storage, loc: storage, pickle_module=restricted_pickle_module)
+                torch.load(base_file, weights_only=False, map_location=lambda storage, loc: storage, pickle_module=restricted_pickle_module)
             )
             logger.debug("Finished!")
         else:
@@ -170,7 +170,7 @@ def build_ssd_vgg(cfg, size, num_classes, config):
 
     if config.basenet and (config.resuming_checkpoint_path is None) and (config.weights is None):
         logger.debug("Loading base network...")
-        basenet_weights = torch.load(config.basenet, pickle_module=restricted_pickle_module)
+        basenet_weights = torch.load(config.basenet, pickle_module=restricted_pickle_module, weights_only=False)
         new_weights = {}
         for wn, wv in basenet_weights.items():
             wn = wn.replace("features.", "")

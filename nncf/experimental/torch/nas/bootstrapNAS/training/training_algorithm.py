@@ -256,7 +256,7 @@ class EpochBasedTrainingAlgorithm:
             msg = f"no checkpoint found at '{resuming_checkpoint_path}'"
             raise FileNotFoundError(msg)
         nncf_logger.info(f"=> loading checkpoint '{resuming_checkpoint_path}'")
-        checkpoint = torch.load(resuming_checkpoint_path, map_location="cpu")
+        checkpoint = torch.load(resuming_checkpoint_path, map_location="cpu", weights_only=False)
 
         training_state = checkpoint[cls._state_names.TRAINING_ALGO_STATE]
         nncf_config = NNCFConfig()
