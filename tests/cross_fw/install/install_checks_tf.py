@@ -35,9 +35,9 @@ EXCLUDED_MODULES_PATTERNS = (
     "nncf\\.experimental\\.torch.*",
     "nncf\\.experimental\\.openvino.*",
     "nncf\\.experimental\\.onnx.*",
-    ".*?openvino_[^\\.]*",
-    ".*?onnx_[^\\.]*",
-    ".*?torch_[^\\.]*",
+    "^(?!nncf(?:\\.experimental)*\\.tensorflow.*?\\.).*?openvino_[^\\.]*",
+    "^(?!nncf(?:\\.experimental)*\\.tensorflow.*?\\.).*?onnx_[^\\.]*",
+    "^(?!nncf(?:\\.experimental)*\\.tensorflow.*?\\.).*?torch_[^\\.]*",
 )
 
 load_nncf_modules(EXCLUDED_MODULES_PATTERNS)
