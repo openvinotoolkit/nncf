@@ -26,11 +26,11 @@ strict digraph  {
 "0 wte_weight" -> "4 embedding"  [label="(10, 5)", style=solid];
 "1 linear_bias" -> "13 linear"  [label="(5,)", style=solid];
 "2 lm_head_bias" -> "22 linear_1"  [label="(10,)", style=solid];
-"3 input_ids" -> "4 embedding"  [label="('s0',)", style=solid];
-"4 embedding" -> "5 embedding_0_0_nncf_smooth_quant_0"  [label="('s0', 5)", style=solid];
-"5 embedding_0_0_nncf_smooth_quant_0" -> "6 quantize_per_tensor_default"  [label="('s0', 5)", style=solid];
-"6 quantize_per_tensor_default" -> "7 dequantize_per_tensor_default"  [label="('s0', 5)", style=solid];
-"7 dequantize_per_tensor_default" -> "13 linear"  [label="('s0', 5)", style=solid];
+"3 input_ids" -> "4 embedding"  [label="(5,)", style=solid];
+"4 embedding" -> "5 embedding_0_0_nncf_smooth_quant_0"  [label="(5, 5)", style=solid];
+"5 embedding_0_0_nncf_smooth_quant_0" -> "6 quantize_per_tensor_default"  [label="(5, 5)", style=solid];
+"6 quantize_per_tensor_default" -> "7 dequantize_per_tensor_default"  [label="(5, 5)", style=solid];
+"7 dequantize_per_tensor_default" -> "13 linear"  [label="(5, 5)", style=solid];
 "8 linear_scale_0" -> "11 quantize_per_channel_default"  [label="(5,)", style=solid];
 "8 linear_scale_0" -> "12 dequantize_per_channel_default"  [label="(5,)", style=solid];
 "9 linear_zero_point_0" -> "11 quantize_per_channel_default"  [label="(5,)", style=solid];
@@ -38,10 +38,10 @@ strict digraph  {
 "10 compressed_weight_updated_constant0" -> "11 quantize_per_channel_default"  [label="(5, 5)", style=solid];
 "11 quantize_per_channel_default" -> "12 dequantize_per_channel_default"  [label="(5, 5)", style=solid];
 "12 dequantize_per_channel_default" -> "13 linear"  [label="(5, 5)", style=solid];
-"13 linear" -> "14 linear_0_0_nncf_smooth_quant_0"  [label="('s0', 5)", style=solid];
-"14 linear_0_0_nncf_smooth_quant_0" -> "15 quantize_per_tensor_default_1"  [label="('s0', 5)", style=solid];
-"15 quantize_per_tensor_default_1" -> "16 dequantize_per_tensor_default_1"  [label="('s0', 5)", style=solid];
-"16 dequantize_per_tensor_default_1" -> "22 linear_1"  [label="('s0', 5)", style=solid];
+"13 linear" -> "14 linear_0_0_nncf_smooth_quant_0"  [label="(5, 5)", style=solid];
+"14 linear_0_0_nncf_smooth_quant_0" -> "15 quantize_per_tensor_default_1"  [label="(5, 5)", style=solid];
+"15 quantize_per_tensor_default_1" -> "16 dequantize_per_tensor_default_1"  [label="(5, 5)", style=solid];
+"16 dequantize_per_tensor_default_1" -> "22 linear_1"  [label="(5, 5)", style=solid];
 "17 linear_1_scale_0" -> "20 quantize_per_channel_default_1"  [label="(10,)", style=solid];
 "17 linear_1_scale_0" -> "21 dequantize_per_channel_default_1"  [label="(10,)", style=solid];
 "18 linear_1_zero_point_0" -> "20 quantize_per_channel_default_1"  [label="(10,)", style=solid];
@@ -49,5 +49,5 @@ strict digraph  {
 "19 compressed_weight_updated_constant1" -> "20 quantize_per_channel_default_1"  [label="(10, 5)", style=solid];
 "20 quantize_per_channel_default_1" -> "21 dequantize_per_channel_default_1"  [label="(10, 5)", style=solid];
 "21 dequantize_per_channel_default_1" -> "22 linear_1"  [label="(10, 5)", style=solid];
-"22 linear_1" -> "23 output"  [label="('s0', 10)", style=solid];
+"22 linear_1" -> "23 output"  [label="(5, 10)", style=solid];
 }

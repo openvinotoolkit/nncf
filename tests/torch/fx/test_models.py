@@ -14,7 +14,7 @@ import os
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, Tuple, Type, Union
+from typing import Callable, Dict, List, Tuple, Type, Union
 
 import openvino.torch  # noqa
 import pytest
@@ -139,21 +139,25 @@ TEST_MODELS_QUANIZED = (
         ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
         {},
         [(46, 50), (23, 27)],
+        [True, False, False, False], # This Unet Model's dynamic shape is resolved to be static by pytorch
     ),
     (
         torchvision_model_case("resnet18", (1, 3, 224, 224)),
         {},
         [(51, 58), (30, 37)],
+        [True, False, True, True],
     ),
     (
         torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)),
         {},
         [(97, 112), (61, 76)],
+        [True, False, True, True],
     ),
     (
         torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [(124, 124), (74, 74)],
+        [True, False, False, False], # This ViT Model's dynamic shape is resolved to be static by pytorch
     ),
     (
         torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
@@ -162,16 +166,19 @@ TEST_MODELS_QUANIZED = (
             (250, 250),
             (149, 149),
         ],
+        [True, False, True, True],
     ),
     (
         ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [(4, 4), (2, 2)],
+        [True],
     ),
     (
         ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [(4, 4), (3, 3)],
+        [True, True, True],
     ),
 )
 
@@ -179,7 +186,7 @@ TEST_MODELS_QUANIZED = (
 @pytest.mark.parametrize("enable_dynamic_shapes", [True, False])
 @pytest.mark.parametrize("compress_weights", [True, False])
 @pytest.mark.parametrize(
-    ("model_case", "quantization_parameters", "compress_n_qdq"),
+    ("model_case", "quantization_parameters", "compress_n_qdq", "dynamic_shape_config"),
     TEST_MODELS_QUANIZED,
     ids=[m[0].model_id for m in TEST_MODELS_QUANIZED],
 )
@@ -189,14 +196,15 @@ def test_quantized_model(
     compress_weights: bool,
     compress_n_qdq: int,
     enable_dynamic_shapes: bool,
+    dynamic_shape_config: List[bool],
 ):
     model = model_case.model_builder()
     dtype = torch.int32 if model_case.model_id == "synthetic_transformer" else torch.float32
     example_input = torch.ones(model_case.input_shape, dtype=dtype)
     dynamic_shapes = None
-    enable_dynamic_shapes = model_case.model_id == "synthetic_transformer" and enable_dynamic_shapes
+    # enable_dynamic_shapes = model_case.model_id == "synthetic_transformer" and enable_dynamic_shapes
     if enable_dynamic_shapes:
-        dynamic_shapes = [(Dim.AUTO,)]
+        dynamic_shapes = [tuple(Dim.AUTO if shape else Dim.STATIC for shape in dynamic_shape_config)]
 
     fx_model = get_torch_fx_model(model, example_input, dynamic_shapes=dynamic_shapes)
 
