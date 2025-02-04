@@ -5,7 +5,7 @@ We suggest to install or use the package in the [Python virtual environment](htt
 NNCF supports multiple backends. Follow the corresponding installation guides and ensure your system meets
 the required specifications for your chosen backend:
 
-- OpenVINO&trade;: [Install Guide](https://docs.openvino.ai/2024/get-started/install-openvino.html), [System Requirements](https://docs.openvino.ai/2024/about-openvino/release-notes-openvino/system-requirements.html)
+- OpenVINO&trade;: [Install Guide](https://docs.openvino.ai/2025/get-started/install-openvino.html), [System Requirements](https://docs.openvino.ai/2025/about-openvino/release-notes-openvino/system-requirements.html)
 - ONNX: [Install Guide](https://onnxruntime.ai/docs/install/)
 - PyTorch: [Install Guide](https://pytorch.org/get-started/locally/#start-locally)
 - TensorFlow: [Install Guide](https://www.tensorflow.org/install/)
