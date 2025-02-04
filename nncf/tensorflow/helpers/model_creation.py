@@ -196,5 +196,4 @@ def get_config(model: tf.keras.Model) -> Dict[str, Any]:
     :return: Config.
     """
     config = getattr(model, "_nncf_config")
-    delattr(model, "_nncf_config")
     return config
