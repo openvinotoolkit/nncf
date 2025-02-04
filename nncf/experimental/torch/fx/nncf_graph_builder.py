@@ -74,6 +74,7 @@ class GraphConverter:
         :param model: Given GraphModule.
         :return: Node's type and metatype.
         """
+        node_type_name = None
         if node.op == "placeholder":
             node_type = "input"
             node_metatype = om.PTInputNoopMetatype
@@ -85,13 +86,15 @@ class GraphConverter:
             node_metatype = om.PTConstNoopMetatype
         elif node.op in ("call_function",):
             if hasattr(node.target, "overloadpacket"):
-                node_type = str(node.target.overloadpacket).split(".")[1]
+                node_type = str(node.target.overloadpacket)
+                node_type_name = node_type.split(".")[1]
             elif node.target.__name__ == "getitem":
-                node_type = "__getitem__"
+                node_type = "aten.__getitem__"
+                node_type_name = "__getitem__"
             else:
                 # TODO(dlyakhov): get correct nodes types from this nodes as well
                 node_type = str(node.target)
-            node_metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
+            node_metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_func(node_type)
         else:
             node_type = node.op
             node_metatype = UnknownMetatype
