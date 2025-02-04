@@ -139,7 +139,7 @@ TEST_MODELS_QUANIZED = (
         ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
         {},
         [(46, 50), (23, 27)],
-        [True, False, False, False], # This Unet Model's dynamic shape is resolved to be static by pytorch
+        [True, False, False, False],  # This ViT Model is not eligible for dynamic shape capability
     ),
     (
         torchvision_model_case("resnet18", (1, 3, 224, 224)),
@@ -157,7 +157,7 @@ TEST_MODELS_QUANIZED = (
         torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [(124, 124), (74, 74)],
-        [True, False, False, False], # This ViT Model's dynamic shape is resolved to be static by pytorch
+        [True, False, False, False],  # This ViT Model is not eligible for dynamic shape capability
     ),
     (
         torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
@@ -202,7 +202,6 @@ def test_quantized_model(
     dtype = torch.int32 if model_case.model_id == "synthetic_transformer" else torch.float32
     example_input = torch.ones(model_case.input_shape, dtype=dtype)
     dynamic_shapes = None
-    # enable_dynamic_shapes = model_case.model_id == "synthetic_transformer" and enable_dynamic_shapes
     if enable_dynamic_shapes:
         dynamic_shapes = [tuple(Dim.AUTO if shape else Dim.STATIC for shape in dynamic_shape_config)]
 
