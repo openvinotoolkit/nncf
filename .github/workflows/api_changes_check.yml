@@ -3,8 +3,10 @@ permissions: read-all
 
 on:
   pull_request:
-    branches:
-      - develop
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 env:
   API_DOC_HTML_ROOT_RELATIVE_PATH: autoapi
