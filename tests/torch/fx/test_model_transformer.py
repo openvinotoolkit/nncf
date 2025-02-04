@@ -122,7 +122,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
     (
         (
             ModelExtractionTestCase(
-                ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output_1"])
+                ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output"])
             ),
             False,
             "(conv2d,)",
@@ -131,14 +131,14 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithNotTensorBiasModel,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand(["conv2d"], ["conv2d", "output_1", "conv2d"]),
+                PTModelExtractionCommand(["conv2d"], ["conv2d", "output", "conv2d"]),
             ),
             False,
             "(conv2d, conv2d, conv2d)",
         ),
         (
             ModelExtractionTestCase(
-                ConvolutionWithSeveralOutputs, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output_1"])
+                ConvolutionWithSeveralOutputs, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output"])
             ),
             False,
             "([conv2d, add],)",
@@ -147,14 +147,14 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithSeveralOutputs,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand(["conv2d"], ["conv2d", "output_1", "conv2d"]),
+                PTModelExtractionCommand(["conv2d"], ["conv2d", "output", "conv2d"]),
             ),
             False,
             "(conv2d, [conv2d, add], conv2d)",
         ),
         (
             ModelExtractionTestCase(
-                ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output_1"])
+                ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output"])
             ),
             True,
             "(conv2d,)",
@@ -163,7 +163,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithNotTensorBiasModel,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand(["conv2d"], ["conv2d", "output_1", "conv2d"]),
+                PTModelExtractionCommand(["conv2d"], ["conv2d", "output", "conv2d"]),
             ),
             True,
             "(conv2d, conv2d, conv2d)",

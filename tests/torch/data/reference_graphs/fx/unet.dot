@@ -219,7 +219,7 @@ strict digraph  {
 "217 batch_norm_17" [id=217, type=batch_norm];
 "218 relu_17" [id=218, type=relu];
 "219 conv2d_18" [id=219, type=conv2d];
-"220 output_1" [id=220, type=output];
+"220 output" [id=220, type=output];
 "0 down_path_0_block_0_weight" -> "137 conv2d"  [label="(64, 3, 3, 3)", style=solid];
 "1 down_path_0_block_0_bias" -> "137 conv2d"  [label="(64,)", style=solid];
 "2 down_path_0_block_1_weight" -> "138 batch_norm"  [label="(64,)", style=solid];
@@ -425,5 +425,5 @@ strict digraph  {
 "216 conv2d_17" -> "217 batch_norm_17"  [label="(1, 64, 36, 36)", style=solid];
 "217 batch_norm_17" -> "218 relu_17"  [label="(1, 64, 36, 36)", style=solid];
 "218 relu_17" -> "219 conv2d_18"  [label="(1, 64, 36, 36)", style=solid];
-"219 conv2d_18" -> "220 output_1"  [label="(1, 12, 36, 36)", style=solid];
+"219 conv2d_18" -> "220 output"  [label="(1, 12, 36, 36)", style=solid];
 }
