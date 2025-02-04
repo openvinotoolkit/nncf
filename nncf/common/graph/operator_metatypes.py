@@ -111,6 +111,17 @@ class OperatorMetatypeRegistry(Registry):
                         )
                         raise nncf.InternalError(msg)
                     self._op_name_to_op_meta_dict[name] = obj
+                if hasattr(obj, "module_to_function_names"):
+                    for namespace, function_names in obj.module_to_function_names.items():
+                        for function_name in function_names:
+                            target_function_name = f"{namespace.value}.{function_name}"
+                            if target_function_name in self._func_name_to_op_meta_dict:
+                                msg = (
+                                    "Inconsistent operator metatype registry - single patched "
+                                    f"op name `{target_function_name}` maps to multiple metatypes!"
+                                )
+                                raise nncf.InternalError(msg)
+                            self._func_name_to_op_meta_dict[target_function_name] = obj
             return obj
 
         return wrap
