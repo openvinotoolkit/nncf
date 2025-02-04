@@ -98,7 +98,15 @@ def create_compressed_model(
         " - https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/tensorflow\n"
         " - https://github.com/openvinotoolkit/nncf/tree/develop/examples/quantization_aware_training/tensorflow"
     )
+    return create_compressed_model_impl(model, config, compression_state)
 
+
+def create_compressed_model_impl(
+    model: tf.keras.Model, config: NNCFConfig, compression_state: Optional[Dict[str, Any]] = None
+) -> Tuple[CompressionAlgorithmController, tf.keras.Model]:
+    """
+    Implementation of the create_compressed_model() method.
+    """
     if is_experimental_quantization(config):
         if is_keras_layer_model(model):
             raise ValueError(

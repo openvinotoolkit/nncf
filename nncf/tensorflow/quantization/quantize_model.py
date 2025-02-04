@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import warnings
 from typing import Any, Dict, Optional
 
 import tensorflow as tf
@@ -29,7 +28,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import apply_advanced_parameters_to_config
 from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
-from nncf.tensorflow.helpers.model_creation import create_compressed_model
+from nncf.tensorflow.helpers.model_creation import create_compressed_model_impl
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
 
@@ -177,9 +176,7 @@ def quantize_impl(
         ]
     )
 
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    compression_ctrl, compressed_model = create_compressed_model(model=model, config=nncf_config)
-    warnings.filterwarnings("default", category=FutureWarning)
+    compression_ctrl, compressed_model = create_compressed_model_impl(model=model, config=nncf_config)
 
     # NOTE: We set the config here to properly save/load the quantized model during training into tf.train.Checkpoint.
     # You can obtain that config via the nncf.tensorflow.get_config() method and save/load it to/from
