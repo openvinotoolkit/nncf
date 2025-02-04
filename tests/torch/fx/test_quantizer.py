@@ -31,10 +31,10 @@ from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQu
 from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x86_inductor_quantization_config
 
 import nncf
-from nncf.experimental.quantization.quantizers.torch_ao_adapter import _get_edge_or_node_to_qspec
-from nncf.experimental.quantization.quantizers.torch_ov_quantizer import OpenVINOQuantizer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.quantization.quantize_pt2e import quantize_pt2e
+from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
+from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import _get_edge_or_node_to_qspec
 from tests.torch import test_models
 from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.test_compressed_graph import check_graph
