@@ -139,25 +139,25 @@ TEST_MODELS_QUANIZED = (
         ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
         {},
         [(46, 50), (23, 27)],
-        [True, False, False, False],  # This Unet Model is not eligible for dynamic shape capability
+        [Dim.AUTO, Dim.STATIC, Dim.STATIC, Dim.STATIC],  # This Unet Model is not eligible for dynamic shape capability
     ),
     (
         torchvision_model_case("resnet18", (1, 3, 224, 224)),
         {},
         [(51, 58), (30, 37)],
-        [True, False, True, True],
+        [Dim.AUTO, Dim.STATIC, Dim.AUTO, Dim.AUTO],
     ),
     (
         torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)),
         {},
         [(97, 112), (61, 76)],
-        [True, False, True, True],
+        [Dim.AUTO, Dim.STATIC, Dim.AUTO, Dim.AUTO],
     ),
     (
         torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [(124, 124), (74, 74)],
-        [True, False, False, False],  # This ViT Model is not eligible for dynamic shape capability
+        [Dim.AUTO, Dim.STATIC, Dim.STATIC, Dim.STATIC],  # This ViT Model is not eligible for dynamic shape capability
     ),
     (
         torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
@@ -166,19 +166,19 @@ TEST_MODELS_QUANIZED = (
             (250, 250),
             (149, 149),
         ],
-        [True, False, True, True],
+        [Dim.AUTO, Dim.STATIC, Dim.AUTO, Dim.AUTO],
     ),
     (
         ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [(4, 4), (2, 2)],
-        [True],
+        [Dim.AUTO],
     ),
     (
         ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [(4, 4), (3, 3)],
-        [True, True, True],
+        [Dim.AUTO, Dim.AUTO, Dim.AUTO],
     ),
 )
 
@@ -203,7 +203,7 @@ def test_quantized_model(
     example_input = torch.ones(model_case.input_shape, dtype=dtype)
     dynamic_shapes = None
     if enable_dynamic_shapes:
-        dynamic_shapes = [tuple(Dim.AUTO if shape else Dim.STATIC for shape in dynamic_shape_config)]
+        dynamic_shapes = [tuple(dynamic_shape_config)]
 
     fx_model = get_torch_fx_model(model, example_input, dynamic_shapes=dynamic_shapes)
 
@@ -253,7 +253,7 @@ def test_dynamic_edge():
         edge_shape = edge.tensor_shape
         assert isinstance(edge_shape, tuple)
         for dim in edge_shape:
-            assert isinstance(dim, (int, str))
+            assert isinstance(dim, int)
             assert not isinstance(dim, torch.SymInt)
 
 
