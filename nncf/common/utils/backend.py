@@ -21,7 +21,6 @@ try:
     import openvino  # type: ignore # noqa: F401
 
     _OPENVINO_AVAILABLE = True
-    _OPENVINO_VERSION = version.parse(openvino.__version__.split("-")[0])
 except ImportError:
     _OPENVINO_AVAILABLE = False
 
@@ -200,4 +199,5 @@ def is_openvino_at_least(version_str: str) -> bool:
     if not _OPENVINO_AVAILABLE:
         return False
 
-    return version.parse(version_str) <= _OPENVINO_VERSION
+    openvino_version = version.parse(openvino.__version__.split("-")[0])
+    return version.parse(version_str) <= openvino_version
