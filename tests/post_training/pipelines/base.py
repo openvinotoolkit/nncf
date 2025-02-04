@@ -447,7 +447,7 @@ class PTQTestPipeline(BaseTestPipeline):
             self.path_compressed_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_compressed_ir)
 
-            if BackendType.CUDA_FX_TORCH:
+            if self.backend == BackendType.CUDA_FX_TORCH:
                 self.model = self.model.cuda()
                 self.dummy_tensor = self.dummy_tensor.cuda()
 
