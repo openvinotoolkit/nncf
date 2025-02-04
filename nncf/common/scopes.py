@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import re
-from typing import Iterable, List, Optional, Sequence, Union
+from typing import Iterable, List, Optional, Union
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -52,8 +52,8 @@ def matches_any(tested_str: str, strs_to_match_to: Union[Iterable[str], str, Non
 
 def should_consider_scope(
     serializable_id: Union[QuantizerId, NNCFNodeName],
-    ignored_scopes: Optional[Sequence[str]],
-    target_scopes: Optional[Sequence[str]] = None,
+    ignored_scopes: Optional[Iterable[str]],
+    target_scopes: Optional[Iterable[str]] = None,
 ) -> bool:
     """
     Used when an entity arising during compression has to be compared to an allowlist or a denylist of strings.

@@ -17,6 +17,9 @@ from tests.tensorflow.helpers import TFTensorListComparator
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_two_conv_test_model
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
+from tests.tensorflow.test_models.mobilenet_v2 import MobileNetV2
+from tests.tensorflow.test_models.retinanet import RetinaNet
+from tests.tensorflow.test_models.yolo_v4 import YOLOv4
 
 
 def test_strip():
@@ -89,3 +92,47 @@ def test_strip_api_do_copy(do_copy):
         assert id(stripped_model) != id(compressed_model)
     else:
         assert id(stripped_model) == id(compressed_model)
+
+
+class SimpleModel(tf.keras.Model):
+    def __init__(self):
+        super().__init__()
+        self._conv = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu")
+
+        self._bn_0 = tf.keras.layers.BatchNormalization()
+        self._bn_1 = tf.keras.layers.BatchNormalization()
+        self._add = tf.keras.layers.Add()
+        self._flatten = tf.keras.layers.Flatten()
+
+    def call(self, inputs, training=None, mask=None):
+        input_0, input_1 = inputs
+
+        x_0 = self._conv(input_0)
+        x_0 = self._bn_0(x_0, training=training)
+
+        x_1 = self._conv(input_1)
+        x_1 = self._bn_1(x_1, training=training)
+
+        x_0 = self._flatten(x_0)
+        x_1 = self._flatten(x_1)
+        outputs = self._add([x_0, x_1])
+        return outputs
+
+    def get_config(self):
+        raise NotImplementedError
+
+
+def create_sequential_model():
+    model = tf.keras.Sequential()
+    model.add(tf.keras.layers.Input(shape=(None, None, 3)))
+    model.add(tf.keras.layers.Conv2D(filters=64, kernel_size=(1, 1), strides=2, activation="relu"))
+    model.add(tf.keras.layers.BatchNormalization())
+    model.add(tf.keras.layers.Dense(2, activation="relu"))
+    return model
+
+
+@pytest.mark.parametrize("model_fn", (MobileNetV2, RetinaNet, SimpleModel, YOLOv4, create_sequential_model))
+def test_strip_api_no_compression(model_fn):
+    model = model_fn()
+    stripped_model = nncf.strip(model)
+    assert id(stripped_model) == id(model)
