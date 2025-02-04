@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`post_training.pipeline`
-================================
-
-.. py:module:: post_training.pipeline
-
-

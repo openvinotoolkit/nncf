@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`quantizers.quantizer`
-==============================
-
-.. py:module:: quantizers.quantizer
-
-

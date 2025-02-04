@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.experimental.quantization.algorithms.post_training.pipeline`
+==========================================================================
+
+.. py:module:: nncf.experimental.quantization.algorithms.post_training.pipeline
+
+
