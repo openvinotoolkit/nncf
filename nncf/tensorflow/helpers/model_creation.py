@@ -180,3 +180,21 @@ def load_from_config(model: tf.keras.Model, config: Dict[str, Any]) -> tf.keras.
         transformation_layout.register(command)
     model_transformer = TFModelTransformer(model)
     return model_transformer.transform(transformation_layout)
+
+
+@tracked_function(
+    NNCF_TF_CATEGORY,
+    [
+        FunctionCallTelemetryExtractor("nncf.tensorflow.get_config"),
+    ],
+)
+def get_config(model: tf.keras.Model) -> Dict[str, Any]:
+    """
+    Extracts the config from the model.
+
+    :param model: Model.
+    :return: Config.
+    """
+    config = getattr(model, "_nncf_config")
+    delattr(model, "_nncf_config")
+    return config

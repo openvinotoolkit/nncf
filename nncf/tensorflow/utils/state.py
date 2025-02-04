@@ -121,15 +121,3 @@ class ConfigState(tf.train.experimental.PythonState):
         :param string_value: A serialized model config.
         """
         self.config = json.loads(string_value)
-
-
-def get_config(model: tf.keras.Model) -> Dict[str, Any]:
-    """
-    Extracts the config from the model.
-
-    :param model: Model.
-    :return: Config.
-    """
-    config = getattr(model, "_nncf_config")
-    delattr(model, "_nncf_config")
-    return config
