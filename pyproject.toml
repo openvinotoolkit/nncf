@@ -139,7 +139,8 @@ select = [
     "CPY001", # copyright check
     "NPY", # numpy rules
     "UP", # pyupgrade
-    "EM"  # flake8-errmsg
+    "EM",  # flake8-errmsg
+    "INP", # flake8-no-pep420
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
@@ -151,6 +152,7 @@ extend-select = [
 "tests/**/*.py" = ["F403"]
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
+"!nncf/**.py" = ["INP"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = """\
