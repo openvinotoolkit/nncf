@@ -139,7 +139,7 @@ TEST_MODELS_QUANIZED = (
         ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
         {},
         [(46, 50), (23, 27)],
-        [True, False, False, False],  # This ViT Model is not eligible for dynamic shape capability
+        [True, False, False, False],  # This Unet Model is not eligible for dynamic shape capability
     ),
     (
         torchvision_model_case("resnet18", (1, 3, 224, 224)),
