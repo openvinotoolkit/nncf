@@ -90,6 +90,11 @@ def fixture_run_benchmark_app(pytestconfig):
     return pytestconfig.getoption("benchmark")
 
 
+@pytest.fixture(scope="session", name="torch_compile_validation")
+def fixture_torch_compile_validation(pytestconfig):
+    return pytestconfig.getoption("torch_compile_validation")
+
+
 @pytest.fixture(scope="session", name="extra_columns")
 def fixture_extra_columns(pytestconfig):
     return pytestconfig.getoption("extra_columns")
@@ -281,6 +286,7 @@ def test_ptq_quantization(
     run_torch_cuda_backend: bool,
     subset_size: Optional[int],
     run_benchmark_app: bool,
+    torch_compile_validation: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
     memory_monitor: bool,
@@ -309,6 +315,7 @@ def test_ptq_quantization(
                 "data_dir": data_dir,
                 "no_eval": no_eval,
                 "run_benchmark_app": run_benchmark_app,
+                "torch_compile_validation": torch_compile_validation,
                 "batch_size": batch_size,
                 "memory_monitor": memory_monitor,
             }

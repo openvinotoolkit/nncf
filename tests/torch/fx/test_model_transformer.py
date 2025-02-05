@@ -45,6 +45,7 @@ from nncf.experimental.torch.fx.transformations import module_insertion_transfor
 from nncf.experimental.torch.fx.transformations import node_removal_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
+from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from tests.torch.fx.helpers import get_torch_fx_model
@@ -55,6 +56,7 @@ from tests.torch.test_models.synthetic import ConvolutionWithNotTensorBiasModel
 from tests.torch.test_models.synthetic import ConvolutionWithSeveralOutputs
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModelWithConcat
+from tests.torch.test_models.synthetic import ScalarCloneTestModel
 
 
 @dataclass
@@ -545,6 +547,27 @@ def test_constant_folding():
 
     nncf_graph = GraphConverter.create_nncf_graph(folded_model)
     check_graph(nncf_graph, "folded_model.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
+
+
+def test_constant_folding_scalar_clone(use_cuda):
+    if not use_cuda:
+        pytest.skip("Cuda-only test")
+    model = ScalarCloneTestModel().cuda()
+
+    ex_input = torch.ones(model.INPUT_SIZE).cuda()
+    with torch.no_grad():
+        with disable_patching():
+            # Use export function instead of export_for_training to
+            # reproduce SWIN model capturing
+            captured_model = torch.export.export(model, args=(ex_input,)).module()
+    assert captured_model.lifted_tensor_0.device == torch.device("cpu")
+
+    folded_model = deepcopy(captured_model)
+    constant_fold(folded_model)
+    assert torch.allclose(captured_model(ex_input), folded_model(ex_input))
+
+    nncf_graph = GraphConverter.create_nncf_graph(folded_model)
+    check_graph(nncf_graph, "folded_scalar_clone_model.dot", TRANSFORMED_GRAPH_DIR_NAME, extended=True)
 
 
 def test_constant_folding_with_constraints(is_per_channel):
