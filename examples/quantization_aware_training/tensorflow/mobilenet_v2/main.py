@@ -167,8 +167,8 @@ stripped_model = nncf.strip(tf_quantized_model)
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
 
-ov_model = ov.convert_model(tf_model, share_weights=False)
-ov_quantized_model = ov.convert_model(stripped_model, share_weights=False)
+ov_model = ov.convert_model(tf_model)
+ov_quantized_model = ov.convert_model(stripped_model)
 
 fp32_ir_path = ROOT / "mobilenet_v2_fp32.xml"
 ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
