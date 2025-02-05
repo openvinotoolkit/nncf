@@ -18,19 +18,25 @@ import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.utils.api_marker import api
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.config.utils import is_experimental_quantization
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_TF_CATEGORY
+from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
 from nncf.tensorflow.accuracy_aware_training.keras_model_utils import accuracy_aware_fit
 from nncf.tensorflow.algorithm_selector import NoCompressionAlgorithmBuilder
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
+from nncf.tensorflow.graph.model_transformer import TFModelTransformer
+from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from nncf.tensorflow.graph.utils import is_keras_layer_model
 from nncf.tensorflow.helpers.utils import get_built_model
+from nncf.tensorflow.quantization.algorithm import QuantizationBuilder
+from nncf.tensorflow.quantization.algorithm import TFQuantizationSetup
 
 
 def create_compression_algorithm_builder(config: NNCFConfig, should_init: bool) -> TFCompressionAlgorithmBuilder:
@@ -80,6 +86,27 @@ def create_compressed_model(
     :return: A tuple of the compression controller for the requested algorithm(s) and the model object with additional
      modifications necessary to enable algorithm-specific compression during fine-tuning.
     """
+
+    warning_deprecated(
+        "The 'nncf.tensorflow.create_compressed_model' function is deprecated and will be removed in a "
+        "future release.\n"
+        "To perform post training quantization (PTQ) or quantization aware training (QAT),"
+        " use the nncf.quantize() API:\n"
+        " - https://github.com/openvinotoolkit/nncf?tab=readme-ov-file#post-training-quantization\n"
+        " - https://github.com/openvinotoolkit/nncf?tab=readme-ov-file#training-time-quantization\n"
+        "Examples:\n"
+        " - https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/tensorflow\n"
+        " - https://github.com/openvinotoolkit/nncf/tree/develop/examples/quantization_aware_training/tensorflow"
+    )
+    return create_compressed_model_impl(model, config, compression_state)
+
+
+def create_compressed_model_impl(
+    model: tf.keras.Model, config: NNCFConfig, compression_state: Optional[Dict[str, Any]] = None
+) -> Tuple[CompressionAlgorithmController, tf.keras.Model]:
+    """
+    Implementation of the create_compressed_model() method.
+    """
     if is_experimental_quantization(config):
         if is_keras_layer_model(model):
             raise ValueError(
@@ -126,3 +153,47 @@ def get_input_signature(config: NNCFConfig):
         input_signature.append(tf.TensorSpec(shape=shape, dtype=tf.float32))
 
     return input_signature if len(input_signature) > 1 else input_signature[0]
+
+
+@tracked_function(
+    NNCF_TF_CATEGORY,
+    [
+        FunctionCallTelemetryExtractor("nncf.tensorflow.load_from_config"),
+    ],
+)
+def load_from_config(model: tf.keras.Model, config: Dict[str, Any]) -> tf.keras.Model:
+    """
+    Recovers additional modules from given config.
+    Does not recover additional modules weights as they are located in a corresponded checkpoint file.
+
+    :param model: TensorFlow model.
+    :parem config: Config.
+    :return: tf.keras.Model builded from given model with additional layers recovered from given config.
+    """
+    quantizer_setup_state = config["quantization"]["quantizer_setup"]
+    quantizer_setup = TFQuantizationSetup.from_state(quantizer_setup_state)
+
+    transformation_layout = TFTransformationLayout()
+    # pylint: disable=protected-access
+    insertion_commands, _ = QuantizationBuilder.build_insertion_commands_for_quantizer_setup(quantizer_setup)
+    for command in insertion_commands:
+        transformation_layout.register(command)
+    model_transformer = TFModelTransformer(model)
+    return model_transformer.transform(transformation_layout)
+
+
+@tracked_function(
+    NNCF_TF_CATEGORY,
+    [
+        FunctionCallTelemetryExtractor("nncf.tensorflow.get_config"),
+    ],
+)
+def get_config(model: tf.keras.Model) -> Dict[str, Any]:
+    """
+    Extracts the config from the model.
+
+    :param model: Model.
+    :return: Config.
+    """
+    config = getattr(model, "_nncf_config")
+    return config
