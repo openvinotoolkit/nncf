@@ -143,7 +143,15 @@ def _get_clean_source_code(func) -> str:
         stripped_line = line.strip()
         if stripped_line and not stripped_line.startswith("#"):
             cleaned_line = stripped_line.split("#")[0].strip()
-            if any(f in line for f in ["_check_key_padding_mask", "torch.jit.is_scripting", "torch.jit.is_tracing", "assert key_padding_mask.shape"]):
+            if any(
+                f in line
+                for f in [
+                    "_check_key_padding_mask",
+                    "torch.jit.is_scripting",
+                    "torch.jit.is_tracing",
+                    "assert key_padding_mask.shape",
+                ]
+            ):
                 continue
             cleaned_lines.append(cleaned_line)
 
@@ -167,9 +175,4 @@ def test_compare_torch_function_with_handle_inner_function(torch_func):
             filtered_torch_func_code.append(line)
     filtered_torch_func_code = "\n".join(filtered_torch_func_code)
     func_code = _get_clean_source_code(func)
-
-    print(filtered_torch_func_code)
-
-    print('=============================================================================')
-    print(func_code)
     assert filtered_torch_func_code == func_code

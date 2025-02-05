@@ -158,7 +158,9 @@ def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path, dataset_di
     with open(metrics_path, encoding="utf8") as metric_file:
         metrics = json.load(metric_file)
         # accuracy is rounded to hundredths
-        assert torch.load(checkpoint_path, weights_only=False)["best_acc1"] == pytest.approx(metrics["Accuracy"], abs=1e-2)
+        assert torch.load(checkpoint_path, weights_only=False)["best_acc1"] == pytest.approx(
+            metrics["Accuracy"], abs=1e-2
+        )
 
 
 # BN Wrapping backward compatibility test

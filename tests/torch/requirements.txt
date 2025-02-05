@@ -11,8 +11,8 @@ torch
 virtualenv
 
 # Required for search_building_blocks tests
-accelerate==0.28.0
-transformers==4.38.2
+accelerate==1.1.0
+transformers==4.47.0
 
 # Required for movement_sparsity tests
 datasets==3.0.1

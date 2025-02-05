@@ -71,7 +71,9 @@ COMPRESSION_STATE_ATTR = "compression_state"
 def load_resuming_checkpoint(resuming_checkpoint_path: str):
     if osp.isfile(resuming_checkpoint_path):
         logger.info(f"=> loading checkpoint '{resuming_checkpoint_path}'")
-        checkpoint = torch.load(resuming_checkpoint_path, map_location="cpu", pickle_module=restricted_pickle_module, weights_only=False)
+        checkpoint = torch.load(
+            resuming_checkpoint_path, map_location="cpu", pickle_module=restricted_pickle_module, weights_only=False
+        )
         return checkpoint
     msg = f"no checkpoint found at '{resuming_checkpoint_path}'"
     raise FileNotFoundError(msg)

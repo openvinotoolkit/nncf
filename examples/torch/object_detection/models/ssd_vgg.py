@@ -81,7 +81,12 @@ class SSD_VGG(nn.Module):
             # trust.
             #
             self.load_state_dict(
-                torch.load(base_file, weights_only=False, map_location=lambda storage, loc: storage, pickle_module=restricted_pickle_module)
+                torch.load(
+                    base_file,
+                    weights_only=False,
+                    map_location=lambda storage, loc: storage,
+                    pickle_module=restricted_pickle_module,
+                )
             )
             logger.debug("Finished!")
         else:
