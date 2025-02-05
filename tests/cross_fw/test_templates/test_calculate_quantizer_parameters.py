@@ -62,7 +62,13 @@ def read_ref_fq_params(q_group, q_config, narrow_range, hf_range):
     return ref_quantize_params
 
 
-def dump_fq_params(fq_params, q_group, q_config, narrow_range, hf_range):
+def dump_fq_params(
+    fq_params: FakeQuantizeParameters,
+    q_group: QuantizerGroup,
+    q_config: QuantizerConfig,
+    narrow_range: bool,
+    hf_range: bool,
+):
     key = get_test_reference_key(q_group, q_config, narrow_range, hf_range)
     all_fq_params = load_json(FQ_CALCULATED_PARAMETERS_PATH)
     fq_params_dict = parse_fq_params_to_dict(fq_params)
@@ -70,13 +76,13 @@ def dump_fq_params(fq_params, q_group, q_config, narrow_range, hf_range):
     dump_to_json(FQ_CALCULATED_PARAMETERS_PATH, all_fq_params)
 
 
-def parse_fq_params_to_dict(fq_params):
+def parse_fq_params_to_dict(fq_params: FakeQuantizeParameters):
     return {
         "levels": fq_params.levels,
-        "input_low": fq_params.input_low,
-        "input_high": fq_params.input_high,
-        "output_low": fq_params.output_low,
-        "output_high": fq_params.output_high,
+        "input_low": fq_params.input_low.as_numpy_tensor().data,
+        "input_high": fq_params.input_high.as_numpy_tensor().data,
+        "output_low": fq_params.output_low.as_numpy_tensor().data,
+        "output_high": fq_params.output_high.as_numpy_tensor().data,
     }
 
 
@@ -227,7 +233,8 @@ class TemplateTestFQParams(ABC):
         )
         if not case_to_test.should_fail:
             fq_params = calculate_quantizer_parameters(statistics, q_config, quant_group, narrow_range, half_range)
-            # Uncomment lines below to generate reference for new models.
+            # Use OpenVINO backend to collect new reference files.
+            # Uncomment lines below to generate reference for new parameters.
             # dump_fq_params(fq_params, quant_group, q_config, narrow_range, half_range)
             ref_fq_params = read_ref_fq_params(quant_group, q_config, narrow_range, half_range)
             compare_fq_parameters(fq_params, ref_fq_params)

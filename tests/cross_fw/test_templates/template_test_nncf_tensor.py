@@ -1749,3 +1749,12 @@ class TemplateTestNNCFTensorOperators:
             backend_tensor = backend_tensor.astype(dtype)
         assert fns.allclose(nncf_tensor, backend_tensor)
         assert nncf_tensor.dtype == backend_tensor.dtype
+
+    def test_as_numpy_tensor(self):
+        tensor1 = Tensor(self.to_tensor([1.0, 2.0]))
+        tensor2 = tensor1.as_numpy_tensor()
+        assert tensor2.backend == TensorBackend.numpy
+        assert tensor1.dtype == tensor2.dtype
+        assert tensor1.shape == tensor2.shape
+        assert tensor2.device == TensorDeviceType.CPU
+        assert fns.allclose(tensor1, tensor2)
