@@ -140,9 +140,9 @@ def main_worker(current_gpu, config: SampleConfig):
     nncf_network = create_nncf_network(model, nncf_config)
 
     if config.search_mode_active:
-        compression_state = torch.load(config.search_elasticity_state_path)
+        compression_state = torch.load(config.search_elasticity_state_path, weights_only=False)
         model, elasticity_ctrl = resume_compression_from_state(nncf_network, compression_state)
-        model_weights = torch.load(config.search_supernet_weights)
+        model_weights = torch.load(config.search_supernet_weights, weights_only=False)
 
         load_state(model, model_weights, is_resume=True)
 

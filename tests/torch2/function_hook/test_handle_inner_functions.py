@@ -143,16 +143,6 @@ def _get_clean_source_code(func) -> str:
         stripped_line = line.strip()
         if stripped_line and not stripped_line.startswith("#"):
             cleaned_line = stripped_line.split("#")[0].strip()
-            if any(
-                f in line
-                for f in [
-                    "_check_key_padding_mask",
-                    "torch.jit.is_scripting",
-                    "torch.jit.is_tracing",
-                    "assert key_padding_mask.shape",
-                ]
-            ):
-                continue
             cleaned_lines.append(cleaned_line)
 
     return "\n".join(cleaned_lines)
