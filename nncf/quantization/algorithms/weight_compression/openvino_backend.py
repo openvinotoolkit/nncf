@@ -128,10 +128,12 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             result.append((weight_name, weight_port_id))
         return result
 
-    def get_weight(self, node_with_weight: NNCFNode, weight_port_id: int, model: ov.Model, graph: NNCFGraph) -> Tensor:
+    def get_weight(self, node_with_weight: NNCFNode, weight_port_id: int, model: ov.Model, graph: NNCFGraph, cast_bf16_to_fp32: bool = True) -> Tensor:
         weight_name = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["name"]
         weight_node = self.name_to_node_mapping[weight_name]
-        weight_tensor = get_const_value(weight_node)
+        weight_tensor = get_const_value(weight_node, cast_bf16_to_fp32)
+        if not cast_bf16_to_fp32:
+            weight_tensor = ov.Tensor(weight_tensor, weight_tensor.shape, weight_node.output(0).get_element_type())
         return Tensor(weight_tensor)
 
     def get_weight_dtype(

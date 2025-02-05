@@ -161,12 +161,13 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         graph: NNCFGraph,
     ) -> float:
         weight = self._backend_entity.get_weight(
-            weight_param.node_with_weight, weight_param.weight_port_id, model, graph
+            weight_param.node_with_weight, weight_param.weight_port_id, model, graph, cast_bf16_to_fp32=False
         )
         backup_config = WeightCompressionConfig()
         reduction_axes = weight_param.reduction_axes
         int_error = get_integer_quantization_error(weight, reduction_axes, backup_config)
-        eps = fns.finfo(weight).eps
+        import numpy as np
+        eps = fns.finfo(Tensor(np.ones((1,), np.float32))).eps
         return 1 / (int_error + eps)
 
     def _calc_score_per_node(

@@ -335,6 +335,17 @@ def get_integer_quantization_error(
     :param config: Information on how to compress (quantize) a specific weight.
     :return: The quantity characterizing the error of integer quantization.
     """
+
+    # Optimized implementation
+    if is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy]:
+        from nncf.openvino.optimized_functions import get_integer_quantization_error as get_integer_quantization_error_ov
+
+        return get_integer_quantization_error_ov(weight, reduction_axes, config)
+    if not is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy]:
+        nncf_logger.info_once(
+            "OpenVINO optimizations are disabled. Install OpenVINO to enable them and improve the performance."
+        )
+
     orig_shape = weight.shape
 
     if weight.dtype != TensorDataType.float32:
