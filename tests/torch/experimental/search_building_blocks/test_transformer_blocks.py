@@ -91,22 +91,22 @@ LIST_CASES = [
     TransformerSearchBBlockParamsCase(
         name="BERT",
         input_info=[dict(sample_size=[1, 10], type="long")],
-        model_creator=partial(AutoModelForQuestionAnswering.from_config, BertConfig()),
+        model_creator=partial(AutoModelForQuestionAnswering.from_config, BertConfig(), attn_implementation="eager"),
     ),
     TransformerSearchBBlockParamsCase(
         name="ViT",
         input_info=dict(sample_size=[1, 3, 224, 224]),
-        model_creator=partial(AutoModelForImageClassification.from_config, ViTConfig()),
+        model_creator=partial(AutoModelForImageClassification.from_config, ViTConfig(), attn_implementation="eager"),
     ),
     TransformerSearchBBlockParamsCase(
         name="wave2vec 2.0",
         input_info=dict(sample_size=[1, 400]),
-        model_creator=partial(AutoModelForAudioClassification.from_config, Wav2Vec2Config()),
+        model_creator=partial(AutoModelForAudioClassification.from_config, Wav2Vec2Config(), attn_implementation="eager"),
     ),
     TransformerSearchBBlockParamsCase(
         name="SWIN MS",
         input_info=dict(sample_size=[1, 3, 224, 224]),
-        model_creator=partial(AutoModelForImageClassification.from_config, SwinConfig()),
+        model_creator=partial(AutoModelForImageClassification.from_config, SwinConfig(), attn_implementation="eager"),
     ),
     TransformerSearchBBlockParamsCase(
         name="one MHSA",
