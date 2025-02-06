@@ -89,6 +89,18 @@ def extract_bn(model: nn.Module, graph: PTNNCFGraph, node: NNCFNode) -> Extracte
         msg = f"Expected PT2OpLayerAttributes for input_node.layer_attributes, actual: {type(layer_attr)}"
         raise nncf.InternalError(msg)
 
+    # torch.batch_norm(
+    #   0 - input: Tensor,
+    #   1 - weight: Optional[Tensor]
+    #   2 - bias: Optional[Tensor]
+    #   3 - running_mean: Optional[Tensor]
+    #   4 - running_var: Optional[Tensor],
+    #   5 - training: _bool,
+    #   6 - momentum: _float,
+    #   7 - eps: _float,
+    #   8 - cudnn_enabled: _bool
+    # ) -> Tensor: ...
+
     weight = get_const_data_on_port(model, graph, node, 1)
     bias = get_const_data_on_port(model, graph, node, 2)
     running_mean = get_const_data_on_port(model, graph, node, 3)
@@ -123,6 +135,17 @@ def extract_conv(
     :param output_nodes: The name of output node.
     :return: The extracted convolutional layer as an ExtractedFunc module.
     """
+
+    # torch.conv{1,2,3}d(
+    #   0 - input: Tensor,
+    #   1 - weight: Tensor,
+    #   2 - bias: Optional[Tensor] = None,
+    #   3 - stride: Union[Union[_int, SymInt], Sequence[Union[_int, SymInt]]] = 1,
+    #   4 - padding: str = "valid" | Union[Union[_int, SymInt],
+    #   5 - dilation: Union[Union[_int, SymInt], Sequence[Union[_int, SymInt]]] = 1,
+    #   6 - groups: Union[_int, SymInt] = 1
+    # ) -> Tensor: ...
+
     weight_node = get_const_node(input_node, 1, graph)
     if weight_node is None:
         msg = "Weight node not found for {input_node}"

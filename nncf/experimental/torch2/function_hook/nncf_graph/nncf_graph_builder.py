@@ -159,7 +159,7 @@ def get_layer_attributes(
         constant_port_ids = get_constant_port_ids(nx_graph, node)
         return PT2OpLayerAttributes(meta.func, meta.args, meta.kwargs, constant_port_ids)
     if isinstance(meta, ConstMeta):
-        return ConstantLayerAttributes(meta.name_in_model, meta.shape)
+        return ConstantLayerAttributes(list(meta.name_in_model), meta.shape)
     return None
 
 
