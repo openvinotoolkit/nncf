@@ -19,7 +19,6 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.graph import operator_metatypes as om
@@ -126,10 +125,7 @@ def get_const_data(const_node: NNCFNode, model: nn.Module) -> torch.Tensor:
     :param model: The NNCFNetwork object.
     :return: A torch.Tensor object containing the constant value.
     """
-    if is_experimental_torch_tracing_enabled():
-        const_name = const_node.layer_name
-    else:
-        const_name = const_node.layer_attributes.name
+    const_name = const_node.layer_attributes.name
     module_name, const_attr_name = split_const_name(const_name)
     module = get_module_by_name(module_name, model)
     data = getattr(module, const_attr_name)
@@ -265,10 +261,7 @@ def set_const_data(data: torch.Tensor, const_node: NNCFNode, model: NNCFNetwork)
     :param const_node: The NNCF node representing the constant data.
     :param model: The NNCF network model.
     """
-    if is_experimental_torch_tracing_enabled():
-        const_name = const_node.layer_name
-    else:
-        const_name = const_node.layer_attributes.name
+    const_name = const_node.layer_attributes.name
     module_name, const_attr_name = split_const_name(const_name)
     module = get_module_by_name(module_name, model)
     const = getattr(module, const_attr_name)
@@ -289,15 +282,11 @@ def set_const_data_to_port_id(
     :param const_port_id: The input port id of the node that receives the constant.
     :param model: The NNCF network containing the module to be modified.
     """
-    # graph = model.nncf.get_graph()
     const_node = get_const_node(node, port_id, graph)
     if const_node is None:
         msg = f"No found node with constant for {node.node_name} on {port_id} port"
         raise nncf.InternalError(msg)
-    if is_experimental_torch_tracing_enabled():
-        const_name = const_node.layer_name
-    else:
-        const_name = const_node.layer_attributes.name
+    const_name = const_node.layer_attributes.name
     module_name, const_attr_name = split_const_name(const_name)
     module = get_module_by_name(module_name, model)
     const = getattr(module, const_attr_name)

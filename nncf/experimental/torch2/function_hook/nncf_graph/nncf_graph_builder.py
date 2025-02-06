@@ -21,6 +21,7 @@ import nncf
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import ConstantLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
 from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
@@ -157,7 +158,8 @@ def get_layer_attributes(
     if isinstance(meta, FunctionMeta):
         constant_port_ids = get_constant_port_ids(nx_graph, node)
         return PT2OpLayerAttributes(meta.func, meta.args, meta.kwargs, constant_port_ids)
-
+    if isinstance(meta, ConstMeta):
+        return ConstantLayerAttributes(meta.name_in_model, meta.shape)
     return None
 
 

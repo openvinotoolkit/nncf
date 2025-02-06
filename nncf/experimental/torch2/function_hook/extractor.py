@@ -33,12 +33,6 @@ CONV_METATYPES = (
     om.PTDepthwiseConv3dSubtype,
 )
 
-CONV_TRANSPOSE_METATYPES = (
-    om.PTConvTranspose1dMetatype,
-    om.PTConvTranspose2dMetatype,
-    om.PTConvTranspose3dMetatype,
-)
-
 
 class ExtractedFunc(nn.Module):
     """
@@ -58,9 +52,18 @@ class ExtractedFunc(nn.Module):
         return self.fn(x, **self.kwargs)
 
 
-def apply_args_defaults(
+def apply_args_to_kwargs(
     args: Sequence[Any], kwargs: Dict[str, Any], indexed_args: List[Tuple[int, str]]
 ) -> Dict[str, Any]:
+    """
+    Applies the given arguments and keyword arguments to a dictionary of keyword arguments.
+
+    :param args: The positional arguments.
+    :param kwargs: The keyword arguments.
+    :param indexed_args: The list of pairs of indexes and names.
+
+    :return: A dictionary of keyword arguments with the applied arguments and keyword arguments.
+    """
     args_dict: Dict[str, Any] = dict()
     for idx, arg_name in indexed_args:
         if idx < len(args):
@@ -91,8 +94,10 @@ def extract_bn(model: nn.Module, graph: PTNNCFGraph, node: NNCFNode) -> Extracte
     running_mean = get_const_data_on_port(model, graph, node, 3)
     running_var = get_const_data_on_port(model, graph, node, 4)
 
-    bn_kwargs = apply_args_defaults(
-        layer_attr.op_args, layer_attr.op_kwargs, [(6, "momentum"), (7, "eps"), (8, "cudnn_enabled")]
+    bn_kwargs = apply_args_to_kwargs(
+        layer_attr.op_args,
+        layer_attr.op_kwargs,
+        [(6, "momentum"), (7, "eps"), (8, "cudnn_enabled")],
     )
     bn_kwargs["weight"] = weight
     bn_kwargs["bias"] = bias
@@ -120,7 +125,8 @@ def extract_conv(
     """
     weight_node = get_const_node(input_node, 1, graph)
     if weight_node is None:
-        raise nncf.InternalError(f"Weight node not found for {input_node}")
+        msg = "Weight node not found for {input_node}"
+        raise nncf.InternalError(msg)
     weight = get_const_data(weight_node, model)
 
     hook_storage = get_hook_storage(model)
@@ -138,8 +144,10 @@ def extract_conv(
         msg = f"Expected PT2OpLayerAttributes for input_node.layer_attributes, actual: {type(layer_attrs)}"
         raise nncf.InternalError(msg)
 
-    conv_kwargs = apply_args_defaults(
-        layer_attrs.op_args, layer_attrs.op_kwargs, [(3, "stride"), (4, "padding"), (5, "dilation"), (6, "groups")]
+    conv_kwargs = apply_args_to_kwargs(
+        layer_attrs.op_args,
+        layer_attrs.op_kwargs,
+        [(3, "stride"), (4, "padding"), (5, "dilation"), (6, "groups")],
     )
     conv_kwargs["weight"] = weight
     conv_kwargs["bias"] = bias
@@ -178,7 +186,8 @@ def extract_model(
     """
 
     if len(input_nodes) != 1 or len(output_nodes) != 1:
-        raise nncf.InternalError("input_nodes and output_nodes should contain only one node.")
+        msg = "input_nodes and output_nodes should contain only one node."
+        raise nncf.InternalError(msg)
 
     input_node = graph.get_node_by_name(input_nodes[0])
     output_node = graph.get_node_by_name(output_nodes[0])
