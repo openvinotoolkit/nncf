@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 import copy
 import os
+from typing import List
 
 import numpy as np
 import openvino as ov
@@ -21,6 +22,7 @@ from torchvision import datasets
 import nncf
 from nncf.common.logging.track_progress import track
 from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
+from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import PTQTestPipeline
 
 
@@ -33,7 +35,7 @@ class ImageClassificationBase(PTQTestPipeline):
 
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
 
-    def _validate(self):
+    def _validate(self) -> List[ErrorReport]:
         val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
         val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=2, shuffle=False)
 
@@ -62,7 +64,7 @@ class ImageClassificationBase(PTQTestPipeline):
                 output_data = request.get_output_tensor().data
                 predicted_label = np.argmax(output_data, axis=1)
                 predictions[userdata] = predicted_label
-                pbar.progress.update(pbar.task, advance=1)
+                pbar.update(advance=1)
 
             infer_queue.set_callback(process_result)
 
@@ -78,3 +80,4 @@ class ImageClassificationBase(PTQTestPipeline):
 
         self.run_info.metric_name = "Acc@1"
         self.run_info.metric_value = acc_top1
+        return []

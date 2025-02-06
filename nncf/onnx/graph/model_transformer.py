@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -49,7 +49,7 @@ class ONNXModelTransformer(ModelTransformer):
     def __init__(self, model: onnx.ModelProto):
         infered_model = onnx.shape_inference.infer_shapes(model)
         super().__init__(infered_model)
-        self.onnx_model_extractor = onnx.utils.Extractor(self._model)
+        self.onnx_model_extractor = onnx.utils.Extractor(infered_model)
 
     def _get_target_edge(
         self,

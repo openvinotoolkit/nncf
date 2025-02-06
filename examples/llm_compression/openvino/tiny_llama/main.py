@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -67,7 +67,9 @@ def main():
     )
     model.save_pretrained(OUTPUT_DIR)
 
-    model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"})
+    model = OVModelForCausalLM.from_pretrained(
+        OUTPUT_DIR, ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"}
+    )
     input_ids = tokenizer("What is PyTorch?", return_tensors="pt").to(device=model.device)
 
     start_t = time.time()

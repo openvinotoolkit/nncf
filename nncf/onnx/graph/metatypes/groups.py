@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,6 +10,8 @@
 # limitations under the License.
 
 from nncf.onnx.graph.metatypes import onnx_metatypes
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpWithWeightsMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import get_operator_metatypes
 
 QUANTIZE_AGNOSTIC_OPERATIONS = [
     onnx_metatypes.ONNXGlobalMaxPoolMetatype,
@@ -67,14 +69,19 @@ INPUTS_QUANTIZABLE_OPERATIONS = [
     onnx_metatypes.ONNXMinimumMetatype,
 ]
 
-
 CONSTANT_WEIGHT_LAYER_METATYPES = [
-    onnx_metatypes.ONNXConvolutionMetatype,
-    onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
-    onnx_metatypes.ONNXConvolutionTransposeMetatype,
-    onnx_metatypes.ONNXEmbeddingMetatype,
+    metatype
+    for metatype in get_operator_metatypes()
+    if issubclass(metatype, ONNXOpWithWeightsMetatype) and metatype.weight_port_ids
 ]
 
+POSSIBLE_WEIGHT_LAYER_METATYPES = [
+    metatype
+    for metatype in get_operator_metatypes()
+    if issubclass(metatype, ONNXOpWithWeightsMetatype) and metatype.possible_weight_ports
+]
+
+OPERATIONS_WITH_WEIGHTS = list(set().union(CONSTANT_WEIGHT_LAYER_METATYPES, POSSIBLE_WEIGHT_LAYER_METATYPES))
 
 LINEAR_OPERATIONS = [
     onnx_metatypes.ONNXConvolutionMetatype,
@@ -122,11 +129,6 @@ ELEMENTWISE_OPERATIONS = [
     onnx_metatypes.ONNXMaximumMetatype,
     onnx_metatypes.ONNXMinimumMetatype,
     onnx_metatypes.ONNXMeanMetatype,
-]
-
-OPERATIONS_WITH_WEIGHTS = [
-    *CONSTANT_WEIGHT_LAYER_METATYPES,
-    *MATMUL_METATYPES,
 ]
 
 

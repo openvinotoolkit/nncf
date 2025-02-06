@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -31,6 +31,7 @@ ModelInput = TypeVar("ModelInput")
 
 ROOT = Path(__file__).parent.resolve()
 MODEL_PATH = ROOT / "compressed_model.xml"
+STATISTICS_PATH = ROOT / "statistics"
 
 COMPRESSION_MODE = nncf.parameters.CompressWeightsMode.INT4_SYM
 MAX_DROP = 0.2
@@ -64,7 +65,7 @@ def compress_model(
         group_size=group_size,
         awq=awq,
         sensitivity_metric=nncf.parameters.SensitivityMetric.MAX_ACTIVATION_VARIANCE,
-        advanced_parameters=AdvancedCompressionParameters(statistics_path="statistics"),
+        advanced_parameters=AdvancedCompressionParameters(statistics_path=STATISTICS_PATH),
     )
     return optimized_ov_model
 
@@ -248,6 +249,7 @@ def main():
         "NUM_STREAMS": "1",
         "CACHE_DIR": "",
         "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0",
+        "KV_CACHE_PRECISION": "f16",
     }
     model = OVModelForCausalLM.from_pretrained(
         model_id,

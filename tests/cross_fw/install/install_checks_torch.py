@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@ import sys
 import torch
 
 import nncf
+from tests.cross_fw.install.common import load_nncf_modules
 
 if len(sys.argv) != 3:
     raise nncf.ValidationError(
@@ -54,3 +55,17 @@ elif execution_type == "gpu":
     )
 else:
     raise nncf.ValidationError(f"Invalid execution type {execution_type} (expected 'cpu' or 'gpu')!")
+
+EXCLUDED_MODULES_PATTERNS = (
+    "nncf\\.openvino.*",
+    "nncf\\.tensorflow.*",
+    "nncf\\.onnx.*",
+    "nncf\\.experimental\\.tensorflow.*",
+    "nncf\\.experimental\\.openvino.*",
+    "nncf\\.experimental\\.onnx.*",
+    "^(?!nncf(?:\\.experimental)*\\.torch.*?\\.).*?openvino_[^\\.]*",
+    "^(?!nncf(?:\\.experimental)*\\.torch.*?\\.).*?onnx_[^\\.]*",
+    "^(?!nncf(?:\\.experimental)*\\.torch.*?\\.).*?tf_[^\\.]*",
+)
+
+load_nncf_modules(EXCLUDED_MODULES_PATTERNS)

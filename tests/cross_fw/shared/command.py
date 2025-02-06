@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,7 +17,9 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
-from nncf.common.utils.os import is_windows
+
+def is_windows() -> bool:
+    return "win32" in sys.platform
 
 
 class Command:

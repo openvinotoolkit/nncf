@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,8 +23,8 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.onnx.graph.metatypes.groups import CONSTANT_WEIGHT_LAYER_METATYPES
-from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_BIAS
+from nncf.onnx.graph.metatypes.groups import POSSIBLE_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpWithWeightsMetatype
@@ -95,7 +95,7 @@ def get_possible_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
     :param metatype: Metatype.
     :return: Port ids.
     """
-    if metatype in MATMUL_METATYPES:
+    if metatype in POSSIBLE_WEIGHT_LAYER_METATYPES:
         return metatype.possible_weight_ports
     return []
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -53,6 +53,9 @@ def pytest_configure(config: Config) -> None:
     nncf_debug = config.getoption("--nncf-debug", False)
     if nncf_debug:
         set_log_level(logging.DEBUG)
+
+    # Disable patching of torch functions
+    os.environ["NNCF_EXPERIMENTAL_TORCH_TRACING"] = "1"
 
 
 @pytest.fixture

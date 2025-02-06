@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -50,12 +50,18 @@ def find_quantizer_nodes_to_cut(
     """
 
     def _parse_node_relatives(node: NNCFNode, is_parents: bool):
-        if node.metatype in quantizable_metatypes:
-            ops_to_return_in_orig_prec.add(node)
-
         relatives = graph.get_previous_nodes(node) if is_parents else graph.get_next_nodes(node)
         for relative in relatives:
-            if relative.metatype in quantizer_metatypes:
+            if relative.metatype in quantizable_metatypes:
+                if is_parents:
+                    if relative in seen_children:
+                        continue
+                    to_see_children.append(relative)
+                else:
+                    ops_to_return_in_orig_prec.add(relative)
+                    if relative not in seen_parents:
+                        to_see_parents.append(relative)
+            elif relative.metatype in quantizer_metatypes:
                 if is_parents:
                     if relative in seen_children:
                         continue

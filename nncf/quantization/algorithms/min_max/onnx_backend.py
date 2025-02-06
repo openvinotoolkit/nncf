@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,9 +21,8 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.groups import ELEMENTWISE_OPERATIONS
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
@@ -35,15 +34,12 @@ from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.hardware.config import ONNXHWConfig
 from nncf.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.onnx.quantization.quantizer_parameters import convert_fq_params_to_onnx_params
-from nncf.onnx.statistics.collectors import ONNX_REDUCERS_MAP
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.quantization.range_estimator import AggregatorType
-from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.quantization.range_estimator import StatisticsType
 
 
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -101,7 +97,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
-        return {om.ONNXConcatMetatype: self.overflow_fix_metatypes}
+        return {om.ONNXConcatMetatype: self.overflow_fix_metatypes + self.scaled_dot_product_attention_metatypes}
 
     @property
     def hw_config(self) -> HWConfig:
@@ -110,6 +106,14 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         return DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
+
+    @property
+    def reducer_map(self) -> Dict[StatisticsType, TensorReducerBase]:
+        return REDUCERS_MAP
+
+    @property
+    def supports_inplace_statistics(self) -> bool:
+        return False
 
     @staticmethod
     def get_start_nodes_for_activation_path_tracing(
@@ -172,52 +176,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_quantization_axes(node: NNCFNode, target_point: ONNXTargetPoint, ndims: int) -> Tuple[int]:
         return (get_weight_quantization_axis(node, target_point.port_id),)
-
-    @staticmethod
-    def get_statistic_collector(
-        range_estimator_params: RangeEstimatorParameters,
-        use_abs_max: bool,
-        reduction_axes: Optional[Tuple[int, ...]],
-        aggregation_axes: Optional[Tuple[int, ...]],
-        inplace: bool,
-        num_samples: Optional[int] = None,
-    ) -> TensorCollector:
-        collector = TensorCollector(MinMaxTensorStatistic)
-        for params, container_key in zip(
-            [range_estimator_params.min, range_estimator_params.max],
-            [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
-        ):
-            if params.statistics_type not in ONNX_REDUCERS_MAP:
-                raise nncf.InternalError(
-                    f"Statistic type: {params.statistics_type} is not supported for ONNX PTQ backend yet."
-                )
-            if params.aggregator_type not in AGGREGATORS_MAP:
-                raise nncf.InternalError(
-                    f"Aggregator type: {params.aggregator_type} is not supported for ONNX PTQ backend yet."
-                )
-            kwargs = {"reduction_axes": reduction_axes, "inplace": False}
-            if params.statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
-                if container_key == MinMaxTensorStatistic.MIN_STAT:
-                    quantile = params.quantile_outlier_prob
-                else:
-                    quantile = 1 - params.quantile_outlier_prob
-                kwargs.update({"quantile": [quantile]})
-            # TODO(dlyakhov): merge two quantile aggregators in one
-            statistic_type = params.statistics_type
-            if use_abs_max and statistic_type == StatisticsType.MAX:
-                statistic_type = StatisticsType.ABS_MAX
-            reducer = ONNX_REDUCERS_MAP[statistic_type](**kwargs)
-
-            kwargs = {
-                "num_samples": num_samples,
-                "aggregation_axes": aggregation_axes,
-            }
-            if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
-                kwargs.update({"quantile": params.quantile_outlier_prob})
-            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
-
-            collector.register_statistic_branch(container_key, reducer, aggregator)
-        return collector
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:

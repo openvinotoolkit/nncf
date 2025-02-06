@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -129,11 +129,14 @@ class FXModelTransformer(ModelTransformer):
         def remap_fn(node: torch.fx.Node):
             return value_remap.get(node)  # noqa F821
 
+        visited_outputs_names = []
         for node in model.graph.nodes:
-            if node.name not in visited or node.op == "output":
+            if node.name not in visited:
+                continue
+            if node.op == "output":
+                visited_outputs_names.append(node.name)
                 continue
             value_remap[node] = extracted_graph.node_copy(node, remap_fn)
-        del value_remap
 
         for input_name in transformation.input_node_names:
             node_with_input = get_graph_node_by_name(extracted_graph, input_name)
@@ -149,7 +152,33 @@ class FXModelTransformer(ModelTransformer):
             args[0] = graph_input
             node_with_input.args = tuple(args)
 
-        nodes_with_output = [get_graph_node_by_name(extracted_graph, name) for name in transformation.output_node_names]
+        # Merge new output with the original output in case
+        # the original output is requested in the extracted graph.
+        nodes_with_output = []
+        for name in transformation.output_node_names:
+            nodes_with_output.append(
+                name if name in visited_outputs_names else get_graph_node_by_name(extracted_graph, name)
+            )
+
+        for idx, node in enumerate(nodes_with_output):
+            if isinstance(node, torch.fx.Node):
+                continue
+            # Current node is the original graph output.
+            # Should be replaced by its arguments.
+            output_node = get_graph_node_by_name(model.graph, node)
+            args = output_node.args[0]
+            if isinstance(args, torch.fx.Node):
+                # Case of non tuple output.
+                args = value_remap[args]
+            else:
+                # Case of tuple output.
+                args = [value_remap[n] for n in args]
+                # Unpack target output args in case
+                # the only one arg is presented.
+                if len(args) == 1:
+                    args = args[0]
+            nodes_with_output[idx] = args
+
         last_node = list(extracted_graph.nodes)[-1]
         with extracted_graph.inserting_after(last_node):
             graph_output_name = "output"

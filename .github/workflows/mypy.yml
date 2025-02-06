@@ -7,6 +7,11 @@ on:
       - opened
       - reopened
       - synchronize
+    paths:
+      - '.github/workflows/mypy.yml'
+      - 'pyproject.toml'
+      - '**.py'
+      - '**.pyi'
 
 jobs:
   mypy:
@@ -18,8 +23,7 @@ jobs:
           python-version: 3.10.14
       - name: Install NNCF
         run: |
-          pip install -e .
-          pip install torch -c constraints.txt
+          pip install -e . torch -c constraints.txt
       - name: Install mypy
         run: pip install mypy==1.8.0
       - name: Run mypy

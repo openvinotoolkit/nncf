@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -24,6 +24,7 @@ from nncf.experimental.common.tensor_statistics.statistical_functions import mea
 from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.quantization.advanced_parameters import AggregatorType
+from nncf.quantization.range_estimator import StatisticsType
 from nncf.tensor import Tensor
 
 InplaceInsertionFNType = TypeVar("InplaceInsertionFNType")
@@ -412,23 +413,15 @@ class MergedTensorCollector(TensorCollector):
 ##################################################
 
 
-class NoopReducer(TensorReducerBase):
+class RawReducer(TensorReducerBase):
     def __init__(self):
         super().__init__(inplace=False)
 
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
         return None
 
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
+    def _reduce_out_of_place(self, x: List[Tensor]) -> List[Tensor]:
         return x
-
-
-class RawReducer(NoopReducer):
-    def __init__(self):
-        super().__init__()
-
-    def __call__(self, x: List[Tensor]):
-        return self._reduce_out_of_place(x)
 
 
 class ShapeReducer(TensorReducerBase):
@@ -842,6 +835,15 @@ def _move_axes_flatten_cat(
     shape_after_aggregation = tuple(1 if idx in aggregation_axes else dim for idx, dim in enumerate(tensor_shape))
     return fns.concatenate(reshaped_tensors, axis=0), shape_after_aggregation
 
+
+REDUCERS_MAP = {
+    StatisticsType.MIN: MinReducer,
+    StatisticsType.MAX: MaxReducer,
+    StatisticsType.ABS_MAX: AbsMaxReducer,
+    StatisticsType.MEAN: MeanReducer,
+    StatisticsType.QUANTILE: QuantileReducer,
+    StatisticsType.ABS_QUANTILE: AbsQuantileReducer,
+}
 
 AGGREGATORS_MAP = {
     AggregatorType.MIN: MinAggregator,

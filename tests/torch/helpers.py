@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -51,7 +51,7 @@ from nncf.torch.nncf_module_replacement import get_original_module_scope_from_nn
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import get_all_modules_by_type
 from tests.cross_fw.shared.command import Command as BaseCommand
-from tests.cross_fw.shared.helpers import BaseTensorListComparator
+from tests.cross_fw.shared.comparator import BaseTensorListComparator
 
 TensorType = Union[torch.Tensor, np.ndarray, numbers.Number]
 

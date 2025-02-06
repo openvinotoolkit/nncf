@@ -1,5 +1,43 @@
 # Release Notes
 
+## New in Release 2.15.0
+
+Post-training Quantization:
+
+- Features:
+  - (TensorFlow) The `nncf.quantize()` method is now the recommended API for Quantization-Aware Training. Please refer to an [example](examples/quantization_aware_training/tensorflow/mobilenet_v2) for more details about how to use a new approach.
+  - (TensorFlow) Compression layers placement in the model now can be serialized and restored with new API functions: `nncf.tensorflow.get_config()` and `nncf.tensorflow.load_from_config()`. Please see the [documentation](docs/usage/training_time_compression/quantization_aware_training/Usage.md#saving-and-loading-compressed-models) for the saving/loading of a quantized model for more details.
+  - (OpenVINO) Added [example](examples/llm_compression/openvino/smollm2_360m_fp8) with LLM quantization to FP8 precision.
+  - (TorchFX, Experimental) Preview support for the new `quantize_pt2e` API has been introduced, enabling quantization of `torch.fx.GraphModule` models with the `OpenVINOQuantizer` and the `X86InductorQuantizer` quantizers. `quantize_pt2e` API utilizes MinMax algorithm statistic collectors, as well as SmoothQuant, BiasCorrection and FastBiasCorrection Post-Training Quantization algorithms.
+  - Added unification of scales for ScaledDotProductAttention operation.
+- Fixes:
+  - (ONNX) Fixed sporadic accuracy issues with the BiasCorrection algorithm.
+  - (ONNX) Fixed GroupConvolution operation weight quantization, which also improves performance for a number of models.
+  - Fixed AccuracyAwareQuantization algorithm to solve [#3118](https://github.com/openvinotoolkit/nncf/issues/3118) issue.
+  - Fixed issue with NNCF usage with potentially corrupted backend frameworks.
+- Improvements:
+  - (TorchFX, Experimental) Added YoloV11 support.
+  - (OpenvINO) The performance of the FastBiasCorrection algorithm was improved.
+  - Significantly faster data-free weight compression for OpenVINO models: INT4 compression is now up to 10x faster, while INT8 compression is up to 3x faster. The larger the model the higher the time reduction.
+  - AWQ weight compression is now up to 2x faster, improving overall runtime efficiency.
+  - Peak memory usage during INT4 data-free weight compression in the OpenVINO backend is reduced by up to 50% for certain models.
+- Deprecations/Removals:
+  - (TensorFlow) The `nncf.tensorflow.create_compressed_model()` method is now marked as deprecated. Please use the `nncf.quantize()` method for the quantization initialization.
+- Tutorials:
+  - [Post-Training Optimization of GLM-Edge-V Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/glm-edge-v/glm-edge-v.ipynb)
+  - [Post-Training Optimization of OmniGen Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/omnigen/omnigen.ipynb)
+  - [Post-Training Optimization of Sana Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/sana-image-generation/sana-image-generation.ipynb)
+  - [Post-Training Optimization of BGE Models](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-rag-langchain/llm-rag-langchain-genai.ipynb)
+  - [Post-Training Optimization of Stable Diffusion Inpainting Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/inpainting-genai/inpainting-genai.ipynb)
+  - [Post-Training Optimization of LTX Video Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/ltx-video/ltx-video.ipynb)
+  - [Post-Training Optimization of DeepSeek-R1-Distill Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-chatbot/llm-chatbot-generate-api.ipynb)
+  - [Post-Training Optimization of Janus DeepSeek-LLM-1.3b Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/janus-multimodal-generation/janus-multimodal-generation.ipynb)
+
+Requirements:
+
+- Updated the minimal version for `numpy` (>=1.24.0).
+- Removed `tqdm` dependency.
+
 ## New in Release 2.14.1
 
 Post-training Quantization:
@@ -17,8 +55,8 @@ Post-training Quantization:
   - Added the `quantizer_propagation_rule` parameter, providing fine-grained control over quantizer propagation. This advanced option is designed to improve accuracy for models where quantizers with different granularity could be merged to per-tensor, potentially affecting model accuracy.
   - Introduced `nncf.data.generate_text_data` API method that utilizes LLM to generate data for further data-aware optimization. See the [example](examples/llm_compression/openvino/tiny_llama_synthetic_data/) for details.
   - (OpenVINO) Extended support of data-free and data-aware weight compression methods for `nncf.compress_weights()` with NF4 per-channel quantization, which makes compressed LLMs more accurate and faster on NPU.
-  - (OpenVINO) Introduced a new option `statistics_path` to cache and reuse statistics for `nncf.compress_weights()`, reducing the time required to find optimal compression configurations. See the [TinyLlama example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/llm_compression/openvino/tiny_llama_find_hyperparams) for details.
-  - (TorchFX, Experimental) Added support for quantization and weight compression of [Torch FX](https://pytorch.org/docs/stable/fx.html) models. The compressed models can be directly executed via `torch.compile(compressed_model, backend="openvino")` (see details [here](https://docs.openvino.ai/2024/openvino-workflow/torch-compile.html)). Added [INT8 quantization example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/torch_fx/resnet18). The list of supported features:
+  - (OpenVINO) Introduced a new option `statistics_path` to cache and reuse statistics for `nncf.compress_weights()`, reducing the time required to find optimal compression configurations. See the [TinyLlama example](examples/llm_compression/openvino/tiny_llama_find_hyperparams) for details.
+  - (TorchFX, Experimental) Added support for quantization and weight compression of [Torch FX](https://pytorch.org/docs/stable/fx.html) models. The compressed models can be directly executed via `torch.compile(compressed_model, backend="openvino")` (see details [here](https://docs.openvino.ai/2024/openvino-workflow/torch-compile.html)). Added [INT8 quantization example](examples/post_training_quantization/torch_fx/resnet18). The list of supported features:
     - INT8 quantization with SmoothQuant, MinMax, FastBiasCorrection, and BiasCorrection algorithms via `nncf.quantize()`.
     - Data-free INT8, INT4, and mixed-precision weights compression with `nncf.compress_weights()`.
   - (PyTorch, Experimental) Added model tracing and execution pre-post hooks based on TorchFunctionMode.
@@ -37,8 +75,8 @@ Post-training Quantization:
   - (OpenVINO) Extended to the ignored scope for `nncf.ModelType.TRANSFORMER` scheme with GroupNorm metatype.
   - (ONNX) SE-block ignored pattern variant for `torchvision` mobilenet_v3 has been extended.
 - Tutorials:
-  - [Post-Training Optimization of Llama-3.2-11B-Vision Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/mllama-3.2/mllama-3.2.ipynb)
-  - [Post-Training Optimization of YOLOv11 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov11-optimization/yolov11-object-detection.ipynb)
+  - [Post-Training Optimization of Llama-3.2-11B-Vision Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/mllama-3.2/mllama-3.2.ipynb)
+  - [Post-Training Optimization of YOLOv11 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/yolov11-optimization/yolov11-object-detection.ipynb)
   - [Post-Training Optimization of Whisper in Automatic speech recognition with OpenVINO Generate API](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/whisper-asr-genai/whisper-asr-genai.ipynb)
   - [Post-Training Optimization of Pixtral Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/pixtral/pixtral.ipynb)
   - [Post-Training Optimization of LLM ReAct Agent Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llm-agent-react/llm-agent-react.ipynb)

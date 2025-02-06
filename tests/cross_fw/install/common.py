@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -32,9 +32,13 @@ def onerror(name, excluded_modules_patterns):
 def load_nncf_modules(excluded_modules_patterns, verbose=False):
     onerror_partial = partial(onerror, excluded_modules_patterns=excluded_modules_patterns)
     for loader, module_name, _ in pkgutil.walk_packages(nncf.__path__, nncf.__name__ + ".", onerror_partial):
-        if module_name in sys.modules or excluded_module(module_name, excluded_modules_patterns):
+        if excluded_module(module_name, excluded_modules_patterns):
             if verbose:
                 print(f"Module {module_name} ------ SKIPPED")
+            continue
+        if module_name in sys.modules:
+            if verbose:
+                print(f"Module {module_name} ------ LOADED")
             continue
         loader.find_module(module_name).load_module(module_name)
         if verbose:

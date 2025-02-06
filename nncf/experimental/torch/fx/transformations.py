@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,7 +15,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import torch
 import torch.fx
 from torch.ao.quantization.fx.utils import create_getattr_from_value
-from torch.ao.quantization.pt2e.utils import fold_bn_weights_into_conv_node
+from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
@@ -47,10 +47,12 @@ Argument = Optional[Union[Tuple[Any, ...], List[Any], Dict[str, Any], slice, ran
 
 QUANTIZE_NODE_TARGETS = [
     torch.ops.quantized_decomposed.quantize_per_tensor.default,
+    torch.ops.quantized_decomposed.quantize_per_tensor.tensor,
     torch.ops.quantized_decomposed.quantize_per_channel.default,
 ]
 DEQUANTIZE_NODE_TARGETS = [
     torch.ops.quantized_decomposed.dequantize_per_tensor.default,
+    torch.ops.quantized_decomposed.dequantize_per_tensor.tensor,
     torch.ops.quantized_decomposed.dequantize_per_channel.default,
 ]
 # Map quantize_per_tensor to dequantize_per_tensor, the same for per_channel and vice-versa
@@ -129,7 +131,7 @@ def module_insertion_transformation_builder(
                         user.replace_input_with(target_node, new_node)
 
             else:
-                prev_node = target_node.args[target_point.input_port_id]
+                prev_node = _get_node_by_input_port_id(target_node, target_point.input_port_id)
                 _set_new_node_meta(new_node, [prev_node], module_to_insert, model)
                 target_node.replace_input_with(prev_node, new_node)
 
@@ -158,33 +160,6 @@ def leaf_module_insertion_transformation_builder(
             _insert_call_module(graph, target_point, module_attr_name, f"{module_attr_name}_{idx}")
 
     return leaf_module_insertion_transformation
-
-
-def bias_update_transformation_builder(node: NNCFNode, value: torch.Tensor, input_port_id: int) -> TransformationFNType:
-    """
-    Return transformation which updates constant of the given node with bias to the given value.
-
-    :param node: Node with bias which requires bias constant update.
-    :param value: New value to use as the bias constant.
-    :param input_port_id: Input port id to get constant node from.
-    :return: Transformation which updates constant of the given node with bias to the given value.
-    """
-
-    def bias_update_transformation(model: torch.fx.GraphModule):
-        graph = model.graph
-        target_node_name = node.node_name
-        graph_node = get_graph_node_by_name(graph, target_node_name)
-        add_nodes = []
-        for user in graph_node.users:
-            if _is_add(user):
-                add_nodes.append(user)
-        if len(add_nodes) != 1:
-            raise nncf.InternalError(f"Node {graph_node.name} has {len(add_nodes)} outputs with adds, 1 expected")
-
-        bias_node = add_nodes[0]
-        constant_update_fn(model, bias_node, value, input_port_id=input_port_id)
-
-    return bias_update_transformation
 
 
 def constant_update_transformation_builder(
@@ -222,27 +197,25 @@ def constant_update_fn(
     :param updated_node_name: Name of the constant node after updating. Default is `nodename` + `_updated_constant`.
     """
     graph = model.graph
-    node_name = updated_node_name if updated_node_name else node.name + "_updated_constant"
-    args = list(node.args)
-    # A bias node suppose to have constant on the second input port.
-    if args[input_port_id].op != "get_attr":
+    old_const = _get_node_by_input_port_id(node, input_port_id)
+
+    if old_const.op != "get_attr":
         raise nncf.InternalError(
-            f"Constant on input port {input_port_id} for {node} is expected,"
-            f" but node {args[input_port_id]} is present."
+            f"Constant on input port {input_port_id} for {node} is expected," f" but node {old_const} is present."
         )
 
+    node_name = updated_node_name if updated_node_name else old_const.name + "_updated_constant"
     # Update metadata of the new constant node.
-    previous_const = args[input_port_id]
-    consumer_nodes = list(previous_const.users)
+    consumer_nodes = list(old_const.users)
     # This list of consumer nodes is topologically sorted
     # To ensure the updated node has the right order,
     # we insert constant node before the node placed at the highest order in topological order.
     sorted_consumer_nodes = [node for node in graph.nodes if node in consumer_nodes]
 
     with graph.inserting_before(sorted_consumer_nodes[0]):
-        new_constant = create_getattr_from_value(model, graph, node_name, value)
+        new_const = create_getattr_from_value(model, graph, node_name, value)
 
-    previous_const.replace_all_uses_with(new_constant, propagate_meta=True)
+    old_const.replace_all_uses_with(new_const, propagate_meta=True)
     graph.eliminate_dead_code()
 
 
@@ -428,9 +401,7 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
             dq_node = graph.call_function(dequantize_op, tuple(dq_inputs), {})
             dq_node.meta["val"] = copy(meta_val)
 
-        args = list(target_node.args)
-        args[target_point.input_port_id] = dq_node
-        target_node.args = tuple(args)
+        target_node.replace_input_with(input_node, dq_node)
     else:
         raise nncf.InternalError(f"Unexpected target type: {target_point.target_type}")
 
@@ -471,7 +442,21 @@ def get_input_node(target_point: PTTargetPoint, target_node: torch.fx.Node) -> t
         raise nncf.InternalError(f"Unexpected target type: {target_type}")
     if target_type == TargetType.OPERATOR_POST_HOOK:
         return target_node
-    return target_node.args[target_point.input_port_id]
+
+    return _get_node_by_input_port_id(target_node, target_point.input_port_id)
+
+
+def _get_node_by_input_port_id(node: torch.fx.Node, input_port_id: int) -> torch.fx.Node:
+    """
+    Retrieves an input node from the given node and the input port id.
+
+    :param node: Given input node.
+    :param input_port_id: Given input port id.
+    :return: An input node from the given node and the input port id.
+    """
+    if node.target == torch.ops.aten.cat.default:
+        return node.args[0][input_port_id]
+    return node.args[input_port_id]
 
 
 def get_ctx_manager(graph: torch.fx.Graph, target_point: PTTargetPoint) -> Callable:
@@ -525,41 +510,6 @@ def _is_supported_batch_norm_for_training(node: torch.fx.Node):
         torch.ops.aten.miopen_batch_norm.default,
     ]
     return node.target in supported_ops
-
-
-def _is_bn_node(node: torch.fx.Node):
-    return (
-        _is_supported_batch_norm_for_training(node)
-        or node.target == torch.ops.aten._native_batch_norm_legit_no_training.default
-    )
-
-
-def fuse_conv_bn(model: torch.fx.GraphModule) -> None:
-    """
-    BatchNorm operations have 3 output ports, to make it easier for algorithms to work with
-    the target graph BatchNorm operations are being fused
-
-    :param model: Model to apply transformations to.
-    """
-    has_bn = any(_is_bn_node(node) for node in model.graph.nodes)
-    if not has_bn:
-        return
-
-    for node in model.graph.nodes:
-        if node.op != "call_function" or not _is_bn_node(node):
-            continue
-        bn_node = node
-
-        node = bn_node.args[0]
-        if not _is_conv(node):
-            continue
-        conv_node = node
-        conv_weight_node = conv_node.args[1]
-        conv_bias_node = conv_node.args[2] if len(conv_node.args) > 2 else None
-        fold_bn_weights_into_conv_node(conv_node, conv_weight_node, conv_bias_node, bn_node, model)
-
-    model.graph.eliminate_dead_code()
-    model.recompile()
 
 
 def _get_pattern_replacement_per_channel() -> (
@@ -783,9 +733,7 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     # with the target graph BatchNorm operations
     # are being fused
     fold_constant_except_qdq(model)
-    fuse_conv_bn(model)
-    separate_conv_and_bias(model)
-    separate_linear_and_bias(model)
+    _fuse_conv_bn_(model)
 
 
 def fold_constant_except_qdq(model: torch.fx.GraphModule):
@@ -799,213 +747,3 @@ def fold_constant_except_qdq(model: torch.fx.GraphModule):
         return node.op != "call_function" or node.target not in QUANTIZE_NODE_TARGETS + DEQUANTIZE_NODE_TARGETS
 
     constant_fold(model, constraint_fn=constraint_fn)
-
-
-def revert_quantization_transformations(model: torch.fx.GraphModule) -> None:
-    """
-    Reverts quantization transformations from the model.
-
-    :param model: Model to revert transformations from.
-    """
-    merge_conv_and_bias(model)
-    merge_linear_and_bias(model)
-
-
-def _is_linear(n: torch.fx.Node) -> bool:
-    """
-    Return whether the node refers to an aten linear op.
-
-    :param n: The given node.
-    :return: True if given node is a linear node, else False.
-    """
-    return n.op == "call_function" and n.target in (torch.ops.aten.linear.default,)
-
-
-def _is_conv(n: torch.fx.Node):
-    """
-    Return whether the node refers to an aten conv op.
-    """
-    return n.op == "call_function" and n.target in (
-        torch.ops.aten.conv1d.default,
-        torch.ops.aten.conv2d.default,
-        torch.ops.aten.conv_transpose2d.input,
-    )
-
-
-def _is_add(n: torch.fx.Node):
-    """
-    Return whether the node refers to an aten add op.
-    """
-    return n.op == "call_function" and n.target in (
-        torch.ops.aten.add_.Tensor,
-        torch.ops.aten.add.Tensor,
-    )
-
-
-def separate_linear_and_bias(model: torch.fx.GraphModule):
-    """
-    Separates one joined linear+bias node to two nodes: conv and bias.
-    Needed as nncf does not expect joined conv
-
-    :param model: Target model.
-    """
-    add_node_target = torch.ops.aten.add.Tensor
-    for n in model.graph.nodes:
-        if not _is_linear(n):
-            continue
-        # This check also makes sure to ignore linear nodes which might already
-        # have quantization applied to the weights.
-        if len(n.args) < 3 or n.args[2] is None or n.args[1].op != "get_attr":
-            continue
-        linear_node = n
-        linear_bias_node = linear_node.args[2]
-        while linear_bias_node.op != "get_attr":
-            # Assume zero argument is on a path to the constant
-            linear_bias_node = linear_bias_node.args[0]
-        linear_bias_value = get_tensor_constant_from_node(linear_bias_node, model)
-        args = list(n.args)
-        args[2] = None
-        linear_node.args = tuple(args)
-        with model.graph.inserting_after(linear_node):
-            new_linear_bias_node = create_getattr_from_value(
-                model,
-                model.graph,
-                linear_bias_node.name + "_",
-                linear_bias_value,
-            )
-        with model.graph.inserting_after(new_linear_bias_node):
-            add_node = model.graph.create_node(
-                "call_function", add_node_target, (linear_node, new_linear_bias_node), {}
-            )
-        for user in list(linear_node.users):
-            if user is add_node:
-                continue
-            user.replace_input_with(linear_node, add_node)
-        if "val" in linear_node.meta:
-            add_node.meta["val"] = linear_node.meta["val"]
-    model.graph.eliminate_dead_code()
-    model.recompile()
-
-
-def separate_conv_and_bias(model: torch.fx.GraphModule):
-    """
-    Separates one joined conv+bias node to two nodes: conv and bias.
-    Needed as nncf does not expect joined conv
-
-    :param model: Target model.
-    """
-    add_node_target = torch.ops.aten.add_.Tensor
-    for n in model.graph.nodes:
-        if not _is_conv(n):
-            continue
-        # This check also makes sure to ignore convolution nodes which might
-        # already have quantization applied to the weights.
-        if len(n.args) < 3 or n.args[2] is None or n.args[1].op != "get_attr":
-            continue
-        conv_node = n
-        dims = len(get_tensor_constant_from_node(conv_node.args[1], model).shape)
-        conv_bias_node = conv_node.args[2]
-        conv_bias_value = get_tensor_constant_from_node(conv_bias_node, model)
-        args = list(n.args)
-        args[2] = None
-        conv_node.args = tuple(args)
-        with model.graph.inserting_after(conv_node):
-            new_conv_bias_node = create_getattr_from_value(
-                model, model.graph, conv_bias_node.name + "_", conv_bias_value.reshape((1, -1) + (1,) * (dims - 2))
-            )
-        with model.graph.inserting_after(new_conv_bias_node):
-            add_node = model.graph.create_node("call_function", add_node_target, (conv_node, new_conv_bias_node), {})
-        for user in list(conv_node.users):
-            if user is add_node:
-                continue
-            user.replace_input_with(conv_node, add_node)
-
-        if "val" in conv_node.meta:
-            add_node.meta["val"] = conv_node.meta["val"]
-    model.graph.eliminate_dead_code()
-    model.recompile()
-
-
-def merge_conv_and_bias(model: torch.fx.GraphModule):
-    """
-    Merges two separate conv and bias nodes to a one node: conv+bias.
-    Needed as nncf does not expect joined conv
-
-    :param model: Target model.
-    """
-    _merge_node_and_bias(model, _is_conv)
-
-
-def merge_linear_and_bias(model: torch.fx.GraphModule):
-    """
-    Merges two separate linear and bias nodes to a one node: linear+bias.
-
-    :param model: Target model.
-    """
-    _merge_node_and_bias(model, _is_linear)
-
-
-def _get_connected_nodes(graph: torch.fx.Graph) -> List[torch.fx.Node]:
-    """
-    Returns the List of nodes which are directly or indirectly connected
-    to the output node.
-
-    :param graph: The torch FX graph to get nodes from.
-    """
-    output_nodes = [node for node in graph.nodes if node.op == "output"]
-    assert len(output_nodes) == 1
-    output_node = output_nodes[0]
-    connected_nodes = set()  # Every node is unique in the graph
-    nodes_to_visit = [output_node]
-    while nodes_to_visit:
-        current_node = nodes_to_visit.pop()
-        if current_node in connected_nodes:
-            continue
-        connected_nodes.add(current_node)
-        nodes_to_visit.extend(current_node.all_input_nodes)
-    return list(connected_nodes)
-
-
-def _merge_node_and_bias(model: torch.fx.GraphModule, is_target_node: Callable[[torch.fx.Node], bool]):
-    """
-    Merges two separate node and bias node to a one node: node+bias.
-    Check which node should be merged by the given `is_target_node` predicate.
-
-    :param model: Target model.
-    :param is_target_node: Predicate to specify nodes which should be merged with the bias
-    """
-    add_node_targets = (torch.ops.aten.add.Tensor, torch.ops.aten.add_.Tensor)
-    for n in model.graph.nodes:
-        if not is_target_node(n):
-            continue
-        if len(n.args) > 2 and n.args[2] is not None:
-            continue
-        bias_node = next(iter(n.users))
-        if len(n.users) > 1 or bias_node.target not in add_node_targets:
-            continue
-        conv_node = n
-        const_node = None
-        for node in bias_node.all_input_nodes:
-            if node is not conv_node:
-                const_node = node
-                break
-        assert const_node is not None
-        bias_value = get_tensor_constant_from_node(const_node, model).squeeze()
-        with model.graph.inserting_before(conv_node):
-            new_bias_node = create_getattr_from_value(model, model.graph, const_node.name + "_", bias_value)
-        args = list(conv_node.args)
-        args[2] = new_bias_node
-        conv_node.args = tuple(args)
-        for user in list(bias_node.users):
-            user.replace_input_with(bias_node, conv_node)
-
-    # Remove nodes which are not connected to output. This removes dead nodes and dead subgraphs in the model graph.
-    nodes_connected_to_output = _get_connected_nodes(model.graph)
-    is_impure = lambda node: node in nodes_connected_to_output
-
-    for node in reversed(model.graph.nodes):
-        if not is_impure(node) and len(node.users) == 0:
-            model.graph.erase_node(node)
-
-    model.graph.eliminate_dead_code()
-    model.recompile()

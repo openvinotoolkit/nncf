@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,12 +9,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Type, Union, cast
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFGraphEdge
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
+from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
+from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
+from nncf.common.graph.layer_attributes import PadLayerAttributes
+from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.pruning.utils import get_input_masks
@@ -30,8 +35,8 @@ class BasePruningOp:
     properties of interaction with pruning masks
     """
 
-    subtypes = []
-    additional_types = []
+    subtypes: List[Type[OperatorMetatype]] = []
+    additional_types: List[str] = []
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
@@ -58,7 +63,7 @@ class BasePruningOp:
         """
         :return: list of all aliases of types in metatype
         """
-        op_types = []
+        op_types: List[str] = []
         for subtype in cls.subtypes:
             op_types.extend(subtype.get_all_aliases())
         op_types = list(set(op_types)) + cls.additional_types
@@ -204,7 +209,7 @@ class LayerNormPruningOp(BasePruningOp):
 
 class ConcatPruningOp(BasePruningOp):
     @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
+    def accept_pruned_input(cls, node: NNCFNode) -> bool:
         return True
 
     @classmethod
@@ -235,6 +240,7 @@ class ConcatPruningOp(BasePruningOp):
 
         device = first_non_empty_mask.device
         filled_input_masks = []
+        assert isinstance(node.layer_attributes, MultipleInputLayerAttributes)
         for i, mask in enumerate(input_masks):
             if mask is None:
                 concat_axis = node.layer_attributes.axis
@@ -256,7 +262,7 @@ class SplitPruningOp(BasePruningOp):
     @classmethod
     def match_multiple_output_masks(
         cls, output_masks: List[SymbolicMask], output_edges: List[NNCFGraphEdge], chunk_axis: int
-    ) -> Dict["str", SymbolicMask]:
+    ) -> Dict[str, SymbolicMask]:
         """
         Match multiple input mask to each next nodes.
 
@@ -277,7 +283,7 @@ class SplitPruningOp(BasePruningOp):
         return result_masks
 
     @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
+    def accept_pruned_input(cls, node: NNCFNode) -> bool:
         if node.layer_attributes is not None:
             return True
         return False
@@ -285,7 +291,7 @@ class SplitPruningOp(BasePruningOp):
     @classmethod
     def generate_output_masks(
         cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]
-    ) -> Optional[NNCFTensor]:
+    ) -> Union[None, SymbolicMask, Dict[str, SymbolicMask]]:
         """
         Generate output mask from input masks for split/chunk operations.
         If input mask is None return None
@@ -305,6 +311,7 @@ class SplitPruningOp(BasePruningOp):
         if not input_mask:
             return None
 
+        assert isinstance(node.layer_attributes, MultipleOutputLayerAttributes)
         chunk_axis = node.layer_attributes.axis
 
         output_edges = graph.get_output_edges(node)
@@ -318,7 +325,7 @@ class SplitPruningOp(BasePruningOp):
         if input_mask.shape[0] != sum(output_shapes):
             return None
 
-        split_masks = tensor_processor.split(input_mask, output_shapes)
+        split_masks = cast(List[SymbolicMask], tensor_processor.split(input_mask, output_shapes))
         result_masks = cls.match_multiple_output_masks(split_masks, output_edges, chunk_axis)
 
         return result_masks
@@ -334,6 +341,7 @@ class SplitPruningOp(BasePruningOp):
 class PadPruningOp(IdentityMaskForwardPruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
+        assert isinstance(node.layer_attributes, PadLayerAttributes)
         mode, value = node.layer_attributes.mode, node.layer_attributes.value
         if mode == "constant" and value != 0:
             return False
@@ -352,7 +360,7 @@ class ElementwisePruningOp(BasePruningOp):
         input_masks = get_input_masks(node, graph)
         output_mask = input_masks[0]
         if output_mask is not None:
-            output_mask = tensor_processor.elementwise_mask_propagation(input_masks)
+            output_mask = tensor_processor.elementwise_mask_propagation(input_masks)  # type: ignore
 
         node.attributes["output_mask"] = output_mask
 
@@ -360,10 +368,12 @@ class ElementwisePruningOp(BasePruningOp):
 class ReshapePruningOp(BasePruningOp):
     @staticmethod
     def _is_flatten(node: NNCFNode) -> bool:
+        assert isinstance(node.layer_attributes, ReshapeLayerAttributes)
         return len(node.layer_attributes.output_shape) == 2
 
     @staticmethod
     def _is_not_mixing_dim(node: NNCFNode) -> bool:
+        assert isinstance(node.layer_attributes, ReshapeLayerAttributes)
         input_shape = node.layer_attributes.input_shape
         output_shape = node.layer_attributes.output_shape
 
@@ -399,12 +409,14 @@ class FlattenPruningOp(BasePruningOp):
         return False
 
     @classmethod
-    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]):
+    def mask_propagation(
+        cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]
+    ) -> None:
         output_mask = None
         input_masks = get_input_masks(node, graph)
         assert len(input_masks) == 1
         input_mask = input_masks[0]
-        if input_mask is not None and node.layer_attributes is not None:
+        if input_mask is not None and isinstance(node.layer_attributes, ReshapeLayerAttributes):
             # We assume all layers known by the mask propagation algo except
             # StopMaskForwardOp have input/output batch dim == 0.
             # Besides, since input_mask is not None thus no StopMaskForwardOp operations

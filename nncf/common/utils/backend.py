@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -8,14 +8,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import importlib
 from copy import deepcopy
 from enum import Enum
-from typing import List, TypeVar
+from typing import Any, Callable, TypeVar
+
+from packaging import version
 
 import nncf
 
 TModel = TypeVar("TModel")
+
+try:
+    import openvino  # type: ignore # noqa: F401
+
+    _OPENVINO_AVAILABLE = True
+except ImportError:
+    _OPENVINO_AVAILABLE = False
 
 
 class BackendType(Enum):
@@ -26,31 +34,17 @@ class BackendType(Enum):
     OPENVINO = "OpenVINO"
 
 
-def get_available_backends() -> List[BackendType]:
-    """
-    Returns a list of available backends.
-
-    :return: A list of available backends.
-    """
-    frameworks = [
-        ("torch", BackendType.TORCH),
-        ("torch.fx", BackendType.TORCH_FX),
-        ("tensorflow", BackendType.TENSORFLOW),
-        ("onnx", BackendType.ONNX),
-        ("openvino.runtime", BackendType.OPENVINO),
-    ]
-
-    available_backends = []
-    for module_name, backend in frameworks:
+def result_verifier(func: Callable[[TModel], bool]) -> Callable[..., None]:
+    def verify_result(*args: Any, **kwargs: Any):  # type: ignore
         try:
-            importlib.import_module(module_name)
-            available_backends.append(backend)
-        except ImportError:
-            pass
+            return func(*args, **kwargs)
+        except Exception:
+            return False
 
-    return available_backends
+    return verify_result
 
 
+@result_verifier
 def is_torch_model(model: TModel) -> bool:
     """
     Returns True if the model is an instance of torch.nn.Module and not a torch.fx.GraphModule, otherwise False.
@@ -64,6 +58,7 @@ def is_torch_model(model: TModel) -> bool:
     return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
 
 
+@result_verifier
 def is_torch_fx_model(model: TModel) -> bool:
     """
     Returns True if the model is an instance of torch.fx.GraphModule, otherwise False.
@@ -76,6 +71,7 @@ def is_torch_fx_model(model: TModel) -> bool:
     return isinstance(model, torch.fx.GraphModule)
 
 
+@result_verifier
 def is_tensorflow_model(model: TModel) -> bool:
     """
     Returns True if the model is an instance of tensorflow.Module, otherwise False.
@@ -88,6 +84,7 @@ def is_tensorflow_model(model: TModel) -> bool:
     return isinstance(model, tensorflow.Module)
 
 
+@result_verifier
 def is_onnx_model(model: TModel) -> bool:
     """
     Returns True if the model is an instance of onnx.ModelProto, otherwise False.
@@ -100,6 +97,7 @@ def is_onnx_model(model: TModel) -> bool:
     return isinstance(model, onnx.ModelProto)
 
 
+@result_verifier
 def is_openvino_model(model: TModel) -> bool:
     """
     Returns True if the model is an instance of openvino.runtime.Model, otherwise False.
@@ -112,6 +110,7 @@ def is_openvino_model(model: TModel) -> bool:
     return isinstance(model, ov.Model)
 
 
+@result_verifier
 def is_openvino_compiled_model(model: TModel) -> bool:
     """
     Returns True if the model is an instance of openvino.runtime.CompiledModel, otherwise False.
@@ -131,27 +130,22 @@ def get_backend(model: TModel) -> BackendType:
     :param model: The framework-specific model.
     :return: A BackendType representing the correct NNCF backend to be used when working with the framework.
     """
-    available_backends = get_available_backends()
 
-    if BackendType.TORCH_FX in available_backends and is_torch_fx_model(model):
-        return BackendType.TORCH_FX
+    verify_map = {
+        is_torch_fx_model: BackendType.TORCH_FX,
+        is_torch_model: BackendType.TORCH,
+        is_tensorflow_model: BackendType.TENSORFLOW,
+        is_onnx_model: BackendType.ONNX,
+        is_openvino_model: BackendType.OPENVINO,
+    }
 
-    if BackendType.TORCH in available_backends and is_torch_model(model):
-        return BackendType.TORCH
-
-    if BackendType.TENSORFLOW in available_backends and is_tensorflow_model(model):
-        return BackendType.TENSORFLOW
-
-    if BackendType.ONNX in available_backends and is_onnx_model(model):
-        return BackendType.ONNX
-
-    if BackendType.OPENVINO in available_backends and is_openvino_model(model):
-        return BackendType.OPENVINO
+    for backend_call, backend in verify_map.items():
+        if backend_call(model):
+            return backend
 
     raise nncf.UnsupportedBackendError(
         "Could not infer the backend framework from the model type because "
-        "the framework is not available or the model type is unsupported. "
-        "The available frameworks found: {}.".format(", ".join([b.value for b in available_backends]))
+        "the framework is not available or corrupted, or the model type is unsupported. "
     )
 
 
@@ -174,3 +168,25 @@ def copy_model(model: TModel) -> TModel:
         model = TFModelTransformer(model).transform(TFTransformationLayout())
         return model
     return deepcopy(model)
+
+
+def is_openvino_available() -> bool:
+    """
+    Check if OpenVINO is available.
+    :return: True if openvino package is installed, False otherwise.
+    """
+    return _OPENVINO_AVAILABLE
+
+
+def is_openvino_at_least(version_str: str) -> bool:
+    """
+    Check if OpenVINO version is at least the specified one.
+
+    :param version_str: The version string to compare with the installed OpenVINO version. For example "2025.1".
+    :return: True if the installed OpenVINO version is at least the specified one, False otherwise.
+    """
+    if not _OPENVINO_AVAILABLE:
+        return False
+
+    openvino_version = version.parse(openvino.__version__.split("-")[0])
+    return version.parse(version_str) <= openvino_version

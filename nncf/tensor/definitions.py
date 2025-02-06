@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,13 +14,14 @@ from enum import Enum
 from enum import auto
 
 
-class TensorBackendType(Enum):
+class TensorBackend(Enum):
     """
     Enum representing the different tensor backends.
     """
 
-    NUMPY = auto()
-    TORCH = auto()
+    numpy = auto()
+    torch = auto()
+    ov = auto()
 
 
 class TensorDataType(Enum):
@@ -36,6 +37,8 @@ class TensorDataType(Enum):
     int32 = auto()
     int64 = auto()
     uint8 = auto()
+    uint4 = auto()
+    int4 = auto()
 
     def is_float(self):
         """
@@ -51,15 +54,6 @@ class TensorDeviceType(Enum):
 
     CPU = auto()
     GPU = auto()
-
-
-class TensorBackend(Enum):
-    """
-    Enum representing the different tensor backends.
-    """
-
-    numpy = auto()
-    torch = auto()
 
 
 @dataclass

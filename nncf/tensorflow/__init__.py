@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -44,6 +44,8 @@ from nncf.common.accuracy_aware_training.training_loop import (
 )
 from nncf.tensorflow.helpers import create_compressed_model as create_compressed_model
 from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks as create_compression_callbacks
+from nncf.tensorflow.helpers.model_creation import get_config
+from nncf.tensorflow.helpers.model_creation import load_from_config
 from nncf.tensorflow.initialization import register_default_init_args as register_default_init_args
 from nncf.tensorflow.pruning.filter_pruning import algorithm as filter_pruning_algorithm
 
@@ -51,3 +53,4 @@ from nncf.tensorflow.pruning.filter_pruning import algorithm as filter_pruning_a
 from nncf.tensorflow.quantization import algorithm as quantization_algorithm
 from nncf.tensorflow.sparsity.magnitude import algorithm as magnitude_sparsity_algorithm
 from nncf.tensorflow.sparsity.rb import algorithm as rb_sparsity_algorithm
+from nncf.tensorflow.utils.state import ConfigState

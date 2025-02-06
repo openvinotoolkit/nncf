@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import pytest
 import torch
 import torchvision.models as models
 
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
 from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
@@ -37,6 +38,25 @@ from tests.torch2.utils import compare_with_reference_file
 REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "nncf_graph"
 
 
+def get_reference_graph(graph: NNCFGraph) -> nx.DiGraph:
+    out_graph = nx.DiGraph()
+    for node in sorted(graph.get_all_nodes(), key=lambda x: x.node_id):
+        attrs_node = {
+            "id": node.node_id,
+            "type": node.node_type,
+            "metatype": node.metatype.__name__,
+        }
+        out_graph.add_node(node.node_name, **attrs_node)
+
+    for edge in graph.get_all_edges():
+        attrs_edge = {"dtype": edge.dtype.value, "shape": edge.tensor_shape}
+        if edge.parallel_input_port_ids:
+            attrs_edge["parallel_input_port_ids"] = edge.parallel_input_port_ids
+
+        out_graph.add_edge(edge.from_node.node_name, edge.to_node.node_name, **attrs_edge)
+    return out_graph
+
+
 @pytest.mark.parametrize(
     "node_type, meta, ref",
     [
@@ -53,16 +73,13 @@ def test_get_node_type(node_type: NodeType, meta: Union[ConstMeta, FunctionMeta,
 @pytest.mark.parametrize(
     "meta, ref",
     [
-        [InOutMeta(torch.float32, (1), "input"), "input"],
-        [InOutMeta(torch.float32, (1), "output"), "output"],
-        [FunctionMeta("op_name", "fn_name", [], {}), "op_name"],
-        [ConstMeta(torch.float32, (1), "model.bias"), "model.bias"],
+        (InOutMeta(torch.float32, (1), "input"), "input"),
+        (InOutMeta(torch.float32, (1), "output"), "output"),
+        (FunctionMeta("op_name", "fn_name", [], {}), "op_name"),
+        (ConstMeta(torch.float32, (1), "model.bias"), "model.bias"),
     ],
 )
-def test_get_name_of_node(
-    meta: list[InOutMeta | str] | list[FunctionMeta | str] | list[ConstMeta | str],
-    ref: list[InOutMeta | str] | list[FunctionMeta | str] | list[ConstMeta | str],
-):
+def test_get_name_of_node(meta: Union[InOutMeta, FunctionMeta, ConstMeta], ref: str):
     assert get_name_of_node(meta) == ref
 
 
@@ -89,7 +106,7 @@ def test_convert_to_nncf_graph(regen_ref_data: bool):
     nx_graph = build_graph(model, model.get_example_inputs())
 
     nncf_graph = convert_to_nncf_graph(nx_graph)
-    graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    graph = get_reference_graph(nncf_graph)
     nx_nncf_graph = nx.nx_pydot.to_pydot(graph)
 
     ref_file = REF_DIR / "convert_to_nncf_graph.dot"
@@ -102,7 +119,7 @@ def test_convert_to_nncf_graph_multi_edges(regen_ref_data: bool):
     model = wrap_model(model)
     nx_graph = build_graph(model, torch.ones(1, 1))
     nncf_graph = convert_to_nncf_graph(nx_graph)
-    graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    graph = get_reference_graph(nncf_graph)
     nx_nncf_graph = nx.nx_pydot.to_pydot(graph)
     ref_file = REF_DIR / "convert_to_nncf_graph_multi_edges.dot"
 
@@ -142,7 +159,7 @@ def test_model_graph(desc: ModelDesc, regen_ref_data: bool):
     inputs = [torch.randn(desc.inputs_info)]
     model = wrap_model(model)
     nncf_graph = build_nncf_graph(model, *inputs)
-    graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    graph = get_reference_graph(nncf_graph)
     nx_nncf_graph = nx.nx_pydot.to_pydot(graph)
     ref_file = REF_DIR / f"model_graph_{desc}.dot"
     compare_with_reference_file(str(nx_nncf_graph), ref_file, regen_ref_data)

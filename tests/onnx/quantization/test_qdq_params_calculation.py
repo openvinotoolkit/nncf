@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,8 +18,8 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
-from tests.cross_fw.shared.helpers import compare_stats
-from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.comparator import compare_stats
+from tests.cross_fw.shared.json import load_json
 from tests.onnx.conftest import ONNX_TEST_ROOT
 from tests.onnx.models import EmbeddingModel
 from tests.onnx.models import GEMMTransposeWeightModel

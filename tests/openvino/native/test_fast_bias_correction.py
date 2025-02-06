@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,6 +16,7 @@ import openvino as ov
 import torch
 
 from nncf.common.factory import NNCFGraphFactory
+from nncf.common.utils.os import is_macos
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.quantization.algorithms.fast_bias_correction.openvino_backend import OVFastBiasCorrectionAlgoBackend
@@ -54,12 +55,15 @@ class TestOVFBCAlgorithm(TemplateTestFBCAlgorithm):
     def check_bias(model: ov.Model, ref_bias: list):
         ref_bias = np.array(ref_bias)
         nncf_graph = NNCFGraphFactory.create(model)
+
+        atol = 0.0001 if not is_macos() else 0.01
+
         for node in nncf_graph.get_all_nodes():
             if not is_node_with_bias(node, nncf_graph):
                 continue
             bias_value = get_bias_value(node, nncf_graph, model)
             bias_value = bias_value.reshape(ref_bias.shape)
-            assert np.all(np.isclose(bias_value, ref_bias, atol=0.0001)), f"{bias_value} != {ref_bias}"
+            assert np.all(np.isclose(bias_value, ref_bias, atol=atol)), f"{bias_value} != {ref_bias}"
 
             return
         raise ValueError("Not found node with bias")

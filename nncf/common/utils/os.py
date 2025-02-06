@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -45,6 +45,10 @@ def is_windows() -> bool:
 
 def is_linux() -> bool:
     return "linux" in sys.platform
+
+
+def is_macos() -> bool:
+    return "darwin" in sys.platform
 
 
 def get_available_cpu_count(logical: bool = True) -> int:

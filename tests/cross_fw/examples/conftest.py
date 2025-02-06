@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -32,6 +32,7 @@ def pytest_addoption(parser):
         "--ov_version_override", default=None, help="Parameter to set OpenVINO into the env with the version from PyPI"
     )
     parser.addoption("--data", type=str, default=None, help="Path to test datasets")
+    parser.addoption("--reuse-venv", action="store_true", help="Use venv from example directory")
 
 
 @pytest.fixture(scope="module")
@@ -52,3 +53,8 @@ def ov_version_override(request):
 @pytest.fixture(scope="module")
 def data(request):
     return request.config.getoption("--data")
+
+
+@pytest.fixture(scope="module")
+def reuse_venv(request) -> bool:
+    return request.config.getoption("--reuse-venv")

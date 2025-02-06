@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -274,9 +274,9 @@ def test_get_dtype_attribute_of_parameter():
     dummy_input = torch.randint(0, 10, [3, 3])
     exported_model = get_torch_fx_model(model, dummy_input)
     compressed_model = compress_weights(exported_model)
-    assert compressed_model.matmul_updated_constant0.dtype == torch.uint8
+    assert compressed_model.weight_updated_constant0.dtype == torch.uint8
     compressed_model(dummy_input)
-    assert compressed_model.matmul_updated_constant0.dtype == torch.uint8
+    assert compressed_model.weight_updated_constant0.dtype == torch.uint8
 
 
 @pytest.mark.parametrize("dtype", ("float16", "float32"))
@@ -295,6 +295,6 @@ def test_model_devices_and_precisions(use_cuda, dtype):
     result = compressed_model(dummy_input)
 
     # Scale should always be in float16
-    assert compressed_model.state_dict()["asymmetric_weights_decompressor_matmul._scale"].dtype == torch.float16
+    assert compressed_model.state_dict()["asymmetric_weights_decompressor_w._scale"].dtype == torch.float16
     # Result should be in the precision of the model
     assert result.dtype == dtype

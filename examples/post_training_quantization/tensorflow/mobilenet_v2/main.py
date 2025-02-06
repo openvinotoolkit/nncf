@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,16 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import re
 import subprocess
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 import openvino as ov
 import tensorflow as tf
 import tensorflow_datasets as tfds
-from tqdm import tqdm
+from rich.progress import track
 
 import nncf
 
@@ -32,37 +31,40 @@ def validate(model: ov.Model, val_loader: tf.data.Dataset) -> tf.Tensor:
     output = compiled_model.outputs[0]
 
     metric = tf.keras.metrics.CategoricalAccuracy(name="acc@1")
-    for images, labels in tqdm(val_loader):
+    for images, labels in track(val_loader):
         pred = compiled_model(images.numpy())[output]
         metric.update_state(labels, pred)
 
     return metric.result()
 
 
-def run_benchmark(model_path: str, shape: Optional[List[int]] = None, verbose: bool = True) -> float:
-    command = f"benchmark_app -m {model_path} -d CPU -api async -t 15"
-    if shape is not None:
-        command += f' -shape [{",".join(str(x) for x in shape)}]'
-    cmd_output = subprocess.check_output(command, shell=True)  # nosec
-    if verbose:
-        print(*str(cmd_output).split("\\n")[-9:-1], sep="\n")
-    match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))
+def run_benchmark(model_path: Path, shape: List[int]) -> float:
+    command = [
+        "benchmark_app",
+        "-m", model_path.as_posix(),
+        "-d", "CPU",
+        "-api", "async",
+        "-t", "15",
+        "-shape", str(shape),
+    ]  # fmt: skip
+    cmd_output = subprocess.check_output(command, text=True)  # nosec
+    print(*cmd_output.splitlines()[-8:], sep="\n")
+    match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
     return float(match.group(1))
 
 
-def get_model_size(ir_path: str, m_type: str = "Mb", verbose: bool = True) -> float:
-    xml_size = os.path.getsize(ir_path)
-    bin_size = os.path.getsize(os.path.splitext(ir_path)[0] + ".bin")
+def get_model_size(ir_path: Path, m_type: str = "Mb") -> float:
+    xml_size = ir_path.stat().st_size
+    bin_size = ir_path.with_suffix(".bin").stat().st_size
     for t in ["bytes", "Kb", "Mb"]:
         if m_type == t:
             break
         xml_size /= 1024
         bin_size /= 1024
     model_size = xml_size + bin_size
-    if verbose:
-        print(f"Model graph (xml):   {xml_size:.3f} Mb")
-        print(f"Model weights (bin): {bin_size:.3f} Mb")
-        print(f"Model size:          {model_size:.3f} Mb")
+    print(f"Model graph (xml):   {xml_size:.3f} Mb")
+    print(f"Model weights (bin): {bin_size:.3f} Mb")
+    print(f"Model size:          {model_size:.3f} Mb")
     return model_size
 
 
@@ -142,26 +144,30 @@ def transform_fn(data_item):
 calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
 tf_quantized_model = nncf.quantize(tf_model, calibration_dataset)
 
+# Removes auxiliary layers and operations added during the quantization process,
+# resulting in a clean, fully quantized model ready for deployment.
+tf_quantized_model = nncf.strip(tf_quantized_model)
+
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
 
-ov_model = ov.convert_model(tf_model, share_weights=False)
-ov_quantized_model = ov.convert_model(tf_quantized_model, share_weights=False)
+ov_model = ov.convert_model(tf_model)
+ov_quantized_model = ov.convert_model(tf_quantized_model)
 
-fp32_ir_path = f"{ROOT}/mobilenet_v2_fp32.xml"
+fp32_ir_path = ROOT / "mobilenet_v2_fp32.xml"
 ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
 print(f"[1/7] Save FP32 model: {fp32_ir_path}")
-fp32_model_size = get_model_size(fp32_ir_path, verbose=True)
+fp32_model_size = get_model_size(fp32_ir_path)
 
-int8_ir_path = f"{ROOT}/mobilenet_v2_int8.xml"
+int8_ir_path = ROOT / "mobilenet_v2_int8.xml"
 ov.save_model(ov_quantized_model, int8_ir_path)
 print(f"[2/7] Save INT8 model: {int8_ir_path}")
-int8_model_size = get_model_size(int8_ir_path, verbose=True)
+int8_model_size = get_model_size(int8_ir_path)
 
 print("[3/7] Benchmark FP32 model:")
-fp32_fps = run_benchmark(fp32_ir_path, shape=[1, 224, 224, 3], verbose=True)
+fp32_fps = run_benchmark(fp32_ir_path, shape=[1, 224, 224, 3])
 print("[4/7] Benchmark INT8 model:")
-int8_fps = run_benchmark(int8_ir_path, shape=[1, 224, 224, 3], verbose=True)
+int8_fps = run_benchmark(int8_ir_path, shape=[1, 224, 224, 3])
 
 print("[5/7] Validate OpenVINO FP32 model:")
 fp32_top1 = validate(ov_model, val_dataset)

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,11 +10,12 @@
 # limitations under the License.
 
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import tensorflow as tf
 
 from nncf.common.compression import BaseCompressionAlgorithmController
+from nncf.tensorflow.quantization.algorithm import TFQuantizationSetup
 
 # TODO(achurkin): remove pylint ignore after 120296 ticked is fixed
 
@@ -86,3 +87,37 @@ class TFCompressionStateLoader(tf.train.experimental.PythonState):
         :param string_value: A serialized compression state.
         """
         self._state = json.loads(string_value)
+
+
+class ConfigState(tf.train.experimental.PythonState):
+    """
+    Used to save/load a config into the tf.train.Checkpoint.
+    """
+
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """
+        :param config: Config.
+        """
+        self.config = config
+
+    def serialize(self) -> str:
+        """
+        Callback to serialize the config.
+
+        :return: A serialized config.
+        """
+        quantizer_setup_state = self.config["quantization"]["quantizer_setup"]
+        data = {
+            "quantization": {
+                "quantizer_setup": TFQuantizationSetup.from_state(quantizer_setup_state).get_state(),
+            }
+        }
+        return json.dumps(data)
+
+    def deserialize(self, string_value: str) -> None:
+        """
+        Callback to deserialize the model config.
+
+        :param string_value: A serialized model config.
+        """
+        self.config = json.loads(string_value)

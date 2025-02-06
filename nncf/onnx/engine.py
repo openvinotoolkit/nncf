@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,10 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict
+from typing import Any, Dict
 
 import numpy as np
 import onnxruntime as rt
+from onnx import ModelProto
 
 from nncf.common.engine import Engine
 
@@ -22,7 +23,7 @@ class ONNXEngine(Engine):
     Engine for ONNX backend using ONNXRuntime to infer the model.
     """
 
-    def __init__(self, model, **rt_session_options):
+    def __init__(self, model: ModelProto, **rt_session_options: Any):
         self.input_names = set()
         rt_session_options["providers"] = ["CPUExecutionProvider"]
         serialized_model = model.SerializeToString()
@@ -38,7 +39,13 @@ class ONNXEngine(Engine):
         :param input_data: inputs for the model
         :return output_data: models outputs
         """
-        output_tensors = self.sess.run([], {k: v for k, v in input_data.items() if k in self.input_names})
+        output_tensors = self.sess.run([], input_data)
         model_outputs = self.sess.get_outputs()
 
-        return {output.name: tensor for tensor, output in zip(output_tensors, model_outputs)}
+        outputs_safe = {}
+        for tensor, output in zip(output_tensors, model_outputs):
+            # Workaround for https://github.com/microsoft/onnxruntime/issues/21922
+            # After fixing this copying should be removed
+            outputs_safe[output.name] = tensor.copy() if output.name in self.input_names else tensor
+
+        return outputs_safe

@@ -14,7 +14,7 @@ import re
 import shutil
 import time
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 import openvino as ov
@@ -31,6 +31,8 @@ import nncf
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import ErrorReason
+from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import StatsFromOutput
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
@@ -257,7 +259,8 @@ class LMWeightCompression(BaseTestPipeline):
             **self.compression_params,
         )
 
-    def _validate(self):
+    def _validate(self) -> List[ErrorReport]:
+        errors = []
         is_stateful = self.params.get("is_stateful", False)
         core = ov.Core()
 
@@ -271,7 +274,12 @@ class LMWeightCompression(BaseTestPipeline):
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
             print("Collection ground-truth reference data")
             model_gold = OVModelForCausalLM.from_pretrained(
-                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                self.fp32_model_dir,
+                trust_remote_code=True,
+                load_in_8bit=False,
+                compile=False,
+                stateful=is_stateful,
+                ov_config={"KV_CACHE_PRECISION": "f16"},
             )
             evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
             evaluator.dump_gt(str(gt_data_path))
@@ -290,7 +298,7 @@ class LMWeightCompression(BaseTestPipeline):
                 load_in_8bit=False,
                 compile=False,
                 stateful=is_stateful,
-                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
+                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
             )
         print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)
@@ -304,12 +312,11 @@ class LMWeightCompression(BaseTestPipeline):
         num_int4_value = self.run_info.num_compress_nodes.num_int4
         num_int8_value = self.run_info.num_compress_nodes.num_int8
 
+        template = "Regression: The number of int{} ops is different than reference {} != {}"
         if num_int4_reference != num_int4_value:
-            status_msg = f"Regression: The number of int4 ops is different \
-                than reference {num_int4_reference} != {num_int4_value}"
-            raise ValueError(status_msg)
-
+            status_msg = template.format(4, num_int4_reference, num_int4_value)
+            errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
         if num_int8_reference != num_int8_value:
-            status_msg = f"Regression: The number of int8 ops is different \
-                than reference {num_int8_reference} != {num_int8_value}"
-            raise ValueError(status_msg)
+            status_msg = template.format(8, num_int8_reference, num_int8_value)
+            errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+        return errors

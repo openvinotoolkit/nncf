@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,9 +18,9 @@ EXCLUDED_MODULES_PATTERNS = (
     "nncf\\.experimental\\.tensorflow.*",
     "nncf\\.experimental\\.torch.*",
     "nncf\\.experimental\\.openvino.*",
-    ".*?openvino_[^\\.]*",
-    ".*?torch_[^\\.]*",
-    ".*?tf_[^\\.]*",
+    "^(?!nncf(?:\\.experimental)*\\.onnx.*?\\.).*?openvino_[^\\.]*",
+    "^(?!nncf(?:\\.experimental)*\\.onnx.*?\\.).*?torch_[^\\.]*",
+    "^(?!nncf(?:\\.experimental)*\\.onnx.*?\\.).*?tf_[^\\.]*",
 )
 
 load_nncf_modules(EXCLUDED_MODULES_PATTERNS)

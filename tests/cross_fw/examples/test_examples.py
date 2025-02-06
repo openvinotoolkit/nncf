@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,7 +22,7 @@ from tests.cross_fw.shared.command import Command
 from tests.cross_fw.shared.helpers import create_venv_with_nncf
 from tests.cross_fw.shared.helpers import get_pip_executable_with_venv
 from tests.cross_fw.shared.helpers import get_python_executable_with_venv
-from tests.cross_fw.shared.helpers import load_json
+from tests.cross_fw.shared.json import load_json
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 from tests.cross_fw.shared.paths import TEST_ROOT
 
@@ -54,6 +54,7 @@ def test_examples(
     is_check_performance: bool,
     ov_version_override: str,
     data: str,
+    reuse_venv: bool,
 ):
     print("\n" + "-" * 64)
     print(f"Example name: {example_name}")
@@ -64,6 +65,9 @@ def test_examples(
 
     backend = example_params["backend"]
     skip_if_backend_not_selected(backend, backends_list)
+    if reuse_venv:
+        # Use example directory as tmp_path
+        tmp_path = Path(example_params["requirements"]).parent
     venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {backend})
     pip_with_venv = get_pip_executable_with_venv(venv_path)
     if "requirements" in example_params:

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 from functools import singledispatch
 from typing import Any, Dict, Union
 
+from nncf.api.statistics import Statistics
 from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.sparsity.statistics import ConstSparsityStatistics
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
@@ -27,7 +28,7 @@ def prepare_for_tensorboard(nncf_stats: NNCFStatistics) -> Dict[str, float]:
     :param nncf_stats: NNCF Statistics.
     :return: A dict storing name and value of the scalar.
     """
-    tensorboard_stats = {}
+    tensorboard_stats: Dict[str, float] = {}
     for algorithm_name, stats in nncf_stats:
         tensorboard_stats.update(convert_to_dict(stats, algorithm_name))
 
@@ -36,13 +37,7 @@ def prepare_for_tensorboard(nncf_stats: NNCFStatistics) -> Dict[str, float]:
 
 @singledispatch
 def convert_to_dict(
-    stats: Union[
-        FilterPruningStatistics,
-        MagnitudeSparsityStatistics,
-        RBSparsityStatistics,
-        ConstSparsityStatistics,
-        MovementSparsityStatistics,
-    ],
+    stats: Statistics,
     algorithm_name: str,
 ) -> Dict[Any, Any]:
     return {}

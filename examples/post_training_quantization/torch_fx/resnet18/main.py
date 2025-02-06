@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -26,11 +26,11 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
+from rich.progress import track
 from torch._dynamo.exc import BackendCompilerFailed
 
 import nncf
 import nncf.torch
-from nncf.common.logging.track_progress import track
 from nncf.common.utils.helpers import create_table
 from nncf.common.utils.os import is_windows
 from nncf.torch import disable_patching
@@ -44,11 +44,11 @@ CHECKPOINT_URL = (
     "https://storage.openvinotoolkit.org/repositories/nncf/openvino_notebook_ckpts/302_resnet18_fp32_v1.pth"
 )
 DATASET_URL = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
-DATASET_PATH = "~/.cache/nncf/datasets"
+DATASET_PATH = Path().home() / ".cache" / "nncf" / "datasets"
 
 
 def download_dataset() -> Path:
-    downloader = FastDownload(base=DATASET_PATH, archive="downloaded", data="extracted")
+    downloader = FastDownload(base=DATASET_PATH.resolve(), archive="downloaded", data="extracted")
     return downloader.get(DATASET_URL)
 
 

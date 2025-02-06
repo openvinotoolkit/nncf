@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -44,11 +44,12 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
@@ -63,8 +64,10 @@ from nncf.quantization.fake_quantize import calculate_convert_parameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.quantization.passes import transform_to_inference_graph
+from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
+from nncf.quantization.range_estimator import StatisticsType
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 
@@ -437,7 +440,7 @@ class MinMaxQuantization(Algorithm):
         target_point: TargetPoint,
         qconfig: QuantizerConfig,
         batchwise_statistics: bool,
-    ) -> TensorStatisticCollectorBase:
+    ) -> TensorCollector:
         """
         Creates and returns a statistic collector based on the quantizer's configuration.
 
@@ -474,7 +477,7 @@ class MinMaxQuantization(Algorithm):
                 shape, channel_axes, batchwise_statistics
             )
 
-        return self._backend_entity.get_statistic_collector(
+        return self._get_statistic_collector(
             range_estimator_params,
             collector_params.use_abs_max,
             reduction_axes,
@@ -482,6 +485,68 @@ class MinMaxQuantization(Algorithm):
             self._inplace_statistics,
             num_samples=num_samples,
         )
+
+    def _get_statistic_collector(
+        self,
+        range_estimator_params: RangeEstimatorParameters,
+        use_abs_max: bool,
+        reduction_axes: Optional[Tuple[int, ...]],
+        aggregation_axes: Optional[Tuple[int, ...]],
+        inplace: bool,
+        num_samples: Optional[int] = None,
+    ) -> TensorCollector:
+        """
+        Returns statistic collector.
+
+        :param range_estimator_params: Parameters that specify estimators types.
+        :param use_abs_max: Wheather reduce absolute values of input tensors or not.
+        :param reduction_axes: Axes for reducer.
+        :param aggregation_axes: Axes for aggregator.
+        :param inplace: Whether to calculate statistic inplace or not.
+        :param num_samples: Maximum number of samples to collect.
+        :return: TensorCollector for the statistics calculation.
+        """
+        if not self._backend_entity.supports_inplace_statistics:
+            inplace = False
+
+        collector = TensorCollector(MinMaxTensorStatistic)
+        for params, container_key in zip(
+            [range_estimator_params.min, range_estimator_params.max],
+            [MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT],
+        ):
+            if params.statistics_type not in self._backend_entity.reducer_map:
+                raise nncf.InternalError(f"Statistic type: {params.statistics_type} is not yet supported.")
+
+            if params.aggregator_type not in AGGREGATORS_MAP:
+                raise nncf.InternalError(f"Aggregator type: {params.aggregator_type} is not yet supported.")
+
+            statistic_type = params.statistics_type
+            if statistic_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
+                # TODO(dlyakhov): merge two quantile aggregators in one
+                if container_key == MinMaxTensorStatistic.MIN_STAT:
+                    quantile = params.quantile_outlier_prob
+                else:
+                    quantile = 1 - params.quantile_outlier_prob
+                reducer = self._backend_entity.reducer_map[statistic_type](
+                    reduction_axes=reduction_axes, inplace=inplace, quantile=[quantile]
+                )
+            else:
+                if use_abs_max and statistic_type == StatisticsType.MAX:
+                    statistic_type = StatisticsType.ABS_MAX
+                reducer = self._backend_entity.reducer_map[statistic_type](
+                    reduction_axes=reduction_axes, inplace=inplace
+                )
+
+            kwargs = {
+                "num_samples": num_samples,
+                "aggregation_axes": aggregation_axes,
+            }
+            if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
+                kwargs.update({"quantile": params.quantile_outlier_prob})
+            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
+
+            collector.register_statistic_branch(container_key, reducer, aggregator)
+        return collector
 
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None) -> QuantizerConfig:
         """
@@ -723,13 +788,11 @@ class MinMaxQuantization(Algorithm):
             )
         return activation_quantization_target_point
 
-    def _find_quantization_target_points(
-        self, model: TModel, nncf_graph: NNCFGraph
-    ) -> Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]]:
+    def find_quantization_setup(self, model: TModel, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
         """
-        Initializes a cache, finds quantization target points and them puts in the cache.
+        Initializes a cache, finds quantization target points and then puts them in the cache.
 
-        :param model: Backend-specific model, for which Quantization Target Points are being seek.
+        :param quantizer_setup: Quantization Target Points in format of SingleConfigQuantizerSetup.
         :param nncf_graph: NNCFGraph instance.
         :return: Mapping of quantization target points with associated quantization configuration,
         along with target points for scale unification.
@@ -753,6 +816,19 @@ class MinMaxQuantization(Algorithm):
         quantizer_setup = self._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         self._apply_model_type_pass(self._model_type, quantizer_setup, nncf_graph)
         self._apply_device_pass(self._target_device, quantizer_setup, inference_nncf_graph)
+        return quantizer_setup
+
+    def fill_quantization_target_points(
+        self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
+    ) -> Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]]:
+        """
+        Initializes a cache and puts the given quantization target points in the cache.
+
+        :param model: Backend-specific model, for which Quantization Target Points are being seek.
+        :param nncf_graph: NNCFGraph instance.
+        :return: Mapping of quantization target points with associated quantization configuration,
+        along with target points for scale unification.
+        """
         self._unified_scale_groups = self._collect_unified_groups(quantizer_setup, nncf_graph)
         quantization_points = list(quantizer_setup.quantization_points.values())
         quantization_points = self._topological_sort_quantization_points(quantization_points, nncf_graph)
@@ -780,7 +856,8 @@ class MinMaxQuantization(Algorithm):
         if self._quantization_target_points_to_qconfig is not None:
             return self._quantization_target_points_to_qconfig, self._unified_scale_groups
         self._init_cache()
-        return self._find_quantization_target_points(model, nncf_graph)
+        quantizer_setup = self.find_quantization_setup(model, nncf_graph)
+        return self.fill_quantization_target_points(quantizer_setup, nncf_graph)
 
     def _collect_unified_groups(
         self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
@@ -989,10 +1066,30 @@ class MinMaxQuantization(Algorithm):
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 
+    def get_cached_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
+        """
+        Build statistic point container using already cached target points vs qconfigs cache.
+
+        :param model: Model instance.
+        :param graph: NNCFGraph instance correspondent to the passed model.
+        :return: Filled statistic point container.
+        """
+        if self._quantization_target_points_to_qconfig is None:
+            raise RuntimeError("get_cached_statistic_points is called before statistic caching.")
+        self._set_backend_entity(model)
+        return self._get_statistic_point_container(self._quantization_target_points_to_qconfig, graph)
+
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         self._reset_cache()
         quantization_target_points, _ = self._get_quantization_target_points(model, graph)
+        return self._get_statistic_point_container(quantization_target_points, graph)
+
+    def _get_statistic_point_container(
+        self,
+        quantization_target_points: Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]],
+        graph: NNCFGraph,
+    ) -> StatisticPointsContainer:
         output = StatisticPointsContainer()
         for quantization_target_point, qconfig in quantization_target_points.items():
             nncf_logger.debug(

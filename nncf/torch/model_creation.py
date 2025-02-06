@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -29,6 +29,7 @@ from nncf.config.extractors import has_input_info_field
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
+from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
@@ -105,7 +106,7 @@ def create_compressed_model(
     warning_deprecated(
         "The 'nncf.torch.create_compressed_model' function is deprecated and will be removed in a future release.\n"
         "To perform post training quantization (PTQ) or quantization aware training (QAT),"
-        " use the new nncf.quantize() API:\n"
+        " use the nncf.quantize() API:\n"
         " - https://github.com/openvinotoolkit/nncf?tab=readme-ov-file#post-training-quantization\n"
         " - https://github.com/openvinotoolkit/nncf?tab=readme-ov-file#training-time-quantization\n"
         "Examples:\n"
@@ -324,6 +325,12 @@ def create_compression_algorithm_builder_from_algo_names(
     return builder
 
 
+@tracked_function(
+    NNCF_PT_CATEGORY,
+    [
+        FunctionCallTelemetryExtractor("nncf.torch.wrap_model"),
+    ],
+)
 def wrap_model(
     model: torch.nn.Module,
     example_input: Any,
@@ -368,6 +375,12 @@ def is_wrapped_model(model: torch.nn.Module) -> bool:
     return isinstance(model, NNCFNetwork)
 
 
+@tracked_function(
+    NNCF_PT_CATEGORY,
+    [
+        FunctionCallTelemetryExtractor("nncf.torch.load_from_config"),
+    ],
+)
 def load_from_config(model: torch.nn.Module, config: Dict[str, Any], example_input: Any) -> NNCFNetwork:
     """
     Wraps given model to a NNCFNetwork and recovers additional modules from given NNCFNetwork config.

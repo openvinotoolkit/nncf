@@ -13,5 +13,7 @@
     "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_torch_ssd300_vgg16]": 231.613,
     "tests/cross_fw/examples/test_examples.py::test_examples[quantization_aware_training_torch_anomalib]": 478.797,
     "tests/cross_fw/examples/test_examples.py::test_examples[quantization_aware_training_torch_resnet18]": 1251.144,
-    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_torch_fx_resnet18]": 412.243
+    "tests/cross_fw/examples/test_examples.py::test_examples[post_training_quantization_torch_fx_resnet18]": 412.243,
+    "tests/cross_fw/examples/test_examples.py::test_examples[fp8_llm_quantization]": 229.69,
+    "tests.cross_fw.examples.test_examples.test_examples[quantization_aware_training_tensorflow_mobilenet_v2]": 1500.00
 }

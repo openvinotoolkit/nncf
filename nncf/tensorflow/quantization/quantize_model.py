@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -28,7 +28,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import apply_advanced_parameters_to_config
 from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
-from nncf.tensorflow.helpers.model_creation import create_compressed_model
+from nncf.tensorflow.helpers.model_creation import create_compressed_model_impl
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
 
@@ -176,7 +176,12 @@ def quantize_impl(
         ]
     )
 
-    compression_ctrl, compressed_model = create_compressed_model(model=model, config=nncf_config)
-    stripped_model = compression_ctrl.strip_model(compressed_model)
+    compression_ctrl, compressed_model = create_compressed_model_impl(model=model, config=nncf_config)
 
-    return stripped_model
+    # NOTE: We set the config here to properly save/load the quantized model during training into tf.train.Checkpoint.
+    # You can obtain that config via the nncf.tensorflow.get_config() method and save/load it to/from
+    # tf.train.Checkpoint using the nncf.tensorflow.ConfigState class.
+    config = compression_ctrl.get_compression_state()["builder_state"]
+    setattr(compressed_model, "_nncf_config", config)
+
+    return compressed_model

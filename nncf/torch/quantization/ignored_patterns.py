@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -55,7 +55,7 @@ def _add_softmax_reshape_matmul(
     #           \
     #            \
     #             \
-    #             RESHAPE   RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT
+    #    RESHAPE || TRANSPOSE   RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT
     #                 \                 /
     #                  \               /
     #                   \             /
@@ -66,7 +66,10 @@ def _add_softmax_reshape_matmul(
     branch_matmul_nodes = reshape_squeeze_metatypes + gather_metatypes + transpose_metatypes + concat_metatypes
     softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.PTSoftmaxMetatype})
     reshape = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: reshape_squeeze_metatypes}
+        **{
+            GraphPattern.LABEL_ATTR: "RESHAPE",
+            GraphPattern.METATYPE_ATTR: reshape_squeeze_metatypes + transpose_metatypes,
+        }
     )
     matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: matmul_metatypes})
     matmul_branch_nodes = pattern.add_node(

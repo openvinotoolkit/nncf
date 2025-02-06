@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,7 +18,7 @@ from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceRed
 from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanVarianceReducer
-from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
+from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 
 
@@ -58,7 +58,7 @@ class TemplateTestMixedPrecisionAlgoBackend:
     @pytest.mark.parametrize(
         "algo_func, aggregator_type, reducer_type",
         [
-            ("get_hawq_with_backend", HAWQAggregator, NoopReducer),
+            ("get_hawq_with_backend", HAWQAggregator, RawReducer),
             ("get_mean_variance_with_backend", MeanAggregator, MeanVarianceReducer),
             ("get_max_variance_with_backend", MeanAggregator, MaxVarianceReducer),
             ("get_mean_max_with_backend", MeanAggregator, MeanAbsMaxReducer),

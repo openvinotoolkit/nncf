@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -43,6 +43,7 @@ from tests.torch.fx.test_sanity import count_q_dq
 from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 from tests.torch.test_models.synthetic import ShortTransformer
+from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
 
 FX_DIR_NAME = Path("fx")
 FX_QUANTIZED_DIR_NAME = Path("fx") / "quantized"
@@ -68,6 +69,7 @@ TEST_MODELS = (
     torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
     ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
     ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
+    ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
 )
 
 
@@ -160,6 +162,11 @@ TEST_MODELS_QUANIZED = (
         ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [(4, 4), (2, 2)],
+    ),
+    (
+        ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
+        {"model_type": nncf.ModelType.TRANSFORMER},
+        [(4, 4), (3, 3)],
     ),
 )
 

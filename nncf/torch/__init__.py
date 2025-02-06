@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@
 Base subpackage for NNCF PyTorch functionality.
 """
 
+import os
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
 
@@ -76,4 +77,5 @@ from nncf.torch.extensions import force_build_cpu_extensions, force_build_cuda_e
 if torch.__version__ >= "2.5.0":
     from torch._dynamo.polyfills import loader
 
-patch_torch_operators()
+if os.getenv("NNCF_EXPERIMENTAL_TORCH_TRACING") is None:
+    patch_torch_operators()
