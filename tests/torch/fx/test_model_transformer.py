@@ -559,7 +559,7 @@ def test_constant_folding_scalar_clone(use_cuda):
         with disable_patching():
             # Use export function instead of export_for_training to
             # reproduce SWIN model capturing
-            captured_model = torch.export.export(model, args=(ex_input,)).module()
+            captured_model = torch.export.export_for_inference(model, args=(ex_input,)).module()
     assert captured_model.lifted_tensor_0.device == torch.device("cpu")
 
     folded_model = deepcopy(captured_model)
