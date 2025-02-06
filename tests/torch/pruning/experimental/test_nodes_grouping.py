@@ -180,7 +180,7 @@ NLP_DESCS = [
         model_desc=GeneralModelDesc(
             model_name="1_layer_BERT",
             input_info=[dict(sample_size=[1, 10], type="long")],
-            model_builder=partial(AutoModelForQuestionAnswering.from_config, BertConfig(num_hidden_layers=1)),
+            model_builder=partial(AutoModelForQuestionAnswering.from_config, BertConfig(num_hidden_layers=1), attn_implementation="eager"),
         ),
         ref_groups=[
             PruningGroup(
@@ -209,6 +209,7 @@ NLP_DESCS = [
                     mhsa_o_bias=True,
                     ffn_bias=True,
                 ),
+                attn_implementation="eager",
             ),
         ),
         ref_groups=[
@@ -225,7 +226,7 @@ NLP_DESCS = [
         model_desc=GeneralModelDesc(
             model_name="RoBERTa",
             input_info=[dict(sample_size=[1, 10], type="long")],
-            model_builder=partial(AutoModelForQuestionAnswering.from_config, RobertaConfig(num_hidden_layers=1)),
+            model_builder=partial(AutoModelForQuestionAnswering.from_config, RobertaConfig(num_hidden_layers=1), attn_implementation="eager"),
         ),
         ref_groups=[
             PruningGroup(
@@ -250,6 +251,7 @@ NLP_DESCS = [
                     dim=4,
                     hidden_dim=4 * 4,
                 ),
+                attn_implementation="eager",
             ),
         ),
         ref_groups=[
@@ -279,6 +281,7 @@ NLP_DESCS = [
                     mhsa_o_bias=True,
                     ffn_bias=True,
                 ),
+                attn_implementation="eager",
             ),
         ),
         ref_groups=[
@@ -352,6 +355,7 @@ CV_DESCS = [
                     patch_size=2,
                     num_channels=1,
                 ),
+                attn_implementation="eager",
             ),
         ),
         ref_groups=[
@@ -378,6 +382,7 @@ CV_DESCS = [
                     patch_size=2,
                     num_channels=1,
                 ),
+                attn_implementation="eager",
             ),
         ),
         ref_groups=[
@@ -394,7 +399,7 @@ CV_DESCS = [
             model_name="CLIP",
             input_info=[dict(sample_size=[1, 3, 3, 3], type="float")] * 1,
             model_builder=partial(
-                CLIPVisionModel,
+                CLIPVisionModel._from_config,
                 CLIPVisionConfig(
                     hidden_size=4,
                     intermediate_size=2,
@@ -404,6 +409,7 @@ CV_DESCS = [
                     image_size=3,
                     patch_size=3,
                 ),
+                attn_implementation="eager",
             ),
         ),
         ref_groups=[
@@ -448,6 +454,7 @@ AUDIO_DESCS = [
                     intermediate_size=4,
                     conv_dim=(2, 2, 2, 2, 2, 2, 2),
                 ),
+                attn_implementation="eager",
             ),
         ),
         ref_groups=[
@@ -476,12 +483,13 @@ def test_groups(desc: GroupTestDesc, mocker, tmp_path):
     not_filtered_groups = get_pruning_groups(
         nncf_network.nncf.get_graph(), PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES, pruning_producing_types, tmp_path
     )
-
+    nncf_network.nncf.get_graph().visualize_graph('transformers38.dot')
     nx_graph = get_graph_spy.spy_return
     path_to_dot = get_full_path_to_the_graph(f"{str(desc)}.dot", "pruning_groups")
     compare_nx_graph_with_reference(nx_graph, path_to_dot, sort_dot_graph=False)
 
     filtered_groups = select_largest_groups(not_filtered_groups)
+    print(filtered_groups)
     assert filtered_groups == desc.ref_groups
 
 
