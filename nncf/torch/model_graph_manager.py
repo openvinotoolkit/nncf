@@ -43,17 +43,17 @@ OPERATORS_WITH_BIAS_METATYPES = CONV_META_TYPES
 CONV_FUSED_META_TYPES = [om.PTBatchNormMetatype]
 
 
-def find_const_node_in_constant_subgraph(graph: NNCFGraph, node: NNCFNode) -> Optional[NNCFNode]:
+def find_const_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> Optional[NNCFNode]:
     """
     Finds a constant node within a constant subgraph, recursively traversing noop and quantize nodes.
 
-    :param graph: The NNCFGraph.
     :param node: The starting node to search from.
+    :param graph: The NNCFGraph.
     :return: The constant node found within the subgraph, or None if no constant node is found.
     """
     if node.metatype == om.PTNoopMetatype or node.node_type in om.QUANTIZE_NODE_TYPES:
         prev_nodes = [e.from_node for e in graph.get_input_edges(node)]
-        return find_const_node_in_constant_subgraph(graph, prev_nodes[0])
+        return find_const_node_in_constant_subgraph(prev_nodes[0], graph)
     if node.metatype in CONST_NOOP_METATYPES:
         return node
     return None
@@ -71,7 +71,7 @@ def get_const_node(node: NNCFNode, port_id: int, graph: NNCFGraph) -> Optional[N
     for prev_node in graph.get_previous_nodes(node):
         edge = graph.get_edge(prev_node, node)
         if edge.input_port_id == port_id:
-            weight_node = find_const_node_in_constant_subgraph(graph, prev_node)
+            weight_node = find_const_node_in_constant_subgraph(prev_node, graph)
             if weight_node is None:
                 msg = "Could not find a constant node in the model graph."
                 raise nncf.InternalError(msg)
@@ -247,7 +247,7 @@ def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[int]:
     weight_port_ids = []
     for edge in graph.get_input_edges(node):
         if edge.input_port_id in node.metatype.weight_port_ids:
-            weight_node = find_const_node_in_constant_subgraph(graph, edge.from_node)
+            weight_node = find_const_node_in_constant_subgraph(edge.from_node, graph)
             if weight_node:
                 weight_port_ids.append(edge.input_port_id)
     return weight_port_ids
@@ -294,21 +294,6 @@ def set_const_data_to_port_id(
         const.data = data
     else:
         setattr(module, const_attr_name, data)
-
-
-def get_input_fake_quantize_node(nncf_graph: NNCFGraph, node: NNCFNode, port_id: int) -> Optional[NNCFNode]:
-    """
-    Return fake_quantizer node on input port id.
-
-    :param nncf_graph: The NNCF graph.
-    :param node: The target node.
-    :param port_id: The port id number for which to retrieve the quantizer module.
-    :return bool: return `True` if the node is quantized.
-    """
-    for edge in nncf_graph.get_input_edges(node):
-        if edge.input_port_id == port_id and edge.from_node.node_type in om.QUANTIZE_NODE_TYPES:
-            return edge.to_node
-    return None
 
 
 def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
