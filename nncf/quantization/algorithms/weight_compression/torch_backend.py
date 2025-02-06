@@ -92,7 +92,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             edge = graph.get_edge(prev_node, node)
             if edge.input_port_id not in node.metatype.weight_port_ids:
                 continue
-            weight_node = find_const_node_in_constant_subgraph(prev_node, graph)
+            weight_node = find_const_node_in_constant_subgraph(graph, prev_node)
             if weight_node is not None:
                 return True
         return False
@@ -101,7 +101,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_weight_names_and_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Tuple[str, int]]:
         weight_port_ids = []
         for prev_node in graph.get_previous_nodes(node):
-            weight_node = find_const_node_in_constant_subgraph(prev_node, graph)
+            weight_node = find_const_node_in_constant_subgraph(graph, prev_node)
             if weight_node is None:
                 continue
             edge = graph.get_edge(prev_node, node)

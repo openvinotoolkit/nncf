@@ -178,7 +178,7 @@ class TestManagerForOriginalModels:
         model_name, desc = model_desc
         ref = self.REF_GET_CONST_DATA[model_name][port_id - 1]
 
-        data = get_const_data_on_port(desc.node, port_id, desc.model)
+        data = get_const_data_on_port(desc.model, desc.model.nncf.get_graph(), desc.node, port_id)
         if ref is None:
             assert data is None
         else:
@@ -333,7 +333,7 @@ def test_get_fused_bias_value(model_cls, ref):
     graph = model.nncf.get_graph()
     target_node = graph.get_nodes_by_types("conv2d")[0]
 
-    bias = get_fused_bias_value(target_node, model)
+    bias = get_fused_bias_value(target_node, graph, model)
     assert torch.all(torch.isclose(bias, torch.tensor(ref)))
 
 
@@ -351,8 +351,8 @@ def test_update_fused_bias(model_cls):
     graph = model.nncf.get_graph()
     target_node = graph.get_nodes_by_types("conv2d")[0]
 
-    update_fused_bias(target_node.node_name, ref_new_bias, model)
-    bias = get_fused_bias_value(target_node, model)
+    update_fused_bias(target_node.node_name, ref_new_bias, graph, model)
+    bias = get_fused_bias_value(target_node, graph, model)
     assert torch.all(torch.isclose(bias, ref_new_bias))
 
     if model_cls == helpers.ConvTestModel:

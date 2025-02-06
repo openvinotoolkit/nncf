@@ -22,6 +22,7 @@ from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 
@@ -727,8 +728,15 @@ class PTBatchNormMetatype(PTOperatorMetatype):
         NamespaceTarget.ATEN: ["_native_batch_norm_legit_no_training", "cudnn_batch_norm"],
     }
     subtypes = [PTModuleBatchNormMetatype]
-    weight_port_ids = [3]
-    bias_port_id = 4
+
+    if is_experimental_torch_tracing_enabled():
+        # torch.batch_norm
+        weight_port_ids = [1]
+        bias_port_id = 2
+    else:
+        # torch.nn.functional.batch_norm
+        weight_port_ids = [3]
+        bias_port_id = 4
 
 
 @PT_OPERATOR_METATYPES.register()

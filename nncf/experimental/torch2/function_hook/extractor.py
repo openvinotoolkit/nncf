@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import torch
 from torch import nn
@@ -20,7 +20,8 @@ from nncf.experimental.torch2.function_hook.nncf_graph.layer_attributes import P
 from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.model_graph_manager import get_const_data, get_input_fake_quantize_node
+from nncf.torch.model_graph_manager import get_const_data
+from nncf.torch.model_graph_manager import get_const_data_on_port
 from nncf.torch.model_graph_manager import get_const_node
 
 CONV_METATYPES = (
@@ -40,7 +41,15 @@ CONV_TRANSPOSE_METATYPES = (
 
 
 class ExtractedFunc(nn.Module):
-    def __init__(self, fn: Callable[..., Any], kwargs: Dict[str, Any]) -> None:
+    """
+    Module to execute function with kwargs.
+    Support function only with one input.
+
+    :param fn: Function to execute.
+    :param kwargs: Function arguments.
+    """
+
+    def __init__(self, fn: Callable[..., torch.Tensor], kwargs: Dict[str, Any]) -> None:
         super().__init__()
         self.fn = fn
         self.kwargs = kwargs
@@ -49,7 +58,9 @@ class ExtractedFunc(nn.Module):
         return self.fn(x, **self.kwargs)
 
 
-def apply_args_defaults(args: List[Any], kwargs: Dict[str, Any], indexed_args=List[Tuple[int, str]]) -> Dict[str, Any]:
+def apply_args_defaults(
+    args: Sequence[Any], kwargs: Dict[str, Any], indexed_args: List[Tuple[int, str]]
+) -> Dict[str, Any]:
     args_dict: Dict[str, Any] = dict()
     for idx, arg_name in indexed_args:
         if idx < len(args):
@@ -65,26 +76,20 @@ def extract_bn(model: nn.Module, graph: PTNNCFGraph, node: NNCFNode) -> Extracte
     Extract batch_norm operation.
     If source modules inhered from nn.BatchNorm1d, nn.BatchNorm2d, or nn.BatchNorm3d return torch BatchNorm module.
 
-    :param node: Target batch_norm node.
     :param model: Source model.
+    :param graph: Graph of source model.
+    :param node: Target batch_norm node.
     :return: BatchNorm module with same attributes and parameters from source module or None.
     """
     layer_attr = node.layer_attributes
     if not isinstance(layer_attr, PT2OpLayerAttributes):
         msg = f"Expected PT2OpLayerAttributes for input_node.layer_attributes, actual: {type(layer_attr)}"
         raise nncf.InternalError(msg)
-    
-    weigth_node = get_const_node(node, 1, graph)
-    weight = get_const_data(weigth_node, model)
 
-    bias_node = get_const_node(node, 2, graph)
-    bias = get_const_data(bias_node, model)
-
-    running_mean_node = get_const_node(node, 3, graph)
-    running_mean = get_const_data(running_mean_node, model)
-
-    running_var_node = get_const_node(node, 4, graph)
-    running_var = get_const_data(running_var_node, model)
+    weight = get_const_data_on_port(model, graph, node, 1)
+    bias = get_const_data_on_port(model, graph, node, 2)
+    running_mean = get_const_data_on_port(model, graph, node, 3)
+    running_var = get_const_data_on_port(model, graph, node, 4)
 
     bn_kwargs = apply_args_defaults(
         layer_attr.op_args, layer_attr.op_kwargs, [(6, "momentum"), (7, "eps"), (8, "cudnn_enabled")]
@@ -97,12 +102,13 @@ def extract_bn(model: nn.Module, graph: PTNNCFGraph, node: NNCFNode) -> Extracte
 
     return ExtractedFunc(layer_attr.func, bn_kwargs)
 
+
 def extract_conv(
     model: nn.Module,
     graph: PTNNCFGraph,
     input_node: NNCFNode,
     output_node: NNCFNode,
-) -> ExtractedFunc:
+) -> nn.Module:
     """
     Extracts a convolutional layer from an NNCF graph and constructs an ExtractedFunc module.
 
@@ -113,11 +119,13 @@ def extract_conv(
     :return: The extracted convolutional layer as an ExtractedFunc module.
     """
     weight_node = get_const_node(input_node, 1, graph)
+    if weight_node is None:
+        raise nncf.InternalError(f"Weight node not found for {input_node}")
     weight = get_const_data(weight_node, model)
 
     hook_storage = get_hook_storage(model)
     with torch.no_grad():
-        # Calculate weight after executuin all hook fro weight data
+        # Calculate weight after execution all hook fro weight data
         weight = hook_storage.execute_post_function_hooks(weight_node.node_name, 0, weight)
         weight = hook_storage.execute_pre_function_hooks(input_node.node_name, 1, weight)
 
@@ -139,16 +147,16 @@ def extract_conv(
 
     if input_node == output_node:
         return conv_module
-    
-    if not output_node.metatype is om.PTBatchNormMetatype:
+
+    if output_node.metatype is not om.PTBatchNormMetatype:
         msg = f"Support only PTBatchNormMetatype as output node, actual: {output_node.metatype}"
         raise nncf.InternalError(msg)
-    
+
     next_nodes = graph.get_next_nodes(input_node)
     if output_node not in next_nodes:
         msg = f"Output node {output_node} not found after {input_node}"
         raise nncf.InternalError(msg)
-    
+
     bn_module = extract_bn(model, graph, output_node)
     return nn.Sequential(conv_module, bn_module)
 
@@ -162,7 +170,7 @@ def extract_model(
     Supported subgraph:
       - Conv
       - Conv + BatchNorm
-    
+
     :param model: The NNCF network to extract the submodule from.
     :param input_nodes: List containing names of the input nodes for the submodule.
     :param output_nodes: List containing names of the output nodes for the submodule.

@@ -12,6 +12,7 @@
 from typing import List, Optional, Tuple, Type, Union
 
 import torch
+from torch import nn
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -43,17 +44,17 @@ OPERATORS_WITH_BIAS_METATYPES = CONV_META_TYPES
 CONV_FUSED_META_TYPES = [om.PTBatchNormMetatype]
 
 
-def find_const_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> Optional[NNCFNode]:
+def find_const_node_in_constant_subgraph(graph: NNCFGraph, node: NNCFNode) -> Optional[NNCFNode]:
     """
     Finds a constant node within a constant subgraph, recursively traversing noop and quantize nodes.
 
-    :param node: The starting node to search from.
     :param graph: The NNCFGraph.
+    :param node: The starting node to search from.
     :return: The constant node found within the subgraph, or None if no constant node is found.
     """
     if node.metatype == om.PTNoopMetatype or node.node_type in om.QUANTIZE_NODE_TYPES:
         prev_nodes = [e.from_node for e in graph.get_input_edges(node)]
-        return find_const_node_in_constant_subgraph(prev_nodes[0], graph)
+        return find_const_node_in_constant_subgraph(graph, prev_nodes[0])
     if node.metatype in CONST_NOOP_METATYPES:
         return node
     return None
@@ -71,7 +72,7 @@ def get_const_node(node: NNCFNode, port_id: int, graph: NNCFGraph) -> Optional[N
     for prev_node in graph.get_previous_nodes(node):
         edge = graph.get_edge(prev_node, node)
         if edge.input_port_id == port_id:
-            weight_node = find_const_node_in_constant_subgraph(prev_node, graph)
+            weight_node = find_const_node_in_constant_subgraph(graph, prev_node)
             if weight_node is None:
                 raise nncf.InternalError("Could not find a constant node in the model graph.")
             return weight_node
@@ -115,7 +116,7 @@ def get_module_by_name(module_name: str, model: torch.nn.Module) -> torch.nn.Mod
     return curr_module
 
 
-def get_const_data(const_node: NNCFNode, model: NNCFNetwork) -> torch.Tensor:
+def get_const_data(const_node: NNCFNode, model: nn.Module) -> torch.Tensor:
     """
     Retrieves a constant tensor associated with a given node.
 
@@ -135,16 +136,16 @@ def get_const_data(const_node: NNCFNode, model: NNCFNetwork) -> torch.Tensor:
     return data
 
 
-def get_const_data_on_port(node: NNCFNode, port_id: int, model: NNCFNetwork) -> torch.Tensor:
+def get_const_data_on_port(model: nn.Module, graph: NNCFGraph, node: NNCFNode, port_id: int) -> torch.Tensor:
     """
     Retrieves a constant tensor associated with a given node and input port in an NNCF graph.
 
+    :param model: The NNCFNetwork object.
+    :param graph: The NNCF graph containing the nodes.
     :param node: The node to retrieve the constant from.
     :param port_id:  The port id within the node that holds the constant.
-    :param model: The NNCFNetwork object.
     :return: A torch.Tensor object containing the constant value, or None if the constant is not found.
     """
-    graph = model.nncf.get_graph()
     const_node = get_const_node(node, port_id, graph)
     if const_node is None:
         return None
@@ -189,7 +190,7 @@ def is_node_with_fused_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     return bias is not None
 
 
-def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> Optional[torch.Tensor]:
+def get_fused_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: NNCFNetwork) -> Optional[torch.Tensor]:
     """
     Returns the bias tensor for the node or for potential fused node.
 
@@ -197,22 +198,21 @@ def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> Optional[torch.T
     :param model: The model that contains this operation.
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
-    nncf_graph = model.nncf.get_graph()
     fused_node = get_potential_fused_node(node.node_name, nncf_graph)
-    bias = get_const_data_on_port(node, node.metatype.bias_port_id, model)
+    bias = get_const_data_on_port(model, nncf_graph, node, node.metatype.bias_port_id)
 
     if fused_node is None:
         return bias
 
-    fused_bias = get_const_data_on_port(fused_node, fused_node.metatype.bias_port_id, model)
+    fused_bias = get_const_data_on_port(model, nncf_graph, fused_node, fused_node.metatype.bias_port_id)
     if bias is None:
         return fused_bias
 
-    fused_weight = get_const_data_on_port(fused_node, fused_node.metatype.weight_port_ids[0], model)
+    fused_weight = get_const_data_on_port(model, nncf_graph, fused_node, fused_node.metatype.weight_port_ids[0])
     return bias * fused_weight + fused_bias
 
 
-def update_fused_bias(target_node_name: str, new_bias: torch.Tensor, model: NNCFNetwork) -> None:
+def update_fused_bias(target_node_name: str, new_bias: torch.Tensor, nncf_graph: NNCFGraph, model: nn.Module) -> None:
     """
     Update bias for target module or potential fused module.
 
@@ -220,11 +220,10 @@ def update_fused_bias(target_node_name: str, new_bias: torch.Tensor, model: NNCF
     :param new_bias: New bias value.
     :param model: The model.
     """
-    nncf_graph = model.nncf.get_graph()
     target_node = nncf_graph.get_node_by_name(target_node_name)
     fused_node = get_potential_fused_node(target_node_name, nncf_graph)
     if fused_node is None:
-        set_const_data_to_port_id(new_bias, target_node, target_node.metatype.bias_port_id, model)
+        set_const_data_to_port_id(new_bias, target_node, target_node.metatype.bias_port_id, nncf_graph, model)
         return
 
     target_bias_node = get_const_node(target_node, target_node.metatype.bias_port_id, nncf_graph)
@@ -250,7 +249,7 @@ def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[int]:
     weight_port_ids = []
     for edge in graph.get_input_edges(node):
         if edge.input_port_id in node.metatype.weight_port_ids:
-            weight_node = find_const_node_in_constant_subgraph(edge.from_node, graph)
+            weight_node = find_const_node_in_constant_subgraph(graph, edge.from_node)
             if weight_node:
                 weight_port_ids.append(edge.input_port_id)
     return weight_port_ids
@@ -264,7 +263,10 @@ def set_const_data(data: torch.Tensor, const_node: NNCFNode, model: NNCFNetwork)
     :param const_node: The NNCF node representing the constant data.
     :param model: The NNCF network model.
     """
-    const_name = const_node.layer_attributes.name
+    if is_experimental_torch_tracing_enabled():
+        const_name = const_node.layer_name
+    else:
+        const_name = const_node.layer_attributes.name
     module_name, const_attr_name = split_const_name(const_name)
     module = get_module_by_name(module_name, model)
     const = getattr(module, const_attr_name)
@@ -274,7 +276,9 @@ def set_const_data(data: torch.Tensor, const_node: NNCFNode, model: NNCFNetwork)
         setattr(module, const_attr_name, data)
 
 
-def set_const_data_to_port_id(data: torch.Tensor, node: NNCFNode, port_id: int, model: NNCFNetwork) -> None:
+def set_const_data_to_port_id(
+    data: torch.Tensor, node: NNCFNode, port_id: int, graph: NNCFGraph, model: NNCFNetwork
+) -> None:
     """
     Sets the value of a constant tensor within a specified node in an NNCFNetwork.
 
@@ -283,11 +287,14 @@ def set_const_data_to_port_id(data: torch.Tensor, node: NNCFNode, port_id: int, 
     :param const_port_id: The input port id of the node that receives the constant.
     :param model: The NNCF network containing the module to be modified.
     """
-    graph = model.nncf.get_graph()
+    # graph = model.nncf.get_graph()
     const_node = get_const_node(node, port_id, graph)
     if const_node is None:
         raise nncf.InternalError(f"No found node with constant for {node.node_name} on {port_id} port")
-    const_name = const_node.layer_attributes.name
+    if is_experimental_torch_tracing_enabled():
+        const_name = const_node.layer_name
+    else:
+        const_name = const_node.layer_attributes.name
     module_name, const_attr_name = split_const_name(const_name)
     module = get_module_by_name(module_name, model)
     const = getattr(module, const_attr_name)
@@ -295,7 +302,6 @@ def set_const_data_to_port_id(data: torch.Tensor, node: NNCFNode, port_id: int, 
         const.data = data
     else:
         setattr(module, const_attr_name, data)
-
 
 
 def get_input_fake_quantize_node(nncf_graph: NNCFGraph, node: NNCFNode, port_id: int) -> Optional[NNCFNode]:
@@ -311,6 +317,7 @@ def get_input_fake_quantize_node(nncf_graph: NNCFGraph, node: NNCFNode, port_id:
         if edge.input_port_id == port_id and edge.from_node.node_type in om.QUANTIZE_NODE_TYPES:
             return edge.to_node
     return None
+
 
 def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     """

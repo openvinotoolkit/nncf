@@ -32,6 +32,7 @@ from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
 from nncf.experimental.torch2.function_hook.weak_map import WeakUnhashableKeyMap
 from nncf.experimental.torch2.function_hook.wrapper import ForwardWithHooks
 from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
+from nncf.torch.utils import training_mode_switcher
 
 
 class GraphBuilderMode(FunctionHookMode):
@@ -358,12 +359,12 @@ def build_graph(model: nn.Module, *args: Any, **kwargs: Any) -> nx.MultiDiGraph:
     :param model: The PyTorch model for which the computational graph will be built.
     :return: A nx.MultiDiGraph where nodes represent operations of model.
     """
-
-    with torch.enable_grad():  # type: ignore
-        # Gradient use to get information about __get__ functions to detect tensor.(T, mT) attributes
-        with GraphBuilderMode(model=model, hook_storage=get_hook_storage(model)) as ctx:
-            args, kwargs = ctx.process_model_inputs(args, kwargs)
-            wrapped_forward = cast(ForwardWithHooks, model.forward)
-            outputs = wrapped_forward._func(*args, **kwargs)
-            outputs = ctx.process_model_outputs(outputs)
+    with training_mode_switcher(model, is_training=False):
+        with torch.enable_grad():  # type: ignore
+            # Gradient use to get information about __get__ functions to detect tensor.(T, mT) attributes
+            with GraphBuilderMode(model=model, hook_storage=get_hook_storage(model)) as ctx:
+                args, kwargs = ctx.process_model_inputs(args, kwargs)
+                wrapped_forward = cast(ForwardWithHooks, model.forward)
+                outputs = wrapped_forward._func(*args, **kwargs)
+                outputs = ctx.process_model_outputs(outputs)
     return ctx.graph

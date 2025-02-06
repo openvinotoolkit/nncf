@@ -225,17 +225,17 @@ class GraphModelWrapper:
     """
     A class that wraps a PyTorch model with examples inputs and provides an interface
     to build a computational graph of the model.
-
-    :param model: The PyTorch model to be wrapped.
-    :param example_input: A tuple of example input for the model.
     """
 
-    def __init__(self, model: nn.Module, example_input: Any) -> None:
+    def __init__(self, model: nn.Module, example_input: Any, graph: Optional[PTNNCFGraph] = None) -> None:
         """
-        Initialize the GraphModelWrapper.
+        :param model: The PyTorch model to be wrapped.
+        :param example_input: A tuple of example input for the model.
+        :param graph: The graph of the model.
         """
         self.model = model
         self.example_input = example_input
+        self.graph = graph
 
     def build_graph(self) -> PTNNCFGraph:
         """
@@ -251,3 +251,19 @@ class GraphModelWrapper:
         if isinstance(self.example_input, tuple):
             return build_nncf_graph(self.model, *self.example_input)
         return build_nncf_graph(self.model, self.example_input)
+
+    def get_graph(self) -> PTNNCFGraph:
+        """
+        Returns the computational graph of the model.
+
+        :return: The PTNNCFGraph representing the model.
+        """
+        if self.graph is None:
+            self.graph = self.build_graph()
+        return self.graph
+
+    def reset_graph(self) -> None:
+        """
+        Resets the computational graph of the model.
+        """
+        self.graph = None
