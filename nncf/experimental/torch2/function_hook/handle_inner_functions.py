@@ -202,8 +202,8 @@ def multi_head_attention_forward(
     src_len = k.size(1)
 
     if key_padding_mask is not None:
-        if not torch.jit.is_scripting() and not torch.jit.is_tracing():
-            _check_key_padding_mask(key_padding_mask, src_len, bsz)
+        if not torch.jit.is_scripting() and not torch.jit.is_tracing():  # type: ignore
+            _check_key_padding_mask(key_padding_mask, src_len, bsz)  # type: ignore
 
         key_padding_mask = (
             key_padding_mask.view(bsz, 1, 1, src_len).expand(-1, num_heads, -1, -1).reshape(bsz * num_heads, 1, src_len)
@@ -217,7 +217,7 @@ def multi_head_attention_forward(
         dropout_p = 0.0
 
     if need_weights:
-        _B, _Nt, E = q.shape # noqa: F841
+        _B, _Nt, E = q.shape  # noqa: F841
         q_scaled = q * math.sqrt(1.0 / float(E))
 
         assert not (is_causal and attn_mask is None), "FIXME: is_causal not implemented for need_weights"
