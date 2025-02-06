@@ -14,6 +14,7 @@ import sys
 import torch
 
 import nncf
+from tests.cross_fw.install.common import load_nncf_modules
 
 if len(sys.argv) != 3:
     raise nncf.ValidationError(
@@ -54,3 +55,17 @@ elif execution_type == "gpu":
     )
 else:
     raise nncf.ValidationError(f"Invalid execution type {execution_type} (expected 'cpu' or 'gpu')!")
+
+EXCLUDED_MODULES_PATTERNS = (
+    "nncf\\.openvino.*",
+    "nncf\\.tensorflow.*",
+    "nncf\\.onnx.*",
+    "nncf\\.experimental\\.tensorflow.*",
+    "nncf\\.experimental\\.openvino.*",
+    "nncf\\.experimental\\.onnx.*",
+    "^(?!nncf(?:\\.experimental)*\\.torch.*?\\.).*?openvino_[^\\.]*",
+    "^(?!nncf(?:\\.experimental)*\\.torch.*?\\.).*?onnx_[^\\.]*",
+    "^(?!nncf(?:\\.experimental)*\\.torch.*?\\.).*?tf_[^\\.]*",
+)
+
+load_nncf_modules(EXCLUDED_MODULES_PATTERNS)

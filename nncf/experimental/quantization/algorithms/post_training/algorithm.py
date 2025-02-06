@@ -17,7 +17,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.quantization.algorithms.post_training.pipeline import experimental_create_ptq_pipeline
-from nncf.experimental.quantization.quantizers.quantizer import Quantizer
+from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
