@@ -181,7 +181,7 @@ class TestTransformersModel(BaseTestModel):
 
                     tokenizer = AutoTokenizer.from_pretrained(name)
                     config = AutoConfig.from_pretrained(name, torchscript=True)
-                    model = AutoModelForCausalLM.from_config(config)
+                    model = AutoModelForCausalLM.from_config(config, attn_implementation="eager")
                     text = "Replace me by any text you'd like."
                     encoded_input = tokenizer(text, return_tensors="pt")
                     inputs_dict = dict(encoded_input)
@@ -199,7 +199,7 @@ class TestTransformersModel(BaseTestModel):
 
                     tokenizer = AutoTokenizer.from_pretrained(name)
                     config = AutoConfig.from_pretrained(name, torchscript=True)
-                    model = AutoModelForMaskedLM.from_config(config)
+                    model = AutoModelForMaskedLM.from_config(config, attn_implementation="eager")
                     text = "Replace me by any text you'd like."
                     encoded_input = tokenizer(text, return_tensors="pt")
                     example = dict(encoded_input)
@@ -209,7 +209,7 @@ class TestTransformersModel(BaseTestModel):
 
                     processor = AutoProcessor.from_pretrained(name)
                     config = AutoConfig.from_pretrained(name, torchscript=True)
-                    model = AutoModelForImageClassification.from_config(config)
+                    model = AutoModelForImageClassification.from_config(config, attn_implementation="eager")
                     encoded_input = processor(images=self.image, return_tensors="pt")
                     example = dict(encoded_input)
                 elif auto_model == "AutoModelForSeq2SeqLM":
@@ -218,7 +218,7 @@ class TestTransformersModel(BaseTestModel):
 
                     tokenizer = AutoTokenizer.from_pretrained(name)
                     config = AutoConfig.from_pretrained(name, torchscript=True)
-                    model = AutoModelForSeq2SeqLM.from_config(config)
+                    model = AutoModelForSeq2SeqLM.from_config(config, attn_implementation="eager")
                     inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
                     decoder_inputs = tokenizer(
                         "<pad> Studien haben gezeigt dass es hilfreich ist einen Hund zu besitzen",
@@ -232,7 +232,7 @@ class TestTransformersModel(BaseTestModel):
 
                     processor = AutoProcessor.from_pretrained(name)
                     config = AutoConfig.from_pretrained(name, torchscript=True)
-                    model = AutoModelForSpeechSeq2Seq.from_config(config)
+                    model = AutoModelForSpeechSeq2Seq.from_config(config, attn_implementation="eager")
                     inputs = processor(torch.randn(1000).numpy(), sampling_rate=16000, return_tensors="pt")
                     example = dict(inputs)
                 elif auto_model == "AutoModelForCTC":
@@ -241,7 +241,7 @@ class TestTransformersModel(BaseTestModel):
 
                     processor = AutoProcessor.from_pretrained(name)
                     config = AutoConfig.from_pretrained(name, torchscript=True)
-                    model = AutoModelForCTC.from_config(config)
+                    model = AutoModelForCTC.from_config(config, attn_implementation="eager")
                     input_values = processor(torch.randn(1000).numpy(), return_tensors="pt")
                     example = dict(input_values)
                 elif auto_model == "AutoModelForTableQuestionAnswering":
@@ -251,7 +251,7 @@ class TestTransformersModel(BaseTestModel):
 
                     tokenizer = AutoTokenizer.from_pretrained(name)
                     config = AutoConfig.from_pretrained(name, torchscript=True)
-                    model = AutoModelForTableQuestionAnswering.from_config(config)
+                    model = AutoModelForTableQuestionAnswering.from_config(config, attn_implementation="eager")
                     data = {
                         "Actors": ["Brad Pitt", "Leonardo Di Caprio", "George Clooney"],
                         "Number of movies": ["87", "53", "69"],
@@ -304,7 +304,7 @@ class TestTransformersModel(BaseTestModel):
             from transformers import AutoModel
 
             config = AutoConfig.from_pretrained(name, torchscript=True)
-            model = AutoModel.from_config(config)
+            model = AutoModel.from_config(config, attn_implementation="eager")
         if hasattr(model, "set_default_language"):
             model.set_default_language("en_XX")
         if example is None:
