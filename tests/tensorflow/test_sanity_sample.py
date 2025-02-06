@@ -57,7 +57,7 @@ def run_around_tests():
 
 
 def convert_to_argv(args):
-    return " ".join(key if val is None else "{} {}".format(key, val) for key, val in args.items()).split()
+    return " ".join(key if val is None else f"{key} {val}" for key, val in args.items()).split()
 
 
 SAMPLE_TYPES = [
@@ -141,7 +141,8 @@ def get_sample_fn(sample_type, modes):
             variants.append(key)
 
     if len(variants) != 1:
-        raise Exception("Can not choose a function for given arguments")
+        msg = "Can not choose a function for given arguments"
+        raise Exception(msg)
 
     return SAMPLES[sample_type][variants[0]]
 
@@ -153,7 +154,7 @@ def generate_config_params():
         dataset_names, dataset_types = zip(*DATASETS[sample_type])
 
         for params_id, params in enumerate(zip(config_paths, dataset_names, dataset_types, batch_sizes)):
-            config_params.append((sample_type, *params, "{}_{}".format(sample_id, params_id)))
+            config_params.append((sample_type, *params, f"{sample_id}_{params_id}"))
     return config_params
 
 
@@ -352,7 +353,7 @@ def test_export_with_resume(_config, tmp_path, export_format, _case_common_dirs)
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--resume": ckpt_path,
-        "--to-{}".format(export_format): export_path,
+        f"--to-{export_format}": export_path,
     }
 
     main = get_sample_fn(_config["sample_type"], modes=["export"])

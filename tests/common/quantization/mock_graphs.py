@@ -413,7 +413,7 @@ def get_sequentially_connected_model_graph(op_name_keys: List[str]) -> nx.DiGrap
 
         if node_key in OP_NAMES_IN_TEST_WITH_MODULE_ATTRIBUTES:
             attrs[NNCFNode.LAYER_ATTRIBUTES] = MagicMock()
-        actual_key = node_key + "_{}".format(node_key_appearances[node_key])
+        actual_key = node_key + f"_{node_key_appearances[node_key]}"
         graph.add_node(actual_key, **attrs)
         node_key_appearances[node_key] += 1
         actual_keys.append(actual_key)

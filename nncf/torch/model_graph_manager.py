@@ -74,7 +74,8 @@ def get_const_node(node: NNCFNode, port_id: int, graph: NNCFGraph) -> Optional[N
         if edge.input_port_id == port_id:
             weight_node = find_const_node_in_constant_subgraph(graph, prev_node)
             if weight_node is None:
-                raise nncf.InternalError("Could not find a constant node in the model graph.")
+                msg = "Could not find a constant node in the model graph."
+                raise nncf.InternalError(msg)
             return weight_node
 
 
@@ -89,7 +90,7 @@ def split_const_name(const_name: str) -> Tuple[str, str]:
     """
     index = const_name.rfind(".")
     if index == -1:
-        return str(), const_name
+        return "", const_name
     module_name = const_name[:index]
     weight_attr_name = const_name[index + 1 :]
     return module_name, weight_attr_name
@@ -112,13 +113,14 @@ def get_module_by_name(module_name: str, model: torch.nn.Module) -> torch.nn.Mod
                 curr_module = child_module
                 break
         else:
-            raise nncf.ModuleNotFoundError(f"Could not find the {module_name} module in the model.")
+            msg = f"Could not find the {module_name} module in the model."
+            raise nncf.ModuleNotFoundError(msg)
     return curr_module
 
 
 def get_const_data(const_node: NNCFNode, model: nn.Module) -> torch.Tensor:
     """
-    Retrieves a constant tensor associated with a given node.
+    Retrieves a detached constant tensor associated with a given node.
 
     :param const_node: The node associated with const data.
     :param model: The NNCFNetwork object.
@@ -132,8 +134,8 @@ def get_const_data(const_node: NNCFNode, model: nn.Module) -> torch.Tensor:
     module = get_module_by_name(module_name, model)
     data = getattr(module, const_attr_name)
     if isinstance(data, torch.nn.Parameter):
-        return data.data
-    return data
+        return data.data.detach()
+    return data.detach()
 
 
 def get_const_data_on_port(model: nn.Module, graph: NNCFGraph, node: NNCFNode, port_id: int) -> torch.Tensor:
@@ -290,7 +292,8 @@ def set_const_data_to_port_id(
     # graph = model.nncf.get_graph()
     const_node = get_const_node(node, port_id, graph)
     if const_node is None:
-        raise nncf.InternalError(f"No found node with constant for {node.node_name} on {port_id} port")
+        msg = f"No found node with constant for {node.node_name} on {port_id} port"
+        raise nncf.InternalError(msg)
     if is_experimental_torch_tracing_enabled():
         const_name = const_node.layer_name
     else:
@@ -377,13 +380,15 @@ def get_weight_channel_axes(metatype: Type[OperatorMetatype], ndims: int, input_
             return (ndims - 2,)
         if input_port_id == 2:
             return (ndims - 1,)
-        raise ValueError(f"Unexpected {input_port_id=} for {metatype=}")
+        msg = f"Unexpected {input_port_id=} for {metatype=}"
+        raise ValueError(msg)
     if metatype == om.PTMatMulMetatype:
         if input_port_id == 0:
             return () if ndims < 2 else (ndims - 2,)
         if input_port_id == 1:
             return () if ndims < 2 else (ndims - 1,)
-        raise ValueError(f"Unexpected {input_port_id=} for {metatype=}")
+        msg = f"Unexpected {input_port_id=} for {metatype=}"
+        raise ValueError(msg)
     if metatype in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]:
         return (1,)
     return (0,)

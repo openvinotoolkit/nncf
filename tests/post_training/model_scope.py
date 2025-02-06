@@ -87,7 +87,14 @@ QUANTIZATION_MODELS = [
         "model_id": "resnet18",
         "pipeline_cls": ImageClassificationTorchvision,
         "compression_params": {},
-        "backends": [BackendType.FX_TORCH, BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.OV, BackendType.ONNX],
+        "backends": [
+            BackendType.FX_TORCH,
+            BackendType.CUDA_FX_TORCH,
+            BackendType.TORCH,
+            BackendType.CUDA_TORCH,
+            BackendType.OV,
+            BackendType.ONNX,
+        ],
         "batch_size": 128,
     },
     {
@@ -98,7 +105,7 @@ QUANTIZATION_MODELS = [
             "fast_bias_correction": False,
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": [BackendType.FX_TORCH, BackendType.OV, BackendType.ONNX],
+        "backends": [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH, BackendType.OV, BackendType.ONNX],
         "batch_size": 128,
     },
     {
@@ -109,7 +116,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.15),
         },
-        "backends": [BackendType.FX_TORCH, BackendType.OV],
+        "backends": [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH, BackendType.OV],
         "batch_size": 1,
     },
     {
@@ -120,7 +127,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.5),
         },
-        "backends": [BackendType.FX_TORCH, BackendType.OV],
+        "backends": [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH, BackendType.OV],
         "batch_size": 1,
     },
     # Timm models
@@ -376,7 +383,7 @@ WEIGHT_COMPRESSION_MODELS = [
         "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
         "pipeline_cls": LMWeightCompression,
         "compression_params": {"group_size": 64, "ratio": 0.8, "mode": CompressWeightsMode.INT4_SYM},
-        "backends": [BackendType.OV],
+        "backends": [BackendType.OV, BackendType.TORCH],
     },
     {
         "reported_name": "tinyllama_data_aware_awq_stateful",
@@ -483,7 +490,7 @@ WEIGHT_COMPRESSION_MODELS = [
             "mode": CompressWeightsMode.INT4_ASYM,
             "scale_estimation": True,
         },
-        "backends": [BackendType.OV],
+        "backends": [BackendType.OV, BackendType.TORCH],
     },
     {
         "reported_name": "tinyllama_data_aware_lora_stateful",
@@ -518,6 +525,21 @@ WEIGHT_COMPRESSION_MODELS = [
         },
         "backends": [BackendType.OV],
     },
+    {
+        "reported_name": "tinyllama_scale_estimation_group_size_64",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": 64,
+            "ratio": 0.8,
+            "mode": CompressWeightsMode.INT4_SYM,
+            "scale_estimation": True,
+            "advanced_parameters": AdvancedCompressionParameters(
+                scale_estimation_params=AdvancedScaleEstimationParameters(32, 5, 10, 1.0)
+            ),
+        },
+        "backends": [BackendType.OV, BackendType.TORCH],
+    },
 ]
 
 
@@ -545,7 +567,8 @@ def generate_tests_scope(models_list: List[Dict]) -> Dict[str, dict]:
             model_param["backend"] = backend
             model_param.pop("backends")
             if test_case_name in tests_scope:
-                raise nncf.ValidationError(f"{test_case_name} already in tests_scope")
+                msg = f"{test_case_name} already in tests_scope"
+                raise nncf.ValidationError(msg)
             tests_scope[test_case_name] = model_param
     return tests_scope
 

@@ -131,10 +131,11 @@ class OpenVINOQuantizer(TorchAOQuantizer):
 
             if any(root_qp.qconfig != quantization_setup.quantization_points[q_id].qconfig for q_id in quantizer_ids):
                 qps = [quantization_setup.quantization_points[q_id] for q_id in quantizer_ids]
-                raise nncf.InternalError(
+                msg = (
                     "Different quantization configs are set to one unified scale group:"
                     f"{[(qp.insertion_point.__dict__, str(qp.qconfig)) for qp in qps]}"
                 )
+                raise nncf.InternalError(msg)
 
             root_target_node = get_graph_node_by_name(graph, root_qp.insertion_point.target_node_name)
             root_edge_or_node = self._get_edge_or_node(root_target_node, root_qp, nncf_graph)

@@ -253,7 +253,8 @@ class EpochBasedTrainingAlgorithm:
         :return: the training algorithm
         """
         if not Path(resuming_checkpoint_path).is_file():
-            raise FileNotFoundError("no checkpoint found at '{}'".format(resuming_checkpoint_path))
+            msg = f"no checkpoint found at '{resuming_checkpoint_path}'"
+            raise FileNotFoundError(msg)
         nncf_logger.info(f"=> loading checkpoint '{resuming_checkpoint_path}'")
         checkpoint = torch.load(resuming_checkpoint_path, map_location="cpu")
 

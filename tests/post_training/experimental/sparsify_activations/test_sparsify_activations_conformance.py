@@ -114,7 +114,8 @@ def test_sparsify_activations(
     start_time = time.perf_counter()
     try:
         if test_case_name not in sparsify_activations_reference_data:
-            raise RuntimeError(f"{test_case_name} is not defined in `sparsify_activations_reference_data` fixture")
+            msg = f"{test_case_name} is not defined in `sparsify_activations_reference_data` fixture"
+            raise RuntimeError(msg)
         test_model_param = SPARSIFY_ACTIVATIONS_TEST_CASES[test_case_name]
         maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
         fp32_model_params = {

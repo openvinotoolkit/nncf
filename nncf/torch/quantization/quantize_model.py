@@ -52,11 +52,14 @@ def quantize_impl(
     Implementation of the `quantize()` method for the PyTorch backend.
     """
     if fast_bias_correction is False:
-        raise ValueError(f"fast_bias_correction={fast_bias_correction} is not supported")
+        msg = f"fast_bias_correction={fast_bias_correction} is not supported"
+        raise ValueError(msg)
     if target_device == TargetDevice.CPU_SPR:
-        raise nncf.InternalError("target_device == CPU_SPR is not supported")
+        msg = "target_device == CPU_SPR is not supported"
+        raise nncf.InternalError(msg)
     if mode is not None:
-        raise ValueError(f"mode={mode} is not supported")
+        msg = f"mode={mode} is not supported"
+        raise ValueError(msg)
 
     copied_model = deepcopy(model)
 
@@ -101,7 +104,6 @@ def compress_weights_impl(
     """
     Implementation of the `compress_weights()` method for the PyTorch backend.
     """
-
     compression_algorithm = WeightCompression(
         mode,
         ratio,

@@ -9,8 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import print_function
-
 import os
 
 import torch
@@ -33,7 +31,7 @@ def configure_distributed(config):
         # default device (E.g. NMS kernel - https://github.com/facebookresearch/maskrcnn-benchmark/issues/74)
         torch.cuda.set_device(config.current_gpu)
 
-    logger.info("| distributed init (rank {}): {}".format(config.rank, config.dist_url))
+    logger.info(f"| distributed init (rank {config.rank}): {config.dist_url}")
     dist.init_process_group(
         backend=config.dist_backend, init_method=config.dist_url, world_size=config.world_size, rank=config.rank
     )
@@ -45,11 +43,13 @@ class DistributedSampler(Sampler):
         super().__init__(dataset)
         if world_size is None:
             if not dist.is_available():
-                raise nncf.ValidationError("Requires distributed package to be available")
+                msg = "Requires distributed package to be available"
+                raise nncf.ValidationError(msg)
             world_size = dist.get_world_size()
         if rank is None:
             if not dist.is_available():
-                raise nncf.ValidationError("Requires distributed package to be available")
+                msg = "Requires distributed package to be available"
+                raise nncf.ValidationError(msg)
             rank = dist.get_rank()
         self.world_size = world_size
         self.rank = rank

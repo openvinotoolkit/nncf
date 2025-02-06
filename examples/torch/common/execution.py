@@ -47,7 +47,7 @@ def get_device(config):
     if config.execution_mode == ExecutionMode.CPU_ONLY:
         return "cpu"
     if config.current_gpu is not None:
-        return "cuda:{}".format(config.current_gpu)
+        return f"cuda:{config.current_gpu}"
 
     return "cuda"
 

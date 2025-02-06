@@ -256,7 +256,7 @@ def main_worker(current_gpu, config: SampleConfig):
                 )
             )
         else:
-            logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
+            logger.info(f"=> loaded checkpoint '{resuming_checkpoint_path}'")
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
@@ -391,7 +391,7 @@ def train(
             make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
 
             for key, value in prepare_for_tensorboard(statistics).items():
-                config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
+                config.tb.add_scalar(f"compression/statistics/{key}", value, len(train_loader) * epoch)
 
 
 def get_dataset(dataset_config, config, transform, is_train):
@@ -644,7 +644,7 @@ def train_epoch(
                     loss=losses,
                     top1=top1,
                     top5=top5,
-                    rank="{}:".format(config.rank) if config.multiprocessing_distributed else "",
+                    rank=f"{config.rank}:" if config.multiprocessing_distributed else "",
                 )
             )
 
@@ -659,7 +659,7 @@ def train_epoch(
 
             statistics = compression_ctrl.statistics(quickly_collected_only=True)
             for stat_name, stat_value in prepare_for_tensorboard(statistics).items():
-                config.tb.add_scalar("train/statistics/{}".format(stat_name), stat_value, i + global_step)
+                config.tb.add_scalar(f"train/statistics/{stat_name}", stat_value, i + global_step)
 
         if i >= train_iters:
             break
@@ -710,7 +710,7 @@ def validate(val_loader, model, criterion, config, epoch=0, log_validation_info=
                         loss=losses,
                         top1=top1,
                         top5=top5,
-                        rank="{}:".format(config.rank) if config.multiprocessing_distributed else "",
+                        rank=f"{config.rank}:" if config.multiprocessing_distributed else "",
                     )
                 )
 
@@ -719,7 +719,7 @@ def validate(val_loader, model, criterion, config, epoch=0, log_validation_info=
             config.tb.add_scalar("val/top1", top1.avg, len(val_loader) * epoch)
             config.tb.add_scalar("val/top5", top5.avg, len(val_loader) * epoch)
 
-            logger.info(" * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n".format(top1=top1, top5=top5))
+            logger.info(f" * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n")
 
         if is_main_process() and config.metrics_dump is not None:
             acc = top1.avg / 100

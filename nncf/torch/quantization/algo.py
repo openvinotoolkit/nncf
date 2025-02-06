@@ -463,9 +463,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         algo_config = self._get_algo_specific_config_section()
         if self._target_device == "NPU" and "preset" in algo_config:
-            raise nncf.InternalError("The NPU target device does not support presets.")
+            msg = "The NPU target device does not support presets."
+            raise nncf.InternalError(msg)
         if self._target_device == "CPU_SPR":
-            raise nncf.InternalError("The CPU_SPR target device does not supported.")
+            msg = "The CPU_SPR target device does not supported."
+            raise nncf.InternalError(msg)
 
         self._range_init_params = None
         self._precision_init_type = None
@@ -538,33 +540,37 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             return None, None
         precision_init_type = init_precision_config.get("type", "manual")
         if precision_init_type not in PRECISION_INIT_TYPES_VS_DESCRIPTION:
-            raise nncf.InternalError(f"Unrecognized precision init type: {precision_init_type}")
+            msg = f"Unrecognized precision init type: {precision_init_type}"
+            raise nncf.InternalError(msg)
         if precision_init_type == "hawq":
             try:
                 precision_init_args = self.config.get_extra_struct(QuantizationPrecisionInitArgs)
             except KeyError as e:
-                raise ValueError(
+                msg = (
                     "Specified non-manual precision initialization in the NNCF config, "
                     "but the initializing data loader and loss criterion are not provided as an extra struct. "
                     "Refer to `NNCFConfig.register_extra_structs` and the `QuantizationPrecisionInitArgs` "
                     "class"
-                ) from e
+                )
+                raise ValueError(msg) from e
             precision_init_params = HAWQPrecisionInitParams.from_config(init_precision_config, precision_init_args)
         elif precision_init_type == "autoq":
             if self.hw_config is not None and self.hw_config.target_device != HWConfigType.NPU.value:
-                raise ValueError(
-                    "Unsupported device ({}). Automatic Precision Initialization only supports for "
-                    "target_device NONE or NPU".format(self.hw_config.target_device)
+                msg = (
+                    f"Unsupported device ({self.hw_config.target_device})."
+                    f" Automatic Precision Initialization only supports for target_device NONE or NPU"
                 )
+                raise ValueError(msg)
             try:
                 precision_init_args = self.config.get_extra_struct(AutoQPrecisionInitArgs)
             except KeyError as e:
-                raise ValueError(
+                msg = (
                     "Specified Automated precision initialization in the NNCF config, "
                     "but the initializing data loader and loss criterion are not provided as an extra "
                     "struct. Refer to `NNCFConfig.register_extra_structs` and the "
                     "`AutoQPrecisionInitArgs` class"
-                ) from e
+                )
+                raise ValueError(msg) from e
 
             hw_config_type = None
             if self.hw_config is not None:
@@ -575,7 +581,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         elif precision_init_type == "manual":
             precision_init_params = ManualPrecisionInitParams.from_config(init_precision_config)
         else:
-            raise ValueError(f"Unhandled precision init type: {precision_init_type}")
+            msg = f"Unhandled precision init type: {precision_init_type}"
+            raise ValueError(msg)
         return precision_init_type, precision_init_params
 
     def _get_minmax_values_for_quantizer_locations(
@@ -749,7 +756,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                             half_range = True
                             quantizers_with_overflow_fix_str = "first convolution weight quantizers"
                     elif self._overflow_fix != "disable":
-                        raise nncf.InternalError(f"Unknown overflow fix type: {self._overflow_fix}")
+                        msg = f"Unknown overflow fix type: {self._overflow_fix}"
+                        raise nncf.InternalError(msg)
                     if half_range:
                         nncf_logger.debug(f"Overflow issue fix will be applied to {quantizers_with_overflow_fix_str}")
 
@@ -902,10 +910,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
             for layer_name in shared_weight_quantized_layers_in_group:
                 if layer_name in already_weight_quantized_shared_layers:
-                    raise nncf.InternalError(
+                    msg = (
                         "Attempted to assign a unified-scale quantizer to a shared layer node that has "
                         "already had its weights quantized by another unified-scale quantizer!"
                     )
+                    raise nncf.InternalError(msg)
                 already_weight_quantized_shared_layers[layer_name] = quant_module_id
 
             for us_qp_id in unified_scales_group:
@@ -1070,8 +1079,9 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         qspec = quantizer_setup.quantization_points[primary_qp_id].qspec
         linked_qspecs = [quantizer_setup.quantization_points[qp_id].qspec for qp_id in linked_qp_ids]
         for linked_qspec in linked_qspecs:
-            if not qspec == linked_qspec:
-                raise nncf.InternalError("The qspecs for unified scale quantization points should be identical!")
+            if qspec != linked_qspec:
+                msg = "The qspecs for unified scale quantization points should be identical!"
+                raise nncf.InternalError(msg)
 
         range_init_minmax_values = None
         if minmax_values_for_range_init:
@@ -1133,7 +1143,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         target_model_graph = target_model.nncf.get_original_graph()
         if not insertion_points:
-            raise nncf.InternalError("No insertion points to put quantizers into!")
+            msg = "No insertion points to put quantizers into!"
+            raise nncf.InternalError(msg)
 
         def is_weights(ip: PTTargetPoint) -> bool:
             return ip.target_type is TargetType.OPERATION_WITH_WEIGHTS
@@ -1191,7 +1202,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         insertion_commands = []
         for curr_insertion_point in insertion_points:
             if curr_insertion_point in self._processed_insertion_points:
-                raise nncf.InternalError("Insertion point {} already quantized!".format(str(curr_insertion_point)))
+                msg = f"Insertion point {str(curr_insertion_point)} already quantized!"
+                raise nncf.InternalError(msg)
             self._processed_insertion_points.add(curr_insertion_point)
 
             if is_weights(curr_insertion_point):
@@ -1600,7 +1612,8 @@ class ExperimentalQuantizationController(QuantizationController):
     def is_new_setup_requires_regeneration(self, quantizer_setup: SingleConfigQuantizerSetup) -> bool:
         current_setup = self.get_quantizer_setup_for_current_state()
         if Counter(current_setup.quantization_points.keys()) != Counter(quantizer_setup.quantization_points.keys()):
-            raise ValueError("The new setup is inconsistent with the original parameter space!")
+            msg = "The new setup is inconsistent with the original parameter space!"
+            raise ValueError(msg)
         for qp_id, qp in quantizer_setup.quantization_points.items():
             current_qconfig = current_setup.quantization_points[qp_id].qconfig
             new_qconfig = quantizer_setup.quantization_points[qp_id].qconfig

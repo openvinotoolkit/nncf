@@ -133,9 +133,8 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         run_batchnorm_adaptation: bool = False,
     ):
         if sparsity_level >= 1 or sparsity_level < 0:
-            raise AttributeError(
-                "Sparsity level should be within interval [0,1), actual value to set is: {}".format(sparsity_level)
-            )
+            msg = f"Sparsity level should be within interval [0,1), actual value to set is: {sparsity_level}"
+            raise AttributeError(msg)
         if target_sparsified_module_info is None:
             target_sparsified_module_info_list = self.sparsified_module_info  # List[SparseModuleInfo]
         else:

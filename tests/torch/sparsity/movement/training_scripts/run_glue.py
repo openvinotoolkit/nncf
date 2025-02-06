@@ -66,7 +66,7 @@ def parse_args() -> Tuple[argparse.Namespace, TrainingArguments]:
     parser.add_argument(
         "--quick_check",
         action="store_true",
-        help="If set True, will train the model without pretrained weights on only " f"{quick_check_num} samples.",
+        help=f"If set True, will train the model without pretrained weights on only {quick_check_num} samples.",
     )
 
     args, other_args = parser.parse_known_args()

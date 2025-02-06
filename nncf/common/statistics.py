@@ -54,9 +54,8 @@ class NNCFStatistics:
         """
         available_algorithms = [f.name for f in fields(self)]
         if algorithm_name not in available_algorithms:
-            raise ValueError(
-                f"Can not register statistics for the algorithm. Unknown name of the algorithm: {algorithm_name}."
-            )
+            msg = f"Can not register statistics for the algorithm. Unknown name of the algorithm: {algorithm_name}."
+            raise ValueError(msg)
 
         setattr(self, algorithm_name, stats)
 

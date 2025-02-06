@@ -132,7 +132,8 @@ def nncf_module_from(module: nn.Module) -> nn.Module:
             nncf_module = deepcopy(module)
             nncf_module = add_nncf_functionality_to_user_module(nncf_module)
             return nncf_module
-    raise nncf.InternalError(f"Could not extend module {module} with NNCF functionality!")
+    msg = f"Could not extend module {module} with NNCF functionality!"
+    raise nncf.InternalError(msg)
 
 
 def replace_modules_by_nncf_modules(
@@ -253,11 +254,11 @@ def _replace_module_by_scope(base_model: torch.nn.Module, scope: Scope, replaced
     for scope_element in scope[1:]:  # omit first scope element which corresponds to base module
         child_module = curr_module._modules.get(scope_element.calling_field_name)
         if child_module is None:
-            raise nncf.InternalError(
-                "Could not find a {} module member in {} module of scope {} during module replacement".format(
-                    scope_element.calling_field_name, scope_element.calling_module_class_name, str(scope)
-                )
+            msg = (
+                f"Could not find a {scope_element.calling_field_name} module member in"
+                f" {scope_element.calling_module_class_name} module of scope {str(scope)} during module replacement"
             )
+            raise nncf.InternalError(msg)
         owning_module = curr_module
         curr_module = child_module
 

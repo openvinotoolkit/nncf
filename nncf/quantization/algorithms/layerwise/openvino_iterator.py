@@ -186,9 +186,8 @@ class OVLayerwiseIterator(LayerwiseIterator):
             if input_id in self._model_input_ids:
                 subgraph_model_input_ids.append(input_id)
             else:
-                raise RuntimeError(
-                    f"{input.node_name}:{input.output_port} is not found in the input cache and is not a model input"
-                )
+                msg = f"{input.node_name}:{input.output_port} is not found in the input cache and is not a model input"
+                raise RuntimeError(msg)
 
         if subgraph_model_input_ids:
             subgraph_inputs = self._model_input_ids

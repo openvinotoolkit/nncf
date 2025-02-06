@@ -116,7 +116,8 @@ def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
             model_dict = datasets[dataset_name]
             for model_name, sample_dict in model_dict.items():
                 if model_name in model_names:
-                    raise nncf.InternalError(f"Model name {model_name} is not unique.")
+                    msg = f"Model name {model_name} is not unique."
+                    raise nncf.InternalError(msg)
                 model_names.append(model_name)
                 param_list.append(
                     EvalRunParamsStruct(

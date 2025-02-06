@@ -119,7 +119,7 @@ def test_distributed_masks_are_equal(quantization, mirrored_strategy):
 
         model.fit(dataset, epochs=1, validation_split=0, callbacks=[compression_callbacks])
     # Check seeds in file
-    with open(MASKS_SEEDS_PATH, "r", encoding="utf8") as f:
+    with open(MASKS_SEEDS_PATH, encoding="utf8") as f:
         seeds = f.readlines()
     seeds_per_replica = defaultdict(list)
     for row in seeds:

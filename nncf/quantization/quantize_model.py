@@ -176,7 +176,8 @@ def quantize(
     :rtype: TModel
     """
     if subset_size < 1:
-        raise nncf.ValidationError("Subset size must be positive.")
+        msg = "Subset size must be positive."
+        raise nncf.ValidationError(msg)
 
     advanced_parameters = _update_advanced_quantization_parameters(advanced_parameters, calibration_dataset)
 
@@ -263,7 +264,8 @@ def quantize(
             ignored_scope=ignored_scope,
             advanced_parameters=advanced_parameters,
         )
-    raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
+    msg = f"Unsupported type of backend: {backend}"
+    raise nncf.UnsupportedBackendError(msg)
 
 
 def wrap_validation_fn(validation_fn):
@@ -405,7 +407,8 @@ def quantize_with_accuracy_control(
             advanced_accuracy_restorer_parameters,
         )
 
-    raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
+    msg = f"Unsupported type of backend: {backend}"
+    raise nncf.UnsupportedBackendError(msg)
 
 
 @api(canonical_alias="nncf.compress_weights")
@@ -512,45 +515,40 @@ def compress_weights(
         from nncf.torch.quantization.quantize_model import compress_weights_impl as pt_compression_weights_impl
 
         if mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]:
-            raise nncf.ParameterNotSupportedError(
-                "Torch backend does not support NF4 and E2M1 modes for weight compression."
-            )
+            msg = "Torch backend does not support NF4 and E2M1 modes for weight compression."
+            raise nncf.ParameterNotSupportedError(msg)
 
         options = {
             "awq": awq,
-            "scale_estimation": scale_estimation,
             "gptq": gptq,
             "lora_correction": lora_correction,
         }
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
-            raise nncf.ParameterNotSupportedError(
-                f"Torch backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
-            )
-
-        if sensitivity_metric not in [None, SensitivityMetric.WEIGHT_QUANTIZATION_ERROR]:
-            raise nncf.ParameterNotSupportedError(
-                "Torch backend only supports data-free sensitivity metric. "
-                "Set None or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR."
-            )
+            msg = f"Torch backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
+            raise nncf.ParameterNotSupportedError(msg)
 
         if advanced_parameters and advanced_parameters.statistics_path:
-            raise nncf.ParameterNotSupportedError("Torch does not support statistics caching.")
+            msg = "Torch does not support statistics caching."
+            raise nncf.ParameterNotSupportedError(msg)
 
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
-                raise nncf.ValidationError(
+                msg = (
                     "Tracing capabilities with tracing parameters are required in the PyTorch model "
                     "for nncf.compress_weights(). Please wrap the model using "
                     "nncf.torch.wrap_model(model, example_input, trace_parameters=True) before calling "
                     "nncf.compress_weights()."
                 )
+                raise nncf.ValidationError(msg)
         elif dataset is None:
-            raise nncf.ValidationError("Please provide a dataset of at least one element for PyTorch model tracing.")
+            msg = "Please provide a dataset of at least one element for PyTorch model tracing."
+            raise nncf.ValidationError(msg)
         else:
             example_input = next(iter(dataset.get_inference_data()))
             model = wrap_model(model, example_input=example_input, trace_parameters=True)
-        dataset = None
+        if mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM):
+            dataset = None  # data-aware methods don't support INT8 modes
         compression_weights_impl = pt_compression_weights_impl
 
     if backend == BackendType.TORCH_FX:
@@ -559,9 +557,8 @@ def compress_weights(
         )
 
         if mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]:
-            raise nncf.ParameterNotSupportedError(
-                "Torch backend does not support NF4 and E2M1 modes for weight compression."
-            )
+            msg = "Torch backend does not support NF4 and E2M1 modes for weight compression."
+            raise nncf.ParameterNotSupportedError(msg)
 
         options = {
             "awq": awq,
@@ -571,22 +568,22 @@ def compress_weights(
         }
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
-            raise nncf.ParameterNotSupportedError(
-                f"TorchFX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
-            )
+            msg = f"TorchFX backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
+            raise nncf.ParameterNotSupportedError(msg)
 
         if sensitivity_metric not in [None, SensitivityMetric.WEIGHT_QUANTIZATION_ERROR]:
-            raise nncf.ParameterNotSupportedError(
+            msg = (
                 "TorchFX backend only supports data-free sensitivity metric. "
                 "Set None or SensitivityMetric.WEIGHT_QUANTIZATION_ERROR."
             )
+            raise nncf.ParameterNotSupportedError(msg)
 
         if dataset:
-            raise nncf.ParameterNotSupportedError(
-                "TorchFX only supports data-free weights compression," "Set the 'dataset' option to None"
-            )
+            msg = "TorchFX only supports data-free weights compression. Set the 'dataset' option to None"
+            raise nncf.ParameterNotSupportedError(msg)
         if advanced_parameters and advanced_parameters.statistics_path:
-            raise nncf.ParameterNotSupportedError("TorchFX does not supports statistics caching.")
+            msg = "TorchFX does not supports statistics caching."
+            raise nncf.ParameterNotSupportedError(msg)
         compression_weights_impl = fx_compression_weights_impl
 
     if backend == BackendType.OPENVINO:
@@ -595,15 +592,15 @@ def compress_weights(
         if any((awq, scale_estimation, gptq, lora_correction)) and (
             dataset is None or mode == CompressWeightsMode.E2M1
         ):
-            raise nncf.ParameterNotSupportedError(
+            msg = (
                 "Scale estimation, AWQ, GPTQ or Lora Correction algorithm is defined, "
                 "but dataset is None or mode is E2M1."
             )
+            raise nncf.ParameterNotSupportedError(msg)
 
         if gptq and lora_correction:
-            raise nncf.ValidationError(
-                "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
-            )
+            msg = "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
+            raise nncf.ValidationError(msg)
 
         compression_weights_impl = ov_compress_weights_impl
     check_user_compression_configuration(
@@ -639,7 +636,8 @@ def compress_weights(
     )
 
     if compression_weights_impl is None:
-        raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
+        msg = f"Unsupported type of backend: {backend}"
+        raise nncf.UnsupportedBackendError(msg)
 
     return compression_weights_impl(
         model=model,

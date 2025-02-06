@@ -55,4 +55,5 @@ def save_file(
     fail_if_symlink(file_path)
     if isinstance(data, dict):
         return dispatch_dict(save_file, data, file_path)
-    raise NotImplementedError(f"Function `save_file` is not implemented for {type(data)}")
+    msg = f"Function `save_file` is not implemented for {type(data)}"
+    raise NotImplementedError(msg)

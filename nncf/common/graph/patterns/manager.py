@@ -52,7 +52,8 @@ class PatternsManager:
 
             registry = cast(Dict[HWFusedPatternNames, Callable[[], GraphPattern]], PT_HW_FUSED_PATTERNS.registry_dict)
             return registry
-        raise ValueError(f"Hardware-fused patterns not implemented for {backend} backend.")
+        msg = f"Hardware-fused patterns not implemented for {backend} backend."
+        raise ValueError(msg)
 
     @staticmethod
     def _get_backend_ignored_patterns_map(
@@ -82,7 +83,8 @@ class PatternsManager:
 
             registry = cast(Dict[IgnoredPatternNames, Callable[[], GraphPattern]], PT_IGNORED_PATTERNS.registry_dict)
             return registry
-        raise ValueError(f"Ignored patterns not implemented for {backend} backend.")
+        msg = f"Ignored patterns not implemented for {backend} backend."
+        raise ValueError(msg)
 
     @staticmethod
     def _filter_patterns(

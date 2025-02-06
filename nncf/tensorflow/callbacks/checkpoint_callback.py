@@ -31,7 +31,8 @@ class CheckpointManagerCallback(tf.keras.callbacks.Callback):
         self._last_batch_seen = 0
         self._batches_seen_since_last_saving = 0
         if save_freq != "epoch" and not isinstance(save_freq, int):
-            raise ValueError("Unrecognized save_freq: {}".format(save_freq))
+            msg = f"Unrecognized save_freq: {save_freq}"
+            raise ValueError(msg)
 
         self._checkpoint_manager = tf.train.CheckpointManager(checkpoint, directory, None)
         self._save_freq = save_freq

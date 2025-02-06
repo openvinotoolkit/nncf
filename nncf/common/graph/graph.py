@@ -371,14 +371,12 @@ class NNCFGraph:
         """
         edges = [e for e in self.get_input_edges(node) if e.input_port_id == port_id]
         if len(edges) == 0:
-            raise nncf.ValidationError(
-                f"Node {node.node_name} does not contain input edge connected to {port_id} port ID."
-            )
+            msg = f"Node {node.node_name} does not contain input edge connected to {port_id} port ID."
+            raise nncf.ValidationError(msg)
 
         if len(edges) > 1:
-            raise nncf.InternalError(
-                "Unsupported graph. More than one edge was found for a given node by the specified input port ID."
-            )
+            msg = "Unsupported graph. More than one edge was found for a given node by the specified input port ID."
+            raise nncf.InternalError(msg)
         return edges[0]
 
     def get_output_edges(self, node: NNCFNode) -> List[NNCFGraphEdge]:
@@ -507,7 +505,8 @@ class NNCFGraph:
                 node_id = 0
 
         if node_id in self._node_id_to_key_dict:
-            raise ValueError(f"NNCF node with id {node_id} is already in the NNCFGraph")
+            msg = f"NNCF node with id {node_id} is already in the NNCFGraph"
+            raise ValueError(msg)
 
         node_ids = self._node_name_to_node_id_map.setdefault(node_name, [])
         node_ids.append(node_id)
@@ -587,7 +586,8 @@ class NNCFGraph:
             err_reason = "cannot add edges *to* input nodes"
 
         if err_reason is not None:
-            raise ValueError(f"Cannot add edge from {from_node_key} to {to_node_key} - {err_reason}!")
+            msg = f"Cannot add edge from {from_node_key} to {to_node_key} - {err_reason}!"
+            raise ValueError(msg)
 
         attrs = {
             NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: tensor_shape,
@@ -690,9 +690,11 @@ class NNCFGraph:
     def get_node_by_name(self, name: NNCFNodeName) -> NNCFNode:
         node_ids = self._node_name_to_node_id_map.get(name, None)
         if node_ids is None:
-            raise nncf.InternalError("Could not find a node {} in NNCFGraph!".format(name))
+            msg = f"Could not find a node {name} in NNCFGraph!"
+            raise nncf.InternalError(msg)
         if len(node_ids) > 1:
-            raise nncf.InternalError(f"More than one node in NNCFGraph matches name {name}")
+            msg = f"More than one node in NNCFGraph matches name {name}"
+            raise nncf.InternalError(msg)
 
         node_key = f"{node_ids[0]} {name}"
         return self._nodes[node_key]
@@ -745,7 +747,8 @@ class NNCFGraph:
             elif to_node_key in match:
                 input_nncf_edges.append(nncf_edge)
             else:
-                raise nncf.InternalError("Invalid graph expression supplied!")
+                msg = "Invalid graph expression supplied!"
+                raise nncf.InternalError(msg)
 
         return NNCFGraphPatternIO(input_nncf_edges, output_nncf_edges)
 

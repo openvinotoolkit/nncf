@@ -113,7 +113,7 @@ def get_bitwidth_per_scope(model, all_quantizations=None):
 
 def compare_with_ref_if_exists(actual_state, path_to_ref):
     if os.path.exists(path_to_ref):
-        with open(path_to_ref, "r", encoding="utf8") as f:
+        with open(path_to_ref, encoding="utf8") as f:
             assert json.load(f) == actual_state
     else:
         with open(path_to_ref, "w", encoding="utf8") as f:
@@ -388,7 +388,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     mocked_trace.side_effect = side_effect_fn
     model, ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    path_to_dot = "{}_{}.dot".format(params.model_creator.__name__, config_builder.filename_suffix())
+    path_to_dot = f"{params.model_creator.__name__}_{config_builder.filename_suffix()}.dot"
     graph_dir = os.path.join("quantized", "hawq")
     check_bitwidth_graph(ctrl, model, path_to_dot, graph_dir, add_flops=config_builder.should_add_flops)
     if config_builder.compression_ratio:
@@ -589,7 +589,7 @@ def disable_quantizer_gradients():
 
 
 def get_path_to_bitwidth_dump(tmp_path, rank):
-    out_file_path = tmp_path / "bitwidth_per_scope_gpu{}.pt".format(rank)
+    out_file_path = tmp_path / f"bitwidth_per_scope_gpu{rank}.pt"
     return out_file_path
 
 

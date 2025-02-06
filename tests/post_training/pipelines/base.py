@@ -55,6 +55,7 @@ class BackendType(Enum):
     TORCH = "TORCH"
     CUDA_TORCH = "CUDA_TORCH"
     FX_TORCH = "FX_TORCH"
+    CUDA_FX_TORCH = "CUDA_FX_TORCH"
     ONNX = "ONNX"
     OV = "OV"
     OPTIMUM = "OPTIMUM"
@@ -63,6 +64,7 @@ class BackendType(Enum):
 NNCF_PTQ_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX, BackendType.OV]
 ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS
 PT_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH]
+FX_BACKENDS = [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH]
 OV_BACKENDS = [BackendType.OV, BackendType.OPTIMUM]
 
 LIMIT_LENGTH_OF_STATUS = 120
@@ -222,6 +224,7 @@ class BaseTestPipeline(ABC):
         reference_data: dict,
         no_eval: bool,
         run_benchmark_app: bool,
+        torch_compile_validation: bool = False,
         params: dict = None,
         batch_size: int = 1,
         memory_monitor: bool = False,
@@ -238,6 +241,7 @@ class BaseTestPipeline(ABC):
         self.memory_monitor = memory_monitor
         self.no_eval = no_eval
         self.run_benchmark_app = run_benchmark_app
+        self.torch_compile_validation = torch_compile_validation
         self.output_model_dir: Path = self.output_dir / self.reported_name / self.backend.value
         self.output_model_dir.mkdir(parents=True, exist_ok=True)
         self.model_name = f"{self.reported_name}_{self.backend.value}"
@@ -322,7 +326,8 @@ class BaseTestPipeline(ABC):
         print("Preparing...")
         self.prepare_model()
         if self.model is None:
-            raise nncf.ValidationError("self.model is None")
+            msg = "self.model is None"
+            raise nncf.ValidationError(msg)
         self.prepare_preprocessor()
         self.prepare_calibration_dataset()
 
@@ -435,11 +440,17 @@ class PTQTestPipeline(BaseTestPipeline):
             )
             self.path_compressed_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_compressed_ir)
-        elif self.backend == BackendType.FX_TORCH:
-            exported_model = torch.export.export(self.compressed_model, (self.dummy_tensor,))
+        elif self.backend in FX_BACKENDS:
+            exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
             ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor.cpu(), input=self.input_size)
+            ov_model.reshape(self.input_size)
             self.path_compressed_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_compressed_ir)
+
+            if self.backend == BackendType.CUDA_FX_TORCH:
+                self.model = self.model.cuda()
+                self.dummy_tensor = self.dummy_tensor.cuda()
+
         elif self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model.onnx"
             onnx.save(self.compressed_model, str(onnx_path))

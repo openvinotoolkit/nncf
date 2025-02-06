@@ -67,7 +67,8 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
     @property
     def name(self) -> str:
         if self._name is None:
-            raise nncf.InternalError("Internal error: name of the controller is not set!")
+            msg = "Internal error: name of the controller is not set!"
+            raise nncf.InternalError(msg)
         return self._name
 
     @property
@@ -178,7 +179,8 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
         :return: The compression state.
         """
         if self._builder_state is None:
-            raise nncf.InternalError("Internal error: builder state is not set for the controller")
+            msg = "Internal error: builder state is not set for the controller"
+            raise nncf.InternalError(msg)
 
         return {self.BUILDER_STATE: self._builder_state, self.CONTROLLER_STATE: self.get_state()}
 

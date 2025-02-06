@@ -290,7 +290,7 @@ def main_worker(current_gpu, config):
                     loss_inference=True,
                     criterion=criterion,
                 )
-                logger.info("Final model loss: {:.3f}".format(model_loss))
+                logger.info(f"Final model loss: {model_loss:.3f}")
             else:
                 mAp = test_net(val_net, config.device, test_data_loader, distributed=config.distributed)
                 if config.metrics_dump is not None:
@@ -303,7 +303,7 @@ def main_worker(current_gpu, config):
 def create_dataloaders(config):
     logger.info("Loading Dataset...")
     train_dataset = get_training_dataset(config.dataset, config.train_anno, config.train_imgs, config)
-    logger.info("Loaded {} training images".format(len(train_dataset)))
+    logger.info(f"Loaded {len(train_dataset)} training images")
     if config.distributed:
         sampler_seed = 0 if config.seed is None else config.seed
         dist_sampler_shuffle = config.seed is None
@@ -337,7 +337,7 @@ def create_dataloaders(config):
         init_data_loader = deepcopy(train_data_loader)
 
     test_dataset = get_testing_dataset(config.dataset, config.test_anno, config.test_imgs, config)
-    logger.info("Loaded {} testing images".format(len(test_dataset)))
+    logger.info(f"Loaded {len(test_dataset)} testing images")
     if config.distributed:
         test_sampler = DistributedSampler(test_dataset, config.rank, config.world_size)
     else:
@@ -415,7 +415,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
     conf_loss = 0
 
     epoch_size = len(train_data_loader)
-    logger.info("Training {} on {} dataset...".format(config.model, train_data_loader.dataset.name))
+    logger.info(f"Training {config.model} on {train_data_loader.dataset.name} dataset...")
 
     best_mAp = 0
     best_compression_stage = CompressionStage.UNCOMPRESSED
@@ -461,9 +461,9 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                 net.train()
 
         if is_on_first_rank(config):
-            logger.info("Saving state, epoch: {}".format(epoch))
+            logger.info(f"Saving state, epoch: {epoch}")
 
-            checkpoint_file_path = osp.join(config.checkpoint_save_dir, "{}_last.pth".format(get_run_name(config)))
+            checkpoint_file_path = osp.join(config.checkpoint_save_dir, f"{get_run_name(config)}_last.pth")
             torch.save(
                 {
                     MODEL_STATE_ATTR: net.state_dict(),

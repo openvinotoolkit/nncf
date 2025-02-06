@@ -48,7 +48,8 @@ class OVOpMetatype(OperatorMetatype):
             if subtype.matches(node):
                 matches.append(subtype)
         if len(matches) > 1:
-            raise nncf.InternalError("Multiple subtypes match operator call - can not determine single subtype.")
+            msg = "Multiple subtypes match operator call - can not determine single subtype."
+            raise nncf.InternalError(msg)
         if not matches:
             return None
         return matches[0]

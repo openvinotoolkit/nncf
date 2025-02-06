@@ -64,14 +64,14 @@ def test_force_cuda_build(tmp_path):
     mode = "cpu"
 
     command = Command(
-        "{} {}/extensions_build_checks.py {}".format(python_executable_with_venv, run_path, mode),
+        f"{python_executable_with_venv} {run_path}/extensions_build_checks.py {mode}",
         cwd=run_path,
         env=env_variables,
     )
     command.run()
 
     version_command = Command(
-        '{} -c "import torch; print(torch.__version__)"'.format(python_executable_with_venv),
+        f'{python_executable_with_venv} -c "import torch; print(torch.__version__)"',
         cwd=run_path,
         env=env_variables,
     )
@@ -91,7 +91,7 @@ def test_force_cuda_build(tmp_path):
     mode = "cuda"
 
     command = Command(
-        "{} {}/extensions_build_checks.py {}".format(python_executable_with_venv, run_path, mode),
+        f"{python_executable_with_venv} {run_path}/extensions_build_checks.py {mode}",
         cwd=run_path,
         env=env_variables,
     )

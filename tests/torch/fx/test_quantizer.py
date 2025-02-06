@@ -31,10 +31,10 @@ from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQu
 from torch.ao.quantization.quantizer.x86_inductor_quantizer import get_default_x86_inductor_quantization_config
 
 import nncf
-from nncf.experimental.quantization.quantizers.openvino_quantizer import OpenVINOQuantizer
-from nncf.experimental.quantization.quantizers.torch_ao_adapter import _get_edge_or_node_to_qspec
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.quantization.quantize_pt2e import quantize_pt2e
+from nncf.experimental.torch.fx.quantization.quantizer.openvino_quantizer import OpenVINOQuantizer
+from nncf.experimental.torch.fx.quantization.quantizer.torch_ao_adapter import _get_edge_or_node_to_qspec
 from tests.torch import test_models
 from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.test_compressed_graph import check_graph
@@ -229,7 +229,8 @@ def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(
             assert isinstance(actual_annotation[annotation.edge_or_node], TorchAOQuantizationSpec)
             break
     else:
-        raise RuntimeError(f"Node {unified_scale_node_names[1]} should be annotated as quantizable")
+        msg = f"Node {unified_scale_node_names[1]} should be annotated as quantizable"
+        raise RuntimeError(msg)
 
     prepared_model(example_input)
     ao_quantized_model = convert_pt2e(prepared_model)
@@ -244,4 +245,5 @@ def test_OVQuantizer_TorchAOSharedQuantizationSpec_handling(
             if nodes_visited == 2:
                 break
     else:
-        raise RuntimeError(f"Quantizers was not found for the unified scales pair {unified_scale_node_names}")
+        msg = f"Quantizers was not found for the unified scales pair {unified_scale_node_names}"
+        raise RuntimeError(msg)

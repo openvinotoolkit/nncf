@@ -17,7 +17,7 @@ from examples.common.sample_config import SampleConfig
 def configure_paths(config: SampleConfig, run_name: str):
     config.name = run_name
     d = datetime.datetime.now()
-    run_id = "{:%Y-%m-%d__%H-%M-%S}".format(d)
+    run_id = f"{d:%Y-%m-%d__%H-%M-%S}"
     log_dir = Path(config.log_dir) / run_name / run_id
     log_dir.mkdir(parents=True, exist_ok=True)
     config.log_dir = str(log_dir)

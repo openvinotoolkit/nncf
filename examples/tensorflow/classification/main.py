@@ -96,7 +96,7 @@ def get_num_classes(dataset):
     else:
         num_classes = 1000
 
-    logger.info("The sample is started with {} classes".format(num_classes))
+    logger.info(f"The sample is started with {num_classes} classes")
     return num_classes
 
 
@@ -104,17 +104,18 @@ def load_checkpoint(checkpoint, ckpt_path):
     logger.info("Load from checkpoint is enabled.")
     if tf.io.gfile.isdir(ckpt_path):
         path_to_checkpoint = tf.train.latest_checkpoint(ckpt_path)
-        logger.info("Latest checkpoint: {}".format(path_to_checkpoint))
+        logger.info(f"Latest checkpoint: {path_to_checkpoint}")
     else:
         path_to_checkpoint = ckpt_path if tf.io.gfile.exists(ckpt_path + ".index") else None
-        logger.info("Provided checkpoint: {}".format(path_to_checkpoint))
+        logger.info(f"Provided checkpoint: {path_to_checkpoint}")
 
     if not path_to_checkpoint:
         logger.info("No checkpoint detected.")
         if ckpt_path:
-            raise nncf.ValidationError(f"ckpt_path was given, but no checkpoint detected in path: {ckpt_path}")
+            msg = f"ckpt_path was given, but no checkpoint detected in path: {ckpt_path}"
+            raise nncf.ValidationError(msg)
 
-    logger.info("Checkpoint file {} found and restoring from checkpoint".format(path_to_checkpoint))
+    logger.info(f"Checkpoint file {path_to_checkpoint} found and restoring from checkpoint")
 
     status = checkpoint.restore(path_to_checkpoint)
     status.expect_partial()
@@ -284,7 +285,7 @@ def run(config):
     if "export" in config.mode:
         save_path, save_format = get_saving_parameters(config)
         export_model(compression_ctrl.strip(), save_path, save_format)
-        logger.info("Saved to {}".format(save_path))
+        logger.info(f"Saved to {save_path}")
 
 
 def export(config):
@@ -319,7 +320,7 @@ def export(config):
 
     save_path, save_format = get_saving_parameters(config)
     export_model(compression_ctrl.strip(), save_path, save_format)
-    logger.info("Saved to {}".format(save_path))
+    logger.info(f"Saved to {save_path}")
 
 
 def main(argv):

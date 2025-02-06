@@ -482,9 +482,9 @@ class LSTMSequenceModel(OVReferenceModel):
         initial_cell_state = opset.parameter([1, 1, 128], name="initial_cell_state")
         seq_len = opset.constant(np.array([2]), dtype=np.int32)
 
-        W = opset.constant(np.zeros(([1, 512, 16])), dtype=np.float32)
-        R = opset.constant(np.zeros(([1, 512, 128])), dtype=np.float32)
-        B = opset.constant(np.zeros(([1, 512])), dtype=np.float32)
+        W = opset.constant(np.zeros([1, 512, 16]), dtype=np.float32)
+        R = opset.constant(np.zeros([1, 512, 128]), dtype=np.float32)
+        B = opset.constant(np.zeros([1, 512]), dtype=np.float32)
 
         lstm = opset.lstm_sequence(
             x, initial_hidden_state, initial_cell_state, seq_len, W, R, B, 128, "FORWARD", name="LSTMSequence"
@@ -507,9 +507,9 @@ class GRUSequenceModel(OVReferenceModel):
         seq_len = opset.constant(np.array([1, 2, 3]), dtype=np.int32)
 
         scale_factor = 4 if linear_before_reset else 3
-        W = opset.constant(np.zeros(([1, 3 * hidden_size, 16])), dtype=np.float32)
-        R = opset.constant(np.zeros(([1, 3 * hidden_size, hidden_size])), dtype=np.float32)
-        B = opset.constant(np.zeros(([1, scale_factor * hidden_size])), dtype=np.float32)
+        W = opset.constant(np.zeros([1, 3 * hidden_size, 16]), dtype=np.float32)
+        R = opset.constant(np.zeros([1, 3 * hidden_size, hidden_size]), dtype=np.float32)
+        B = opset.constant(np.zeros([1, scale_factor * hidden_size]), dtype=np.float32)
 
         gru = opset.gru_sequence(
             x,
@@ -798,12 +798,12 @@ class SequentialMatmulModel(OVReferenceModel):
     """
 
     def _create_ov_model(self):
-        input_node = opset.parameter([1, 3, 3], name="Input_1")
+        input_node = opset.parameter([1, 4, 4], name="Input_1")
         main_values = [10000, 1000, 1, 10, 10000]
 
         last_node = input_node
         for i, main_value in enumerate(main_values):
-            weights_data = np.arange(0, 9).reshape(3, 3)
+            weights_data = np.arange(0, 16).reshape(4, 4)
             weights_data[-1, -1] = main_value
             current_weights = opset.constant(weights_data, dtype=np.float32, name=f"weights_{i}")
             current_node = opset.matmul(
@@ -1184,4 +1184,19 @@ class RoPEModel(OVReferenceModel):
         cos_result = opset.result(cos, name="cos_result")
 
         model = ov.Model([sin_result, cos_result], [position_ids])
+        return model
+
+
+class MatMul(OVReferenceModel):
+    def _create_ov_model(self):
+        input_node = opset.parameter([1, 4, 8], name="Input")
+
+        weights_data = np.arange(0, 16 * 8, dtype=np.float32).reshape(16, 8)
+        weights_node = opset.constant(weights_data, dtype=np.float32, name="Weights")
+
+        matmul_node = opset.matmul(input_node, weights_node, transpose_a=False, transpose_b=True, name="MatMul")
+
+        result_node = opset.result(matmul_node, name="Result")
+
+        model = ov.Model([result_node], [input_node], name="MLP_Model")
         return model
