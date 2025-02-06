@@ -94,10 +94,10 @@ def extract_bn(model: nn.Module, graph: PTNNCFGraph, node: NNCFNode) -> Extracte
     #   1 - weight: Optional[Tensor]
     #   2 - bias: Optional[Tensor]
     #   3 - running_mean: Optional[Tensor]
-    #   4 - running_var: Optional[Tensor],
-    #   5 - training: _bool,
-    #   6 - momentum: _float,
-    #   7 - eps: _float,
+    #   4 - running_var: Optional[Tensor]
+    #   5 - training: _bool
+    #   6 - momentum: _float
+    #   7 - eps: _float
     #   8 - cudnn_enabled: _bool
     # ) -> Tensor: ...
 
@@ -136,14 +136,14 @@ def extract_conv(
     :return: The extracted convolutional layer as an ExtractedFunc module.
     """
 
-    # torch.conv{1,2,3}d(
-    #   0 - input: Tensor,
-    #   1 - weight: Tensor,
-    #   2 - bias: Optional[Tensor] = None,
-    #   3 - stride: Union[Union[_int, SymInt], Sequence[Union[_int, SymInt]]] = 1,
-    #   4 - padding: str = "valid" | Union[Union[_int, SymInt],
-    #   5 - dilation: Union[Union[_int, SymInt], Sequence[Union[_int, SymInt]]] = 1,
-    #   6 - groups: Union[_int, SymInt] = 1
+    # torch.conv*d(
+    #   0 - input: Tensor
+    #   1 - weight: Tensor
+    #   2 - bias: Optional[Tensor]
+    #   3 - stride: Union[Union[_int, SymInt], Sequence[Union[_int, SymInt]]]
+    #   4 - padding: Union[Union[_int, SymInt] | str
+    #   5 - dilation: Union[Union[_int, SymInt], Sequence[Union[_int, SymInt]]]
+    #   6 - groups: Union[_int, SymInt]
     # ) -> Tensor: ...
 
     weight_node = get_const_node(input_node, 1, graph)
