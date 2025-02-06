@@ -213,8 +213,11 @@ def fixture_wc_report_data(output_dir, run_benchmark_app, pytestconfig):
 def maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size):
     if test_model_param["backend"] == BackendType.FP32 and not run_fp32_backend:
         pytest.skip("To run test for not quantized model use --fp32 argument")
-    if test_model_param["backend"] == BackendType.CUDA_TORCH and not run_torch_cuda_backend:
-        pytest.skip("To run test for CUDA_TORCH backend use --cuda argument")
+    if (
+        test_model_param["backend"] in [BackendType.CUDA_TORCH, BackendType.CUDA_FX_TORCH]
+        and not run_torch_cuda_backend
+    ):
+        pytest.skip(f"To run test for {test_model_param['backend'].value} backend use --cuda argument")
     if batch_size and batch_size > 1 and test_model_param.get("batch_size", 1) == 1:
         pytest.skip("The model does not support batch_size > 1. Please use --batch-size 1.")
     return test_model_param
