@@ -20,7 +20,6 @@ import jstyleson as json  # type: ignore[import-untyped]
 import nncf
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization import quantizers as quant
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.helpers import product_dict
@@ -158,26 +157,7 @@ class HWConfig(list[Dict[str, Any]], ABC):
         bits = quantization_subdict["bits"]
         mode = HWConfig.get_quantization_mode_from_config_value(quantization_subdict["mode"])
         is_per_channel = HWConfig.get_is_per_channel_from_config_value(quantization_subdict["granularity"])
-        signedness_to_force = None
-        if "level_low" in quantization_subdict and "level_high" in quantization_subdict:
-            signedness_to_force = False
-            if mode == QuantizationMode.SYMMETRIC:
-                if quantization_subdict["level_low"] < 0 < quantization_subdict["level_high"]:
-                    signedness_to_force = True
-                true_level_low, true_level_high = quant.calculate_symmetric_level_ranges(bits, signed=True)
-            else:
-                signedness_to_force = True
-                true_level_low, true_level_high = quant.calculate_asymmetric_level_ranges(bits)
-
-            assert (
-                quantization_subdict["level_low"] == true_level_low
-            ), "Invalid value of quantizer parameter `level_low`.\
-                         The parameter must be consistent with other parameters!"
-            assert (
-                quantization_subdict["level_high"] == true_level_high
-            ), "Invalid value of quantizer parameter `level_high`.\
-                         The parameter must be consistent with other parameters!"
-
+        signedness_to_force = quantization_subdict.get("signedness_to_force")
         narrow_range = quantization_subdict["narrow_range"]
         return QuantizerConfig(
             num_bits=bits,
