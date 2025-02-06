@@ -78,7 +78,7 @@ class TestTransformersModel(BaseTestModel):
             from transformers import CLIPVisionModel
 
             config = AutoConfig.from_pretrained(name, torchscript=True)
-            model = CLIPVisionModel._from_config(config)
+            model = CLIPVisionModel._from_config(config, attn_implementation="eager")
             preprocessor = CLIPFeatureExtractor.from_pretrained(name)
             encoded_input = preprocessor(self.image, return_tensors="pt")
             example = dict(encoded_input)
@@ -97,7 +97,7 @@ class TestTransformersModel(BaseTestModel):
             from transformers import ViTImageProcessor
 
             config = AutoConfig.from_pretrained(name, torchscript=True)
-            model = VisionEncoderDecoderModel._from_config(config)
+            model = VisionEncoderDecoderModel._from_config(config, attn_implementation="eager")
             feature_extractor = ViTImageProcessor.from_pretrained(name)
             encoded_input = feature_extractor(images=[self.image], return_tensors="pt")
 
@@ -117,7 +117,7 @@ class TestTransformersModel(BaseTestModel):
             from transformers import Wav2Vec2ForSequenceClassification
 
             config = AutoConfig.from_pretrained(name, torchscript=True)
-            model = Wav2Vec2ForSequenceClassification._from_config(config)
+            model = Wav2Vec2ForSequenceClassification._from_config(config, attn_implementation="eager")
             processor = AutoFeatureExtractor.from_pretrained(name)
             input_values = processor(torch.randn(16000).numpy(), sampling_rate=16_000, return_tensors="pt")
             example = {"input_values": input_values.input_values}
