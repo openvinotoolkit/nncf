@@ -63,6 +63,10 @@ def test_examples(
     if python_version < example_python_version:
         pytest.skip(f"The test is skipped because python >= {example_python_version} is required.")
 
+    xfail_reason = example_params.get("xfail_reason")
+    if xfail_reason:
+        pytest.xfail(f"xfail reason: {xfail_reason}")
+
     backend = example_params["backend"]
     skip_if_backend_not_selected(backend, backends_list)
     if reuse_venv:
