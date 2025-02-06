@@ -24,7 +24,7 @@ from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.dynamic_graph.layer_attributes_handlers import apply_args_defaults
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
+from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES, FX_OPERATOR_METATYPES
 
 
 class GraphConverter:
@@ -95,6 +95,7 @@ class GraphConverter:
                 # TODO(dlyakhov): get correct nodes types from this nodes as well
                 node_type = str(node.target)
             node_metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_func(node_type)
+            node_metatype = FX_OPERATOR_METATYPES.get_operator_metatype_by_func(node_type) if node_metatype == UnknownMetatype else node_metatype
         else:
             node_type = node.op
             node_metatype = UnknownMetatype

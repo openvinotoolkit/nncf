@@ -28,6 +28,7 @@ from nncf.torch.dynamic_graph.structs import NamespaceTarget
 ModuleAttributes = TypeVar("ModuleAttributes", bound=BaseLayerAttributes)
 
 PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
+FX_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 
 
 class PTOperatorMetatype(OperatorMetatype):
@@ -967,7 +968,7 @@ class PTEmbeddingMetatype(PTOperatorMetatype):
     weight_port_ids = [1]
 
 
-@PT_OPERATOR_METATYPES.register()
+@FX_OPERATOR_METATYPES.register()
 class PTAtenEmbeddingMetatype(PTOperatorMetatype):
     name = "AtenEmbeddingOp"
     module_to_function_names = {NamespaceTarget.ATEN: ["embedding"]}
