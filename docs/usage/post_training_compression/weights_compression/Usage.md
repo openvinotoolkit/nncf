@@ -676,9 +676,9 @@ Accuracy/footprint trade-off for `microsoft/Phi-3-mini-4k-instruct`:
 
 ### Additional resources
 
-- [LLM Weight Compression](https://docs.openvino.ai/2024/openvino-workflow/model-optimization-guide/weight-compression.html)
-- [Large Language Model Inference Guide](https://docs.openvino.ai/2024/learn-openvino/llm_inference_guide.html)
-- [Inference with Hugging Face and Optimum Intel](https://docs.openvino.ai/2024/learn-openvino/llm_inference_guide/llm-inference-hf.html)
+- [LLM Weight Compression](https://docs.openvino.ai/2025/openvino-workflow/model-optimization-guide/weight-compression.html)
+- [Large Language Model Inference Guide](https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-genai.html)
+- [Inference with Hugging Face and Optimum Intel](https://docs.openvino.ai/2025/openvino-workflow-generative/inference-with-optimum-intel.html)
 - [Optimum Intel documentation](https://huggingface.co/docs/optimum/intel/inference)
 - [Large Language Models Weight Compression Example](https://github.com/openvinotoolkit/nncf/blob/develop/examples/llm_compression/openvino/tiny_llama)
 - [Tuning Ratio and Group Size Example](https://github.com/openvinotoolkit/nncf/blob/develop/examples/llm_compression/openvino/tiny_llama_find_hyperparams)
