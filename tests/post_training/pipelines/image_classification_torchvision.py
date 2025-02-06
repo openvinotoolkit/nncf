@@ -30,7 +30,7 @@ def _torch_export_for_training(model: torch.nn.Module, args: Tuple[Any, ...]) ->
 
 
 def _torch_export(model: torch.nn.Module, args: Tuple[Any, ...]) -> torch.fx.GraphModule:
-    return torch.export._torch_export(model, args).module()
+    return torch.export.export_for_inference(model, args).module()
 
 
 @dataclass
