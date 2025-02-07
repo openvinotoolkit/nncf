@@ -193,6 +193,7 @@ def get_fused_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: nn.Module
     Returns the bias tensor for the node or for potential fused node.
 
     :param node: The node that corresponds to the operation with bias.
+    :param nncf_graph: The NNCF graph.
     :param model: The model that contains this operation.
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
@@ -275,7 +276,7 @@ def set_const_data_to_port_id(
     data: torch.Tensor, node: NNCFNode, port_id: int, graph: NNCFGraph, model: nn.Module
 ) -> None:
     """
-    Sets the value of a constant tensor within a specified node in an NNCFNetwork.
+    Sets the value of a constant tensor within a specified node in the target model.
 
     :param data: The tensor containing the new value to be set for the constant.
     :param node: The NNCF node representing the operation that uses the constant.
