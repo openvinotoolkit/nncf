@@ -349,7 +349,9 @@ def test_ptq_quantization(
         run_info.time_total = time.perf_counter() - start_time
         ptq_result_data[test_case_name] = run_info
         if "xfail_reason" in ptq_reference_data[test_case_name]:
-            pytest.xfail("XFAIL:" + ptq_reference_data[test_case_name]["xfail_reason"])
+            xfail_msg = f"XFAIL: {ptq_reference_data[test_case_name]['xfail_reason']} - {run_info.status}"
+            run_info.status = xfail_msg
+            pytest.xfail(xfail_msg)
         elif err_msg:
             pytest.fail(err_msg)
 
