@@ -515,12 +515,23 @@ class PTLayerNormMetatype(PTOperatorMetatype):
     name = "LayerNormOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["layer_norm"],
-        NamespaceTarget.ATEN: ["layer_norm"],
     }
     hw_config_names = [HWConfigOpName.MVN]
     subtypes = [PTModuleLayerNormMetatype]
     num_expected_input_edges = 1
     weight_port_ids = [2]
+
+
+@FX_OPERATOR_METATYPES.register()
+class PTAtenLayerNormMetatype(PTOperatorMetatype):
+    name = "LayerNormOp"
+    module_to_function_names = {
+        NamespaceTarget.ATEN: ["layer_norm"],
+    }
+    hw_config_names = [HWConfigOpName.MVN]
+    subtypes = [PTModuleLayerNormMetatype]
+    num_expected_input_edges = 1
+    weight_port_ids = [1]
 
 
 @PT_OPERATOR_METATYPES.register(is_subtype=True)
