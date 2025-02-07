@@ -201,6 +201,9 @@ def transform_fn(data_item):
 calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
 # Step 3: Run the quantization pipeline
 quantized_model = nncf.quantize(model, calibration_dataset)
+# Step 4: Remove auxiliary layers and operations added during the quantization process,
+# resulting in a clean, fully quantized model ready for deployment.
+stripped_model = nncf.strip(quantized_model)
 ```
 
 </details>
@@ -511,4 +514,4 @@ You can opt-out at any time by running the following command in the Python envir
 
 `opt_in_out --opt_out`
 
-More information available on [OpenVINO telemetry](https://docs.openvino.ai/2024/about-openvino/additional-resources/telemetry.html).
+More information available on [OpenVINO telemetry](https://docs.openvino.ai/2025/about-openvino/additional-resources/telemetry.html).

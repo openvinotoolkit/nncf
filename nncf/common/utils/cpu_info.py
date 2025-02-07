@@ -9,18 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tests.cross_fw.install.common import load_nncf_modules
+import re
 
-EXCLUDED_MODULES_PATTERNS = (
-    "nncf\\.onnx.*",
-    "nncf\\.tensorflow.*",
-    "nncf\\.torch.*",
-    "nncf\\.experimental\\.onnx.*",
-    "nncf\\.experimental\\.tensorflow.*",
-    "nncf\\.experimental\\.torch.*",
-    "^(?!nncf(?:\\.experimental)*\\.openvino.*?\\.).*?onnx_[^\\.]*",
-    "^(?!nncf(?:\\.experimental)*\\.openvino.*?\\.).*?torch_[^\\.]*",
-    "^(?!nncf(?:\\.experimental)*\\.openvino.*?\\.).*?tf_[^\\.]*",
-)
+import cpuinfo  # type: ignore
 
-load_nncf_modules(EXCLUDED_MODULES_PATTERNS)
+_IS_LNL_CPU = None
+
+
+def is_lnl_cpu() -> bool:
+    global _IS_LNL_CPU
+    if _IS_LNL_CPU is None:
+        _IS_LNL_CPU = re.search(r"Ultra \d 2\d{2}", cpuinfo.get_cpu_info()["brand_raw"]) is not None
+    return _IS_LNL_CPU

@@ -106,7 +106,7 @@ def create_compressed_model(
     warning_deprecated(
         "The 'nncf.torch.create_compressed_model' function is deprecated and will be removed in a future release.\n"
         "To perform post training quantization (PTQ) or quantization aware training (QAT),"
-        " use the new nncf.quantize() API:\n"
+        " use the nncf.quantize() API:\n"
         " - https://github.com/openvinotoolkit/nncf?tab=readme-ov-file#post-training-quantization\n"
         " - https://github.com/openvinotoolkit/nncf?tab=readme-ov-file#training-time-quantization\n"
         "Examples:\n"
@@ -180,7 +180,7 @@ def get_input_info_from_config(config: NNCFConfig) -> ModelInputInfo:
         return FillerInputInfo.from_nncf_config(config)
 
     nncf_logger.debug(
-        "Config has no 'input_info' section, trying to use dataloader output as model inputs " "for graph building."
+        "Config has no 'input_info' section, trying to use dataloader output as model inputs for graph building."
     )
     exact_info = LoaderInputInfo.from_nncf_config_dataloaders(config)
     if exact_info is not None:

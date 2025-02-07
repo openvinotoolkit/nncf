@@ -12,6 +12,8 @@ from copy import deepcopy
 from enum import Enum
 from typing import Any, Callable, TypeVar, cast
 
+from packaging import version
+
 import nncf
 from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 
@@ -185,3 +187,17 @@ def is_openvino_available() -> bool:
     :return: True if openvino package is installed, False otherwise.
     """
     return _OPENVINO_AVAILABLE
+
+
+def is_openvino_at_least(version_str: str) -> bool:
+    """
+    Check if OpenVINO version is at least the specified one.
+
+    :param version_str: The version string to compare with the installed OpenVINO version. For example "2025.1".
+    :return: True if the installed OpenVINO version is at least the specified one, False otherwise.
+    """
+    if not _OPENVINO_AVAILABLE:
+        return False
+
+    openvino_version = version.parse(openvino.__version__.split("-")[0])
+    return version.parse(version_str) <= openvino_version
