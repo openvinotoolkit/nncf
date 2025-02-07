@@ -53,6 +53,8 @@ def find_const_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> Op
     """
     if node.metatype == om.PTNoopMetatype or node.node_type in om.QUANTIZE_NODE_TYPES:
         prev_nodes = [e.from_node for e in graph.get_input_edges(node)]
+        if not prev_nodes:
+            return None
         return find_const_node_in_constant_subgraph(prev_nodes[0], graph)
     if node.metatype in CONST_NOOP_METATYPES:
         return node
