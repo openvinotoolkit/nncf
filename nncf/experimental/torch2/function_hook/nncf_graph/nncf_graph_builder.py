@@ -232,15 +232,14 @@ class GraphModelWrapper:
     to build a computational graph of the model.
     """
 
-    def __init__(self, model: nn.Module, example_input: Any, graph: Optional[PTNNCFGraph] = None) -> None:
+    def __init__(self, model: nn.Module, example_input: Any) -> None:
         """
         :param model: The PyTorch model to be wrapped.
         :param example_input: A tuple of example input for the model.
-        :param graph: The graph of the model.
         """
         self.model = model
         self.example_input = example_input
-        self.graph = graph
+        self.graph: Optional[PTNNCFGraph] = None
 
     def build_graph(self) -> PTNNCFGraph:
         """

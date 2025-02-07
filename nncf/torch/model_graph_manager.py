@@ -122,7 +122,7 @@ def get_const_data(const_node: NNCFNode, model: nn.Module) -> torch.Tensor:
     Retrieves a detached constant tensor associated with a given node.
 
     :param const_node: The node associated with const data.
-    :param model: The NNCFNetwork object.
+    :param model: The nn.Module object.
     :return: A torch.Tensor object containing the constant value.
     """
     const_name = const_node.layer_attributes.name
@@ -138,7 +138,7 @@ def get_const_data_on_port(model: nn.Module, graph: NNCFGraph, node: NNCFNode, p
     """
     Retrieves a constant tensor associated with a given node and input port in an NNCF graph.
 
-    :param model: The NNCFNetwork object.
+    :param model: The nn.Module object.
     :param graph: The NNCF graph containing the nodes.
     :param node: The node to retrieve the constant from.
     :param port_id:  The port id within the node that holds the constant.
@@ -188,7 +188,7 @@ def is_node_with_fused_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     return bias is not None
 
 
-def get_fused_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: NNCFNetwork) -> Optional[torch.Tensor]:
+def get_fused_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: nn.Module) -> Optional[torch.Tensor]:
     """
     Returns the bias tensor for the node or for potential fused node.
 
@@ -253,13 +253,13 @@ def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[int]:
     return weight_port_ids
 
 
-def set_const_data(data: torch.Tensor, const_node: NNCFNode, model: NNCFNetwork) -> None:
+def set_const_data(data: torch.Tensor, const_node: NNCFNode, model: nn.Module) -> None:
     """
     Sets the constant data associated with a specific constant node in an NNCF network model.
 
     :param data: The constant data tensor to be set.
     :param const_node: The NNCF node representing the constant data.
-    :param model: The NNCF network model.
+    :param model: The model.
     """
     const_name = const_node.layer_attributes.name
     module_name, const_attr_name = split_const_name(const_name)
@@ -272,7 +272,7 @@ def set_const_data(data: torch.Tensor, const_node: NNCFNode, model: NNCFNetwork)
 
 
 def set_const_data_to_port_id(
-    data: torch.Tensor, node: NNCFNode, port_id: int, graph: NNCFGraph, model: NNCFNetwork
+    data: torch.Tensor, node: NNCFNode, port_id: int, graph: NNCFGraph, model: nn.Module
 ) -> None:
     """
     Sets the value of a constant tensor within a specified node in an NNCFNetwork.
