@@ -327,6 +327,8 @@ def test_ptq_quantization(
         if not err_msg:
             err_msg = "Unknown exception"
         traceback.print_exc()
+        if "xfail_reason" in ptq_reference_data[test_case_name]:
+            pytest.xfail("XFAIL:" + ptq_reference_data[test_case_name]["xfail_reason"])
 
     if pipeline is not None:
         pipeline.cleanup_cache()
