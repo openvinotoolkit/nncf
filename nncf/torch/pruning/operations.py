@@ -41,6 +41,7 @@ from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.torch.graph.operator_metatypes import PTAdaptiveMaxPool2dMetatype
 from nncf.torch.graph.operator_metatypes import PTAdaptiveMaxPool3dMetatype
 from nncf.torch.graph.operator_metatypes import PTAddMetatype
+from nncf.torch.graph.operator_metatypes import PTAtenLayerNormMetatype
 from nncf.torch.graph.operator_metatypes import PTAvgPool2dMetatype
 from nncf.torch.graph.operator_metatypes import PTAvgPool3dMetatype
 from nncf.torch.graph.operator_metatypes import PTBatchNormMetatype
@@ -62,7 +63,6 @@ from nncf.torch.graph.operator_metatypes import PTHardTanhMetatype
 from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTInterpolateMetatype
 from nncf.torch.graph.operator_metatypes import PTLayerNormMetatype
-from nncf.torch.graph.operator_metatypes import PTAtenLayerNormMetatype
 from nncf.torch.graph.operator_metatypes import PTLeakyRELUMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTMatMulMetatype
