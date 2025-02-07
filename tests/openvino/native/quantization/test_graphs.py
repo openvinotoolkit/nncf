@@ -43,7 +43,7 @@ from tests.openvino.native.models import MatmulSoftmaxMatmulBlock
 from tests.openvino.native.models import RoPEModel
 from tests.openvino.native.models import ScaledDotProductAttentionModel
 from tests.openvino.native.models import get_torch_model_info
-from tests.openvino.native.quantization.test_fq_params_calculation import quantize_model
+from tests.openvino.native.quantization.test_calculation_quantizer_params import quantize_model
 
 QUANTIZED_REF_GRAPHS_DIR = Path("reference_graphs") / "quantized"
 
