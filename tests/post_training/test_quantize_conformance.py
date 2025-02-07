@@ -330,28 +330,28 @@ def test_ptq_quantization(
         if not err_msg:
             err_msg = "Unknown exception"
         traceback.print_exc()
+
+    finally:
+        if pipeline is not None:
+            pipeline.cleanup_cache()
+            run_info = pipeline.run_info
+            if err_msg:
+                run_info.status = f"{run_info.status} | {err_msg}" if run_info.status else err_msg
+
+            captured = capsys.readouterr()
+            write_logs(captured, pipeline)
+
+            if extra_columns:
+                pipeline.collect_data_from_stdout(captured.out)
+        else:
+            run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
+
+        run_info.time_total = time.perf_counter() - start_time
+        ptq_result_data[test_case_name] = run_info
         if "xfail_reason" in ptq_reference_data[test_case_name]:
             pytest.xfail("XFAIL:" + ptq_reference_data[test_case_name]["xfail_reason"])
-
-    if pipeline is not None:
-        pipeline.cleanup_cache()
-        run_info = pipeline.run_info
-        if err_msg:
-            run_info.status = f"{run_info.status} | {err_msg}" if run_info.status else err_msg
-
-        captured = capsys.readouterr()
-        write_logs(captured, pipeline)
-
-        if extra_columns:
-            pipeline.collect_data_from_stdout(captured.out)
-    else:
-        run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
-
-    run_info.time_total = time.perf_counter() - start_time
-    ptq_result_data[test_case_name] = run_info
-
-    if err_msg:
-        pytest.fail(err_msg)
+        elif err_msg:
+            pytest.fail(err_msg)
 
 
 @pytest.mark.parametrize("test_case_name", WC_TEST_CASES.keys())
