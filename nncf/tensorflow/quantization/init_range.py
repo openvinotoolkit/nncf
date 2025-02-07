@@ -75,7 +75,7 @@ class TFRangeInitParams(RangeInitParams):
                     )
                 )
         if len(matches) > 1:
-            msg = f"Location {str(node_name)} matches more than one per-layer initialization parameter " "definition!"
+            msg = f"Location {str(node_name)} matches more than one per-layer initialization parameter definition!"
             raise ValueError(msg)
         if len(matches) == 1:
             return matches[0]

@@ -220,7 +220,7 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
             qconfig_any = deepcopy(qconfig)
             qconfig_any.signedness_to_force = None
             if qconfig_any not in self.possible_qconfigs:
-                msg = "Invalid selection for a quantizer config - " "tried to select {} among [{}]".format(
+                msg = "Invalid selection for a quantizer config - tried to select {} among [{}]".format(
                     qconfig, ",".join([str(q) for q in self.possible_qconfigs])
                 )
                 raise ValueError(msg)
