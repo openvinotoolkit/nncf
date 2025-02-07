@@ -4,5 +4,5 @@ scikit-learn
 fastdownload
 onnx==1.17.0
 onnxruntime==1.19.2
-openvino==2024.6
+openvino==2025.0
 numpy<2
