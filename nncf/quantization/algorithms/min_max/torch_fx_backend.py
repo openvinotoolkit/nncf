@@ -288,6 +288,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.PTMaxMetatype,
                 om.PTSqueezeMetatype,
                 om.PTLayerNormMetatype,
+                om.PTAtenLayerNormMetatype,
                 om.PTModuleLayerNormMetatype,
                 om.PTGroupNormMetatype,
                 om.PTModuleGroupNormMetatype,

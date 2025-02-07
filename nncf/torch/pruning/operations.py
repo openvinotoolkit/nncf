@@ -62,6 +62,7 @@ from nncf.torch.graph.operator_metatypes import PTHardTanhMetatype
 from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTInterpolateMetatype
 from nncf.torch.graph.operator_metatypes import PTLayerNormMetatype
+from nncf.torch.graph.operator_metatypes import PTAtenLayerNormMetatype
 from nncf.torch.graph.operator_metatypes import PTLeakyRELUMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTMatMulMetatype
@@ -543,7 +544,7 @@ class PTGroupNormPruningOp(GroupNormPruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register("layer_norm")
 class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
-    subtypes = [PTLayerNormMetatype]
+    subtypes = [PTLayerNormMetatype, PTAtenLayerNormMetatype]
 
     @classmethod
     def input_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):

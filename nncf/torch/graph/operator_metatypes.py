@@ -1189,7 +1189,7 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
 
     :return: List of operator metatypes .
     """
-    return list(PT_OPERATOR_METATYPES.registry_dict.values())
+    return list(PT_OPERATOR_METATYPES.registry_dict.values()) + list(FX_OPERATOR_METATYPES.registry_dict.values())
 
 
 OPERATORS_WITH_WEIGHTS_METATYPES = [

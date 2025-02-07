@@ -80,6 +80,7 @@ def assign_qconfig_lists_to_modules(
         scope_overrides_dict = {}
     weight_scope_overrides_dict = scope_overrides_dict.get("weights")
     if hw_config is not None:
+        print(hw_config)
         meta_vs_qconfig_map = hw_config.get_metatype_vs_quantizer_configs_map(for_weights=True)
     for node in nodes_with_weights:
         qconfig_for_current_scope = get_scoped_quantizer_config(
