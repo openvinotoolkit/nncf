@@ -55,7 +55,7 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
         for node in nncf_graph.get_all_nodes():
             if not is_node_with_fused_bias(node, nncf_graph):
                 continue
-            bias_value = get_fused_bias_value(node, nncf_graph, model)
+            bias_value = get_fused_bias_value(node, nncf_graph, model).cpu()
             # TODO(AlexanderDokuchaev): return atol=0.0001 after fix 109189
             assert torch.all(torch.isclose(bias_value, ref_bias, atol=0.02)), f"{bias_value} != {ref_bias}"
             return
@@ -77,17 +77,3 @@ class TestTorchCudaFBCAlgorithm(TestTorchFBCAlgorithm):
     @staticmethod
     def fn_to_type(tensor):
         return torch.Tensor(tensor).cuda()
-
-    @staticmethod
-    def check_bias(model: NNCFNetwork, ref_bias: list):
-        ref_bias = torch.Tensor(ref_bias)
-        nncf_graph = NNCFGraphFactory.create(model)
-        for node in nncf_graph.get_all_nodes():
-            if not is_node_with_fused_bias(node, nncf_graph):
-                continue
-            bias_value = get_fused_bias_value(node, nncf_graph, model).cpu()
-            # TODO(AlexanderDokuchaev): return atol=0.0001 after fix 109189
-            assert torch.all(torch.isclose(bias_value, ref_bias, atol=0.02)), f"{bias_value} != {ref_bias}"
-            return
-        msg = "Not found node with bias"
-        raise ValueError(msg)

@@ -61,7 +61,6 @@ def apply_args_to_kwargs(
     :param args: The positional arguments.
     :param kwargs: The keyword arguments.
     :param indexed_args: The list of pairs of indexes and names.
-
     :return: A dictionary of keyword arguments with the applied arguments and keyword arguments.
     """
     args_dict: Dict[str, Any] = dict()
@@ -77,7 +76,6 @@ def apply_args_to_kwargs(
 def extract_bn(model: nn.Module, graph: PTNNCFGraph, node: NNCFNode) -> ExtractedFunc:
     """
     Extract batch_norm operation.
-    If source modules inhered from nn.BatchNorm1d, nn.BatchNorm2d, or nn.BatchNorm3d return torch BatchNorm module.
 
     :param model: Source model.
     :param graph: Graph of source model.

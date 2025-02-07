@@ -27,7 +27,7 @@ from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import update_fused_bias
 
-TRANSFORMATION_PAIRS = List[Tuple[Type[Any], Callable[[GraphModelWrapper, List[Any]], GraphModelWrapper]]]
+TRANSFORMATION_PAIRS = Tuple[Tuple[Type[Any], Callable[[GraphModelWrapper, List[Any]], GraphModelWrapper]], ...]
 
 
 class PT2ModelTransformer(ModelTransformer[GraphModelWrapper]):
@@ -38,10 +38,10 @@ class PT2ModelTransformer(ModelTransformer[GraphModelWrapper]):
     def __init__(self, model: GraphModelWrapper):
         super().__init__(model)
 
-        self._command_transformation_ordered_pairs: TRANSFORMATION_PAIRS = [
+        self._command_transformation_ordered_pairs: TRANSFORMATION_PAIRS = (
             (PT2InsertionCommand, self._apply_insertion_transformations),
             (PTBiasCorrectionCommand, self._apply_bias_correction_transformations),
-        ]
+        )
 
     def transform(self, transformation_layout: TransformationLayout) -> GraphModelWrapper:
         """
