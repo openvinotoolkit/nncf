@@ -15,7 +15,7 @@ from typing import Callable, Tuple
 import numpy as np
 import openvino as ov
 import pytest
-from openvino.runtime import opset13 as opset
+from openvino import opset13 as opset
 
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes

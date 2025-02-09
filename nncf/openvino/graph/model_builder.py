@@ -12,8 +12,8 @@ from collections import deque
 from typing import Dict, List, Tuple
 
 import openvino as ov
-from openvino.runtime import opset13 as opset
-from openvino.runtime.utils.node_factory import NodeFactory
+from openvino import opset13 as opset
+from openvino.utils.node_factory import NodeFactory
 
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_parameter_node_name

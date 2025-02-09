@@ -106,10 +106,10 @@ def is_onnx_model(model: Any) -> bool:
 @result_verifier
 def is_openvino_model(model: Any) -> bool:
     """
-    Returns True if the model is an instance of openvino.runtime.Model, otherwise False.
+    Returns True if the model is an instance of openvino.Model, otherwise False.
 
     :param model: A target model.
-    :return: True if the model is an instance of openvino.runtime.Model, otherwise False.
+    :return: True if the model is an instance of openvino.Model, otherwise False.
     """
     import openvino as ov  # type: ignore
 
@@ -119,10 +119,10 @@ def is_openvino_model(model: Any) -> bool:
 @result_verifier
 def is_openvino_compiled_model(model: Any) -> bool:
     """
-    Returns True if the model is an instance of openvino.runtime.CompiledModel, otherwise False.
+    Returns True if the model is an instance of openvino.CompiledModel, otherwise False.
 
     :param model: A target model.
-    :return: True if the model is an instance of openvino.runtime.CompiledModel, otherwise False.
+    :return: True if the model is an instance of openvino.CompiledModel, otherwise False.
     """
     import openvino as ov
 

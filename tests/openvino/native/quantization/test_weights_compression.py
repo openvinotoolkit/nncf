@@ -18,7 +18,7 @@ import openvino as ov
 import pandas as pd
 import pytest
 from attr import dataclass
-from openvino.runtime import opset13 as opset
+from openvino import opset13 as opset
 
 import nncf
 from nncf import CompressWeightsMode

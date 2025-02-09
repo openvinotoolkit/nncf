@@ -17,7 +17,7 @@ import pytest
 import torch
 from fastdownload import FastDownload
 from onnx import version_converter
-from openvino.runtime import Core
+from openvino import Core
 from sklearn.metrics import accuracy_score
 from torchvision import datasets
 from torchvision import transforms

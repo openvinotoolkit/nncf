@@ -30,8 +30,8 @@ import numpy as np
 import openvino as ov
 import pkg_resources
 from config import Config
-from openvino.runtime import Dimension
-from openvino.runtime import PartialShape
+from openvino import Dimension
+from openvino import PartialShape
 
 try:
     from accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator

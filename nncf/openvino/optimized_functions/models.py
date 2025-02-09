@@ -17,10 +17,10 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import openvino as ov
+from openvino import Node
+from openvino import opset13 as opset
 from openvino._pyopenvino.op import Parameter
 from openvino._pyopenvino.properties.hint import inference_precision
-from openvino.runtime import Node
-from openvino.runtime import opset13 as opset
 
 from nncf.common.utils.backend import is_openvino_at_least
 from nncf.common.utils.caching import ResultsCache
