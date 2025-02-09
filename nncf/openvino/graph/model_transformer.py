@@ -14,7 +14,7 @@ from collections import deque
 from typing import Callable, Dict, List, Tuple
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 from openvino._pyopenvino import DescriptorTensor
 from openvino.runtime import opset13 as opset
 

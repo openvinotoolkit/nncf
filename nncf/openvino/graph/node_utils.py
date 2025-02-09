@@ -12,7 +12,7 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import openvino.runtime.op as op
 import openvino.runtime.opset13 as opset
 

@@ -11,7 +11,7 @@
 from collections import deque
 from typing import Dict, List, Tuple
 
-import openvino.runtime as ov
+import openvino as ov
 from openvino.runtime import opset13 as opset
 from openvino.runtime.utils.node_factory import NodeFactory
 

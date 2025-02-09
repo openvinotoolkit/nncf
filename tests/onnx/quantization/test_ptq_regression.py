@@ -12,7 +12,7 @@ from pathlib import Path
 
 import numpy as np
 import onnx
-import openvino.runtime as ov
+import openvino as ov
 import pytest
 import torch
 from fastdownload import FastDownload
