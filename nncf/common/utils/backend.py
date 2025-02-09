@@ -111,7 +111,7 @@ def is_openvino_model(model: Any) -> bool:
     :param model: A target model.
     :return: True if the model is an instance of openvino.Model, otherwise False.
     """
-    import openvino as ov  # type: ignore
+    import openvino as ov
 
     return isinstance(model, ov.Model)
 
