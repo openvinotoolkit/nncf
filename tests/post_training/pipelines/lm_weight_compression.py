@@ -209,7 +209,7 @@ class LMWeightCompression(PTQTestPipeline):
         if self.backend == BackendType.FP32:
             return
 
-        self.path_compressed_ir = self.output_model_dir / "openvino_model.xml"
+        self.path_compressed_ir = self.output_model_dir / self.OV_MODEL_NAME
         if self.backend == BackendType.OV:
             ov.serialize(self.model, self.path_compressed_ir)
             self.model_hf._save_config(self.output_model_dir)
@@ -223,7 +223,8 @@ class LMWeightCompression(PTQTestPipeline):
             )
 
     def run_bench(self) -> None:
-        pass
+        # Does not apply to LMWeightCompression
+        return
 
     def _dump_model_fp32(self) -> None:
         """

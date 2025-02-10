@@ -93,10 +93,10 @@ class StatsFromOutput:
 
 @dataclass
 class NumCompressNodes:
-    num_fq_nodes: Optional[int] = None
-    num_int8: Optional[int] = None
-    num_int4: Optional[int] = None
-    num_sparse_activations: Optional[int] = None
+    num_fq_nodes: int = 0
+    num_int8: int = 0
+    num_int4: int = 0
+    num_sparse_activations: int = 0
 
 
 @dataclass
@@ -394,19 +394,18 @@ class PTQTestPipeline(BaseTestPipeline):
         Save compressed model to IR.
         """
         print("Saving quantized model...")
+        self.path_compressed_ir = self.output_model_dir / "model.xml"
         if self.backend == BackendType.OPTIMUM:
             self.path_compressed_ir = self.output_model_dir / "openvino_model.xml"
         elif self.backend in PT_BACKENDS:
             ov_model = ov.convert_model(
                 self.compressed_model.cpu(), example_input=self.dummy_tensor.cpu(), input=self.input_size
             )
-            self.path_compressed_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in FX_BACKENDS:
             exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
             ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor.cpu(), input=self.input_size)
             ov_model.reshape(self.input_size)
-            self.path_compressed_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_compressed_ir)
 
             if self.backend == BackendType.CUDA_FX_TORCH:
@@ -417,10 +416,8 @@ class PTQTestPipeline(BaseTestPipeline):
             onnx_path = self.output_model_dir / "model.onnx"
             onnx.save(self.compressed_model, str(onnx_path))
             ov_model = ov.convert_model(onnx_path)
-            self.path_compressed_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in OV_BACKENDS:
-            self.path_compressed_ir = self.output_model_dir / "model.xml"
             from openvino._offline_transformations import apply_moc_transformations
 
             apply_moc_transformations(self.compressed_model, cf=True)

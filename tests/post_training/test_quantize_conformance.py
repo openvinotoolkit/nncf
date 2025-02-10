@@ -481,27 +481,26 @@ def _collect_errors(err_msg: str, pipeline: BaseTestPipeline) -> List[ErrorReaso
             )
             errors.append(ErrorReport(ErrorReason.METRICS, status_msg))
 
-    num_int4_reference = reference_data.get("num_int4")
+    num_int4_reference = reference_data.get("num_int4")  # None means the check is skipped
     num_int8_reference = reference_data.get("num_int8")
+    ref_num_sparse_activations = reference_data.get("num_sparse_activations")
     num_int4_value = run_info.num_compress_nodes.num_int4
     num_int8_value = run_info.num_compress_nodes.num_int8
+    num_sparse_activations = run_info.num_compress_nodes.num_sparse_activations
 
-    if num_int4_reference != num_int4_value:
+    if num_int4_reference is not None and num_int4_reference != num_int4_value:
         status_msg = (
             f"Regression: The number of int4 ops is different than reference {num_int4_reference} != {num_int4_value}"
         )
         errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
 
-    if num_int8_reference != num_int8_value:
+    if num_int8_reference is not None and num_int8_reference != num_int8_value:
         status_msg = (
             f"Regression: The number of int8 ops is different than reference {num_int8_reference} != {num_int8_value}"
         )
         errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
 
-    ref_num_sparse_activations = reference_data.get("num_sparse_activations", 0)
-    num_sparse_activations = run_info.num_compress_nodes.num_sparse_activations
-
-    if num_sparse_activations != ref_num_sparse_activations:
+    if ref_num_sparse_activations is not None and num_sparse_activations != ref_num_sparse_activations:
         status_msg = (
             f"Regression: The number of sparse activations is {num_sparse_activations}, "
             f"which differs from reference {ref_num_sparse_activations}."
