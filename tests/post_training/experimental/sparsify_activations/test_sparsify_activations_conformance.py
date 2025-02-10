@@ -18,8 +18,7 @@ import pytest
 import yaml
 
 from tests.post_training.experimental.sparsify_activations.model_scope import SPARSIFY_ACTIVATIONS_TEST_CASES
-from tests.post_training.experimental.sparsify_activations.pipelines import SARunInfo
-from tests.post_training.pipelines.base import BackendType
+from tests.post_training.pipelines.base import RunInfo
 from tests.post_training.test_quantize_conformance import fixture_batch_size  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_data  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_extra_columns  # noqa: F401
@@ -44,7 +43,7 @@ def fixture_sparsify_activations_reference_data():
 
 @pytest.fixture(scope="session", name="sparsify_activations_result_data")
 def fixture_sparsify_activations_report_data(output_dir):
-    data: Dict[str, SARunInfo] = {}
+    data: Dict[str, RunInfo] = {}
     yield data
     if data:
         test_results = OrderedDict(sorted(data.items()))
@@ -59,7 +58,7 @@ def test_sparsify_activations(
     test_case_name: str,
     data_dir: Path,
     output_dir: Path,
-    sparsify_activations_result_data: Dict[str, SARunInfo],
+    sparsify_activations_result_data: Dict[str, RunInfo],
     no_eval: bool,
     batch_size: int,
     run_fp32_backend: bool,
@@ -69,9 +68,6 @@ def test_sparsify_activations(
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
 ):
-    fp32_model_params = {
-        tc["model_id"]: tc for tc in SPARSIFY_ACTIVATIONS_TEST_CASES.values() if tc["backend"] == BackendType.FP32
-    }
     run_pipeline(
         test_case_name,
         sparsify_activations_reference_data,
@@ -90,5 +86,4 @@ def test_sparsify_activations(
         extra_columns,
         False,  # memory_monitor is not used in SA
         None,  # use_avx2 is not used in SA
-        fp32_model_params,
     )

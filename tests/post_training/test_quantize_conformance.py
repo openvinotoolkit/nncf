@@ -178,6 +178,8 @@ def fixture_ptq_report_data(output_dir, run_benchmark_app, pytestconfig):
         if not run_benchmark_app:
             df = df.drop(columns=["FPS"])
 
+        df = df.drop(columns=["Num sparse activations"])
+
         output_dir.mkdir(parents=True, exist_ok=True)
         output_file = output_dir / "results.csv"
 
@@ -202,6 +204,7 @@ def fixture_wc_report_data(output_dir, run_benchmark_app, pytestconfig):
             df = df.drop(columns=["FPS"])
 
         df = df.drop(columns=["Num FQ"])
+        df = df.drop(columns=["Num sparse activations"])
 
         output_dir.mkdir(parents=True, exist_ok=True)
         output_file = output_dir / "results.csv"
@@ -266,7 +269,7 @@ def create_pipeline_kwargs(test_model_param, subset_size, test_case_name, refere
     print(f"PTQ params: {test_model_param['compression_params']}")
 
     # Get target fp32 metric value
-    model_name = test_case_name.split("_backend_")[0]
+    model_name = test_model_param.get("model_name", test_case_name.split("_backend_")[0])
     test_reference = reference_data[test_case_name]
     test_reference["metric_value_fp32"] = reference_data[f"{model_name}_backend_FP32"]["metric_value"]
 
@@ -297,11 +300,14 @@ def _update_status(pipeline: BaseTestPipeline, errors: List[ErrorReason]) -> Lis
     return unexpected_errors
 
 
-def _collect_errors(err_msg: str, pipeline: BaseTestPipeline) -> List[ErrorReason]:
+def _collect_errors(
+    pipeline: BaseTestPipeline,
+    exception_report: Optional[ErrorReport] = None,
+) -> List[ErrorReport]:
     errors = []
 
-    if err_msg:
-        errors.append(ErrorReport(ErrorReason.EXCEPTION, err_msg))
+    if exception_report:
+        errors.append(exception_report)
         return errors
 
     run_info = pipeline.run_info
@@ -372,9 +378,7 @@ def run_pipeline(
     memory_monitor: bool,
     use_avx2: Optional[bool] = None,
 ):
-    pipeline = None
-    err_msg = None
-    test_model_param = None
+    pipeline, exception_report, test_model_param = None, None, None
     start_time = time.perf_counter()
     if test_case_name not in reference_data:
         msg = f"{test_case_name} does not exist in 'reference_data.yaml'"
@@ -409,6 +413,7 @@ def run_pipeline(
         err_msg = str(e)
         if not err_msg:
             err_msg = "Unknown exception"
+        exception_report = ErrorReport(ErrorReason.EXCEPTION, err_msg)
         traceback.print_exc()
     finally:
         if pipeline is not None:
@@ -424,7 +429,7 @@ def run_pipeline(
             run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
         run_info.time_total = time.perf_counter() - start_time
 
-        errors = _collect_errors(err_msg, pipeline)
+        errors = _collect_errors(pipeline, exception_report)
         unexpected_errors = _update_status(pipeline, errors)
         result_data[test_case_name] = run_info
 
@@ -495,7 +500,7 @@ def test_weight_compression(
         WC_TEST_CASES,
         wc_result_data,
         output_dir,
-        None,
+        None,  # data_dir is not used in WC
         no_eval,
         batch_size,
         run_fp32_backend,

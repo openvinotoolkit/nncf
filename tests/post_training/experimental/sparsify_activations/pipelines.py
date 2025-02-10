@@ -11,7 +11,6 @@
 
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -33,10 +32,11 @@ from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
-from tests.post_training.pipelines.base import RunInfo
+from tests.post_training.pipelines.base import PTQTestPipeline
 from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
 from tests.post_training.pipelines.lm_weight_compression import LMWeightCompression
 from tests.post_training.pipelines.lm_weight_compression import WCTimeStats
+from tests.torch.experimental.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 from tests.torch.helpers import set_torch_seed
 
 
@@ -52,39 +52,10 @@ class SATimeStats(WCTimeStats):
     REGEX_PREFIX = [*WCTimeStats.REGEX_PREFIX, SparsifyActivationsAlgoBackend.CALIBRATION_TRACKING_DESC]
 
 
-class SAPipelineMixin:
+class SAPipelineMixin(PTQTestPipeline):
     """
     Common methods in the test pipeline for Sparsify Activations.
     """
-
-    def __init__(
-        self,
-        reported_name: str,
-        model_id: str,
-        backend: BackendType,
-        compression_params: dict,
-        output_dir: Path,
-        data_dir: Path,
-        reference_data: dict,
-        no_eval: bool,
-        run_benchmark_app: bool,
-        params: dict = None,
-        batch_size: int = 1,
-    ):
-        super().__init__(
-            reported_name=reported_name,
-            model_id=model_id,
-            backend=backend,
-            compression_params=compression_params,
-            output_dir=output_dir,
-            data_dir=data_dir,
-            reference_data=reference_data,
-            no_eval=no_eval,
-            run_benchmark_app=run_benchmark_app,
-            params=params,
-            batch_size=batch_size,
-        )
-        self.run_info = RunInfo(model=reported_name, backend=backend)
 
     def collect_data_from_stdout(self, stdout: str):
         stats = SATimeStats()
@@ -110,6 +81,16 @@ class SAPipelineMixin:
                 dataset=self.calibration_dataset,
                 **self.compression_params["sparsify_activations"],
             )
+
+    def get_num_compressed(self) -> None:
+        """
+
+        Get number of the FakeQuantize nodes in the compressed IR.
+        """
+        super().get_num_compressed()
+        ie = ov.Core()
+        model = ie.read_model(model=self.path_compressed_ir)
+        self.run_info.num_compress_nodes.num_sparse_activations = count_sparsifier_patterns_in_ov(model)
 
 
 class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
@@ -198,6 +179,7 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
         self.calibration_dataset = nncf.Dataset(chunks, self.get_transform_calibration_fn())
 
     def save_compressed_model(self):
+        self.path_compressed_ir = self.output_model_dir / self.OV_MODEL_NAME
         if self.backend == BackendType.CUDA_TORCH:
             self.model_hf.float()
             for module in self.model_hf.nncf.modules():

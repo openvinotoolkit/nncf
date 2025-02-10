@@ -30,7 +30,6 @@ from optimum.intel import OVQuantizer
 import nncf
 from nncf import TargetDevice
 from tests.cross_fw.shared.command import Command
-from tests.torch.experimental.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
 from tools.memory_monitor import memory_monitor_context
@@ -207,7 +206,6 @@ class RunInfo:
             "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
             "Build url": os.environ.get("BUILD_URL", ""),
         }
-
         return result
 
 
@@ -423,9 +421,9 @@ class PTQTestPipeline(BaseTestPipeline):
             apply_moc_transformations(self.compressed_model, cf=True)
             ov.serialize(self.compressed_model, str(self.path_compressed_ir))
 
-    def get_num_compressed(self, to_count_sparse_activations: bool = False) -> None:
+    def get_num_compressed(self) -> None:
         """
-        to_count_sparse_activations
+
         Get number of the FakeQuantize nodes in the compressed IR.
         """
 
@@ -449,9 +447,6 @@ class PTQTestPipeline(BaseTestPipeline):
         self.run_info.num_compress_nodes.num_int8 = num_int8
         self.run_info.num_compress_nodes.num_int4 = num_int4
         self.run_info.num_compress_nodes.num_fq_nodes = num_fq
-        self.run_info.num_compress_nodes.num_sparse_activations = (
-            0 if not to_count_sparse_activations else count_sparsifier_patterns_in_ov(model)
-        )
 
     def run_bench(self) -> None:
         """
