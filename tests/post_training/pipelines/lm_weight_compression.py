@@ -30,7 +30,7 @@ from whowhatbench import Evaluator
 import nncf
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.post_training.pipelines.base import BackendType
-from tests.post_training.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import PTQTestPipeline
 from tests.post_training.pipelines.base import StatsFromOutput
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
@@ -71,7 +71,7 @@ class WCTimeStats(StatsFromOutput):
         return dict(zip(self.STAT_NAMES, VARS))
 
 
-class LMWeightCompression(BaseTestPipeline):
+class LMWeightCompression(PTQTestPipeline):
     """Pipeline for casual language models from Hugging Face repository"""
 
     OV_MODEL_NAME = "openvino_model.xml"
@@ -209,8 +209,9 @@ class LMWeightCompression(BaseTestPipeline):
         if self.backend == BackendType.FP32:
             return
 
+        self.path_compressed_ir = self.output_model_dir / "openvino_model.xml"
         if self.backend == BackendType.OV:
-            ov.serialize(self.model, self.output_model_dir / self.OV_MODEL_NAME)
+            ov.serialize(self.model, self.path_compressed_ir)
             self.model_hf._save_config(self.output_model_dir)
         elif self.backend == BackendType.TORCH:
             export_from_model(
@@ -220,28 +221,6 @@ class LMWeightCompression(BaseTestPipeline):
                 compression_option="fp32",
                 device=self.model_hf.device,
             )
-
-    def get_num_compressed(self) -> None:
-        """
-        Get number of the i8, u8, i4, u4 ops in the compressed IR.
-        """
-        num_int8 = 0
-        num_int4 = 0
-
-        if self.backend == BackendType.TORCH:
-            model = ov.Core().read_model(self.output_model_dir / self.OV_MODEL_NAME)
-        else:
-            model = self.model
-
-        for node in model.get_ops():
-            for i in range(node.get_output_size()):
-                if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
-                    num_int8 += 1
-                if node.get_output_element_type(i).get_type_name() in ["i4", "u4", "nf4"]:
-                    num_int4 += 1
-
-        self.run_info.num_compress_nodes.num_int8 = num_int8
-        self.run_info.num_compress_nodes.num_int4 = num_int4
 
     def run_bench(self) -> None:
         pass

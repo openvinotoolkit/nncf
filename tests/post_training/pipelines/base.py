@@ -30,6 +30,7 @@ from optimum.intel import OVQuantizer
 import nncf
 from nncf import TargetDevice
 from tests.cross_fw.shared.command import Command
+from tests.torch.experimental.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
 from tools.memory_monitor import memory_monitor_context
@@ -95,6 +96,7 @@ class NumCompressNodes:
     num_fq_nodes: Optional[int] = None
     num_int8: Optional[int] = None
     num_int4: Optional[int] = None
+    num_sparse_activations: Optional[int] = None
 
 
 @dataclass
@@ -196,6 +198,7 @@ class RunInfo:
             "Num FQ": self.num_compress_nodes.num_fq_nodes,
             "Num int4": self.num_compress_nodes.num_int4,
             "Num int8": self.num_compress_nodes.num_int8,
+            "Num sparse activations": self.num_compress_nodes.num_sparse_activations,
             "Compr. time": self.format_time(self.time_compression),
             **self.stats_from_output.get_stats(),
             "Total time": self.format_time(self.time_total),
@@ -423,8 +426,9 @@ class PTQTestPipeline(BaseTestPipeline):
             apply_moc_transformations(self.compressed_model, cf=True)
             ov.serialize(self.compressed_model, str(self.path_compressed_ir))
 
-    def get_num_compressed(self) -> None:
+    def get_num_compressed(self, to_count_sparse_activations: bool = False) -> None:
         """
+        to_count_sparse_activations
         Get number of the FakeQuantize nodes in the compressed IR.
         """
 
@@ -448,6 +452,9 @@ class PTQTestPipeline(BaseTestPipeline):
         self.run_info.num_compress_nodes.num_int8 = num_int8
         self.run_info.num_compress_nodes.num_int4 = num_int4
         self.run_info.num_compress_nodes.num_fq_nodes = num_fq
+        self.run_info.num_compress_nodes.num_sparse_activations = (
+            0 if not to_count_sparse_activations else count_sparsifier_patterns_in_ov(model)
+        )
 
     def run_bench(self) -> None:
         """

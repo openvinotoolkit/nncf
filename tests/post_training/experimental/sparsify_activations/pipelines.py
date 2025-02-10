@@ -11,7 +11,6 @@
 
 
 from dataclasses import dataclass
-from dataclasses import field
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -32,15 +31,12 @@ from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl impo
 from nncf.experimental.torch.sparsify_activations.torch_backend import PTSparsifyActivationsAlgoBackend
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
-from tests.post_training.pipelines.base import LIMIT_LENGTH_OF_STATUS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
-from tests.post_training.pipelines.base import NumCompressNodes
 from tests.post_training.pipelines.base import RunInfo
 from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
 from tests.post_training.pipelines.lm_weight_compression import LMWeightCompression
 from tests.post_training.pipelines.lm_weight_compression import WCTimeStats
-from tests.torch.experimental.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 from tests.torch.helpers import set_torch_seed
 
 
@@ -54,35 +50,6 @@ class SATimeStats(WCTimeStats):
     STAT_NAMES = [*WCTimeStats.STAT_NAMES, "Activations Sparsifier calibration time"]
     VAR_NAMES = [*WCTimeStats.VAR_NAMES, "time_sparsifier_calibration"]
     REGEX_PREFIX = [*WCTimeStats.REGEX_PREFIX, SparsifyActivationsAlgoBackend.CALIBRATION_TRACKING_DESC]
-
-
-@dataclass
-class SANumCompressNodes(NumCompressNodes):
-    num_sparse_activations: Optional[int] = None
-
-
-@dataclass
-class SARunInfo(RunInfo):
-    num_compress_nodes: SANumCompressNodes = field(default_factory=SANumCompressNodes)
-
-    def get_result_dict(self):
-        return {
-            "Model": self.model,
-            "Backend": self.backend.value if self.backend else None,
-            "Metric name": self.metric_name,
-            "Metric value": self.metric_value,
-            "Metric diff": self.metric_diff,
-            "Num FQ": self.num_compress_nodes.num_fq_nodes,
-            "Num int4": self.num_compress_nodes.num_int4,
-            "Num int8": self.num_compress_nodes.num_int8,
-            "Num sparse activations": self.num_compress_nodes.num_sparse_activations,
-            "RAM MiB": self.format_memory_usage(self.compression_memory_usage),
-            "Compr. time": self.format_time(self.time_compression),
-            **self.stats_from_output.get_stats(),
-            "Total time": self.format_time(self.time_total),
-            "FPS": self.fps,
-            "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
-        }
 
 
 class SAPipelineMixin:
@@ -117,32 +84,7 @@ class SAPipelineMixin:
             params=params,
             batch_size=batch_size,
         )
-        self.run_info = SARunInfo(model=reported_name, backend=backend)
-
-    @staticmethod
-    def count_compressed_nodes_from_ir(model: ov.Model) -> SANumCompressNodes:
-        """
-        Get number of compressed nodes in the compressed IR.
-        """
-        num_fq_nodes = 0
-        num_int8 = 0
-        num_int4 = 0
-        for node in model.get_ops():
-            if node.type_info.name == "FakeQuantize":
-                num_fq_nodes += 1
-            for i in range(node.get_output_size()):
-                if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
-                    num_int8 += 1
-                if node.get_output_element_type(i).get_type_name() in ["i4", "u4", "nf4"]:
-                    num_int4 += 1
-
-        num_sparse_activations = count_sparsifier_patterns_in_ov(model)
-        return SANumCompressNodes(
-            num_fq_nodes=num_fq_nodes,
-            num_int8=num_int8,
-            num_int4=num_int4,
-            num_sparse_activations=num_sparse_activations,
-        )
+        self.run_info = RunInfo(model=reported_name, backend=backend)
 
     def collect_data_from_stdout(self, stdout: str):
         stats = SATimeStats()
@@ -267,16 +209,6 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
         else:
             super().save_compressed_model()
 
-    def get_num_compressed(self):
-        """
-        Get number of quantization ops and sparsifier ops in the compressed IR.
-        """
-        if self.backend in PT_BACKENDS:
-            model = ov.Core().read_model(self.output_model_dir / self.OV_MODEL_NAME)
-        else:
-            model = self.model
-        self.run_info.num_compress_nodes = self.count_compressed_nodes_from_ir(model)
-
     def _dump_model_fp32(self):
         if self.backend == BackendType.CUDA_TORCH:
             export_from_model(
@@ -306,10 +238,3 @@ class ImageClassificationTimmSparsifyActivations(SAPipelineMixin, ImageClassific
         subset = torch.utils.data.Subset(val_dataset, indices=indices)
         loader = torch.utils.data.DataLoader(subset, batch_size=self.batch_size, num_workers=2, shuffle=False)
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
-
-    def get_num_compressed(self):
-        """
-        Get number of quantization ops and sparsifier ops in the compressed IR.
-        """
-        model = ov.Core().read_model(model=self.path_compressed_ir)
-        self.run_info.num_compress_nodes = self.count_compressed_nodes_from_ir(model)
