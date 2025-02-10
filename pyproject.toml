@@ -116,7 +116,6 @@ exclude = [
 
 [tool.ruff.lint]
 preview = true
-ignore-init-module-imports = true
 ignore = [
     "E201", # whitespace-after-open-bracket
     "E203", # whitespace-before-punctuation
