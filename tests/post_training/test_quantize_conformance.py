@@ -179,6 +179,7 @@ def fixture_ptq_report_data(output_dir, run_benchmark_app, pytestconfig):
             df = df.drop(columns=["FPS"])
 
         df = df.drop(columns=["Num sparse activations"])
+        df = df.drop(columns=["Num int4"])
 
         output_dir.mkdir(parents=True, exist_ok=True)
         output_file = output_dir / "results.csv"
