@@ -280,6 +280,79 @@ def create_pipeline_kwargs(test_model_param, subset_size, test_case_name, refere
     }
 
 
+def _update_status(pipeline: BaseTestPipeline, errors: List[ErrorReason]) -> List[str]:
+    """ """
+    pipeline.run_info.status = ""  # Successful status
+    xfails, unexpected_errors = [], []
+    for report in errors:
+        xfail_reason = report.reason.value + XFAIL_SUFFIX
+        if xfail_reason in pipeline.reference_data:
+            xfails.append(f"XFAIL: {pipeline.reference_data[xfail_reason]} - {report.msg}")
+        else:
+            unexpected_errors.append(report.msg)
+    if xfails:
+        pipeline.run_info.status = "\n".join(xfails)
+    if unexpected_errors:
+        pipeline.run_info.status = "\n".join(unexpected_errors)
+    return unexpected_errors
+
+
+def _collect_errors(err_msg: str, pipeline: BaseTestPipeline) -> List[ErrorReason]:
+    errors = []
+
+    if err_msg:
+        errors.append(ErrorReport(ErrorReason.EXCEPTION, err_msg))
+        return errors
+
+    run_info = pipeline.run_info
+    reference_data = pipeline.reference_data
+
+    metric_value = run_info.metric_value
+    metric_reference = reference_data.get("metric_value")
+    metric_value_fp32 = reference_data.get("metric_value_fp32")
+
+    if metric_value is not None and metric_value_fp32 is not None:
+        run_info.metric_diff = round(metric_value - metric_value_fp32, 5)
+
+    if metric_value is not None and metric_reference is not None:
+        atol = reference_data.get("atol", 0.001)
+        if not np.isclose(metric_value, metric_reference, atol=atol):
+            status_msg = (
+                f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
+                if metric_value < metric_reference
+                else f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
+            )
+            errors.append(ErrorReport(ErrorReason.METRICS, status_msg))
+
+    num_int4_reference = reference_data.get("num_int4")  # None means the check is skipped
+    num_int8_reference = reference_data.get("num_int8")
+    ref_num_sparse_activations = reference_data.get("num_sparse_activations")
+    num_int4_value = run_info.num_compress_nodes.num_int4
+    num_int8_value = run_info.num_compress_nodes.num_int8
+    num_sparse_activations = run_info.num_compress_nodes.num_sparse_activations
+
+    if num_int4_reference is not None and num_int4_reference != num_int4_value:
+        status_msg = (
+            f"Regression: The number of int4 ops is different than reference {num_int4_reference} != {num_int4_value}"
+        )
+        errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+
+    if num_int8_reference is not None and num_int8_reference != num_int8_value:
+        status_msg = (
+            f"Regression: The number of int8 ops is different than reference {num_int8_reference} != {num_int8_value}"
+        )
+        errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+
+    if ref_num_sparse_activations is not None and num_sparse_activations != ref_num_sparse_activations:
+        status_msg = (
+            f"Regression: The number of sparse activations is {num_sparse_activations}, "
+            f"which differs from reference {ref_num_sparse_activations}."
+        )
+        errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+
+    return errors
+
+
 def run_pipeline(
     test_case_name: str,
     reference_data: dict,
@@ -303,34 +376,34 @@ def run_pipeline(
     err_msg = None
     test_model_param = None
     start_time = time.perf_counter()
+    if test_case_name not in reference_data:
+        msg = f"{test_case_name} does not exist in 'reference_data.yaml'"
+        raise nncf.ValidationError(msg)
+    test_model_param = test_cases[test_case_name]
+    maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
+    pipeline_cls = test_model_param["pipeline_cls"]
+    # Recalculates subset_size when subset_size is None
+    if batch_size is None:
+        batch_size = test_model_param.get("batch_size", 1)
+    if batch_size > 1 and subset_size is None:
+        subset_size = 300 // batch_size
+        print(f"Update subset_size value based on provided batch_size to {subset_size}.")
+    pipeline_kwargs = create_pipeline_kwargs(test_model_param, subset_size, test_case_name, reference_data)
+    pipeline_kwargs.update(
+        {
+            "output_dir": output_dir,
+            "data_dir": data_dir,
+            "no_eval": no_eval,
+            "run_benchmark_app": run_benchmark_app,
+            "torch_compile_validation": torch_compile_validation,
+            "batch_size": batch_size,
+            "memory_monitor": memory_monitor,
+        }
+    )
+    if use_avx2 is not None:
+        pipeline_kwargs["use_avx2"] = use_avx2
+    pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
     try:
-        if test_case_name not in reference_data:
-            msg = f"{test_case_name} does not exist in 'reference_data.yaml'"
-            raise nncf.ValidationError(msg)
-        test_model_param = test_cases[test_case_name]
-        maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
-        pipeline_cls = test_model_param["pipeline_cls"]
-        # Recalculates subset_size when subset_size is None
-        if batch_size is None:
-            batch_size = test_model_param.get("batch_size", 1)
-        if batch_size > 1 and subset_size is None:
-            subset_size = 300 // batch_size
-            print(f"Update subset_size value based on provided batch_size to {subset_size}.")
-        pipeline_kwargs = create_pipeline_kwargs(test_model_param, subset_size, test_case_name, reference_data)
-        pipeline_kwargs.update(
-            {
-                "output_dir": output_dir,
-                "data_dir": data_dir,
-                "no_eval": no_eval,
-                "run_benchmark_app": run_benchmark_app,
-                "torch_compile_validation": torch_compile_validation,
-                "batch_size": batch_size,
-                "memory_monitor": memory_monitor,
-            }
-        )
-        if use_avx2 is not None:
-            pipeline_kwargs["use_avx2"] = use_avx2
-        pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
         pipeline.run()
     except Exception as e:
         err_msg = str(e)
@@ -435,76 +508,3 @@ def test_weight_compression(
         memory_monitor,
         use_avx2,
     )
-
-
-def _update_status(pipeline: BaseTestPipeline, errors: List[ErrorReason]) -> List[str]:
-    """ """
-    pipeline.run_info.status = ""  # Successful status
-    xfails, unexpected_errors = [], []
-    for report in errors:
-        xfail_reason = report.reason.value + XFAIL_SUFFIX
-        if xfail_reason in pipeline.reference_data:
-            xfails.append(f"XFAIL: {pipeline.reference_data[xfail_reason]} - {report.msg}")
-        else:
-            unexpected_errors.append(report.msg)
-    if xfails:
-        pipeline.run_info.status = "\n".join(xfails)
-    if unexpected_errors:
-        pipeline.run_info.status = "\n".join(unexpected_errors)
-    return unexpected_errors
-
-
-def _collect_errors(err_msg: str, pipeline: BaseTestPipeline) -> List[ErrorReason]:
-    errors = []
-
-    if err_msg:
-        errors.append(ErrorReport(ErrorReason.EXCEPTION, err_msg))
-        return errors
-
-    run_info = pipeline.run_info
-    reference_data = pipeline.reference_data
-
-    metric_value = run_info.metric_value
-    metric_reference = reference_data.get("metric_value")
-    metric_value_fp32 = reference_data.get("metric_value_fp32")
-
-    if metric_value is not None and metric_value_fp32 is not None:
-        run_info.metric_diff = round(metric_value - metric_value_fp32, 5)
-
-    if metric_value is not None and metric_reference is not None:
-        atol = reference_data.get("atol", 0.001)
-        if not np.isclose(metric_value, metric_reference, atol=atol):
-            status_msg = (
-                f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
-                if metric_value < metric_reference
-                else f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
-            )
-            errors.append(ErrorReport(ErrorReason.METRICS, status_msg))
-
-    num_int4_reference = reference_data.get("num_int4")  # None means the check is skipped
-    num_int8_reference = reference_data.get("num_int8")
-    ref_num_sparse_activations = reference_data.get("num_sparse_activations")
-    num_int4_value = run_info.num_compress_nodes.num_int4
-    num_int8_value = run_info.num_compress_nodes.num_int8
-    num_sparse_activations = run_info.num_compress_nodes.num_sparse_activations
-
-    if num_int4_reference is not None and num_int4_reference != num_int4_value:
-        status_msg = (
-            f"Regression: The number of int4 ops is different than reference {num_int4_reference} != {num_int4_value}"
-        )
-        errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
-
-    if num_int8_reference is not None and num_int8_reference != num_int8_value:
-        status_msg = (
-            f"Regression: The number of int8 ops is different than reference {num_int8_reference} != {num_int8_value}"
-        )
-        errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
-
-    if ref_num_sparse_activations is not None and num_sparse_activations != ref_num_sparse_activations:
-        status_msg = (
-            f"Regression: The number of sparse activations is {num_sparse_activations}, "
-            f"which differs from reference {ref_num_sparse_activations}."
-        )
-        errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
-
-    return errors
