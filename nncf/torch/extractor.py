@@ -153,6 +153,8 @@ def extract_bn(node: NNCFNode, model: NNCFNetwork) -> Optional[Union[nn.BatchNor
     for name, _ in chain(extracted_bn.named_parameters(), extracted_bn.named_buffers()):
         setattr(extracted_bn, name, deepcopy(getattr(bn_module, name)))
     extracted_bn.eval()
+    extracted_bn.weight.requires_grad = False
+    extracted_bn.bias.requires_grad = False
     return extracted_bn
 
 
