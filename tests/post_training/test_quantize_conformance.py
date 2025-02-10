@@ -16,8 +16,9 @@ import traceback
 from collections import OrderedDict
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
+import numpy as np
 import pandas as pd
 import pytest
 import yaml
@@ -27,8 +28,11 @@ import nncf
 from tests.cross_fw.shared.openvino_version import get_openvino_version
 from tests.post_training.model_scope import PTQ_TEST_CASES
 from tests.post_training.model_scope import WC_TEST_CASES
+from tests.post_training.pipelines.base import XFAIL_SUFFIX
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import ErrorReason
+from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import RunInfo
 
 DATA_ROOT = Path(__file__).parent / "data"
@@ -276,6 +280,110 @@ def create_pipeline_kwargs(test_model_param, subset_size, test_case_name, refere
     }
 
 
+def run_pipeline(
+    test_case_name: str,
+    reference_data: dict,
+    test_cases: dict,
+    result_data: Dict[str, RunInfo],
+    output_dir: Path,
+    data_dir: Optional[Path],
+    no_eval: bool,
+    batch_size: Optional[int],
+    run_fp32_backend: bool,
+    run_torch_cuda_backend: bool,
+    subset_size: Optional[int],
+    run_benchmark_app: bool,
+    torch_compile_validation: bool,
+    capsys: pytest.CaptureFixture,
+    extra_columns: bool,
+    memory_monitor: bool,
+    use_avx2: Optional[bool] = None,
+    fp32_model_params: Optional[Dict[str, dict]] = None,
+):
+    pipeline = None
+    err_msg = None
+    test_model_param = None
+    start_time = time.perf_counter()
+    try:
+        if test_case_name not in reference_data:
+            msg = f"{test_case_name} does not exist in 'reference_data.yaml'"
+            raise nncf.ValidationError(msg)
+        test_model_param = test_cases[test_case_name]
+        maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
+        pipeline_cls = test_model_param["pipeline_cls"]
+        # Recalculates subset_size when subset_size is None
+        if batch_size is None:
+            batch_size = test_model_param.get("batch_size", 1)
+        if batch_size > 1 and subset_size is None:
+            subset_size = 300 // batch_size
+            print(f"Update subset_size value based on provided batch_size to {subset_size}.")
+        pipeline_kwargs = create_pipeline_kwargs(
+            test_model_param, subset_size, test_case_name, reference_data, fp32_model_params
+        )
+        pipeline_kwargs.update(
+            {
+                "output_dir": output_dir,
+                "data_dir": data_dir,
+                "no_eval": no_eval,
+                "run_benchmark_app": run_benchmark_app,
+                "torch_compile_validation": torch_compile_validation,
+                "batch_size": batch_size,
+                "memory_monitor": memory_monitor,
+            }
+        )
+        if use_avx2 is not None:
+            pipeline_kwargs["use_avx2"] = use_avx2
+        pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
+        pipeline.run()
+    except Exception as e:
+        err_msg = str(e)
+        if not err_msg:
+            err_msg = "Unknown exception"
+        traceback.print_exc()
+    finally:
+        if pipeline is not None:
+            pipeline.cleanup_cache()
+            run_info = pipeline.run_info
+
+            captured = capsys.readouterr()
+            write_logs(captured, pipeline)
+
+            if extra_columns:
+                pipeline.collect_data_from_stdout(captured.out)
+        else:
+            run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
+        run_info.time_total = time.perf_counter() - start_time
+
+        errors = _collect_errors(err_msg, pipeline)
+        _update_status(pipeline, errors)
+        result_data[test_case_name] = run_info
+
+        if run_info.status.startswith("XFAIL:"):
+            pytest.xfail(run_info.status)
+        if err_msg:
+            pytest.fail(err_msg)
+            batch_size = test_model_param.get("batch_size", 1)
+        if batch_size > 1 and subset_size is None:
+            subset_size = 300 // batch_size
+            print(f"Update subset_size value based on provided batch_size to {subset_size}.")
+        pipeline_kwargs = create_pipeline_kwargs(test_model_param, subset_size, test_case_name, reference_data)
+        pipeline_kwargs.update(
+            {
+                "output_dir": output_dir,
+                "data_dir": data_dir,
+                "no_eval": no_eval,
+                "run_benchmark_app": run_benchmark_app,
+                "torch_compile_validation": torch_compile_validation,
+                "batch_size": batch_size,
+                "memory_monitor": memory_monitor,
+            }
+        )
+        if use_avx2 is not None:
+            pipeline_kwargs["use_avx2"] = use_avx2
+        pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
+        pipeline.run()
+
+
 @pytest.mark.parametrize("test_case_name", PTQ_TEST_CASES.keys())
 def test_ptq_quantization(
     ptq_reference_data: dict,
@@ -294,66 +402,24 @@ def test_ptq_quantization(
     extra_columns: bool,
     memory_monitor: bool,
 ):
-    pipeline = None
-    err_msg = None
-    test_model_param = None
-    start_time = time.perf_counter()
-    try:
-        if test_case_name not in ptq_reference_data:
-            msg = f"{test_case_name} does not exist in 'reference_data.yaml'"
-            raise nncf.ValidationError(msg)
-        test_model_param = PTQ_TEST_CASES[test_case_name]
-        maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
-        pipeline_cls = test_model_param["pipeline_cls"]
-        # Recalculates subset_size when subset_size is None
-        if batch_size is None:
-            batch_size = test_model_param.get("batch_size", 1)
-        if batch_size > 1 and subset_size is None:
-            subset_size = 300 // batch_size
-            print(f"Update subset_size value based on provided batch_size to {subset_size}.")
-        pipeline_kwargs = create_pipeline_kwargs(test_model_param, subset_size, test_case_name, ptq_reference_data)
-        pipeline_kwargs.update(
-            {
-                "output_dir": output_dir,
-                "data_dir": data_dir,
-                "no_eval": no_eval,
-                "run_benchmark_app": run_benchmark_app,
-                "torch_compile_validation": torch_compile_validation,
-                "batch_size": batch_size,
-                "memory_monitor": memory_monitor,
-            }
-        )
-        pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
-        pipeline.run()
-    except Exception as e:
-        err_msg = str(e)
-        if not err_msg:
-            err_msg = "Unknown exception"
-        traceback.print_exc()
-
-    finally:
-        if pipeline is not None:
-            pipeline.cleanup_cache()
-            run_info = pipeline.run_info
-            if err_msg:
-                run_info.status = f"{run_info.status} | {err_msg}" if run_info.status else err_msg
-
-            captured = capsys.readouterr()
-            write_logs(captured, pipeline)
-
-            if extra_columns:
-                pipeline.collect_data_from_stdout(captured.out)
-        else:
-            run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
-
-        run_info.time_total = time.perf_counter() - start_time
-        ptq_result_data[test_case_name] = run_info
-        if "xfail_reason" in ptq_reference_data[test_case_name]:
-            xfail_msg = f"XFAIL: {ptq_reference_data[test_case_name]['xfail_reason']} - {run_info.status}"
-            run_info.status = xfail_msg
-            pytest.xfail(xfail_msg)
-        elif err_msg:
-            pytest.fail(err_msg)
+    run_pipeline(
+        test_case_name,
+        ptq_reference_data,
+        PTQ_TEST_CASES,
+        ptq_result_data,
+        output_dir,
+        data_dir,
+        no_eval,
+        batch_size,
+        run_fp32_backend,
+        run_torch_cuda_backend,
+        subset_size,
+        run_benchmark_app,
+        torch_compile_validation,
+        capsys,
+        extra_columns,
+        memory_monitor,
+    )
 
 
 @pytest.mark.parametrize("test_case_name", WC_TEST_CASES.keys())
@@ -373,53 +439,95 @@ def test_weight_compression(
     memory_monitor: bool,
     use_avx2: None,
 ):
-    pipeline = None
-    err_msg = None
-    test_model_param = None
-    start_time = time.perf_counter()
-    try:
-        if test_case_name not in wc_reference_data:
-            pytest.skip(f"{test_case_name} is not defined in `wc_reference_data` fixture")
-        test_model_param = WC_TEST_CASES[test_case_name]
-        maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
-        pipeline_cls = test_model_param["pipeline_cls"]
-        pipeline_kwargs = create_pipeline_kwargs(test_model_param, subset_size, test_case_name, wc_reference_data)
-        pipeline_kwargs.update(
-            {
-                "output_dir": output_dir,
-                "data_dir": None,
-                "no_eval": no_eval,
-                "run_benchmark_app": run_benchmark_app,
-                "batch_size": batch_size,
-                "memory_monitor": memory_monitor,
-            }
-        )
-        pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
-        pipeline.run()
-    except Exception as e:
-        err_msg = str(e)
-        if not err_msg:
-            err_msg = "Unknown exception"
-        traceback.print_exc()
+    run_pipeline(
+        test_case_name,
+        wc_reference_data,
+        WC_TEST_CASES,
+        wc_result_data,
+        output_dir,
+        None,
+        no_eval,
+        batch_size,
+        run_fp32_backend,
+        run_torch_cuda_backend,
+        subset_size,
+        run_benchmark_app,
+        False,  # torch_compile_validation is not used in WC
+        capsys,
+        extra_columns,
+        memory_monitor,
+        use_avx2,
+    )
 
-    if pipeline is not None:
-        pipeline.cleanup_cache()
-        run_info = pipeline.run_info
-        if err_msg:
-            run_info.status = f"{run_info.status} | {err_msg}" if run_info.status else err_msg
 
-        captured = capsys.readouterr()
-        write_logs(captured, pipeline)
+def _update_status(pipeline, errors) -> List[str]:
+    """
+    Processes a list of error reports and updates the run status.
 
-        if extra_columns:
-            pipeline.collect_data_from_stdout(captured.out)
-    else:
-        run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
+    :param errors: A list of error reports.
+    :return: A string representing the concatenated statuses of the processed errors.
+    """
+    xfails, msg_list = [], []
+    for report in errors:
+        xfail_reason = report.reason.value + XFAIL_SUFFIX
+        if xfail_reason in pipeline.reference_data:
+            xfails.append(f"XFAIL: {pipeline.reference_data[xfail_reason]} - {report.msg}")
+        else:
+            msg_list.append(report.msg)
+    if xfails:
+        pipeline.run_info.status = "\n".join(xfails)
+    if msg_list:
+        pipeline.run_info.status = "\n".join(msg_list)
+    return msg_list
 
-    run_info.time_total = time.perf_counter() - start_time
-    wc_result_data[test_case_name] = run_info
 
+def _collect_errors(err_msg, pipeline):
+    errors = []
     if err_msg:
-        pytest.fail(err_msg)
-    if run_info.status is not None and run_info.status.startswith("XFAIL:"):
-        pytest.xfail(run_info.status)
+        errors.append(ErrorReport(ErrorReason.EXCEPTION, err_msg))
+        return errors
+
+    metric_value = pipeline.run_info.metric_value
+    metric_reference = pipeline.reference_data.get("metric_value")
+    metric_value_fp32 = pipeline.reference_data.get("metric_value_fp32")
+
+    if metric_value is not None and metric_value_fp32 is not None:
+        pipeline.run_info.metric_diff = round(
+            pipeline.run_info.metric_value - pipeline.reference_data["metric_value_fp32"], 5
+        )
+
+    if (
+        metric_value is not None
+        and metric_reference is not None
+        and not np.isclose(metric_value, metric_reference, atol=pipeline.reference_data.get("atol", 0.001))
+    ):
+        status_msg = None
+        if metric_value < metric_reference:
+            status_msg = f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
+        if metric_value > metric_reference:
+            status_msg = f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
+        if status_msg:
+            errors.append(ErrorReport(ErrorReason.METRICS, status_msg))
+
+    num_int4_reference = pipeline.reference_data.get("num_int4")
+    num_int8_reference = pipeline.reference_data.get("num_int8")
+
+    num_int4_value = pipeline.run_info.num_compress_nodes.num_int4
+    num_int8_value = pipeline.run_info.num_compress_nodes.num_int8
+
+    template = "Regression: The number of int{} ops is different than reference {} != {}"
+    if num_int4_reference != num_int4_value:
+        status_msg = template.format(4, num_int4_reference, num_int4_value)
+        errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+    if num_int8_reference != num_int8_value:
+        status_msg = template.format(8, num_int8_reference, num_int8_value)
+        errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+
+    ref_num_sparse_activations = pipeline.reference_data.get("num_sparse_activations", 0)
+    num_sparse_activations = pipeline.run_info.num_compress_nodes.num_sparse_activations
+    if num_sparse_activations != ref_num_sparse_activations:
+        status_msg = f"Regression: The number of sparse activations is {num_sparse_activations}, \
+            which differs from reference {ref_num_sparse_activations}."
+        errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+
+    return errors

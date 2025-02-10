@@ -43,7 +43,6 @@ class ImageClassificationBase(PTQTestPipeline):
         references: np.ndarray,
         dataset_size: int,
     ):
-
         core = ov.Core()
         if os.environ.get("INFERENCE_NUM_THREADS"):
             # Set CPU_THREADS_NUM for OpenVINO inference
@@ -106,4 +105,3 @@ class ImageClassificationBase(PTQTestPipeline):
 
         self.run_info.metric_name = "Acc@1"
         self.run_info.metric_value = acc_top1
-        return []

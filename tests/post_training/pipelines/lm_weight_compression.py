@@ -14,7 +14,7 @@ import re
 import shutil
 import time
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 import numpy as np
 import openvino as ov
@@ -31,8 +31,6 @@ import nncf
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
-from tests.post_training.pipelines.base import ErrorReason
-from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import StatsFromOutput
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
@@ -269,8 +267,7 @@ class LMWeightCompression(BaseTestPipeline):
             **self.compression_params,
         )
 
-    def _validate(self) -> List[ErrorReport]:
-        errors = []
+    def _validate(self) -> None:
         is_stateful = self.params.get("is_stateful", False)
         core = ov.Core()
 
@@ -315,18 +312,3 @@ class LMWeightCompression(BaseTestPipeline):
         similarity = all_metrics["similarity"][0]
         self.run_info.metric_name = "Similarity"
         self.run_info.metric_value = round(similarity, 5)
-
-        num_int4_reference = self.reference_data.get("num_int4")
-        num_int8_reference = self.reference_data.get("num_int8")
-
-        num_int4_value = self.run_info.num_compress_nodes.num_int4
-        num_int8_value = self.run_info.num_compress_nodes.num_int8
-
-        template = "Regression: The number of int{} ops is different than reference {} != {}"
-        if num_int4_reference != num_int4_value:
-            status_msg = template.format(4, num_int4_reference, num_int4_value)
-            errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
-        if num_int8_reference != num_int8_value:
-            status_msg = template.format(8, num_int8_reference, num_int8_value)
-            errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
-        return errors

@@ -19,9 +19,8 @@ from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
-import numpy as np
 import onnx
 import openvino as ov
 import torch
@@ -42,6 +41,7 @@ XFAIL_SUFFIX = "_xfail_reason"
 class ErrorReason(Enum):
     METRICS = "metrics"
     NUM_COMPRESSED = "num_compressed"
+    EXCEPTION = "exception"
 
 
 @dataclass
@@ -293,31 +293,12 @@ class BaseTestPipeline(ABC):
     def run_bench(self) -> None:
         """Run a benchmark to collect performance statistics."""
 
-    def _validate(self) -> List[ErrorReport]:
+    def _validate(self) -> None:
         """
         Validates some test criteria.
         returns:
             A list of error reports generated during validation.
         """
-        return []
-
-    def _process_errors(self, errors) -> str:
-        """
-        Processes a list of error reports and updates the run status.
-
-        :param errors: A list of error reports.
-        :return: A string representing the concatenated statuses of the processed errors.
-        """
-        xfails, msg_list = [], []
-        for report in errors:
-            xfail_reason = report.reason.value + XFAIL_SUFFIX
-            if xfail_reason in self.reference_data:
-                xfails.append(f"XFAIL: {self.reference_data[xfail_reason]} - {report.msg}")
-            else:
-                msg_list.append(report.msg)
-        if msg_list:
-            raise ValueError("\n".join(msg_list))
-        self.run_info.status = "\n".join(xfails)
 
     def prepare(self):
         """
@@ -339,29 +320,7 @@ class BaseTestPipeline(ABC):
             print("Validation skipped")
             return
         print("Validation...")
-
-        errors = self._validate()
-
-        metric_value = self.run_info.metric_value
-        metric_reference = self.reference_data.get("metric_value")
-        metric_value_fp32 = self.reference_data.get("metric_value_fp32")
-
-        if metric_value is not None and metric_value_fp32 is not None:
-            self.run_info.metric_diff = round(self.run_info.metric_value - self.reference_data["metric_value_fp32"], 5)
-
-        if (
-            metric_value is not None
-            and metric_reference is not None
-            and not np.isclose(metric_value, metric_reference, atol=self.reference_data.get("atol", 0.001))
-        ):
-            status_msg = None
-            if metric_value < metric_reference:
-                status_msg = f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
-            if metric_value > metric_reference:
-                status_msg = f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
-            if status_msg:
-                errors.append(ErrorReport(ErrorReason.METRICS, status_msg))
-        self._process_errors(errors)
+        self._validate()
 
     def run(self) -> None:
         """
