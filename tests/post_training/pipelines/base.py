@@ -422,11 +422,6 @@ class PTQTestPipeline(BaseTestPipeline):
             ov.serialize(self.compressed_model, str(self.path_compressed_ir))
 
     def get_num_compressed(self) -> None:
-        """
-
-        Get number of the FakeQuantize nodes in the compressed IR.
-        """
-
         ie = ov.Core()
         model = ie.read_model(model=self.path_compressed_ir)
 

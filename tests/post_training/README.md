@@ -160,3 +160,11 @@ To mark a test as expected to fail (xfail) when a number of compression operatio
   ...
   num_compressed_xfail_reason: "Issue-<jira ticket number>"
 ```
+
+To mark a test as expected to fail (xfail) during the compression process with an exception:
+
+```yml
+<Name from model scopes>_backend_<BACKEND>:
+  ...
+  exception_xfail_reason: "Issue-<jira ticket number>"
+```

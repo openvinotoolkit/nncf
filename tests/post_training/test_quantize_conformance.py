@@ -284,7 +284,13 @@ def create_pipeline_kwargs(test_model_param, subset_size, test_case_name, refere
 
 
 def _update_status(pipeline: BaseTestPipeline, errors: List[ErrorReason]) -> List[str]:
-    """ """
+    """
+    Updates status of the pipeline based on the errors encountered during the run.
+
+    :param pipeline: The pipeline object containing run information.
+    :param errors: List of errors encountered during the run.
+    :return: List of unexpected errors.
+    """
     pipeline.run_info.status = ""  # Successful status
     xfails, unexpected_errors = [], []
     for report in errors:
@@ -304,6 +310,13 @@ def _collect_errors(
     pipeline: BaseTestPipeline,
     exception_report: Optional[ErrorReport] = None,
 ) -> List[ErrorReport]:
+    """
+    Collects errors based on the pipeline's run information and exception happened during the run.
+
+    :param pipeline: The pipeline object containing run information.
+    :param exception_report: Optional exception report.
+    :return: List of error reports.
+    """
     errors = []
 
     if exception_report:

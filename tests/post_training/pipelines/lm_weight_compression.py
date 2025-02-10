@@ -223,8 +223,7 @@ class LMWeightCompression(PTQTestPipeline):
             )
 
     def run_bench(self) -> None:
-        # Does not apply to LMWeightCompression
-        return
+        pass
 
     def _dump_model_fp32(self) -> None:
         """

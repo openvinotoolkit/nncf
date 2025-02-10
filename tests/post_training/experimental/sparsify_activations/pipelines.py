@@ -83,10 +83,6 @@ class SAPipelineMixin(PTQTestPipeline):
             )
 
     def get_num_compressed(self) -> None:
-        """
-
-        Get number of the FakeQuantize nodes in the compressed IR.
-        """
         super().get_num_compressed()
         ie = ov.Core()
         model = ie.read_model(model=self.path_compressed_ir)
