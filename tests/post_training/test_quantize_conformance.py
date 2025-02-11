@@ -173,7 +173,7 @@ def fixture_report_data(output_dir, run_benchmark_app, pytestconfig):
         test_results = OrderedDict(sorted(data.items()))
         test_results = [v.get_result_dict() for v in test_results.values()]
         # To fill columns of testcases with None if some of them are missing
-        all_columns = max(test_results, key=len)
+        all_columns = list(max(test_results, key=len).keys())
         filtered_test_results = []
         for test_result in test_results:
             new_test_result = {}
