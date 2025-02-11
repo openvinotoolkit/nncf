@@ -51,6 +51,7 @@ from nncf.common.scopes import should_consider_scope
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
+from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
 
 
 class TransitionStatus(Enum):
@@ -160,6 +161,7 @@ class QuantizationProposal:
                             final_qconfig.per_channel == initial_qconfig.per_channel
                             and final_qconfig.mode == initial_qconfig.mode
                             and final_qconfig.num_bits == initial_qconfig.num_bits
+                            and final_qconfig.narrow_range == initial_qconfig.narrow_range
                             and (
                                 final_qconfig.signedness_to_force == initial_qconfig.signedness_to_force
                                 or initial_qconfig.signedness_to_force is None
@@ -301,7 +303,13 @@ class QuantizerPropagationSolver:
     """
 
     DEFAULT_QUANTIZATION_TYPES = [
-        QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None, per_channel=False)
+        QuantizerConfig(
+            num_bits=8,
+            mode=QuantizationMode.SYMMETRIC,
+            signedness_to_force=None,
+            per_channel=False,
+            narrow_range=QUANTIZATION_NARROW_RANGE,
+        )
     ]
 
     DEFAULT_PROPAGATION_STRATEGY = QuantizerPropagationRule.MERGE_ALL_IN_ONE
@@ -1373,7 +1381,7 @@ class QuantizerPropagationSolver:
         Returns a tuple, of which the first node is the qconfig list for the quantizer to be placed
         above the branching node (i.e. that will affect all of the downward branches), and a list
         of nodes which are either None (which means that the corresponding branch quantizer has been successfully
-        merged, or qconfigs list to be set for the corresponding branch quantizer if it cannot be merged (e.g. if
+        merged), or qconfigs list to be set for the corresponding branch quantizer if it cannot be merged (e.g. if
         requantization to a lower bitwidth has to be done for this branch)
 
         :param potential_qconfigs_for_each_branch: For each branch defines the list of available configurations
@@ -1495,7 +1503,8 @@ class QuantizerPropagationSolver:
         """
         The input list should be sorted in descending order of priority. In case some qconfigs in the list have the
         same priority, this function will resolve the ambiguity in ordering these qconfigs in the final returned
-        list.
+        list. Quantization configs could not contain different narrow range parameters, so it does
+        not participate in __lt__ method of the QConfigComparator.
         """
 
         class QConfigComparator:

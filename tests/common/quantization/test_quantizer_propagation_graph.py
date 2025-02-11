@@ -986,6 +986,9 @@ class TestRedundantQuantizerMerge:
             return qpsg
 
     class NoRedundancyState0(RedundantQuantizerMergeTestStruct):
+        def __init__(self, second_quantizer_q_config: QuantizerConfig):
+            self._non_compatible_q_config = second_quantizer_q_config
+
         ref_remaining_pq_positions = {
             InsertionPointGraph.get_post_hook_node_key("2 /C_0"),
             InsertionPointGraph.get_pre_hook_node_key("5 /F_0"),
@@ -1007,7 +1010,7 @@ class TestRedundantQuantizerMerge:
                 ],
             )
             _ = qpsg.add_propagating_quantizer(
-                [QuantizerConfig(num_bits=6)], InsertionPointGraph.get_pre_hook_node_key("5 /F_0")
+                [self._non_compatible_q_config], InsertionPointGraph.get_pre_hook_node_key("5 /F_0")
             )
             return qpsg
 
@@ -1096,7 +1099,8 @@ class TestRedundantQuantizerMerge:
         BranchHandlingState0(),
         MergeState0(),
         MergeState1(),
-        NoRedundancyState0(),
+        NoRedundancyState0(QuantizerConfig(num_bits=6)),
+        NoRedundancyState0(QuantizerConfig(narrow_range=True)),
         NoRedundancyState1(),
         NoRedundancyState2(),
     ]
