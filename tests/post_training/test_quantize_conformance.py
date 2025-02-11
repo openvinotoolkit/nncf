@@ -16,9 +16,8 @@ import traceback
 from collections import OrderedDict
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
-import numpy as np
 import pandas as pd
 import pytest
 import yaml
@@ -28,7 +27,6 @@ import nncf
 from tests.cross_fw.shared.openvino_version import get_openvino_version
 from tests.post_training.model_scope import PTQ_TEST_CASES
 from tests.post_training.model_scope import WC_TEST_CASES
-from tests.post_training.pipelines.base import XFAIL_SUFFIX
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import ErrorReason
@@ -166,43 +164,25 @@ def fixture_wc_reference_data():
     return data
 
 
-@pytest.fixture(scope="session", name="ptq_result_data")
-def fixture_ptq_report_data(output_dir, run_benchmark_app, pytestconfig):
-    columns_to_drop = ["Num sparse activations", "Num int4"]
-    yield from create_fixture_report_data(output_dir, run_benchmark_app, pytestconfig, columns_to_drop)
-
-
-@pytest.fixture(scope="session", name="wc_result_data")
+@pytest.fixture(scope="session", name="result_data")
 def fixture_wc_report_data(output_dir, run_benchmark_app, pytestconfig):
-    columns_to_drop = ["Num sparse activations", "Num FQ"]
-    yield from create_fixture_report_data(output_dir, run_benchmark_app, pytestconfig, columns_to_drop)
-
-
-def create_fixture_report_data(output_dir, run_benchmark_app, pytestconfig, columns_to_drop):
     data: Dict[str, RunInfo] = {}
-
     yield data
-
     if data:
-        if not run_benchmark_app:
-            columns_to_drop.append("FPS")
-        save_results(data, columns_to_drop, output_dir, pytestconfig.getoption("forked"))
+        columns_to_drop = ["FPS"] if not run_benchmark_app else []
+        test_results = OrderedDict(sorted(data.items()))
+        df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
+        df = df.drop(columns=columns_to_drop)
 
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / "results.csv"
 
-def save_results(data, columns_to_drop, output_dir, is_forked):
-    test_results = OrderedDict(sorted(data.items()))
-    df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
-    df = df.drop(columns=columns_to_drop)
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_file = output_dir / "results.csv"
-
-    if is_forked and output_file.exists():
-        # When run test with --forked to run test in separate process
-        # Used in post_training_performance jobs
-        df.to_csv(output_file, index=False, mode="a", header=False)
-    else:
-        df.to_csv(output_file, index=False)
+        if pytestconfig.getoption("forked") and output_file.exists():
+            # When run test with --forked to run test in separate process
+            # Used in post_training_performance jobs
+            df.to_csv(output_file, index=False, mode="a", header=False)
+        else:
+            df.to_csv(output_file, index=False)
 
 
 def maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size):
@@ -271,126 +251,6 @@ def create_pipeline_kwargs(test_model_param, subset_size, test_case_name, refere
     }
 
 
-def _get_exception_type_name(report: ErrorReport) -> str:
-    return report.msg.split("|")[0].replace("Exception Type: ", "")
-
-
-def _get_exception_error_message(report: ErrorReport) -> str:
-    return report.msg.split("|")[1]
-
-
-def _are_exceptions_matched(report: ErrorReport, reference_exception: Dict[str, str]) -> bool:
-    return reference_exception["error_message"] == _get_exception_error_message(report) and reference_exception[
-        "type"
-    ] == _get_exception_type_name(report)
-
-
-def _is_error_xfailed(report: ErrorReport, xfail_reason: str, reference_data: Dict[str, Dict[str, str]]) -> bool:
-    if xfail_reason not in reference_data:
-        return False
-
-    if report.reason == ErrorReason.EXCEPTION:
-        return _are_exceptions_matched(report, reference_data[xfail_reason])
-    return True
-
-
-def _get_xfail_message(report: ErrorReport, xfail_reason: str, reference_data: Dict[str, Dict[str, str]]) -> str:
-    if report.reason == ErrorReason.EXCEPTION:
-        return f"XFAIL: {reference_data[xfail_reason]['message']} - {report.msg}"
-    return f"XFAIL: {xfail_reason} - {report.msg}"
-
-
-def _update_status(pipeline: BaseTestPipeline, error_reports: List[ErrorReport]) -> List[str]:
-    """
-    Updates status of the pipeline based on the errors encountered during the run.
-
-    :param pipeline: The pipeline object containing run information.
-    :param error_reports: List of errors encountered during the run.
-    :return: List of unexpected errors.
-    """
-    pipeline.run_info.status = ""  # Successful status
-    xfails, unexpected_errors = [], []
-
-    for report in error_reports:
-        xfail_reason = report.reason.value + XFAIL_SUFFIX
-        if _is_error_xfailed(report, xfail_reason, pipeline.reference_data):
-            xfails.append(_get_xfail_message(report, xfail_reason, pipeline.reference_data))
-        else:
-            unexpected_errors.append(report.msg)
-
-    if xfails:
-        pipeline.run_info.status = "\n".join(xfails)
-    if unexpected_errors:
-        pipeline.run_info.status = "\n".join(unexpected_errors)
-    return unexpected_errors
-
-
-def _collect_errors(
-    pipeline: BaseTestPipeline,
-    exception_report: Optional[ErrorReport] = None,
-) -> List[ErrorReport]:
-    """
-    Collects errors based on the pipeline's run information and exception happened during the run.
-
-    :param pipeline: The pipeline object containing run information.
-    :param exception_report: Optional exception report.
-    :return: List of error reports.
-    """
-    errors = []
-
-    if exception_report:
-        errors.append(exception_report)
-        return errors
-
-    run_info = pipeline.run_info
-    reference_data = pipeline.reference_data
-
-    metric_value = run_info.metric_value
-    metric_reference = reference_data.get("metric_value")
-    metric_value_fp32 = reference_data.get("metric_value_fp32")
-
-    if metric_value is not None and metric_value_fp32 is not None:
-        run_info.metric_diff = round(metric_value - metric_value_fp32, 5)
-
-    if metric_value is not None and metric_reference is not None:
-        atol = reference_data.get("atol", 0.001)
-        if not np.isclose(metric_value, metric_reference, atol=atol):
-            status_msg = (
-                f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
-                if metric_value < metric_reference
-                else f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
-            )
-            errors.append(ErrorReport(ErrorReason.METRICS, status_msg))
-
-    num_int4_reference = reference_data.get("num_int4")  # None means the check is skipped
-    num_int8_reference = reference_data.get("num_int8")
-    ref_num_sparse_activations = reference_data.get("num_sparse_activations")
-    num_int4_value = run_info.num_compress_nodes.num_int4
-    num_int8_value = run_info.num_compress_nodes.num_int8
-    num_sparse_activations = run_info.num_compress_nodes.num_sparse_activations
-
-    if num_int4_reference is not None and num_int4_reference != num_int4_value:
-        status_msg = (
-            f"Regression: The number of int4 ops is different than reference {num_int4_reference} != {num_int4_value}"
-        )
-        errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
-
-    if num_int8_reference is not None and num_int8_reference != num_int8_value:
-        status_msg = (
-            f"Regression: The number of int8 ops is different than reference {num_int8_reference} != {num_int8_value}"
-        )
-        errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
-
-    if ref_num_sparse_activations is not None and num_sparse_activations != ref_num_sparse_activations:
-        status_msg = (
-            f"Regression: The number of sparse activations is {num_sparse_activations}, "
-            f"which differs from reference {ref_num_sparse_activations}."
-        )
-        errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
-
-    return errors
-
-
 def run_pipeline(
     test_case_name: str,
     reference_data: dict,
@@ -456,10 +316,13 @@ def run_pipeline(
             run_info = create_short_run_info(test_model_param, message, test_case_name)
         run_info.time_total = time.perf_counter() - start_time
 
-        errors = _collect_errors(pipeline, exception_report)
-        unexpected_errors = _update_status(pipeline, errors)
-        result_data[test_case_name] = run_info
+        if exception_report:
+            unexpected_errors = pipeline.update_status([exception_report])
+        else:
+            errors = pipeline.collect_errors()
+            unexpected_errors = pipeline.update_status(errors)
 
+        result_data[test_case_name] = run_info
         if unexpected_errors:
             pytest.fail(run_info.status)
         if run_info.status.startswith("XFAIL:"):
@@ -472,7 +335,7 @@ def test_ptq_quantization(
     test_case_name: str,
     data_dir: Path,
     output_dir: Path,
-    ptq_result_data: Dict[str, RunInfo],
+    result_data: Dict[str, RunInfo],
     no_eval: bool,
     batch_size: Optional[int],
     run_fp32_backend: bool,
@@ -488,7 +351,7 @@ def test_ptq_quantization(
         test_case_name,
         ptq_reference_data,
         PTQ_TEST_CASES,
-        ptq_result_data,
+        result_data,
         output_dir,
         data_dir,
         no_eval,
@@ -509,7 +372,7 @@ def test_weight_compression(
     wc_reference_data: dict,
     test_case_name: str,
     output_dir: Path,
-    wc_result_data: Dict[str, RunInfo],
+    result_data: Dict[str, RunInfo],
     no_eval: bool,
     batch_size: int,
     run_fp32_backend: bool,
@@ -525,7 +388,7 @@ def test_weight_compression(
         test_case_name,
         wc_reference_data,
         WC_TEST_CASES,
-        wc_result_data,
+        result_data,
         output_dir,
         None,  # data_dir is not used in WC
         no_eval,

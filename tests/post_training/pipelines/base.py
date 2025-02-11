@@ -19,8 +19,9 @@ from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
+import numpy as np
 import onnx
 import openvino as ov
 import torch
@@ -179,7 +180,8 @@ class RunInfo:
             return None
         return int(memory)
 
-    def get_result_dict(self):
+    def get_result_dict(self) -> Dict[str, str]:
+        """Returns a dictionary with the results of the run."""
         ram_data = {}
         if self.compression_memory_usage_rss is None and self.compression_memory_usage_system is None:
             ram_data["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage)
@@ -194,10 +196,6 @@ class RunInfo:
             "Metric name": self.metric_name,
             "Metric value": self.metric_value,
             "Metric diff": self.metric_diff,
-            "Num FQ": self.num_compress_nodes.num_fq_nodes,
-            "Num int4": self.num_compress_nodes.num_int4,
-            "Num int8": self.num_compress_nodes.num_int8,
-            "Num sparse activations": self.num_compress_nodes.num_sparse_activations,
             "Compr. time": self.format_time(self.time_compression),
             **self.stats_from_output.get_stats(),
             "Total time": self.format_time(self.time_total),
@@ -206,6 +204,15 @@ class RunInfo:
             "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
             "Build url": os.environ.get("BUILD_URL", ""),
         }
+        return result
+
+
+@dataclass
+class PTQRunInfo(RunInfo):
+    def get_result_dict(self):
+        result = super().get_result_dict()
+        result["Num FQ"] = self.num_compress_nodes.num_fq_nodes
+        result["Num int8"] = self.num_compress_nodes.num_int8
         return result
 
 
@@ -286,9 +293,28 @@ class BaseTestPipeline(ABC):
     def save_compressed_model(self) -> None:
         """Save compressed model to IR."""
 
-    @abstractmethod
     def get_num_compressed(self) -> None:
         """Get number of the compressed nodes in the compressed IR."""
+        ie = ov.Core()
+        model = ie.read_model(model=self.path_compressed_ir)
+
+        num_fq = 0
+        num_int4 = 0
+        num_int8 = 0
+        for node in model.get_ops():
+            node_type = node.type_info.name
+            if node_type == "FakeQuantize":
+                num_fq += 1
+
+            for i in range(node.get_output_size()):
+                if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
+                    num_int8 += 1
+                if node.get_output_element_type(i).get_type_name() in ["i4", "u4", "nf4"]:
+                    num_int4 += 1
+
+        self.run_info.num_compress_nodes.num_int8 = num_int8
+        self.run_info.num_compress_nodes.num_int4 = num_int4
+        self.run_info.num_compress_nodes.num_fq_nodes = num_fq
 
     @abstractmethod
     def run_bench(self) -> None:
@@ -333,6 +359,61 @@ class BaseTestPipeline(ABC):
         self.get_num_compressed()
         self.validate()
         self.run_bench()
+
+    def collect_errors(self) -> List[ErrorReport]:
+        """
+        Collects errors based on the pipeline's run information.
+
+        :param pipeline: The pipeline object containing run information.
+        :return: List of error reports.
+        """
+        errors = []
+
+        run_info = self.run_info
+        reference_data = self.reference_data
+
+        metric_value = run_info.metric_value
+        metric_reference = reference_data.get("metric_value")
+        metric_value_fp32 = reference_data.get("metric_value_fp32")
+
+        if metric_value is not None and metric_value_fp32 is not None:
+            run_info.metric_diff = round(metric_value - metric_value_fp32, 5)
+
+        if metric_value is not None and metric_reference is not None:
+            atol = reference_data.get("atol", 0.001)
+            if not np.isclose(metric_value, metric_reference, atol=atol):
+                status_msg = (
+                    f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
+                    if metric_value < metric_reference
+                    else f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
+                )
+                errors.append(ErrorReport(ErrorReason.METRICS, status_msg))
+
+        return errors
+
+    def update_status(self, error_reports: List[ErrorReport]) -> List[str]:
+        """
+        Updates status of the pipeline based on the errors encountered during the run.
+
+        :param pipeline: The pipeline object containing run information.
+        :param error_reports: List of errors encountered during the run.
+        :return: List of unexpected errors.
+        """
+        self.run_info.status = ""  # Successful status
+        xfails, unexpected_errors = [], []
+
+        for report in error_reports:
+            xfail_reason = report.reason.value + XFAIL_SUFFIX
+            if _is_error_xfailed(report, xfail_reason, self.reference_data):
+                xfails.append(_get_xfail_message(report, xfail_reason, self.reference_data))
+            else:
+                unexpected_errors.append(report.msg)
+
+        if xfails:
+            self.run_info.status = "\n".join(xfails)
+        if unexpected_errors:
+            self.run_info.status = "\n".join(unexpected_errors)
+        return unexpected_errors
 
 
 class PTQTestPipeline(BaseTestPipeline):
@@ -421,28 +502,6 @@ class PTQTestPipeline(BaseTestPipeline):
             apply_moc_transformations(self.compressed_model, cf=True)
             ov.serialize(self.compressed_model, str(self.path_compressed_ir))
 
-    def get_num_compressed(self) -> None:
-        ie = ov.Core()
-        model = ie.read_model(model=self.path_compressed_ir)
-
-        num_fq = 0
-        num_int4 = 0
-        num_int8 = 0
-        for node in model.get_ops():
-            node_type = node.type_info.name
-            if node_type == "FakeQuantize":
-                num_fq += 1
-
-            for i in range(node.get_output_size()):
-                if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
-                    num_int8 += 1
-                if node.get_output_element_type(i).get_type_name() in ["i4", "u4", "nf4"]:
-                    num_int4 += 1
-
-        self.run_info.num_compress_nodes.num_int8 = num_int8
-        self.run_info.num_compress_nodes.num_int4 = num_int4
-        self.run_info.num_compress_nodes.num_fq_nodes = num_fq
-
     def run_bench(self) -> None:
         """
         Run benchmark_app to collect performance statistics.
@@ -476,3 +535,32 @@ class PTQTestPipeline(BaseTestPipeline):
         stats = PTQTimeStats()
         stats.fill(stdout)
         self.run_info.stats_from_output = stats
+
+
+def _get_exception_type_name(report: ErrorReport) -> str:
+    return report.msg.split("|")[0].replace("Exception Type: ", "")
+
+
+def _get_exception_error_message(report: ErrorReport) -> str:
+    return report.msg.split("|")[1]
+
+
+def _are_exceptions_matched(report: ErrorReport, reference_exception: Dict[str, str]) -> bool:
+    return reference_exception["error_message"] == _get_exception_error_message(report) and reference_exception[
+        "type"
+    ] == _get_exception_type_name(report)
+
+
+def _is_error_xfailed(report: ErrorReport, xfail_reason: str, reference_data: Dict[str, Dict[str, str]]) -> bool:
+    if xfail_reason not in reference_data:
+        return False
+
+    if report.reason == ErrorReason.EXCEPTION:
+        return _are_exceptions_matched(report, reference_data[xfail_reason])
+    return True
+
+
+def _get_xfail_message(report: ErrorReport, xfail_reason: str, reference_data: Dict[str, Dict[str, str]]) -> str:
+    if report.reason == ErrorReason.EXCEPTION:
+        return f"XFAIL: {reference_data[xfail_reason]['message']} - {report.msg}"
+    return f"XFAIL: {xfail_reason} - {report.msg}"

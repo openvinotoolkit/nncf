@@ -14,7 +14,8 @@ import re
 import shutil
 import time
 from dataclasses import dataclass
-from typing import Dict, Optional
+from pathlib import Path
+from typing import Dict, List, Optional
 
 import numpy as np
 import openvino as ov
@@ -30,7 +31,11 @@ from whowhatbench import Evaluator
 import nncf
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.post_training.pipelines.base import BackendType
-from tests.post_training.pipelines.base import PTQTestPipeline
+from tests.post_training.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import ErrorReason
+from tests.post_training.pipelines.base import ErrorReport
+from tests.post_training.pipelines.base import NumCompressNodes
+from tests.post_training.pipelines.base import RunInfo
 from tests.post_training.pipelines.base import StatsFromOutput
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
@@ -71,10 +76,52 @@ class WCTimeStats(StatsFromOutput):
         return dict(zip(self.STAT_NAMES, VARS))
 
 
-class LMWeightCompression(PTQTestPipeline):
+@dataclass
+class WCRunInfo(RunInfo):
+    def get_result_dict(self):
+        result = super().get_result_dict()
+        result["Num int4"] = self.num_compress_nodes.num_int4
+        result["Num int8"] = self.num_compress_nodes.num_int8
+        return result
+
+
+class LMWeightCompression(BaseTestPipeline):
     """Pipeline for casual language models from Hugging Face repository"""
 
     OV_MODEL_NAME = "openvino_model.xml"
+
+    def __init__(
+        self,
+        reported_name: str,
+        model_id: str,
+        backend: BackendType,
+        compression_params: dict,
+        output_dir: Path,
+        data_dir: Path,
+        reference_data: dict,
+        no_eval: bool,
+        run_benchmark_app: bool,
+        torch_compile_validation: bool = False,
+        params: dict = None,
+        batch_size: int = 1,
+        memory_monitor: bool = False,
+    ) -> None:
+        super().__init__(
+            reported_name,
+            model_id,
+            backend,
+            compression_params,
+            output_dir,
+            data_dir,
+            reference_data,
+            no_eval,
+            run_benchmark_app,
+            torch_compile_validation,
+            params,
+            batch_size,
+            memory_monitor,
+        )
+        self.run_info = WCRunInfo(model=reported_name, backend=self.backend, num_compress_nodes=NumCompressNodes())
 
     def prepare_model(self) -> None:
         is_stateful = self.params.get("is_stateful", False)
@@ -291,3 +338,29 @@ class LMWeightCompression(PTQTestPipeline):
         similarity = all_metrics["similarity"][0]
         self.run_info.metric_name = "Similarity"
         self.run_info.metric_value = round(similarity, 5)
+
+    def collect_errors(self) -> List[ErrorReport]:
+        errors = super().collect_errors()
+        run_info = self.run_info
+        reference_data = self.reference_data
+
+        num_int4_reference = reference_data.get("num_int4")
+        num_int8_reference = reference_data.get("num_int8")
+        num_int4_value = run_info.num_compress_nodes.num_int4
+        num_int8_value = run_info.num_compress_nodes.num_int8
+
+        if num_int4_reference is not None and num_int4_reference != num_int4_value:
+            status_msg = (
+                "Regression: The number of int4 ops is different "
+                f"than reference {num_int4_reference} != {num_int4_value}"
+            )
+            errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+
+        if num_int8_reference is not None and num_int8_reference != num_int8_value:
+            status_msg = (
+                "Regression: The number of int8 ops is different "
+                f"than reference {num_int8_reference} != {num_int8_value}"
+            )
+            errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+
+        return errors

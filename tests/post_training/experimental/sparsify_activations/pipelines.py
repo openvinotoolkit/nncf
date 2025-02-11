@@ -32,7 +32,9 @@ from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
-from tests.post_training.pipelines.base import PTQTestPipeline
+from tests.post_training.pipelines.base import ErrorReason
+from tests.post_training.pipelines.base import ErrorReport
+from tests.post_training.pipelines.base import RunInfo
 from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
 from tests.post_training.pipelines.lm_weight_compression import LMWeightCompression
 from tests.post_training.pipelines.lm_weight_compression import WCTimeStats
@@ -52,7 +54,18 @@ class SATimeStats(WCTimeStats):
     REGEX_PREFIX = [*WCTimeStats.REGEX_PREFIX, SparsifyActivationsAlgoBackend.CALIBRATION_TRACKING_DESC]
 
 
-class SAPipelineMixin(PTQTestPipeline):
+@dataclass
+class SARunInfo(RunInfo):
+    def get_result_dict(self):
+        result = super().get_result_dict()
+        result["Num FQ"] = self.num_compress_nodes.num_fq_nodes
+        result["Num int4"] = self.num_compress_nodes.num_int4
+        result["Num int8"] = self.num_compress_nodes.num_int8
+        result["Num sparse activations"] = self.num_compress_nodes.num_sparse_activations
+        return result
+
+
+class SAPipelineMixin(LMWeightCompression):
     """
     Common methods in the test pipeline for Sparsify Activations.
     """
@@ -88,8 +101,24 @@ class SAPipelineMixin(PTQTestPipeline):
         model = ie.read_model(model=self.path_compressed_ir)
         self.run_info.num_compress_nodes.num_sparse_activations = count_sparsifier_patterns_in_ov(model)
 
+    def collect_errors(self) -> List[ErrorReport]:
+        errors = super().collect_errors()
+        run_info = self.run_info
+        reference_data = self.reference_data
 
-class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
+        ref_num_sparse_activations = reference_data.get("num_sparse_activations")
+        num_sparse_activations = run_info.num_compress_nodes.num_sparse_activations
+
+        if ref_num_sparse_activations is not None and num_sparse_activations != ref_num_sparse_activations:
+            status_msg = (
+                f"Regression: The number of sparse activations is {num_sparse_activations}, "
+                f"which differs from reference {ref_num_sparse_activations}."
+            )
+            errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+        return errors
+
+
+class LMSparsifyActivations(SAPipelineMixin):
     DEFAULT_SUBSET_SIZE = 32
 
     def prepare_model(self):
