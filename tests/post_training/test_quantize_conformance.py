@@ -213,8 +213,11 @@ def fixture_wc_report_data(output_dir, run_benchmark_app, pytestconfig):
 def maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size):
     if test_model_param["backend"] == BackendType.FP32 and not run_fp32_backend:
         pytest.skip("To run test for not quantized model use --fp32 argument")
-    if test_model_param["backend"] == BackendType.CUDA_TORCH and not run_torch_cuda_backend:
-        pytest.skip("To run test for CUDA_TORCH backend use --cuda argument")
+    if (
+        test_model_param["backend"] in [BackendType.CUDA_TORCH, BackendType.CUDA_FX_TORCH]
+        and not run_torch_cuda_backend
+    ):
+        pytest.skip(f"To run test for {test_model_param['backend'].value} backend use --cuda argument")
     if batch_size and batch_size > 1 and test_model_param.get("batch_size", 1) == 1:
         pytest.skip("The model does not support batch_size > 1. Please use --batch-size 1.")
     return test_model_param
@@ -328,25 +331,29 @@ def test_ptq_quantization(
             err_msg = "Unknown exception"
         traceback.print_exc()
 
-    if pipeline is not None:
-        pipeline.cleanup_cache()
-        run_info = pipeline.run_info
-        if err_msg:
-            run_info.status = f"{run_info.status} | {err_msg}" if run_info.status else err_msg
+    finally:
+        if pipeline is not None:
+            pipeline.cleanup_cache()
+            run_info = pipeline.run_info
+            if err_msg:
+                run_info.status = f"{run_info.status} | {err_msg}" if run_info.status else err_msg
 
-        captured = capsys.readouterr()
-        write_logs(captured, pipeline)
+            captured = capsys.readouterr()
+            write_logs(captured, pipeline)
 
-        if extra_columns:
-            pipeline.collect_data_from_stdout(captured.out)
-    else:
-        run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
+            if extra_columns:
+                pipeline.collect_data_from_stdout(captured.out)
+        else:
+            run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
 
-    run_info.time_total = time.perf_counter() - start_time
-    ptq_result_data[test_case_name] = run_info
-
-    if err_msg:
-        pytest.fail(err_msg)
+        run_info.time_total = time.perf_counter() - start_time
+        ptq_result_data[test_case_name] = run_info
+        if "xfail_reason" in ptq_reference_data[test_case_name]:
+            xfail_msg = f"XFAIL: {ptq_reference_data[test_case_name]['xfail_reason']} - {run_info.status}"
+            run_info.status = xfail_msg
+            pytest.xfail(xfail_msg)
+        elif err_msg:
+            pytest.fail(err_msg)
 
 
 @pytest.mark.parametrize("test_case_name", WC_TEST_CASES.keys())

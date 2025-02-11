@@ -77,7 +77,6 @@ def main():
         scale_estimation=True,
     )
 
-    # Verify the model output in comparison to floating-point one
     input_ids = tokenizer("What is Python? ", return_tensors="pt").to(device=hf_model.device)
     max_new_tokens = 100
 

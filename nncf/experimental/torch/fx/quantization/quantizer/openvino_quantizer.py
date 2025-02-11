@@ -154,6 +154,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         for node, annotation in node_vs_torch_annotation.items():
             assert QUANT_ANNOTATION_KEY not in node.meta
             node.meta[QUANT_ANNOTATION_KEY] = annotation
+        return model
 
     @staticmethod
     def _get_unified_scales_root_quantizer_id(
