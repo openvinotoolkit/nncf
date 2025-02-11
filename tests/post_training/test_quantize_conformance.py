@@ -377,7 +377,6 @@ def run_pipeline(
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
     memory_monitor: bool,
-    use_avx2: Optional[bool] = None,
 ):
     pipeline, exception_report, test_model_param = None, None, None
     start_time = time.perf_counter()
@@ -405,8 +404,6 @@ def run_pipeline(
             "memory_monitor": memory_monitor,
         }
     )
-    if use_avx2 is not None:
-        pipeline_kwargs["use_avx2"] = use_avx2
     pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
     try:
         pipeline.run()
@@ -512,5 +509,4 @@ def test_weight_compression(
         capsys,
         extra_columns,
         memory_monitor,
-        use_avx2,
     )

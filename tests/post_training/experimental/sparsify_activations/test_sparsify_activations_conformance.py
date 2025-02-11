@@ -78,5 +78,4 @@ def test_sparsify_activations(
         capsys,
         extra_columns,
         False,  # memory_monitor is not used in SA
-        None,  # use_avx2 is not used in SA
     )
