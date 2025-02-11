@@ -34,7 +34,7 @@ from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import ErrorReason
 from tests.post_training.pipelines.base import ErrorReport
-from tests.post_training.pipelines.base import RunInfo
+from tests.post_training.pipelines.base import get_num_fq_int4_int8
 from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
 from tests.post_training.pipelines.lm_weight_compression import LMWeightCompression
 from tests.post_training.pipelines.lm_weight_compression import WCTimeStats
@@ -52,17 +52,6 @@ class SATimeStats(WCTimeStats):
     STAT_NAMES = [*WCTimeStats.STAT_NAMES, "Activations Sparsifier calibration time"]
     VAR_NAMES = [*WCTimeStats.VAR_NAMES, "time_sparsifier_calibration"]
     REGEX_PREFIX = [*WCTimeStats.REGEX_PREFIX, SparsifyActivationsAlgoBackend.CALIBRATION_TRACKING_DESC]
-
-
-@dataclass
-class SARunInfo(RunInfo):
-    def get_result_dict(self):
-        result = super().get_result_dict()
-        result["Num FQ"] = self.num_compress_nodes.num_fq_nodes
-        result["Num int4"] = self.num_compress_nodes.num_int4
-        result["Num int8"] = self.num_compress_nodes.num_int8
-        result["Num sparse activations"] = self.num_compress_nodes.num_sparse_activations
-        return result
 
 
 class SAPipelineMixin(LMWeightCompression):
@@ -96,10 +85,14 @@ class SAPipelineMixin(LMWeightCompression):
             )
 
     def get_num_compressed(self) -> None:
-        super().get_num_compressed()
         ie = ov.Core()
         model = ie.read_model(model=self.path_compressed_ir)
-        self.run_info.num_compress_nodes.num_sparse_activations = count_sparsifier_patterns_in_ov(model)
+        num_fq, num_int4, num_int8 = get_num_fq_int4_int8(model)
+        num_sparse_activations = count_sparsifier_patterns_in_ov(model)
+        self.run_info.num_compress_nodes.num_fq_nodes = num_fq
+        self.run_info.num_compress_nodes.num_int8 = num_int8
+        self.run_info.num_compress_nodes.num_int4 = num_int4
+        self.run_info.num_compress_nodes.num_sparse_activations = num_sparse_activations
 
     def collect_errors(self) -> List[ErrorReport]:
         errors = super().collect_errors()

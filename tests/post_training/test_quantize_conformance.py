@@ -165,7 +165,7 @@ def fixture_wc_reference_data():
 
 
 @pytest.fixture(scope="session", name="result_data")
-def fixture_wc_report_data(output_dir, run_benchmark_app, pytestconfig):
+def fixture_report_data(output_dir, run_benchmark_app, pytestconfig):
     data: Dict[str, RunInfo] = {}
     yield data
     if data:

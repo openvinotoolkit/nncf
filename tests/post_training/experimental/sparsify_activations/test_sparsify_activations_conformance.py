@@ -16,13 +16,13 @@ import pytest
 import yaml
 
 from tests.post_training.experimental.sparsify_activations.model_scope import SPARSIFY_ACTIVATIONS_TEST_CASES
-from tests.post_training.pipelines.base import RunInfo
-from tests.post_training.test_quantize_conformance import create_fixture_report_data
+from tests.post_training.experimental.sparsify_activations.pipelines import SARunInfo
 from tests.post_training.test_quantize_conformance import fixture_batch_size  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_data  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_extra_columns  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_no_eval  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_output  # noqa: F401
+from tests.post_training.test_quantize_conformance import fixture_report_data  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_run_benchmark_app  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_run_fp32_backend  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_run_torch_cuda_backend  # noqa: F401
@@ -40,18 +40,13 @@ def fixture_sparsify_activations_reference_data():
     return data
 
 
-@pytest.fixture(scope="session", name="sparsify_activations_result_data")
-def fixture_sparsify_activations_report_data(output_dir, pytestconfig):
-    yield from create_fixture_report_data(output_dir, False, pytestconfig, [])
-
-
 @pytest.mark.parametrize("test_case_name", SPARSIFY_ACTIVATIONS_TEST_CASES.keys())
 def test_sparsify_activations(
     sparsify_activations_reference_data: dict,
     test_case_name: str,
     data_dir: Path,
     output_dir: Path,
-    sparsify_activations_result_data: Dict[str, RunInfo],
+    result_data: Dict[str, SARunInfo],
     no_eval: bool,
     batch_size: int,
     run_fp32_backend: bool,
@@ -65,7 +60,7 @@ def test_sparsify_activations(
         test_case_name,
         sparsify_activations_reference_data,
         SPARSIFY_ACTIVATIONS_TEST_CASES,
-        sparsify_activations_result_data,
+        result_data,
         output_dir,
         data_dir,
         no_eval,

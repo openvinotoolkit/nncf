@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import onnx
@@ -93,10 +93,22 @@ class StatsFromOutput:
 
 @dataclass
 class NumCompressNodes:
-    num_fq_nodes: int = 0
-    num_int8: int = 0
-    num_int4: int = 0
-    num_sparse_activations: int = 0
+    num_fq_nodes: Optional[int] = None
+    num_int8: Optional[int] = None
+    num_int4: Optional[int] = None
+    num_sparse_activations: Optional[int] = None
+
+    def get_compression_numbers(self) -> Dict[str, int]:
+        output = {}
+        if self.num_fq_nodes is not None:
+            output["Num FQ"] = self.num_fq_nodes
+        if self.num_int8 is not None:
+            output["Num int8"] = self.num_int8
+        if self.num_int4 is not None:
+            output["Num int4"] = self.num_int4
+        if self.num_sparse_activations is not None:
+            output["Num sparse activations"] = self.num_sparse_activations
+        return output
 
 
 @dataclass
@@ -197,6 +209,7 @@ class RunInfo:
             "Metric value": self.metric_value,
             "Metric diff": self.metric_diff,
             "Compr. time": self.format_time(self.time_compression),
+            **self.num_compress_nodes.get_compression_numbers(),
             **self.stats_from_output.get_stats(),
             "Total time": self.format_time(self.time_total),
             "FPS": self.fps,
@@ -204,15 +217,6 @@ class RunInfo:
             "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
             "Build url": os.environ.get("BUILD_URL", ""),
         }
-        return result
-
-
-@dataclass
-class PTQRunInfo(RunInfo):
-    def get_result_dict(self):
-        result = super().get_result_dict()
-        result["Num FQ"] = self.num_compress_nodes.num_fq_nodes
-        result["Num int8"] = self.num_compress_nodes.num_int8
         return result
 
 
@@ -293,28 +297,9 @@ class BaseTestPipeline(ABC):
     def save_compressed_model(self) -> None:
         """Save compressed model to IR."""
 
+    @abstractmethod
     def get_num_compressed(self) -> None:
         """Get number of the compressed nodes in the compressed IR."""
-        ie = ov.Core()
-        model = ie.read_model(model=self.path_compressed_ir)
-
-        num_fq = 0
-        num_int4 = 0
-        num_int8 = 0
-        for node in model.get_ops():
-            node_type = node.type_info.name
-            if node_type == "FakeQuantize":
-                num_fq += 1
-
-            for i in range(node.get_output_size()):
-                if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
-                    num_int8 += 1
-                if node.get_output_element_type(i).get_type_name() in ["i4", "u4", "nf4"]:
-                    num_int4 += 1
-
-        self.run_info.num_compress_nodes.num_int8 = num_int8
-        self.run_info.num_compress_nodes.num_int4 = num_int4
-        self.run_info.num_compress_nodes.num_fq_nodes = num_fq
 
     @abstractmethod
     def run_bench(self) -> None:
@@ -535,6 +520,31 @@ class PTQTestPipeline(BaseTestPipeline):
         stats = PTQTimeStats()
         stats.fill(stdout)
         self.run_info.stats_from_output = stats
+
+    def get_num_compressed(self) -> None:
+        ie = ov.Core()
+        model = ie.read_model(model=self.path_compressed_ir)
+        num_fq, _, num_int8 = get_num_fq_int4_int8(model)
+        self.run_info.num_compress_nodes.num_int8 = num_int8
+        self.run_info.num_compress_nodes.num_fq_nodes = num_fq
+
+
+def get_num_fq_int4_int8(model: ov.Model) -> Tuple[int, int, int]:
+    num_fq = 0
+    num_int8 = 0
+    num_int4 = 0
+    for node in model.get_ops():
+        node_type = node.type_info.name
+        if node_type == "FakeQuantize":
+            num_fq += 1
+
+        for i in range(node.get_output_size()):
+            if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
+                num_int8 += 1
+            if node.get_output_element_type(i).get_type_name() in ["i4", "u4", "nf4"]:
+                num_int4 += 1
+
+    return num_fq, num_int4, num_int8
 
 
 def _get_exception_type_name(report: ErrorReport) -> str:
