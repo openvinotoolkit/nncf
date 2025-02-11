@@ -16,7 +16,7 @@ import pytest
 import yaml
 
 from tests.post_training.experimental.sparsify_activations.model_scope import SPARSIFY_ACTIVATIONS_TEST_CASES
-from tests.post_training.experimental.sparsify_activations.pipelines import SARunInfo
+from tests.post_training.pipelines.base import RunInfo
 from tests.post_training.test_quantize_conformance import fixture_batch_size  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_data  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_extra_columns  # noqa: F401
@@ -46,7 +46,7 @@ def test_sparsify_activations(
     test_case_name: str,
     data_dir: Path,
     output_dir: Path,
-    result_data: Dict[str, SARunInfo],
+    result_data: Dict[str, RunInfo],
     no_eval: bool,
     batch_size: int,
     run_fp32_backend: bool,
