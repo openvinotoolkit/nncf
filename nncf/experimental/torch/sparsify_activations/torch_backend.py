@@ -49,7 +49,8 @@ class ActivationsSparsifier(nn.Module):
         super().__init__()
         self.target_sparsity = target_sparsity
         if alpha <= 0.0 or alpha >= 1.0:
-            raise ValueError("The decay factor `alpha` should be in range (0, 1).")
+            msg = "The decay factor `alpha` should be in range (0, 1)."
+            raise ValueError(msg)
         self.alpha = alpha
         self.register_buffer("running_threshold", torch.tensor(float("-inf")))
         self.register_buffer("num_batches_tracked", torch.tensor(0))
@@ -195,5 +196,6 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
                 continue
             activation_ports.append(edge.input_port_id)
         if len(activation_ports) != 1:
-            raise nncf.InternalError(f'Cannot find activation port for node "{node}".')
+            msg = f'Cannot find activation port for node "{node}".'
+            raise nncf.InternalError(msg)
         return activation_ports[0]

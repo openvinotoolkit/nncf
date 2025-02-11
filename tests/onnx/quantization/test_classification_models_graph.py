@@ -46,7 +46,8 @@ def model_builder(model_name):
         return models.densenet121(weights=models.DenseNet121_Weights.IMAGENET1K_V1)
     if model_name == "mnasnet0_5":
         return models.mnasnet0_5(weights=models.MNASNet0_5_Weights.IMAGENET1K_V1)
-    raise ValueError(f"Unknown model name {model_name}")
+    msg = f"Unknown model name {model_name}"
+    raise ValueError(msg)
 
 
 TORCHVISION_TEST_DATA = [

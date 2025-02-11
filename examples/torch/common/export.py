@@ -66,5 +66,6 @@ def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> 
                 input_node.node.set_friendly_name(input_name)
         ov.save_model(ov_model, model_path)
     else:
-        raise ValueError(f"--export-model-path argument should have suffix `.xml` or `.onnx` but got {extension}")
+        msg = f"--export-model-path argument should have suffix `.xml` or `.onnx` but got {extension}"
+        raise ValueError(msg)
     logger.info(f"Saved to {model_path}")

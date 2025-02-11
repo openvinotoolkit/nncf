@@ -56,7 +56,8 @@ class TFExporter(Exporter):
 
         if export_fn is None:
             available_formats = list(format_to_export_fn.keys())
-            raise ValueError(f"Unsupported saving format: '{save_format}'. Available formats: {available_formats}")
+            msg = f"Unsupported saving format: '{save_format}'. Available formats: {available_formats}"
+            raise ValueError(msg)
 
         export_fn(save_path)
 

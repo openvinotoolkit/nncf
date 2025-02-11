@@ -85,14 +85,12 @@ def reshape_weight_for_grouped_quantization(
     if isinstance(reduction_axes, tuple) and len(reduction_axes) == 1:
         reduction_axes = reduction_axes[0]
     if not isinstance(reduction_axes, int):
-        raise nncf.UnsupportedModelError(
-            f"Group-wise quantization expects a single reduction axis, but given: {reduction_axes}."
-        )
+        msg = f"Group-wise quantization expects a single reduction axis, but given: {reduction_axes}."
+        raise nncf.UnsupportedModelError(msg)
     channel_size = weight.shape[reduction_axes]
     if channel_size % group_size != 0:
-        raise nncf.UnsupportedModelError(
-            f"Channel size {channel_size} should be divisible by size of group {group_size}"
-        )
+        msg = f"Channel size {channel_size} should be divisible by size of group {group_size}"
+        raise nncf.UnsupportedModelError(msg)
 
     num_groups_per_channel = channel_size // group_size
     shape = list(weight.shape)  # [a1, r, a2] - "r" refers to number of channels along reduction axis
@@ -266,7 +264,8 @@ def calculate_integer_quantization_params(
     :return: Scale and zero point tensors.
     """
     if not config.is_integer:
-        raise nncf.InternalError("The function supports integer quantization only")
+        msg = "The function supports integer quantization only"
+        raise nncf.InternalError(msg)
 
     num_bits = config.num_bits
 
@@ -444,12 +443,14 @@ def do_int_quantization(
     :return: A tuple containing the compressed weights, scale, and zero point tensors.
     """
     if not config.is_integer:
-        raise nncf.InternalError("The function supports integer quantization only")
+        msg = "The function supports integer quantization only"
+        raise nncf.InternalError(msg)
     if config.is_asym_mode and (precomputed_scale is None) != (precomputed_zero_point is None):
-        raise ValueError(
+        msg = (
             "If precomputed quantization parameters are provided, both scale and zero point are required "
             "for asymmetric quantization."
         )
+        raise ValueError(msg)
 
     # When reduction axes are not provided, assuming that the weights are already reshaped
     if config.group_size != -1 and reduction_axes is not None:
@@ -475,7 +476,8 @@ def do_int_quantization(
     scale, zero_point = None, None
     if precomputed_scale is None or (config.is_asym_mode and precomputed_zero_point is None):
         if reduction_axes is None:
-            raise ValueError("Reduction axes are required for computing the scale and (zero point) vectors.")
+            msg = "Reduction axes are required for computing the scale and (zero point) vectors."
+            raise ValueError(msg)
         scale, zero_point = calculate_integer_quantization_params(weight, reduction_axes, config)
     if precomputed_scale is not None:
         scale = precomputed_scale

@@ -128,7 +128,8 @@ class FillerInputElement:
         else:
             self.filler = filler
             if self.filler not in self.FILLER_TYPES:
-                raise ValueError(f"Unknown input filler type: {filler}")
+                msg = f"Unknown input filler type: {filler}"
+                raise ValueError(msg)
 
     @staticmethod
     def _string_to_torch_type(string):
@@ -179,7 +180,8 @@ class FillerInputInfo(ModelInputInfo):
         """
         input_infos = config.get("input_info")
         if input_infos is None:
-            raise nncf.ValidationError("Passed NNCFConfig does not have an 'input_info' field")
+            msg = "Passed NNCFConfig does not have an 'input_info' field"
+            raise nncf.ValidationError(msg)
         if isinstance(input_infos, dict):
             return FillerInputInfo(
                 [
@@ -203,7 +205,8 @@ class FillerInputInfo(ModelInputInfo):
                     )
                 )
             return FillerInputInfo(elements)
-        raise nncf.ValidationError("Invalid input_infos specified in config - should be either dict or list of dicts")
+        msg = "Invalid input_infos specified in config - should be either dict or list of dicts"
+        raise nncf.ValidationError(msg)
 
     def get_forward_inputs(
         self, device: Optional[Union[str, torch.device]] = None

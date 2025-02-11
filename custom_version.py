@@ -60,7 +60,8 @@ def get_custom_version() -> str:
         r"^__version__ = ['\"]((\d+\.\d+\.\d+)([^'\"]*))['\"]", Path(NNCF_VERSION_FILE).read_text(), re.M
     )
     if not version_match:
-        raise RuntimeError("Unable to find version string.")
+        msg = "Unable to find version string."
+        raise RuntimeError(msg)
 
     version_full = version_match.group(1)
     version_value = version_match.group(2)

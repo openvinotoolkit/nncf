@@ -56,7 +56,8 @@ class RangeInitConfig:
     def from_dict(cls, dct: Dict[str, Any]) -> RangeInitConfig:
         num_init_samples = dct.get("num_init_samples", NUM_INIT_SAMPLES)
         if num_init_samples < 0:
-            raise ValueError("Number of initialization samples must be >= 0")
+            msg = "Number of initialization samples must be >= 0"
+            raise ValueError(msg)
         return cls(dct.get("type", "mixed_min_max"), num_init_samples, dct.get("params"))
 
 
@@ -91,10 +92,11 @@ class PerLayerRangeInitConfig(RangeInitConfig):
             range_init_config.init_type, range_init_config.num_init_samples, range_init_config.init_type_specific_params
         )
         if target_scopes is None and ignored_scopes is None:
-            raise ValueError(
+            msg = (
                 "At least one of the (target_scopes, ignored_scopes) should be specified"
                 " for a per-layer range init config!"
             )
+            raise ValueError(msg)
         self.target_scopes = target_scopes
         self.ignored_scopes = ignored_scopes
         self.target_group = target_quantizer_group

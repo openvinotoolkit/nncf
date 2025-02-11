@@ -24,8 +24,11 @@ from nncf.common.tensor import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanNoOutliersAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MeanVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import MedianAbsoluteDeviationAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MedianNoOutliersAggregator
@@ -52,6 +55,7 @@ NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE = [
 
 NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE = [[5.0, 4.0, 15.0], [8.0, 25.0, 12.0], [35.0, 16.0, 45.0]]
 
+WEIGHT_COMPRESSION_REDUCERS_DATA = [[[1, 2, 0], [1, -3, 10]], [[-1, 2, -3], [4, 5, -6]]]
 
 default_test_quantile = 0.1
 
@@ -231,6 +235,39 @@ class TemplateTestReducersAggregators:
         assert val.shape[0] == len(ref)
         for i, ref_ in enumerate(ref):
             assert fns.allclose(val[i], self.get_nncf_tensor(ref_))
+
+    @pytest.mark.parametrize(
+        "axes, reference",
+        [[None, 16.1666], [(0,), 14.25], [(0, 1), 15.875], [(0, 1, 2), 16.1666]],
+    )
+    def test_mean_variance_reducer(self, axes, reference):
+        reducer = MeanVarianceReducer(reduction_axes=axes)
+        nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
+        result = reducer._reduce_out_of_place([nncf_data])
+        assert len(result) == 1
+        assert fns.allclose(result[0], self.get_nncf_tensor(reference))
+
+    @pytest.mark.parametrize(
+        "axes, reference",
+        [[None, 10.0], [(0,), 4.16666], [(0, 1), 6.33333], [(0, 1, 2), 10.0]],
+    )
+    def test_mean_abs_max_reducer(self, axes, reference):
+        reducer = MeanAbsMaxReducer(reduction_axes=axes)
+        nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
+        result = reducer._reduce_out_of_place([nncf_data])
+        assert len(result) == 1
+        assert fns.allclose(result[0], self.get_nncf_tensor(reference))
+
+    @pytest.mark.parametrize(
+        "axes, reference",
+        [[None, 16.1666], [(0,), 64.0], [(0, 1), 36.1875], [(0, 1, 2), 16.1666]],
+    )
+    def test_max_variance_reducer(self, axes, reference):
+        reducer = MaxVarianceReducer(reduction_axes=axes)
+        nncf_data = self.get_nncf_tensor(np.array(WEIGHT_COMPRESSION_REDUCERS_DATA), dtype=Dtype.FLOAT)
+        result = reducer._reduce_out_of_place([nncf_data])
+        assert len(result) == 1
+        assert fns.allclose(result[0], self.get_nncf_tensor(reference))
 
     @pytest.mark.parametrize(
         "reducer_name,ref,kwargs",
@@ -530,10 +567,10 @@ class TemplateTestReducersAggregators:
             params["inplace"] = [False, True]
             params["channel_axis"] = [1, 2]
         else:
-            raise nncf.ValidationError(
-                "test_min_max_mean_reducer_hash_equal configurated in a wrong way."
-                f" Wrong reducer_name: {reducer_name}"
+            msg = (
+                f"test_min_max_mean_reducer_hash_equal configurated in a wrong way. Wrong reducer_name: {reducer_name}"
             )
+            raise nncf.ValidationError(msg)
 
         def product_dict(**kwargs):
             keys = kwargs.keys()

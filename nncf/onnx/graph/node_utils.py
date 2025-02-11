@@ -180,7 +180,8 @@ def _get_activation_tensor_shape(
         edges = nncf_graph.get_output_edges_by_port_id(node, target_point.port_id)
         shape = edges[0].tensor_shape
     else:
-        raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
+        msg = f"Unsupported target point type {target_point.type}."
+        raise NotImplementedError(msg)
     if not shape:  # ONNX model can not have a shape of a edge, even after shape inference.
         if target_point.type == TargetType.PRE_LAYER_OPERATION:
             nncf_logger.info(

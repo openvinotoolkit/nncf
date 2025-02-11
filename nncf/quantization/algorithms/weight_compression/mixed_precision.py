@@ -151,9 +151,8 @@ class DataFreeCriterion(MixedPrecisionCriterion):
 
             self._backend_entity = FXWeightCompressionAlgoBackend()
         else:
-            raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
-            )
+            msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
+            raise nncf.UnsupportedBackendError(msg)
 
     def _calc_weight_sensitivity(
         self,
@@ -198,7 +197,8 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         graph: NNCFGraph,
         nodes_and_port_ids: Iterable[Tuple[NNCFNode, int]],
     ) -> StatisticPointsContainer:
-        raise RuntimeError("No statistics collection intended for data-free mixed precision criterion")
+        msg = "No statistics collection intended for data-free mixed precision criterion"
+        raise RuntimeError(msg)
 
 
 class DataBasedCriterion(DataFreeCriterion, ABC):
@@ -211,7 +211,7 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
 
     @property
     def available_backends(self) -> List[BackendType]:
-        return [BackendType.OPENVINO]
+        return [BackendType.OPENVINO, BackendType.TORCH]
 
     def _set_backend_entity(self, model: TModel) -> None:
         model_backend = get_backend(model)
@@ -219,10 +219,13 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVMixedPrecisionAlgoBackend
 
             self._backend_entity = OVMixedPrecisionAlgoBackend(model)
+        elif model_backend == BackendType.TORCH:
+            from nncf.quantization.algorithms.weight_compression.torch_backend import PTMixedPrecisionAlgoBackend
+
+            self._backend_entity = PTMixedPrecisionAlgoBackend()
         else:
-            raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
-            )
+            msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
+            raise nncf.UnsupportedBackendError(msg)
 
     def _calc_activation_sensitivity(
         self,
@@ -264,10 +267,11 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
         for act_node, output_port_id in nodes_and_port_ids:
             n_dims = len(graph.get_output_edges_by_port_id(act_node, output_port_id)[0].tensor_shape)
             if n_dims < 2:
-                raise RuntimeError(
+                msg = (
                     f"Data-aware mixed precision criteria are not supported for MatMuls with 1D inputs. "
                     f"Node: {act_node.node_name}, number of dimensions: {n_dims}."
                 )
+                raise RuntimeError(msg)
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, act_node.node_name, port_id=output_port_id
             )
@@ -303,21 +307,12 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
     def _get_statistics_for_node(
         self, statistic_points: StatisticPointsContainer, node: NNCFNode, nncf_graph: NNCFGraph, stat_key: str
     ) -> List[Tensor]:
-        act_node, output_port_id = self._get_activation_node_and_port(node, nncf_graph)
-
-        def input_filter_func(point):
-            # For the floating-point statistics collected in POST_LAYER style,
-            # we also need to determine the output port id.
-            # For the cases when the layer has more than one (0) output port.
-            return (
-                self._algorithm_key in point.algorithm_to_tensor_collectors
-                and point.target_point.type == TargetType.POST_LAYER_OPERATION
-                and point.target_point.port_id == output_port_id
-            )
-
+        act_node, act_port_id = self._get_activation_node_and_port(node, nncf_graph)
         stats = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
-            act_node.node_name, input_filter_func, self._algorithm_key
+            act_node.node_name,
+            self._backend_entity.get_filter_fn_for_statistics(act_port_id, self._algorithm_key),
+            self._algorithm_key,
         ):
             statistics = tensor_collector.get_statistics()
             for data in statistics.get_data().values():

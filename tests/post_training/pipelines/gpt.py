@@ -95,6 +95,3 @@ class GPT(PTQTestPipeline):
             self.calibration_dataset = calibration_dataset
         else:
             self.calibration_dataset = nncf.Dataset(calibration_dataset, self.get_transform_calibration_fn())
-
-    def _validate(self):
-        pass

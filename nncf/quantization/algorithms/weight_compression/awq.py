@@ -118,9 +118,8 @@ class AWQ(Algorithm):
             self._backend_entity = OVAWQAlgoAlgoBackend(model, self.name_to_node_mapping)
             self._patterns = self._backend_entity.get_awq_patterns()
         else:
-            raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific AWQ entity because {} is not supported!".format(model_backend.value)
-            )
+            msg = f"Cannot return backend-specific AWQ entity because {model_backend.value} is not supported!"
+            raise nncf.UnsupportedBackendError(msg)
 
     def apply(
         self,

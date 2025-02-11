@@ -108,9 +108,8 @@ def create_grouped_conv(
     in_channels, out_channels, kernel_size, groups, weight_init=1, bias_init=0, padding=0, stride=1
 ):
     if in_channels % groups != 0 or out_channels % groups != 0:
-        raise nncf.ValidationError(
-            "Cannot create grouped convolution. Either `in_channels` or `out_channels` are not divisible by `groups`"
-        )
+        msg = "Cannot create grouped convolution. Either `in_channels` or `out_channels` are not divisible by `groups`"
+        raise nncf.ValidationError(msg)
     conv = nn.Conv2d(in_channels, out_channels, kernel_size, groups=groups, padding=padding, stride=stride)
     fill_conv_weight(conv, weight_init)
     fill_bias(conv, bias_init)
@@ -398,7 +397,8 @@ class PTTensorListComparator(BaseTensorListComparator):
             return tensor.cpu().detach().numpy()
         if isinstance(tensor, (np.ndarray, numbers.Number)):
             return tensor
-        raise Exception(f"Tensor must be np.ndarray or torch.Tensor, not {type(tensor)}")
+        msg = f"Tensor must be np.ndarray or torch.Tensor, not {type(tensor)}"
+        raise Exception(msg)
 
 
 def create_compressed_model_and_algo_for_test(

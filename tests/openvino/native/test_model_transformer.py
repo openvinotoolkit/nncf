@@ -116,8 +116,8 @@ def create_fake_quantize_params() -> FakeQuantizeParameters:
 
 
 def create_fake_convert_params(destination_type: FP8Type) -> FakeConvertParameters:
-    scale = Tensor(np.ones((1)).astype(np.float32))
-    shift = Tensor(np.zeros((1)).astype(np.float32))
+    scale = Tensor(np.ones(1).astype(np.float32))
+    shift = Tensor(np.zeros(1).astype(np.float32))
     return FakeConvertParameters(scale, shift, destination_type)
 
 

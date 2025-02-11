@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import torch
 import torch.fx
@@ -22,6 +22,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
@@ -135,7 +136,8 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         graph_weight_node = get_graph_node_by_name(model.graph, weight_node.node_name)
         weight = get_tensor_constant_from_node(graph_weight_node, model).data
         if weight is None:
-            raise nncf.InternalError(f"Could not find a node in the model by name {weight_node}.")
+            msg = f"Could not find a node in the model by name {weight_node}."
+            raise nncf.InternalError(msg)
 
         return Tensor(weight)
 
@@ -165,6 +167,17 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     ) -> None:
         pass
 
+    @staticmethod
+    def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
+        def filter_func(point: StatisticPoint) -> bool:
+            return (
+                algorithm_key in point.algorithm_to_tensor_collectors
+                and point.target_point.type
+                == PTWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[TargetType.POST_LAYER_OPERATION]
+            )
+
+        return filter_func
+
     def transform_model(
         self,
         model: torch.fx.GraphModule,
@@ -182,12 +195,14 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 CompressWeightsMode.NF4,
                 CompressWeightsMode.E2M1,
             ]:
-                raise nncf.ParameterNotSupportedError(f"{compression_config.mode.value} is not supported.")
+                msg = f"{compression_config.mode.value} is not supported."
+                raise nncf.ParameterNotSupportedError(msg)
             weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
             weight_name = weight_node.node_name
             weight = self.get_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph)
             if weight is None or not isinstance(weight, Tensor):
-                raise nncf.InternalError(f"Could not find a nncf.tensor in the model by name {weight_name}.")
+                msg = f"Could not find a nncf.tensor in the model by name {weight_name}."
+                raise nncf.InternalError(msg)
 
             # calculates compressed weights and decompression parameters
             compressed_weight = compress_weight(

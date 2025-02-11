@@ -40,10 +40,12 @@ class COCOWrapper(coco.COCO):
             gt_dataset: the groundtruth eval datatset in COCO API format.
         """
         if (annotation_file and gt_dataset) or ((not annotation_file) and (not gt_dataset)):
-            raise ValueError("One and only one of `annotation_file` and `gt_dataset` needs to be specified.")
+            msg = "One and only one of `annotation_file` and `gt_dataset` needs to be specified."
+            raise ValueError(msg)
 
         if eval_type not in ["box", "mask"]:
-            raise ValueError("The `eval_type` can only be either `box` or `mask`.")
+            msg = "The `eval_type` can only be either `box` or `mask`."
+            raise ValueError(msg)
 
         coco.COCO.__init__(self, annotation_file=annotation_file)
         self._eval_type = eval_type
@@ -72,7 +74,8 @@ class COCOWrapper(coco.COCO):
 
         image_ids = [ann["image_id"] for ann in predictions]
         if set(image_ids) != (set(image_ids) & set(self.getImgIds())):
-            raise ValueError("Results do not correspond to the current dataset!")
+            msg = "Results do not correspond to the current dataset!"
+            raise ValueError(msg)
         for ann in predictions:
             x1, x2, y1, y2 = [
                 ann["bbox"][0],

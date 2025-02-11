@@ -108,10 +108,11 @@ class RBSparsityController(BaseSparsityAlgoController):
 
     def distributed(self):
         if not dist.is_initialized():
-            raise KeyError(
+            msg = (
                 "Could not set distributed mode for the compression algorithm "
                 "because the default process group has not been initialized."
             )
+            raise KeyError(msg)
 
         if "cuda" in get_model_device(self._model).type:
             state = torch.cuda.get_rng_state()

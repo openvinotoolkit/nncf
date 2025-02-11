@@ -186,8 +186,8 @@ def test_activation_shape_tracing(input_shape: Tuple[int, ...]):
         ).output_edges
         input_tensor_shapes = [x.tensor_shape for x in input_edges]
         output_tensor_shapes = [x.tensor_shape for x in output_edges]
-        assert input_tensor_shapes == ref_input_shapes, "Failed for node ID: {}".format(node_id)
-        assert output_tensor_shapes == ref_output_shapes, "Failed for node ID: {}".format(node_id)
+        assert input_tensor_shapes == ref_input_shapes, f"Failed for node ID: {node_id}"
+        assert output_tensor_shapes == ref_output_shapes, f"Failed for node ID: {node_id}"
 
 
 class ParallelEdgesModel(nn.Module):

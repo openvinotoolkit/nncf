@@ -98,7 +98,6 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@ed94116c4d30d2091601b81f339a2eaa1c2ba0a6 # v1.4.1
       - name: Install NNCF and test requirements
         run: |
-          pip install -e .
           pip install -r tests/cross_fw/examples/requirements.txt
       - name: Print installed modules
         run: pip list

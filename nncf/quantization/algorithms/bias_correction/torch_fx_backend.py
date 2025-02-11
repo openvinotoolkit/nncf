@@ -105,7 +105,8 @@ class FXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
             elif node.op == "output":
                 return node.all_input_nodes.index(graph_node)
 
-        raise nncf.InternalError(f"Node with name {node_name} expected to have an output," " no outputs were found.")
+        msg = f"Node with name {node_name} expected to have an output, no outputs were found."
+        raise nncf.InternalError(msg)
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:

@@ -111,7 +111,8 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
     def ones(cls, shape: Union[int, List[int]], device) -> SymbolicMask:  # type: ignore
         if isinstance(shape, list):
             if len(shape) != 1:
-                raise nncf.ValidationError(f"Unexpected shape = {shape} for 1D symbolic mask")
+                msg = f"Unexpected shape = {shape} for 1D symbolic mask"
+                raise nncf.ValidationError(msg)
             shape = shape[0]
 
         return SymbolicMask(shape)
@@ -149,10 +150,11 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
     @classmethod
     def split(cls, tensor: SymbolicMask, output_shapes: List[int]) -> List[SymbolicMask]:  # type: ignore
         if any(shape <= 0 for shape in output_shapes) or tensor.shape[0] != sum(output_shapes):
-            raise AssertionError(
+            msg = (
                 "Symbolic mask split was called with"
                 f"invalid parammeters: input mask shape: {tensor.shape[0]}, output masks shapes: {output_shapes}"
             )
+            raise AssertionError(msg)
 
         producers = tensor.mask_producers
         return [SymbolicMask(output_shape, producers) for output_shape in output_shapes]

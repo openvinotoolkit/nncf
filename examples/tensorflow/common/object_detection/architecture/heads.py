@@ -63,10 +63,10 @@ class RetinanetHead:
         self._build_box_net_layers(norm_activation)
 
     def _class_net_batch_norm_name(self, i, level):
-        return "class-%d-%d" % (i, level)
+        return f"class-{i}-{level}"
 
     def _box_net_batch_norm_name(self, i, level):
-        return "box-%d-%d" % (i, level)
+        return f"box-{i}-{level}"
 
     def _build_class_net_layers(self, norm_activation):
         """Build re-usable layers for class prediction network."""
@@ -254,7 +254,8 @@ class RpnHead(tf.keras.layers.Layer):
         elif activation == "swish":
             self._activation_op = tf.nn.swish
         else:
-            raise ValueError("Unsupported activation `{}`.".format(activation))
+            msg = f"Unsupported activation `{activation}`."
+            raise ValueError(msg)
         self._use_batch_norm = use_batch_norm
 
         if use_separable_conv:
@@ -286,7 +287,7 @@ class RpnHead(tf.keras.layers.Layer):
         self._norm_activations = {}
         if self._use_batch_norm:
             for level in range(self._min_level, self._max_level + 1):
-                self._norm_activations[level] = norm_activation(name="rpn-l%d-bn" % level)
+                self._norm_activations[level] = norm_activation(name=f"rpn-l{level}-bn")
 
     def _shared_rpn_heads(self, features, anchors_per_location, level, is_training):
         """Shared RPN heads."""
@@ -372,7 +373,8 @@ class FastrcnnHead(tf.keras.layers.Layer):
         elif activation == "swish":
             self._activation_op = tf.nn.swish
         else:
-            raise ValueError("Unsupported activation `{}`.".format(activation))
+            msg = f"Unsupported activation `{activation}`."
+            raise ValueError(msg)
         self._use_batch_norm = use_batch_norm
         self._norm_activation = norm_activation
 
@@ -387,7 +389,7 @@ class FastrcnnHead(tf.keras.layers.Layer):
                     padding="same",
                     dilation_rate=(1, 1),
                     activation=(None if self._use_batch_norm else self._activation_op),
-                    name="conv_{}".format(i),
+                    name=f"conv_{i}",
                 )
             )
             if self._use_batch_norm:
@@ -400,7 +402,7 @@ class FastrcnnHead(tf.keras.layers.Layer):
                 tf.keras.layers.Dense(
                     units=self._fc_dims,
                     activation=(None if self._use_batch_norm else self._activation_op),
-                    name="fc{}".format(i),
+                    name=f"fc{i}",
                 )
             )
             if self._use_batch_norm:
@@ -511,7 +513,8 @@ class MaskrcnnHead(tf.keras.layers.Layer):
         elif activation == "swish":
             self._activation_op = tf.nn.swish
         else:
-            raise ValueError("Unsupported activation `{}`.".format(activation))
+            msg = f"Unsupported activation `{activation}`."
+            raise ValueError(msg)
         self._use_batch_norm = use_batch_norm
         self._norm_activation = norm_activation
         self._conv2d_ops = []
@@ -524,7 +527,7 @@ class MaskrcnnHead(tf.keras.layers.Layer):
                     padding="same",
                     dilation_rate=(1, 1),
                     activation=(None if self._use_batch_norm else self._activation_op),
-                    name="mask-conv-l%d" % i,
+                    name=f"mask-conv-l{i}",
                 )
             )
 

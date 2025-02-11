@@ -394,7 +394,8 @@ def get_input_channels(node: NNCFNode) -> int:
         return layer_attrs.in_channels
     if isinstance(layer_attrs, LinearLayerAttributes):
         return layer_attrs.in_features
-    raise nncf.InternalError(f"Can't get count of input channels from node {node}")
+    msg = f"Can't get count of input channels from node {node}"
+    raise nncf.InternalError(msg)
 
 
 def get_output_channels(node: NNCFNode) -> int:
@@ -409,7 +410,8 @@ def get_output_channels(node: NNCFNode) -> int:
         return layer_attrs.out_channels
     if isinstance(layer_attrs, LinearLayerAttributes):
         return layer_attrs.out_features
-    raise nncf.InternalError(f"Can't get count of output channels from node {node}")
+    msg = f"Can't get count of output channels from node {node}"
+    raise nncf.InternalError(msg)
 
 
 def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:

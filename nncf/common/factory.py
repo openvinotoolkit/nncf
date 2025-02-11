@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import TypeVar, cast
+from typing import Any, TypeVar, cast
 
 import nncf
 from nncf.common.engine import Engine
@@ -20,6 +20,7 @@ from nncf.common.tensor_statistics import aggregator
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data.dataset import Dataset
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 
 TModel = TypeVar("TModel")
 
@@ -53,17 +54,22 @@ class NNCFGraphFactory:
 
             return FXGraphConverter.create_nncf_graph(cast(GraphModule, model))
         if model_backend == BackendType.TORCH:
+            from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
             from nncf.torch.nncf_network import NNCFNetwork
 
-            return cast(NNCFNetwork, model).nncf.get_graph()
-        raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific graph because {} is not supported!".format(model_backend.value)
-        )
+            if isinstance(model, GraphModelWrapper):
+                return model.build_graph()
+            if isinstance(model, NNCFNetwork):
+                return model.nncf.get_graph()
+            msg = f"Unexpected type of model {type(model)} for TORCH backend"
+            raise nncf.InternalError(msg)
+        msg = f"Cannot create backend-specific graph because {model_backend.value} is not supported!"
+        raise nncf.UnsupportedBackendError(msg)
 
 
 class ModelTransformerFactory:
     @staticmethod
-    def create(model: TModel, inplace: bool = False) -> ModelTransformer:
+    def create(model: TModel, inplace: bool = False) -> ModelTransformer[Any]:
         """
         Factory method to create backend-specific ModelTransformer instance based on the input model.
 
@@ -84,20 +90,26 @@ class ModelTransformerFactory:
             from nncf.openvino.graph.model_transformer import OVModelTransformer
 
             return OVModelTransformer(cast(Model, model), inplace=inplace)
-        if model_backend == BackendType.TORCH:
+        if model_backend == BackendType.TORCH and is_experimental_torch_tracing_enabled():
+            from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+            from nncf.experimental.torch2.model_transformer import PT2ModelTransformer
+
+            return PT2ModelTransformer(cast(GraphModelWrapper, model))
+
+        if model_backend == BackendType.TORCH and not is_experimental_torch_tracing_enabled():
             from nncf.torch.model_transformer import PTModelTransformer
             from nncf.torch.nncf_network import NNCFNetwork
 
             return PTModelTransformer(cast(NNCFNetwork, model))
+
         if model_backend == BackendType.TORCH_FX:
             from torch.fx import GraphModule
 
             from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 
             return FXModelTransformer(cast(GraphModule, model))
-        raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific model transformer because {} is not supported!".format(model_backend.value)
-        )
+        msg = f"Cannot create backend-specific model transformer because {model_backend.value} is not supported!"
+        raise nncf.UnsupportedBackendError(msg)
 
 
 class EngineFactory:
@@ -125,12 +137,16 @@ class EngineFactory:
         if model_backend in (BackendType.TORCH, BackendType.TORCH_FX):
             from torch.nn import Module
 
+            from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
             from nncf.torch.engine import PTEngine
 
-            return PTEngine(cast(Module, model))
-        raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific engine because {} is not supported!".format(model_backend.value)
-        )
+            if isinstance(model, GraphModelWrapper):
+                pt_model = model.model
+            else:
+                pt_model = cast(Module, model)
+            return PTEngine(pt_model)
+        msg = f"Cannot create backend-specific engine because {model_backend.value} is not supported!"
+        raise nncf.UnsupportedBackendError(msg)
 
 
 class CommandCreatorFactory:
@@ -153,9 +169,8 @@ class CommandCreatorFactory:
 
             return ONNXCommandCreator()
 
-        raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific command creator because {} is not supported!".format(model_backend.value)
-        )
+        msg = f"Cannot create backend-specific command creator because {model_backend.value} is not supported!"
+        raise nncf.UnsupportedBackendError(msg)
 
 
 class StatisticsAggregatorFactory:
@@ -176,16 +191,17 @@ class StatisticsAggregatorFactory:
             from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 
             return OVStatisticsAggregator(dataset)
-        if model_backend == BackendType.TORCH:
+        if model_backend == BackendType.TORCH and not is_experimental_torch_tracing_enabled():
             from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 
             return PTStatisticsAggregator(dataset)
+        if model_backend == BackendType.TORCH and is_experimental_torch_tracing_enabled():
+            from nncf.experimental.torch2.statistics.aggregator import PT2StatisticsAggregator
+
+            return PT2StatisticsAggregator(dataset)
         if model_backend == BackendType.TORCH_FX:
             from nncf.experimental.torch.fx.statistics.aggregator import FXStatisticsAggregator
 
             return FXStatisticsAggregator(dataset)
-        raise nncf.UnsupportedBackendError(
-            "Cannot create backend-specific statistics aggregator because {} is not supported!".format(
-                model_backend.value
-            )
-        )
+        msg = f"Cannot create backend-specific statistics aggregator because {model_backend.value} is not supported!"
+        raise nncf.UnsupportedBackendError(msg)

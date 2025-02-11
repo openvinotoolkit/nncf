@@ -96,4 +96,5 @@ def test_is_ddp_freezing(waiting_time: float) -> None:
             for process in ctx.processes:
                 if process.is_alive():
                     process.terminate()
-            raise TimeoutError("DDP wrapper may be freezing")
+            msg = "DDP wrapper may be freezing"
+            raise TimeoutError(msg)

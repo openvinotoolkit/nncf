@@ -19,6 +19,7 @@ import torch
 from torchvision import models
 
 from nncf.torch import disable_patching
+from tests.post_training.pipelines.base import FX_BACKENDS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.image_classification_base import ImageClassificationBase
@@ -74,9 +75,12 @@ class ImageClassificationTorchvision(ImageClassificationBase):
         if self.batch_size > 1:  # Dynamic batch_size shape export
             self.input_size[0] = -1
 
-        if self.backend == BackendType.FX_TORCH:
+        if self.backend in FX_BACKENDS:
             with torch.no_grad():
                 with disable_patching():
+                    if self.backend is BackendType.CUDA_FX_TORCH:
+                        model = model.cuda()
+                        self.dummy_tensor = self.dummy_tensor.cuda()
                     self.model = self.model_params.export_fn(model, (self.dummy_tensor,))
 
         elif self.backend in PT_BACKENDS:
@@ -120,10 +124,14 @@ class ImageClassificationTorchvision(ImageClassificationBase):
                 )
             ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
 
-        if self.backend == BackendType.FX_TORCH:
-            exported_model = torch.export.export(self.model, (self.dummy_tensor,))
+        if self.backend in FX_BACKENDS:
+            exported_model = torch.export.export(self.model.cpu(), (self.dummy_tensor.cpu(),))
             ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor, input=self.input_size)
             ov.serialize(ov_model, self.fp32_model_dir / "fx_model_fp32.xml")
+
+            if self.backend is BackendType.CUDA_FX_TORCH:
+                self.model = self.model.cuda()
+                self.dummy_tensor = self.dummy_tensor.cuda()
 
         if self.backend in [BackendType.FP32, BackendType.OV]:
             ov.serialize(self.model, self.fp32_model_dir / "model_fp32.xml")
@@ -132,8 +140,10 @@ class ImageClassificationTorchvision(ImageClassificationBase):
         self.transform = self.model_params.weights.transforms()
 
     def get_transform_calibration_fn(self):
-        if self.backend in [BackendType.FX_TORCH] + PT_BACKENDS:
-            device = torch.device("cuda" if self.backend == BackendType.CUDA_TORCH else "cpu")
+        if self.backend in FX_BACKENDS + PT_BACKENDS:
+            device = torch.device(
+                "cuda" if self.backend in [BackendType.CUDA_TORCH, BackendType.CUDA_FX_TORCH] else "cpu"
+            )
 
             def transform_fn(data_item):
                 images, _ = data_item

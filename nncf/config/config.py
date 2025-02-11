@@ -72,7 +72,8 @@ class NNCFConfig(dict[str, Any]):
         for struct in struct_list:
             struct_id = struct.get_id()
             if struct_id in self.__nncf_extra_structs:
-                raise nncf.InternalError(f"{struct_id} is already registered as extra struct in NNCFConfig!")
+                msg = f"{struct_id} is already registered as extra struct in NNCFConfig!"
+                raise nncf.InternalError(msg)
             self.__nncf_extra_structs[struct_id] = struct
 
     def get_extra_struct(self, struct_cls: Type[NNCFExtraConfigStruct]) -> NNCFExtraConfigStruct:

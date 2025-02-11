@@ -81,7 +81,7 @@ def MobileNetV3(stack_fn, last_point_ch, input_shape=None, model_type="large", *
     x = tf.keras.layers.Activation(activation="softmax", name="Predictions")(x)
 
     # Create model.
-    model = tf.keras.Model(img_input, x, name="MobilenetV3{}".format(model_type))
+    model = tf.keras.Model(img_input, x, name=f"MobilenetV3{model_type}")
 
     BASE_WEIGHT_PATH = "https://storage.googleapis.com/tensorflow/keras-applications/mobilenet_v3/"
     WEIGHTS_HASHES = {
@@ -89,7 +89,7 @@ def MobileNetV3(stack_fn, last_point_ch, input_shape=None, model_type="large", *
         "small": "8768d4c2e7dee89b9d02b2d03d65d862",
     }
 
-    file_name = "weights_mobilenet_v3_{}_224_1.0_float.h5".format(model_type)
+    file_name = f"weights_mobilenet_v3_{model_type}_224_1.0_float.h5"
     file_hash = WEIGHTS_HASHES[model_type]
 
     weights_path = tf.keras.utils.get_file(
@@ -185,7 +185,7 @@ def _inverted_res_block(x, expansion, filters, kernel_size, stride, se_ratio, ac
     infilters = tf.keras.backend.int_shape(x)[channel_axis]
     if block_id:
         # Expand
-        prefix = "expanded_conv_{}/".format(block_id)
+        prefix = f"expanded_conv_{block_id}/"
         x = tf.keras.layers.Conv2D(
             _depth(infilters * expansion), kernel_size=1, padding="same", use_bias=False, name=prefix + "expand"
         )(x)

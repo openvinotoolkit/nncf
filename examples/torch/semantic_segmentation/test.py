@@ -76,6 +76,6 @@ class Test:
             self.metric.add(metric_outputs.detach(), labels.detach())
 
             if iteration_loss:
-                logger.info("[Step: {}] Iteration loss: {:.4f}".format(step, loss.item()))
+                logger.info(f"[Step: {step}] Iteration loss: {loss.item():.4f}")
 
         return epoch_loss / len(self.data_loader), self.metric.value()

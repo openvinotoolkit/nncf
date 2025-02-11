@@ -219,7 +219,7 @@ def test_can_create_quant_loss_and_scheduler():
 
 
 def get_path_to_keys(tmp_path, rank):
-    return "{}_{}".format(tmp_path, str(rank))
+    return f"{tmp_path}_{str(rank)}"
 
 
 def activation_quantizers_dumping_worker(current_gpu, config, tmp_path):
@@ -229,7 +229,7 @@ def activation_quantizers_dumping_worker(current_gpu, config, tmp_path):
     print(path)
     with open(path, "w", encoding="utf8") as f:
         for aq_id in qctrl.non_weight_quantizers:
-            f.writelines("%s\n" % str(aq_id))
+            f.writelines(f"{str(aq_id)}\n")
 
 
 @pytest.mark.cuda
@@ -245,10 +245,10 @@ def test_activation_quantizers_order_is_the_same__for_resnet50(tmp_path, runs_su
         activation_quantizers_dumping_worker, nprocs=ngpus_per_node, args=(config, tmp_path), join=True
     )
 
-    with open(get_path_to_keys(tmp_path, 0), "r", encoding="utf8") as f:
+    with open(get_path_to_keys(tmp_path, 0), encoding="utf8") as f:
         ref_list = f.readlines()
     for i in range(1, ngpus_per_node):
-        with open(get_path_to_keys(tmp_path, i), "r", encoding="utf8") as f:
+        with open(get_path_to_keys(tmp_path, i), encoding="utf8") as f:
             curr_list = f.readlines()
             assert curr_list == ref_list
 

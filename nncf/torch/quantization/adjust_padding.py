@@ -44,7 +44,8 @@ class CalculatePaddingAdjustment:
 
     def __init__(self, activation_quantizer: SymmetricQuantizer):
         if not isinstance(activation_quantizer, SymmetricQuantizer):
-            raise nncf.InternalError("Padding adjustment is not supported for not symmetric quantization")
+            msg = "Padding adjustment is not supported for not symmetric quantization"
+            raise nncf.InternalError(msg)
         self._activation_quantizer = activation_quantizer
         self._is_enabled = True
 

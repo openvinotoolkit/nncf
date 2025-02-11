@@ -29,10 +29,11 @@ class TFCompositeCompressionAlgorithmBuilder(CompositeCompressionAlgorithmBuilde
 
         algo_names = extract_algorithm_names(config)
         if len(algo_names) < 2:
-            raise nncf.ValidationError(
+            msg = (
                 "Composite algorithm builder must be supplied with a config with more than one "
                 "compression algo specified!"
             )
+            raise nncf.ValidationError(msg)
         for algo_name in algo_names:
             algo_builder_cls = get_compression_algorithm_builder(algo_name)
             self._child_builders.append(algo_builder_cls(config, should_init=should_init))

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,7 +14,7 @@ import re
 import shutil
 import time
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 import openvino as ov
@@ -31,6 +31,8 @@ import nncf
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import ErrorReason
+from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import StatsFromOutput
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
@@ -61,7 +63,7 @@ class WCTimeStats(StatsFromOutput):
         time_regex = r".*•\s(.*)\s•.*"
         for line in stdout.splitlines():
             for attr_name, prefix_regex in zip(self.VAR_NAMES, self.REGEX_PREFIX):
-                match = re.search(r"{}{}".format(prefix_regex, time_regex), line)
+                match = re.search(f"{prefix_regex}{time_regex}", line)
                 if match:
                     setattr(self, attr_name, match.group(1))
                 continue
@@ -82,10 +84,13 @@ class LMWeightCompression(BaseTestPipeline):
         # load model
         if self.backend == BackendType.TORCH:
             if is_stateful:
-                raise RuntimeError(f"is_stateful={is_stateful} is not supported for PyTorch backend.")
+                msg = f"is_stateful={is_stateful} is not supported for PyTorch backend."
+                raise RuntimeError(msg)
 
             self.model_hf = AutoModelForCausalLM.from_pretrained(
-                self.model_id, torch_dtype=torch.float32, device_map="cpu"
+                self.model_id,
+                torch_dtype=torch.float32,
+                device_map="cpu",  # TODO (kshpv): add support of 'cuda', when supported
             )
             self.model = self.model_hf
         elif self.backend == BackendType.OV:
@@ -103,7 +108,8 @@ class LMWeightCompression(BaseTestPipeline):
                 )
             self.model = self.model_hf.model
         else:
-            raise RuntimeError(f"backend={self.backend.value} is not supported.")
+            msg = f"backend={self.backend.value} is not supported."
+            raise RuntimeError(msg)
 
         # dump FP32 model
         if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
@@ -157,7 +163,7 @@ class LMWeightCompression(BaseTestPipeline):
                     inputs[name] = np.zeros(shape)
             if self.backend == BackendType.TORCH:
                 for input_name in inputs:
-                    inputs[input_name] = torch.from_numpy(inputs[input_name])
+                    inputs[input_name] = torch.from_numpy(inputs[input_name]).to(self.model_hf.device)
             return inputs
 
         return transform_fn
@@ -209,7 +215,13 @@ class LMWeightCompression(BaseTestPipeline):
             ov.serialize(self.model, self.output_model_dir / self.OV_MODEL_NAME)
             self.model_hf._save_config(self.output_model_dir)
         elif self.backend == BackendType.TORCH:
-            export_from_model(self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32")
+            export_from_model(
+                self.model_hf,
+                self.output_model_dir,
+                stateful=False,
+                compression_option="fp32",
+                device=self.model_hf.device,
+            )
 
     def get_num_compressed(self) -> None:
         """
@@ -257,7 +269,8 @@ class LMWeightCompression(BaseTestPipeline):
             **self.compression_params,
         )
 
-    def _validate(self):
+    def _validate(self) -> List[ErrorReport]:
+        errors = []
         is_stateful = self.params.get("is_stateful", False)
         core = ov.Core()
 
@@ -309,12 +322,11 @@ class LMWeightCompression(BaseTestPipeline):
         num_int4_value = self.run_info.num_compress_nodes.num_int4
         num_int8_value = self.run_info.num_compress_nodes.num_int8
 
+        template = "Regression: The number of int{} ops is different than reference {} != {}"
         if num_int4_reference != num_int4_value:
-            status_msg = f"Regression: The number of int4 ops is different \
-                than reference {num_int4_reference} != {num_int4_value}"
-            raise ValueError(status_msg)
-
+            status_msg = template.format(4, num_int4_reference, num_int4_value)
+            errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
         if num_int8_reference != num_int8_value:
-            status_msg = f"Regression: The number of int8 ops is different \
-                than reference {num_int8_reference} != {num_int8_value}"
-            raise ValueError(status_msg)
+            status_msg = template.format(8, num_int8_reference, num_int8_value)
+            errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+        return errors

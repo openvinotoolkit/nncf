@@ -31,7 +31,8 @@ def replace_value_by_index(xs: Tuple[Any, ...], pos: int, value: Any) -> Tuple[A
 def check_port_id(port_id: int, min_port_id: int, max_port_id: int):
     if min_port_id <= port_id <= max_port_id:
         return
-    raise ValueError(f"Unexpected `port_id`: {port_id}")
+    msg = f"Unexpected `port_id`: {port_id}"
+    raise ValueError(msg)
 
 
 TF_ARG_PROVIDERS = Registry("TF_ARG_PROVIDERS")
@@ -97,7 +98,8 @@ class SimpleOutputArgProvider(ArgProvider):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
-            raise ValueError(f"Unexpected `args`: {args}")
+            msg = f"Unexpected `args`: {args}"
+            raise ValueError(msg)
 
         return args[output_port_id]
 
@@ -105,7 +107,8 @@ class SimpleOutputArgProvider(ArgProvider):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
-            raise ValueError(f"Unexpected `args`: {args}")
+            msg = f"Unexpected `args`: {args}"
+            raise ValueError(msg)
 
         return replace_value_by_index(args, output_port_id, value), kwargs
 
@@ -131,7 +134,8 @@ class ResizeNearestNeighborArgProvider(ArgProvider):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
-            raise ValueError(f"Unexpected `args`: {args}")
+            msg = f"Unexpected `args`: {args}"
+            raise ValueError(msg)
 
         return args[output_port_id]
 
@@ -139,7 +143,8 @@ class ResizeNearestNeighborArgProvider(ArgProvider):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
-            raise ValueError(f"Unexpected `args`: {args}")
+            msg = f"Unexpected `args`: {args}"
+            raise ValueError(msg)
 
         return replace_value_by_index(args, output_port_id, value), kwargs
 
@@ -184,7 +189,8 @@ class Conv2DArgProvider(ArgProvider):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
-            raise ValueError(f"Unexpected `args`: {args}")
+            msg = f"Unexpected `args`: {args}"
+            raise ValueError(msg)
 
         return args[output_port_id]
 
@@ -192,7 +198,8 @@ class Conv2DArgProvider(ArgProvider):
         check_port_id(output_port_id, min_port_id=0, max_port_id=0)
 
         if len(args) > 1:
-            raise ValueError(f"Unexpected `args`: {args}")
+            msg = f"Unexpected `args`: {args}"
+            raise ValueError(msg)
 
         return replace_value_by_index(args, output_port_id, value), kwargs
 

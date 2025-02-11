@@ -20,7 +20,7 @@ from nncf.tensor import TensorDataType
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDeviceType
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP as DTYPE_MAP_NP
-from nncf.tensor.functions.ov_numeric import DTYPE_MAP as DTYPE_MAP_OV
+from nncf.tensor.functions.openvino_numeric import DTYPE_MAP as DTYPE_MAP_OV
 
 
 class TestOVNNCFTensorOperators:
@@ -34,10 +34,12 @@ class TestOVNNCFTensorOperators:
                 return ov.Tensor(np.array(x, dtype=DTYPE_MAP_NP[dtype]))
         elif backend == TensorBackend.numpy:
             if dtype in [TensorDataType.bfloat16, TensorDataType.uint4, TensorDataType.int4]:
-                raise ValueError(f"Can't create NumPY tensor in dtype {dtype}")
+                msg = f"Can't create NumPY tensor in dtype {dtype}"
+                raise ValueError(msg)
             return np.array(x, dtype=DTYPE_MAP_NP[dtype])
         else:
-            raise ValueError("Unsupported backend")
+            msg = "Unsupported backend"
+            raise ValueError(msg)
 
     @staticmethod
     def backend() -> TensorBackend:

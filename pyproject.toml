@@ -43,6 +43,7 @@ dependencies = [
     "packaging>=20.0",
     "pandas>=1.1.5,<2.3",
     "psutil",
+    "py-cpuinfo>=9.0.0",
     "pydot>=1.4.1, <3.0.0",
     "pymoo>=0.6.0.1",
     "rich>=13.5.2",
@@ -105,17 +106,13 @@ files = [
     "nncf/telemetry/",
     "nncf/*py",
 ]
-exclude = [
-    "nncf/common/composite_compression.py",
-    "nncf/common/compression.py",
-    "nncf/common/quantization/config_assignment.py",
-    "nncf/common/quantization/quantizer_removal.py",
-    "nncf/common/quantization/quantizer_setup.py",
-]
 
 [tool.ruff]
 line-length = 120
-exclude = ["nncf/tensorflow/__init__.py"]
+exclude = [
+    "nncf/tensorflow/__init__.py",
+    "nncf/experimental/torch2/function_hook/handle_inner_functions.py"
+]
 
 [tool.ruff.lint]
 preview = true
@@ -131,12 +128,21 @@ ignore = [
     "SIM117", # multiple-with-statements
     "SIM103", # needless-bool
     "NPY002", # numpy-legacy-random
+    "UP006", # non-pep585-annotation
+    "UP007", # non-pep604-annotation-union
+    "UP035", # deprecated-import
+    "UP038", # non-pep604-isinstance
+    "UP045", # non-pep604-annotation-optional
 ]
 select = [
     "E", # pycodestyle rules
     "F", # pyflakes rules
     "CPY001", # copyright check
     "NPY", # numpy rules
+    "UP", # pyupgrade
+    "EM",  # flake8-errmsg
+    "INP", # flake8-no-pep420
+    "ISC", # flake8-implicit-str-concat
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
@@ -148,10 +154,11 @@ extend-select = [
 "tests/**/*.py" = ["F403"]
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
+"!nncf/**.py" = ["INP"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = """\
-# Copyright \\(c\\) (\\d{4}|\\d{4}-\\d{4}) Intel Corporation
+# Copyright \\(c\\) (202[5,6]) Intel Corporation
 # Licensed under the Apache License, Version 2.0 \\(the "License"\\);
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at

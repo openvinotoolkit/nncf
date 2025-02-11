@@ -246,11 +246,11 @@ class TensorCollector:
         :reducer_output_port_id: Reducer target output port id.
         """
         if container_key in self._stat_container_kwargs_map:
-            raise nncf.InternalError(
-                f"Two different statistic branches for one container key {container_key} are encountered"
-            )
+            msg = f"Two different statistic branches for one container key {container_key} are encountered"
+            raise nncf.InternalError(msg)
         if any(aggr is aggregator for aggr in self._aggregators.values()):
-            raise nncf.InternalError(f"One aggregator instance {aggregator} for different branches is encountered")
+            msg = f"One aggregator instance {aggregator} for different branches is encountered"
+            raise nncf.InternalError(msg)
 
         self._reducers.add(reducer)
         key = (hash(reducer), reducer_output_port_id, hash(aggregator))
@@ -464,18 +464,27 @@ class MeanReducer(TensorReducerBase):
 
 
 class MeanVarianceReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
-        raise NotImplementedError()
+    def _reduce_out_of_place(self, x: List[Tensor]) -> List[Tensor]:
+        x = x[0]
+        reduction_axes = self._get_reduction_axes(x)
+        variance = fns.var(x, reduction_axes)
+        return [fns.mean(variance)]
 
 
 class MaxVarianceReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
-        raise NotImplementedError()
+    def _reduce_out_of_place(self, x: List[Tensor]) -> List[Tensor]:
+        x = x[0]
+        reduction_axes = self._get_reduction_axes(x)
+        variance = fns.var(x, reduction_axes)
+        return [fns.max(variance)]
 
 
 class MeanAbsMaxReducer(TensorReducerBase):
-    def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
-        raise NotImplementedError()
+    def _reduce_out_of_place(self, x: List[Tensor]) -> List[Tensor]:
+        x = fns.abs(x[0])
+        reduction_axes = self._get_reduction_axes(x)
+        abs_max = fns.max(x, reduction_axes, keepdims=self._keepdims)
+        return [fns.mean(abs_max)]
 
 
 class QuantileReducerBase(TensorReducerBase):
@@ -724,9 +733,8 @@ class MedianAbsoluteDeviationAggregator(AggregatorBase):
             window_size=window_size,
         )
         if 0 not in self._aggregation_axes:
-            raise NotImplementedError(
-                "Aggregation without 0 dim is not supported yet for MedianAbsoluteDeviationAggregator"
-            )
+            msg = "Aggregation without 0 dim is not supported yet for MedianAbsoluteDeviationAggregator"
+            raise NotImplementedError(msg)
 
     def _register_reduced_input_impl(self, x: TensorType) -> None:
         return self._container.append(x)
@@ -765,7 +773,8 @@ class PercentileAggregator(AggregatorBase):
     ):
         super().__init__(aggregation_axes=aggregation_axes, num_samples=num_samples)
         if 0 not in self._aggregation_axes:
-            raise NotImplementedError("Aggregation without 0 dim is not supported yet for PercentileAggregator")
+            msg = "Aggregation without 0 dim is not supported yet for PercentileAggregator"
+            raise NotImplementedError(msg)
         self._percentiles_to_collect = percentiles_to_collect
         self._window_size = window_size
         self._container = deque(maxlen=window_size)

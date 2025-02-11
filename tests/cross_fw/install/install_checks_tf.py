@@ -14,6 +14,7 @@ import tensorflow as tf
 import nncf  # noqa: F401
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
+from tests.cross_fw.install.common import load_nncf_modules
 from tests.tensorflow.quantization.utils import get_basic_quantization_config
 
 # Do not remove - these imports are for testing purposes.
@@ -26,3 +27,17 @@ model = tf.keras.Model(inputs=inputs, outputs=outputs)
 config = get_basic_quantization_config()
 compression_state_to_skip_init = {BaseCompressionAlgorithmController.BUILDER_STATE: {}}
 compression_model, compression_ctrl = create_compressed_model(model, config, compression_state_to_skip_init)
+
+EXCLUDED_MODULES_PATTERNS = (
+    "nncf\\.openvino.*",
+    "nncf\\.torch.*",
+    "nncf\\.onnx.*",
+    "nncf\\.experimental\\.torch.*",
+    "nncf\\.experimental\\.openvino.*",
+    "nncf\\.experimental\\.onnx.*",
+    "^(?!nncf(?:\\.experimental)*\\.tensorflow.*?\\.).*?openvino_[^\\.]*",
+    "^(?!nncf(?:\\.experimental)*\\.tensorflow.*?\\.).*?onnx_[^\\.]*",
+    "^(?!nncf(?:\\.experimental)*\\.tensorflow.*?\\.).*?torch_[^\\.]*",
+)
+
+load_nncf_modules(EXCLUDED_MODULES_PATTERNS)

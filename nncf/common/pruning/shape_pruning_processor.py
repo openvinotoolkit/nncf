@@ -170,7 +170,8 @@ class ShapePruningProcessor:
                 if mask_producer.id in cluster_nodes_idxs:
                     return mask_producer.sparse_multiplier
 
-        raise nncf.ValidationError(f"Next node for cluster {cluster.elements} doesn't have closing mask")
+        msg = f"Next node for cluster {cluster.elements} doesn't have closing mask"
+        raise nncf.ValidationError(msg)
 
     def get_next_nodes(
         self, graph: NNCFGraph, pruning_groups: Clusterization[PrunedLayerInfoBase]

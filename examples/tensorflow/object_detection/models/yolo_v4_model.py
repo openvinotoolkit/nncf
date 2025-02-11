@@ -63,7 +63,7 @@ class YOLOv4Model(base_model.Model):
         outputs = self.model_outputs(self._input_layer, is_training)
         keras_model = tf.keras.models.Model(inputs=self._input_layer, outputs=outputs, name="yolo_v4")
         if weights:
-            logger.info("Loaded pretrained weights from {}".format(weights))
+            logger.info(f"Loaded pretrained weights from {weights}")
             keras_model.load_weights(weights, by_name=True)
         return keras_model
 

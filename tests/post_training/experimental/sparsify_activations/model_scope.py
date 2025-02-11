@@ -104,10 +104,12 @@ def generate_tests_scope(models_list: List[Dict]) -> Dict[str, Dict]:
             model_param.pop("backends")
             if backend == BackendType.FP32:
                 if model_id in fp32_models:
-                    raise nncf.ValidationError(f"Duplicate test case for {model_id} with FP32 backend")
+                    msg = f"Duplicate test case for {model_id} with FP32 backend"
+                    raise nncf.ValidationError(msg)
                 fp32_models.add(model_id)
             if test_case_name in tests_scope:
-                raise nncf.ValidationError(f"{test_case_name} already in tests_scope")
+                msg = f"{test_case_name} already in tests_scope"
+                raise nncf.ValidationError(msg)
             tests_scope[test_case_name] = model_param
 
     return tests_scope

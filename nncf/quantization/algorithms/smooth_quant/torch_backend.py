@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -24,13 +24,12 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
-from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.command_creation import create_command_to_update_weight
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import CompressionParameter
 from nncf.torch.layer_utils import StatefullModuleInterface
@@ -122,12 +121,13 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     def get_weight_value(node_with_weight: NNCFNode, model: NNCFNetwork, nncf_graph: NNCFGraph) -> Tensor:
         weight_node = get_const_node(node_with_weight, node_with_weight.metatype.weight_port_ids[0], nncf_graph)
         if weight_node is None:
-            raise RuntimeError(f"{node_with_weight} node has no weight node.")
+            msg = f"{node_with_weight} node has no weight node."
+            raise RuntimeError(msg)
         weight_data = get_const_data(weight_node, model)
         return Tensor(weight_data)
 
     @staticmethod
-    def weight_update_command(node_with_weight: NNCFNode, weight_value: np.ndarray) -> OVWeightUpdateCommand:
+    def weight_update_command(node_with_weight: NNCFNode, weight_value: np.ndarray) -> PTWeightUpdateCommand:
         return create_command_to_update_weight(node_with_weight, weight_value)
 
     @staticmethod
@@ -137,7 +137,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         source_output_port_id: int,
         nodes: List[NNCFNode],
         scale_node_name: str,
-    ) -> OVMultiplyInsertionCommand:
+    ) -> PTSharedFnInsertionCommand:
         input_port_id = 0
         target_points = []
         for node in nodes:

@@ -40,7 +40,8 @@ class Resnet:
         elif activation == "swish":
             self._activation_op = tf.nn.swish
         else:
-            raise ValueError("Unsupported activation `{}`.".format(activation))
+            msg = f"Unsupported activation `{activation}`."
+            raise ValueError(msg)
 
         self._norm_activation = norm_activation
         self._data_format = data_format
@@ -57,8 +58,9 @@ class Resnet:
 
         if resnet_depth not in model_params:
             valid_resnet_depths = ", ".join([str(depth) for depth in sorted(model_params.keys())])
+            msg = f"The resnet_depth should be in [{valid_resnet_depths}]. Not a valid resnet_depth:"
             raise ValueError(
-                "The resnet_depth should be in [%s]. Not a valid resnet_depth:" % (valid_resnet_depths),
+                msg,
                 self._resnet_depth,
             )
 
@@ -78,7 +80,7 @@ class Resnet:
           The values are corresponding feature hierarchy in ResNet with shape
           [batch_size, height_l, width_l, num_filters].
         """
-        with tf.name_scope("resnet%s" % self._resnet_depth):
+        with tf.name_scope(f"resnet{self._resnet_depth}"):
             return self._resnet_fn(inputs, is_training)
 
     def fixed_padding(self, inputs, kernel_size):

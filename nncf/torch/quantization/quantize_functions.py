@@ -11,6 +11,8 @@
 from typing import Any
 
 import torch
+from torch.overrides import handle_torch_function
+from torch.overrides import has_torch_function_unary
 
 from nncf.common.logging import nncf_logger
 from nncf.errors import ValidationError
@@ -193,6 +195,10 @@ def get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, inp
 
 @register_operator()
 def symmetric_quantize(input_, levels, level_low, level_high, scale, eps, skip: bool = False):
+    if has_torch_function_unary(input_):
+        return handle_torch_function(
+            symmetric_quantize, (input_,), input_, levels, level_low, level_high, scale, eps, skip
+        )
     if skip:
         return input_
     scale = scale.to(dtype=input_.dtype)
@@ -202,6 +208,10 @@ def symmetric_quantize(input_, levels, level_low, level_high, scale, eps, skip: 
 
 @register_operator()
 def asymmetric_quantize(input_, levels, level_low, level_high, input_low, input_range, eps, skip: bool = False):
+    if has_torch_function_unary(input_):
+        return handle_torch_function(
+            asymmetric_quantize, (input_,), input_, levels, level_low, level_high, input_low, input_range, eps, skip
+        )
     if skip:
         return input_
     input_range_safe = abs(input_range) + eps
@@ -290,7 +300,8 @@ def pack_uint4(tensor: torch.Tensor) -> torch.Tensor:
     :raises nncf.errors.ValidationError: If the input tensor is not of type `torch.uint8`.
     """
     if tensor.dtype != torch.uint8:
-        raise ValidationError(f"Invalid tensor dtype {tensor.type}. torch.uint8 type is supported.")
+        msg = f"Invalid tensor dtype {tensor.type}. torch.uint8 type is supported."
+        raise ValidationError(msg)
     packed_tensor = tensor.contiguous()
     packed_tensor = packed_tensor.reshape(-1, 2)
     packed_tensor = torch.bitwise_and(packed_tensor[..., ::2], 15) | packed_tensor[..., 1::2] << 4
@@ -320,7 +331,8 @@ def pack_int4(tensor: torch.Tensor) -> torch.Tensor:
     :raises nncf.errors.ValidationError: If the input tensor is not of type `torch.int8`.
     """
     if tensor.dtype != torch.int8:
-        raise ValidationError(f"Invalid tensor dtype {tensor.type}. torch.int8 type is supported.")
+        msg = f"Invalid tensor dtype {tensor.type}. torch.int8 type is supported."
+        raise ValidationError(msg)
     tensor = tensor + 8
     return pack_uint4(tensor.type(torch.uint8))
 

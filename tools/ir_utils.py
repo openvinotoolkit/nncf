@@ -80,7 +80,7 @@ def extract_params(buffer, all_parameters, layer, get_weight_shape_fn):
     weight_size = int(weight.get("size"))
     weight_data = get_blob(buffer, weight_offset, weight_size, weight_shape, precision)
     param = Parameter(weight_data, weight_size, weight_offset, weight_shape)
-    all_parameters["{}.weight".format(layer_name)] = param
+    all_parameters[f"{layer_name}.weight"] = param
     if biases is not None:
         bias_shape = [output_shape[1]]
         bias_size = int(biases.get("size"))
@@ -88,7 +88,7 @@ def extract_params(buffer, all_parameters, layer, get_weight_shape_fn):
 
         bias_data = get_blob(buffer, bias_offset, bias_size, bias_shape, precision)
         bias_param = Parameter(bias_data, bias_size, bias_offset, bias_shape)
-        all_parameters["{}.bias".format(layer_name)] = bias_param
+        all_parameters[f"{layer_name}.bias"] = bias_param
 
 
 def get_blob(buffer, offset, size, shape, dtype=np.float32):

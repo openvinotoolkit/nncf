@@ -106,7 +106,7 @@ def create_compressed_model(
     warning_deprecated(
         "The 'nncf.torch.create_compressed_model' function is deprecated and will be removed in a future release.\n"
         "To perform post training quantization (PTQ) or quantization aware training (QAT),"
-        " use the new nncf.quantize() API:\n"
+        " use the nncf.quantize() API:\n"
         " - https://github.com/openvinotoolkit/nncf?tab=readme-ov-file#post-training-quantization\n"
         " - https://github.com/openvinotoolkit/nncf?tab=readme-ov-file#training-time-quantization\n"
         "Examples:\n"
@@ -115,7 +115,7 @@ def create_compressed_model(
     )
 
     if isinstance(model, NNCFNetwork):
-        raise nncf.InternalError(
+        msg = (
             "The model object has already been compressed.\n"
             "NNCF for PyTorch modifies the model object in-place, and repeat calls to "
             "`nncf.torch.create_compressed_model` with the same model object passed as argument "
@@ -126,6 +126,7 @@ def create_compressed_model(
             "re-running cells involving `nncf.torch.create_compressed_model` the original model object "
             "is also re-created (via constructor call)."
         )
+        raise nncf.InternalError(msg)
 
     set_debug_log_dir(config.get("log_dir", "."))
 
@@ -179,12 +180,12 @@ def get_input_info_from_config(config: NNCFConfig) -> ModelInputInfo:
         return FillerInputInfo.from_nncf_config(config)
 
     nncf_logger.debug(
-        "Config has no 'input_info' section, trying to use dataloader output as model inputs " "for graph building."
+        "Config has no 'input_info' section, trying to use dataloader output as model inputs for graph building."
     )
     exact_info = LoaderInputInfo.from_nncf_config_dataloaders(config)
     if exact_info is not None:
         return exact_info
-    raise nncf.ValidationError(
+    msg = (
         "Could not determine tensor inputs for the model's forward call.\n"
         "If you are using the `nncf.quantize` API, make sure that you supply the "
         "calibration dataloader to the `nncf.quantize` call.\n"
@@ -196,6 +197,7 @@ def get_input_info_from_config(config: NNCFConfig) -> ModelInputInfo:
         f"{EXTRA_STRUCTS_WITH_DATALOADERS}\n"
         f"or by calling `nncf.torch.register_default_init_args`"
     )
+    raise nncf.ValidationError(msg)
 
 
 def create_nncf_network(
@@ -238,12 +240,13 @@ def create_nncf_network(
     :return: A model wrapped by NNCFNetwork, which is ready for adding compression."""
 
     if dummy_forward_fn is not None and wrap_inputs_fn is None:
-        raise ValueError(
+        msg = (
             "A custom dummy forward function was specified, but the corresponding input wrapping function "
             "was not. In case a custom dummy forward function is specified for purposes of NNCF graph "
             "building, then the wrap_inputs_fn parameter MUST also be specified and be consistent with "
             "the input wrapping done in dummy_forward_fn."
         )
+        raise ValueError(msg)
 
     # Preserve `.training`/`.requires_grad` state since we will be building NNCFNetwork in `.eval` mode
     with training_mode_switcher(model, is_training=False):
@@ -349,10 +352,11 @@ def wrap_model(
     :return: A model wrapped by NNCFNetwork.
     """
     if not isinstance(model, torch.nn.Module):
-        raise TypeError(
+        msg = (
             f"The provided model type {type(model)} is incompatible. "
             "Only models inheriting from torch.nn.Module are supported."
         )
+        raise TypeError(msg)
 
     input_info = ExampleInputInfo.from_example_input(example_input)
 

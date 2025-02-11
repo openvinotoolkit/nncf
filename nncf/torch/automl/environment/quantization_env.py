@@ -212,7 +212,8 @@ class QuantizationEnv:
         # Create master dataframe to keep track of quantizable layers and their attributes
         self.master_df, self.state_list = self._get_state_space(self.qctrl, self.qmodel, self.quantizer_table)
         if self.master_df.isnull().values.any():
-            raise ValueError("Q.Env Master Dataframe has null value(s)")
+            msg = "Q.Env Master Dataframe has null value(s)"
+            raise ValueError(msg)
 
         assert len(self.quantizer_table) == len(
             self.qctrl.all_quantizations
@@ -234,13 +235,11 @@ class QuantizationEnv:
         self.target_model_size = self.orig_model_size * self.compression_ratio
 
         if self.target_model_size < self.min_model_size and self.target_model_size > self.max_model_size:
-            raise ValueError(
-                "Model Size Ratio {} is out of bound ({}, {})".format(
-                    self.compression_ratio,
-                    self.min_model_size / self.orig_model_size,
-                    self.max_model_size / self.orig_model_size,
-                )
+            msg = (
+                f"Model Size Ratio {self.compression_ratio} is out of bound"
+                f" ({self.min_model_size / self.orig_model_size}, {self.max_model_size / self.orig_model_size})"
             )
+            raise ValueError(msg)
 
         # Compression Ratio Calculation (BOP relative to 8-bit)
         self.compression_ratio_calculator = CompressionRatioCalculator(
@@ -394,7 +393,8 @@ class QuantizationEnv:
                 feature["prev_action"] = 0.0  # placeholder
 
             else:
-                raise NotImplementedError("State embedding extraction of {}".format(m.__class__.__name__))
+                msg = f"State embedding extraction of {m.__class__.__name__}"
+                raise NotImplementedError(msg)
 
         elif isinstance(qid, NonWeightQuantizerId):
             qmod = self.qctrl.all_quantizations[qid]
@@ -410,9 +410,11 @@ class QuantizationEnv:
             feature["prev_action"] = 0.0
 
             if len(input_shape) != 4 and len(input_shape) != 2:
-                raise NotImplementedError("A design is required to cater this scenario. Pls. report to maintainer")
+                msg = "A design is required to cater this scenario. Pls. report to maintainer"
+                raise NotImplementedError(msg)
         else:
-            raise ValueError("qid is an instance of unexpected class {}".format(qid.__class__.__name__))
+            msg = f"qid is an instance of unexpected class {qid.__class__.__name__}"
+            raise ValueError(msg)
 
         return pd.Series(feature)
 
@@ -476,7 +478,8 @@ class QuantizationEnv:
             self._run_batchnorm_adaptation()
 
         if finetune:
-            raise NotImplementedError("Post-Quantization fine tuning is not implemented.")
+            msg = "Post-Quantization fine tuning is not implemented."
+            raise NotImplementedError(msg)
         with torch.no_grad():
             quantized_score = self.eval_fn(self.qmodel, self.eval_loader)
             nncf_logger.info(f"[Q.Env] Quantized Score: {quantized_score:.3f}")
@@ -654,7 +657,7 @@ class QuantizationEnv:
                 group_members.append(self.master_df.index[self.master_df.qid == str(wq[0])][0])
             adj_quantizer_groups.append(natsorted(group_members))
 
-        with safe_open(self.dump_dir / "{}_groups_of_adjacent_quantizers.json".format(self.model_name), "w") as DUMP_FH:
+        with safe_open(self.dump_dir / f"{self.model_name}_groups_of_adjacent_quantizers.json", "w") as DUMP_FH:
             json.dump(natsorted(adj_quantizer_groups), DUMP_FH, indent=4)
 
     def _align_bw_action(self):
@@ -705,5 +708,5 @@ class QuantizationEnv:
             )
 
         os.makedirs(self.dump_dir / "bw_alignment", exist_ok=True)
-        with safe_open(self.dump_dir / "bw_alignment/{0:03d}_bw_alignment.json".format(self._n_eval), "w") as DUMP_FH:
+        with safe_open(self.dump_dir / f"bw_alignment/{self._n_eval:03d}_bw_alignment.json", "w") as DUMP_FH:
             json.dump(list_of_dump_dict, DUMP_FH, indent=4)

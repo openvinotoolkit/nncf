@@ -46,7 +46,7 @@ class MovementGlueHandler:
     def get_metric_value_from_checkpoint(self, checkpoint_save_dir: str) -> Dict[str, Union[float, int]]:
         checkpoint_path = self.get_checkpoint_path(checkpoint_save_dir)
         result_path = checkpoint_path / "all_results.json"
-        with open(result_path, "r", encoding="utf-8") as f:
+        with open(result_path, encoding="utf-8") as f:
             result = json.load(f)
         return result
 

@@ -92,7 +92,8 @@ def accuracy_aware_fit(
                         break
 
         if logs is None:
-            raise ValueError("Expect x to be a non-empty array or dataset.")
+            msg = "Expect x to be a non-empty array or dataset."
+            raise ValueError(msg)
         epoch_logs = copy.copy(logs)
         callbacks.on_epoch_end(epoch, epoch_logs)
 

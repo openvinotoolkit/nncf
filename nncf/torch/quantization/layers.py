@@ -14,12 +14,13 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
 from torch import distributed
 from torch import nn
+from torch._C import DisableTorchFunction
 
 import nncf
 from nncf.common.graph import NNCFNodeName
@@ -95,7 +96,7 @@ class PTQuantizerSpec(QuantizerSpec):
         scale_shape: Tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool = False,
-        compression_lr_multiplier: float = None,
+        compression_lr_multiplier: Optional[float] = None,
     ):
         """
         :param scale_shape: Shape of quantizer scale parameters
@@ -117,10 +118,10 @@ class PTQuantizerSpec(QuantizerSpec):
         qconfig: QuantizerConfig,
         narrow_range: bool,
         half_range: bool,
-        scale_shape: Tuple[int],
+        scale_shape: Tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool,
-        compression_lr_multiplier: float,
+        compression_lr_multiplier: Optional[float],
     ) -> "PTQuantizerSpec":
         return cls(
             qconfig.num_bits,
@@ -290,6 +291,7 @@ class PTQuantizerSetup(QuantizerSetupBase):
 
 
 class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
+
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__()
         self._qspec = qspec
@@ -341,7 +343,8 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
 
     @property
     def level_low(self) -> int:
-        return self._level_low.item()
+        with DisableTorchFunction():
+            return self._level_low.item()
 
     @level_low.setter
     def level_low(self, val: int):
@@ -349,7 +352,8 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
 
     @property
     def level_high(self) -> int:
-        return self._level_high.item()
+        with DisableTorchFunction():
+            return self._level_high.item()
 
     @level_high.setter
     def level_high(self, val: int):
@@ -369,7 +373,8 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
 
     def is_enabled_quantization(self):
         with no_jit_trace():
-            return self.enabled[0].item() == 1
+            with DisableTorchFunction():
+                return self.enabled[0].item() == 1
 
     def enable_quantization(self):
         self.enabled[0] = 1
@@ -428,10 +433,12 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
             return
 
         if torch.all(torch.isinf(min_values)) or torch.all(torch.isinf(max_values)):
-            raise ValueError(f"Statistics are not collected for {log_module_name}")
+            msg = f"Statistics are not collected for {log_module_name}"
+            raise ValueError(msg)
 
         if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
-            raise ValueError(f"Some of the values in statistics have infinite value for {log_module_name}")
+            msg = f"Some of the values in statistics have infinite value for {log_module_name}"
+            raise ValueError(msg)
 
         own_device = get_model_device(self)
         min_values = min_values.to(own_device)
@@ -464,7 +471,8 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
     @property
     def num_bits(self):
         with no_jit_trace():
-            return self._num_bits.item()
+            with DisableTorchFunction():
+                return self._num_bits.item()
 
     @num_bits.setter
     def num_bits(self, num_bits: int):
@@ -509,10 +517,11 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
             y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, input_high)
             possible_axes = self._possible_per_channel_dimensions()
             if len(possible_axes) > 1:
-                raise nncf.InternalError(
+                msg = (
                     f"Impossible to determine the per-channel axis for a scale shape {self.scale_shape} - "
                     f"more than one dimension is >1"
                 )
+                raise nncf.InternalError(msg)
             if not possible_axes:
                 # Impossible to determine proper axis for per-channel quantization because we have
                 # scale shape ~ [1, 1, 1, 1], therefore falling back to per-tensor style export
@@ -541,10 +550,11 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
             if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
                 x, y_scale, y_zero_point, axis = self._prepare_qdq_export_quantization(x)
                 return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point, axis)
-        raise nncf.InternalError("Unknown export mode")
+        msg = "Unknown export mode"
+        raise nncf.InternalError(msg)
 
     def extra_repr(self):
-        return "bit={}, ch={}".format(self.num_bits, self.per_channel)
+        return f"bit={self.num_bits}, ch={self.per_channel}"
 
     @abstractmethod
     def get_quantizer_config(self) -> QuantizerConfig:
@@ -724,7 +734,8 @@ class SymmetricQuantizer(BaseQuantizer):
     @property
     def signed(self):
         with no_jit_trace():
-            return self.signed_tensor.item() == 1
+            with DisableTorchFunction():
+                return self.signed_tensor.item() == 1
 
     @signed.setter
     def signed(self, signed: bool):
@@ -1021,7 +1032,7 @@ class AsymmetricQuantizer(BaseQuantizer):
         )
 
 
-def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None):
+def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: Optional[int] = None) -> List[int]:
     scale_shape = [1 for _ in input_shape]
     if channel_idx is None:
         if is_weights:
@@ -1032,7 +1043,9 @@ def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: int = None
     return scale_shape
 
 
-def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool, channel_idx: int = None) -> List[int]:
+def get_scale_shape(
+    input_shape: Iterable[int], is_weights: bool, per_channel: bool, channel_idx: Optional[int] = None
+) -> List[int]:
     """
     Assumes that input_shape is supplied in either [B, C, H, W] or [N_out, N_in, H, W] format,
     or derivatives.
@@ -1103,9 +1116,11 @@ class INT8AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
 
     def pack_weight(self, weight: torch.Tensor) -> torch.Tensor:
         if torch.is_floating_point(weight):
-            raise ValueError(f"Invalid weight dtype {weight.type}. Integer types are supported.")
+            msg = f"Invalid weight dtype {weight.type}. Integer types are supported."
+            raise ValueError(msg)
         if torch.any((weight < 0) | (weight > 255)):
-            raise ValueError("Weight values are not in [0, 255].")
+            msg = "Weight values are not in [0, 255]."
+            raise ValueError(msg)
         return weight.type(dtype=torch.uint8)
 
     def forward(self, x) -> torch.Tensor:
@@ -1133,10 +1148,9 @@ class INT8SymmetricWeightsDecompressor(BaseWeightsDecompressor):
         return QuantizationMode.SYMMETRIC
 
     def pack_weight(self, weight: torch.Tensor) -> torch.Tensor:
-        if torch.is_floating_point(weight):
-            raise ValueError(f"Invalid weight dtype {weight.type}. Integer types are supported.")
         if torch.any((weight < -128) | (weight > 127)):
-            raise ValueError("Weight values are not in [-128, 127].")
+            msg = "Weight values are not in [-128, 127]."
+            raise ValueError(msg)
         return weight.type(dtype=torch.int8)
 
     def forward(self, x) -> torch.Tensor:
@@ -1176,10 +1190,9 @@ class INT4AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
         return QuantizationMode.ASYMMETRIC
 
     def pack_weight(self, weight: torch.Tensor) -> torch.Tensor:
-        if torch.is_floating_point(weight):
-            raise ValueError(f"Invalid weight dtype {weight.type}. Integer types are supported.")
         if torch.any((weight < 0) | (weight > 15)):
-            raise ValueError("Weight values are not in [0, 15].")
+            msg = "Weight values are not in [0, 15]."
+            raise ValueError(msg)
         return pack_uint4(weight.type(dtype=torch.uint8))
 
     def forward(self, x):
@@ -1222,9 +1235,11 @@ class INT4SymmetricWeightsDecompressor(BaseWeightsDecompressor):
 
     def pack_weight(self, weight: torch.Tensor) -> torch.Tensor:
         if torch.is_floating_point(weight):
-            raise ValueError(f"Invalid weight dtype {weight.type}. Integer types are supported.")
+            msg = f"Invalid weight dtype {weight.type}. Integer types are supported."
+            raise ValueError(msg)
         if torch.any((weight < -8) | (weight > 7)):
-            raise ValueError("Tensor values are not in [-8, 7].")
+            msg = "Tensor values are not in [-8, 7]."
+            raise ValueError(msg)
         return pack_int4(weight.type(dtype=torch.int8))
 
     def forward(self, x):

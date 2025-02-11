@@ -24,5 +24,5 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
-      - uses: AlexanderDokuchaev/md-dead-link-check@cc3ed55268899a1a6d5fd7068abbc4591eab1f74 # v0.9
+      - uses: AlexanderDokuchaev/md-dead-link-check@c7210ef8a38c194a119834e39d212387d19b512c # v1.1.0
 

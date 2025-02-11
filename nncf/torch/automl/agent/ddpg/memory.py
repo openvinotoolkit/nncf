@@ -9,9 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from __future__ import absolute_import
-
 import random
 from collections import deque
 from collections import namedtuple
@@ -241,7 +238,8 @@ class SequentialMemory(Memory):
 
     def discard(self, subscript):
         if not isinstance(subscript, slice):
-            raise ValueError("discard function only supports input of type slice")
+            msg = "discard function only supports input of type slice"
+            raise ValueError(msg)
 
         del self.observations[subscript]
         del self.actions[subscript]

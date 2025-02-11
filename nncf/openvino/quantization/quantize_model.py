@@ -75,9 +75,8 @@ def native_quantize_if_op_impl(
     Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
     """
     if not fast_bias_correction:
-        raise NotImplementedError(
-            "The BiasCorrection algorithm is not supported for OpenVINO models with If operation."
-        )
+        msg = "The BiasCorrection algorithm is not supported for OpenVINO models with If operation."
+        raise NotImplementedError(msg)
     graphs = {}
 
     def _extract_all_subgraphs(model: ov.Model, current_id: str) -> None:

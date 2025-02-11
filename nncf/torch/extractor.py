@@ -173,10 +173,12 @@ def try_to_fuse_conv(
         return extracted_module
 
     if output_node != next_nodes[0]:
-        raise nncf.InternalError(f"Output node {output_node} not found after {input_node}")
+        msg = f"Output node {output_node} not found after {input_node}"
+        raise nncf.InternalError(msg)
 
     if next_nodes[0].metatype != om.PTBatchNormMetatype:
-        raise nncf.InternalError("Supported only BatchNorm layers")
+        msg = "Supported only BatchNorm layers"
+        raise nncf.InternalError(msg)
 
     extracted_bn = extract_bn(next_nodes[0], model)
     if extracted_bn is None:
@@ -199,7 +201,8 @@ def extract_model(model: NNCFNetwork, input_nodes: List[str], output_nodes: List
     """
 
     if len(input_nodes) != 1 or len(output_nodes) != 1:
-        raise nncf.InternalError("input_nodes and output_nodes should contain only one node.")
+        msg = "input_nodes and output_nodes should contain only one node."
+        raise nncf.InternalError(msg)
 
     graph = model.nncf.get_graph()
     input_node = graph.get_node_by_name(input_nodes[0])

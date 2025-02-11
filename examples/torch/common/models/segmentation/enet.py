@@ -135,10 +135,11 @@ class RegularBottleneck(nn.Module):
         # Check in the internal_scale parameter is within the expected range
         # [1, channels]
         if internal_ratio <= 1 or internal_ratio > channels:
-            raise nncf.ValidationError(
+            msg = (
                 "Value out of range. Expected value in the "
-                "interval [1, {0}], got internal_scale={1}.".format(channels, internal_ratio)
+                f"interval [1, {channels}], got internal_scale={internal_ratio}."
             )
+            raise nncf.ValidationError(msg)
 
         internal_channels = channels // internal_ratio
 
@@ -293,10 +294,11 @@ class DownsamplingBottleneck(nn.Module):
         # Check in the internal_scale parameter is within the expected range
         # [1, channels]
         if internal_ratio <= 1 or internal_ratio > in_channels:
-            raise nncf.ValidationError(
+            msg = (
                 "Value out of range. Expected value in the "
-                "interval [1, {0}], got internal_scale={1}. ".format(in_channels, internal_ratio)
+                f"interval [1, {in_channels}], got internal_scale={internal_ratio}. "
             )
+            raise nncf.ValidationError(msg)
 
         internal_channels = in_channels // internal_ratio
 
@@ -427,10 +429,11 @@ class UpsamplingBottleneck(nn.Module):
         # Check in the internal_scale parameter is within the expected range
         # [1, channels]
         if internal_ratio <= 1 or internal_ratio > in_channels:
-            raise nncf.ValidationError(
+            msg = (
                 "Value out of range. Expected value in the "
-                "interval [1, {0}], got internal_scale={1}. ".format(in_channels, internal_ratio)
+                f"interval [1, {in_channels}], got internal_scale={internal_ratio}. "
             )
+            raise nncf.ValidationError(msg)
 
         internal_channels = in_channels // internal_ratio
 

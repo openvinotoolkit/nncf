@@ -312,7 +312,8 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController, ABC):
         pruning_target = params.get("pruning_target", None)
         pruning_flops_target = params.get("pruning_flops_target", None)
         if pruning_target and pruning_flops_target:
-            raise ValueError("Only one parameter from 'pruning_target' and 'pruning_flops_target' can be set.")
+            msg = "Only one parameter from 'pruning_target' and 'pruning_flops_target' can be set."
+            raise ValueError(msg)
         if pruning_flops_target:
             self.prune_flops = True
 
