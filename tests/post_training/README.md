@@ -166,5 +166,8 @@ To mark a test as expected to fail (xfail) during the compression process with a
 ```yml
 <Name from model scopes>_backend_<BACKEND>:
   ...
-  exception_xfail_reason: "Issue-<jira ticket number>"
+    exception_xfail_reason:
+      type: "<ExceptionType>", e.g. TypeError
+      error_message: "<Error message from Exception>"
+      message: "Issue-<jira ticket number>"
 ```

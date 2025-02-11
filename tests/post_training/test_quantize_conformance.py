@@ -271,22 +271,53 @@ def create_pipeline_kwargs(test_model_param, subset_size, test_case_name, refere
     }
 
 
-def _update_status(pipeline: BaseTestPipeline, errors: List[ErrorReason]) -> List[str]:
+def _get_exception_type_name(report: ErrorReport) -> str:
+    return report.msg.split("|")[0].replace("Exception Type: ", "")
+
+
+def _get_exception_error_message(report: ErrorReport) -> str:
+    return report.msg.split("|")[1]
+
+
+def _are_exceptions_matched(report: ErrorReport, reference_exception: Dict[str, str]) -> bool:
+    return reference_exception["error_message"] == _get_exception_error_message(report) and reference_exception[
+        "type"
+    ] == _get_exception_type_name(report)
+
+
+def _is_error_xfailed(report: ErrorReport, xfail_reason: str, reference_data: Dict[str, Dict[str, str]]) -> bool:
+    if xfail_reason not in reference_data:
+        return False
+
+    if report.reason == ErrorReason.EXCEPTION:
+        return _are_exceptions_matched(report, reference_data[xfail_reason])
+    return True
+
+
+def _get_xfail_message(report: ErrorReport, xfail_reason: str, reference_data: Dict[str, Dict[str, str]]) -> str:
+    if report.reason == ErrorReason.EXCEPTION:
+        return f"XFAIL: {reference_data[xfail_reason]['message']} - {report.msg}"
+    return f"XFAIL: {xfail_reason} - {report.msg}"
+
+
+def _update_status(pipeline: BaseTestPipeline, error_reports: List[ErrorReport]) -> List[str]:
     """
     Updates status of the pipeline based on the errors encountered during the run.
 
     :param pipeline: The pipeline object containing run information.
-    :param errors: List of errors encountered during the run.
+    :param error_reports: List of errors encountered during the run.
     :return: List of unexpected errors.
     """
     pipeline.run_info.status = ""  # Successful status
     xfails, unexpected_errors = [], []
-    for report in errors:
+
+    for report in error_reports:
         xfail_reason = report.reason.value + XFAIL_SUFFIX
-        if xfail_reason in pipeline.reference_data:
-            xfails.append(f"XFAIL: {pipeline.reference_data[xfail_reason]} - {report.msg}")
+        if _is_error_xfailed(report, xfail_reason, pipeline.reference_data):
+            xfails.append(_get_xfail_message(report, xfail_reason, pipeline.reference_data))
         else:
             unexpected_errors.append(report.msg)
+
     if xfails:
         pipeline.run_info.status = "\n".join(xfails)
     if unexpected_errors:
@@ -408,10 +439,8 @@ def run_pipeline(
     try:
         pipeline.run()
     except Exception as e:
-        err_msg = str(e)
-        if not err_msg:
-            err_msg = "Unknown exception"
-        exception_report = ErrorReport(ErrorReason.EXCEPTION, err_msg)
+        message = f"Exception Type: {type(e).__name__}|{str(e)}"
+        exception_report = ErrorReport(ErrorReason.EXCEPTION, message)
         traceback.print_exc()
     finally:
         if pipeline is not None:
@@ -424,7 +453,7 @@ def run_pipeline(
             if extra_columns:
                 pipeline.collect_data_from_stdout(captured.out)
         else:
-            run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
+            run_info = create_short_run_info(test_model_param, message, test_case_name)
         run_info.time_total = time.perf_counter() - start_time
 
         errors = _collect_errors(pipeline, exception_report)
