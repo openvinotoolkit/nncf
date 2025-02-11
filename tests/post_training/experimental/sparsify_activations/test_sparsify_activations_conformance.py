@@ -9,16 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import OrderedDict
 from pathlib import Path
 from typing import Dict, Optional
 
-import pandas as pd
 import pytest
 import yaml
 
 from tests.post_training.experimental.sparsify_activations.model_scope import SPARSIFY_ACTIVATIONS_TEST_CASES
 from tests.post_training.pipelines.base import RunInfo
+from tests.post_training.test_quantize_conformance import create_fixture_report_data
 from tests.post_training.test_quantize_conformance import fixture_batch_size  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_data  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_extra_columns  # noqa: F401
@@ -42,14 +41,8 @@ def fixture_sparsify_activations_reference_data():
 
 
 @pytest.fixture(scope="session", name="sparsify_activations_result_data")
-def fixture_sparsify_activations_report_data(output_dir):
-    data: Dict[str, RunInfo] = {}
-    yield data
-    if data:
-        test_results = OrderedDict(sorted(data.items()))
-        df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
-        output_dir.mkdir(parents=True, exist_ok=True)
-        df.to_csv(output_dir / "results.csv", index=False)
+def fixture_sparsify_activations_report_data(output_dir, pytestconfig):
+    yield from create_fixture_report_data(output_dir, False, pytestconfig, [])
 
 
 @pytest.mark.parametrize("test_case_name", SPARSIFY_ACTIVATIONS_TEST_CASES.keys())

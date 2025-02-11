@@ -168,54 +168,41 @@ def fixture_wc_reference_data():
 
 @pytest.fixture(scope="session", name="ptq_result_data")
 def fixture_ptq_report_data(output_dir, run_benchmark_app, pytestconfig):
-    data: Dict[str, RunInfo] = {}
-
-    yield data
-
-    if data:
-        test_results = OrderedDict(sorted(data.items()))
-        df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
-        if not run_benchmark_app:
-            df = df.drop(columns=["FPS"])
-
-        df = df.drop(columns=["Num sparse activations"])
-        df = df.drop(columns=["Num int4"])
-
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / "results.csv"
-
-        if pytestconfig.getoption("forked") and output_file.exists():
-            # When run test with --forked to run test in separate process
-            # Used in post_training_performance jobs
-            df.to_csv(output_file, index=False, mode="a", header=False)
-        else:
-            df.to_csv(output_file, index=False)
+    columns_to_drop = ["Num sparse activations", "Num int4"]
+    yield from create_fixture_report_data(output_dir, run_benchmark_app, pytestconfig, columns_to_drop)
 
 
 @pytest.fixture(scope="session", name="wc_result_data")
 def fixture_wc_report_data(output_dir, run_benchmark_app, pytestconfig):
+    columns_to_drop = ["Num sparse activations", "Num FQ"]
+    yield from create_fixture_report_data(output_dir, run_benchmark_app, pytestconfig, columns_to_drop)
+
+
+def create_fixture_report_data(output_dir, run_benchmark_app, pytestconfig, columns_to_drop):
     data: Dict[str, RunInfo] = {}
 
     yield data
 
     if data:
-        test_results = OrderedDict(sorted(data.items()))
-        df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
         if not run_benchmark_app:
-            df = df.drop(columns=["FPS"])
+            columns_to_drop.append("FPS")
+        save_results(data, columns_to_drop, output_dir, pytestconfig.getoption("forked"))
 
-        df = df.drop(columns=["Num FQ"])
-        df = df.drop(columns=["Num sparse activations"])
 
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / "results.csv"
+def save_results(data, columns_to_drop, output_dir, is_forked):
+    test_results = OrderedDict(sorted(data.items()))
+    df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
+    df = df.drop(columns=columns_to_drop)
 
-        if pytestconfig.getoption("forked") and output_file.exists():
-            # When run test with --forked to run test in separate process
-            # Used in post_training_performance jobs
-            df.to_csv(output_file, index=False, mode="a", header=False)
-        else:
-            df.to_csv(output_file, index=False)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = output_dir / "results.csv"
+
+    if is_forked and output_file.exists():
+        # When run test with --forked to run test in separate process
+        # Used in post_training_performance jobs
+        df.to_csv(output_file, index=False, mode="a", header=False)
+    else:
+        df.to_csv(output_file, index=False)
 
 
 def maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size):
