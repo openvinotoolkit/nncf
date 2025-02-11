@@ -171,7 +171,17 @@ def fixture_report_data(output_dir, run_benchmark_app, pytestconfig):
     if data:
         columns_to_drop = ["FPS"] if not run_benchmark_app else []
         test_results = OrderedDict(sorted(data.items()))
-        df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
+        test_results = [v.get_result_dict() for v in test_results.values()]
+        # To fill columns of testcases with None if some of them are missing
+        all_columns = max(test_results, key=len)
+        filtered_test_results = []
+        for test_result in test_results:
+            new_test_result = {}
+            for column in all_columns:
+                new_test_result[column] = test_result.get(column, None)
+            filtered_test_results.append(new_test_result)
+
+        df = pd.DataFrame(filtered_test_results)
         df = df.drop(columns=columns_to_drop)
 
         output_dir.mkdir(parents=True, exist_ok=True)
