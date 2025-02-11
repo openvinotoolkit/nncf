@@ -16,6 +16,7 @@ import torch
 import transformers
 from optimum.intel import OVQuantizer
 from optimum.intel.openvino import OVModelForSequenceClassification
+from optimum.intel.openvino.configuration import OVQuantizationConfigBase
 from optimum.onnxruntime import ORTModelForSequenceClassification
 
 import nncf
@@ -89,17 +90,12 @@ class MaskedLanguageModelingHF(PTQTestPipeline):
         quantizer = OVQuantizer.from_pretrained(self.model_hf)
 
         num_samples = self.compression_params.get("subset_size", 300)
-
-        def preprocess_function(examples):
-            return self.preprocessor(examples["sentence"], padding=True, truncation=True, max_length=128)
-
-        calibration_dataset = quantizer.get_calibration_dataset(
-            "glue",
-            dataset_config_name="sst2",
-            preprocess_function=preprocess_function,
-            num_samples=num_samples,
-            dataset_split="validation",
-            preprocess_batch=True,
+        calibration_dataset = quantizer._prepare_causal_lm_dataset(
+            OVQuantizationConfigBase(
+                dataset="wikitext2",
+                num_samples=num_samples,
+                tokenizer=self.model_id,
+            )
         )
 
         if self.backend == BackendType.OPTIMUM:

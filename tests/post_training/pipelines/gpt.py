@@ -16,6 +16,7 @@ import torch
 import transformers
 from optimum.intel import OVQuantizer
 from optimum.intel.openvino import OVModelForCausalLM
+from optimum.intel.openvino.configuration import OVQuantizationConfigBase
 
 import nncf
 from tests.post_training.pipelines.base import OV_BACKENDS
@@ -28,7 +29,6 @@ class GPT(PTQTestPipeline):
     """Pipeline for causal language models from Hugging Face repository"""
 
     def prepare_model(self) -> None:
-
         if self.backend in PT_BACKENDS:
             self.model_hf = transformers.AutoModelForCausalLM.from_pretrained(self.model_id)
             self.model = self.model_hf
@@ -78,17 +78,13 @@ class GPT(PTQTestPipeline):
     def prepare_calibration_dataset(self):
         quantizer = OVQuantizer.from_pretrained(self.model_hf)
 
-        def preprocess_function(examples):
-            return self.preprocessor(examples["sentence"], padding="max_length", truncation=True, max_length=128)
-
         num_samples = self.compression_params.get("subset_size", 300)
-        calibration_dataset = quantizer.get_calibration_dataset(
-            "glue",
-            dataset_config_name="sst2",
-            preprocess_function=preprocess_function,
-            num_samples=num_samples,
-            dataset_split="validation",
-            preprocess_batch=True,
+        calibration_dataset = quantizer._prepare_causal_lm_dataset(
+            OVQuantizationConfigBase(
+                dataset="wikitext2",
+                num_samples=num_samples,
+                tokenizer=self.model_id,
+            )
         )
 
         if self.backend == BackendType.OPTIMUM:
