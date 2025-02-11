@@ -548,11 +548,11 @@ def get_num_fq_int4_int8(model: ov.Model) -> Tuple[int, int, int]:
 
 
 def _get_exception_type_name(report: ErrorReport) -> str:
-    return report.msg.split("|")[0].replace("Exception Type: ", "")
+    return report.msg.split(" | ")[0]
 
 
 def _get_exception_error_message(report: ErrorReport) -> str:
-    return report.msg.split("|")[1]
+    return report.msg.split(" | ")[1]
 
 
 def _are_exceptions_matched(report: ErrorReport, reference_exception: Dict[str, str]) -> bool:

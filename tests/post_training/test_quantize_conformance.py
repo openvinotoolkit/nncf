@@ -299,7 +299,7 @@ def run_pipeline(
     try:
         pipeline.run()
     except Exception as e:
-        message = f"Exception Type: {type(e).__name__}|{str(e)}"
+        message = f"{type(e).__name__} | {str(e)}"
         exception_report = ErrorReport(ErrorReason.EXCEPTION, message)
         traceback.print_exc()
     finally:
