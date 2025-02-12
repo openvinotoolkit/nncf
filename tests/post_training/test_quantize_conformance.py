@@ -308,12 +308,6 @@ def run_pipeline(
     test_model_param = test_cases[test_case_name]
     maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
     pipeline_cls = test_model_param["pipeline_cls"]
-    # Recalculates subset_size when subset_size is None
-    if batch_size is None:
-        batch_size = test_model_param.get("batch_size", 1)
-    if batch_size > 1 and subset_size is None:
-        subset_size = 300 // batch_size
-        print(f"Update subset_size value based on provided batch_size to {subset_size}.")
     pipeline_kwargs = create_pipeline_kwargs(test_model_param, subset_size, test_case_name, reference_data)
     pipeline_kwargs.update(
         {
@@ -322,7 +316,7 @@ def run_pipeline(
             "no_eval": no_eval,
             "run_benchmark_app": run_benchmark_app,
             "torch_compile_validation": torch_compile_validation,
-            "batch_size": batch_size,
+            "batch_size": batch_size or test_model_param.get("batch_size", 1),
             "memory_monitor": memory_monitor,
         }
     )
