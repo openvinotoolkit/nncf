@@ -52,7 +52,7 @@ class CompressionTrainer(Trainer):
         if not (self.args.local_rank == -1 or self.args.no_cuda or compression_ctrl is None):
             compression_ctrl.distributed()
 
-    def compute_loss(self, model, inputs, return_outputs=False):
+    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
         if self.compression_ctrl is not None:
             loss_compress = self.compression_ctrl.loss()
