@@ -334,6 +334,14 @@ class MinMaxQuantization(Algorithm):
         )
         self._unified_scale_groups = []
 
+    def set_ignored_scope(self, ignored_scope: IgnoredScope) -> None:
+        """
+        Set target ignored scope for the MinMax algorithm.
+
+        :param ignored_scope: The ignored scope to set to the MinMax algorithm.
+        """
+        self._ignored_scope = ignored_scope
+
     @property
     def available_backends(self) -> List[BackendType]:
         return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
