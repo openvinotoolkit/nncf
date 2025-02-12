@@ -281,15 +281,6 @@ class GraphBuilderMode(FunctionHookMode):
         if isinstance(arg, torch.Tensor):
             self.register_op_input_tensor(arg, node_id, port_id, op_meta)
             return TensorMeta.from_tensor(arg)
-        elif isinstance(arg, (list, tuple, set)):
-            op_attr = []
-            for x in arg:
-                if isinstance(x, torch.Tensor):
-                    self.register_op_input_tensor(x, node_id, port_id, op_meta)
-                    op_attr.append(TensorMeta.from_tensor(x))
-                else:
-                    op_attr.append(x)
-            return op_attr
         return arg
 
     def register_op_node(self, args: Tuple[Any], kwargs: Dict[str, Any], op_meta: OpMeta) -> None:
@@ -311,13 +302,30 @@ class GraphBuilderMode(FunctionHookMode):
 
         op_attrs = []
         op_kwargs = {}
-        for port_id, arg in enumerate(args):
-            op_attr = self.register_op_input(arg, node_id, port_id, op_meta)
-            op_attrs.append(op_attr)
+        port_id = 0
 
-        for port_id, (name, arg) in enumerate(kwargs.items(), start=len(args)):
-            op_attr = self.register_op_input(arg, node_id, port_id, op_meta)
-            op_kwargs[name] = op_attr
+        for value in args:
+            if isinstance(value, (list, tuple)) and all(isinstance(v, torch.Tensor) for v in value):
+                list_attr = [None] * len(value)
+                for idx, tensor in enumerate(value):
+                    op_attr = self.register_op_input(tensor, node_id, port_id, op_meta)
+                    list_attr[idx] = op_attr
+                    port_id += 1
+                op_attrs.append(tuple(list_attr) if isinstance(value, tuple) else list_attr)
+            else:
+                op_attr = self.register_op_input(value, node_id, port_id, op_meta)
+                op_attrs.append(op_attr)
+                port_id += 1
+
+        for kw_name, value in kwargs.items():
+            if isinstance(value, (list, tuple)) and all(isinstance(v, torch.Tensor) for v in value):
+                op_kwargs[kw_name] = [None] * len(value)
+                for tensor_idx, tensor in enumerate(value):
+                    op_kwargs[kw_name][tensor_idx] = self.register_op_input(value, node_id, port_id, op_meta)
+                    port_id += 1
+            else:
+                op_kwargs[kw_name] = self.register_op_input(value, node_id, port_id, op_meta)
+                port_id += 1
 
         self.graph.add_node(
             node_id,
