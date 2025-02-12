@@ -164,56 +164,81 @@ def fixture_wc_reference_data():
     return data
 
 
+# Define the start and end report order
+COMPRESSED_NODES_ORDER = ["Num FQ", "Num int8", "Num int4", "Num sparse activations"]
+START_REPORT_ORDER = [
+    "Model",
+    "Backend",
+    "Metric name",
+    "Metric value",
+    "Metric diff",
+    *COMPRESSED_NODES_ORDER,
+    "Compr. time",
+    "Total time",
+    "FPS",
+]
+END_REPORT_ORDER = ["Status", "Build url"]
+
+
+def fill_missing_columns(test_results):
+    """Fill missing columns in test results with None."""
+    all_columns = list(max(test_results, key=len).keys())
+    return [{col: result.get(col, None) for col in all_columns} for result in test_results]
+
+
+def reorder_columns(df, start_order, end_order):
+    """Reorder DataFrame columns based on start and end orders."""
+    combined_columns = set(df.columns)
+    start_columns = [col for col in start_order if col in combined_columns]
+    end_columns = [col for col in end_order if col in combined_columns]
+    middle_columns = sorted(col for col in combined_columns if col not in start_columns and col not in end_columns)
+    final_column_order = start_columns + middle_columns + end_columns
+    return df.reindex(columns=final_column_order)
+
+
+def ensure_all_columns(df, reference_columns):
+    """Ensure all reference columns are present in the DataFrame, filling missing columns with None."""
+    for column in reference_columns:
+        if column not in df.columns:
+            df[column] = None
+    return df
+
+
+def process_test_results(data, columns_to_drop):
+    """Process test results into a DataFrame with missing columns filled."""
+    test_results = OrderedDict(sorted(data.items()))
+    test_results = [v.get_result_dict() for v in test_results.values()]
+    filled_test_results = fill_missing_columns(test_results)
+    df = pd.DataFrame(filled_test_results).drop(columns=columns_to_drop)
+    return df
+
+
+def save_dataframe(df, output_file, start_order, end_order, append=False):
+    """Save the DataFrame to a CSV file, optionally appending to an existing file."""
+    if append and output_file.exists():
+        existing_df = pd.read_csv(output_file)
+        combined_columns = set(existing_df.columns).union(set(df.columns))
+        df = ensure_all_columns(df, combined_columns)
+        existing_df = ensure_all_columns(existing_df, combined_columns)
+        df = reorder_columns(df, start_order, end_order)
+        existing_df = reorder_columns(existing_df, start_order, end_order)
+        combined_df = pd.concat([existing_df, df], ignore_index=True)
+        combined_df.to_csv(output_file, index=False)
+    else:
+        df = reorder_columns(df, start_order, end_order)
+        df.to_csv(output_file, index=False)
+
+
 @pytest.fixture(scope="session", name="result_data")
 def fixture_report_data(output_dir, run_benchmark_app, pytestconfig):
     data: Dict[str, RunInfo] = {}
     yield data
     if data:
         columns_to_drop = ["FPS"] if not run_benchmark_app else []
-        test_results = OrderedDict(sorted(data.items()))
-        test_results = [v.get_result_dict() for v in test_results.values()]
-        # To fill columns of testcases with None if some of them are missing
-        all_columns = list(max(test_results, key=len).keys())
-        filtered_test_results = []
-        for test_result in test_results:
-            new_test_result = {}
-            for column in all_columns:
-                new_test_result[column] = test_result.get(column, None)
-            filtered_test_results.append(new_test_result)
-
-        df = pd.DataFrame(filtered_test_results)
-        df = df.drop(columns=columns_to_drop)
-
+        df = process_test_results(data, columns_to_drop)
         output_dir.mkdir(parents=True, exist_ok=True)
         output_file = output_dir / "results.csv"
-
-        if pytestconfig.getoption("forked") and output_file.exists():
-            # When run test with --forked to run test in separate process
-            # Used in post_training_performance jobs
-            existing_df = pd.read_csv(output_file)
-
-            # Determine the DataFrame with the most columns
-            if len(existing_df.columns) > len(df.columns):
-                reference_df = existing_df
-            else:
-                reference_df = df
-
-            # Ensure all columns are present in both DataFrames
-            for column in reference_df.columns:
-                if column not in df.columns:
-                    df[column] = None
-                if column not in existing_df.columns:
-                    existing_df[column] = None
-
-            # Reorder columns to match the reference DataFrame
-            df = df[reference_df.columns]
-            existing_df = existing_df[reference_df.columns]
-
-            # Append new data to existing data
-            combined_df = pd.concat([existing_df, df], ignore_index=True)
-            combined_df.to_csv(output_file, index=False)
-        else:
-            df.to_csv(output_file, index=False)
+        save_dataframe(df, output_file, START_REPORT_ORDER, END_REPORT_ORDER, append=pytestconfig.getoption("forked"))
 
 
 def maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size):
