@@ -117,8 +117,6 @@ class TracedTensor(torch.Tensor, TracedTensorMixin):
         :param tensor_meta: The metadata associated with the tensor.
         :return: The resulting TracedTensor.
         """
-        if tensor.dim() == 0:
-            tensor = torch.unsqueeze(tensor, 0)
         return TracedTensor.patch(tensor, tensor_meta)
 
     def as_subclass(self, cls: "TracedTensor") -> "TracedTensor":
