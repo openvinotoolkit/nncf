@@ -274,9 +274,9 @@ class GraphBuilderMode(FunctionHookMode):
         :param node_id: Id if operation node.
         :param port_id: Port id of input argument.
         :param op_meta: Metadata about the operation.
-        :return: Descriptor of the input. For a Tensor, this is a `TensorMeta` object.
-             For a collection of Tensors, a collection of `TensorMeta` objects is returned.
-             For other types, the original input `arg` is returned as-is.
+        :return: Descriptor of the input.
+            For a Tensor, this is a `TensorMeta` object.
+            For other types, the original input `arg` is returned as-is.
         """
         if isinstance(arg, torch.Tensor):
             self.register_op_input_tensor(arg, node_id, port_id, op_meta)
