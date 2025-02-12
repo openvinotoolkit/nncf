@@ -94,7 +94,7 @@ def quantize_pt2e(
         model = deepcopy(model)
 
     _fuse_conv_bn_(model)
-    if isinstance(quantizer, OpenVINOQuantizer):
+    if isinstance(quantizer, OpenVINOQuantizer) or hasattr(quantizer, "get_nncf_quantization_setup"):
         quantizer = OpenVINOQuantizerAdapter(quantizer)
     else:
         quantizer = TorchAOQuantizerAdapter(quantizer)
