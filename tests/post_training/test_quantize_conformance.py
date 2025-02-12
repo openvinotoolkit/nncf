@@ -192,16 +192,22 @@ def fixture_report_data(output_dir, run_benchmark_app, pytestconfig):
             # Used in post_training_performance jobs
             existing_df = pd.read_csv(output_file)
 
+            # Determine the DataFrame with the most columns
+            if len(existing_df.columns) > len(df.columns):
+                reference_df = existing_df
+            else:
+                reference_df = df
+
             # Ensure all columns are present in both DataFrames
-            for column in existing_df.columns:
+            for column in reference_df.columns:
                 if column not in df.columns:
                     df[column] = None
-            for column in df.columns:
                 if column not in existing_df.columns:
                     existing_df[column] = None
 
-            # Reorder columns to match
-            df = df[existing_df.columns]
+            # Reorder columns to match the reference DataFrame
+            df = df[reference_df.columns]
+            existing_df = existing_df[reference_df.columns]
 
             # Append new data to existing data
             combined_df = pd.concat([existing_df, df], ignore_index=True)
