@@ -1,5 +1,5 @@
 datasets
 openvino==2024.6
 optimum-intel[openvino]
-transformers
+transformers>=4.48.0
 onnx==1.17.0
