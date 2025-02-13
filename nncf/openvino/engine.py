@@ -12,7 +12,7 @@
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 from openvino import Type
 from openvino.properties.hint import inference_precision
 

@@ -13,7 +13,7 @@ import sys
 from argparse import ArgumentParser
 from typing import List, Optional
 
-import openvino.runtime as ov
+import openvino as ov
 
 
 def print_ignored_scope_by_model_name(model_name: str, xml_path: str, bin_path: str) -> None:

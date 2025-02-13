@@ -12,7 +12,7 @@
 from collections import deque
 from typing import List, Optional, Type
 
-import openvino.runtime as ov
+import openvino as ov
 
 import nncf
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES

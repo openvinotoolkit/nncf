@@ -12,7 +12,7 @@
 from dataclasses import dataclass
 from typing import List
 
-import openvino.runtime as ov
+import openvino as ov
 import pytest
 
 from nncf.common.factory import NNCFGraphFactory

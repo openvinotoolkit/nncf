@@ -11,9 +11,9 @@
 from collections import deque
 from typing import Dict, List, Tuple
 
-import openvino.runtime as ov
-from openvino.runtime import opset13 as opset
-from openvino.runtime.utils.node_factory import NodeFactory
+import openvino as ov
+from openvino import opset13 as opset
+from openvino.utils.node_factory import NodeFactory
 
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_parameter_node_name
@@ -59,14 +59,14 @@ class OVModelBuilder:
         output_ids: List[Tuple[str, int]],
         node_mapping: Dict[str, ov.Node],
     ) -> List[ov.Node]:
-        """
+        r"""
         A method for aggregating layers to be further cloned.
         Aggregation is designed in such a way that layers are listed from right to left,
         as they pass from bottom to top. This is done in order to find all constants in the model and
         to start graph creation from them (as well as Parameter layers), because
         OpenVINO graph is created from top-down and cannot be created otherwise.
 
-        Legend: w - weigths, c - convert, il/ih - input low/high, ol/oh - output low/high
+        Legend: w - weights, c - convert, il/ih - input low/high, ol/oh - output low/high
         (w)
          |
         (c) (il) (ih) (ol) (oh)
@@ -115,11 +115,11 @@ class OVModelBuilder:
         output_ids: List[Tuple[str, int]],
         node_mapping: Dict[str, ov.Node],
     ) -> ov.Model:
-        """
+        r"""
         The basic method of the algorithm. This method uses an aggregated list of layers to be recreated.
         Let us take a graph of this kind as an example:
 
-        Legend: w - weigths, c - convert, il/ih - input low/high, ol/oh - output low/high
+        Legend: w - weights, c - convert, il/ih - input low/high, ol/oh - output low/high
         (w)
          |
         (c) (il) (ih) (ol) (oh)

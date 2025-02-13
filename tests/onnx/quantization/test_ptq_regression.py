@@ -12,12 +12,12 @@ from pathlib import Path
 
 import numpy as np
 import onnx
-import openvino.runtime as ov
+import openvino as ov
 import pytest
 import torch
 from fastdownload import FastDownload
 from onnx import version_converter
-from openvino.runtime import Core
+from openvino import Core
 from sklearn.metrics import accuracy_score
 from torchvision import datasets
 from torchvision import transforms
