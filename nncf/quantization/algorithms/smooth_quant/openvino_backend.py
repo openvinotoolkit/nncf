@@ -100,7 +100,9 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return const_ids[0]
 
     @staticmethod
-    def weight_update_command(node_with_weight: NNCFNode, weight_value: np.ndarray) -> OVWeightUpdateCommand:
+    def weight_update_command(
+        node_with_weight: NNCFNode, nncf_graph: NNCFGraph, weight_value: np.ndarray
+    ) -> OVWeightUpdateCommand:
         weight_port_id = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(node_with_weight)
         return OVCommandCreator.create_command_to_update_weight(node_with_weight, weight_value, weight_port_id)
 

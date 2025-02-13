@@ -18,6 +18,7 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.experimental.torch2.commands import PT2ConstUpdateCommand
 from nncf.experimental.torch2.commands import PT2InsertionCommand
 from nncf.experimental.torch2.function_hook.hook_storage import RemovableHookHandle
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
@@ -25,6 +26,7 @@ from nncf.experimental.torch2.function_hook.wrapper import register_post_functio
 from nncf.experimental.torch2.function_hook.wrapper import register_pre_function_hook
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.model_graph_manager import set_const_data
 from nncf.torch.model_graph_manager import update_fused_bias
 
 TRANSFORMATION_PAIRS = Tuple[Tuple[Type[Any], Callable[[GraphModelWrapper, List[Any]], GraphModelWrapper]], ...]
@@ -41,6 +43,7 @@ class PT2ModelTransformer(ModelTransformer[GraphModelWrapper]):
         self._command_transformation_ordered_pairs: TRANSFORMATION_PAIRS = (
             (PT2InsertionCommand, self._apply_insertion_transformations),
             (PTBiasCorrectionCommand, self._apply_bias_correction_transformations),
+            (PT2ConstUpdateCommand, self._apply_const_update_transformations),
         )
 
     def transform(self, transformation_layout: TransformationLayout) -> GraphModelWrapper:
@@ -112,6 +115,24 @@ class PT2ModelTransformer(ModelTransformer[GraphModelWrapper]):
                 nncf_graph=wrapped_model.get_graph(),
                 model=wrapped_model.model,
             )
+        return wrapped_model
+
+    @staticmethod
+    def _apply_const_update_transformations(
+        wrapped_model: GraphModelWrapper, transformations: List[PT2ConstUpdateCommand]
+    ) -> GraphModelWrapper:
+        """
+        Applies bias correction transformations on the model.
+
+        :param model: Model to apply transformations.
+        :param transformations: List of the bias correction transformations.
+        :return: Model with corrected bias.
+        """
+        for transformation in transformations:
+            node = transformation.node
+            value = transformation.value
+            set_const_data(value, node, wrapped_model.model)
+
         return wrapped_model
 
 

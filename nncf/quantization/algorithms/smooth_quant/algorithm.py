@@ -160,7 +160,9 @@ class SmoothQuant(Algorithm):
                 weight_value = self._backend_entity.get_weight_value(node_to_smooth, model, graph)
                 weights_scale = self._calculate_weight_scale(best_scale, node_to_smooth, weight_value)
                 scaled_weight = weight_value * weights_scale
-                weight_update_command = self._backend_entity.weight_update_command(node_to_smooth, scaled_weight.data)
+                weight_update_command = self._backend_entity.weight_update_command(
+                    node_to_smooth, graph, scaled_weight.data
+                )
                 transformation_layout.register(weight_update_command)
 
             activations_by_output_id = {e.output_port_id: e for e in graph.get_output_edges(source_node)}
