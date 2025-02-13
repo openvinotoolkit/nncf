@@ -143,6 +143,6 @@ def mobilenet_v2_cifar10(pretrained=False, progress=True, device="cpu", **kwargs
     model = MobileNetV2(**kwargs)
     if pretrained:
         script_dir = os.path.dirname(__file__)
-        state_dict = torch.load(script_dir + "/state_dicts/mobilenet_v2.pt", map_location=device)
+        state_dict = torch.load(script_dir + "/state_dicts/mobilenet_v2.pt", map_location=device, weights_only=False)
         model.load_state_dict(state_dict)
     return model

@@ -191,7 +191,7 @@ strict digraph  {
 "189 adaptive_avg_pool2d" [id=189, type=adaptive_avg_pool2d];
 "190 flatten" [id=190, type=flatten];
 "191 linear" [id=191, type=linear];
-"192 output_1" [id=192, type=output];
+"192 output" [id=192, type=output];
 "0 conv1_weight" -> "123 conv2d"  [label="(64, 3, 7, 7)", style=solid];
 "1 bn1_weight" -> "124 batch_norm"  [label="(64,)", style=solid];
 "2 bn1_bias" -> "124 batch_norm"  [label="(64,)", style=solid];
@@ -371,5 +371,5 @@ strict digraph  {
 "188 relu__16" -> "189 adaptive_avg_pool2d"  [label="(1, 512, 7, 7)", style=solid];
 "189 adaptive_avg_pool2d" -> "190 flatten"  [label="(1, 512, 1, 1)", style=solid];
 "190 flatten" -> "191 linear"  [label="(1, 512)", style=solid];
-"191 linear" -> "192 output_1"  [label="(1, 1000)", style=solid];
+"191 linear" -> "192 output"  [label="(1, 1000)", style=solid];
 }

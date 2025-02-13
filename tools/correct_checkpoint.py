@@ -57,7 +57,7 @@ def main(argv):
     )
     args = parser.parse_args(args=argv)
 
-    pth = torch.load(args.input_model)
+    pth = torch.load(args.input_model, weights_only=False)
     sd = pth["state_dict"]
 
     replace_key_fn = KEYS_REPLACERS.get(args.name)

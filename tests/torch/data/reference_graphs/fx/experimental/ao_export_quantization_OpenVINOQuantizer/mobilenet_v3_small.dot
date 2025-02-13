@@ -498,7 +498,7 @@ strict digraph  {
 "496 dequantize_per_tensor_default_49" [id=496, type=dequantize_per_tensor];
 "497 dropout_" [id=497, type=dropout_];
 "498 linear_1" [id=498, type=linear];
-"499 output_1" [id=499, type=output];
+"499 output" [id=499, type=output];
 "0 _scale_0" -> "3 dequantize_per_channel_default"  [label="(16,)", style=solid];
 "1 _zero_point_0" -> "3 dequantize_per_channel_default"  [label="(16,)", style=solid];
 "2 _frozen_param0" -> "3 dequantize_per_channel_default"  [label="(16, 3, 3, 3)", style=solid];
@@ -1034,5 +1034,5 @@ strict digraph  {
 "495 quantize_per_tensor_default_49" -> "496 dequantize_per_tensor_default_49"  [label=None, style=solid];
 "496 dequantize_per_tensor_default_49" -> "497 dropout_"  [label=None, style=solid];
 "497 dropout_" -> "498 linear_1"  [label="(1, 1024)", style=solid];
-"498 linear_1" -> "499 output_1"  [label="(1, 1000)", style=solid];
+"498 linear_1" -> "499 output"  [label="(1, 1000)", style=solid];
 }

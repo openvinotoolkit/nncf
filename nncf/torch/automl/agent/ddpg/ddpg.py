@@ -269,9 +269,9 @@ class DDPG:
         if output is None:
             return
 
-        self.actor.load_state_dict(torch.load(f"{output}/actor.pkl"))
+        self.actor.load_state_dict(torch.load(f"{output}/actor.pkl", weights_only=False))
 
-        self.critic.load_state_dict(torch.load(f"{output}/critic.pkl"))
+        self.critic.load_state_dict(torch.load(f"{output}/critic.pkl", weights_only=False))
 
     def save_model(self, output):
         torch.save(self.actor.state_dict(), f"{output}/actor.pkl")

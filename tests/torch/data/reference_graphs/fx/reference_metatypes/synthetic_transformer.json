@@ -8,5 +8,5 @@
     "embedding": "PTAtenEmbeddingMetatype",
     "linear": "PTLinearMetatype",
     "linear_1": "PTLinearMetatype",
-    "output_1": "PTOutputNoopMetatype"
+    "output": "PTOutputNoopMetatype"
 }

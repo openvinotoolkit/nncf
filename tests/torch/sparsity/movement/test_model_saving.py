@@ -95,17 +95,23 @@ class TestONNXExport:
             SwinRunRecipe(),
             LinearRunRecipe(),
             Conv2dPlusLinearRunRecipe(),
-            SwinRunRecipe()
-            .scheduler_params_(enable_structured_masking=False)
-            .model_config_(
-                image_size=384,
-                patch_size=4,
-                window_size=12,
-                embed_dim=192,
-                mlp_ratio=4,
-                depths=(2, 2, 5, 2),
-                num_heads=(6, 12, 24, 48),
-                num_labels=32,
+            pytest.param(
+                SwinRunRecipe()
+                .scheduler_params_(enable_structured_masking=False)
+                .model_config_(
+                    image_size=384,
+                    patch_size=4,
+                    window_size=12,
+                    embed_dim=192,
+                    mlp_ratio=4,
+                    depths=(2, 2, 5, 2),
+                    num_heads=(6, 12, 24, 48),
+                    num_labels=32,
+                ),
+                marks=pytest.mark.xfail(
+                    reason="""transformers>=4.47.0 swin model causes an error calling torch.tensor on 
+                            (TracedTensor,) Ticket 162383"""
+                ),
             ),
         ],
     )

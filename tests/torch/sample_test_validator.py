@@ -104,7 +104,7 @@ class ClassificationHandler(BaseSampleHandler):
     ):
         checkpoint_path = self.get_checkpoint_path(checkpoint_save_dir, checkpoint_name, config_path)
         assert os.path.exists(checkpoint_path), f"Path to checkpoint {checkpoint_path} does not exist"
-        accuracy = torch.load(checkpoint_path)["best_acc1"]
+        accuracy = torch.load(checkpoint_path, weights_only=False)["best_acc1"]
         return accuracy
 
     def get_sample_dir_name(self) -> str:

@@ -226,7 +226,7 @@ strict digraph  {
 "224 quantize_per_tensor_default_22" [id=224, type=quantize_per_tensor];
 "225 dequantize_per_tensor_default_22" [id=225, type=dequantize_per_tensor];
 "226 conv2d_18" [id=226, type=conv2d];
-"227 output_1" [id=227, type=output];
+"227 output" [id=227, type=output];
 "0 _scale_0" -> "3 dequantize_per_channel_default"  [label="(64,)", style=solid];
 "1 _zero_point_0" -> "3 dequantize_per_channel_default"  [label="(64,)", style=solid];
 "2 _frozen_param0" -> "3 dequantize_per_channel_default"  [label="(64, 3, 3, 3)", style=solid];
@@ -457,5 +457,5 @@ strict digraph  {
 "223 relu_17" -> "224 quantize_per_tensor_default_22"  [label="(1, 64, 36, 36)", style=solid];
 "224 quantize_per_tensor_default_22" -> "225 dequantize_per_tensor_default_22"  [label=None, style=solid];
 "225 dequantize_per_tensor_default_22" -> "226 conv2d_18"  [label=None, style=solid];
-"226 conv2d_18" -> "227 output_1"  [label="(1, 12, 36, 36)", style=solid];
+"226 conv2d_18" -> "227 output"  [label="(1, 12, 36, 36)", style=solid];
 }

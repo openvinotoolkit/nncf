@@ -57,7 +57,7 @@ def load_model(
         # Check if provided path is a url and download the checkpoint if yes
         if is_url(weights_path):
             weights_path = download_checkpoint(weights_path)
-        sd = torch.load(weights_path, map_location="cpu", pickle_module=restricted_pickle_module)
+        sd = torch.load(weights_path, map_location="cpu", pickle_module=restricted_pickle_module, weights_only=False)
         if MODEL_STATE_ATTR in sd:
             sd = sd[MODEL_STATE_ATTR]
         load_state(loaded_model, sd, is_resume=False)
@@ -71,7 +71,9 @@ COMPRESSION_STATE_ATTR = "compression_state"
 def load_resuming_checkpoint(resuming_checkpoint_path: str):
     if osp.isfile(resuming_checkpoint_path):
         logger.info(f"=> loading checkpoint '{resuming_checkpoint_path}'")
-        checkpoint = torch.load(resuming_checkpoint_path, map_location="cpu", pickle_module=restricted_pickle_module)
+        checkpoint = torch.load(
+            resuming_checkpoint_path, map_location="cpu", pickle_module=restricted_pickle_module, weights_only=False
+        )
         return checkpoint
     msg = f"no checkpoint found at '{resuming_checkpoint_path}'"
     raise FileNotFoundError(msg)

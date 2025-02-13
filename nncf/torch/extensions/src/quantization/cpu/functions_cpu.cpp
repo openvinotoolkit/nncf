@@ -81,7 +81,7 @@ at::Tensor q_forward(
 
     at::Tensor output;
 
-    DISPATCH_TENSOR_DATA_TYPES(input.type(), "q_cpu_forward", ([&] {
+    DISPATCH_TENSOR_DATA_TYPES(input.scalar_type(), "q_cpu_forward", ([&] {
       output = q_cpu_forward<scalar_t>(input, input_low, input_range, levels);
     }));
 
@@ -103,7 +103,7 @@ std::vector<at::Tensor> q_backward(
     CHECK_INPUT(input_range);
 
     std::vector<at::Tensor> results;
-    DISPATCH_TENSOR_DATA_TYPES(input.type(), "q_cpu_backward", ([&] {
+    DISPATCH_TENSOR_DATA_TYPES(input.scalar_type(), "q_cpu_backward", ([&] {
         results = q_cpu_backward<scalar_t>(grad_output, input, input_low, input_range, levels, level_low, level_high, is_asymmetric);
     }));
 

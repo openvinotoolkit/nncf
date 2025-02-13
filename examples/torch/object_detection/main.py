@@ -361,7 +361,7 @@ def create_model(config: SampleConfig):
     ssd_net = build_ssd(config.model, config.ssd_params, image_size, config.num_classes, config)
     weights = config.get("weights")
     if weights:
-        sd = torch.load(weights, map_location="cpu", pickle_module=restricted_pickle_module)
+        sd = torch.load(weights, map_location="cpu", pickle_module=restricted_pickle_module, weights_only=False)
         sd = sd["state_dict"]
         load_state(ssd_net, sd)
 

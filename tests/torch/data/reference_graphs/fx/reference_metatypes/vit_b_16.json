@@ -583,5 +583,5 @@
     "slice_1": "PTGatherMetatype",
     "select_36": "PTGatherMetatype",
     "linear_48": "PTLinearMetatype",
-    "output_1": "PTOutputNoopMetatype"
+    "output": "PTOutputNoopMetatype"
 }

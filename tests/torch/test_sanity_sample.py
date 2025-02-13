@@ -143,7 +143,7 @@ def update_compression_algo_dict_with_legr_save_load_params(nncf_config, tmp_pat
 
 
 def extract_compression_stage_from_checkpoint(last_checkpoint_path: str) -> CompressionStage:
-    compression_state = torch.load(last_checkpoint_path)[COMPRESSION_STATE_ATTR]
+    compression_state = torch.load(last_checkpoint_path, weights_only=False)[COMPRESSION_STATE_ATTR]
     ctrl_state = compression_state[BaseController.CONTROLLER_STATE]
     compression_stage = next(iter(ctrl_state.values()))[BaseControllerStateNames.COMPRESSION_STAGE]
     return compression_stage

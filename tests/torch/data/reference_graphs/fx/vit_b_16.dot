@@ -583,7 +583,7 @@ strict digraph  {
 "581 slice_1" [id=581, type=slice];
 "582 select_36" [id=582, type=select];
 "583 linear_48" [id=583, type=linear];
-"584 output_1" [id=584, type=output];
+"584 output" [id=584, type=output];
 "0 class_token" -> "156 expand"  [label="(1, 1, 768)", style=solid];
 "1 encoder_pos_embedding" -> "158 add"  [label="(1, 197, 768)", style=solid];
 "2 conv_proj_weight" -> "153 conv2d"  [label="(768, 3, 16, 16)", style=solid];
@@ -1215,5 +1215,5 @@ strict digraph  {
 "580 layer_norm_24" -> "581 slice_1"  [label="(1, 197, 768)", style=solid];
 "581 slice_1" -> "582 select_36"  [label="(1, 197, 768)", style=solid];
 "582 select_36" -> "583 linear_48"  [label="(1, 768)", style=solid];
-"583 linear_48" -> "584 output_1"  [label="(1, 1000)", style=solid];
+"583 linear_48" -> "584 output"  [label="(1, 1000)", style=solid];
 }

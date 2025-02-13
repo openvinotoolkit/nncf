@@ -130,7 +130,7 @@ class CompressionTrainer(Trainer):
         ):
             compression_ctrl.distributed()
 
-    def compute_loss(self, model, inputs, return_outputs=False):
+    def compute_loss(self, model, inputs, num_items_in_batch=None, return_outputs=False):
         loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
         if self.compression_ctrl is not None:
             loss_compress = self.compression_ctrl.loss()
@@ -182,7 +182,7 @@ def prepare_model(args: argparse.Namespace, training_args: TrainingArguments, nu
         finetuning_task=args.task_name,
     )
     if args.quick_check:
-        model = AutoModelForSequenceClassification.from_config(config)
+        model = AutoModelForSequenceClassification.from_config(config, attn_implementation="eager")
     else:
         model = AutoModelForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
     return model

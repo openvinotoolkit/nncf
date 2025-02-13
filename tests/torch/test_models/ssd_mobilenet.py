@@ -103,7 +103,7 @@ def build_ssd_mobilenet(cfg, size, num_classes, config):
 
     if config.basenet and (config.resuming_checkpoint_path is None) and (config.weights is None):
         print("Loading base network...")
-        basenet_weights = torch.load(config.basenet)["state_dict"]
+        basenet_weights = torch.load(config.basenet, weights_only=False)["state_dict"]
         new_weights = {}
         for wn, wv in basenet_weights.items():
             wn = wn.replace("model.", "")

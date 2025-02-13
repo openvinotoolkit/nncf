@@ -19,11 +19,11 @@ def compare_multi_gpu_dump(config, dump_dir, get_path_by_rank_fn):
     mismatching = False
     ref_file_path = get_path_by_rank_fn(dump_dir, 0)
     with ref_file_path.open("rb") as ref_scale_file:
-        ref_data = torch.load(ref_scale_file)
+        ref_data = torch.load(ref_scale_file, weights_only=False)
         for other_rank in range(1, config.world_size):
             other_file_path = get_path_by_rank_fn(dump_dir, other_rank)
             with other_file_path.open("rb") as in_file:
-                data_to_compare = torch.load(in_file)
+                data_to_compare = torch.load(in_file, weights_only=False)
                 for ref_tuple, tuple_to_compare in zip(ref_data, data_to_compare):
                     for ref_info, info_to_compare in zip(ref_tuple, tuple_to_compare):
                         if torch.tensor(ref_info != info_to_compare).sum():

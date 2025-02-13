@@ -23,7 +23,7 @@ strict digraph  {
 "21 cat" [id=21, type=cat];
 "22 conv2d_2" [id=22, type=conv2d];
 "23 add" [id=23, type=add];
-"24 output_1" [id=24, type=output];
+"24 output" [id=24, type=output];
 "0 const" -> "21 cat"  [label="(1, 3, 3, 3)", style=solid];
 "1 conv_a_weight" -> "11 quantize_per_channel_default"  [label="(3, 3, 1, 1)", style=solid];
 "2 conv_a_bias" -> "13 conv2d"  [label="(3,)", style=solid];
@@ -54,5 +54,5 @@ strict digraph  {
 "20 add__1" -> "21 cat"  [label="(1, 3, 3, 3)", style=solid];
 "21 cat" -> "22 conv2d_2"  [label="(1, 9, 3, 3)", style=solid];
 "22 conv2d_2" -> "23 add"  [label="(1, 3, 3, 3)", style=solid];
-"23 add" -> "24 output_1"  [label="(1, 3, 3, 3)", style=solid];
+"23 add" -> "24 output"  [label="(1, 3, 3, 3)", style=solid];
 }

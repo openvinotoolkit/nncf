@@ -556,7 +556,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         self._filter_importance_fn = filter_importance_fn
         self._external_importance = None
         if external_importance_path is not None:
-            self._external_importance = torch.load(external_importance_path)
+            self._external_importance = torch.load(external_importance_path, weights_only=False)
             nncf_logger.debug("Loaded custom external weight importance.")
         self._weights_normalizer_fn = weights_normalizer_fn
         self._add_dynamic_inputs = add_dynamic_inputs
