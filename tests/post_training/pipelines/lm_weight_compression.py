@@ -34,6 +34,7 @@ from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import ErrorReason
 from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import StatsFromOutput
+from tests.post_training.pipelines.base import get_num_fq_int4_int8
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
 from tools.memory_monitor import memory_monitor_context
@@ -211,8 +212,9 @@ class LMWeightCompression(BaseTestPipeline):
         if self.backend == BackendType.FP32:
             return
 
+        self.path_compressed_ir = self.output_model_dir / self.OV_MODEL_NAME
         if self.backend == BackendType.OV:
-            ov.serialize(self.model, self.output_model_dir / self.OV_MODEL_NAME)
+            ov.serialize(self.model, self.path_compressed_ir)
             self.model_hf._save_config(self.output_model_dir)
         elif self.backend == BackendType.TORCH:
             export_from_model(
@@ -222,28 +224,6 @@ class LMWeightCompression(BaseTestPipeline):
                 compression_option="fp32",
                 device=self.model_hf.device,
             )
-
-    def get_num_compressed(self) -> None:
-        """
-        Get number of the i8, u8, i4, u4 ops in the compressed IR.
-        """
-        num_int8 = 0
-        num_int4 = 0
-
-        if self.backend == BackendType.TORCH:
-            model = ov.Core().read_model(self.output_model_dir / self.OV_MODEL_NAME)
-        else:
-            model = self.model
-
-        for node in model.get_ops():
-            for i in range(node.get_output_size()):
-                if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
-                    num_int8 += 1
-                if node.get_output_element_type(i).get_type_name() in ["i4", "u4", "nf4"]:
-                    num_int4 += 1
-
-        self.run_info.num_compress_nodes.num_int8 = num_int8
-        self.run_info.num_compress_nodes.num_int4 = num_int4
 
     def run_bench(self) -> None:
         pass
@@ -269,8 +249,7 @@ class LMWeightCompression(BaseTestPipeline):
             **self.compression_params,
         )
 
-    def _validate(self) -> List[ErrorReport]:
-        errors = []
+    def _validate(self) -> None:
         is_stateful = self.params.get("is_stateful", False)
         core = ov.Core()
 
@@ -316,17 +295,36 @@ class LMWeightCompression(BaseTestPipeline):
         self.run_info.metric_name = "Similarity"
         self.run_info.metric_value = round(similarity, 5)
 
-        num_int4_reference = self.reference_data.get("num_int4")
-        num_int8_reference = self.reference_data.get("num_int8")
+    def get_num_compressed(self) -> None:
+        ie = ov.Core()
+        model = ie.read_model(model=self.path_compressed_ir)
+        _, num_int4, num_int8 = get_num_fq_int4_int8(model)
 
-        num_int4_value = self.run_info.num_compress_nodes.num_int4
-        num_int8_value = self.run_info.num_compress_nodes.num_int8
+        self.run_info.num_compress_nodes.num_int8 = num_int8
+        self.run_info.num_compress_nodes.num_int4 = num_int4
 
-        template = "Regression: The number of int{} ops is different than reference {} != {}"
-        if num_int4_reference != num_int4_value:
-            status_msg = template.format(4, num_int4_reference, num_int4_value)
+    def collect_errors(self) -> List[ErrorReport]:
+        errors = super().collect_errors()
+        run_info = self.run_info
+        reference_data = self.reference_data
+
+        num_int4_reference = reference_data.get("num_int4")
+        num_int8_reference = reference_data.get("num_int8")
+        num_int4_value = run_info.num_compress_nodes.num_int4
+        num_int8_value = run_info.num_compress_nodes.num_int8
+
+        if num_int4_reference is not None and num_int4_reference != num_int4_value:
+            status_msg = (
+                "Regression: The number of int4 ops is different "
+                f"than reference {num_int4_reference} != {num_int4_value}"
+            )
             errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
-        if num_int8_reference != num_int8_value:
-            status_msg = template.format(8, num_int8_reference, num_int8_value)
+
+        if num_int8_reference is not None and num_int8_reference != num_int8_value:
+            status_msg = (
+                "Regression: The number of int8 ops is different "
+                f"than reference {num_int8_reference} != {num_int8_value}"
+            )
             errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+
         return errors
