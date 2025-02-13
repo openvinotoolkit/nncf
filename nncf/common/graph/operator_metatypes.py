@@ -78,6 +78,7 @@ class OperatorMetatypeRegistry(Registry):
         """
         super().__init__(name)
         self._op_name_to_op_meta_dict: Dict[str, Type[OperatorMetatype]] = {}
+        self._func_name_to_op_meta_dict: Dict[str, Type[OperatorMetatype]] = {}
 
     def register(self, name: Optional[str] = None, is_subtype: bool = False) -> Callable[..., Type[OperatorMetatype]]:
         """
@@ -111,6 +112,17 @@ class OperatorMetatypeRegistry(Registry):
                         )
                         raise nncf.InternalError(msg)
                     self._op_name_to_op_meta_dict[name] = obj
+                if hasattr(obj, "module_to_function_names"):
+                    for namespace, function_names in obj.module_to_function_names.items():
+                        for function_name in function_names:
+                            target_function_name = f"{namespace.value}.{function_name}"
+                            if target_function_name in self._func_name_to_op_meta_dict:
+                                msg = (
+                                    "Inconsistent operator metatype registry - single patched "
+                                    f"op name `{target_function_name}` maps to multiple metatypes!"
+                                )
+                                raise nncf.InternalError(msg)
+                            self._func_name_to_op_meta_dict[target_function_name] = obj
             return obj
 
         return wrap
@@ -125,6 +137,18 @@ class OperatorMetatypeRegistry(Registry):
         if op_name not in self._op_name_to_op_meta_dict:
             return UnknownMetatype
         return self._op_name_to_op_meta_dict[op_name]
+
+    def get_operator_metatype_by_func(self, func_name: str) -> Type[OperatorMetatype]:
+        """
+        Returns the operator metatype by function name.
+
+        :param func_name: The function name.
+        :return: The operator metatype.
+        """
+        if func_name not in self._func_name_to_op_meta_dict:
+            return UnknownMetatype
+        obj = self._func_name_to_op_meta_dict[func_name]
+        return obj
 
 
 NOOP_METATYPES = Registry("noop_metatypes")

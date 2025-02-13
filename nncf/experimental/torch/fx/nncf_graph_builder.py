@@ -24,6 +24,7 @@ from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.dynamic_graph.layer_attributes_handlers import apply_args_defaults
 from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.operator_metatypes import FX_OPERATOR_METATYPES
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
 
@@ -65,22 +66,6 @@ class GraphConverter:
             )
         return None
 
-    def _map_fx_unique_metatypes(node: torch.fx.Node, metatype: om.OperatorMetatype) -> om.OperatorMetatype:
-        """
-        Attempts to retrieve correct subtype for the given node.
-
-        :param node: Given node.
-        :param metatype: Given node metatype.
-        :param model: Target GraphModule instance.
-        :return: Correct FX metatype of the given node if it is exist or the original node metatype otherwise.
-        """
-        if metatype in [om.PTEmbeddingMetatype]:
-            weight_node = node.args[0]
-            if weight_node.op == "get_attr":
-                return om.PTAtenEmbeddingMetatype
-
-        return metatype
-
     @staticmethod
     def get_node_type_and_metatype(node: torch.fx.Node, model: torch.fx.GraphModule) -> Tuple[str, om.OperatorMetatype]:
         """
@@ -90,6 +75,7 @@ class GraphConverter:
         :param model: Given GraphModule.
         :return: Node's type and metatype.
         """
+        node_type_name = None
         if node.op == "placeholder":
             node_type = "input"
             node_metatype = om.PTInputNoopMetatype
@@ -101,13 +87,21 @@ class GraphConverter:
             node_metatype = om.PTConstNoopMetatype
         elif node.op in ("call_function",):
             if hasattr(node.target, "overloadpacket"):
-                node_type = str(node.target.overloadpacket).split(".")[1]
+                node_type = str(node.target.overloadpacket)
+                node_type_name = node_type.split(".")[1]
             elif node.target.__name__ == "getitem":
-                node_type = "__getitem__"
+                node_type = "aten.__getitem__"
+                node_type_name = "__getitem__"
             else:
                 # TODO(dlyakhov): get correct nodes types from this nodes as well
                 node_type = str(node.target)
-            node_metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
+            node_metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_func(node_type)
+            # For FX specific metatypes not registered in PT operator metatype
+            node_metatype = (
+                FX_OPERATOR_METATYPES.get_operator_metatype_by_func(node_type)
+                if node_metatype == UnknownMetatype
+                else node_metatype
+            )
         else:
             node_type = node.op
             node_metatype = UnknownMetatype
@@ -118,7 +112,8 @@ class GraphConverter:
             layer_attrs = GraphConverter._get_layer_attributes(node, node_metatype, model)
             node_subtype = node_metatype.determine_subtype(layer_attrs)
             node_metatype = node_subtype or node_metatype
-        return node_type, node_metatype
+        node_type_name = node_type_name or node_type
+        return node_type_name, node_metatype
 
     @staticmethod
     def create_nncf_graph(model: torch.fx.GraphModule) -> PTNNCFGraph:
@@ -135,7 +130,6 @@ class GraphConverter:
         const_targets_counter = Counter([node.target for node in model.graph.nodes if node.op == "get_attr"])
         for source_node in model.graph.nodes:
             node_type, node_metatype = GraphConverter.get_node_type_and_metatype(source_node, model)
-            node_metatype = GraphConverter._map_fx_unique_metatypes(source_node, node_metatype)
             is_shared_node = source_node.op in ("get_attr",) and (
                 const_targets_counter[source_node.target] > 1 or len(source_node.users) > 1
             )

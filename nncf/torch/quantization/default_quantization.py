@@ -34,6 +34,7 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: Dict[QuantizationTrait, List[PTOperatorMetaty
         operator_metatypes.PTLinearMetatype,
         operator_metatypes.PTModuleLinearMetatype,
         operator_metatypes.PTLayerNormMetatype,
+        operator_metatypes.PTAtenLayerNormMetatype,
         operator_metatypes.PTModuleLayerNormMetatype,
         operator_metatypes.PTAddMetatype,
         operator_metatypes.PTMulMetatype,
