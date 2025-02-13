@@ -127,14 +127,14 @@ class SmoothQuantAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def weight_update_command(
-        node_with_weight: NNCFNode, weight_value: TTensor, weight_port_id: int
+        node_with_weight: NNCFNode, nncf_graph: NNCFGraph, weight_value: TTensor
     ) -> TransformationCommand:
         """
         Returns command to update weights.
 
         :param node_with_weight: NNCFNode instance.
+        :param nncf_graph: NNCFGraph instance.
         :param weight_value: New weight value.
-        :param weight_port_id: Weight port id.
         :return: TransformationCommand instance.
         """
 

@@ -11,8 +11,10 @@
 
 from typing import List, Optional
 
+import torch
 from torch import nn
 
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.experimental.torch2.function_hook.hook_storage import RemovableHookHandle
@@ -41,3 +43,18 @@ class PT2InsertionCommand(Command):
         self.target_points = target_points
         self.hook_module = hook_module
         self.handle_storage = handle_storage
+
+
+class PT2ConstUpdateCommand(Command):
+    """
+    Corrects weight value in the model based on the input value.
+    """
+
+    def __init__(self, node: NNCFNode, value: torch.Tensor):
+        """
+        :param const_node: The node of the data in the model.
+        :param value: The new value of the constant.
+        """
+        super().__init__(TransformationType.CHANGE)
+        self.node = node
+        self.value = value
