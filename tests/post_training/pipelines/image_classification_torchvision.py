@@ -118,14 +118,14 @@ class ImageClassificationTorchvision(ImageClassificationBase):
         if self.backend in PT_BACKENDS:
             with disable_patching():
                 ov_model = ov.convert_model(
-                    torch.export.export(self.model, args=(self.dummy_tensor,)),
+                    torch.export.export_for_inference(self.model, args=(self.dummy_tensor,)),
                     example_input=self.dummy_tensor,
                     input=self.input_size,
                 )
             ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
 
         if self.backend in FX_BACKENDS:
-            exported_model = torch.export.export(self.model.cpu(), (self.dummy_tensor.cpu(),))
+            exported_model = torch.export.export_for_inference(self.model.cpu(), (self.dummy_tensor.cpu(),))
             ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor, input=self.input_size)
             ov.serialize(ov_model, self.fp32_model_dir / "fx_model_fp32.xml")
 
