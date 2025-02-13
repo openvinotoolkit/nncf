@@ -29,4 +29,4 @@ class OpenVINOQuantizerAdapter(Quantizer):
         return self._quantizer.transform_for_annotation(model)
 
     def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
-        return self._quantizer.get_quantization_setup(model, nncf_graph)
+        return self._quantizer.get_nncf_quantization_setup(model, nncf_graph)

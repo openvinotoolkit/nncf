@@ -104,13 +104,15 @@ class OpenVINOQuantizer(TorchAOQuantizer):
             quantizer_propagation_rule=quantizer_propagation_rule,
         )
 
-    def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
+    def get_nncf_quantization_setup(
+        self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph
+    ) -> SingleConfigQuantizerSetup:
         self._min_max_algo._set_backend_entity(model)
         return self._min_max_algo.find_quantization_setup(model, nncf_graph)
 
     def annotate(self, model: torch.fx.GraphModule) -> torch.fx.GraphModule:
         nncf_graph = GraphConverter.create_nncf_graph(model)
-        quantization_setup = self.get_quantization_setup(model, nncf_graph)
+        quantization_setup = self.get_nncf_quantization_setup(model, nncf_graph)
 
         graph = model.graph
         node_vs_torch_annotation = defaultdict(TorchAOQuantizationAnnotation)

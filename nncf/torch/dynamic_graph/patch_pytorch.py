@@ -24,6 +24,7 @@ from torch.nn.parallel import DistributedDataParallel
 import nncf
 from nncf import nncf_logger
 from nncf.common.utils.api_marker import api
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.structs import PatchedOperatorInfo
@@ -352,6 +353,9 @@ def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool
 
 
 def patch_torch_operators():
+    if is_experimental_torch_tracing_enabled():
+        return
+
     # Only patch torch.jit.script during first patch_torch_operators call
     if not PATCHING_STATE.jit_is_wrapped:
         patch_torch_jit()
