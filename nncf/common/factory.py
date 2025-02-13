@@ -58,7 +58,7 @@ class NNCFGraphFactory:
             from nncf.torch.nncf_network import NNCFNetwork
 
             if isinstance(model, GraphModelWrapper):
-                return model.build_graph()
+                return model.get_graph()
             if isinstance(model, NNCFNetwork):
                 return model.nncf.get_graph()
             msg = f"Unexpected type of model {type(model)} for TORCH backend"

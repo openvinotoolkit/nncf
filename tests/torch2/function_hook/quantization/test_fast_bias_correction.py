@@ -14,13 +14,12 @@ from typing import List
 import pytest
 import torch
 
-from nncf.common.factory import NNCFGraphFactory
+from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from nncf.quantization.algorithms.fast_bias_correction.torch_backend import PTFastBiasCorrectionAlgoBackend
 from nncf.torch.model_graph_manager import get_fused_bias_value
 from nncf.torch.model_graph_manager import is_node_with_fused_bias
-from nncf.torch.nncf_network import NNCFNetwork
 from tests.cross_fw.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
-from tests.torch.ptq.helpers import get_nncf_network
 
 
 class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
@@ -34,7 +33,7 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: bool, tmp_dir: str):
-        return get_nncf_network(model, model.INPUT_SIZE)
+        return GraphModelWrapper(wrap_model(model), torch.ones(model.INPUT_SIZE))
 
     @staticmethod
     def fn_to_type(tensor):
@@ -49,13 +48,13 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
         return transform_fn
 
     @staticmethod
-    def check_bias(model: NNCFNetwork, ref_bias: list):
+    def check_bias(model: GraphModelWrapper, ref_bias: list):
         ref_bias = torch.Tensor(ref_bias)
-        nncf_graph = NNCFGraphFactory.create(model)
+        nncf_graph = model.get_graph()
         for node in nncf_graph.get_all_nodes():
             if not is_node_with_fused_bias(node, nncf_graph):
                 continue
-            bias_value = get_fused_bias_value(node, nncf_graph, model).cpu()
+            bias_value = get_fused_bias_value(node, nncf_graph, model.model).cpu()
             # TODO(AlexanderDokuchaev): return atol=0.0001 after fix 109189
             assert torch.all(torch.isclose(bias_value, ref_bias, atol=0.02)), f"{bias_value} != {ref_bias}"
             return
@@ -72,7 +71,7 @@ class TestTorchCudaFBCAlgorithm(TestTorchFBCAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: bool, tmp_dir: str):
-        return get_nncf_network(model.cuda(), model.INPUT_SIZE)
+        return GraphModelWrapper(wrap_model(model.cuda()), torch.ones(model.INPUT_SIZE).cuda())
 
     @staticmethod
     def fn_to_type(tensor):
