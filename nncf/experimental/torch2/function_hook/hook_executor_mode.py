@@ -20,7 +20,7 @@ from dataclasses import field
 from itertools import chain
 from types import MethodType
 from types import TracebackType
-from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type, cast
 from weakref import ReferenceType
 from weakref import ref
 
@@ -348,13 +348,34 @@ class FunctionHookMode(TorchFunctionMode):
         with self:
             _args, kwargs = self.process_parameters(_args, kwargs)
 
+            port_id = 0
             for idx, value in enumerate(_args):
-                _args[idx] = self.hook_storage.execute_pre_function_hooks(op_meta.op_name, idx, value)
+                if isinstance(value, (list, tuple)) and all(isinstance(v, torch.Tensor) for v in value):
+                    is_tuple = isinstance(value, tuple)
+                    list_args = cast(List[Tensor], list(value) if is_tuple else value)
+                    for tensor_idx, tensor in enumerate(list_args):
+                        list_args[tensor_idx] = self.hook_storage.execute_pre_function_hooks(
+                            op_meta.op_name, port_id, tensor
+                        )
+                        port_id += 1
+                    _args[idx] = tuple(list_args) if is_tuple else list_args
+                else:
+                    _args[idx] = self.hook_storage.execute_pre_function_hooks(op_meta.op_name, port_id, value)
+                    port_id += 1
 
-            for port_id, kw_name in enumerate(kwargs, start=len(_args)):
-                kwargs[kw_name] = self.hook_storage.execute_pre_function_hooks(
-                    op_meta.op_name, port_id, kwargs[kw_name]
-                )
+            for kw_name, value in kwargs.items():
+                if isinstance(value, (list, tuple)) and all(isinstance(v, torch.Tensor) for v in value):
+                    is_tuple = isinstance(value, tuple)
+                    list_args = cast(List[Tensor], list(value) if is_tuple else value)
+                    for tensor_idx, tensor in enumerate(list_args):
+                        list_args[tensor_idx] = self.hook_storage.execute_pre_function_hooks(
+                            op_meta.op_name, port_id, tensor
+                        )
+                        port_id += 1
+                    kwargs[kw_name] = tuple(list_args) if is_tuple else list_args
+                else:
+                    kwargs[kw_name] = self.hook_storage.execute_pre_function_hooks(op_meta.op_name, port_id, value)
+                    port_id += 1
         return tuple(_args), kwargs
 
     def process_post_function_hooks_for_value(self, value: Any, op_meta: OpMeta, port_id: int) -> Any:

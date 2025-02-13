@@ -2001,9 +2001,9 @@ x -> "features/0/0/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="
 "features/2/pad/0" -> "features/2/__getitem__/2"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 16, 16, 128)"];
 "features/2/pad/0" -> "features/2/__getitem__/3"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 16, 16, 128)"];
 "features/2/__getitem__/0" -> "features/2/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 8, 8, 128)"];
-"features/2/__getitem__/1" -> "features/2/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 8, 8, 128)"];
-"features/2/__getitem__/2" -> "features/2/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 8, 8, 128)"];
-"features/2/__getitem__/3" -> "features/2/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 8, 8, 128)"];
+"features/2/__getitem__/1" -> "features/2/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 8, 8, 128)"];
+"features/2/__getitem__/2" -> "features/2/cat/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(1, 8, 8, 128)"];
+"features/2/__getitem__/3" -> "features/2/cat/0"  [dtype=float, in_port_id=3, out_port_id=0, shape="(1, 8, 8, 128)"];
 "features/2/cat/0" -> "features/2/reduction/linear/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 8, 8, 512)"];
 "features.2.reduction.weight" -> "features/2/reduction/linear/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(256, 512)"];
 "features/2/reduction/linear/0" -> "features/2/norm/layer_norm/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 8, 8, 256)"];
@@ -2167,9 +2167,9 @@ x -> "features/0/0/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="
 "features/4/pad/0" -> "features/4/__getitem__/2"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 8, 8, 256)"];
 "features/4/pad/0" -> "features/4/__getitem__/3"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 8, 8, 256)"];
 "features/4/__getitem__/0" -> "features/4/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 4, 4, 256)"];
-"features/4/__getitem__/1" -> "features/4/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 4, 4, 256)"];
-"features/4/__getitem__/2" -> "features/4/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 4, 4, 256)"];
-"features/4/__getitem__/3" -> "features/4/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 4, 4, 256)"];
+"features/4/__getitem__/1" -> "features/4/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 4, 4, 256)"];
+"features/4/__getitem__/2" -> "features/4/cat/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(1, 4, 4, 256)"];
+"features/4/__getitem__/3" -> "features/4/cat/0"  [dtype=float, in_port_id=3, out_port_id=0, shape="(1, 4, 4, 256)"];
 "features/4/cat/0" -> "features/4/reduction/linear/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 4, 4, 1024)"];
 "features.4.reduction.weight" -> "features/4/reduction/linear/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(512, 1024)"];
 "features/4/reduction/linear/0" -> "features/4/norm/layer_norm/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 4, 4, 512)"];
@@ -3549,9 +3549,9 @@ x -> "features/0/0/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="
 "features/6/pad/0" -> "features/6/__getitem__/2"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 4, 4, 512)"];
 "features/6/pad/0" -> "features/6/__getitem__/3"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 4, 4, 512)"];
 "features/6/__getitem__/0" -> "features/6/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 2, 512)"];
-"features/6/__getitem__/1" -> "features/6/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 2, 512)"];
-"features/6/__getitem__/2" -> "features/6/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 2, 512)"];
-"features/6/__getitem__/3" -> "features/6/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 2, 512)"];
+"features/6/__getitem__/1" -> "features/6/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 2, 2, 512)"];
+"features/6/__getitem__/2" -> "features/6/cat/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(1, 2, 2, 512)"];
+"features/6/__getitem__/3" -> "features/6/cat/0"  [dtype=float, in_port_id=3, out_port_id=0, shape="(1, 2, 2, 512)"];
 "features/6/cat/0" -> "features/6/reduction/linear/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 2, 2048)"];
 "features.6.reduction.weight" -> "features/6/reduction/linear/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1024, 2048)"];
 "features/6/reduction/linear/0" -> "features/6/norm/layer_norm/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 2, 1024)"];
