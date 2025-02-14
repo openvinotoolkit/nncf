@@ -83,6 +83,7 @@ NON_RELU_ACTIVATIONS_OPERATIONS = {
         om.PTSILUMetatype,
         om.PTHardSigmoidMetatype,
         om.PTHardSwishMetatype,
+        om.PTSELUMetatype,
     ],
     GraphPattern.LABEL_ATTR: "NON_RELU_ACTIVATIONS",
 }

@@ -19,6 +19,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
@@ -329,7 +330,9 @@ class PTAWQAlgoAlgoBackend(AWQAlgoBackend, PTWeightCompressionAlgoBackend):
     @staticmethod
     def get_awq_patterns():
         return get_awq_patterns(
-            PTWeightCompressionAlgoBackend.MATMUL_METATYPES, PTMulMetatype, ATOMIC_ACTIVATIONS_OPERATIONS
+            PTWeightCompressionAlgoBackend.MATMUL_METATYPES,
+            PTMulMetatype,
+            ATOMIC_ACTIVATIONS_OPERATIONS[GraphPattern.METATYPE_ATTR],
         )
 
     @staticmethod
