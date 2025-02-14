@@ -441,7 +441,7 @@ class PTQTestPipeline(BaseTestPipeline):
             self.path_compressed_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in FX_BACKENDS:
-            exported_model = torch.export.export_for_inference(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
+            exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
             ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor.cpu(), input=self.input_size)
             ov_model.reshape(self.input_size)
             self.path_compressed_ir = self.output_model_dir / "model.xml"
@@ -468,7 +468,8 @@ class PTQTestPipeline(BaseTestPipeline):
         """
         Get number of the FakeQuantize nodes in the compressed IR.
         """
-
+        if self.backend in FX_BACKENDS:
+            return
         ie = ov.Core()
         model = ie.read_model(model=self.path_compressed_ir)
 

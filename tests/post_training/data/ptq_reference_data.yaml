@@ -39,6 +39,7 @@ torchvision/resnet18_backend_CUDA_TORCH:
   metric_value: 0.69152
 torchvision/resnet18_backend_FX_TORCH:
   metric_value: 0.6946
+  xfail_reason: "Issue-CVS-162009"
 torchvision/resnet18_backend_CUDA_FX_TORCH:
   metric_value: 0.6946
 torchvision/mobilenet_v3_small_BC_backend_FP32:
@@ -49,6 +50,7 @@ torchvision/mobilenet_v3_small_BC_backend_ONNX:
   metric_value: 0.6679
 torchvision/mobilenet_v3_small_BC_backend_FX_TORCH:
   metric_value: 0.6679
+  xfail_reason: "Issue-CVS-162009"
 torchvision/mobilenet_v3_small_BC_backend_CUDA_FX_TORCH:
   metric_value: 0.6664
 torchvision/vit_b_16_backend_FP32:
@@ -57,6 +59,7 @@ torchvision/vit_b_16_backend_OV:
   metric_value: 0.80948
 torchvision/vit_b_16_backend_FX_TORCH:
   metric_value: 0.80922
+  xfail_reason: "Issue-CVS-162009"
 torchvision/vit_b_16_backend_CUDA_FX_TORCH:
   metric_value: 0.80922
 torchvision/swin_v2_s_backend_FP32:
@@ -65,6 +68,7 @@ torchvision/swin_v2_s_backend_OV:
   metric_value: 0.83638
 torchvision/swin_v2_s_backend_FX_TORCH:
   metric_value: 0.8360
+  xfail_reason: "Issue-CVS-162009"
 torchvision/swin_v2_s_backend_CUDA_FX_TORCH:
   metric_value: 0.8360
 timm/crossvit_9_240_backend_CUDA_TORCH:

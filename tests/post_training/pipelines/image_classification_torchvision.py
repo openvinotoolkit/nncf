@@ -30,7 +30,7 @@ def _torch_export_for_training(model: torch.nn.Module, args: Tuple[Any, ...]) ->
 
 
 def _torch_export(model: torch.nn.Module, args: Tuple[Any, ...]) -> torch.fx.GraphModule:
-    return torch.export.export_for_inference(model, args).module()
+    return torch.export.export(model, args).module()
 
 
 @dataclass
@@ -118,14 +118,14 @@ class ImageClassificationTorchvision(ImageClassificationBase):
         if self.backend in PT_BACKENDS:
             with disable_patching():
                 ov_model = ov.convert_model(
-                    torch.export.export_for_inference(self.model, args=(self.dummy_tensor,)),
+                    self.model,
                     example_input=self.dummy_tensor,
                     input=self.input_size,
                 )
             ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
 
         if self.backend in FX_BACKENDS:
-            exported_model = torch.export.export_for_inference(self.model.cpu(), (self.dummy_tensor.cpu(),))
+            exported_model = torch.export.export(self.model.cpu(), (self.dummy_tensor.cpu(),))
             ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor, input=self.input_size)
             ov.serialize(ov_model, self.fp32_model_dir / "fx_model_fp32.xml")
 
