@@ -32,13 +32,14 @@ tinyllama_data_aware_gptq_scale_estimation_stateful_backend_OV:
   num_int8: 124
   metrics_xfail_reason: "Issue-148819"
 tinyllama_scale_estimation_per_channel_backend_OV:
-  metric_value: 0.80873
+  metric_value: 0.81389
   num_int4: 188
   num_int8: 124
 tinyllama_scale_estimation_per_channel_backend_TORCH:
-  metric_value: 0.80873
+  metric_value: 0.81389
   num_int4: 188
   num_int8: 124
+  atol: 0.006 # difference across devices: 0.80873 vs 0.81389
 tinyllama_data_aware_lora_stateful_backend_OV:
   metric_value: 0.83446
   num_int4: 94
