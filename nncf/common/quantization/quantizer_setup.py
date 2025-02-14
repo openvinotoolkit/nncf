@@ -24,11 +24,16 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
+from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
 
 QuantizationPointId = int
 
 DEFAULT_QUANTIZER_CONFIG = QuantizerConfig(
-    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None, per_channel=False
+    num_bits=8,
+    mode=QuantizationMode.SYMMETRIC,
+    signedness_to_force=None,
+    per_channel=False,
+    narrow_range=QUANTIZATION_NARROW_RANGE,
 )
 
 

@@ -1170,6 +1170,10 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                 (ds_config.per_channel == us_config.per_channel)
                 or (ds_config.per_channel is True and us_config.per_channel is False)
             )
+
+            # Strictly prohibit merging of config with different narrow_range params
+            is_redundant = is_redundant and (ds_config.narrow_range == us_config.narrow_range)
+
             return is_redundant
 
         def merge_traverse_fn(

@@ -62,7 +62,6 @@ from nncf.quantization.advanced_parameters import changes_asdict
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.fake_quantize import calculate_convert_parameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
-from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
@@ -335,6 +334,14 @@ class MinMaxQuantization(Algorithm):
         )
         self._unified_scale_groups = []
 
+    def set_ignored_scope(self, ignored_scope: IgnoredScope) -> None:
+        """
+        Set target ignored scope for the MinMax algorithm.
+
+        :param ignored_scope: The ignored scope to set to the MinMax algorithm.
+        """
+        self._ignored_scope = ignored_scope
+
     @property
     def available_backends(self) -> List[BackendType]:
         return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
@@ -371,6 +378,8 @@ class MinMaxQuantization(Algorithm):
             constraints["per_channel"] = quantization_params.per_channel
         if quantization_params.signedness_to_force is not None:
             constraints["signedness_to_force"] = quantization_params.signedness_to_force
+        if quantization_params.narrow_range is not None:
+            constraints["narrow_range"] = quantization_params.narrow_range
 
         return QuantizationConstraints(**constraints)
 
@@ -1009,7 +1018,6 @@ class MinMaxQuantization(Algorithm):
                 raise nncf.InternalError(msg)
             qconfig = qconfigs[0]
             q_group = QuantizerGroup.ACTIVATIONS
-            narrow_range = get_quantizer_narrow_range(qconfig, q_group)
             if self._mode is not None:
                 destination_type = self._quantization_params[q_group].destination_type
                 parameters = calculate_convert_parameters(
@@ -1021,7 +1029,7 @@ class MinMaxQuantization(Algorithm):
                     )
                     unified_ops_list.add(quantization_target_point)
                 continue
-            parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
+            parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group)
             commands = self._backend_entity.create_unified_scales_quantizers_insertion_commands(
                 graph, unified_scale_group, qconfig, parameters
             )
@@ -1046,7 +1054,6 @@ class MinMaxQuantization(Algorithm):
                     quant_group = QuantizerGroup.ACTIVATIONS
 
                 half_range = quantization_target_point in quantization_points_overflow_fix
-                narrow_range = get_quantizer_narrow_range(qconfig, quant_group)
                 statistics = tensor_collector.get_statistics()
                 if statistics.min_values is None or statistics.max_values is None:
                     msg = f"Statistics were not collected for the node {target_node_name}"
@@ -1060,9 +1067,7 @@ class MinMaxQuantization(Algorithm):
                         quantization_target_point, parameters
                     )
                 else:
-                    parameters = calculate_quantizer_parameters(
-                        statistics, qconfig, quant_group, narrow_range, half_range
-                    )
+                    parameters = calculate_quantizer_parameters(statistics, qconfig, quant_group, half_range)
                     command = self._backend_entity.create_quantizer_insertion_command(
                         graph, quantization_target_point, qconfig, parameters
                     )
