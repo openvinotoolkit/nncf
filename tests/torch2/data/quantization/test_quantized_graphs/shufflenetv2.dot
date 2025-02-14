@@ -815,7 +815,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer1.0.bn5.running_var" -> "layer1/0/bn5/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(24,)"];
 "layer1/0/bn5/batch_norm/0" -> "layer1/0/relu/2"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 16, 16)"];
 "layer1/0/relu/2" -> "layer1/0/post_hook__layer1-3-relu-1__0[0]/symmetric_quantize/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 16, 16)"];
-"layer1/0/post_hook__layer1-3-relu-1__0[0]/symmetric_quantize/1" -> "layer1/0/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 16, 16)"];
+"layer1/0/post_hook__layer1-3-relu-1__0[0]/symmetric_quantize/1" -> "layer1/0/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 24, 16, 16)"];
 "layer1/0/cat/0" -> "layer1/0/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 16, 16)"];
 "layer1/0/shuffle/view/0" -> "layer1/0/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 24, 16, 16)"];
 "layer1/0/shuffle/permute/0" -> "layer1/0/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 2, 16, 16)"];
@@ -856,7 +856,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer1.1.bn3.running_var" -> "layer1/1/bn3/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(24,)"];
 "layer1/1/bn3/batch_norm/0" -> "layer1/1/relu/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 16, 16)"];
 "layer1/1/relu/1" -> "layer1/1/post_hook__layer1-3-relu-1__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 16, 16)"];
-"layer1/1/post_hook__layer1-3-relu-1__0[0]/symmetric_quantize/0" -> "layer1/1/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 16, 16)"];
+"layer1/1/post_hook__layer1-3-relu-1__0[0]/symmetric_quantize/0" -> "layer1/1/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 24, 16, 16)"];
 "layer1/1/cat/0" -> "layer1/1/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 16, 16)"];
 "layer1/1/shuffle/view/0" -> "layer1/1/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 24, 16, 16)"];
 "layer1/1/shuffle/permute/0" -> "layer1/1/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 2, 16, 16)"];
@@ -897,7 +897,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer1.2.bn3.running_var" -> "layer1/2/bn3/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(24,)"];
 "layer1/2/bn3/batch_norm/0" -> "layer1/2/relu/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 16, 16)"];
 "layer1/2/relu/1" -> "layer1/2/post_hook__layer1-3-relu-1__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 16, 16)"];
-"layer1/2/post_hook__layer1-3-relu-1__0[0]/symmetric_quantize/0" -> "layer1/2/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 16, 16)"];
+"layer1/2/post_hook__layer1-3-relu-1__0[0]/symmetric_quantize/0" -> "layer1/2/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 24, 16, 16)"];
 "layer1/2/cat/0" -> "layer1/2/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 16, 16)"];
 "layer1/2/shuffle/view/0" -> "layer1/2/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 24, 16, 16)"];
 "layer1/2/shuffle/permute/0" -> "layer1/2/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 2, 16, 16)"];
@@ -938,7 +938,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer1.3.bn3.running_var" -> "layer1/3/bn3/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(24,)"];
 "layer1/3/bn3/batch_norm/0" -> "layer1/3/relu/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 16, 16)"];
 "layer1/3/relu/1" -> "layer1/3/post_hook__layer1-3-relu-1__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 16, 16)"];
-"layer1/3/post_hook__layer1-3-relu-1__0[0]/symmetric_quantize/0" -> "layer1/3/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 16, 16)"];
+"layer1/3/post_hook__layer1-3-relu-1__0[0]/symmetric_quantize/0" -> "layer1/3/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 24, 16, 16)"];
 "layer1/3/cat/0" -> "layer1/3/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 16, 16)"];
 "layer1/3/shuffle/view/0" -> "layer1/3/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 24, 16, 16)"];
 "layer1/3/shuffle/permute/0" -> "layer1/3/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 24, 2, 16, 16)"];
@@ -1008,7 +1008,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer2.0.bn5.running_var" -> "layer2/0/bn5/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(48,)"];
 "layer2/0/bn5/batch_norm/0" -> "layer2/0/relu/2"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/0/relu/2" -> "layer2/0/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
-"layer2/0/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/1" -> "layer2/0/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
+"layer2/0/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/1" -> "layer2/0/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/0/cat/0" -> "layer2/0/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 8, 8)"];
 "layer2/0/shuffle/view/0" -> "layer2/0/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 48, 8, 8)"];
 "layer2/0/shuffle/permute/0" -> "layer2/0/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 2, 8, 8)"];
@@ -1049,7 +1049,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer2.1.bn3.running_var" -> "layer2/1/bn3/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(48,)"];
 "layer2/1/bn3/batch_norm/0" -> "layer2/1/relu/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/1/relu/1" -> "layer2/1/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
-"layer2/1/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0" -> "layer2/1/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
+"layer2/1/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0" -> "layer2/1/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/1/cat/0" -> "layer2/1/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 8, 8)"];
 "layer2/1/shuffle/view/0" -> "layer2/1/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 48, 8, 8)"];
 "layer2/1/shuffle/permute/0" -> "layer2/1/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 2, 8, 8)"];
@@ -1090,7 +1090,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer2.2.bn3.running_var" -> "layer2/2/bn3/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(48,)"];
 "layer2/2/bn3/batch_norm/0" -> "layer2/2/relu/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/2/relu/1" -> "layer2/2/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
-"layer2/2/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0" -> "layer2/2/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
+"layer2/2/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0" -> "layer2/2/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/2/cat/0" -> "layer2/2/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 8, 8)"];
 "layer2/2/shuffle/view/0" -> "layer2/2/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 48, 8, 8)"];
 "layer2/2/shuffle/permute/0" -> "layer2/2/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 2, 8, 8)"];
@@ -1131,7 +1131,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer2.3.bn3.running_var" -> "layer2/3/bn3/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(48,)"];
 "layer2/3/bn3/batch_norm/0" -> "layer2/3/relu/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/3/relu/1" -> "layer2/3/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
-"layer2/3/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0" -> "layer2/3/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
+"layer2/3/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0" -> "layer2/3/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/3/cat/0" -> "layer2/3/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 8, 8)"];
 "layer2/3/shuffle/view/0" -> "layer2/3/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 48, 8, 8)"];
 "layer2/3/shuffle/permute/0" -> "layer2/3/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 2, 8, 8)"];
@@ -1172,7 +1172,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer2.4.bn3.running_var" -> "layer2/4/bn3/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(48,)"];
 "layer2/4/bn3/batch_norm/0" -> "layer2/4/relu/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/4/relu/1" -> "layer2/4/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
-"layer2/4/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0" -> "layer2/4/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
+"layer2/4/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0" -> "layer2/4/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/4/cat/0" -> "layer2/4/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 8, 8)"];
 "layer2/4/shuffle/view/0" -> "layer2/4/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 48, 8, 8)"];
 "layer2/4/shuffle/permute/0" -> "layer2/4/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 2, 8, 8)"];
@@ -1213,7 +1213,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer2.5.bn3.running_var" -> "layer2/5/bn3/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(48,)"];
 "layer2/5/bn3/batch_norm/0" -> "layer2/5/relu/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/5/relu/1" -> "layer2/5/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
-"layer2/5/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0" -> "layer2/5/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
+"layer2/5/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0" -> "layer2/5/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/5/cat/0" -> "layer2/5/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 8, 8)"];
 "layer2/5/shuffle/view/0" -> "layer2/5/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 48, 8, 8)"];
 "layer2/5/shuffle/permute/0" -> "layer2/5/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 2, 8, 8)"];
@@ -1254,7 +1254,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer2.6.bn3.running_var" -> "layer2/6/bn3/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(48,)"];
 "layer2/6/bn3/batch_norm/0" -> "layer2/6/relu/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/6/relu/1" -> "layer2/6/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
-"layer2/6/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0" -> "layer2/6/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
+"layer2/6/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0" -> "layer2/6/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/6/cat/0" -> "layer2/6/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 8, 8)"];
 "layer2/6/shuffle/view/0" -> "layer2/6/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 48, 8, 8)"];
 "layer2/6/shuffle/permute/0" -> "layer2/6/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 2, 8, 8)"];
@@ -1295,7 +1295,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer2.7.bn3.running_var" -> "layer2/7/bn3/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(48,)"];
 "layer2/7/bn3/batch_norm/0" -> "layer2/7/relu/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/7/relu/1" -> "layer2/7/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
-"layer2/7/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0" -> "layer2/7/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 8, 8)"];
+"layer2/7/post_hook__layer2-0-relu-2__0[0]/symmetric_quantize/0" -> "layer2/7/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 48, 8, 8)"];
 "layer2/7/cat/0" -> "layer2/7/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 8, 8)"];
 "layer2/7/shuffle/view/0" -> "layer2/7/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 48, 8, 8)"];
 "layer2/7/shuffle/permute/0" -> "layer2/7/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 48, 2, 8, 8)"];
@@ -1361,7 +1361,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer3.0.bn5.running_var" -> "layer3/0/bn5/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(96,)"];
 "layer3/0/bn5/batch_norm/0" -> "layer3/0/relu/2"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 4, 4)"];
 "layer3/0/relu/2" -> "layer3/0/post_hook__layer3-3-relu-1__0[0]/symmetric_quantize/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 4, 4)"];
-"layer3/0/post_hook__layer3-3-relu-1__0[0]/symmetric_quantize/1" -> "layer3/0/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 4, 4)"];
+"layer3/0/post_hook__layer3-3-relu-1__0[0]/symmetric_quantize/1" -> "layer3/0/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 96, 4, 4)"];
 "layer3/0/cat/0" -> "layer3/0/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 192, 4, 4)"];
 "layer3/0/shuffle/view/0" -> "layer3/0/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 96, 4, 4)"];
 "layer3/0/shuffle/permute/0" -> "layer3/0/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 2, 4, 4)"];
@@ -1402,7 +1402,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer3.1.bn3.running_var" -> "layer3/1/bn3/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(96,)"];
 "layer3/1/bn3/batch_norm/0" -> "layer3/1/relu/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 4, 4)"];
 "layer3/1/relu/1" -> "layer3/1/post_hook__layer3-3-relu-1__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 4, 4)"];
-"layer3/1/post_hook__layer3-3-relu-1__0[0]/symmetric_quantize/0" -> "layer3/1/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 4, 4)"];
+"layer3/1/post_hook__layer3-3-relu-1__0[0]/symmetric_quantize/0" -> "layer3/1/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 96, 4, 4)"];
 "layer3/1/cat/0" -> "layer3/1/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 192, 4, 4)"];
 "layer3/1/shuffle/view/0" -> "layer3/1/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 96, 4, 4)"];
 "layer3/1/shuffle/permute/0" -> "layer3/1/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 2, 4, 4)"];
@@ -1443,7 +1443,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer3.2.bn3.running_var" -> "layer3/2/bn3/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(96,)"];
 "layer3/2/bn3/batch_norm/0" -> "layer3/2/relu/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 4, 4)"];
 "layer3/2/relu/1" -> "layer3/2/post_hook__layer3-3-relu-1__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 4, 4)"];
-"layer3/2/post_hook__layer3-3-relu-1__0[0]/symmetric_quantize/0" -> "layer3/2/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 4, 4)"];
+"layer3/2/post_hook__layer3-3-relu-1__0[0]/symmetric_quantize/0" -> "layer3/2/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 96, 4, 4)"];
 "layer3/2/cat/0" -> "layer3/2/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 192, 4, 4)"];
 "layer3/2/shuffle/view/0" -> "layer3/2/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 96, 4, 4)"];
 "layer3/2/shuffle/permute/0" -> "layer3/2/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 2, 4, 4)"];
@@ -1484,7 +1484,7 @@ x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_
 "layer3.3.bn3.running_var" -> "layer3/3/bn3/batch_norm/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(96,)"];
 "layer3/3/bn3/batch_norm/0" -> "layer3/3/relu/1"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 4, 4)"];
 "layer3/3/relu/1" -> "layer3/3/post_hook__layer3-3-relu-1__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 4, 4)"];
-"layer3/3/post_hook__layer3-3-relu-1__0[0]/symmetric_quantize/0" -> "layer3/3/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 4, 4)"];
+"layer3/3/post_hook__layer3-3-relu-1__0[0]/symmetric_quantize/0" -> "layer3/3/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 96, 4, 4)"];
 "layer3/3/cat/0" -> "layer3/3/shuffle/view/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 192, 4, 4)"];
 "layer3/3/shuffle/view/0" -> "layer3/3/shuffle/permute/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 2, 96, 4, 4)"];
 "layer3/3/shuffle/permute/0" -> "layer3/3/shuffle/reshape/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 96, 2, 4, 4)"];

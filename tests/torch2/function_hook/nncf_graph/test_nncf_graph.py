@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
+from functools import partial
 from typing import List, Tuple, Union
 
 import networkx as nx
@@ -120,7 +121,7 @@ TEST_MODELS_DESC = [
     ModelDesc("convnext_small", models.convnext_small, [1, 3, 64, 64]),
     ModelDesc("densenet121", models.densenet121, [1, 3, 64, 64]),
     ModelDesc("efficientnet_b0", models.efficientnet_b0, [1, 3, 64, 64]),
-    ModelDesc("inception_v3", models.inception_v3, [1, 3, 300, 300]),
+    ModelDesc("inception_v3", partial(models.inception_v3, init_weights=False), [1, 3, 300, 300]),
     ModelDesc("mobilenet_v2", models.mobilenet_v2, [1, 3, 64, 64]),
     ModelDesc("mobilenet_v3_small", models.mobilenet_v3_small, [1, 3, 64, 64]),
     ModelDesc("resnet18", models.resnet18, [1, 3, 64, 64]),
