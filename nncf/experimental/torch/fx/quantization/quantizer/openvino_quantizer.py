@@ -30,6 +30,7 @@ from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.utils.api_marker import api
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.transformations import fold_constant_except_qdq
@@ -46,6 +47,7 @@ from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 QUANT_ANNOTATION_KEY = "quantization_annotation"
 
 
+@api()
 class OpenVINOQuantizer(TorchAOQuantizer):
     """
     Implementation of the Torch AO quantizer which annotates models with quantization annotations

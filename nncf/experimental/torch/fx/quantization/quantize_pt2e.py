@@ -25,6 +25,7 @@ from torch.fx.passes.infra.pass_manager import PassManager
 import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
+from nncf.common.utils.api_marker import api
 from nncf.data import Dataset
 from nncf.experimental.quantization.algorithms.post_training.algorithm import ExperimentalPostTrainingQuantization
 from nncf.experimental.torch.fx.constant_folding import constant_fold
@@ -38,6 +39,7 @@ from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
 
 
+@api()
 def quantize_pt2e(
     model: torch.fx.GraphModule,
     quantizer: Quantizer,
