@@ -15,6 +15,7 @@ import re
 import time
 from abc import ABC
 from abc import abstractmethod
+from dataclasses import asdict
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
@@ -93,22 +94,12 @@ class StatsFromOutput:
 
 @dataclass
 class NumCompressNodes:
-    num_fq_nodes: Optional[int] = None
     num_int8: Optional[int] = None
-    num_int4: Optional[int] = None
-    num_sparse_activations: Optional[int] = None
 
-    def get_compression_numbers(self) -> Dict[str, int]:
-        output = {}
-        if self.num_fq_nodes is not None:
-            output["Num FQ"] = self.num_fq_nodes
-        if self.num_int8 is not None:
-            output["Num int8"] = self.num_int8
-        if self.num_int4 is not None:
-            output["Num int4"] = self.num_int4
-        if self.num_sparse_activations is not None:
-            output["Num sparse activations"] = self.num_sparse_activations
-        return output
+
+@dataclass
+class PTQNumCompressNodes(NumCompressNodes):
+    num_fq_nodes: Optional[int] = None
 
 
 @dataclass
@@ -195,11 +186,10 @@ class RunInfo:
     def get_result_dict(self) -> Dict[str, str]:
         """Returns a dictionary with the results of the run."""
         ram_data = {}
-        if self.compression_memory_usage_rss is None and self.compression_memory_usage_system is None:
+        if not self.compression_memory_usage_system:
             ram_data["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage)
-        if self.compression_memory_usage_rss is not None:
+        else:
             ram_data["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage_rss)
-        if self.compression_memory_usage_system is not None:
             ram_data["RAM MiB System"] = self.format_memory_usage(self.compression_memory_usage_system)
 
         result = {
@@ -208,7 +198,7 @@ class RunInfo:
             "Metric name": self.metric_name,
             "Metric value": self.metric_value,
             "Metric diff": self.metric_diff,
-            **self.num_compress_nodes.get_compression_numbers(),
+            **asdict(self.num_compress_nodes),
             "Compr. time": self.format_time(self.time_compression),
             **self.stats_from_output.get_stats(),
             "Total time": self.format_time(self.time_total),

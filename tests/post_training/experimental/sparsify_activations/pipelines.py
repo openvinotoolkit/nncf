@@ -34,9 +34,12 @@ from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import ErrorReason
 from tests.post_training.pipelines.base import ErrorReport
+from tests.post_training.pipelines.base import PTQNumCompressNodes
+from tests.post_training.pipelines.base import RunInfo
 from tests.post_training.pipelines.base import get_num_fq_int4_int8
 from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
 from tests.post_training.pipelines.lm_weight_compression import LMWeightCompression
+from tests.post_training.pipelines.lm_weight_compression import WCNumCompressNodes
 from tests.post_training.pipelines.lm_weight_compression import WCTimeStats
 from tests.torch.experimental.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 from tests.torch.helpers import set_torch_seed
@@ -54,10 +57,48 @@ class SATimeStats(WCTimeStats):
     REGEX_PREFIX = [*WCTimeStats.REGEX_PREFIX, SparsifyActivationsAlgoBackend.CALIBRATION_TRACKING_DESC]
 
 
+@dataclass
+class SANumCompressNodes(PTQNumCompressNodes, WCNumCompressNodes):
+    num_sparse_activations: Optional[int] = None
+
+
 class SAPipelineMixin(LMWeightCompression):
     """
     Common methods in the test pipeline for Sparsify Activations.
     """
+
+    def __init__(
+        self,
+        reported_name,
+        model_id,
+        backend,
+        compression_params,
+        output_dir,
+        data_dir,
+        reference_data,
+        no_eval,
+        run_benchmark_app,
+        torch_compile_validation=False,
+        params=None,
+        batch_size=1,
+        memory_monitor=False,
+    ):
+        super().__init__(
+            reported_name,
+            model_id,
+            backend,
+            compression_params,
+            output_dir,
+            data_dir,
+            reference_data,
+            no_eval,
+            run_benchmark_app,
+            torch_compile_validation,
+            params,
+            batch_size,
+            memory_monitor,
+        )
+        self.run_info = RunInfo(model=reported_name, backend=self.backend, num_compress_nodes=SANumCompressNodes())
 
     def collect_data_from_stdout(self, stdout: str):
         stats = SATimeStats()

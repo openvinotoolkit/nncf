@@ -33,6 +33,8 @@ from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import ErrorReason
 from tests.post_training.pipelines.base import ErrorReport
+from tests.post_training.pipelines.base import NumCompressNodes
+from tests.post_training.pipelines.base import RunInfo
 from tests.post_training.pipelines.base import StatsFromOutput
 from tests.post_training.pipelines.base import get_num_fq_int4_int8
 from tools.memory_monitor import MemoryType
@@ -74,10 +76,48 @@ class WCTimeStats(StatsFromOutput):
         return dict(zip(self.STAT_NAMES, VARS))
 
 
+@dataclass
+class WCNumCompressNodes(NumCompressNodes):
+    num_int4: Optional[int] = None
+
+
 class LMWeightCompression(BaseTestPipeline):
     """Pipeline for casual language models from Hugging Face repository"""
 
     OV_MODEL_NAME = "openvino_model.xml"
+
+    def __init__(
+        self,
+        reported_name,
+        model_id,
+        backend,
+        compression_params,
+        output_dir,
+        data_dir,
+        reference_data,
+        no_eval,
+        run_benchmark_app,
+        torch_compile_validation=False,
+        params=None,
+        batch_size=1,
+        memory_monitor=False,
+    ):
+        super().__init__(
+            reported_name,
+            model_id,
+            backend,
+            compression_params,
+            output_dir,
+            data_dir,
+            reference_data,
+            no_eval,
+            run_benchmark_app,
+            torch_compile_validation,
+            params,
+            batch_size,
+            memory_monitor,
+        )
+        self.run_info = RunInfo(model=reported_name, backend=self.backend, num_compress_nodes=WCNumCompressNodes())
 
     def prepare_model(self) -> None:
         is_stateful = self.params.get("is_stateful", False)

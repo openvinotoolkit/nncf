@@ -17,16 +17,7 @@ import yaml
 
 from tests.post_training.experimental.sparsify_activations.model_scope import SPARSIFY_ACTIVATIONS_TEST_CASES
 from tests.post_training.pipelines.base import RunInfo
-from tests.post_training.test_quantize_conformance import fixture_batch_size  # noqa: F401
-from tests.post_training.test_quantize_conformance import fixture_data  # noqa: F401
-from tests.post_training.test_quantize_conformance import fixture_extra_columns  # noqa: F401
-from tests.post_training.test_quantize_conformance import fixture_no_eval  # noqa: F401
-from tests.post_training.test_quantize_conformance import fixture_output  # noqa: F401
 from tests.post_training.test_quantize_conformance import fixture_report_data  # noqa: F401
-from tests.post_training.test_quantize_conformance import fixture_run_benchmark_app  # noqa: F401
-from tests.post_training.test_quantize_conformance import fixture_run_fp32_backend  # noqa: F401
-from tests.post_training.test_quantize_conformance import fixture_run_torch_cuda_backend  # noqa: F401
-from tests.post_training.test_quantize_conformance import fixture_subset_size  # noqa: F401
 from tests.post_training.test_quantize_conformance import run_pipeline
 
 

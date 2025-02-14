@@ -49,64 +49,6 @@ def fixture_use_avx2():
         os.environ["ONEDNN_MAX_CPU_ISA"] = old_value
 
 
-@pytest.fixture(scope="session", name="data_dir")
-def fixture_data(pytestconfig):
-    if pytestconfig.getoption("data") is None:
-        msg = "This test requires the --data argument to be specified."
-        raise ValueError(msg)
-    return Path(pytestconfig.getoption("data"))
-
-
-@pytest.fixture(scope="session", name="output_dir")
-def fixture_output(pytestconfig):
-    return Path(pytestconfig.getoption("output"))
-
-
-@pytest.fixture(scope="session", name="no_eval")
-def fixture_no_eval(pytestconfig):
-    return pytestconfig.getoption("no_eval")
-
-
-@pytest.fixture(scope="session", name="batch_size")
-def fixture_batch_size(pytestconfig):
-    return pytestconfig.getoption("batch_size")
-
-
-@pytest.fixture(scope="session", name="subset_size")
-def fixture_subset_size(pytestconfig):
-    return pytestconfig.getoption("subset_size")
-
-
-@pytest.fixture(scope="session", name="run_fp32_backend")
-def fixture_run_fp32_backend(pytestconfig):
-    return pytestconfig.getoption("fp32")
-
-
-@pytest.fixture(scope="session", name="run_torch_cuda_backend")
-def fixture_run_torch_cuda_backend(pytestconfig):
-    return pytestconfig.getoption("cuda")
-
-
-@pytest.fixture(scope="session", name="run_benchmark_app")
-def fixture_run_benchmark_app(pytestconfig):
-    return pytestconfig.getoption("benchmark")
-
-
-@pytest.fixture(scope="session", name="torch_compile_validation")
-def fixture_torch_compile_validation(pytestconfig):
-    return pytestconfig.getoption("torch_compile_validation")
-
-
-@pytest.fixture(scope="session", name="extra_columns")
-def fixture_extra_columns(pytestconfig):
-    return pytestconfig.getoption("extra_columns")
-
-
-@pytest.fixture(scope="session", name="memory_monitor")
-def fixture_memory_monitor(pytestconfig):
-    return pytestconfig.getoption("memory_monitor")
-
-
 def _parse_version(s: Path):
     version_str = re.search(r".*_(\d+\.\d+).(?:yaml|yml)", s.name).group(1)
     return version.parse(version_str)
@@ -164,81 +106,23 @@ def fixture_wc_reference_data():
     return data
 
 
-# Define the start and end report order
-COMPRESSED_NODES_ORDER = ["Num FQ", "Num int8", "Num int4", "Num sparse activations"]
-START_REPORT_ORDER = [
-    "Model",
-    "Backend",
-    "Metric name",
-    "Metric value",
-    "Metric diff",
-    *COMPRESSED_NODES_ORDER,
-    "Compr. time",
-    "Total time",
-    "FPS",
-]
-END_REPORT_ORDER = ["Status", "Build url"]
-
-
-def fill_missing_columns(test_results):
-    """Fill missing columns in test results with None."""
-    all_columns = list(max(test_results, key=len).keys())
-    return [{col: result.get(col, None) for col in all_columns} for result in test_results]
-
-
-def reorder_columns(df, start_order, end_order):
-    """Reorder DataFrame columns based on start and end orders."""
-    combined_columns = set(df.columns)
-    start_columns = [col for col in start_order if col in combined_columns]
-    end_columns = [col for col in end_order if col in combined_columns]
-    middle_columns = sorted(col for col in combined_columns if col not in start_columns and col not in end_columns)
-    final_column_order = start_columns + middle_columns + end_columns
-    return df.reindex(columns=final_column_order)
-
-
-def ensure_all_columns(df, reference_columns):
-    """Ensure all reference columns are present in the DataFrame, filling missing columns with None."""
-    for column in reference_columns:
-        if column not in df.columns:
-            df[column] = None
-    return df
-
-
-def process_test_results(data, columns_to_drop):
-    """Process test results into a DataFrame with missing columns filled."""
-    test_results = OrderedDict(sorted(data.items()))
-    test_results = [v.get_result_dict() for v in test_results.values()]
-    filled_test_results = fill_missing_columns(test_results)
-    df = pd.DataFrame(filled_test_results).drop(columns=columns_to_drop)
-    return df
-
-
-def save_dataframe(df, output_file, start_order, end_order, append=False):
-    """Save the DataFrame to a CSV file, optionally appending to an existing file."""
-    if append and output_file.exists():
-        existing_df = pd.read_csv(output_file)
-        combined_columns = set(existing_df.columns).union(set(df.columns))
-        df = ensure_all_columns(df, combined_columns)
-        existing_df = ensure_all_columns(existing_df, combined_columns)
-        df = reorder_columns(df, start_order, end_order)
-        existing_df = reorder_columns(existing_df, start_order, end_order)
-        combined_df = pd.concat([existing_df, df], ignore_index=True)
-        combined_df.to_csv(output_file, index=False)
-    else:
-        df = reorder_columns(df, start_order, end_order)
-        df.to_csv(output_file, index=False)
-
-
 @pytest.fixture(scope="session", name="result_data")
-def fixture_report_data(output_dir, run_benchmark_app, pytestconfig):
+def fixture_report_data(output_dir, run_benchmark_app, forked):
     data: Dict[str, RunInfo] = {}
     yield data
     if data:
         columns_to_drop = ["FPS"] if not run_benchmark_app else []
-        df = process_test_results(data, columns_to_drop)
         output_dir.mkdir(parents=True, exist_ok=True)
         output_file = output_dir / "results.csv"
-        save_dataframe(df, output_file, START_REPORT_ORDER, END_REPORT_ORDER, append=pytestconfig.getoption("forked"))
+        test_results = OrderedDict(sorted(data.items()))
+        test_results = [v.get_result_dict() for v in test_results.values()]
+        df = pd.DataFrame(test_results).drop(columns=columns_to_drop)
+        if forked and output_file.exists():
+            # When run test with --forked to run test in separate process
+            # Used in post_training_performance jobs
+            df.to_csv(output_file, index=False, mode="a", header=False)
+        else:
+            df.to_csv(output_file, index=False)
 
 
 def maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size):
