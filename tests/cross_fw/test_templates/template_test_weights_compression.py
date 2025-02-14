@@ -218,33 +218,46 @@ class TemplateWeightCompression(ABC):
         assert error_before_se[OUTLIER_CHANNEL] > error_after_se[OUTLIER_CHANNEL]
 
     # AWQ Tests
-    # @pytest.mark.parametrize("mode", self.get_supported_4_bit_modes())
-    # @pytest.mark.parametrize("with_multiply", (True, False))
-    # def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(self, mode, with_multiply):
-    #     n_layers = 8
-    #     n_awq_target = n_layers - 1  # first MatMul is always int8
-    #     model = AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers).ov_model
-    #     dataset = Dataset([np.ones([1, 8, 8])])
-
-    #     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
-
-    #     awq_num = 0
-    #     for op in model.get_ops():
-    #         if op.get_type_name() == "Constant" and "awq" in op.get_friendly_name():
-    #             awq_num += 1
-    #     assert awq_num == n_awq_target
+    @staticmethod
+    @abstractmethod
+    def get_awq_act_matmul_model(with_multiply, n_layers):
+        "Returns a backend model for test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul."
 
     @staticmethod
     @abstractmethod
-    def get_awq_matmul_model() -> TModel: ...
+    def get_num_multiply_from_awq():
+        "Returns number of Multiply nodes from AWQ."
+
+    @pytest.fixture
+    def int4_mode(self, request):
+        return None
+
+    @pytest.mark.parametrize("with_multiply", (True, False))
+    def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(self, int4_mode, with_multiply):
+        n_layers = 8
+        n_awq_target = n_layers - 1  # first MatMul is always int8
+        model = self.get_awq_act_matmul_model(with_multiply, n_layers)
+
+        dataset = Dataset([self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))])
+        model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
+
+        awq_num = self.get_num_multiply_from_awq(model)
+        assert awq_num == n_awq_target
 
     @staticmethod
     @abstractmethod
-    def get_num_int4_nodes(): ...
+    def get_awq_matmul_model() -> TModel:
+        "Returns a backend model for test_awq_with_ignored_scope."
 
     @staticmethod
     @abstractmethod
-    def get_ignored_scope_name() -> str: ...
+    def get_num_int4_nodes(model: TModel):
+        "Returns number of int4 nodes."
+
+    @staticmethod
+    @abstractmethod
+    def get_ignored_scope_name() -> str:
+        "Returns ignored scope name for test_awq_with_ignored_scope."
 
     def test_awq_with_ignored_scope(self):
         model = self.get_awq_matmul_model()

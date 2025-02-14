@@ -22,9 +22,11 @@ from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.torch import wrap_model
+from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
@@ -85,6 +87,45 @@ class LinearModel(torch.nn.Module):
 
     def forward(self, input):
         return self.linear(input)
+
+
+class AWQActLinearModel(nn.Module):
+    def __init__(self, with_multiply=False, n_layers=8):
+        super().__init__()
+        self.with_multiply = with_multiply
+        self.n_layers = n_layers
+
+        def create_linear_layer():
+            weight_tensor = torch.arange(0, 64, dtype=torch.float32).reshape(8, 8) - 32.0
+            linear_layer = nn.Linear(8, 8, bias=False)
+            linear_layer.weight = nn.Parameter(weight_tensor)
+            return linear_layer
+
+        self.linear_emb = create_linear_layer()
+
+        self.linears_1 = nn.ModuleList()
+        if self.with_multiply:
+            self.linears_2 = nn.ModuleList()
+
+        for _ in range(n_layers):
+            self.linears_1.append(create_linear_layer())
+            if self.with_multiply:
+                self.linears_2.append(create_linear_layer())
+        self.linear_lm_head = create_linear_layer()
+
+    def forward(self, x):
+        out = self.linear_emb(x)
+
+        for i in range(self.n_layers):
+            node1 = F.relu(self.linears_1[i](out))
+            if self.with_multiply:
+                node2 = torch.selu(self.linears_2[i](out))
+                out = node1 * node2
+            else:
+                out = node1
+
+        out = self.linear_lm_head(out)
+        return out
 
 
 class AWQMatmulModel(nn.Module):
@@ -469,11 +510,26 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return "AWQMatmulModel/Linear[linear6]/linear_0"
 
     @staticmethod
-    def get_num_int4_nodes(compressed_model: torch.nn.Module) -> int:
+    def get_num_int4_nodes(model: torch.nn.Module) -> int:
         num = 0
-        for _, op in compressed_model.nncf.external_op.items():
+        for _, op in model.nncf.external_op.items():
             num += isinstance(op, INT4SymmetricWeightsDecompressor)
         return num
 
     @staticmethod
-    def check_model_2(): ...
+    def get_awq_act_matmul_model(with_multiply, n_layers):
+        return AWQActLinearModel(with_multiply=with_multiply, n_layers=n_layers)
+
+    @pytest.fixture(params=INT4_MODES)
+    def int4_mode(self, request):
+        return request.param
+
+    @staticmethod
+    def get_num_multiply_from_awq(model):
+        awq_num = 0
+        model.nncf.get_original_graph().dump_graph
+        modules = model.nncf.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_OP)
+        for name, module in modules.items():
+            if "awq" in name and isinstance(module, SQMultiply):
+                awq_num += 1
+        return awq_num

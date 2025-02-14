@@ -49,6 +49,7 @@ from tests.cross_fw.shared.json import load_json
 from tests.cross_fw.test_templates.template_test_weights_compression import ACTIVATION
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
+from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
@@ -1514,12 +1515,25 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return "MatMul_6"
 
     @staticmethod
-    def get_num_int4_nodes(compressed_model: ov.Model) -> int:
+    def get_num_int4_nodes(model: ov.Model) -> int:
         num = 0
-        for op in compressed_model.get_ops():
+        for op in model.get_ops():
             if op.get_type_name() == "Constant" and op.get_element_type() == ov.Type.i4:
                 num += 1
         return num
 
     @staticmethod
-    def check_model_2(): ...
+    def get_awq_act_matmul_model(with_multiply, n_layers):
+        return AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers).ov_model
+
+    @pytest.fixture(params=INT4_NF4_MODES)
+    def int4_mode(self, request):
+        return request.param
+
+    @staticmethod
+    def get_num_multiply_from_awq(model):
+        awq_num = 0
+        for op in model.get_ops():
+            if op.get_type_name() == "Constant" and "awq" in op.get_friendly_name():
+                awq_num += 1
+        return awq_num
