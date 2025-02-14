@@ -14,6 +14,7 @@ import re
 import shutil
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -88,19 +89,19 @@ class LMWeightCompression(BaseTestPipeline):
 
     def __init__(
         self,
-        reported_name,
-        model_id,
-        backend,
-        compression_params,
-        output_dir,
-        data_dir,
-        reference_data,
-        no_eval,
-        run_benchmark_app,
-        torch_compile_validation=False,
-        params=None,
-        batch_size=1,
-        memory_monitor=False,
+        reported_name: str,
+        model_id: str,
+        backend: BackendType,
+        compression_params: dict,
+        output_dir: Path,
+        data_dir: Path,
+        reference_data: dict,
+        no_eval: bool,
+        run_benchmark_app: bool,
+        torch_compile_validation: bool = False,
+        params: dict = None,
+        batch_size: int = 1,
+        memory_monitor: bool = False,
     ):
         super().__init__(
             reported_name,
