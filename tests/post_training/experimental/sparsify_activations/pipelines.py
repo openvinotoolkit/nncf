@@ -33,6 +33,7 @@ from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
+from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import ErrorReason
 from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import PTQNumCompressNodes
@@ -42,6 +43,7 @@ from tests.post_training.pipelines.image_classification_timm import ImageClassif
 from tests.post_training.pipelines.lm_weight_compression import LMWeightCompression
 from tests.post_training.pipelines.lm_weight_compression import WCNumCompressNodes
 from tests.post_training.pipelines.lm_weight_compression import WCTimeStats
+from tests.post_training.pipelines.lm_weight_compression import collect_int4_int8_num_errors
 from tests.torch.experimental.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 from tests.torch.helpers import set_torch_seed
 
@@ -62,8 +64,13 @@ class SATimeStats(WCTimeStats):
 class SANumCompressNodes(PTQNumCompressNodes, WCNumCompressNodes):
     num_sparse_activations: Optional[int] = None
 
+    def get_data(self):
+        data = super().get_data()
+        data["Num sparse activations"] = self.num_sparse_activations
+        return data
 
-class SAPipelineMixin(LMWeightCompression):
+
+class SAPipelineMixin(BaseTestPipeline):
     """
     Common methods in the test pipeline for Sparsify Activations.
     """
@@ -140,6 +147,7 @@ class SAPipelineMixin(LMWeightCompression):
         errors = super().collect_errors()
         run_info = self.run_info
         reference_data = self.reference_data
+        errors.extend(collect_int4_int8_num_errors(self.run_info, self.reference_data))
 
         ref_num_sparse_activations = reference_data.get("num_sparse_activations")
         num_sparse_activations = run_info.num_compress_nodes.num_sparse_activations
@@ -150,10 +158,11 @@ class SAPipelineMixin(LMWeightCompression):
                 f"which differs from reference {ref_num_sparse_activations}."
             )
             errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+
         return errors
 
 
-class LMSparsifyActivations(SAPipelineMixin):
+class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
     DEFAULT_SUBSET_SIZE = 32
 
     def prepare_model(self):

@@ -81,6 +81,11 @@ class WCTimeStats(StatsFromOutput):
 class WCNumCompressNodes(NumCompressNodes):
     num_int4: Optional[int] = None
 
+    def get_data(self):
+        data = super().get_data()
+        data["Num int4"] = self.num_int4
+        return data
+
 
 class LMWeightCompression(BaseTestPipeline):
     """Pipeline for casual language models from Hugging Face repository"""
@@ -230,6 +235,8 @@ class LMWeightCompression(BaseTestPipeline):
         print("Weight compression...")
         start_time = time.perf_counter()
         if self.memory_monitor:
+            self.run_info.compression_memory_usage_rss = -1
+            self.run_info.compression_memory_usage_system = -1
             gc.collect()
             with memory_monitor_context(
                 interval=0.1,
@@ -346,26 +353,26 @@ class LMWeightCompression(BaseTestPipeline):
 
     def collect_errors(self) -> List[ErrorReport]:
         errors = super().collect_errors()
-        run_info = self.run_info
-        reference_data = self.reference_data
-
-        num_int4_reference = reference_data.get("num_int4")
-        num_int8_reference = reference_data.get("num_int8")
-        num_int4_value = run_info.num_compress_nodes.num_int4
-        num_int8_value = run_info.num_compress_nodes.num_int8
-
-        if num_int4_reference is not None and num_int4_reference != num_int4_value:
-            status_msg = (
-                "Regression: The number of int4 ops is different "
-                f"than reference {num_int4_reference} != {num_int4_value}"
-            )
-            errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
-
-        if num_int8_reference is not None and num_int8_reference != num_int8_value:
-            status_msg = (
-                "Regression: The number of int8 ops is different "
-                f"than reference {num_int8_reference} != {num_int8_value}"
-            )
-            errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
-
+        errors.extend(collect_int4_int8_num_errors(self.run_info, self.reference_data))
         return errors
+
+
+def collect_int4_int8_num_errors(run_info: RunInfo, reference_data: dict) -> List[ErrorReport]:
+    errors = []
+    num_int4_reference = reference_data.get("num_int4")
+    num_int8_reference = reference_data.get("num_int8")
+    num_int4_value = run_info.num_compress_nodes.num_int4
+    num_int8_value = run_info.num_compress_nodes.num_int8
+
+    if num_int4_reference is not None and num_int4_reference != num_int4_value:
+        status_msg = (
+            f"Regression: The number of int4 ops is different than reference {num_int4_reference} != {num_int4_value}"
+        )
+        errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+
+    if num_int8_reference is not None and num_int8_reference != num_int8_value:
+        status_msg = (
+            f"Regression: The number of int8 ops is different than reference {num_int8_reference} != {num_int8_value}"
+        )
+        errors.append(ErrorReport(ErrorReason.NUM_COMPRESSED, status_msg))
+    return errors

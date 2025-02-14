@@ -15,7 +15,6 @@ import re
 import time
 from abc import ABC
 from abc import abstractmethod
-from dataclasses import asdict
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
@@ -96,10 +95,18 @@ class StatsFromOutput:
 class NumCompressNodes:
     num_int8: Optional[int] = None
 
+    def get_data(self):
+        return {"Num int8": self.num_int8}
+
 
 @dataclass
 class PTQNumCompressNodes(NumCompressNodes):
     num_fq_nodes: Optional[int] = None
+
+    def get_data(self):
+        data = super().get_data()
+        data["Num FQ"] = self.num_fq_nodes
+        return data
 
 
 @dataclass
@@ -186,7 +193,7 @@ class RunInfo:
     def get_result_dict(self) -> Dict[str, str]:
         """Returns a dictionary with the results of the run."""
         ram_data = {}
-        if not self.compression_memory_usage_system:
+        if self.compression_memory_usage_system is None:
             ram_data["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage)
         else:
             ram_data["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage_rss)
@@ -198,7 +205,7 @@ class RunInfo:
             "Metric name": self.metric_name,
             "Metric value": self.metric_value,
             "Metric diff": self.metric_diff,
-            **asdict(self.num_compress_nodes),
+            **self.num_compress_nodes.get_data(),
             "Compr. time": self.format_time(self.time_compression),
             **self.stats_from_output.get_stats(),
             "Total time": self.format_time(self.time_total),
@@ -396,6 +403,39 @@ class PTQTestPipeline(BaseTestPipeline):
     Base class to test post training quantization.
     """
 
+    def __init__(
+        self,
+        reported_name,
+        model_id,
+        backend,
+        compression_params,
+        output_dir,
+        data_dir,
+        reference_data,
+        no_eval,
+        run_benchmark_app,
+        torch_compile_validation=False,
+        params=None,
+        batch_size=1,
+        memory_monitor=False,
+    ):
+        super().__init__(
+            reported_name,
+            model_id,
+            backend,
+            compression_params,
+            output_dir,
+            data_dir,
+            reference_data,
+            no_eval,
+            run_benchmark_app,
+            torch_compile_validation,
+            params,
+            batch_size,
+            memory_monitor,
+        )
+        self.run_info = RunInfo(model=reported_name, backend=self.backend, num_compress_nodes=PTQNumCompressNodes())
+
     def _compress(self):
         """
         Quantize self.model
@@ -429,6 +469,8 @@ class PTQTestPipeline(BaseTestPipeline):
 
         start_time = time.perf_counter()
         if self.memory_monitor:
+            self.run_info.compression_memory_usage_rss = -1
+            self.run_info.compression_memory_usage_system = -1
             gc.collect()
             with memory_monitor_context(
                 interval=0.1,
