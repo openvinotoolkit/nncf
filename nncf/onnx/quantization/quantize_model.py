@@ -15,7 +15,6 @@ import onnx
 
 import nncf
 from nncf.common.logging.logger import nncf_logger
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
@@ -32,6 +31,7 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
+from nncf.quantization.structs import QuantizationPreset
 from nncf.scopes import IgnoredScope
 
 TTensor = TypeVar("TTensor")

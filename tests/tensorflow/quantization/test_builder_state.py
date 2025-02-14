@@ -17,7 +17,7 @@ from examples.tensorflow.classification.main import load_checkpoint
 from examples.tensorflow.classification.main import load_compression_state
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.tensorflow import create_compression_callbacks
 from nncf.tensorflow import register_default_init_args
 from nncf.tensorflow.callbacks.checkpoint_callback import CheckpointManagerCallback

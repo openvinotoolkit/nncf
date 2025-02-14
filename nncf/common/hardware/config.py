@@ -20,12 +20,12 @@ import jstyleson as json  # type: ignore[import-untyped]
 import nncf
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.helpers import product_dict
 from nncf.common.utils.os import safe_open
 from nncf.definitions import HW_CONFIG_RELATIVE_DIR
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizerConfig
 
 
 class HWConfigType(Enum):

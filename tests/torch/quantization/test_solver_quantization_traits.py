@@ -13,10 +13,10 @@ from typing import Dict, List, Type
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph as QPSG
-from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
-from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
+from nncf.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph as QPSG
+from nncf.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
+from nncf.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
 from nncf.torch.graph.operator_metatypes import get_operator_metatypes
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from tests.common.quantization.mock_graphs import get_ip_graph_for_test

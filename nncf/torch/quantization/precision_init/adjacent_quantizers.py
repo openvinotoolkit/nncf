@@ -12,9 +12,9 @@ from typing import Dict, List, NamedTuple, Tuple
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.quantizer_setup import QuantizationPointId
-from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
-from nncf.common.quantization.structs import QuantizerId
+from nncf.quantization.quantizer_setup import QuantizationPointId
+from nncf.quantization.quantizer_setup import QuantizerSetupBase
+from nncf.quantization.structs import QuantizerId
 from nncf.torch.quantization.layers import BaseQuantizer
 
 

@@ -22,7 +22,7 @@ try:
     import torch
 except:  # noqa: E722
     torch = None
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
 from tests.cross_fw.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 from tests.cross_fw.shared.case_collection import skip_marked_cases_if_options_not_specified
 from tests.cross_fw.shared.install_fixtures import tmp_venv_with_nncf  # noqa: F401

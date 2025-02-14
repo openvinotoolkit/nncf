@@ -16,11 +16,11 @@ import pytest
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.insertion_point_graph import InsertionPointGraph
-from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
-from nncf.common.quantization.quantizer_propagation.solver import PostprocessingNodeLocator
-from nncf.common.quantization.structs import QuantizableWeightedLayerNode
-from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.registry import Registry
+from nncf.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
+from nncf.quantization.quantizer_propagation.solver import PostprocessingNodeLocator
+from nncf.quantization.structs import QuantizableWeightedLayerNode
+from nncf.quantization.structs import QuantizerConfig
 from tests.common.quantization.metatypes import WEIGHT_LAYER_METATYPES
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import IdentityTestMetatype

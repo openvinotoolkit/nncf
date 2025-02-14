@@ -33,18 +33,6 @@ from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
-from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
-from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
-from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
-from nncf.common.quantization.quantizer_setup import QuantizationPointId
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.common.quantization.structs import QuantizableWeightedLayerNode
-from nncf.common.quantization.structs import QuantizationConstraints
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.scopes import check_scopes_in_graph
 from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
@@ -56,6 +44,18 @@ from nncf.config.schemata.defaults import QUANTIZATION_OVERFLOW_FIX
 from nncf.config.schemata.defaults import QUANTIZE_INPUTS
 from nncf.config.schemata.defaults import QUANTIZE_OUTPUTS
 from nncf.config.schemata.defaults import TARGET_DEVICE
+from nncf.quantization.config_assignment import assign_qconfig_lists_to_modules
+from nncf.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
+from nncf.quantization.quantizer_propagation.structs import IgnoreReason
+from nncf.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.quantization.quantizer_setup import QuantizationPointId
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.quantization.structs import QuantizableWeightedLayerNode
+from nncf.quantization.structs import QuantizationConstraints
+from nncf.quantization.structs import QuantizationPreset
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizerConfig
+from nncf.quantization.structs import QuantizerGroup
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverter

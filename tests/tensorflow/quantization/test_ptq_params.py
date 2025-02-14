@@ -13,14 +13,14 @@
 import pytest
 
 from nncf import NNCFConfig
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.advanced_parameters import apply_advanced_parameters_to_config
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
+from nncf.quantization.structs import QuantizationPreset
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.scopes import IgnoredScope
 from nncf.tensorflow.quantization.quantize_model import _create_nncf_config
 from nncf.tensorflow.quantization.quantize_model import _get_default_quantization_config

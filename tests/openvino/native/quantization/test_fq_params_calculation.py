@@ -15,12 +15,12 @@ import openvino as ov
 import pytest
 import torch
 
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import QuantizationMode
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.structs import QuantizationPreset
 from tests.cross_fw.shared.comparator import compare_stats
 from tests.cross_fw.shared.json import load_json
 from tests.openvino.native.common import convert_torch_model

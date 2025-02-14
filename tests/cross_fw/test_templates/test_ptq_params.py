@@ -21,10 +21,6 @@ from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
@@ -37,6 +33,10 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
+from nncf.quantization.structs import QuantizationPreset
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizerConfig
+from nncf.quantization.structs import QuantizerGroup
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from tests.common.quantization.metatypes import CatTestMetatype

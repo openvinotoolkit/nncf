@@ -10,7 +10,7 @@
 # limitations under the License.
 from typing import Dict, List
 
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.torch.graph import operator_metatypes
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
 from nncf.torch.graph.operator_metatypes import PTOperatorMetatype

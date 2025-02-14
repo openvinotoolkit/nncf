@@ -14,7 +14,7 @@ from abc import abstractmethod
 from typing import TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 
 TModel = TypeVar("TModel")
 

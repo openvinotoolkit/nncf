@@ -10,9 +10,9 @@
 # limitations under the License.
 
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
-from nncf.common.quantization.quantizer_setup import QuantizationInsertionPointBase
-from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
+from nncf.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.quantization.quantizer_setup import QuantizationInsertionPointBase
+from nncf.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 

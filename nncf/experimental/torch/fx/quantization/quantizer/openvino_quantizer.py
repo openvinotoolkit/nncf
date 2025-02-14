@@ -25,11 +25,6 @@ from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec as 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationRule
-from nncf.common.quantization.quantizer_setup import QuantizationPointBase
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.quantization.structs import QuantizationScheme
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.transformations import fold_constant_except_qdq
@@ -40,6 +35,11 @@ from nncf.quantization.advanced_parameters import FP8QuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.quantizer_propagation.solver import QuantizerPropagationRule
+from nncf.quantization.quantizer_setup import QuantizationPointBase
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.quantization.structs import QuantizationPreset
+from nncf.quantization.structs import QuantizationScheme
 from nncf.scopes import IgnoredScope
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 

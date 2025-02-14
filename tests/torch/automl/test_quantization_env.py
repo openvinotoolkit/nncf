@@ -19,7 +19,7 @@ from torch import nn
 from nncf import NNCFConfig
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
-from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
+from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.torch.automl.environment.quantization_env import ModelSizeCalculator
 from nncf.torch.automl.environment.quantization_env import QuantizationEnv
 from nncf.torch.automl.environment.quantization_env import QuantizationEnvParams

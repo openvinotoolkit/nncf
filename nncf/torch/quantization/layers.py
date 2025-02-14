@@ -25,16 +25,16 @@ from torch._C import DisableTorchFunction
 import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.quantizer_setup import QuantizationPointId
-from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
-from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
-from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
-from nncf.common.quantization.quantizers import get_num_levels
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizerSpec
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.registry import Registry
+from nncf.quantization.fake_quantize import calculate_asymmetric_level_ranges
+from nncf.quantization.fake_quantize import calculate_symmetric_level_ranges
+from nncf.quantization.fake_quantize import get_num_levels
+from nncf.quantization.quantizer_setup import QuantizationPointId
+from nncf.quantization.quantizer_setup import QuantizerSetupBase
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizerConfig
+from nncf.quantization.structs import QuantizerSpec
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.functions import clamp

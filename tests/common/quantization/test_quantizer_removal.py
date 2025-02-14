@@ -17,8 +17,8 @@ import pytest
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
 from nncf.quantization.passes import find_shapeof_subgraphs
+from nncf.quantization.quantizer_removal import find_quantizer_nodes_to_cut
 from tests.common.quantization.metatypes import CONSTANT_METATYPES
 from tests.common.quantization.metatypes import METATYPES_FOR_TEST
 from tests.common.quantization.metatypes import QUANTIZABLE_METATYPES

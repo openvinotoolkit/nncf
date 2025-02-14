@@ -17,9 +17,9 @@ from torch import Tensor
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.experimental.torch2.commands import PT2InsertionCommand
+from nncf.quantization.structs import NonWeightQuantizerId
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand

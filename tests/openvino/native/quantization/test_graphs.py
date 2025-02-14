@@ -18,7 +18,6 @@ import openvino as ov
 import pytest
 
 from nncf import Dataset
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.quantization.quantize_model import quantize_impl
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
@@ -26,6 +25,7 @@ from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
+from nncf.quantization.structs import QuantizationPreset
 from nncf.scopes import IgnoredScope
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import convert_torch_model

@@ -11,7 +11,7 @@
 import torch
 from torch import nn
 
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer

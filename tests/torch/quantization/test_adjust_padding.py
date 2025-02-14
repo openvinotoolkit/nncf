@@ -15,8 +15,8 @@ from typing import List
 import pytest
 import torch
 
-from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationRule
-from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
+from nncf.quantization.quantizer_propagation.solver import QuantizerPropagationRule
+from nncf.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdatePaddingValue

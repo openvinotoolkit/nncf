@@ -19,8 +19,6 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
-from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
-from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.timer import timer
@@ -31,6 +29,8 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
 from nncf.quantization.algorithms.accuracy_control.subset_selection import select_subset
 from nncf.quantization.passes import find_shapeof_subgraphs
+from nncf.quantization.quantizer_removal import find_quantizer_nodes_to_cut
+from nncf.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 
 TModel = TypeVar("TModel")
 TPModel = TypeVar("TPModel")

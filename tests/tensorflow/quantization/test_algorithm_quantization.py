@@ -17,7 +17,7 @@ from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationA
 
 # TODO(nlyalyus): WA for the bug 58886, QuantizationMode should be imported after nncf.tensorflow.
 #  Otherwise test_quantize_inputs and test_quantize_outputs_removal will fail, because of invalid inputs quantization
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.data_layout import get_channel_axis

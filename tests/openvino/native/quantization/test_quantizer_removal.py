@@ -16,11 +16,11 @@ import openvino.runtime as ov
 import pytest
 
 from nncf.common.factory import NNCFGraphFactory
-from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.quantization.advanced_parameters import RestoreMode
+from nncf.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from tests.openvino.native.models import LinearQuantizedModel
 
 

@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.tensorflow.graph.metatypes import common
 from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
 from nncf.tensorflow.graph.metatypes import tf_ops as op_metatypes

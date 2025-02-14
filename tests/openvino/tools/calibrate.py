@@ -46,8 +46,6 @@ import nncf
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.logger import set_log_file
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.quantization.structs import QuantizationScheme
 from nncf.data.dataset import DataProvider
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -59,6 +57,8 @@ from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import RestoreMode
 from nncf.quantization.advanced_parameters import StatisticsType
+from nncf.quantization.structs import QuantizationPreset
+from nncf.quantization.structs import QuantizationScheme
 from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")

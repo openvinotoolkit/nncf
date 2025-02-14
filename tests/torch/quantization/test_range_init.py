@@ -28,14 +28,14 @@ import nncf.torch.tensor_statistics.collectors as pt_collectors
 from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitConfig
-from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
-from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizerGroup
 from nncf.config import NNCFConfig
 from nncf.config.structures import QuantizationRangeInitArgs
+from nncf.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.quantization.quantizer_setup import SingleConfigQuantizationPoint
+from nncf.quantization.quantizer_setup import WeightQuantizationInsertionPoint
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizerConfig
+from nncf.quantization.structs import QuantizerGroup
 from nncf.tensor import Tensor
 from nncf.torch import utils
 from nncf.torch.checkpoint_loading import load_state

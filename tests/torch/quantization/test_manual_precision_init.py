@@ -17,8 +17,8 @@ import pytest
 
 from examples.torch.common.model_loader import load_model
 from nncf import NNCFConfig
-from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.quantization.structs import WeightQuantizerId
+from nncf.quantization.structs import NonWeightQuantizerId
+from nncf.quantization.structs import WeightQuantizerId
 from nncf.torch import register_default_init_args
 from nncf.torch.quantization.algo import QuantizationController
 from tests.cross_fw.shared.paths import EXAMPLES_DIR

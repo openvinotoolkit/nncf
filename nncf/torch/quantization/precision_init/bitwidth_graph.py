@@ -17,7 +17,7 @@ import networkx as nx
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.quantization.structs import NonWeightQuantizerId
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationController

@@ -28,30 +28,30 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.hardware.config import HWConfig
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
-from nncf.common.quantization.quantizer_propagation.grouping import QuantizersWaitingForMergeManager
-from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
-from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
-from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
-from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
-from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
-from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
-from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
-from nncf.common.quantization.quantizer_setup import QuantizationPointId
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.common.quantization.structs import QuantizableWeightedLayerNode
-from nncf.common.quantization.structs import QuantizationConstraints
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.scopes import matches_any
 from nncf.common.scopes import should_consider_scope
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
+from nncf.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
+from nncf.quantization.quantizer_propagation.grouping import QuantizersWaitingForMergeManager
+from nncf.quantization.quantizer_propagation.structs import IgnoreReason
+from nncf.quantization.quantizer_propagation.structs import PropagatingQuantizer
+from nncf.quantization.quantizer_propagation.structs import PropagationPath
+from nncf.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.quantization.quantizer_propagation.structs import QuantizerPropagationRule
+from nncf.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
+from nncf.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
+from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
+from nncf.quantization.quantizer_setup import QuantizationPointId
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.quantization.structs import QuantizableWeightedLayerNode
+from nncf.quantization.structs import QuantizationConstraints
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizerConfig
+from nncf.quantization.structs import QuantizerGroup
+from nncf.quantization.structs import UnifiedScaleType
 
 
 class TransitionStatus(Enum):
@@ -395,7 +395,7 @@ class QuantizerPropagationSolver:
         self._hw_config = hw_config
         self._visualizer: Optional[Any] = None
         if is_debug():
-            from nncf.common.quantization.quantizer_propagation.visualizer import QuantizerPropagationVisualizer
+            from nncf.quantization.quantizer_propagation.visualizer import QuantizerPropagationVisualizer
 
             self._visualizer = QuantizerPropagationVisualizer(DEBUG_LOG_DIR + "/quant_prop")
         self._propagation_strategy = (

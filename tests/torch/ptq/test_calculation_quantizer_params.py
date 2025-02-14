@@ -20,15 +20,15 @@ from torch import nn
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
+from nncf.quantization.structs import QuantizationPreset
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizerConfig
+from nncf.quantization.structs import QuantizerGroup
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.torch.model_creation import wrap_model

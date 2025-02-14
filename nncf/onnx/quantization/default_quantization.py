@@ -9,10 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.onnx.graph.metatypes import onnx_metatypes
 from nncf.onnx.graph.metatypes.groups import INPUTS_QUANTIZABLE_OPERATIONS
 from nncf.onnx.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
+from nncf.quantization.quantizer_propagation.structs import QuantizationTrait
 
 # If a metatype is not in this list, then it is considered to be QuantizationTrait.NON_QUANTIZABLE.
 

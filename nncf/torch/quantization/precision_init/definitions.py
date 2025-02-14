@@ -10,7 +10,7 @@
 # limitations under the License.
 from typing import List
 
-from nncf.common.quantization.structs import QuantizerConfig
+from nncf.quantization.structs import QuantizerConfig
 
 QConfigSequenceForHAWQToEvaluate = List[QuantizerConfig]
 CoveringQConfigSequenceForQuantNoiseCalculation = List[QuantizerConfig]

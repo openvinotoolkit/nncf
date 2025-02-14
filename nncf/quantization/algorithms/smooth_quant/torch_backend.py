@@ -19,12 +19,12 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
+from nncf.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.command_creation import create_command_to_update_weight
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand

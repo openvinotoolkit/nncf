@@ -18,7 +18,6 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
@@ -29,6 +28,7 @@ from nncf.experimental.torch.fx.transformations import constant_update_transform
 from nncf.experimental.torch.fx.transformations import get_graph_node_by_name
 from nncf.experimental.torch.fx.transformations import module_insertion_transformation_builder
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
+from nncf.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_node

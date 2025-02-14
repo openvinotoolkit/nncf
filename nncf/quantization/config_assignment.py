@@ -13,9 +13,9 @@ from typing import Any, Dict, List, Optional
 
 from nncf.common.graph import NNCFNode
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.structs import QuantizationConstraints
-from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.scopes import matches_any
+from nncf.quantization.structs import QuantizationConstraints
+from nncf.quantization.structs import QuantizerConfig
 
 
 def get_scoped_quantizer_config(

@@ -12,7 +12,7 @@
 import pytest
 import torch
 
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import PTQuantizerSpec
 

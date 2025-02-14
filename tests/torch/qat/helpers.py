@@ -17,13 +17,13 @@ import torch
 
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import start_worker
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.quantization.structs import QuantizationScheme
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
+from nncf.quantization.structs import QuantizationPreset
+from nncf.quantization.structs import QuantizationScheme
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
 

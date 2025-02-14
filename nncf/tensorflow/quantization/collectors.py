@@ -15,7 +15,7 @@ import tensorflow as tf
 
 from nncf.common.quantization.collectors import QuantizationStatisticsCollector
 from nncf.common.quantization.collectors import QuantizerDescription
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.tensorflow.graph.utils import get_nncf_operations
 from nncf.tensorflow.quantization.utils import collect_fake_quantize_layers
 

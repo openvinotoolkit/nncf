@@ -14,9 +14,9 @@ from copy import deepcopy
 from typing import Dict, List, Union
 
 from nncf.common.graph import NNCFNodeName
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.common.quantization.structs import QuantizerId
-from nncf.common.quantization.structs import WeightQuantizerId
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.quantization.structs import QuantizerId
+from nncf.quantization.structs import WeightQuantizerId
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.module_operations import UpdateWeight

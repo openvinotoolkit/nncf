@@ -13,7 +13,7 @@ from typing import Dict
 import torch
 from torch import Tensor
 
-from nncf.common.quantization.structs import QuantizerConfig
+from nncf.quantization.structs import QuantizerConfig
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 
 

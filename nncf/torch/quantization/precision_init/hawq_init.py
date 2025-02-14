@@ -26,11 +26,6 @@ from torch.nn.modules.loss import _Loss
 import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.quantizer_setup import QuantizationPointId
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizerId
-from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.os import safe_open
 from nncf.config.schemata.defaults import HAWQ_COMPRESSION_RATIO
@@ -39,6 +34,11 @@ from nncf.config.schemata.defaults import HAWQ_ITER_NUMBER
 from nncf.config.schemata.defaults import HAWQ_NUM_DATA_POINTS
 from nncf.config.schemata.defaults import HAWQ_TOLERANCE
 from nncf.config.schemata.defaults import PRECISION_INIT_BITWIDTHS
+from nncf.quantization.quantizer_setup import QuantizationPointId
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.quantization.structs import QuantizerConfig
+from nncf.quantization.structs import QuantizerId
+from nncf.quantization.structs import WeightQuantizerId
 from nncf.torch.quantization.hessian_trace import HessianTraceEstimator
 from nncf.torch.quantization.layers import QuantizersSwitcher
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints

@@ -15,7 +15,6 @@ import tensorflow as tf
 
 import nncf
 from nncf.common.initialization.dataloader import NNCFDataLoader
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
@@ -26,6 +25,7 @@ from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import apply_advanced_parameters_to_config
+from nncf.quantization.structs import QuantizationPreset
 from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
 from nncf.tensorflow.helpers.model_creation import create_compressed_model_impl

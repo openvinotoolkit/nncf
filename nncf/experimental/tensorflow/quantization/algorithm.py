@@ -19,9 +19,6 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.utils import get_first_nodes_of_type
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
-from nncf.common.quantization.quantizer_setup import QuantizationPointId
-from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.stateful_classes_registry import TF_STATEFUL_CLASSES
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.backend import copy_model
@@ -34,6 +31,9 @@ from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 from nncf.experimental.tensorflow.quantization.init_range import RangeInitializerV2
 from nncf.experimental.tensorflow.quantization.init_range import TFRangeInitParamsV2
 from nncf.experimental.tensorflow.quantization.quantizers import create_quantizer
+from nncf.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.quantization.quantizer_setup import QuantizationPointId
+from nncf.quantization.structs import QuantizerConfig
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.graph.metatypes.tf_ops import TFOpWithWeightsMetatype
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand

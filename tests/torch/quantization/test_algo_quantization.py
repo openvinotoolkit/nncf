@@ -24,10 +24,10 @@ from torchvision.models import squeezenet1_1
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionScheduler
 from nncf.common.hardware.config import HWConfigType
-from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.utils.debug import nncf_debug
+from nncf.quantization.structs import NonWeightQuantizerId
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import WeightQuantizerId
 from nncf.torch import create_compressed_model
 from nncf.torch import register_default_init_args
 from nncf.torch import register_module

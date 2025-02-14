@@ -12,7 +12,7 @@
 from copy import copy
 from typing import Dict, Optional, Set
 
-from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
+from nncf.quantization.quantizer_propagation.structs import PropagatingQuantizer
 
 
 class UnifiedScalePropagatingQuantizerGroupManager:

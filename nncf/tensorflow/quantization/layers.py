@@ -11,7 +11,7 @@
 
 import tensorflow as tf
 
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.operation import InputType

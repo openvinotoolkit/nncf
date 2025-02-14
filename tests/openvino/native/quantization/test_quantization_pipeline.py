@@ -14,9 +14,9 @@ import openvino.runtime as ov
 import pytest
 
 import nncf
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.openvino.quantization.quantize_model import quantize_impl
 from nncf.parameters import TargetDevice
+from nncf.quantization.structs import QuantizationPreset
 from nncf.scopes import IgnoredScope
 from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.models import ConvModel

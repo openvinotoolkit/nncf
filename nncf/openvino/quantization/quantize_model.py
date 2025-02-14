@@ -19,7 +19,6 @@ from openvino._offline_transformations import compress_quantize_weights_transfor
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
@@ -53,6 +52,7 @@ from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.quantization.statistics_caching import cache_weight_compression_statistics
 from nncf.quantization.statistics_caching import register_statistics_for_algorithm
+from nncf.quantization.structs import QuantizationPreset
 from nncf.scopes import IgnoredScope
 from nncf.scopes import validate_ignored_scope
 

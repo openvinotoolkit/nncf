@@ -16,7 +16,6 @@ from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging.logger import nncf_logger
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -38,6 +37,7 @@ from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_qua
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
 from nncf.quantization.algorithms.weight_compression.algorithm import check_user_compression_configuration
 from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
+from nncf.quantization.structs import QuantizationPreset
 from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi

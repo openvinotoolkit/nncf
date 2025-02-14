@@ -28,20 +28,20 @@ from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.insertion_point_graph import InsertionPointGraph
-from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph as QPSG
-from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationRule
-from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
-from nncf.common.quantization.quantizer_propagation.solver import TransitionStatus
-from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
-from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
-from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
-from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
-from nncf.common.quantization.quantizer_setup import MultiConfigQuantizationPoint
-from nncf.common.quantization.quantizer_setup import QuantizationPointId
-from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
+from nncf.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph as QPSG
+from nncf.quantization.quantizer_propagation.solver import QuantizerPropagationRule
+from nncf.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
+from nncf.quantization.quantizer_propagation.solver import TransitionStatus
+from nncf.quantization.quantizer_propagation.structs import IgnoreReason
+from nncf.quantization.quantizer_propagation.structs import PropagatingQuantizer
+from nncf.quantization.quantizer_propagation.structs import PropagationPath
+from nncf.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
+from nncf.quantization.quantizer_setup import QuantizationPointId
+from nncf.quantization.quantizer_setup import WeightQuantizationInsertionPoint
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizerConfig
 from tests.common.quantization.metatypes import DEFAULT_TEST_QUANT_TRAIT_MAP
 from tests.common.quantization.metatypes import BatchNormTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype

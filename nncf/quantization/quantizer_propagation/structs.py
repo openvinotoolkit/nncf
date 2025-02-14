@@ -14,10 +14,10 @@ from __future__ import annotations
 from enum import Enum
 from typing import List, Optional, Set, Tuple
 
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.utils.api_marker import api
 from nncf.parameters import StrEnum
+from nncf.quantization.structs import QuantizerConfig
+from nncf.quantization.structs import UnifiedScaleType
 
 
 class QuantizationTrait(Enum):

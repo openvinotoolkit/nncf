@@ -18,7 +18,6 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.utils import get_number_of_quantized_ops
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.os import get_available_cpu_count
@@ -30,6 +29,7 @@ from nncf.quantization.algorithms.accuracy_control.backend import AccuracyContro
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
 from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
+from nncf.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")

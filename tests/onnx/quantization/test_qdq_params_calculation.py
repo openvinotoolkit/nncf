@@ -14,10 +14,10 @@ import numpy as np
 import onnx
 import pytest
 
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
+from nncf.quantization.structs import QuantizationPreset
 from tests.cross_fw.shared.comparator import compare_stats
 from tests.cross_fw.shared.json import load_json
 from tests.onnx.conftest import ONNX_TEST_ROOT

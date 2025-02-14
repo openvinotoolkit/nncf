@@ -14,11 +14,11 @@ import json
 import torch
 
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
-from nncf.common.quantization.structs import QuantizerConfig
+from nncf.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.quantization.quantizer_setup import SingleConfigQuantizationPoint
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.quantization.quantizer_setup import WeightQuantizationInsertionPoint
+from nncf.quantization.structs import QuantizerConfig
 from nncf.torch.dynamic_graph.context import Scope
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from tests.cross_fw.shared.serialization import check_serialization

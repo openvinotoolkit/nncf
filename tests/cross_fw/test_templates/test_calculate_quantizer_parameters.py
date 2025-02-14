@@ -18,12 +18,12 @@ import numpy as np
 import pytest
 
 import nncf
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizerConfig
+from nncf.quantization.structs import QuantizerGroup
 from nncf.tensor import functions as fns
 from tests.cross_fw.shared.json import dump_to_json
 from tests.cross_fw.shared.json import load_json

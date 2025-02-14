@@ -17,8 +17,8 @@ import torch
 
 import nncf
 from nncf.common.factory import ModelTransformerFactory
-from nncf.common.quantization.structs import QuantizationScheme
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
+from nncf.quantization.structs import QuantizationScheme
 from nncf.torch import wrap_model
 from nncf.torch.graph.transformations.commands import PTTransformationCommand
 from nncf.torch.graph.transformations.commands import TransformationType

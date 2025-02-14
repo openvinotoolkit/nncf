@@ -17,11 +17,11 @@ import torch
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
-from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
-from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
-from nncf.common.quantization.quantizers import get_num_levels
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.config import NNCFConfig
+from nncf.quantization.fake_quantize import calculate_asymmetric_level_ranges
+from nncf.quantization.fake_quantize import calculate_symmetric_level_ranges
+from nncf.quantization.fake_quantize import get_num_levels
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec

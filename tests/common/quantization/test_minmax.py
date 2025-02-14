@@ -15,9 +15,6 @@ import types
 import pytest
 
 import nncf
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.quantization.structs import QuantizationScheme
-from nncf.common.quantization.structs import QuantizerGroup
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -26,6 +23,9 @@ from nncf.quantization.advanced_parameters import FP8Type
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.structs import QuantizationPreset
+from nncf.quantization.structs import QuantizationScheme
+from nncf.quantization.structs import QuantizerGroup
 
 
 @pytest.mark.parametrize(

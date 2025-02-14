@@ -14,7 +14,7 @@ from typing import List
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.quantization.quantizer_propagation.structs import QuantizationTrait
 
 METATYPES_FOR_TEST = OperatorMetatypeRegistry("TEST_METATYPES")
 

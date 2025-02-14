@@ -21,12 +21,12 @@ from nncf.common.logging.progress_bar import ProgressBar
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitParams
-from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.config.schemata.defaults import MAX_PERCENTILE
 from nncf.config.schemata.defaults import MIN_PERCENTILE
+from nncf.quantization.structs import QuantizerGroup
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.data_layout import get_channel_axis
 from nncf.tensorflow.layers.operation import InputType

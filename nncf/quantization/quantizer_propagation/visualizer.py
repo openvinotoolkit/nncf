@@ -11,8 +11,8 @@
 import shutil
 from pathlib import Path
 
-from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
-from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
+from nncf.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph
+from nncf.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 
 
 class QuantizerPropagationVisualizer:

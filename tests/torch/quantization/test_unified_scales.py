@@ -23,8 +23,8 @@ import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfigType
-from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
-from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
+from nncf.quantization.structs import NonWeightQuantizerId
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_creation import wrap_model

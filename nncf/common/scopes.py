@@ -17,7 +17,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.structs import QuantizerId
+from nncf.quantization.structs import QuantizerId
 from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
 

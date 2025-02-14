@@ -25,13 +25,13 @@ import pandas as pd
 
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.os import safe_open
 from nncf.config.schemata.defaults import AUTOQ_EVAL_SUBSET_RATIO
 from nncf.config.schemata.defaults import AUTOQ_ITER_NUMBER
 from nncf.config.schemata.defaults import AUTOQ_WARMUP_ITER_NUMBER
 from nncf.config.schemata.defaults import PRECISION_INIT_BITWIDTHS
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.automl.agent.ddpg.ddpg import DDPG
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitializer

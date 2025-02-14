@@ -12,7 +12,6 @@
 from typing import Optional, TypeVar
 
 from nncf.common.deprecation import warning_deprecated
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -25,6 +24,7 @@ from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBias
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.pipeline import Pipeline
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
+from nncf.quantization.structs import QuantizationPreset
 from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")

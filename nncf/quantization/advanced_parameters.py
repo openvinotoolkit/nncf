@@ -21,13 +21,13 @@ from enum import Enum
 from typing import Any, Dict, Optional, Union
 
 import nncf
-from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.api_marker import api
 from nncf.parameters import StrEnum
+from nncf.quantization.quantizer_propagation.structs import QuantizerPropagationRule
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsType
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
 
 
 @api(canonical_alias="nncf.OverflowFix")

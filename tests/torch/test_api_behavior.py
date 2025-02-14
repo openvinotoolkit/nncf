@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 
 import nncf
 from nncf import NNCFConfig
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch import create_compressed_model
 from nncf.torch import register_default_init_args
 from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder

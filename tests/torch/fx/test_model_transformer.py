@@ -29,7 +29,6 @@ import nncf.common.factory
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
@@ -45,6 +44,7 @@ from nncf.experimental.torch.fx.transformations import module_insertion_transfor
 from nncf.experimental.torch.fx.transformations import node_removal_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint

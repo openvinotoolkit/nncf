@@ -15,7 +15,6 @@ from typing import Optional
 import torch
 
 import nncf
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.experimental.torch2.function_hook import wrap_model
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
@@ -25,6 +24,7 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
+from nncf.quantization.structs import QuantizationPreset
 from nncf.scopes import IgnoredScope
 from nncf.torch.graph.operator_metatypes import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 

@@ -16,7 +16,7 @@ import torch
 
 import nncf
 from nncf.common.graph import NNCFNodeName
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.nncf_network import NNCFNetwork

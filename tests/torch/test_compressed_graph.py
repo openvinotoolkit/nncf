@@ -26,8 +26,8 @@ from torch import nn
 from nncf import NNCFConfig
 from nncf.common.graph import NNCFNodeName
 from nncf.common.hardware.config import HWConfigType
-from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch import nncf_model_input
 from nncf.torch import nncf_model_output
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn

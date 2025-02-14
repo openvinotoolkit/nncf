@@ -18,7 +18,7 @@ import torch.utils.data
 from torch import nn
 from torchvision.models import resnet50
 
-from nncf.common.quantization.structs import QuantizerGroup
+from nncf.quantization.structs import QuantizerGroup
 from nncf.torch import register_default_init_args
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.utils import get_all_modules_by_type

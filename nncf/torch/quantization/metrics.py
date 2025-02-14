@@ -26,11 +26,11 @@ from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns.manager import TargetDevice
 from nncf.common.quantization.collectors import QuantizationStatisticsCollector
 from nncf.common.quantization.collectors import QuantizerDescription
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
-from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.debug import is_debug
+from nncf.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.quantization.structs import NonWeightQuantizerId
+from nncf.quantization.structs import WeightQuantizerId
 from nncf.torch.nncf_module_replacement import is_nncf_module
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTNNCFGraph

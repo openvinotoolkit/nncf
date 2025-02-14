@@ -33,12 +33,12 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
-from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.dot_file_rw import get_graph_without_data
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
+from nncf.quantization.structs import NonWeightQuantizerId
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.torch import wrap_model
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement

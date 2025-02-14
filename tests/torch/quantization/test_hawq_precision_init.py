@@ -33,9 +33,9 @@ from examples.torch.object_detection.models.ssd_vgg import SSD_VGG
 from nncf import NNCFConfig
 from nncf.common.graph import NNCFNodeName
 from nncf.common.hardware.config import HWConfigType
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.debug import set_debug_log_dir
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.quantization.structs import QuantizerGroup
 from nncf.torch import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo

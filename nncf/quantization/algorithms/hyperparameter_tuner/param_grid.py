@@ -12,8 +12,6 @@
 import itertools
 from typing import Any, Dict, List
 
-from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
@@ -22,10 +20,12 @@ from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBias
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.pipeline import Pipeline
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
+from nncf.quantization.quantizer_propagation.structs import QuantizerPropagationRule
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsCollectorParameters
 from nncf.quantization.range_estimator import StatisticsType
+from nncf.quantization.structs import QuantizationPreset
 
 ParamGrid = Dict[str, List[Any]]
 

@@ -22,8 +22,6 @@ import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.aggregator import EMPTY_DATASET_ERROR
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -39,6 +37,8 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.quantization.range_estimator import StatisticsCollectorParameters
 from nncf.quantization.range_estimator import StatisticsType
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizerConfig
 from nncf.tensor import functions as fns
 
 

@@ -21,13 +21,6 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
-from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
@@ -41,7 +34,14 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.passes import transform_to_inference_graph
+from nncf.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.quantization.quantizer_setup import SingleConfigQuantizationPoint
+from nncf.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
+from nncf.quantization.structs import QuantizationPreset
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizerConfig
+from nncf.quantization.structs import QuantizerGroup
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation

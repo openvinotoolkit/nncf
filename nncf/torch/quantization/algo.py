@@ -40,20 +40,6 @@ from nncf.common.hardware.config import HWConfigType
 from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
-from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
-from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
-from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
-from nncf.common.quantization.quantizer_setup import QuantizationPointId
-from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
-from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.quantization.structs import QuantizableWeightedLayerNode
-from nncf.common.quantization.structs import QuantizationConstraints
-from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.quantization.structs import QuantizerGroup
-from nncf.common.quantization.structs import QuantizerId
-from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.tensor_statistics.collectors import ReductionAxes
@@ -74,6 +60,20 @@ from nncf.config.schemata.defaults import QUANTIZE_INPUTS
 from nncf.config.schemata.defaults import QUANTIZE_OUTPUTS
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
+from nncf.quantization.config_assignment import assign_qconfig_lists_to_modules
+from nncf.quantization.quantizer_propagation.structs import IgnoreReason
+from nncf.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
+from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
+from nncf.quantization.quantizer_setup import QuantizationPointId
+from nncf.quantization.quantizer_setup import QuantizerSetupBase
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.quantization.structs import NonWeightQuantizerId
+from nncf.quantization.structs import QuantizableWeightedLayerNode
+from nncf.quantization.structs import QuantizationConstraints
+from nncf.quantization.structs import QuantizationPreset
+from nncf.quantization.structs import QuantizerGroup
+from nncf.quantization.structs import QuantizerId
+from nncf.quantization.structs import WeightQuantizerId
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
@@ -347,7 +347,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         insertion_point_graph = self._target_model.nncf.get_original_insertion_point_graph()
         if self._debug_interface:
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
-        from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
+        from nncf.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 
         scales_unification_map = {PTCatMetatype: UNIFICATION_PRODUCING_METATYPES}
         ignored_scopes_for_solver = {

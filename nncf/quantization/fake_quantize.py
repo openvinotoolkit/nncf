@@ -14,14 +14,11 @@ from dataclasses import dataclass
 from typing import Tuple
 
 import nncf
-from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
-from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
-from nncf.common.quantization.quantizers import get_num_levels
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.quantization.advanced_parameters import FP8Type
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizerConfig
+from nncf.quantization.structs import QuantizerGroup
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor import functions as fns
@@ -199,6 +196,65 @@ def asymmetric_range(
     level_low = level_low.astype(TensorDataType.float32)
     level_high = level_high.astype(TensorDataType.float32)
     return level_low, level_high
+
+
+def calculate_symmetric_level_ranges(num_bits: int, signed: bool, narrow_range: bool = False) -> Tuple[int, int]:
+    """
+    Calculates the numbers of the low and high quant and the number of
+    quantization levels for the symmetric quantization scheme.
+
+    :param num_bits: The bitwidth of the quantization.
+    :param signed: The flag specifying type of the symmetric quantization scheme
+        if it is True then the symmetric quantization scheme is the signed and
+        the un-signed otherwise.
+    :param narrow_range: True if the range of quantized values is reduced by 1 compared to the
+        naive case, False otherwise.
+    :return: A Tuple
+        level_low - the low quant number
+        level_high - the high quant number
+    """
+    levels = 2**num_bits
+
+    if signed:
+        level_high = (levels // 2) - 1
+        level_low = -(levels // 2)
+    else:
+        level_high = levels - 1
+        level_low = 0
+
+    if narrow_range:
+        if level_low < 0:
+            level_low += 1
+        else:
+            level_high -= 1
+
+    return level_low, level_high
+
+
+def calculate_asymmetric_level_ranges(num_bits: int, narrow_range: bool = False) -> Tuple[int, int]:
+    """
+    Calculates the numbers of the low and high quant and the number of
+    quantization levels for the asymmetric quantization scheme.
+
+    :param num_bits: The bitwidth of the quantization
+    :param narrow_range: The flag specifying quantization range if it is True
+        then [1; 2^num_bits - 1] and [0; 2^num_bits - 1] otherwise
+    :return: A Tuple
+        level_low - the low quant number
+        level_high - the high quant number
+    """
+    levels = 2**num_bits
+    level_high = levels - 1
+    level_low = 0
+
+    if narrow_range:
+        level_low = level_low + 1
+
+    return level_low, level_high
+
+
+def get_num_levels(level_low: int, level_high: int) -> int:
+    return level_high - level_low + 1
 
 
 def calculate_quantizer_parameters(

@@ -20,14 +20,14 @@ from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
-from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.quantization.range_estimator import StatisticsType
+from nncf.quantization.structs import QuantizerConfig
 
 TModel = TypeVar("TModel")
 

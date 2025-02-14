@@ -26,17 +26,17 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
-from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph as QPSG
-from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
-from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
-from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
-from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
-from nncf.common.quantization.quantizer_setup import MultiConfigQuantizationPoint
-from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
-from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import UnifiedScaleType
+from nncf.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph as QPSG
+from nncf.quantization.quantizer_propagation.structs import PropagationPath
+from nncf.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
+from nncf.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
+from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
+from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
+from nncf.quantization.quantizer_setup import WeightQuantizationInsertionPoint
+from nncf.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.quantization.structs import QuantizerConfig
+from nncf.quantization.structs import UnifiedScaleType
 from tests.common.quantization.metatypes import WEIGHT_LAYER_METATYPES
 from tests.common.quantization.metatypes import CatTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
