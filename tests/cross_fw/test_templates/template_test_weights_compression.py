@@ -279,21 +279,3 @@ class TemplateWeightCompression(ABC):
         int4_ref_num_compressed = 4  # first MatMul is always int8; one - is ignored; total 6 matmuls
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
         assert int4_num_nodes == int4_ref_num_compressed
-
-    # @staticmethod
-    # @abstractmethod
-    # def check_model_2(): ...
-
-    # @pytest.mark.parametrize("mode", INT4_MODES)
-    # def test_one_dimentional_samples(self, mode):
-    #     model = self.get_awq_matmul_model()
-    #     sz = 8
-    #     n_samples = 10
-    #     dataset = Dataset([np.ones([1, i + 1, sz]) for i in range(n_samples)])
-
-    #     compressed_model = compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, awq=True)
-    #     self.check_model_2(compressed_model)
-    #     # for op in compressed_model.get_ordered_ops():
-    #     #     op_name = op.get_friendly_name()
-    #     #     if op.get_type_name() == "Constant" and ("/zero_point" in op_name or "/scale" in op_name):
-    #     #         assert op.get_shape() == [sz, 1]
