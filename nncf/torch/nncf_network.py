@@ -783,7 +783,6 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         Returns scopes of the operations in the graph which are executed in evaluation mode.
         """
-
         tracer = GraphTracer(dummy_forward_fn)
         result = []
         eval_graph = tracer.trace_graph(model, as_eval=True)
@@ -1179,7 +1178,6 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         Wraps the original forward call, doing additional actions before and after the call to facilitate model
         graph tracing and calling compression-related hooks.
         """
-
         with self.nncf._compressed_context as ctx:
             ctx.base_module_thread_local_replica = self
 

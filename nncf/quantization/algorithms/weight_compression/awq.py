@@ -110,7 +110,6 @@ class AWQ(Algorithm):
 
         :param model: Backend-specific input model.
         """
-
         model_backend = get_backend(model)
         if model_backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVAWQAlgoAlgoBackend

@@ -32,7 +32,6 @@ class BlockHierarchy:
         :param roots: list of the root groups
         :return: networkx graph that represents the hierarchy of propagation blocks/groups.
         """
-
         self._id_counter = 0
         self._graph = nx.DiGraph()
         self._visited_block_ids_map: Dict[int, int] = {}

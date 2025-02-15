@@ -343,7 +343,6 @@ class NNCFGraph:
         :param node: Consumer node.
         :return: List of producers nodes of provided node.
         """
-
         nx_node_keys = self._nx_graph.pred[self._node_id_to_key_dict[node.node_id]]
         return [self._nodes[key] for key in nx_node_keys]
 
@@ -723,7 +722,6 @@ class NNCFGraph:
         `match` list
         :return: NNCFGraphPatternIO object describing the inputs and outputs of the matched subgraph
         """
-
         in_edge_boundary, out_edge_boundary = NNCFGraph._get_edge_boundaries(match, self._nx_graph)
         boundary = in_edge_boundary + out_edge_boundary
         input_nncf_edges = []

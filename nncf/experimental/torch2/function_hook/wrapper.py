@@ -174,7 +174,6 @@ def wrap_model(model: nn.Module) -> nn.Module:
     :param model: The nn.Module to be wrapped.
     :return: The modified model with the custom behavior injected.
     """
-
     if "forward" in model.__dict__:
         msg = "Wrapper does not supported models with overrided forward function"
         raise nncf.InternalError(msg)

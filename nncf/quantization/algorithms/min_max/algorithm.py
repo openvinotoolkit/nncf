@@ -110,7 +110,8 @@ MODE_BASED_DEFAULTS = {
 def _filter_target_points_by_metatypes(
     quantization_target_points: Set[TargetPoint], metatypes: List[OperatorMetatype], nncf_graph: NNCFGraph
 ) -> Set[TargetPoint]:
-    """Returns TargetPoints which are suited to a node having metatype specified in 'metatypes'.
+    """
+    Returns TargetPoints which are suited to a node having metatype specified in 'metatypes'.
 
     :param quantization_target_points: TargetPoints to be filtered.
     :param metatypes: Metatypes that pass filtering.
@@ -1159,7 +1160,6 @@ class MinMaxQuantization(Algorithm):
         :param nncf_graph: NNCFGraph.
         :return: None.
         """
-
         passes_map = {TargetDevice.CPU_SPR: self._apply_spr_pass}
 
         if target_device not in passes_map:
@@ -1244,7 +1244,6 @@ class MinMaxQuantization(Algorithm):
         :param statistics: List of MinMaxTensorStatistic instances.
         :return: Unified MinMaxTensorStatistic value.
         """
-
         max_values, min_values = [], []
         for statistic in statistics:
             max_values.append(statistic.max_values.flatten())

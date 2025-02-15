@@ -75,7 +75,7 @@ def _set_new_node_meta(
     model: torch.fx.GraphModule,
 ):
     """
-    Sets correct meta \"val\" value to the new node.
+    Sets correct meta 'val' value to the new node.
 
     :param new_node: The new node.
     :param prev_node: Input node of the new node.
@@ -316,7 +316,6 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
         target node.
     :param quantizer: Quantizer module to inherit quantization parameters from.
     """
-
     # Copied from torch.ao.quantization.quantize_pt2e.convert_pt2e
     # 1. extract information for inserting q/dq node from activation_post_process
     node_type = "call_function"
@@ -613,7 +612,6 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) 
 
     :param: model: Model to apply transformations to.
     """
-
     for match in matches:
         mul_node = match.replacements[0]
         sub_node = match.replacements[1]

@@ -53,7 +53,6 @@ class PT2ModelTransformer(ModelTransformer[GraphModelWrapper]):
         :param transformation_layout: Transformation commands.
         :return: The new instance of a model with applied transformations.
         """
-
         transformations = transformation_layout.transformations
         aggregated_transformations: Dict[type, List[Command]] = defaultdict(list)
         for transformation in transformations:
