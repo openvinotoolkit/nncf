@@ -18,6 +18,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.utils import get_first_nodes_of_type
+from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
@@ -133,7 +134,7 @@ def _get_tensor_specs(
         assert len(metatype.weight_definitions) == 1
 
         channel_axes = metatype.weight_definitions[0].channel_axes
-        weight_shape = node.layer_attributes.get_weight_shape()
+        weight_shape = get_weight_shape_legacy(node.layer_attributes)
         tensor_specs.append((weight_shape, channel_axes))
     else:
         data_format = node.layer_attributes.get_data_format()
