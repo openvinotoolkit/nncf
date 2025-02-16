@@ -132,3 +132,30 @@ def get_reduction_axes(
     for channel_axis in sorted(channel_axes, reverse=True):
         del reduction_axes[channel_axis]
     return tuple(reduction_axes)
+
+
+def get_weight_shape_legacy(
+    layer_attributes: WeightedLayerAttributes) -> List[int]:
+    """
+    Returns hard-coded weights shape layout only for Torch and Tensorflow models.
+
+    :param layer_attributes: layer attributes of NNCFNode.
+    :return: weights shape layout.
+    """
+    if isinstance(layer_attributes, GenericWeightedLayerAttributes):
+        return layer_attributes.weight_shape
+
+    if isinstance(layer_attributes, LinearLayerAttributes):
+        return[layer_attributes.out_features, layer_attributes.in_features]
+
+    if isinstance(layer_attributes, ConvolutionLayerAttributes):
+        if not layer_attributes.transpose:
+            return [layer_attributes.out_channels,
+                    layer_attributes.in_channels // layer_attributes.groups,
+                    *layer_attributes.kernel_size]
+        return [layer_attributes.in_channels,
+                layer_attributes.out_channels // layer_attributes.groups,
+                *layer_attributes.kernel_size]
+
+    if isinstance(layer_attributes, GroupNormLayerAttributes):
+        return [layer_attributes.num_channels]
