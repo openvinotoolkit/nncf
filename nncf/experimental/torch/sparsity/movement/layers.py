@@ -18,6 +18,8 @@ from torch import nn
 
 import nncf
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.utils import get_weight_shape_legacy
+from nncf.common.graph.utils import get_bias_shape_legacy
 from nncf.experimental.torch.sparsity.movement.functions import binary_mask_by_threshold
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import CompressionParameter
@@ -167,7 +169,7 @@ class MovementSparsifier(nn.Module):
         self._importance_threshold = -math.inf
         self._importance_regularization_factor = 0.0
 
-        weight_shape: List[int] = target_module_node.layer_attributes.get_weight_shape()
+        weight_shape: List[int] = get_weight_shape_legacy(target_module_node.layer_attributes)
         assert len(weight_shape) == 2, "Unsupported module with weight shape not in 2D."
         self.weight_ctx = BinaryMask(weight_shape)
         self.sparse_factors = self._get_sparse_factors(weight_shape, sparse_cfg)
@@ -185,7 +187,7 @@ class MovementSparsifier(nn.Module):
         self.weight_ctx.binary_mask = self._calc_training_binary_mask()
 
         if self.prune_bias:
-            bias_shape = target_module_node.layer_attributes.get_bias_shape()
+            bias_shape = get_bias_shape_legacy(target_module_node.layer_attributes)
             self.bias_ctx = BinaryMask(bias_shape)
             bias_importance_shape = weight_importance_shape[0]
             self.bias_importance = CompressionParameter(
