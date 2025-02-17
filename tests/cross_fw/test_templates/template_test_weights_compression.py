@@ -220,7 +220,7 @@ class TemplateWeightCompression(ABC):
     # AWQ Tests
     @staticmethod
     @abstractmethod
-    def get_awq_act_matmul_model(with_multiply, n_layers):
+    def get_awq_act_model(with_multiply, n_layers):
         "Returns a backend model for test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul."
 
     @staticmethod
@@ -236,7 +236,7 @@ class TemplateWeightCompression(ABC):
     def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(self, int4_mode, with_multiply):
         n_layers = 8
         n_awq_target = n_layers - 1  # first MatMul is always int8
-        model = self.get_awq_act_matmul_model(with_multiply, n_layers)
+        model = self.get_awq_act_model(with_multiply, n_layers)
 
         dataset = Dataset([self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))])
         model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
@@ -246,7 +246,7 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_awq_matmul_model() -> TModel:
+    def get_awq_model() -> TModel:
         "Returns a backend model for test_awq_with_ignored_scope."
 
     @staticmethod
@@ -260,7 +260,7 @@ class TemplateWeightCompression(ABC):
         "Returns ignored scope name for test_awq_with_ignored_scope."
 
     def test_awq_with_ignored_scope(self):
-        model = self.get_awq_matmul_model()
+        model = self.get_awq_model()
         sz = 8
         n_samples = 10
 

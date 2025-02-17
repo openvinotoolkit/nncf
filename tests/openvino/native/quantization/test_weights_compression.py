@@ -1459,8 +1459,16 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return SequentialMatmulModel().ov_model
 
     @staticmethod
-    def get_awq_matmul_model() -> ov.Model:
+    def get_model_for_test_scale_estimation():
+        return MatMul().ov_model
+
+    @staticmethod
+    def get_awq_model() -> ov.Model:
         return AWQMatmulModel().ov_model
+
+    @staticmethod
+    def get_awq_act_model(with_multiply, n_layers):
+        return AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers).ov_model
 
     @staticmethod
     def to_tensor(x) -> np.ndarray:
@@ -1479,10 +1487,6 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         names = {op.get_friendly_name() for op in model.get_ordered_ops() if op.get_element_type() == ov.Type.i4}
         low_precision_nodes = {f"weights_{i}" for i in ref_ids}
         assert low_precision_nodes == names
-
-    @staticmethod
-    def get_model_for_test_scale_estimation():
-        return MatMul().ov_model
 
     @staticmethod
     def get_scale_estimation_ref():
@@ -1536,10 +1540,6 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
             if op.get_type_name() == "Constant" and op.get_element_type() == ov.Type.i4:
                 num += 1
         return num
-
-    @staticmethod
-    def get_awq_act_matmul_model(with_multiply, n_layers):
-        return AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers).ov_model
 
     @pytest.fixture(params=INT4_NF4_MODES)
     def int4_mode(self, request):

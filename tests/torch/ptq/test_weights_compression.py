@@ -128,7 +128,7 @@ class AWQActLinearModel(nn.Module):
         return out
 
 
-class AWQMatmulModel(nn.Module):
+class AWQLinearModel(nn.Module):
     def __init__(self, is_int8=False):
         super().__init__()
         self.is_int8 = is_int8
@@ -448,6 +448,18 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return SequentialMatmulModel()
 
     @staticmethod
+    def get_model_for_test_scale_estimation():
+        return LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
+
+    @staticmethod
+    def get_awq_model() -> torch.nn.Module:
+        return AWQLinearModel()
+
+    @staticmethod
+    def get_awq_act_model(with_multiply, n_layers):
+        return AWQActLinearModel(with_multiply=with_multiply, n_layers=n_layers)
+
+    @staticmethod
     def to_tensor(t) -> torch.Tensor:
         return torch.tensor(t)
 
@@ -463,10 +475,6 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
             for name in low_precision_nodes:
                 if name in op_name:
                     assert isinstance(op, INT4SymmetricWeightsDecompressor)
-
-    @staticmethod
-    def get_model_for_test_scale_estimation():
-        return LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
 
     @staticmethod
     def get_scale_estimation_ref():
@@ -502,12 +510,8 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return Tensor(unpacked_w)
 
     @staticmethod
-    def get_awq_matmul_model() -> torch.nn.Module:
-        return AWQMatmulModel()
-
-    @staticmethod
     def get_ignored_scope_name() -> str:
-        return "AWQMatmulModel/Linear[linear6]/linear_0"
+        return "AWQLinearModel/Linear[linear6]/linear_0"
 
     @staticmethod
     def get_num_int4_nodes(model: torch.nn.Module) -> int:
@@ -515,10 +519,6 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         for _, op in model.nncf.external_op.items():
             num += isinstance(op, INT4SymmetricWeightsDecompressor)
         return num
-
-    @staticmethod
-    def get_awq_act_matmul_model(with_multiply, n_layers):
-        return AWQActLinearModel(with_multiply=with_multiply, n_layers=n_layers)
 
     @pytest.fixture(params=INT4_MODES)
     def int4_mode(self, request):
