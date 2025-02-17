@@ -16,7 +16,7 @@ jobs:
     uses: ./.github/workflows/examples.yml
 
   md-dead-link-check:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     if: github.repository_owner == 'openvinotoolkit'
     timeout-minutes: 10
     steps:
@@ -24,7 +24,7 @@ jobs:
       - uses: AlexanderDokuchaev/md-dead-link-check@c7210ef8a38c194a119834e39d212387d19b512c # v1.1.0
 
   tensorflow:
-    runs-on: ubuntu-20.04-8-cores
+    runs-on: ubuntu-latest-8-cores
     if: github.repository_owner == 'openvinotoolkit'
     timeout-minutes: 60
     defaults:
