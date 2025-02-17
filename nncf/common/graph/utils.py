@@ -159,3 +159,22 @@ def get_weight_shape_legacy(
 
     if isinstance(layer_attributes, GroupNormLayerAttributes):
         return [layer_attributes.num_channels]
+
+
+def get_target_dim_for_compression_legacy(
+    layer_attributes: WeightedLayerAttributes) -> int:
+    """
+    Returns hard-coded target dim for compression only for Torch and Tensorflow models.
+
+    :param layer_attributes: layer attributes of NNCFNode.
+    :return: target dim for compression.
+    """
+    if isinstance(layer_attributes, (GenericWeightedLayerAttributes,
+                LinearLayerAttributes, GroupNormLayerAttributes)):
+        return 0
+
+    if isinstance(layer_attributes, ConvolutionLayerAttributes):
+        # Always quantize per each "out" channel
+        if layer_attributes.transpose:
+            return 1
+        return 0
