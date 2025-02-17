@@ -122,10 +122,10 @@ class PT2ModelTransformer(ModelTransformer[GraphModelWrapper]):
         wrapped_model: GraphModelWrapper, transformations: List[PT2ConstUpdateCommand]
     ) -> GraphModelWrapper:
         """
-        Applies bias correction transformations on the model.
+        Applies const data update transformations on the model.
 
         :param model: Model to apply transformations.
-        :param transformations: List of the bias correction transformations.
+        :param transformations: List of the const data update transformations.
         :return: Model with corrected bias.
         """
         for transformation in transformations:
