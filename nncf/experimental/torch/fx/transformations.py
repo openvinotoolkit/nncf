@@ -688,7 +688,7 @@ def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
 
 
 def compress_post_quantize_transformation(model: torch.fx.GraphModule) -> None:
-    """
+    r"""
     Applies transformation to compress the weights to Int8 after the quantization step.
     Starts by removing the Quantize/De-Quantize nodes for weight nodes by matching the pattern
     to be like follows:

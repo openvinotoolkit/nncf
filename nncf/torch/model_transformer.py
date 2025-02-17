@@ -221,6 +221,7 @@ class PTModelTransformer(ModelTransformer):
             update_fused_bias(
                 target_node_name=transformation.target_point.target_node_name,
                 new_bias=transformation.bias_value,
+                nncf_graph=model.nncf.get_graph(),
                 model=model,
             )
         return model
