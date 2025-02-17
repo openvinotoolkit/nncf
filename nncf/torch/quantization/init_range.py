@@ -18,6 +18,8 @@ import torch
 
 import nncf
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
+from nncf.common.graph.utils import get_weight_shape_legacy
+from nncf.common.graph.utils import get_target_dim_for_compression_legacy
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitParams
@@ -226,8 +228,8 @@ class StatCollectorGenerator:
             module_node = target_nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
             layer_attributes = module_node.layer_attributes
             assert isinstance(layer_attributes, WeightedLayerAttributes)
-            input_shape = layer_attributes.get_weight_shape()
-            channel_idx = layer_attributes.get_target_dim_for_compression()
+            input_shape = get_weight_shape_legacy(layer_attributes)
+            channel_idx = get_target_dim_for_compression_legacy(layer_attributes)
         else:
             input_shape = target_nncf_graph.get_input_shape_for_insertion_point(qp.insertion_point)
             channel_idx = 1  # channel dim for activations
