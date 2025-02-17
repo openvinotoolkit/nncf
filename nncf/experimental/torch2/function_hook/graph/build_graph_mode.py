@@ -212,6 +212,10 @@ class GraphBuilderMode(FunctionHookMode):
         Overload execute_post_hooks to correct registered node for operation.
         Process __get__ function, to detect permute and transpose operation
         and remove node if operation return not tensor.
+
+        :param output: The output of the function.
+        :param op_meta: Metadata for the operation.
+        :return: The modified output after post-hooks.
         """
         if op_meta.func.__name__ == "__get__" and not isinstance(outputs, torch.Tensor):
             # Remove the node corresponding to this operation from the graph, as non-tensor
