@@ -22,7 +22,7 @@ jobs:
     uses: ./.github/workflows/build_schema_page.yml
   publish:
     needs: [call-build-html-doc, call-build-schema-page]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout main repo  # the github-pages-deploy-action seems to require this step
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
