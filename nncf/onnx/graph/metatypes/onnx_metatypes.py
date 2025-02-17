@@ -687,6 +687,12 @@ class ONNXSinMetatype(ONNXOpMetatype):
     op_names = ["Sin"]
 
 
+@ONNX_OPERATION_METATYPES.register()
+class ONNXSeluMetatype(ONNXOpMetatype):
+    name = "SeluOp"
+    op_names = ["Selu"]
+
+
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.
