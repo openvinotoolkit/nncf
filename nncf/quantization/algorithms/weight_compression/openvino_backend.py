@@ -110,9 +110,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        if node.layer_attributes.input_attributes["transpose"]:
-            msg = "Transposed input is not supported"
-            raise nncf.UnsupportedModelError(msg)
         constant_ports = node.layer_attributes.get_const_port_ids()
         activation_ports = [
             e.input_port_id for e in nncf_graph.get_input_edges(node) if e.input_port_id not in constant_ports
@@ -204,7 +201,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             A_W = opset.constant(lora_A.data)
             B_W = opset.constant(lora_B.data)
 
-        A_MM = opset.matmul(input_node, A_W, transpose_a=False, transpose_b=True)
+        A_MM = opset.matmul(input_node, A_W, transpose_a=wc_params.node_with_weight.layer_attributes.input_attributes['transpose'], transpose_b=True)
         B_MM = opset.matmul(A_MM, B_W, transpose_a=False, transpose_b=True)
 
         node_output_port = mm_node.output(0)
