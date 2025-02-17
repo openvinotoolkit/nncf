@@ -209,7 +209,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph, weight: Tensor
     ):
-        update_parameter(node_with_weight.node_name, "weight", weight, model)
+        update_parameter(node_with_weight.node_name, "weight", weight.data, model)
 
     def insert_adapters(
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
