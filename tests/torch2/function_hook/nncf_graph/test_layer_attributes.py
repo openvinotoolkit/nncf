@@ -43,9 +43,9 @@ class ParamForLayerAttributes:
             PT2OpLayerAttributes(
                 func=torch.conv2d,
                 op_args=(
-                    TensorMeta(dtype=torch.float32, shape=(1, 1, 3, 3), requires_grad=False),
-                    TensorMeta(dtype=torch.float32, shape=(1, 1, 1, 1), requires_grad=True),
-                    TensorMeta(dtype=torch.float32, shape=(1,), requires_grad=True),
+                    TensorMeta(dtype=torch.float32, shape=(1, 1, 3, 3)),
+                    TensorMeta(dtype=torch.float32, shape=(1, 1, 1, 1)),
+                    TensorMeta(dtype=torch.float32, shape=(1,)),
                     (1, 1),
                     (0, 0),
                     (1, 1),
@@ -61,8 +61,8 @@ class ParamForLayerAttributes:
             PT2OpLayerAttributes(
                 func=torch.matmul,
                 op_args=(
-                    TensorMeta(dtype=torch.float32, shape=(1, 1), requires_grad=False),
-                    TensorMeta(dtype=torch.float32, shape=(1,), requires_grad=True),
+                    TensorMeta(dtype=torch.float32, shape=(1, 1)),
+                    TensorMeta(dtype=torch.float32, shape=(1,)),
                 ),
                 op_kwargs={},
                 constant_port_ids={1},
@@ -74,8 +74,8 @@ class ParamForLayerAttributes:
             PT2OpLayerAttributes(
                 func=torch.matmul,
                 op_args=(
-                    TensorMeta(dtype=torch.float32, shape=(1,), requires_grad=True),
-                    TensorMeta(dtype=torch.float32, shape=(1, 1), requires_grad=False),
+                    TensorMeta(dtype=torch.float32, shape=(1,)),
+                    TensorMeta(dtype=torch.float32, shape=(1, 1)),
                 ),
                 op_kwargs={},
                 constant_port_ids={0},
