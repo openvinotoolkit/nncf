@@ -533,15 +533,16 @@ def compress_weights(
             msg = "Torch does not support statistics caching."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if is_wrapped_model(model) and not model.nncf.trace_parameters:
-            msg = (
-                "Tracing capabilities with tracing parameters are required in the PyTorch model "
-                "for nncf.compress_weights(). Please wrap the model using "
-                "nncf.torch.wrap_model(model, example_input, trace_parameters=True) before calling "
-                "nncf.compress_weights()."
-            )
-            raise nncf.ValidationError(msg)
-        if isinstance(model, GraphModelWrapper):
+        if is_wrapped_model(model):
+            if not model.nncf.trace_parameters:
+                msg = (
+                    "Tracing capabilities with tracing parameters are required in the PyTorch model "
+                    "for nncf.compress_weights(). Please wrap the model using "
+                    "nncf.torch.wrap_model(model, example_input, trace_parameters=True) before calling "
+                    "nncf.compress_weights()."
+                )
+                raise nncf.ValidationError(msg)
+        elif isinstance(model, GraphModelWrapper):
             pass
         elif dataset is None:
             msg = "Please provide a dataset of at least one element for PyTorch model tracing."
