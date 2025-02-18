@@ -25,6 +25,10 @@ from tabulate import tabulate
 from transformers import AutoTokenizer
 
 
+LM_EVAL_RESULTS_FILENAME = "lm_eval_results.json"
+OPTIMUM_CLI_PARAMS_FILENAME = "optimum_cli_params.json"
+
+
 class CompressBackendType(Enum):
     OPTIMUM_CLI = "optimum_cli"
     NNCF = "nncf"
@@ -297,7 +301,7 @@ def run_lm_eval(model_dir: Path, evaluation_params: Dict[str, Any]):
     if device:
         cmd_line += f" --device {device}"
 
-    cmd_line += f" --output_path {model_dir.joinpath('lm_eval_results.json').as_posix()}"
+    cmd_line += f" --output_path {model_dir.joinpath(LM_EVAL_RESULTS_FILENAME).as_posix()}"
 
     limit = evaluation_params.get("limit")
     if limit:
@@ -374,7 +378,7 @@ def compress(model_id: str,
         print(f"Applying configuration: {params.get_key()}")
 
         if backend == CompressBackendType.OPTIMUM_CLI:
-            params_filename = "optimum_cli_params.json"
+            params_filename = OPTIMUM_CLI_PARAMS_FILENAME
             run_optimum_cli(model_id, EXPERIMENT_DIR, params)
         elif backend == CompressBackendType.NNCF:
             params_filename = "nncf_params.json"
@@ -383,6 +387,72 @@ def compress(model_id: str,
         # --------- Save params ---------
         print(f"Saving compression parameters: {EXPERIMENT_DIR / params_filename}")
         params.save_to_json(EXPERIMENT_DIR / params_filename)
+
+
+class ResultsParser:
+
+    @staticmethod
+    def parse_lm_eval(path: Path):
+
+        METRICS = [
+            "acc",
+            "ppl",
+            "word_perplexity",
+            "exact_match,strict-match",
+            "perplexity",
+            "similarity",
+            "fdt_norm",
+        ]
+        METRICS.extend([metric + ",none" for metric in METRICS])
+
+        data = load_json(path)
+        limit = data.get("config", {}).get("limit", None)
+        results_section = data.get("results")
+
+        results = []
+        for task, task_results in results_section.items():
+            res = {}
+            for metric, value in task_results.items():
+                res["task"] = task
+
+                if metric in METRICS:
+                    metric = metric.replace(",none", "")
+                    res[metric] = value
+            res["limit"] = limit
+            results.append(res)
+
+        return results
+
+    @staticmethod
+    def parse_optimum_params(path: Path, fields: List[str]):
+        data = load_json(path)
+        return {field_name: data[field_name] for field_name in fields}
+
+    @staticmethod
+    def parse(root_model_dir: Path):
+        c = {}  # configuration_key -> {/* data */}
+
+        for model_dir in root_model_dir.iterdir():
+            if not model_dir.is_dir():
+                continue
+
+            configuration_key = model_dir.name
+
+            c[configuration_key] = {}
+            c[configuration_key]["model"] = root_model_dir.name
+            c[configuration_key]["configuration"] = configuration_key
+
+            # Parse the `lm_eval_results.json` file
+            path = model_dir.joinpath(LM_EVAL_RESULTS_FILENAME)
+            if path.exists():
+                c[configuration_key]["lm_eval"] = ResultsParser.parse_lm_eval(path)
+
+            # Parse the `optimum_cli_params.json` file
+            path = model_dir.joinpath(OPTIMUM_CLI_PARAMS_FILENAME)
+            if path.exists():
+                c[configuration_key]["optimum_params"] = ResultsParser.parse_optimum_params(path, ["weight_format", "ratio", "group_size"]) # TODO
+
+        # print(json.dumps(c, indent=4))
 
 
 def main():
@@ -422,6 +492,9 @@ def main():
     # --------- Save extra info ---------
     if args.dump_packages:
         dump_all_packages(ROOT_MODEL_DIR / "versions.txt")
+
+    # --------- Parse results ---------
+    ResultsParser.parse(ROOT_MODEL_DIR)
 
 
 if __name__ == "__main__":
