@@ -510,8 +510,9 @@ def compress_weights(
     compression_weights_impl = None
 
     if backend == BackendType.TORCH:
+        from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
+        from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
         from nncf.torch.model_creation import is_wrapped_model
-        from nncf.torch.model_creation import wrap_model
         from nncf.torch.quantization.quantize_model import compress_weights_impl as pt_compression_weights_impl
 
         if mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]:
@@ -532,21 +533,29 @@ def compress_weights(
             msg = "Torch does not support statistics caching."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if is_wrapped_model(model):
-            if not model.nncf.trace_parameters:
-                msg = (
-                    "Tracing capabilities with tracing parameters are required in the PyTorch model "
-                    "for nncf.compress_weights(). Please wrap the model using "
-                    "nncf.torch.wrap_model(model, example_input, trace_parameters=True) before calling "
-                    "nncf.compress_weights()."
-                )
-                raise nncf.ValidationError(msg)
+        if is_wrapped_model(model) and not model.nncf.trace_parameters:
+            msg = (
+                "Tracing capabilities with tracing parameters are required in the PyTorch model "
+                "for nncf.compress_weights(). Please wrap the model using "
+                "nncf.torch.wrap_model(model, example_input, trace_parameters=True) before calling "
+                "nncf.compress_weights()."
+            )
+            raise nncf.ValidationError(msg)
+        if isinstance(model, GraphModelWrapper):
+            pass
         elif dataset is None:
             msg = "Please provide a dataset of at least one element for PyTorch model tracing."
             raise nncf.ValidationError(msg)
         else:
             example_input = next(iter(dataset.get_inference_data()))
-            model = wrap_model(model, example_input=example_input, trace_parameters=True)
+            if is_experimental_torch_tracing_enabled():
+                from nncf.experimental.torch2.function_hook import wrap_model
+
+                model = GraphModelWrapper(wrap_model(model), example_input=example_input)
+            else:
+                from nncf.torch.model_creation import wrap_model
+
+                model = wrap_model(model, example_input=example_input, trace_parameters=True)
         if mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM):
             dataset = None  # data-aware methods don't support INT8 modes
         compression_weights_impl = pt_compression_weights_impl
