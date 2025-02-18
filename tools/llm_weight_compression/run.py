@@ -37,9 +37,10 @@ def export_base_model(model_id: str, base_model_dir: Path) -> None:
         {ROOT_DIR}
         |-- {encoded model ID}
             |-- fp32
-                |-- openvino_model.xml
-                |-- openvino_model.bin
-                |-- ...
+                |-- model
+                    |-- openvino_model.xml
+                    |-- openvino_model.bin
+                    |-- ...
 
     :param model_id: A model ID of a model hosted on the [Hub](https://huggingface.co/models).
     :param base_model_dir: A directory where the model should be saved.
@@ -50,8 +51,8 @@ def export_base_model(model_id: str, base_model_dir: Path) -> None:
 
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
 
-    model.save_pretrained(base_model_dir)
-    tokenizer.save_pretrained(base_model_dir)
+    model.save_pretrained(base_model_dir.joinpath("model"))
+    tokenizer.save_pretrained(base_model_dir.joinpath("model"))
 
 
 def dump_all_packages(output_file: str) -> None:
@@ -235,7 +236,7 @@ def run_optimum_cli(
         cmd_line += " --lora-correction"
 
     # output argument
-    cmd_line += f" {output_dir.as_posix()}"
+    cmd_line += f" {output_dir.joinpath('model').as_posix()}"
 
     if log_filename:
         optimum_cli_log = output_dir.joinpath("optimum_cli_log.txt")
@@ -281,7 +282,7 @@ def run_lm_eval_cli(model_dir: Path, evaluation_params: Dict[str, Any]):
     tasks_arg = ",".join(evaluation_params["tasks"])
     cmd_line += f" --tasks {tasks_arg}"
 
-    cmd_line += f" --model_args pretrained={model_dir.as_posix()}"
+    cmd_line += f" --model_args pretrained={model_dir.joinpath('model').as_posix()}"
 
     num_fewshot = evaluation_params.get("num_fewshot")
     if num_fewshot:
@@ -295,7 +296,7 @@ def run_lm_eval_cli(model_dir: Path, evaluation_params: Dict[str, Any]):
     if device:
         cmd_line += f" --device {device}"
 
-    cmd_line += f" --output_path {model_dir.as_posix()}"
+    cmd_line += f" --output_path {model_dir.joinpath('lm_eval_results.json').as_posix()}"
 
     limit = evaluation_params.get("limit")
     if limit:
