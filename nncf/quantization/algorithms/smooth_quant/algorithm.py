@@ -59,7 +59,6 @@ class SmoothQuant(Algorithm):
             The default value for each layer in the ALPHA_MAP.
             Negative value switches off the algorithm for correspondent nodes.
         """
-
         super().__init__()
         self._subset_size = subset_size
         self._inplace_statistics = inplace_statistics
@@ -191,7 +190,6 @@ class SmoothQuant(Algorithm):
         :param quantile: Base quantile value.
         :return: Calculated base scale value & ratio.
         """
-
         eps = fns.finfo(activations).eps
         scales = fns.power(activations, alpha) / (fns.power(weights, 1 - alpha) + eps)
 
@@ -234,7 +232,6 @@ class SmoothQuant(Algorithm):
         :param act_port: Activation port id.
         :return: List of the TTensor instances.
         """
-
         statistics_for_node = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name,

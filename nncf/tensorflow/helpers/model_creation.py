@@ -86,7 +86,6 @@ def create_compressed_model(
     :return: A tuple of the compression controller for the requested algorithm(s) and the model object with additional
      modifications necessary to enable algorithm-specific compression during fine-tuning.
     """
-
     warning_deprecated(
         "The 'nncf.tensorflow.create_compressed_model' function is deprecated and will be removed in a "
         "future release.\n"

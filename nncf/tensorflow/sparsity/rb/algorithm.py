@@ -101,7 +101,6 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
             algorithm-specific compression during fine-tuning.
         :return: The instance of the `RBSparsityController`.
         """
-
         return RBSparsityController(model, self.config, self._op_names)
 
     def initialize(self, model: tf.keras.Model) -> None:

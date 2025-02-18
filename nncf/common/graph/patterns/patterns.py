@@ -101,7 +101,6 @@ class GraphPattern:
         :param other: GraphPattern that will be added.
         :return: resulted GraphPattern.
         """
-
         final_pattern = GraphPattern()
         for self_subgraph in self.get_weakly_connected_subgraphs():
             for other_subgraph in other.get_weakly_connected_subgraphs():

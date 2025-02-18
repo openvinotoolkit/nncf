@@ -53,7 +53,6 @@ def maybe_wrap_to_torch_return_type(
     :param wrapped_tensor: Instance of the tensor before it was unwrapped.
     :return: Wrapped tensor in case wrapped_input is wrapped by a torch.return_value container else the tensor.
     """
-
     if isinstance(wrapped_input, _TORCH_RETURN_TYPES):
         # We assume that return_type has only two attributes, the first one is `value`.
         # This assumption is checked by `test_unwrap_wrap_torch_return_type`.

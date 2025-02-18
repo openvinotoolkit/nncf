@@ -196,7 +196,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         :return: Tuple[int, ...]: The shape of the scale to be applied to the input.
         """
-
         is_weights = target_point.is_weight_target_point()
         input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
 

@@ -47,7 +47,6 @@ def generate_text_data(
     :param dataset_size: Size of the data.
     :return: List of the text data ready to use.
     """
-
     try:
         import torch
     except ImportError:

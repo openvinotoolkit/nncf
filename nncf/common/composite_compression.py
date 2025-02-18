@@ -75,7 +75,6 @@ class CompositeCompressionLoss(CompressionLoss):
 
         :return: The compression loss value.
         """
-
         if len(self._child_losses) == 0:
             msg = "Cannot calculate the loss value because the number of child loss is 0."
             raise nncf.InternalError(msg)

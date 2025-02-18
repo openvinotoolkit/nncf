@@ -124,7 +124,6 @@ class OVModelTransformer(ModelTransformer):
         :param transformation_layout: Transformation commands.
         :return: The new instance of a model with applied transformations.
         """
-
         transformations = transformation_layout.transformations
         aggregated_transformations = defaultdict(list)
         for transformation in transformations:
@@ -308,7 +307,6 @@ class OVModelTransformer(ModelTransformer):
         :param data_type: ov.Type instance for data.
         :return: ov.Node instance.
         """
-
         input_low = fake_quantize_params.input_low.data
         input_high = fake_quantize_params.input_high.data
         output_low = fake_quantize_params.output_low.data
@@ -348,7 +346,6 @@ class OVModelTransformer(ModelTransformer):
         :param data_type: ov.Type instance for data.
         :return: ov.Node instance.
         """
-
         scale = fake_convert_params.scale.data
         shift = fake_convert_params.shift.data
 
