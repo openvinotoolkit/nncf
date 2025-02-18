@@ -351,8 +351,9 @@ class TestStructuredMaskHandler:
         compression_ctrl, _ = create_compressed_model(run_recipe.model(), run_recipe.nncf_config(), dump_graphs=False)
         handler, _ = self._get_handler_from_ctrl(compression_ctrl)
         num_transformer_blocks = sum(tbinfo.num_hidden_layers for tbinfo in run_recipe.transformer_block_info)
-        assert len(handler._structured_mask_ctx_groups) == num_transformer_blocks * 2
-        for i in range(num_transformer_blocks * 2):
+        miltiplier = 2 if isinstance(run_recipe, SwinRunRecipe) else 1
+        assert len(handler._structured_mask_ctx_groups) == num_transformer_blocks * miltiplier
+        for i in range(num_transformer_blocks * miltiplier):
             group = handler._structured_mask_ctx_groups[i]
             assert isinstance(group, StructuredMaskContextGroup)
             assert len(group.structured_mask_contexts) in (2, 4)
@@ -399,7 +400,7 @@ class TestStructuredMaskHandler:
         for mock_method in mock_methods:
             mock_method.assert_called_once()
 
-    @pytest.mark.parametrize("max_num_of_kept_heads_to_report", [1, 20])
+    @pytest.mark.parametrize("max_num_of_kept_heads_to_report", [1, 40])
     def test_report_structured_sparsity(self, tmp_path, mocker, max_num_of_kept_heads_to_report):
         file_name = "structured_report"
         run_recipe = STRUCTURED_MASK_SUPPORTED_RECIPES[0]
@@ -413,7 +414,7 @@ class TestStructuredMaskHandler:
         mock_stat = StructuredMaskContextStatistics(*([mocker.Mock()] * 6))
         ref_columns = ["group_id", "torch_module", *mock_stat.__dict__.keys()]
         assert sorted(columns) == sorted(ref_columns)
-        assert len(df) == 6 * sum(tbinfo.num_hidden_layers for tbinfo in run_recipe.transformer_block_info)
+        assert len(df) == 2 * sum(tbinfo.num_hidden_layers for tbinfo in run_recipe.transformer_block_info)
         for item in df["head_or_channel_id_to_keep"]:
             if isinstance(item, list):
                 assert len(item) <= max_num_of_kept_heads_to_report

@@ -96,7 +96,9 @@ def test_exporter_parser_format(save_format: str, refs: Any):
     assert args == refs[1]
 
 
-@pytest.mark.parametrize("save_format, ref_opset", (("onnx", 13), ("onnx_9", 9), ("onnx_10", 10), ("onnx_11", 11)))
+@pytest.mark.parametrize(
+    "save_format, ref_opset", (("onnx", 14), ("onnx_9", 9), ("onnx_10", 10), ("onnx_11", 11), ("onnx_13", 13))
+)
 def test_exported_version(tmp_path: str, save_format: str, ref_opset: int):
     model = MockModel()
     config = NNCFConfig()
