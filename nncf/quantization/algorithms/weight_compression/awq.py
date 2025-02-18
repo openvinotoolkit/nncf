@@ -62,9 +62,9 @@ class AWQ(Algorithm):
     def __init__(
         self,
         subset_size: int = 32,
-        percent_to_apply: int = 0.002,
-        alpha_min: int = 0.0,
-        alpha_max: int = 1.0,
+        percent_to_apply: float = 0.002,
+        alpha_min: float = 0.0,
+        alpha_max: float = 1.0,
         steps: int = 100,
     ):
         """
