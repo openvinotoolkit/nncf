@@ -187,7 +187,6 @@ class StructuredMaskContext:
          1111    &            1100               &             0000                =    0000
          1111                 1100                             1111                     1100
         """
-
         self.sparsifier_operand.weight_ctx.binary_mask.fill_(1)
         if self.sparsifier_operand.prune_bias:
             self.sparsifier_operand.bias_ctx.binary_mask.fill_(1)

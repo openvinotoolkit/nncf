@@ -77,7 +77,6 @@ class FXModelTransformer(ModelTransformer):
         :param stop_nodes: Given stop nodes.
         :param visited: Set of already visited nodes.
         """
-
         while input_nodes:
             in_node = input_nodes.pop()
             if in_node.name in visited or in_node.name in stop_nodes:
@@ -104,7 +103,6 @@ class FXModelTransformer(ModelTransformer):
             more than one element this function raises an assert.
         :return: Returns a submodel extracted from the given model by the given transformation.
         """
-
         transformation = transformations[-1]
         stop_nodes = set(transformation.input_node_names + transformation.output_node_names)
         visited = set()

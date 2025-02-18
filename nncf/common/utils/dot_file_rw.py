@@ -85,7 +85,6 @@ def relabel_graph_for_dot_visualization(nx_graph: nx.Graph, from_reference: bool
     :param nx_graph: NetworkX graph to visualize via dot.
     :return: NetworkX graph with reserved symbols in nodes keys replaced.
     """
-
     nx_graph = copy.deepcopy(nx_graph)
 
     # .dot format reserves ':' character in node names

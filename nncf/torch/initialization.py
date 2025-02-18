@@ -72,7 +72,6 @@ class PTInitializingDataLoader(NNCFDataLoader):
 
         :param dataloader_output - the (args, kwargs) tuple returned by the __next__ method.
         """
-
         raise NotImplementedError
 
 

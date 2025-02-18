@@ -45,7 +45,6 @@ class TFExporter(Exporter):
                 - `frozen_graph` for export to the Frozen Graph format.
             The Frozen Graph format will be used if `save_format` is not specified.
         """
-
         format_to_export_fn = {
             TFExportFormat.SAVED_MODEL: self._export_to_saved_model,
             TFExportFormat.KERAS_H5: self._export_to_h5,

@@ -216,7 +216,6 @@ class AccuracyEvaluator(BaseEvaluator):
         :param state: dict with state that should be used for updating this evaluator
         :return:
         """
-
         super().update_from_state(state)
         new_dict = state.copy()
         self._is_top1 = new_dict["is_top1"]

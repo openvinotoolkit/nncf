@@ -92,7 +92,6 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
             container with deterministic traversal.
         :return: knowledge distillation loss value
         """
-
         compressed_model_outputs_nested_obj_indexing = NestedObjectIndex([compressed_model_outputs])
         orig_model_outputs_nested_obj_indexing = NestedObjectIndex([orig_model_outputs])
         compressed_model_loss_outputs_nested_obj_indexing = list(

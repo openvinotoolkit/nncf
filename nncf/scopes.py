@@ -64,7 +64,7 @@ def get_ignored_node_names_from_subgraph(graph: NNCFGraph, subgraph: Subgraph) -
 @api(canonical_alias="nncf.IgnoredScope")
 @dataclass
 class IgnoredScope:
-    """
+    r"""
     Provides an option to specify portions of model to be excluded from compression.
 
     The ignored scope defines model sub-graphs that should be excluded from the compression process such as

@@ -34,7 +34,6 @@ def matches_any(tested_str: str, strs_to_match_to: Union[Iterable[str], str, Non
     :return: A boolean value specifying whether a tested_str should matches at least one element
         in strs_to_match_to.
     """
-
     if strs_to_match_to is None:
         return False
 

@@ -797,7 +797,6 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
         :return: True if all paths from the given node to the first
         input quantizable nodes have an activation quantizer, False otherwise.
         """
-
         nodes_keys_stack = deque(self.successors(node_key))
         while nodes_keys_stack:
             node_key = nodes_keys_stack.popleft()
@@ -1424,7 +1423,6 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
         :return: A MultiConfigQuantizerSetup with weights-as-outputs-dependent quantizers removed where possible
             and shared inputs/unified scales group adjusted to reflect the change.
         """
-
         # For the weights-are-outputs quantized operations, need to find out the dependent activation quantizers in
         # the multiconfig setup and see if it is possible to avoid requantization by selecting a common configuration
         # subset. If yes and the activation quantizer becomes unnecessary, need to unify the scales of the weight
