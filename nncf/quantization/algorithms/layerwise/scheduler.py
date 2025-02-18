@@ -82,9 +82,10 @@ class LayerwiseScheduler:
     7. Repeat the process until all target nodes have been processed.
     """
 
-    def __init__(self, add_additional_outputs: bool = False):
+    def __init__(self, add_additional_outputs: bool = True):
         """
-        :param strategy: The strategy to use for scheduling.
+        :param add_additional_outputs: If True (default), includes additional output nodes that were visited
+            to remove inputs to target nodes.
         """
         self.add_additional_outputs = add_additional_outputs
 
