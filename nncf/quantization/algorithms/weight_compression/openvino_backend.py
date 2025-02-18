@@ -128,12 +128,17 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             result.append((weight_name, weight_port_id))
         return result
 
-    def get_weight(self, node_with_weight: NNCFNode, weight_port_id: int, model: ov.Model, graph: NNCFGraph, cast_bf16_to_fp32: bool = True) -> Tensor:
+    def get_weight(
+        self,
+        node_with_weight: NNCFNode,
+        weight_port_id: int,
+        model: ov.Model,
+        graph: NNCFGraph,
+        as_ov_tensor: bool = False,
+    ) -> Tensor:
         weight_name = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["name"]
         weight_node = self.name_to_node_mapping[weight_name]
-        weight_tensor = get_const_value(weight_node, cast_bf16_to_fp32)
-        if not cast_bf16_to_fp32:
-            weight_tensor = ov.Tensor(weight_tensor, weight_tensor.shape, weight_node.output(0).get_element_type())
+        weight_tensor = get_const_value(weight_node, as_ov_tensor)
         return Tensor(weight_tensor)
 
     def get_weight_dtype(
@@ -300,12 +305,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             const_node = self.name_to_node_mapping[const_node_name]
             const_node_output = const_node.output(0)
             const_dtype = const_node_output.get_element_type()
-            weight = get_const_value(const_node, cast_bf16_to_fp32=False)
             # Creation of ov.Tensor is required for two reasons:
             #   1. To be able to process BF16 weight properly
             #   2. To indicate that it is allowed for the compressed constant to be returned as int4/uint4 if needed
-            weight = ov.Tensor(weight, weight.shape, const_dtype)
-            weight = Tensor(weight)
+            weight = Tensor(get_const_value(const_node, as_ov_tensor=True))
 
             should_add_convert_node = False
             if const_dtype != ov.Type.f16:

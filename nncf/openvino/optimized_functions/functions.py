@@ -174,7 +174,17 @@ def get_integer_quantization_error(
     reduction_axes: ReductionAxes,
     config: WeightCompressionConfig,
 ) -> float:
+    """
+    Calculates a quantity characterizing the difference between floating point weights and fake quantized
+    (compressed and decompressed) to integer ones.
+
+    :param weight: Weight array to compress.
+    :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
+    :param config: Information on how to compress (quantize) a specific weight.
+    :return: The quantity characterizing the error of integer quantization.
+    """
     original_weight_shape = weight.shape
+    original_reduction_axes = reduction_axes
 
     # When reduction axes are not provided, assuming that the weights are already reshaped
     if config.group_size != -1 and reduction_axes is not None:
@@ -183,7 +193,9 @@ def get_integer_quantization_error(
 
     ov_model_params = OVModelParameters()
     ov_model_params.input_dtypes["weight"] = weight.dtype
-    model = get_quantization_error_model(ov_model_params, config, original_weight_shape, weight.shape, reduction_axes)
+    model = get_quantization_error_model(
+        ov_model_params, config, original_weight_shape, weight.shape, original_reduction_axes, reduction_axes
+    )
 
     quantization_error = model([weight])[0].item()
 

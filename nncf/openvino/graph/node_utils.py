@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import openvino.runtime as ov
@@ -110,19 +110,21 @@ def get_number_if_op(model: ov.Model) -> int:
     return cnt_if_op(model, 0)
 
 
-def get_const_value(const_node: ov.Node, cast_bf16_to_fp32: bool = True) -> np.ndarray:
+def get_const_value(const_node: ov.Node, as_ov_tensor: bool = False) -> Union[np.ndarray, ov.Tensor]:
     """
     Returns the constant tensor for the node.
     This method is applicable only for the floating-point constant data.
 
     :param const_node: OpenVINO node.
-    :param cast_bf16_to_fp32: Whether to cast bf16 node data to fp32 or not. If False and the node contains bf16 data,
-        the resulting bf16 value will be returned encoded inside a numpy.float16 array.
+    :param as_ov_tensor: If True, returns the constant value as OpenVINO tensor, otherwise as np.ndarray.
     :return: The constant value.
     """
-    if const_node.get_element_type() == ov.Type.bf16 and cast_bf16_to_fp32:
-        return const_node.get_data(dtype=np.float32)
-    return const_node.data
+    if as_ov_tensor:
+        return ov.Tensor(const_node.data, const_node.get_output_shape(0), const_node.get_element_type())
+    else:
+        if const_node.get_element_type() == ov.Type.bf16:
+            return const_node.get_data(dtype=np.float32)
+        return const_node.data
 
 
 def get_bias_value(

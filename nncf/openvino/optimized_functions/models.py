@@ -261,6 +261,8 @@ def get_compress_decompress_weight_model(
         inputs.
     :param return_compressed_weight: Whether to also return compressed weight, scale, (and zero point) besides the
         decompressed weight.
+    :param return_nodes: Whether to return the OV model inputs parameters and results nodes instead of the model
+        callable.
     :return: A model callable that returns a decompressed weight, and optionally compressed weight, scale,
         (and zero point) if `return_compressed_weight` is True.
     """
@@ -285,13 +287,28 @@ def get_quantization_error_model(
     config: WeightCompressionConfig,
     original_weight_shape: Tuple,
     weight_shape: Tuple,
-    reduction_axes: Optional[ReductionAxes] = None,
+    original_reduction_axes: ReductionAxes,
+    reduction_axes: ReductionAxes,
 ) -> ModelCallable:
-    weight_shape, _, _ = _prepare_compression_model_inputs(
-        ov_model_params, weight_shape, None, None, reduction_axes
-    )
+    """
+    Get a model that calculates the quantization error for a given weight.
 
-    return _build_quantization_error_model(config, ov_model_params, original_weight_shape, weight_shape, reduction_axes)
+    This function builds a model that compresses and then decompresses the given weight, and calculates the
+    quantization error by comparing the original weight with the decompressed weight.
+
+    :param ov_model_params: OV model parameters.
+    :param config: Compression configuration.
+    :param original_weight_shape: Shape of the original weight tensor.
+    :param weight_shape: Shape of the weight tensor to be compressed.
+    :param original_reduction_axes: Reduction axes of the original weight tensor before reshaping.
+    :param reduction_axes: Axes to reduce the weight tensor.
+    :return: A model callable that returns the quantization error.
+    """
+    weight_shape, _, _ = _prepare_compression_model_inputs(ov_model_params, weight_shape, None, None, reduction_axes)
+
+    return _build_quantization_error_model(
+        config, ov_model_params, original_weight_shape, weight_shape, original_reduction_axes, reduction_axes
+    )
 
 
 @cache_results(OV_MODEL_CACHE)
@@ -468,8 +485,8 @@ def _build_compress_decompress_model(
         raise ValueError(msg)
 
     # Get compression model as input/result nodes and potentially modified ov model parameters
-    ov_parameters, ov_results, ov_model_params = get_compress_weight_model(
-        ov_model_params, config, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_nodes=True
+    ov_parameters, ov_results, ov_model_params = _build_compress_model(
+        config, ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_nodes=True
     )
 
     if config.is_asym_mode:
@@ -510,11 +527,12 @@ def _build_quantization_error_model(
     ov_model_params: OVModelParameters,
     original_weight_shape: Tuple,
     weight_shape: Tuple,
-    reduction_axes: Optional[ReductionAxes] = None,
+    original_reduction_axes: ReductionAxes,
+    reduction_axes: ReductionAxes,
 ) -> ModelCallable:
-    ov_parameters, ov_results, ov_model_params = get_compress_decompress_weight_model(
-        ov_model_params,
+    ov_parameters, ov_results, ov_model_params = _build_compress_decompress_model(
         config,
+        ov_model_params,
         weight_shape,
         reduction_axes=reduction_axes,
         return_compressed_weight=False,
@@ -525,9 +543,11 @@ def _build_quantization_error_model(
     decompressed_weight = ov_results[0]
 
     weight = convert_op(opset.reshape(weight, original_weight_shape, special_zero=False), ov.Type.f32)
-    decompressed_weight = convert_op(opset.reshape(decompressed_weight, original_weight_shape, special_zero=False), ov.Type.f32)
+    decompressed_weight = convert_op(
+        opset.reshape(decompressed_weight, original_weight_shape, special_zero=False), ov.Type.f32
+    )
     diff = opset.squared_difference(decompressed_weight, weight)
-    layer_err = opset.reduce_mean(diff, reduction_axes=reduction_axes)
+    layer_err = opset.reduce_mean(diff, reduction_axes=original_reduction_axes)
     quantization_error = opset.reduce_max(layer_err, reduction_axes=tuple(range(len(layer_err.shape))))
 
     model = ov.Model([quantization_error], ov_parameters)
