@@ -484,7 +484,7 @@ Functions
            ignored_scope = nncf.IgnoredScope(names=node_names)
 
            # Exclude using regular expressions:
-           patterns = ['node_\d']
+           patterns = ['node_\\d']
            ignored_scope = nncf.IgnoredScope(patterns=patterns)
 
            # Exclude by operation type:

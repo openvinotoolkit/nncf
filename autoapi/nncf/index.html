@@ -925,7 +925,7 @@ quantization, pruning and etc.</p>
 <span class="n">ignored_scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">IgnoredScope</span><span class="p">(</span><span class="n">names</span><span class="o">=</span><span class="n">node_names</span><span class="p">)</span>
 
 <span class="c1"># Exclude using regular expressions:</span>
-<span class="n">patterns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;node_\d&#39;</span><span class="p">]</span>
+<span class="n">patterns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;node_</span><span class="se">\\</span><span class="s1">d&#39;</span><span class="p">]</span>
 <span class="n">ignored_scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">IgnoredScope</span><span class="p">(</span><span class="n">patterns</span><span class="o">=</span><span class="n">patterns</span><span class="p">)</span>
 
 <span class="c1"># Exclude by operation type:</span>
