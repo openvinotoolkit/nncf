@@ -272,7 +272,7 @@ class EvaluateBackendType(Enum):
     WHO_WHAT_BENCHMARK = "who_what_benchmark"
 
 
-def run_lm_eval_cli(model_dir: Path, evaluation_params: Dict[str, Any]):
+def run_lm_eval(model_dir: Path, evaluation_params: Dict[str, Any]):
     """
     :param model_dir:
     :param evaluation_params:
@@ -308,7 +308,7 @@ def run_lm_eval_cli(model_dir: Path, evaluation_params: Dict[str, Any]):
     return run_command(cmd_line)
 
 
-def run_who_what_benchmark_cli(model_dir: Path, base_model_dir: Path, evaluation_params: Dict[str, Any]):
+def run_who_what_benchmark(model_dir: Path, base_model_dir: Path, evaluation_params: Dict[str, Any]):
     if model_dir.resolve() == base_model_dir.resolve():
         return
 
@@ -337,10 +337,10 @@ def evaluate(model_dir: Path, base_model_dir: Path, evaluation_config: Dict[str,
     print(f"Run evaluation ({backend.name}): {model_dir.as_posix()}")
 
     if backend == EvaluateBackendType.LM_EVAL:
-        run_lm_eval_cli(model_dir, evaluation_params)
+        run_lm_eval(model_dir, evaluation_params)
 
     if backend == EvaluateBackendType.WHO_WHAT_BENCHMARK:
-        run_who_what_benchmark_cli(model_dir, base_model_dir, evaluation_params)
+        run_who_what_benchmark(model_dir, base_model_dir, evaluation_params)
 
 
 def compress(model_id: str,
