@@ -31,7 +31,7 @@ from tests.openvino.native.models import MatMul2DNotBiasModel
 
 
 @pytest.mark.parametrize(
-    "precisions,cast_bf16_to_fp32",
+    "precisions,as_ov_tensor",
     [
         # base FP32 precision
         (
@@ -39,7 +39,7 @@ from tests.openvino.native.models import MatMul2DNotBiasModel
                 "type_for_const": ov.Type.f32,
                 "ref_type": np.float32,
             },
-            True,
+            False,
         ),
         # base FP16 precision
         (
@@ -47,7 +47,7 @@ from tests.openvino.native.models import MatMul2DNotBiasModel
                 "type_for_const": ov.Type.f16,
                 "ref_type": np.float16,
             },
-            True,
+            False,
         ),
         # base BF16 precision should be casted to FP32
         (
@@ -55,40 +55,40 @@ from tests.openvino.native.models import MatMul2DNotBiasModel
                 "type_for_const": ov.Type.bf16,
                 "ref_type": np.float32,
             },
-            True,
+            False,
         ),
-        # base FP32 precision, cast_bf16_to_fp32=False has no effect
+        # base FP32 precision, as_ov_tensor=True
         (
             {
                 "type_for_const": ov.Type.f32,
                 "ref_type": np.float32,
             },
-            False,
+            True,
         ),
-        # base FP16 precision, cast_bf16_to_fp32=False has no effect
+        # base FP16 precision, as_ov_tensor=True
         (
             {
                 "type_for_const": ov.Type.f16,
                 "ref_type": np.float16,
             },
-            False,
+            True,
         ),
-        # with cast_bf16_to_fp32=False BF16 constant is retrieved as FP16
+        # base BF16 precision, as_ov_tensor=True, bf16 is encoded as fp16
         (
             {
                 "type_for_const": ov.Type.bf16,
                 "ref_type": np.float16,
             },
-            False,
+            True,
         ),
     ],
 )
-def test_get_const_value(precisions, cast_bf16_to_fp32):
+def test_get_const_value(precisions, as_ov_tensor):
     const_data = np.ones((1, 2, 3), dtype=np.float32)
     weight_const = opset.constant(const_data, dtype=precisions["type_for_const"])
 
-    const_value = get_const_value(weight_const, cast_bf16_to_fp32=cast_bf16_to_fp32)
-    assert const_value.dtype == precisions["ref_type"]
+    const_value = get_const_value(weight_const, as_ov_tensor=as_ov_tensor)
+    assert (const_value.data if as_ov_tensor else const_value).dtype == precisions["ref_type"]
 
 
 @pytest.mark.parametrize(
