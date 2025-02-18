@@ -78,14 +78,6 @@ line-length = 120
 [tool.md_dead_link_check]
 exclude_files = ["ReleaseNotes.md"]
 
-[tool.isort]
-line_length = 120
-force_single_line = true
-profile = "black"
-single_line_exclusions = "typing"
-skip_glob = "examples/post_training_quantization/torch/ssd300_vgg16/main.py"
-known_third_party = "datasets"
-
 [tool.mypy]
 follow_imports = "silent"
 strict = true
@@ -142,6 +134,7 @@ select = [
     "EM",  # flake8-errmsg
     "INP", # flake8-no-pep420
     "ISC", # flake8-implicit-str-concat
+    "I",  # isort
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
@@ -154,6 +147,7 @@ extend-select = [
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
 "!nncf/**.py" = ["INP"]
+"examples/post_training_quantization/torch/ssd300_vgg16/main.py" = ["I"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = """\
@@ -168,6 +162,11 @@ notice-rgx = """\
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
+
+[tool.ruff.lint.isort]
+force-single-line = true
+known-third-party = ["datasets"]
+single-line-exclusions = ["typing"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
