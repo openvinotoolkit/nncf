@@ -1,0 +1,23 @@
+{
+    "compression": {
+        "backend": "optimum_cli",
+        "params": [
+            {
+                "task": ["text-generation"],
+                "weight_format": ["int4"],
+                "ratio": [0.2],
+                "group_size": [64],
+                "awq": [false],
+                "dataset": ["auto"]
+            }
+        ]
+    },
+    "evaluation": {
+        "backend": "who_what_benchmark",
+        "params": {
+            "model_type": "text",
+            "device": "CPU",
+            "language": "en"
+        }
+    }
+}

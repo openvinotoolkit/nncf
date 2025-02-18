@@ -269,6 +269,7 @@ def get_all_param_combinations(experiment: Dict[str, List[Any]], cls) -> List[Pa
 
 class EvaluateBackendType(Enum):
     LM_EVAL = "lm_eval"
+    WHO_WHAT_BENCHMARK = "who_what_benchmark"
 
 
 def run_lm_eval_cli(model_dir: Path, evaluation_params: Dict[str, Any]):
@@ -307,7 +308,27 @@ def run_lm_eval_cli(model_dir: Path, evaluation_params: Dict[str, Any]):
     return run_command(cmd_line)
 
 
-def evaluate(model_dir: Path, evaluation_config: Dict[str, Any]):
+def run_who_what_benchmark_cli(model_dir: Path, base_model_dir: Path, evaluation_params: Dict[str, Any]):
+    if model_dir.resolve() == base_model_dir.resolve():
+        return
+
+    language = evaluation_params['language']
+    gt_data_filename = f"gt_{language}.csv"
+
+    cmd_line = "wwb"
+    cmd_line += f" --base-model {base_model_dir.joinpath('model')}"
+    cmd_line += f" --target-model {model_dir.joinpath('model')}"
+    cmd_line += f" --gt-data {base_model_dir.joinpath(gt_data_filename)}"
+    cmd_line += f" --model-type {evaluation_params['model_type']}"
+    cmd_line += f" --device {evaluation_params['device']}"
+    cmd_line += f" --language {language}"
+    # cmd_line += " --hf"
+    cmd_line += f" --output {model_dir.as_posix()}"
+
+    return run_command(cmd_line)
+
+
+def evaluate(model_dir: Path, base_model_dir: Path, evaluation_config: Dict[str, Any]):
     """
     """
     backend = EvaluateBackendType(evaluation_config["backend"])
@@ -317,8 +338,9 @@ def evaluate(model_dir: Path, evaluation_config: Dict[str, Any]):
 
     if backend == EvaluateBackendType.LM_EVAL:
         run_lm_eval_cli(model_dir, evaluation_params)
-    else:
-        raise NotImplementedError
+
+    if backend == EvaluateBackendType.WHO_WHAT_BENCHMARK:
+        run_who_what_benchmark_cli(model_dir, base_model_dir, evaluation_params)
 
 
 def compress(model_id: str,
@@ -393,7 +415,7 @@ def main():
             continue
 
         try:
-            evaluate(model_dir, evaluation_config)
+            evaluate(model_dir, BASE_MODEL_DIR, evaluation_config)
         except Exception as e:
             print(e)
 
