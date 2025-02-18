@@ -24,7 +24,6 @@ from optimum.intel import OVModelForCausalLM
 from tabulate import tabulate
 from transformers import AutoTokenizer
 
-
 LM_EVAL_RESULTS_FILENAME = "lm_eval_results.json"
 OPTIMUM_CLI_PARAMS_FILENAME = "optimum_cli_params.json"
 
@@ -174,7 +173,12 @@ def visualize_experiments(model_id: str, params_grid: List[Params]):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model-id", type=str, required=True, help="A model ID of a model hosted on the [Hub](https://huggingface.co/models)")
+    parser.add_argument(
+        "--model-id",
+        type=str,
+        required=True,
+        help="A model ID of a model hosted on the [Hub](https://huggingface.co/models)",
+    )
     parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--root-dir", type=str, required=True)
     parser.add_argument("--show-only", action="store_true")
@@ -282,7 +286,7 @@ def run_lm_eval(model_dir: Path, evaluation_params: Dict[str, Any]):
     :param evaluation_params:
     """
     cmd_line = "lm_eval"
-    cmd_line += f" --model openvino"
+    cmd_line += " --model openvino"
 
     tasks_arg = ",".join(evaluation_params["tasks"])
     cmd_line += f" --tasks {tasks_arg}"
@@ -307,7 +311,7 @@ def run_lm_eval(model_dir: Path, evaluation_params: Dict[str, Any]):
     if limit:
         cmd_line += f" --limit {limit}"
 
-    cmd_line += f" --trust_remote_code"
+    cmd_line += " --trust_remote_code"
 
     return run_command(cmd_line)
 
@@ -316,7 +320,7 @@ def run_who_what_benchmark(model_dir: Path, base_model_dir: Path, evaluation_par
     if model_dir.resolve() == base_model_dir.resolve():
         return
 
-    language = evaluation_params['language']
+    language = evaluation_params["language"]
     gt_data_filename = f"gt_{language}.csv"
 
     cmd_line = "wwb"
@@ -333,8 +337,7 @@ def run_who_what_benchmark(model_dir: Path, base_model_dir: Path, evaluation_par
 
 
 def evaluate(model_dir: Path, base_model_dir: Path, evaluation_config: Dict[str, Any]):
-    """
-    """
+    """ """
     backend = EvaluateBackendType(evaluation_config["backend"])
     evaluation_params = evaluation_config["params"]
 
@@ -347,10 +350,7 @@ def evaluate(model_dir: Path, base_model_dir: Path, evaluation_config: Dict[str,
         run_who_what_benchmark(model_dir, base_model_dir, evaluation_params)
 
 
-def compress(model_id: str,
-             root_model_dir: Path,
-             compression_config: Dict[str, Any],
-             show_only: bool = False) -> None:
+def compress(model_id: str, root_model_dir: Path, compression_config: Dict[str, Any], show_only: bool = False) -> None:
     """
     :param model_id:
     :param root_model_dir:
@@ -450,7 +450,9 @@ class ResultsParser:
             # Parse the `optimum_cli_params.json` file
             path = model_dir.joinpath(OPTIMUM_CLI_PARAMS_FILENAME)
             if path.exists():
-                c[configuration_key]["optimum_params"] = ResultsParser.parse_optimum_params(path, ["weight_format", "ratio", "group_size"]) # TODO
+                c[configuration_key]["optimum_params"] = ResultsParser.parse_optimum_params(
+                    path, ["weight_format", "ratio", "group_size"]
+                )  # TODO
 
         # print(json.dumps(c, indent=4))
 
