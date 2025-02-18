@@ -325,7 +325,6 @@ def get_fake_quantizer(
     :param model: The NNCFNetwork instance.
     :return: Fake Quantizer module if exists, overwise None.
     """
-
     address_map = model.nncf.get_node_to_op_address_mapping()
     op_addr = address_map[node.node_name]
 

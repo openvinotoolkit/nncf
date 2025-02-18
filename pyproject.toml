@@ -36,9 +36,9 @@ dependencies = [
     "jsonschema>=3.2.0",
     "jstyleson>=0.0.2",
     "natsort>=7.1.0",
-    "networkx>=2.6, <=3.3",
+    "networkx>=2.6, <3.5.0",
     "ninja>=1.10.0.post2, <1.12",
-    "numpy>=1.24.0, <2.2.0",
+    "numpy>=1.24.0, <2.3.0",
     "openvino-telemetry>=2023.2.0",
     "packaging>=20.0",
     "pandas>=1.1.5,<2.3",
@@ -124,17 +124,37 @@ ignore = [
     "UP035", # deprecated-import
     "UP038", # non-pep604-isinstance
     "UP045", # non-pep604-annotation-optional
+    "D100", # undocumented-public-module
+    "D101", # undocumented-public-class
+    "D102", # undocumented-public-method
+    "D103", # undocumented-public-function
+    "D104", # undocumented-public-package
+    "D105", # undocumented-magic-method
+    "D106", # undocumented-public-nested-class
+    "D107", # undocumented-public-init
+    "D200", # unnecessary-multiline-docstring
+    "D203", # incorrect-blank-line-before-class
+    "D205", # missing-blank-line-after-summary
+    "D212", # multi-line-summary-first-line
+    "D400", # missing-trailing-period
+    "D401", # non-imperative-mood
+    "D402", # signature-in-docstring
+    "D404", # docstring-starts-with-this
+    "D413", # missing-blank-line-after-last-section
+    "D415", # missing-terminal-punctuation
+    "D417", # undocumented-param
 ]
 select = [
-    "E", # pycodestyle rules
-    "F", # pyflakes rules
     "CPY001", # copyright check
-    "NPY", # numpy rules
-    "UP", # pyupgrade
+    "D", # pydocstyle
+    "E", # pycodestyle rules
     "EM",  # flake8-errmsg
+    "F", # pyflakes rules
+    "I",  # isort
     "INP", # flake8-no-pep420
     "ISC", # flake8-implicit-str-concat
-    "I",  # isort
+    "NPY", # numpy rules
+    "UP", # pyupgrade
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
@@ -146,7 +166,7 @@ extend-select = [
 "tests/**/*.py" = ["F403"]
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
-"!nncf/**.py" = ["INP"]
+"!nncf/**.py" = ["INP", "D"]
 "examples/post_training_quantization/torch/ssd300_vgg16/main.py" = ["I"]
 
 [tool.ruff.lint.flake8-copyright]

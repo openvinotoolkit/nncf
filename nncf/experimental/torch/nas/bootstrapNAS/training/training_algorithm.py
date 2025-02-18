@@ -126,7 +126,6 @@ class EpochBasedTrainingAlgorithm:
         :param tensorboard_writer: The tensorboard object to be used for logging.
         :return: the fine-tuned model and elasticity controller
         """
-
         if train_iters is None:
             train_iters = len(train_loader)
         self._training_ctrl.set_training_lr_scheduler_args(optimizer, train_iters)  # len(train_loader))

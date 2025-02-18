@@ -420,7 +420,6 @@ def get_model_device(model: torch.nn.Module) -> torch.device:
     :return: The device where the first model parameter reside.
         Default cpu if the model has no parameters.
     """
-
     try:
         device = next(model.parameters()).device
     except StopIteration:
@@ -442,7 +441,6 @@ def is_multidevice(model: torch.nn.Module) -> bool:
     :return: True if the parameters reside on multiple devices, False otherwise.
         Default False if the models has no parameters
     """
-
     device_generator = get_all_model_devices_generator(model)
     try:
         curr_device = next(device_generator)
@@ -463,7 +461,6 @@ def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
     :return: The datatype of the first model parameter.
         Default to torch.float32 if the model has no parameters.
     """
-
     try:
         dtype = next(model.parameters()).dtype
     except StopIteration:

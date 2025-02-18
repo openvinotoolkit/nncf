@@ -26,6 +26,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.experimental.torch2.commands import PT2InsertionCommand
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
@@ -195,7 +196,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         :return: Tuple[int, ...]: The shape of the scale to be applied to the input.
         """
-
         is_weights = target_point.is_weight_target_point()
         input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
 
@@ -271,6 +271,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = PTMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_point.target_type
         )
+        if is_experimental_torch_tracing_enabled():
+            return PT2InsertionCommand(target_points=[target_point], hook_module=quantizer)
+
         return create_quantizer_insertion_command(target_point, quantizer)
 
     @staticmethod
@@ -287,6 +290,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = PTMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_points[0].target_type
         )
+        if is_experimental_torch_tracing_enabled():
+            return [PT2InsertionCommand(target_points=target_points, hook_module=quantizer)]
         return [create_shared_quantizer_insertion_command(target_points, quantizer)]
 
     @staticmethod
@@ -312,7 +317,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 # Batchnorm
                 om.PTBatchNormMetatype,
                 om.PTModuleBatchNormMetatype,
-                # Сomparison operations
+                # Comparison operations
                 om.PTGreaterEqualMetatype,
                 om.PTGreaterMetatype,
                 om.PTLessEqualMetatype,
