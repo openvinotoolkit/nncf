@@ -84,7 +84,6 @@ class HookStorage(nn.Module):
         :param hooks_dict: A dictionary containing existing hooks.
         :return: The next available hook ID as a string. Starts from '0' if no hooks exist.
         """
-
         if not hooks_dict:
             return "0"
         return str(max([int(k) for k in hooks_dict]) + 1)
@@ -102,7 +101,6 @@ class HookStorage(nn.Module):
         :param hook: The hook module to be stored.
         :return: A handle that can be used to remove the hook later.
         """
-
         hook_key = cls._generate_key(op_name, port_id)
         if hook_key not in storage_dict:
             storage_dict[hook_key] = nn.ModuleDict()

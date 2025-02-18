@@ -304,7 +304,7 @@ def get_potential_candidate_for_block(search_graph: SearchGraph) -> Tuple[ShapeV
 
 def itemgetter_force_tuple(*indexes):
     """
-    itemgetter wrapper that always returns a tuple. The original function may return both: iterable and a single
+    Itemgetter wrapper that always returns a tuple. The original function may return both: iterable and a single
     non-iterable element, which is not convenient in the general case.
     """
     getter = itemgetter(*indexes)

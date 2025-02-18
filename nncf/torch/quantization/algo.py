@@ -1140,7 +1140,6 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         insertion commands registering this module for quantization at spots described by
         insertion_points.
         """
-
         target_model_graph = target_model.nncf.get_original_graph()
         if not insertion_points:
             msg = "No insertion points to put quantizers into!"
