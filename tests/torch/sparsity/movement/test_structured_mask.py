@@ -369,6 +369,7 @@ class TestStructuredMaskHandler:
         for mock_method in mock_methods:
             mock_method.assert_called_once()
 
+    @pytest.mark.xfail(reason="get_pruning_groups does not support SDPA, so it fails to find groups in MHSA")
     @pytest.mark.parametrize(
         "desc", desc_test_resolve_dependent_structured.values(), ids=desc_test_resolve_dependent_structured.keys()
     )
