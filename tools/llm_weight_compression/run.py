@@ -20,6 +20,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import pandas as pd
+
 from optimum.intel import OVModelForCausalLM
 from tabulate import tabulate
 from transformers import AutoTokenizer
@@ -450,11 +452,84 @@ class ResultsParser:
             # Parse the `optimum_cli_params.json` file
             path = model_dir.joinpath(OPTIMUM_CLI_PARAMS_FILENAME)
             if path.exists():
+                # TODO(andrey-churkin): Add more fields
                 c[configuration_key]["optimum_params"] = ResultsParser.parse_optimum_params(
                     path, ["weight_format", "ratio", "group_size"]
-                )  # TODO
+                )
 
-        # print(json.dumps(c, indent=4))
+        return c
+
+
+def save_results(results: Dict[str, Dict[str, Any]], root_path: Path):
+# {
+#     "int4_r0.2_gs64_auto": {
+#         "model": "opt-125m",
+#         "configuration": "int4_r0.2_gs64_auto",
+#         "lm_eval": [{...}, ...],
+#         "optimum_params": {
+#             "weight_format": "int4",
+#             "ratio": 0.2,
+#             "group_size": 64
+#         }
+#     },
+#     "fp32": {
+#         "model": "opt-125m",
+#         "configuration": "fp32",
+#         "lm_eval": [{...}, ...],
+#     },
+#      ...
+# }
+    rows: List[Dict[str, Any]] = []
+    for val in results.values():
+        row = {
+            "model": val["model"],
+            "configuration": val["configuration"],
+        }
+        # Add optimum params
+        row.update(val.get("optimum_params", {}))
+
+        # Add lm_eval results
+        lm_eval = val.get("lm_eval", [])
+        for dct in lm_eval:
+            new_row = row.copy()
+            new_row.update(dct)
+            rows.append(new_row)
+
+    pd.set_option("display.precision", 2)
+    df = pd.DataFrame(rows)
+    df.to_csv(root_path / "raw_results.csv")
+
+    dump_to_excel(df, root_path / "results.xlsx")
+
+
+def dump_to_excel(df, output_path: Path):
+    # to have all columns, not only pivot's values, but also index one.
+    print(df.columns)
+
+    writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
+    df.to_excel(writer, sheet_name="all", index=False)
+    # (max_row, max_col) = df.shape
+    workbook = writer.book
+    worksheet = writer.sheets["all"]
+
+    format1 = workbook.add_format({"num_format": "#,##0.00"})
+    worksheet.set_column("A:X", 18, format1)
+    col_names = [{"header": col_name} for col_name in df.columns]
+    worksheet.add_table(
+        0,
+        0,
+        df.shape[0],
+        df.shape[1] - 1,
+        {
+            "columns": col_names,
+            # 'style' = option Format as table value and is case sensitive
+            # (look at the exact name into Excel)
+            "style": None,
+        },
+    )
+    worksheet.autofit()
+    workbook.close()
+    print("Path to parsed results: ", output_path.resolve())
 
 
 def main():
@@ -496,7 +571,10 @@ def main():
         dump_all_packages(ROOT_MODEL_DIR / "versions.txt")
 
     # --------- Parse results ---------
-    ResultsParser.parse(ROOT_MODEL_DIR)
+    results = ResultsParser.parse(ROOT_MODEL_DIR)
+
+    # --------- Save results ---------
+    save_results(results, ROOT_MODEL_DIR)
 
 
 if __name__ == "__main__":

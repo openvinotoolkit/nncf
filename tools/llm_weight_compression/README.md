@@ -12,6 +12,7 @@ pip install nncf==2.15.0
 pip install "git+https://github.com/huggingface/optimum.git@v1.24.0"
 pip install "git+https://github.com/huggingface/optimum-intel.git@v1.22.0"
 pip install "git+https://github.com/EleutherAI/lm-evaluation-harness@v0.4.2"
+pip install xlsxwriter
 
 # #whowhatbench
 git clone --depth 1 --branch 2025.0.0.0 https://github.com/openvinotoolkit/openvino.genai.git
@@ -24,7 +25,7 @@ pip install .
 # For test
 python run.py \
 --model-id facebook/opt-125m \
---config config_optimum_cli.json \
+--config config_optimum_lm_eval.json \
 --root-dir experiment_dir \
 --dump-packages
 ```
