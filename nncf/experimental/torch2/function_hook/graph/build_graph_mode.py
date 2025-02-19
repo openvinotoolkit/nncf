@@ -212,14 +212,15 @@ class GraphBuilderMode(FunctionHookMode):
         Overload execute_post_hooks to correct registered node for operation.
         Process __get__ function, to detect permute and transpose operation
         and remove node if operation return not tensor.
+
+        :param output: The output of the function.
+        :param op_meta: Metadata for the operation.
+        :return: The modified output after post-hooks.
         """
-        if op_meta.func.__name__ == "__get__":
-            if isinstance(outputs, torch.Tensor):
-                self.process_tensor_attributes(outputs, op_meta)
-            else:
-                # Remove the node corresponding to this operation from the graph, as non-tensor
-                # outputs (like `tensor.shape` or similar) are not relevant for further algorithmic use.
-                self.graph.remove_node(op_meta.extra_info["node_id"])
+        if op_meta.func.__name__ == "__get__" and not isinstance(outputs, torch.Tensor):
+            # Remove the node corresponding to this operation from the graph, as non-tensor
+            # outputs (like `tensor.shape` or similar) are not relevant for further algorithmic use.
+            self.graph.remove_node(op_meta.extra_info["node_id"])
         outputs = super().execute_post_hooks(outputs, op_meta)
         return outputs
 
@@ -368,8 +369,7 @@ def build_graph(model: nn.Module, *args: Any, **kwargs: Any) -> nx.MultiDiGraph:
     :return: A nx.MultiDiGraph where nodes represent operations of model.
     """
     with training_mode_switcher(model, is_training=False):
-        with torch.enable_grad():  # type: ignore
-            # Gradient use to get information about __get__ functions to detect tensor.(T, mT) attributes
+        with torch.no_grad():
             with GraphBuilderMode(model=model, hook_storage=get_hook_storage(model)) as ctx:
                 args, kwargs = ctx.process_model_inputs(args, kwargs)
                 wrapped_forward = cast(ForwardWithHooks, model.forward)

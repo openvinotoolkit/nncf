@@ -43,7 +43,6 @@ def load_state(
     :param keys_to_ignore: A list of parameter names that should be skipped from matching process.
     :return: The number of state_dict_to_load entries successfully matched and loaded into model.
     """
-
     model_state_dict = model.state_dict()
 
     from nncf.torch.utils import maybe_convert_legacy_names_in_model_state
@@ -246,7 +245,8 @@ class NormalizedKeys:
 
     @staticmethod
     def _split_unified_parameters(new_key: str) -> List[str]:
-        """covers unified activation quantizers case, e.g.
+        """
+        Covers unified activation quantizers case, e.g.
             external_quantizers.RELU_0;RELU_1;RELU_2.op
         Result of this function is full names of individual parameters:
             external_quantizers.RELU_2.op

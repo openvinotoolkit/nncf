@@ -93,7 +93,6 @@ def get_min_max_statistic_collector(
     :param num_samples: Maximum number of samples to collect.
     :return: Min max statistic collector.
     """
-
     tensor_collector = TensorCollector(_get_wrapped_min_max_tensor_statistic(target_shape=scale_shape))
 
     aggregator_kwargs = {

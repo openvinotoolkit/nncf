@@ -222,7 +222,6 @@ def get_compress_weight_model(
     :return: A model callable that compresses weights using the given configuration. Or a model as nodes, if
         `return_nodes` is True.
     """
-
     weight_shape, scale_shape, zero_point_shape = _prepare_compression_model_inputs(
         ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes
     )
@@ -264,7 +263,6 @@ def get_compress_decompress_weight_model(
     :return: A model callable that returns a decompressed weight, and optionally compressed weight, scale,
         (and zero point) if `return_compressed_weight` is True.
     """
-
     weight_shape, scale_shape, zero_point_shape = _prepare_compression_model_inputs(
         ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes
     )

@@ -201,7 +201,6 @@ def extract_model(model: NNCFNetwork, input_nodes: List[str], output_nodes: List
     :param output_nodes: List containing names of the output nodes for the submodule.
     :return: An nn.Module containing the extracted submodel, or None if extraction is not supported.
     """
-
     if len(input_nodes) != 1 or len(output_nodes) != 1:
         msg = "input_nodes and output_nodes should contain only one node."
         raise nncf.InternalError(msg)

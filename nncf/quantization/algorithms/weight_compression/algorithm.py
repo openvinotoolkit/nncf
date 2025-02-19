@@ -812,7 +812,6 @@ class WeightCompression(Algorithm):
         :param statistic_points: Statistic points object.
         :return: Collected statistics.
         """
-
         # For each node we store statistics in a WCTensorStatistics data-class. It contains the following fields:
         #   mean_values=[mean_value_1, ..., mean_value_n]
         #   shapes=[shape_1, ..., shape_n]

@@ -40,7 +40,6 @@ class Patcher:
         :param wrapper: Wrapper function to override with.
         :param force: Whether to override previously applied patches or not.
         """
-
         obj_cls, fn_name = self.import_obj(obj_cls)
 
         # wrap only if function does exist

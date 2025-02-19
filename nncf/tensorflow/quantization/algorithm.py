@@ -210,7 +210,6 @@ class TFQuantizationSetup:
 
         :return: state of the object
         """
-
         quantization_points_state = [qp.get_state() for qp in self._quantization_points]
         return {
             self._state_names.QUANTIZATION_POINTS: quantization_points_state,

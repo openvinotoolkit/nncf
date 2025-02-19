@@ -34,7 +34,7 @@ jobs:
           rm artifact.tar
         shell: 'bash'
       - name: Checkout latest doc_pages branch tip
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: doc_pages
           path: previous_doc_state
@@ -63,7 +63,7 @@ jobs:
           echo '{"pr_number": "${{ github.event.pull_request.number }}", "action": "none"}' > api_status.json
 
       - name: Upload artifact
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b #v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 #v4.6.0
         with:
           name: api_status
           path: api_status.json

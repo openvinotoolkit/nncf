@@ -125,7 +125,6 @@ class AggregatorBase:
         :param window_size: Number of samples from the end of the list of collected samples to aggregate.
         Aggregates all available collected statistics in case parameter is None.
         """
-
         self._aggregation_axes = (0,) if aggregation_axes is None else aggregation_axes
         self._keepdims = True
         self._num_samples = num_samples

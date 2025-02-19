@@ -72,7 +72,6 @@ def create_ptq_pipeline(
         fine-tuning the quantization algorithm
     :return: A post-training quantization pipeline.
     """
-
     if advanced_parameters is None:
         advanced_parameters = AdvancedQuantizationParameters()
 
