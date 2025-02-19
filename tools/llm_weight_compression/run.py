@@ -28,6 +28,7 @@ from transformers import AutoTokenizer
 
 LM_EVAL_RESULTS_FILENAME = "lm_eval_results.json"
 OPTIMUM_CLI_PARAMS_FILENAME = "optimum_cli_params.json"
+WWB_METRICS_FILENAME = "metrics.csv"
 
 
 class CompressBackendType(Enum):
@@ -394,7 +395,7 @@ def compress(model_id: str, root_model_dir: Path, compression_config: Dict[str, 
 class ResultsParser:
 
     @staticmethod
-    def parse_lm_eval(path: Path):
+    def parse_lm_eval_metrics(path: Path):
 
         METRICS = [
             "acc",
@@ -426,6 +427,14 @@ class ResultsParser:
         return results
 
     @staticmethod
+    def parse_who_what_benchmark_metrics(path: Path):
+        # TODO(andrey-churkin): Clarify possible field names
+        df = pd.read_csv(path)
+        return {
+            "similarity": float(df['similarity'][0]),
+        }
+
+    @staticmethod
     def parse_optimum_params(path: Path, fields: List[str]):
         data = load_json(path)
         return {field_name: data[field_name] for field_name in fields}
@@ -447,7 +456,13 @@ class ResultsParser:
             # Parse the `lm_eval_results.json` file
             path = model_dir.joinpath(LM_EVAL_RESULTS_FILENAME)
             if path.exists():
-                c[configuration_key]["lm_eval"] = ResultsParser.parse_lm_eval(path)
+                c[configuration_key]["lm_eval"] = ResultsParser.parse_lm_eval_metrics(path)
+
+            # Parse the WWB metrics file
+            path = model_dir.joinpath(WWB_METRICS_FILENAME)
+            if path.exists():
+                # TODO(andrey-churkin): Find the format specification for the `metrics.csv` file
+                c[configuration_key]["who_what_benchmark"] = ResultsParser.parse_who_what_benchmark_metrics(path)
 
             # Parse the `optimum_cli_params.json` file
             path = model_dir.joinpath(OPTIMUM_CLI_PARAMS_FILENAME)
@@ -485,15 +500,24 @@ def save_results(results: Dict[str, Dict[str, Any]], root_path: Path):
             "model": val["model"],
             "configuration": val["configuration"],
         }
+
         # Add optimum params
         row.update(val.get("optimum_params", {}))
+        # Add who_what_benchmark results
+        row.update(val.get("who_what_benchmark", {}))
 
         # Add lm_eval results
         lm_eval = val.get("lm_eval", [])
-        for dct in lm_eval:
-            new_row = row.copy()
-            new_row.update(dct)
-            rows.append(new_row)
+        if lm_eval:
+            new_rows = []
+            for dct in lm_eval:
+                new_row = row.copy()
+                new_row.update(dct)
+                new_rows.append(new_row)
+        else:
+            new_rows = [row]
+
+        rows.extend(new_rows)
 
     pd.set_option("display.precision", 2)
     df = pd.DataFrame(rows)
