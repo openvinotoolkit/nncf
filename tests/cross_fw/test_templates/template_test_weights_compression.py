@@ -11,7 +11,7 @@
 import math
 from abc import ABC
 from abc import abstractmethod
-from typing import List, TypeVar
+from typing import Dict, List, TypeVar
 
 import numpy as np
 import pytest
@@ -21,6 +21,7 @@ from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.data.dataset import Dataset
 from nncf.quantization import compress_weights
+from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
@@ -46,6 +47,17 @@ INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
 def get_relative_error(weight_1: Tensor, weight_2: Tensor, axis: int = 0) -> Tensor:
     diff = (weight_1 - weight_2) ** 2
     return fns.mean(diff, axis=axis) / fns.mean(weight_1**2, axis=axis)
+
+
+# Spy for AWQ
+spy_instance = None
+
+
+class SpyAWQ(AWQ):
+    def __init__(self, *agrs, **kwargs):
+        global spy_instance
+        super().__init__(*agrs, **kwargs)
+        spy_instance = self
 
 
 class TemplateWeightCompression(ABC):
@@ -279,3 +291,28 @@ class TemplateWeightCompression(ABC):
         int4_ref_num_compressed = 4  # first MatMul is always int8; one - is ignored; total 6 matmuls
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
         assert int4_num_nodes == int4_ref_num_compressed
+
+    @staticmethod
+    @abstractmethod
+    def get_reference_for_test_awq_scale_reference() -> Dict[str, Tensor]:
+        "Returns reference for test_awq_scale_reference."
+
+    def test_awq_scale_reference(self, monkeypatch):
+        monkeypatch.setattr("nncf.quantization.algorithms.weight_compression.algorithm.AWQ", SpyAWQ)
+        model = self.get_awq_model()
+
+        input = 0.01 * np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8) + 0.02
+        input = self.to_tensor(input)
+        dataset = Dataset([input])
+
+        _ = compress_weights(
+            model,
+            mode=CompressWeightsMode.INT4_SYM,
+            ratio=1.0,
+            group_size=-1,
+            dataset=dataset,
+            awq=True,
+        )
+        assert spy_instance is not None
+        for node_name, scales in spy_instance._scale_per_target_node.items():
+            assert fns.allclose(scales, self.get_reference_for_test_awq_scale_reference()[node_name])

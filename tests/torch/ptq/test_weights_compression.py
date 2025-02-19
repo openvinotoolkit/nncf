@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from typing import Dict, List
 
 import pytest
 import torch
@@ -133,12 +133,12 @@ class AWQLinearModel(nn.Module):
         super().__init__()
         self.is_int8 = is_int8
 
-        self.linear1 = self.get_linear_layer(torch.full((8, 8), 2.0), is_int8)
-        self.linear2 = self.get_linear_layer(torch.full((8, 8), 3.0), is_int8)
-        self.linear3 = self.get_linear_layer(torch.full((8, 8), 4.0), is_int8)
-        self.linear4 = self.get_linear_layer(torch.full((8, 8), 2.0), is_int8)
-        self.linear5 = self.get_linear_layer(torch.full((8, 8), 3.0), is_int8)
-        self.linear6 = self.get_linear_layer(torch.full((8, 8), 4.0), is_int8)
+        self.linear1 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
+        self.linear2 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
+        self.linear3 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
+        self.linear4 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
+        self.linear5 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
+        self.linear6 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
 
     def get_linear_layer(self, weights_data, is_int8):
         if not is_int8:
@@ -155,8 +155,6 @@ class AWQLinearModel(nn.Module):
         return linear_layer
 
     def forward(self, x):
-        x = x.view(1, -1, 8)  # Reshape input to match the expected dimensions
-
         node1 = self.linear1(x)
         node2 = self.linear2(x)
         node_multiply = node1 * node2
@@ -533,3 +531,11 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
             if "awq" in name and isinstance(module, SQMultiply):
                 awq_num += 1
         return awq_num
+
+    @staticmethod
+    def get_reference_for_test_awq_scale_reference() -> Dict[str, Tensor]:
+        return {
+            "AWQLinearModel/Linear[linear3]/linear_0": Tensor(
+                torch.tensor([[1.226455, 1.205499, 1.141340, 1.097436, 1.064355, 1.037971, 1.016118, 0.997526]])
+            )
+        }

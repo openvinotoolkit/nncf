@@ -11,7 +11,7 @@
 
 import inspect
 import os
-from typing import Callable, List
+from typing import Callable, Dict, List
 
 import numpy as np
 import openvino.runtime as ov
@@ -1552,3 +1552,14 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
             if op.get_type_name() == "Constant" and "awq" in op.get_friendly_name():
                 awq_num += 1
         return awq_num
+
+    @staticmethod
+    def get_reference_for_test_awq_scale_reference() -> Dict[str, Tensor]:
+        return {
+            "MatMul_3": Tensor(
+                np.array(
+                    [[1.2264546, 1.2054994, 1.1413403, 1.0974358, 1.0643553, 1.0379708, 1.0161183, 0.9975262]],
+                    dtype=np.float32,
+                )
+            )
+        }
