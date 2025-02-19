@@ -1,7 +1,7 @@
-strict digraph  {
-x [id=0, metatype=PTInputNoopMetatype, type=nncf_model_input];
-"/add/0" [id=1, metatype=PTAddMetatype, type=add];
-output [id=2, metatype=PTOutputNoopMetatype, type=nncf_model_output];
-x -> "/add/0"  [dtype=float, in_port_id=0, out_port_id=0, parallel_input_port_ids="[1]", shape="(1, 1)"];
-"/add/0" -> output  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 1)"];
+strict digraph {
+x [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
+"/add/0" [id=1, type=add, metatype=PTAddMetatype];
+output [id=2, type="nncf_model_output", metatype=PTOutputNoopMetatype];
+x -> "/add/0" [dtype=float, shape="(1, 1)", out_port_id=0, in_port_id=0, parallel_input_port_ids="[1]"];
+"/add/0" -> output [dtype=float, shape="(1, 1)", out_port_id=0, in_port_id=0];
 }
