@@ -50,7 +50,7 @@ torchvision/resnet18_backend_CUDA_FX_TORCH:
   metric_value: 0.6946
   exception_xfail_reason:
     type: "OpConversionFailure"
-    error_message: "Check 'is_conversion_successful' failed at src/frontends/pytorch/src/frontend.cpp:171:\nFrontEnd API failed with OpConversionFailure:\nModel wasn't fully converted.\nSummary:\n-- No conversion rule found for operations: aten.adaptive_avg_pool2d.default, aten.conv2d.default, aten.linear.default, aten.max_pool2d.default\n"
+    error_message: "Check 'is_conversion_successful' failed at src/frontends/pytorch/src/frontend.cpp:171:\nFrontEnd API failed with OpConversionFailure:\nModel wasn't fully converted. Failed operations detailed log:\n-- torch::None with a message:\nNone constant cannot be converted to OpenVINO opset and should be removed by consuming operation.\nSummary:\n-- No conversion rule found for operations: aten.adaptive_avg_pool2d.default, aten.conv2d.default, aten.linear.default, aten.max_pool2d.default\n-- Conversion is failed for: torch::None\n"
     message: "Issue-162009"
 torchvision/mobilenet_v3_small_BC_backend_FP32:
   metric_value: 0.6766
@@ -62,13 +62,13 @@ torchvision/mobilenet_v3_small_BC_backend_FX_TORCH:
   metric_value: 0.6679
   exception_xfail_reason:
     type: "OpConversionFailure"
-    error_message: "Check 'is_conversion_successful' failed at src/frontends/pytorch/src/frontend.cpp:171:\nFrontEnd API failed with OpConversionFailure:\nModel wasn't fully converted.\nSummary:\n-- No conversion rule found for operations: aten.adaptive_avg_pool2d.default, aten.conv2d.default, aten.linear.default, aten.max_pool2d.default\n"
+    error_message: "Check 'is_conversion_successful' failed at src/frontends/pytorch/src/frontend.cpp:171:\nFrontEnd API failed with OpConversionFailure:\nModel wasn't fully converted. Failed operations detailed log:\n-- torch::None with a message:\nNone constant cannot be converted to OpenVINO opset and should be removed by consuming operation.\nSummary:\n-- No conversion rule found for operations: aten.adaptive_avg_pool2d.default, aten.conv2d.default, aten.linear.default, aten.max_pool2d.default\n-- Conversion is failed for: torch::None\n"
     message: "Issue-162009"
 torchvision/mobilenet_v3_small_BC_backend_CUDA_FX_TORCH:
   metric_value: 0.6664
   exception_xfail_reason:
     type: "OpConversionFailure"
-    error_message: "Check 'is_conversion_successful' failed at src/frontends/pytorch/src/frontend.cpp:171:\nFrontEnd API failed with OpConversionFailure:\nModel wasn't fully converted.\nSummary:\n-- No conversion rule found for operations: aten.adaptive_avg_pool2d.default, aten.conv2d.default, aten.linear.default, aten.max_pool2d.default\n"
+    error_message: "Check 'is_conversion_successful' failed at src/frontends/pytorch/src/frontend.cpp:171:\nFrontEnd API failed with OpConversionFailure:\nModel wasn't fully converted. Failed operations detailed log:\n-- torch::None with a message:\nNone constant cannot be converted to OpenVINO opset and should be removed by consuming operation.\nSummary:\n-- No conversion rule found for operations: aten.adaptive_avg_pool2d.default, aten.conv2d.default, aten.linear.default, aten.max_pool2d.default\n-- Conversion is failed for: torch::None\n"
     message: "Issue-162009"
 torchvision/vit_b_16_backend_FP32:
   metric_value: 0.8107
@@ -78,13 +78,13 @@ torchvision/vit_b_16_backend_FX_TORCH:
   metric_value: 0.80922
   exception_xfail_reason:
     type: "OpConversionFailure"
-    error_message: "Check 'is_conversion_successful' failed at src/frontends/pytorch/src/frontend.cpp:171:\nFrontEnd API failed with OpConversionFailure:\nModel wasn't fully converted.\nSummary:\n-- No conversion rule found for operations: aten.adaptive_avg_pool2d.default, aten.conv2d.default, aten.linear.default, aten.max_pool2d.default\n"
+    error_message: "Check 'is_conversion_successful' failed at src/frontends/pytorch/src/frontend.cpp:171:\nFrontEnd API failed with OpConversionFailure:\nModel wasn't fully converted.\nSummary:\n-- No conversion rule found for operations: aten.conv2d.default, aten.layer_norm.default, aten.linear.default, aten.scaled_dot_product_attention.default\n"
     message: "Issue-162009"
 torchvision/vit_b_16_backend_CUDA_FX_TORCH:
   metric_value: 0.80922
   exception_xfail_reason:
     type: "OpConversionFailure"
-    error_message: "Check 'is_conversion_successful' failed at src/frontends/pytorch/src/frontend.cpp:171:\nFrontEnd API failed with OpConversionFailure:\nModel wasn't fully converted.\nSummary:\n-- No conversion rule found for operations: aten.adaptive_avg_pool2d.default, aten.conv2d.default, aten.linear.default, aten.max_pool2d.default\n"
+    error_message: "Check 'is_conversion_successful' failed at src/frontends/pytorch/src/frontend.cpp:171:\nFrontEnd API failed with OpConversionFailure:\nModel wasn't fully converted.\nSummary:\n-- No conversion rule found for operations: aten.conv2d.default, aten.layer_norm.default, aten.linear.default, aten.scaled_dot_product_attention.default\n"
     message: "Issue-162009"
 torchvision/swin_v2_s_backend_FP32:
   metric_value: 0.83712
@@ -94,13 +94,13 @@ torchvision/swin_v2_s_backend_FX_TORCH:
   metric_value: 0.8360
   exception_xfail_reason:
     type: "OpConversionFailure"
-    error_message: "Check 'is_conversion_successful' failed at src/frontends/pytorch/src/frontend.cpp:171:\nFrontEnd API failed with OpConversionFailure:\nModel wasn't fully converted.\nSummary:\n-- No conversion rule found for operations: aten.adaptive_avg_pool2d.default, aten.conv2d.default, aten.linear.default, aten.max_pool2d.default\n"
+    error_message: "Check 'is_conversion_successful' failed at src/frontends/pytorch/src/frontend.cpp:171:\nFrontEnd API failed with OpConversionFailure:\nModel wasn't fully converted.\nSummary:\n-- No conversion rule found for operations: aten.adaptive_avg_pool2d.default, aten.conv2d.default, aten.layer_norm.default, aten.linear.default, aten.matmul.default, aten.pad.default, aten.softmax.int, aten.where.ScalarSelf\n"
     message: "Issue-162009"
 torchvision/swin_v2_s_backend_CUDA_FX_TORCH:
   metric_value: 0.8360
   exception_xfail_reason:
     type: "OpConversionFailure"
-    error_message: "Check 'is_conversion_successful' failed at src/frontends/pytorch/src/frontend.cpp:171:\nFrontEnd API failed with OpConversionFailure:\nModel wasn't fully converted.\nSummary:\n-- No conversion rule found for operations: aten.adaptive_avg_pool2d.default, aten.conv2d.default, aten.linear.default, aten.max_pool2d.default\n"
+    error_message: "Check 'is_conversion_successful' failed at src/frontends/pytorch/src/frontend.cpp:171:\nFrontEnd API failed with OpConversionFailure:\nModel wasn't fully converted.\nSummary:\n-- No conversion rule found for operations: aten.adaptive_avg_pool2d.default, aten.conv2d.default, aten.layer_norm.default, aten.linear.default, aten.matmul.default, aten.pad.default, aten.softmax.int, aten.where.ScalarSelf\n"
     message: "Issue-162009"
 timm/crossvit_9_240_backend_CUDA_TORCH:
   metric_value: 0.7275
