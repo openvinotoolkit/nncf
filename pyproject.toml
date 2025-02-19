@@ -167,7 +167,6 @@ extend-select = [
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
 "!nncf/**.py" = ["INP", "D"]
-"examples/post_training_quantization/torch/ssd300_vgg16/main.py" = ["I"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = """\
