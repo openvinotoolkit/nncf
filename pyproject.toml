@@ -78,14 +78,6 @@ line-length = 120
 [tool.md_dead_link_check]
 exclude_files = ["ReleaseNotes.md"]
 
-[tool.isort]
-line_length = 120
-force_single_line = true
-profile = "black"
-single_line_exclusions = "typing"
-skip_glob = "examples/post_training_quantization/torch/ssd300_vgg16/main.py"
-known_third_party = "datasets"
-
 [tool.mypy]
 follow_imports = "silent"
 strict = true
@@ -153,15 +145,16 @@ ignore = [
     "D417", # undocumented-param
 ]
 select = [
-    "E", # pycodestyle rules
-    "F", # pyflakes rules
     "CPY001", # copyright check
-    "NPY", # numpy rules
-    "UP", # pyupgrade
+    "D", # pydocstyle
+    "E", # pycodestyle rules
     "EM",  # flake8-errmsg
+    "F", # pyflakes rules
+    "I",  # isort
     "INP", # flake8-no-pep420
     "ISC", # flake8-implicit-str-concat
-    "D", # pydocstyle
+    "NPY", # numpy rules
+    "UP", # pyupgrade
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
@@ -188,6 +181,11 @@ notice-rgx = """\
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
+
+[tool.ruff.lint.isort]
+force-single-line = true
+known-third-party = ["datasets"]
+single-line-exclusions = ["typing"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
