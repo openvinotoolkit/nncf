@@ -428,11 +428,14 @@ class ResultsParser:
 
     @staticmethod
     def parse_who_what_benchmark_metrics(path: Path):
-        # TODO(andrey-churkin): Clarify possible field names
         df = pd.read_csv(path)
-        return {
-            "similarity": float(df['similarity'][0]),
-        }
+
+        val = {}
+        for name in df:
+            if name in ["similarity", "FDT", "FDT norm", "SDT", "SDT norm"]:
+                val[name] = float(df[name][0])
+
+        return val
 
     @staticmethod
     def parse_optimum_params(path: Path, fields: List[str]):
