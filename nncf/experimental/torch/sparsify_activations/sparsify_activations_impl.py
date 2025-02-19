@@ -225,7 +225,7 @@ def sparsify_activations(
         representing the layers to match in the model's NNCF graph; the corresponding value
         is a float number in the range [0, 1] representing the target sparsity level.
 
-        Example:
+    Example:
         ..  code-block:: python
             {
                 # Target sparsity is 60% for node "Dummy/Linear[layer]/linear_0" in the model graph
@@ -239,7 +239,6 @@ def sparsify_activations(
         filtered out internally, so there is no need to mention them in `ignored_scope`.
     :return: The sparsified model.
     """
-
     for scope, target_sparsity in target_sparsity_by_scope.items():
         if target_sparsity < 0.0 or target_sparsity > 1.0:
             msg = f'Target sparsity for scope "{scope}" should be in range [0, 1].'

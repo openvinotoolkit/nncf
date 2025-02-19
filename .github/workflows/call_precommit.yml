@@ -22,7 +22,7 @@ on:
 jobs:
   common:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
@@ -48,7 +48,7 @@ jobs:
 
   onnx:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04-8-cores
+    runs-on: ubuntu-latest-8-cores
     defaults:
       run:
         shell: bash
@@ -74,7 +74,7 @@ jobs:
 
   openvino:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04-8-cores
+    runs-on: ubuntu-latest-8-cores
     defaults:
       run:
         shell: bash
@@ -100,7 +100,7 @@ jobs:
 
   pytorch-cpu:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04-8-cores
+    runs-on: ubuntu-latest-8-cores
     defaults:
       run:
         shell: bash
@@ -187,7 +187,7 @@ jobs:
 
   tensorflow:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04-8-cores
+    runs-on: ubuntu-latest-8-cores
     if: ${{ inputs.python_version != '3.12' }}
     defaults:
       run:
@@ -216,7 +216,7 @@ jobs:
 
   tools:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
@@ -236,7 +236,7 @@ jobs:
 
   pytorch2-cpu:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash

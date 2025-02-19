@@ -62,7 +62,6 @@ def experimental_create_ptq_pipeline(
         for each item of the batch or for the entire batch, default is False.
     :return: An experimental post-training quantization pipeline.
     """
-
     # Build the post-training quantization pipeline.
     pipeline_steps = []
 

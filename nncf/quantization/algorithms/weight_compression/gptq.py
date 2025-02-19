@@ -273,18 +273,17 @@ class GPTQ:
                                 wc_statistics,
                                 weight_tensor[:, (i1 + i) : (i1 + i + group_size)],
                                 reduction_axes,
-                                wc_params.compression_config,
+                                block_compression_config,
                             )
-                            scales.append(scale.squeeze(axis=1))
-                            zero_points.append(zero_point if zero_point is None else zero_point.squeeze(axis=1))
                         else:
                             scale, zero_point = calculate_integer_quantization_params(
                                 weight_tensor[:, (i1 + i) : (i1 + i + group_size)],
                                 reduction_axes,
                                 block_compression_config,
                             )
-                            scales.append(scale)
-                            zero_points.append(zero_point)
+                        scales.append(scale)
+                        zero_points.append(zero_point)
+
                 if block_compression_config.mode == CompressWeightsMode.NF4:
                     compressed_weights = do_nf4_quantization(
                         fns.unsqueeze(weight_col, 1), scales[-1], is_normalized_weight=False

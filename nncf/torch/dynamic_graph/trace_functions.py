@@ -62,7 +62,6 @@ def forward_trace_only(operator: Callable, *args, **kwargs):
     compression, but still have to be accounted for so that the NNCF internal graph representation
     does not become disjoint.
     """
-
     result = operator(*args, **kwargs)
 
     fargs = flatten_args(args, kwargs)
@@ -151,7 +150,6 @@ def trace_tensors(
     :return: Same structure as `operator_output`, but with torch.Tensor entries turned into tensor
         with tracing capabilities instance using TracedTensorMixin.
     """
-
     if isinstance(operator_output, (list, tuple)):
         output_ = []
         for i, x in enumerate(operator_output):

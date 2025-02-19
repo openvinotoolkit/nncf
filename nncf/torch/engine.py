@@ -30,7 +30,6 @@ class PTEngine(Engine):
 
         :param model: Pytorch module to infer.
         """
-
         self._model = model
         if get_backend(model) == BackendType.TORCH:
             self._model.eval()
@@ -44,7 +43,6 @@ class PTEngine(Engine):
         :param input_data: Inputs for the model.
         :return: Model outputs.
         """
-
         if isinstance(input_data, dict):
             return self._model(**input_data)
         if isinstance(input_data, tuple):

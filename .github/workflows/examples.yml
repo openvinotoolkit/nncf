@@ -23,7 +23,7 @@ concurrency:
 jobs:
   examples-cpu:
     name: Test exmaples CPU [${{ matrix.group }}/4]
-    runs-on: ubuntu-22.04-16-cores
+    runs-on: ubuntu-latest-16-cores
     strategy:
       fail-fast: false
       matrix:

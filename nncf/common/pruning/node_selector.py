@@ -91,7 +91,6 @@ class PruningNodeSelector:
         :param graph: Graph to work with and their initialization parameters as values.
         :return: Clusterization of pruned nodes.
         """
-
         all_nodes_to_prune = graph.get_nodes_by_types(self._prune_operations_types)  # NNCFNodes here
 
         # 1. Clusters for special ops
@@ -218,7 +217,6 @@ class PruningNodeSelector:
             are supported by the NNCF pruning algorithm
         :return: Pruning node analysis after model analyzer, pruning algo compatibility and pruning dimensions checks.
         """
-
         nodes_of_group_with_non_eq_pruning_dim = self._check_internal_groups_dim(pruned_nodes_clusterization)
         can_prune_after_check_updated = can_prune_after_check.copy()
         for node_id, val in nodes_of_group_with_non_eq_pruning_dim.items():

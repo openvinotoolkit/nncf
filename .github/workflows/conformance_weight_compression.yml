@@ -15,7 +15,7 @@ on:
 jobs:
   examples-cpu:
     name: Weight compression [${{ matrix.group }}/3]
-    runs-on: ubuntu-22.04-16-cores
+    runs-on: ubuntu-latest-16-cores
     timeout-minutes: 40
     strategy:
       fail-fast: false

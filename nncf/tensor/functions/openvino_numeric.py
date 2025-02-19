@@ -93,7 +93,6 @@ def _astype_ov(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
     :param dtype: Data type to cast to.
     :return: Casted openvino tensor.
     """
-
     from nncf.openvino.optimized_functions import astype
 
     return astype(Tensor(a), dtype).data

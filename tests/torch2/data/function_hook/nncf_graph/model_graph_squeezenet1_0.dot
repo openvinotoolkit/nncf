@@ -137,7 +137,7 @@ x -> "features/0/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1
 "features.3.expand3x3.weight" -> "features/3/expand3x3/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(64, 16, 3, 3)"];
 "features.3.expand3x3.bias" -> "features/3/expand3x3/conv2d/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(64,)"];
 "features/3/expand3x3/conv2d/0" -> "features/3/expand3x3_activation/relu_/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 64, 14, 14)"];
-"features/3/expand3x3_activation/relu_/0" -> "features/3/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 64, 14, 14)"];
+"features/3/expand3x3_activation/relu_/0" -> "features/3/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 64, 14, 14)"];
 "features/3/cat/0" -> "features/4/squeeze/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 128, 14, 14)"];
 "features.4.squeeze.weight" -> "features/4/squeeze/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(16, 128, 1, 1)"];
 "features.4.squeeze.bias" -> "features/4/squeeze/conv2d/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(16,)"];
@@ -151,7 +151,7 @@ x -> "features/0/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1
 "features.4.expand3x3.weight" -> "features/4/expand3x3/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(64, 16, 3, 3)"];
 "features.4.expand3x3.bias" -> "features/4/expand3x3/conv2d/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(64,)"];
 "features/4/expand3x3/conv2d/0" -> "features/4/expand3x3_activation/relu_/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 64, 14, 14)"];
-"features/4/expand3x3_activation/relu_/0" -> "features/4/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 64, 14, 14)"];
+"features/4/expand3x3_activation/relu_/0" -> "features/4/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 64, 14, 14)"];
 "features/4/cat/0" -> "features/5/squeeze/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 128, 14, 14)"];
 "features.5.squeeze.weight" -> "features/5/squeeze/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(32, 128, 1, 1)"];
 "features.5.squeeze.bias" -> "features/5/squeeze/conv2d/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(32,)"];
@@ -165,7 +165,7 @@ x -> "features/0/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1
 "features.5.expand3x3.weight" -> "features/5/expand3x3/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(128, 32, 3, 3)"];
 "features.5.expand3x3.bias" -> "features/5/expand3x3/conv2d/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(128,)"];
 "features/5/expand3x3/conv2d/0" -> "features/5/expand3x3_activation/relu_/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 128, 14, 14)"];
-"features/5/expand3x3_activation/relu_/0" -> "features/5/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 128, 14, 14)"];
+"features/5/expand3x3_activation/relu_/0" -> "features/5/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 128, 14, 14)"];
 "features/5/cat/0" -> "features/6/max_pool2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 256, 14, 14)"];
 "features/6/max_pool2d/0" -> "features/7/squeeze/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 256, 7, 7)"];
 "features.7.squeeze.weight" -> "features/7/squeeze/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(32, 256, 1, 1)"];
@@ -180,7 +180,7 @@ x -> "features/0/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1
 "features.7.expand3x3.weight" -> "features/7/expand3x3/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(128, 32, 3, 3)"];
 "features.7.expand3x3.bias" -> "features/7/expand3x3/conv2d/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(128,)"];
 "features/7/expand3x3/conv2d/0" -> "features/7/expand3x3_activation/relu_/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 128, 7, 7)"];
-"features/7/expand3x3_activation/relu_/0" -> "features/7/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 128, 7, 7)"];
+"features/7/expand3x3_activation/relu_/0" -> "features/7/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 128, 7, 7)"];
 "features/7/cat/0" -> "features/8/squeeze/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 256, 7, 7)"];
 "features.8.squeeze.weight" -> "features/8/squeeze/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(48, 256, 1, 1)"];
 "features.8.squeeze.bias" -> "features/8/squeeze/conv2d/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(48,)"];
@@ -194,7 +194,7 @@ x -> "features/0/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1
 "features.8.expand3x3.weight" -> "features/8/expand3x3/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(192, 48, 3, 3)"];
 "features.8.expand3x3.bias" -> "features/8/expand3x3/conv2d/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(192,)"];
 "features/8/expand3x3/conv2d/0" -> "features/8/expand3x3_activation/relu_/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 192, 7, 7)"];
-"features/8/expand3x3_activation/relu_/0" -> "features/8/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 192, 7, 7)"];
+"features/8/expand3x3_activation/relu_/0" -> "features/8/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 192, 7, 7)"];
 "features/8/cat/0" -> "features/9/squeeze/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 384, 7, 7)"];
 "features.9.squeeze.weight" -> "features/9/squeeze/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(48, 384, 1, 1)"];
 "features.9.squeeze.bias" -> "features/9/squeeze/conv2d/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(48,)"];
@@ -208,7 +208,7 @@ x -> "features/0/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1
 "features.9.expand3x3.weight" -> "features/9/expand3x3/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(192, 48, 3, 3)"];
 "features.9.expand3x3.bias" -> "features/9/expand3x3/conv2d/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(192,)"];
 "features/9/expand3x3/conv2d/0" -> "features/9/expand3x3_activation/relu_/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 192, 7, 7)"];
-"features/9/expand3x3_activation/relu_/0" -> "features/9/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 192, 7, 7)"];
+"features/9/expand3x3_activation/relu_/0" -> "features/9/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 192, 7, 7)"];
 "features/9/cat/0" -> "features/10/squeeze/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 384, 7, 7)"];
 "features.10.squeeze.weight" -> "features/10/squeeze/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(64, 384, 1, 1)"];
 "features.10.squeeze.bias" -> "features/10/squeeze/conv2d/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(64,)"];
@@ -222,7 +222,7 @@ x -> "features/0/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1
 "features.10.expand3x3.weight" -> "features/10/expand3x3/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(256, 64, 3, 3)"];
 "features.10.expand3x3.bias" -> "features/10/expand3x3/conv2d/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(256,)"];
 "features/10/expand3x3/conv2d/0" -> "features/10/expand3x3_activation/relu_/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 256, 7, 7)"];
-"features/10/expand3x3_activation/relu_/0" -> "features/10/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 256, 7, 7)"];
+"features/10/expand3x3_activation/relu_/0" -> "features/10/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 256, 7, 7)"];
 "features/10/cat/0" -> "features/11/max_pool2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 512, 7, 7)"];
 "features/11/max_pool2d/0" -> "features/12/squeeze/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 512, 3, 3)"];
 "features.12.squeeze.weight" -> "features/12/squeeze/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(64, 512, 1, 1)"];
@@ -237,7 +237,7 @@ x -> "features/0/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1
 "features.12.expand3x3.weight" -> "features/12/expand3x3/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(256, 64, 3, 3)"];
 "features.12.expand3x3.bias" -> "features/12/expand3x3/conv2d/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(256,)"];
 "features/12/expand3x3/conv2d/0" -> "features/12/expand3x3_activation/relu_/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 256, 3, 3)"];
-"features/12/expand3x3_activation/relu_/0" -> "features/12/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 256, 3, 3)"];
+"features/12/expand3x3_activation/relu_/0" -> "features/12/cat/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 256, 3, 3)"];
 "features/12/cat/0" -> "classifier/0/dropout/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 512, 3, 3)"];
 "classifier/0/dropout/0" -> "classifier/1/conv2d/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 512, 3, 3)"];
 "classifier.1.weight" -> "classifier/1/conv2d/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1000, 512, 1, 1)"];

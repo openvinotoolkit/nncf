@@ -15,7 +15,7 @@ on:
 jobs:
   bandit:
     name: Bandit
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
       run:
@@ -32,7 +32,7 @@ jobs:
 
   codeql:
     name: CodeQL
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       security-events: write
