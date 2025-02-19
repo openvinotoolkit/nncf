@@ -110,7 +110,7 @@ class TestONNXExport:
                 ),
                 marks=pytest.mark.xfail(
                     reason="""transformers>=4.47.0 swin model causes an error calling torch.tensor on 
-                            (TracedTensor,) Ticket 162383"""
+                            (TracedTensor,) Issue-162383"""
                 ),
             ),
         ],
