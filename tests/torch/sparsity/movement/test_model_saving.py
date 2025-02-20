@@ -100,7 +100,7 @@ class TestONNXExport:
             .model_config_(
                 image_size=384,
                 patch_size=4,
-                window_size=12,
+                window_size=4,  # TODO: nlyayus: SwinModel changed logic for window size larger than input resolution
                 embed_dim=192,
                 mlp_ratio=4,
                 depths=(2, 2, 5, 2),
