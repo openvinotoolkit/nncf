@@ -167,7 +167,7 @@ def visualize_experiments(model_id: str, params_grid: List[Params]):
     :param params_grid:
     """
     rows = [[model_id, params.get_key()] for params in params_grid]
-    print("List of configurations to test out:")
+    print(f"List of configurations to test out ({len(params_grid)}):")
     print(tabulate(tabular_data=rows, headers=["Model ID", "Experiment"], tablefmt="mixed_grid"))
 
 
@@ -577,7 +577,7 @@ def main():
 
     # --------- Compress ---------
     compression_config = config["compression"]
-    compress(args.model_id, ROOT_MODEL_DIR, compression_config)
+    compress(args.model_id, ROOT_MODEL_DIR, compression_config, show_only=args.show_only)
 
     if args.show_only:
         return
