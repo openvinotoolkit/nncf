@@ -28,7 +28,6 @@ from nncf.config.extractors import extract_algorithm_names
 from nncf.config.extractors import has_input_info_field
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
@@ -357,6 +356,7 @@ def wrap_model(
             msg = "The 'trace_parameters=False' option is not supported in the experimental tracing mode."
             raise nncf.InternalError(msg)
         from nncf.experimental.torch2.function_hook import wrap_model
+        from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
         wrapped_model = GraphModelWrapper(wrap_model(model), example_input=example_input)
         return wrapped_model
@@ -386,6 +386,8 @@ def is_wrapped_model(model: torch.nn.Module) -> bool:
     :param model: A model.
     :return: True if the model is wrapped, False otherwise.
     """
+    from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+
     return isinstance(model, (NNCFNetwork, GraphModelWrapper))
 
 
