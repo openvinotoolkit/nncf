@@ -489,13 +489,11 @@ def test_groups(desc: GroupTestDesc, mocker, tmp_path):
     not_filtered_groups = get_pruning_groups(
         nncf_network.nncf.get_graph(), PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES, pruning_producing_types, tmp_path
     )
-    nncf_network.nncf.get_graph().visualize_graph("transformers38.dot")
     nx_graph = get_graph_spy.spy_return
     path_to_dot = get_full_path_to_the_graph(f"{str(desc)}.dot", "pruning_groups")
     compare_nx_graph_with_reference(nx_graph, path_to_dot, sort_dot_graph=False)
 
     filtered_groups = select_largest_groups(not_filtered_groups)
-    print(filtered_groups)
     assert filtered_groups == desc.ref_groups
 
 
