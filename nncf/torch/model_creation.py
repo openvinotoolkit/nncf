@@ -27,6 +27,8 @@ from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.extractors import has_input_info_field
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
+from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
@@ -350,6 +352,15 @@ def wrap_model(
     :param trace_parameters: Whether to trace model parameters. Default is False.
     :return: A model wrapped by NNCFNetwork.
     """
+    if is_experimental_torch_tracing_enabled():
+        if not trace_parameters:
+            msg = "The 'trace_parameters=False' option is not supported in the experimental tracing mode."
+            raise nncf.InternalError(msg)
+        from nncf.experimental.torch2.function_hook import wrap_model
+
+        wrapped_model = GraphModelWrapper(wrap_model(model), example_input=example_input)
+        return wrapped_model
+
     if not isinstance(model, torch.nn.Module):
         msg = (
             f"The provided model type {type(model)} is incompatible. "
@@ -370,12 +381,12 @@ def wrap_model(
 
 def is_wrapped_model(model: torch.nn.Module) -> bool:
     """
-    Check that the model was wrapped by NNCFNetwork.
+    Check that the model was wrapped by NNCFNetwork or GraphModelWrapper.
 
     :param model: A model.
     :return: True if the model is wrapped, False otherwise.
     """
-    return isinstance(model, NNCFNetwork)
+    return isinstance(model, (NNCFNetwork, GraphModelWrapper))
 
 
 @tracked_function(
