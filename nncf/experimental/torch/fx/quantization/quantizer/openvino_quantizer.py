@@ -47,11 +47,35 @@ from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 QUANT_ANNOTATION_KEY = "quantization_annotation"
 
 
-@api()
+@api(canonical_alias="nncf.experimental.torch.fx.OpenVINOQuantizer")
 class OpenVINOQuantizer(TorchAOQuantizer):
     """
     Implementation of the Torch AO quantizer which annotates models with quantization annotations
     optimally for the inference via OpenVINO.
+
+    :param mode: Defines optimization mode for the algorithm. None by default.
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performance`.
+    :param target_device: A target device the specificity of which will be taken
+        into account while compressing in order to obtain the best performance
+        for this type of device, defaults to TargetDevice.ANY.
+    :param model_type: Model type is needed to specify additional patterns
+        in the model. Supported only `transformer` now.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
+    :param overflow_fix: This option controls whether to apply the overflow issue
+        fix for the 8-bit quantization.
+    :param quantize_outputs: Whether to insert additional quantizers right before
+        each of the model outputs.
+    :param activations_quantization_params: Quantization parameters for model
+        activations.
+    :param weights_quantization_params: Quantization parameters for model weights.
+    :param quantizer_propagation_rule: The strategy to be used while propagating and merging quantizers.
+    MERGE_ALL_IN_ONE by default.
     """
 
     def __init__(
@@ -68,31 +92,6 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         weights_quantization_params: Optional[Union[QuantizationParameters, FP8QuantizationParameters]] = None,
         quantizer_propagation_rule: QuantizerPropagationRule = QuantizerPropagationRule.MERGE_ALL_IN_ONE,
     ):
-        """
-        :param mode: Defines optimization mode for the algorithm. None by default.
-        :param preset: A preset controls the quantization mode (symmetric and asymmetric).
-            It can take the following values:
-            - `performance`: Symmetric quantization of weights and activations.
-            - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
-            Default value is None. In this case, `mixed` preset is used for `transformer`
-            model type otherwise `performance`.
-        :param target_device: A target device the specificity of which will be taken
-            into account while compressing in order to obtain the best performance
-            for this type of device, defaults to TargetDevice.ANY.
-        :param model_type: Model type is needed to specify additional patterns
-            in the model. Supported only `transformer` now.
-        :param ignored_scope: An ignored scope that defined the list of model control
-            flow graph nodes to be ignored during quantization.
-        :param overflow_fix: This option controls whether to apply the overflow issue
-            fix for the 8-bit quantization.
-        :param quantize_outputs: Whether to insert additional quantizers right before
-            each of the model outputs.
-        :param activations_quantization_params: Quantization parameters for model
-            activations.
-        :param weights_quantization_params: Quantization parameters for model weights.
-        :param quantizer_propagation_rule: The strategy to be used while propagating and merging quantizers.
-        MERGE_ALL_IN_ONE by default.
-        """
         self._min_max_algo = MinMaxQuantization(
             mode=mode,
             preset=preset,

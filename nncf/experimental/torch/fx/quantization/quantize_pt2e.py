@@ -39,7 +39,7 @@ from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
 
 
-@api()
+@api(canonical_alias="nncf.experimental.torch.fx.quantize_pt2e")
 def quantize_pt2e(
     model: torch.fx.GraphModule,
     quantizer: Quantizer,
@@ -59,8 +59,11 @@ def quantize_pt2e(
     Applies post-training quantization to the torch.fx.GraphModule provided model
     using provided torch.ao quantizer.
 
+    :param model: A torch.fx.GraphModule instance to be quantized.
     :param quantizer: Torch ao quantizer to annotate nodes in the graph with quantization setups
         to convey the desired way of quantization.
+    :param calibration_dataset: A representative dataset for the
+        calibration process.
     :param subset_size: Size of a subset to calculate activations
         statistics used for quantization.
     :param fast_bias_correction: Setting this option to `False` enables a different
@@ -79,6 +82,7 @@ def quantize_pt2e(
     :param fold_quantize: Boolean flag for whether fold the quantize op or not. The value is True by default.
     :param do_copy: The copy of the given model is being quantized if do_copy == True,
         otherwise the model is quantized inplace. Default value is False.
+    :return: The quantized torch.fx.GraphModule instance.
     """
     nncf_logger.warning("This is an experimental feature and may change in the future without notice.")
 
