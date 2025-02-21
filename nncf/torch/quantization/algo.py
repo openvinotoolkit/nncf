@@ -35,8 +35,8 @@ from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns.manager import TargetDevice
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_first_nodes_of_type
-from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.graph.utils import get_target_dim_for_compression_legacy
+from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.hardware.config import get_hw_config_type

@@ -18,8 +18,8 @@ import torch.nn.functional as F
 
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
-from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.graph.utils import get_bias_shape_legacy
+from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.logging import nncf_logger
 from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
 from nncf.experimental.common.pruning.nodes_grouping import select_largest_groups

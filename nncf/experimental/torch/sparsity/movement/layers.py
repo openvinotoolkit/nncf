@@ -18,8 +18,8 @@ from torch import nn
 
 import nncf
 from nncf.common.graph import NNCFNode
-from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.graph.utils import get_bias_shape_legacy
+from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.experimental.torch.sparsity.movement.functions import binary_mask_by_threshold
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import CompressionParameter

@@ -18,8 +18,8 @@ import torch
 
 import nncf
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
-from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.graph.utils import get_target_dim_for_compression_legacy
+from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitParams
