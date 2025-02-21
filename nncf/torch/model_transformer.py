@@ -14,7 +14,6 @@ from functools import partial
 from typing import Callable, Dict, List, Optional, Tuple
 
 import torch
-from torch import Tensor
 from torch import nn
 from torch.nn.parameter import Parameter
 
@@ -242,7 +241,7 @@ class PTModelTransformer(ModelTransformer):
         return model
 
 
-def update_parameter(target_node_name: str, parameter_name: str, new_value: Tensor, model: NNCFNetwork) -> None:
+def update_parameter(target_node_name: str, parameter_name: str, new_value: torch.Tensor, model: NNCFNetwork) -> None:
     """
     Update parameter for target module.
 
