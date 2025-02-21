@@ -958,37 +958,31 @@ class AWQMatmulModel(OVReferenceModel):
     def _create_ov_model(self, n_extra_dims: int = 1, is_int8=False):
         input_node = opset.parameter([1] * n_extra_dims + [-1, 8], name="Input_1")
 
-        weights_data1 = np.arange(0, 64).reshape(8, 8)
-        weights_data1[:] = 2.0
+        weights_data1 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
         weights1 = self.get_weights(weights_data1, is_int8, name="weights_1")
         node1 = opset.matmul(input_node, weights1, transpose_a=False, transpose_b=True, name="MatMul_1")
 
-        weights_data2 = np.arange(0, 64).reshape(8, 8)
-        weights_data2[:] = 3.0
+        weights_data2 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
         weights2 = self.get_weights(weights_data2, is_int8, name="weights_2")
         node2 = opset.matmul(input_node, weights2, transpose_a=False, transpose_b=True, name="MatMul_2")
 
         node_multiply = opset.multiply(node1, node2, name="Multiply")
 
-        weights_data3 = np.arange(0, 64).reshape(8, 8)
-        weights_data3[:] = 4.0
+        weights_data3 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
         weights3 = self.get_weights(weights_data3, is_int8, name="weights_3")
         node3 = opset.matmul(node_multiply, weights3, transpose_a=False, transpose_b=True, name="MatMul_3")
 
-        weights_data4 = np.arange(0, 64).reshape(8, 8)
-        weights_data4[:] = 2.0
+        weights_data4 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
         weights4 = self.get_weights(weights_data4, is_int8, name="weights_4")
         node4 = opset.matmul(node3, weights4, transpose_a=False, transpose_b=True, name="MatMul_4")
 
-        weights_data5 = np.arange(0, 64).reshape(8, 8)
-        weights_data5[:] = 3.0
+        weights_data5 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
         weights5 = self.get_weights(weights_data5, is_int8, name="weights_5")
         node5 = opset.matmul(node3, weights5, transpose_a=False, transpose_b=True, name="MatMul_5")
 
         node_multiply_2 = opset.multiply(node4, node5, name="Multiply_2")
 
-        weights_data6 = np.arange(0, 64).reshape(8, 8)
-        weights_data6[:] = 4.0
+        weights_data6 = 0.01 * np.arange(0, 64).reshape(8, 8) + 0.05
         weights6 = self.get_weights(weights_data6, is_int8, name="weights_6")
         node6 = opset.matmul(node_multiply_2, weights6, transpose_a=False, transpose_b=True, name="MatMul_6")
 

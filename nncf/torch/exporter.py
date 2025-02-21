@@ -71,7 +71,7 @@ class PTExporter(Exporter):
     This class provides export of the compressed model to the ONNX format.
     """
 
-    _ONNX_DEFAULT_OPSET = 13
+    _ONNX_DEFAULT_OPSET = 14
 
     @staticmethod
     def parse_format(save_format: str) -> Tuple[str, dict]:
