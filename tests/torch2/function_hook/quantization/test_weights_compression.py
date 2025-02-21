@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from typing import Dict, List
 
 import pytest
 import torch
@@ -25,6 +25,7 @@ from nncf.experimental.torch2.function_hook import wrap_model
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
@@ -36,6 +37,8 @@ from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
+from tests.torch.ptq.test_weights_compression import AWQActLinearModel
+from tests.torch.ptq.test_weights_compression import AWQLinearModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
 
@@ -273,11 +276,7 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 @pytest.mark.parametrize("mode", INT4_MODES)
 @pytest.mark.parametrize(
     "params",
-    (
-        {"gptq": True},
-        {"awq": True},
-        {"lora_correction": True},
-    ),
+    ({"gptq": True}, {"lora_correction": True}),
 )
 def test_raise_error_with_unsupported_params_for_int4(mode, params):
     dummy_torch_model = EmptyModel()
@@ -375,6 +374,18 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return SequentialMatmulModel()
 
     @staticmethod
+    def get_model_for_test_scale_estimation():
+        return LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
+
+    @staticmethod
+    def get_awq_model() -> torch.nn.Module:
+        return AWQLinearModel()
+
+    @staticmethod
+    def get_awq_act_model(with_multiply, n_layers):
+        return AWQActLinearModel(with_multiply=with_multiply, n_layers=n_layers)
+
+    @staticmethod
     def to_tensor(t) -> torch.Tensor:
         return torch.tensor(t)
 
@@ -393,10 +404,6 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
             for name in low_precision_nodes:
                 if name in op_name:
                     assert isinstance(op, INT4SymmetricWeightsDecompressor)
-
-    @staticmethod
-    def get_model_for_test_scale_estimation():
-        return LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
 
     @staticmethod
     def get_scale_estimation_ref():
@@ -430,3 +437,34 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         weight = compressed_model.linear.weight
         unpacked_w = compressed_model.get_submodule("__nncf_hooks.post_hooks.linear:weight__0.0")(weight)
         return Tensor(unpacked_w)
+
+    @staticmethod
+    def get_ignored_scope_name() -> str:
+        return "linear6/linear/0"
+
+    @staticmethod
+    def get_num_int4_nodes(model: torch.nn.Module) -> int:
+        num = 0
+        for op in get_hook_storage(model).modules():
+            num += isinstance(op, INT4SymmetricWeightsDecompressor)
+        return num
+
+    @pytest.fixture(params=INT4_MODES)
+    def int4_mode(self, request):
+        return request.param
+
+    @staticmethod
+    def get_num_multiply_from_awq(model):
+        awq_num = 0
+        for module in model.modules():
+            if isinstance(module, SQMultiply):
+                awq_num += 1
+        return awq_num
+
+    @staticmethod
+    def get_reference_for_test_awq_scale_reference() -> Dict[str, Tensor]:
+        return {
+            "linear3/linear/0": Tensor(
+                torch.tensor([[1.226455, 1.205499, 1.141340, 1.097436, 1.064355, 1.037971, 1.016118, 0.997526]])
+            )
+        }

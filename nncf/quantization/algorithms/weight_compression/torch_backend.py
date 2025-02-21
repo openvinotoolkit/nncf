@@ -223,7 +223,14 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph, weight: Tensor
     ):
-        update_parameter(node_with_weight.node_name, "weight", weight.data, model)
+        if is_experimental_torch_tracing_enabled():
+            weight_node = get_const_node(node_with_weight, weight_port_id, graph)
+            module_name, weight_attr_name = split_const_name(weight_node.layer_attributes.name)
+            module = get_module_by_name(module_name, model.model)
+            weight_param = getattr(module, weight_attr_name)
+            weight_param.data = weight.data
+        else:
+            update_parameter(node_with_weight.node_name, "weight", weight.data, model)
 
     def insert_adapters(
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
@@ -393,6 +400,9 @@ class PTAWQAlgoAlgoBackend(AWQAlgoBackend, PTWeightCompressionAlgoBackend):
 
         sq_multiply = SQMultiply(scale.shape)
         sq_multiply.scale = scale
+
+        if is_experimental_torch_tracing_enabled():
+            return PT2InsertionCommand(target_points, sq_multiply)
         scale_node_name = f"{source_node.node_name}/awq_mul"
         return PTSharedFnInsertionCommand(target_points, sq_multiply, scale_node_name)
 
