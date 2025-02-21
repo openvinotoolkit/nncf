@@ -190,16 +190,18 @@ def get_target_dim_for_compression_legacy(layer_attributes: WeightedLayerAttribu
         return 0
 
 
-def get_bias_shape_legacy(
-    layer_attributes: WeightedLayerAttributes) -> int:
+def get_bias_shape_legacy(layer_attributes: WeightedLayerAttributes) -> int:
     """
     Returns hard-coded bias shape only for Torch and Tensorflow models.
 
     :param layer_attributes: layer attributes of NNCFNode.
     :return: bias shape.
     """
-    if isinstance(layer_attributes, LinearLayerAttributes):
-        return layer_attributes.out_features if layer_attributes.with_bias is True else 0
+    if isinstance(layer_attributes, LinearLayerAttributes) and layer_attributes.with_bias:
+        return layer_attributes.out_features
+
+    else:
+        return 0
 
 
 def get_num_filters_legacy(layer_attributes: WeightedLayerAttributes) -> int:
