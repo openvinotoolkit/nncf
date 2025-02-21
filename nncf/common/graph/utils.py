@@ -195,3 +195,14 @@ def get_bias_shape_legacy(
     """
     if isinstance(layer_attributes, LinearLayerAttributes):
         return layer_attributes.out_features if layer_attributes.with_bias is True else 0
+
+
+def get_num_filters_legacy(layer_attributes: WeightedLayerAttributes) -> int:
+    """
+    Returns hard-coded number of filters only for Torch and Tensorflow models.
+
+    :param layer_attributes: layer attributes of NNCFNode.
+    :return: number of filters.
+    """
+    weight_shape = get_weight_shape_legacy(layer_attributes)
+    return weight_shape[get_target_dim_for_compression_legacy(layer_attributes)]
