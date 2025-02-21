@@ -449,7 +449,7 @@ class ClipVisionRunRecipe(BaseMockRunRecipe):
         pass
 
     def _create_model(self) -> torch.nn.Module:
-        return CLIPVisionModel._from_config(self.model_config)
+        return CLIPVisionModel(self.model_config)
 
     @property
     def transformer_block_info(self) -> List[TransformerBlockInfo]:

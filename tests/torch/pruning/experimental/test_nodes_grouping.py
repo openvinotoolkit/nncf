@@ -367,7 +367,7 @@ CV_DESCS = [
             model_name="CLIP",
             input_info=[dict(sample_size=[1, 3, 3, 3], type="float")] * 1,
             model_builder=partial(
-                CLIPVisionModel._from_config,
+                CLIPVisionModel,
                 CLIPVisionConfig(
                     hidden_size=4,
                     intermediate_size=2,
