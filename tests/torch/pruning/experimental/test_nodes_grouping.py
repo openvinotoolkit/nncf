@@ -180,9 +180,7 @@ NLP_DESCS = [
         model_desc=GeneralModelDesc(
             model_name="1_layer_BERT",
             input_info=[dict(sample_size=[1, 10], type="long")],
-            model_builder=partial(
-                AutoModelForQuestionAnswering.from_config, BertConfig(num_hidden_layers=1)
-            ),
+            model_builder=partial(AutoModelForQuestionAnswering.from_config, BertConfig(num_hidden_layers=1)),
         ),
         ref_groups=[
             PruningGroup(block=PruningBlock(), producers={ProducerInfo(26)}, consumers={ConsumerInfo(28)}),
