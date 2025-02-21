@@ -182,7 +182,7 @@ def prepare_model(args: argparse.Namespace, training_args: TrainingArguments, nu
         finetuning_task=args.task_name,
     )
     if args.quick_check:
-        model = AutoModelForSequenceClassification.from_config(config, attn_implementation="eager")
+        model = AutoModelForSequenceClassification.from_config(config)
     else:
         model = AutoModelForSequenceClassification.from_pretrained(args.model_name_or_path, config=config)
     return model

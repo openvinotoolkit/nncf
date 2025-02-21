@@ -177,7 +177,6 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
                 self.model_id,
                 torch_dtype=torch.float32,
                 device_map="cuda" if self.backend == BackendType.CUDA_TORCH else "cpu",
-                attn_implementation="eager",
             )
             self.model = self.model_hf
         elif self.backend in [BackendType.OV, BackendType.FP32]:

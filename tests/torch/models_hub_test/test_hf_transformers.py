@@ -78,7 +78,7 @@ class TestTransformersModel(BaseTestModel):
             from transformers import CLIPVisionModel
 
             config = AutoConfig.from_pretrained(name, torchscript=True)
-            model = CLIPVisionModel._from_config(config, attn_implementation="eager")
+            model = CLIPVisionModel._from_config(config)
             preprocessor = CLIPFeatureExtractor.from_pretrained(name)
             encoded_input = preprocessor(self.image, return_tensors="pt")
             example = dict(encoded_input)
@@ -97,7 +97,7 @@ class TestTransformersModel(BaseTestModel):
             from transformers import ViTImageProcessor
 
             config = AutoConfig.from_pretrained(name, torchscript=True)
-            model = VisionEncoderDecoderModel._from_config(config, attn_implementation="eager")
+            model = VisionEncoderDecoderModel._from_config(config)
             feature_extractor = ViTImageProcessor.from_pretrained(name)
             encoded_input = feature_extractor(images=[self.image], return_tensors="pt")
 
@@ -117,7 +117,7 @@ class TestTransformersModel(BaseTestModel):
             from transformers import Wav2Vec2ForSequenceClassification
 
             config = AutoConfig.from_pretrained(name, torchscript=True)
-            model = Wav2Vec2ForSequenceClassification._from_config(config, attn_implementation="eager")
+            model = Wav2Vec2ForSequenceClassification._from_config(config)
             processor = AutoFeatureExtractor.from_pretrained(name)
             input_values = processor(torch.randn(16000).numpy(), sampling_rate=16_000, return_tensors="pt")
             example = {"input_values": input_values.input_values}
@@ -181,7 +181,7 @@ class TestTransformersModel(BaseTestModel):
 
                     tokenizer = AutoTokenizer.from_pretrained(name)
                     config = AutoConfig.from_pretrained(name, torchscript=True)
-                    model = AutoModelForCausalLM.from_config(config, attn_implementation="eager")
+                    model = AutoModelForCausalLM.from_config(config)
                     text = "Replace me by any text you'd like."
                     encoded_input = tokenizer(text, return_tensors="pt")
                     inputs_dict = dict(encoded_input)
@@ -199,7 +199,7 @@ class TestTransformersModel(BaseTestModel):
 
                     tokenizer = AutoTokenizer.from_pretrained(name)
                     config = AutoConfig.from_pretrained(name, torchscript=True)
-                    model = AutoModelForMaskedLM.from_config(config, attn_implementation="eager")
+                    model = AutoModelForMaskedLM.from_config(config)
                     text = "Replace me by any text you'd like."
                     encoded_input = tokenizer(text, return_tensors="pt")
                     example = dict(encoded_input)
@@ -209,7 +209,7 @@ class TestTransformersModel(BaseTestModel):
 
                     processor = AutoProcessor.from_pretrained(name)
                     config = AutoConfig.from_pretrained(name, torchscript=True)
-                    model = AutoModelForImageClassification.from_config(config, attn_implementation="eager")
+                    model = AutoModelForImageClassification.from_config(config)
                     encoded_input = processor(images=self.image, return_tensors="pt")
                     example = dict(encoded_input)
                 elif auto_model == "AutoModelForSeq2SeqLM":
@@ -218,7 +218,7 @@ class TestTransformersModel(BaseTestModel):
 
                     tokenizer = AutoTokenizer.from_pretrained(name)
                     config = AutoConfig.from_pretrained(name, torchscript=True)
-                    model = AutoModelForSeq2SeqLM.from_config(config, attn_implementation="eager")
+                    model = AutoModelForSeq2SeqLM.from_config(config)
                     inputs = tokenizer("Studies have been shown that owning a dog is good for you", return_tensors="pt")
                     decoder_inputs = tokenizer(
                         "<pad> Studien haben gezeigt dass es hilfreich ist einen Hund zu besitzen",
@@ -232,7 +232,7 @@ class TestTransformersModel(BaseTestModel):
 
                     processor = AutoProcessor.from_pretrained(name)
                     config = AutoConfig.from_pretrained(name, torchscript=True)
-                    model = AutoModelForSpeechSeq2Seq.from_config(config, attn_implementation="eager")
+                    model = AutoModelForSpeechSeq2Seq.from_config(config)
                     inputs = processor(torch.randn(1000).numpy(), sampling_rate=16000, return_tensors="pt")
                     example = dict(inputs)
                 elif auto_model == "AutoModelForCTC":
@@ -241,7 +241,7 @@ class TestTransformersModel(BaseTestModel):
 
                     processor = AutoProcessor.from_pretrained(name)
                     config = AutoConfig.from_pretrained(name, torchscript=True)
-                    model = AutoModelForCTC.from_config(config, attn_implementation="eager")
+                    model = AutoModelForCTC.from_config(config)
                     input_values = processor(torch.randn(1000).numpy(), return_tensors="pt")
                     example = dict(input_values)
                 elif auto_model == "AutoModelForTableQuestionAnswering":
@@ -251,7 +251,7 @@ class TestTransformersModel(BaseTestModel):
 
                     tokenizer = AutoTokenizer.from_pretrained(name)
                     config = AutoConfig.from_pretrained(name, torchscript=True)
-                    model = AutoModelForTableQuestionAnswering.from_config(config, attn_implementation="eager")
+                    model = AutoModelForTableQuestionAnswering.from_config(config)
                     data = {
                         "Actors": ["Brad Pitt", "Leonardo Di Caprio", "George Clooney"],
                         "Number of movies": ["87", "53", "69"],
@@ -304,7 +304,7 @@ class TestTransformersModel(BaseTestModel):
             from transformers import AutoModel
 
             config = AutoConfig.from_pretrained(name, torchscript=True)
-            model = AutoModel.from_config(config, attn_implementation="eager")
+            model = AutoModel.from_config(config)
         if hasattr(model, "set_default_language"):
             model.set_default_language("en_XX")
         if example is None:

@@ -278,7 +278,7 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
         return modules
 
     def _create_model(self) -> torch.nn.Module:
-        return AutoModelForAudioClassification.from_config(self.model_config, attn_implementation="eager")
+        return AutoModelForAudioClassification.from_config(self.model_config)
 
 
 class BertRunRecipe(BaseMockRunRecipe):
@@ -346,7 +346,7 @@ class BertRunRecipe(BaseMockRunRecipe):
         return modules
 
     def _create_model(self) -> torch.nn.Module:
-        model = AutoModelForSequenceClassification.from_config(self.model_config, attn_implementation="eager")
+        model = AutoModelForSequenceClassification.from_config(self.model_config)
         for block in model.bert.encoder.layer:
             if not getattr(self.model_config, "mhsa_qkv_bias", True):
                 block.attention.self.query.bias = None
@@ -383,7 +383,7 @@ class DistilBertRunRecipe(BaseMockRunRecipe):
         pass
 
     def _create_model(self) -> torch.nn.Module:
-        return AutoModelForSequenceClassification.from_config(self.model_config, attn_implementation="eager")
+        return AutoModelForSequenceClassification.from_config(self.model_config)
 
     @property
     def transformer_block_info(self) -> List[TransformerBlockInfo]:
@@ -416,7 +416,7 @@ class MobileBertRunRecipe(BaseMockRunRecipe):
         pass
 
     def _create_model(self) -> torch.nn.Module:
-        return AutoModelForSequenceClassification.from_config(self.model_config, attn_implementation="eager")
+        return AutoModelForSequenceClassification.from_config(self.model_config)
 
     @property
     def transformer_block_info(self) -> List[TransformerBlockInfo]:
@@ -449,7 +449,7 @@ class ClipVisionRunRecipe(BaseMockRunRecipe):
         pass
 
     def _create_model(self) -> torch.nn.Module:
-        return CLIPVisionModel._from_config(self.model_config, attn_implementation="eager")
+        return CLIPVisionModel._from_config(self.model_config)
 
     @property
     def transformer_block_info(self) -> List[TransformerBlockInfo]:
@@ -523,7 +523,7 @@ class SwinRunRecipe(BaseMockRunRecipe):
         return modules
 
     def _create_model(self) -> torch.nn.Module:
-        return AutoModelForImageClassification.from_config(self.model_config, attn_implementation="eager")
+        return AutoModelForImageClassification.from_config(self.model_config)
 
 
 class LinearForClassification(PreTrainedModel):

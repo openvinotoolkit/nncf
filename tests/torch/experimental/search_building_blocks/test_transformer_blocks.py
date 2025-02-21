@@ -91,12 +91,12 @@ LIST_CASES = [
     TransformerSearchBBlockParamsCase(
         name="BERT",
         input_info=[dict(sample_size=[1, 10], type="long")],
-        model_creator=partial(AutoModelForQuestionAnswering.from_config, BertConfig(), attn_implementation="eager"),
+        model_creator=partial(AutoModelForQuestionAnswering.from_config, BertConfig()),
     ),
     TransformerSearchBBlockParamsCase(
         name="ViT",
         input_info=dict(sample_size=[1, 3, 224, 224]),
-        model_creator=partial(AutoModelForImageClassification.from_config, ViTConfig(), attn_implementation="eager"),
+        model_creator=partial(AutoModelForImageClassification.from_config, ViTConfig()),
     ),
     TransformerSearchBBlockParamsCase(
         name="wave2vec 2.0",
@@ -108,7 +108,7 @@ LIST_CASES = [
     TransformerSearchBBlockParamsCase(
         name="SWIN MS",
         input_info=dict(sample_size=[1, 3, 224, 224]),
-        model_creator=partial(AutoModelForImageClassification.from_config, SwinConfig(), attn_implementation="eager"),
+        model_creator=partial(AutoModelForImageClassification.from_config, SwinConfig()),
     ),
     TransformerSearchBBlockParamsCase(
         name="one MHSA",

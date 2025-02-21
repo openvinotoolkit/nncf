@@ -181,7 +181,7 @@ NLP_DESCS = [
             model_name="1_layer_BERT",
             input_info=[dict(sample_size=[1, 10], type="long")],
             model_builder=partial(
-                AutoModelForQuestionAnswering.from_config, BertConfig(num_hidden_layers=1), attn_implementation="eager"
+                AutoModelForQuestionAnswering.from_config, BertConfig(num_hidden_layers=1)
             ),
         ),
         ref_groups=[
@@ -206,7 +206,6 @@ NLP_DESCS = [
                     mhsa_o_bias=True,
                     ffn_bias=True,
                 ),
-                attn_implementation="eager",
             ),
         ),
         ref_groups=[
@@ -221,7 +220,6 @@ NLP_DESCS = [
             model_builder=partial(
                 AutoModelForQuestionAnswering.from_config,
                 RobertaConfig(num_hidden_layers=1),
-                attn_implementation="eager",
             ),
         ),
         ref_groups=[
@@ -242,7 +240,6 @@ NLP_DESCS = [
                     dim=4,
                     hidden_dim=4 * 4,
                 ),
-                attn_implementation="eager",
             ),
         ),
         ref_groups=[
@@ -267,7 +264,6 @@ NLP_DESCS = [
                     mhsa_o_bias=True,
                     ffn_bias=True,
                 ),
-                attn_implementation="eager",
             ),
         ),
         ref_groups=[
@@ -341,7 +337,6 @@ CV_DESCS = [
                     patch_size=2,
                     num_channels=1,
                 ),
-                attn_implementation="eager",
             ),
         ),
         ref_groups=[
@@ -363,7 +358,6 @@ CV_DESCS = [
                     patch_size=2,
                     num_channels=1,
                 ),
-                attn_implementation="eager",
             ),
         ),
         ref_groups=[
@@ -385,7 +379,6 @@ CV_DESCS = [
                     image_size=3,
                     patch_size=3,
                 ),
-                attn_implementation="eager",
             ),
         ),
         ref_groups=[
@@ -425,7 +418,6 @@ AUDIO_DESCS = [
                     intermediate_size=4,
                     conv_dim=(2, 2, 2, 2, 2, 2, 2),
                 ),
-                attn_implementation="eager",
             ),
         ),
         ref_groups=[
