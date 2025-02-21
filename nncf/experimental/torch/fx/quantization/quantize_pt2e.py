@@ -23,10 +23,10 @@ from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
 
 import nncf
+from nncf import Dataset
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
-from nncf.data import Dataset
 from nncf.experimental.quantization.algorithms.post_training.algorithm import ExperimentalPostTrainingQuantization
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_adapter import OpenVINOQuantizerAdapter
@@ -36,7 +36,7 @@ from nncf.experimental.torch.fx.transformations import QUANTIZE_NODE_TARGETS
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
-from nncf.quantization.advanced_parameters import RangeEstimatorParameters
+from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 
 @api(canonical_alias="nncf.experimental.torch.fx.quantize_pt2e")
