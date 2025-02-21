@@ -19,6 +19,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
@@ -39,6 +40,9 @@ from nncf.experimental.torch2.commands import PT2InsertionCommand
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.experimental.torch2.model_transformer import PT2ModelTransformer
 from nncf.parameters import CompressWeightsMode
+from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
+from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
+from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
@@ -48,6 +52,8 @@ from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph import operator_metatypes as om
+from nncf.torch.graph.operator_metatypes import PTMulMetatype
+from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import find_const_node_in_constant_subgraph
@@ -56,6 +62,7 @@ from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_transformer import PTModelTransformer
+from nncf.torch.model_transformer import update_parameter
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
@@ -216,12 +223,12 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph, weight: Tensor
     ):
-        pass
+        update_parameter(node_with_weight.node_name, "weight", weight.data, model)
 
     def insert_adapters(
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
     ) -> None:
-        pass
+        raise NotImplementedError()
 
     @staticmethod
     def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
@@ -355,6 +362,39 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         transformed_model = model_transformer.transform(transformation_layout)
 
         return transformed_model
+
+
+class PTAWQAlgoAlgoBackend(AWQAlgoBackend, PTWeightCompressionAlgoBackend):
+    @staticmethod
+    def get_awq_patterns():
+        return get_awq_patterns(
+            PTWeightCompressionAlgoBackend.MATMUL_METATYPES,
+            PTMulMetatype,
+            ATOMIC_ACTIVATIONS_OPERATIONS[GraphPattern.METATYPE_ATTR],
+        )
+
+    @staticmethod
+    def scale_insertion_command(
+        source_node: NNCFNode,
+        next_nodes,
+        source_output_port_id: int,
+        scale: torch.Tensor,
+    ) -> PTSharedFnInsertionCommand:
+        input_port_id = 0
+        target_points = []
+        for node in next_nodes:
+            target_points.append(
+                PTTargetPoint(
+                    PTWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[TargetType.PRE_LAYER_OPERATION],
+                    node.node_name,
+                    input_port_id=input_port_id,
+                )
+            )
+
+        sq_multiply = SQMultiply(scale.shape)
+        sq_multiply.scale = scale
+        scale_node_name = f"{source_node.node_name}/awq_mul"
+        return PTSharedFnInsertionCommand(target_points, sq_multiply, scale_node_name)
 
 
 class PTMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, PTWeightCompressionAlgoBackend):

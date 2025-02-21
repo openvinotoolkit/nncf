@@ -18,6 +18,10 @@ tinyllama_data_aware_awq_scale_estimation_backend_OV:
   metric_value: 0.85502
   num_int4: 94
   num_int8: 124
+tinyllama_data_aware_awq_scale_estimation_backend_TORCH:
+  metric_value: 0.85502
+  num_int4: 94
+  num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
   metric_value: 0.85502
   num_int4: 94
