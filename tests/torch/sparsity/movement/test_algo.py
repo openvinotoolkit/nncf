@@ -442,20 +442,20 @@ desc_test_controller_structured_mask_resolution = {
         ),
         ref_structured_binary_mask=DictInTransformerBlockOrder(
             mhsa_q=dict(
-                weight=torch.FloatTensor([[1, 1, 1, 1], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]]),
-                bias=torch.FloatTensor([1, 1, 0, 0]),
+                weight=torch.FloatTensor([[1, 0, 0, 0], [1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+                bias=torch.FloatTensor([0, 0, 0, 0]),
             ),
             mhsa_k=dict(
-                weight=torch.FloatTensor([[1, 1, 1, 1], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]]),
-                bias=torch.FloatTensor([1, 1, 0, 0]),
+                weight=torch.FloatTensor([[0, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+                bias=torch.FloatTensor([1, 0, 0, 0]),
             ),
             mhsa_v=dict(
-                weight=torch.FloatTensor([[1, 1, 1, 1], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]]),
-                bias=torch.FloatTensor([1, 1, 0, 0]),
+                weight=torch.FloatTensor([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+                bias=torch.FloatTensor([0, 1, 0, 0]),
             ),
             mhsa_o=dict(
-                weight=torch.FloatTensor([[1, 1, 0, 0], [1, 1, 0, 0], [1, 1, 0, 0], [1, 1, 0, 0]]),
-                bias=torch.FloatTensor([1, 1, 1, 1]),
+                weight=torch.FloatTensor([[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]),
+                bias=torch.FloatTensor([1, 1, 1, 0]),
             ),
             ffn_i=dict(
                 weight=torch.FloatTensor([[1, 1, 1, 1], [1, 1, 1, 1], [0, 0, 0, 0]]), bias=torch.FloatTensor([1, 1, 0])
@@ -484,12 +484,12 @@ desc_test_controller_structured_mask_resolution = {
             ),
         ),
         ref_structured_binary_mask=DictInTransformerBlockOrder(
-            mhsa_q=dict(weight=torch.FloatTensor([[0, 0, 0, 0], [0, 0, 0, 0], [1, 1, 1, 1], [1, 1, 1, 1]]), bias=None),
-            mhsa_k=dict(weight=torch.FloatTensor([[0, 0, 0, 0], [0, 0, 0, 0], [1, 1, 1, 1], [1, 1, 1, 1]]), bias=None),
-            mhsa_v=dict(weight=torch.FloatTensor([[0, 0, 0, 0], [0, 0, 0, 0], [1, 1, 1, 1], [1, 1, 1, 1]]), bias=None),
+            mhsa_q=dict(weight=torch.FloatTensor([[0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0]]), bias=None),
+            mhsa_k=dict(weight=torch.FloatTensor([[0, 0, 0, 0], [0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]]), bias=None),
+            mhsa_v=dict(weight=torch.FloatTensor([[0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0]]), bias=None),
             mhsa_o=dict(
-                weight=torch.FloatTensor([[0, 0, 1, 1], [0, 0, 1, 1], [0, 0, 1, 1], [0, 0, 1, 1]]),
-                bias=torch.FloatTensor([1, 1, 1, 1]),
+                weight=torch.FloatTensor([[0, 0, 0, 1], [0, 0, 1, 0], [0, 0, 0, 0], [0, 0, 1, 0]]),
+                bias=torch.FloatTensor([1, 1, 0, 0]),
             ),
             ffn_i=dict(
                 weight=torch.FloatTensor([[1, 1, 1, 1], [1, 1, 1, 1], [0, 0, 0, 0]]), bias=torch.FloatTensor([1, 1, 0])
@@ -524,10 +524,19 @@ desc_test_controller_structured_mask_resolution = {
             ),
         ),
         ref_structured_binary_mask=DictInTransformerBlockOrder(
-            mhsa_q=dict(weight=torch.ones((4, 4)), bias=torch.ones(4)),
-            mhsa_k=dict(weight=torch.ones((4, 4)), bias=torch.ones(4)),
-            mhsa_v=dict(weight=torch.ones((4, 4)), bias=torch.ones(4)),
-            mhsa_o=dict(weight=torch.ones((4, 4)), bias=None),
+            mhsa_q=dict(
+                weight=torch.FloatTensor([[0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0], [1, 0, 0, 0]]),
+                bias=torch.FloatTensor([1, 0, 0, 0]),
+            ),
+            mhsa_k=dict(
+                weight=torch.FloatTensor([[0, 0, 0, 0], [0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]]),
+                bias=torch.FloatTensor([0, 0, 0, 0]),
+            ),
+            mhsa_v=dict(
+                weight=torch.FloatTensor([[0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0]]),
+                bias=torch.FloatTensor([0, 0, 0, 0]),
+            ),
+            mhsa_o=dict(weight=torch.FloatTensor([[1, 0, 0, 1], [0, 0, 1, 0], [0, 0, 0, 0], [0, 0, 1, 0]]), bias=None),
             ffn_i=dict(
                 weight=torch.FloatTensor([[1, 1, 1, 1], [1, 1, 1, 1], [0, 0, 0, 0]]), bias=torch.FloatTensor([1, 1, 0])
             ),
@@ -559,10 +568,22 @@ desc_test_controller_structured_mask_resolution = {
             ffn_o=dict(weight=torch.FloatTensor([[0, 1, 0], [1, 0, 1], [1, 1, 0], [1, 1, 0]]), bias=None),
         ),
         ref_structured_binary_mask=DictInTransformerBlockOrder(
-            mhsa_q=dict(weight=torch.ones((4, 4)), bias=torch.ones(4)),
-            mhsa_k=dict(weight=torch.ones((4, 4)), bias=torch.ones(4)),
-            mhsa_v=dict(weight=torch.ones((4, 4)), bias=torch.ones(4)),
-            mhsa_o=dict(weight=torch.ones((4, 4)), bias=torch.ones(4)),
+            mhsa_q=dict(
+                weight=torch.FloatTensor([[1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0]]),
+                bias=torch.FloatTensor([1, 0, 0, 0]),
+            ),
+            mhsa_k=dict(
+                weight=torch.FloatTensor([[0, 0, 0, 0], [0, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]]),
+                bias=torch.FloatTensor([0, 0, 0, 0]),
+            ),
+            mhsa_v=dict(
+                weight=torch.FloatTensor([[0, 0, 0, 0], [0, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0]]),
+                bias=torch.FloatTensor([0, 0, 0, 0]),
+            ),
+            mhsa_o=dict(
+                weight=torch.FloatTensor([[0, 0, 0, 1], [0, 0, 1, 0], [0, 0, 0, 0], [0, 0, 1, 0]]),
+                bias=torch.FloatTensor([1, 1, 0, 0]),
+            ),
             ffn_i=dict(weight=torch.ones((3, 4)), bias=None),
             ffn_o=dict(weight=torch.ones((4, 3)), bias=None),
         ),
