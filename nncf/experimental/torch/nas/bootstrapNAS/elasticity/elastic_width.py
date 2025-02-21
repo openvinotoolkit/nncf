@@ -27,6 +27,7 @@ from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.utils import get_num_filters_legacy
 from nncf.common.logging import nncf_logger
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
@@ -1204,7 +1205,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
     def _create_dynamic_bn_input_op(generic_layer_attrs: BaseLayerAttributes, node_name: str) -> UpdateBatchNormParams:
         assert isinstance(generic_layer_attrs, GenericWeightedLayerAttributes)
         dynamic_bn_input_op = ElasticInputWidthBatchNormOp(
-            max_width=generic_layer_attrs.get_num_filters(), node_name=node_name
+            max_width=get_num_filters_legacy(generic_layer_attrs), node_name=node_name
         )
         return UpdateBatchNormParams(dynamic_bn_input_op)
 
@@ -1212,7 +1213,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
     def _create_dynamic_ln_input_op(generic_layer_attrs: BaseLayerAttributes, node_name: str) -> UpdateLayerNormParams:
         assert isinstance(generic_layer_attrs, GenericWeightedLayerAttributes)
         dynamic_ln_input_op = ElasticInputWidthLayerNormOp(
-            max_width=generic_layer_attrs.get_num_filters(), node_name=node_name
+            max_width=get_num_filters_legacy(generic_layer_attrs), node_name=node_name
         )
         return UpdateLayerNormParams(dynamic_ln_input_op)
 
