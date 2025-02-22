@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
+from functools import partial
 from typing import List, Tuple, Union
 
 import networkx as nx
@@ -32,7 +33,7 @@ from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch2.function_hook import helpers
 from tests.torch2.utils import compare_with_reference_file
-from tests.torch2.utils import get_reference_graph
+from tests.torch2.utils import to_comparable_nx_graph
 
 REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "nncf_graph"
 
@@ -86,7 +87,7 @@ def test_convert_to_nncf_graph(regen_ref_data: bool):
     nx_graph = build_graph(model, model.get_example_inputs())
 
     nncf_graph = convert_to_nncf_graph(nx_graph)
-    graph = get_reference_graph(nncf_graph)
+    graph = to_comparable_nx_graph(nncf_graph)
     nx_nncf_graph = nx.nx_pydot.to_pydot(graph)
 
     ref_file = REF_DIR / "convert_to_nncf_graph.dot"
@@ -99,7 +100,7 @@ def test_convert_to_nncf_graph_multi_edges(regen_ref_data: bool):
     model = wrap_model(model)
     nx_graph = build_graph(model, torch.ones(1, 1))
     nncf_graph = convert_to_nncf_graph(nx_graph)
-    graph = get_reference_graph(nncf_graph)
+    graph = to_comparable_nx_graph(nncf_graph)
     nx_nncf_graph = nx.nx_pydot.to_pydot(graph)
     ref_file = REF_DIR / "convert_to_nncf_graph_multi_edges.dot"
 
@@ -120,7 +121,7 @@ TEST_MODELS_DESC = [
     ModelDesc("convnext_small", models.convnext_small, [1, 3, 64, 64]),
     ModelDesc("densenet121", models.densenet121, [1, 3, 64, 64]),
     ModelDesc("efficientnet_b0", models.efficientnet_b0, [1, 3, 64, 64]),
-    ModelDesc("inception_v3", models.inception_v3, [1, 3, 300, 300]),
+    ModelDesc("inception_v3", partial(models.inception_v3, init_weights=False), [1, 3, 300, 300]),
     ModelDesc("mobilenet_v2", models.mobilenet_v2, [1, 3, 64, 64]),
     ModelDesc("mobilenet_v3_small", models.mobilenet_v3_small, [1, 3, 64, 64]),
     ModelDesc("resnet18", models.resnet18, [1, 3, 64, 64]),
@@ -139,7 +140,7 @@ def test_model_graph(desc: ModelDesc, regen_ref_data: bool):
     inputs = [torch.randn(desc.inputs_info)]
     model = wrap_model(model)
     nncf_graph = build_nncf_graph(model, *inputs)
-    graph = get_reference_graph(nncf_graph)
+    graph = to_comparable_nx_graph(nncf_graph)
     nx_nncf_graph = nx.nx_pydot.to_pydot(graph)
     ref_file = REF_DIR / f"model_graph_{desc}.dot"
     compare_with_reference_file(str(nx_nncf_graph), ref_file, regen_ref_data)

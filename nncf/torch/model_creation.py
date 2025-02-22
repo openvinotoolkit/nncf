@@ -102,11 +102,10 @@ def create_compressed_model(
         is an instance of CompositeCompressionController) and the model ready for compression parameter training wrapped
         as an object of NNCFNetwork.
     """
-
     warning_deprecated(
         "The 'nncf.torch.create_compressed_model' function is deprecated and will be removed in a future release.\n"
         "To perform post training quantization (PTQ) or quantization aware training (QAT),"
-        " use the new nncf.quantize() API:\n"
+        " use the nncf.quantize() API:\n"
         " - https://github.com/openvinotoolkit/nncf?tab=readme-ov-file#post-training-quantization\n"
         " - https://github.com/openvinotoolkit/nncf?tab=readme-ov-file#training-time-quantization\n"
         "Examples:\n"
@@ -180,7 +179,7 @@ def get_input_info_from_config(config: NNCFConfig) -> ModelInputInfo:
         return FillerInputInfo.from_nncf_config(config)
 
     nncf_logger.debug(
-        "Config has no 'input_info' section, trying to use dataloader output as model inputs " "for graph building."
+        "Config has no 'input_info' section, trying to use dataloader output as model inputs for graph building."
     )
     exact_info = LoaderInputInfo.from_nncf_config_dataloaders(config)
     if exact_info is not None:
@@ -237,8 +236,8 @@ def create_nncf_network(
         dummy_forward_fn is specified.
     :param wrap_outputs_fn: Same as `wrap_inputs_fn`, but for marking model outputs with
 
-    :return: A model wrapped by NNCFNetwork, which is ready for adding compression."""
-
+    :return: A model wrapped by NNCFNetwork, which is ready for adding compression.
+    """
     if dummy_forward_fn is not None and wrap_inputs_fn is None:
         msg = (
             "A custom dummy forward function was specified, but the corresponding input wrapping function "

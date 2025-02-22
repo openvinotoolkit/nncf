@@ -24,10 +24,10 @@ from tests.cross_fw.test_templates.helpers import EmbeddingModel
 from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.helpers import ScaledDotProductAttentionModel
 from tests.torch import test_models
-from tests.torch2.utils import compare_with_reference_file
-from tests.torch2.utils import get_reference_graph
 from tests.torch.quantization.test_algo_quantization import SharedLayersModel
 from tests.torch.test_compressed_graph import ModelDesc
+from tests.torch2.utils import compare_with_reference_file
+from tests.torch2.utils import to_comparable_nx_graph
 
 REF_DIR = TEST_ROOT / "torch2" / "data" / "quantization" / "test_quantized_graphs"
 
@@ -89,7 +89,7 @@ def test_quantized_graphs(desc: ModelDesc, quantization_parameters: Dict[str, An
         nncf_graph = build_nncf_graph(q_model, **example_input)
     else:
         nncf_graph = build_nncf_graph(q_model, example_input)
-    nx_graph = get_reference_graph(nncf_graph)
+    nx_graph = to_comparable_nx_graph(nncf_graph)
     dot_nncf_graph = to_pydot(nx_graph)
     ref_file = REF_DIR / f"{desc.model_name}.dot"
     compare_with_reference_file(str(dot_nncf_graph), ref_file, regen_ref_data)

@@ -210,7 +210,6 @@ class TFQuantizationSetup:
 
         :return: state of the object
         """
-
         quantization_points_state = [qp.get_state() for qp in self._quantization_points]
         return {
             self._state_names.QUANTIZATION_POINTS: quantization_points_state,
@@ -348,14 +347,17 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 return True
         return False
 
-    def _create_quantizer(self, name: str, qspec: TFQuantizerSpec) -> Quantizer:
+    @staticmethod
+    def _create_quantizer(name: str, qspec: TFQuantizerSpec) -> Quantizer:
         quantizer_cls = NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode)
         return quantizer_cls(name, qspec)
 
-    def _build_insertion_commands_for_quantizer_setup(
-        self, quantizer_setup: TFQuantizationSetup
-    ) -> List[TFInsertionCommand]:
+    @staticmethod
+    def build_insertion_commands_for_quantizer_setup(
+        quantizer_setup: TFQuantizationSetup,
+    ) -> Tuple[List[TFInsertionCommand], List[str]]:
         insertion_commands = []
+        op_names = []
         quantization_points = quantizer_setup.get_quantization_points()
         non_unified_scales_quantization_point_ids = set(range(len(quantization_points)))
 
@@ -367,7 +369,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             quantizer_spec = qp.quantizer_spec
             op_name = qp.op_name + "/unified_scale_group"
             quantizer = FakeQuantize(quantizer_spec, name=op_name)
-            self._op_names.append(quantizer.op_name)
+            op_names.append(quantizer.op_name)
             target_points = []
             for us_qp_id in unified_scales_group:
                 non_unified_scales_quantization_point_ids.discard(us_qp_id)
@@ -389,24 +391,26 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             quantizer_spec = quantization_point.quantizer_spec
             target_point = quantization_point.target_point
             if quantization_point.is_weight_quantization():
-                quantizer = self._create_quantizer(op_name, quantizer_spec)
-                self._op_names.append(op_name)
+                quantizer = QuantizationBuilder._create_quantizer(op_name, quantizer_spec)
+                op_names.append(op_name)
             else:
                 quantizer = FakeQuantize(quantizer_spec, name=op_name)
-                self._op_names.append(quantizer.op_name)
+                op_names.append(quantizer.op_name)
             command = TFInsertionCommand(
                 target_point=target_point,
                 callable_object=quantizer,
                 priority=TransformationPriority.QUANTIZATION_PRIORITY,
             )
             insertion_commands.append(command)
-        return insertion_commands
+        return insertion_commands, op_names
 
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
         transformations = TFTransformationLayout()
         if self._quantizer_setup is None:
             self._quantizer_setup = self._get_quantizer_setup(model)
-        insertion_commands = self._build_insertion_commands_for_quantizer_setup(self._quantizer_setup)
+        insertion_commands, self._op_names = QuantizationBuilder.build_insertion_commands_for_quantizer_setup(
+            self._quantizer_setup
+        )
         for command in insertion_commands:
             transformations.register(command)
         return transformations

@@ -451,9 +451,11 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
 
     @abstractmethod
     def set_levels(self):
-        """Must set the self._level_low and self._level_high buffers according to the current quantizer state
+        """
+        Must set the self._level_low and self._level_high buffers according to the current quantizer state
         and type, and called whenever the state of the quantizer is updated in a way that affects the effective level
-        ranges."""
+        ranges.
+        """
 
     @property
     def is_half_range(self):

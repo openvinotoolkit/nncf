@@ -518,11 +518,7 @@ def compress_weights(
             msg = "Torch backend does not support NF4 and E2M1 modes for weight compression."
             raise nncf.ParameterNotSupportedError(msg)
 
-        options = {
-            "awq": awq,
-            "gptq": gptq,
-            "lora_correction": lora_correction,
-        }
+        options = {"gptq": gptq, "lora_correction": lora_correction}
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
             msg = f"Torch backend does not support {', '.join(unsupported_options)} option(s). Set them to None."

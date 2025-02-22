@@ -23,6 +23,8 @@ from nncf.experimental.torch2.function_hook.hook_executor_mode import OpMeta
 from nncf.experimental.torch2.function_hook.hook_executor_mode import generate_normalized_op_name
 from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
 from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
+from nncf.experimental.torch2.function_hook.wrapper import register_pre_function_hook
+from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from tests.torch2.function_hook import helpers
 from tests.torch2.function_hook.helpers import CallCount
 
@@ -114,3 +116,26 @@ def test_execute_post_hooks(example_outputs: Union[torch.Tensor, List[torch.Tens
         assert hook_port_1.call_count == 0
     else:
         assert hook_port_1.call_count == 1
+
+
+class ConcatModel(nn.Module):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.cat([x, x], dim=0)
+
+
+class AddModule(nn.Module):
+    def __init__(self, val: int) -> None:
+        super().__init__()
+        self.arg = val
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x + self.arg
+
+
+def test_execute_pre_hooks_for_concat():
+    model = wrap_model(ConcatModel())
+    op_name = "/cat/0"
+    register_pre_function_hook(model, op_name, 0, AddModule(1))
+    register_pre_function_hook(model, op_name, 1, AddModule(2))
+    ret_val = model(torch.zeros(2))
+    assert torch.allclose(ret_val, torch.tensor([1.0, 1.0, 2.0, 2.0])), ret_val

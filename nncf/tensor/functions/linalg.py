@@ -24,7 +24,7 @@ def norm(
     axis: Optional[Union[int, Tuple[int, ...]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    """
+    r"""
     Computes a vector or matrix norm.
 
     The following norms can be calculated:

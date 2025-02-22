@@ -295,7 +295,7 @@ class ElasticOutputWidthOp(ElasticWidthOp):
     @property
     def width_list(self) -> List[int]:
         """
-        list of all available widths to select from. Each value corresponds to a single element in the search space of
+        List of all available widths to select from. Each value corresponds to a single element in the search space of
         operation. The search space of the model is cartesian product of search spaces of operation.
         If all widths starting from 1 to maximum number of channels with step size 1 are available, the search space
         would be prohibitively large to efficiently train and search.

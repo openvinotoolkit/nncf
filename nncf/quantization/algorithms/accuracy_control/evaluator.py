@@ -87,7 +87,6 @@ class Evaluator:
 
         :return: Number of passed iterations during last validation process.
         """
-
         return self._num_passed_iterations
 
     def enable_iteration_count(self) -> None:

@@ -5,7 +5,7 @@ We suggest to install or use the package in the [Python virtual environment](htt
 NNCF supports multiple backends. Follow the corresponding installation guides and ensure your system meets
 the required specifications for your chosen backend:
 
-- OpenVINO&trade;: [Install Guide](https://docs.openvino.ai/2024/get-started/install-openvino.html), [System Requirements](https://docs.openvino.ai/2024/about-openvino/release-notes-openvino/system-requirements.html)
+- OpenVINO&trade;: [Install Guide](https://docs.openvino.ai/2025/get-started/install-openvino.html), [System Requirements](https://docs.openvino.ai/2025/about-openvino/release-notes-openvino/system-requirements.html)
 - ONNX: [Install Guide](https://onnxruntime.ai/docs/install/)
 - PyTorch: [Install Guide](https://pytorch.org/get-started/locally/#start-locally)
 - TensorFlow: [Install Guide](https://www.tensorflow.org/install/)
@@ -49,7 +49,8 @@ as well as the supported versions of Python:
 
 | NNCF      | OpenVINO   | PyTorch  | ONNX     | TensorFlow | Python |
 |-----------|------------|----------|----------|------------|--------|
-| `develop` | `2024.6.0` | `2.5.1`  | `1.17.0` | `2.15.1`   | `3.10` |
+| `develop` | `2025.0.0` | `2.5.1`  | `1.17.0` | `2.15.1`   | `3.10` |
+| `2.15.0`  | `2025.0.0` | `2.5.1`  | `1.17.0` | `2.15.1`   | `3.10` |
 | `2.14.1`  | `2024.6.0` | `2.5.1`  | `1.17.0` | `2.15.1`   | `3.10` |
 | `2.14.0`  | `2024.5.0` | `2.5.1`  | `1.17.0` | `2.15.1`   | `3.10` |
 | `2.13.0`  | `2024.4.0` | `2.4.0`  | `1.16.0` | `2.15.1`   | `3.8`* |

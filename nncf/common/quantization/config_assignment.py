@@ -47,6 +47,8 @@ def get_scoped_quantizer_config(
                 qconfig.per_channel = config_overrides["per_channel"]
             if config_overrides.get("signed") is not None:
                 qconfig.signedness_to_force = config_overrides["signed"]
+            if config_overrides.get("narrow_range") is not None:
+                qconfig.narrow_range = config_overrides["narrow_range"]
     return qconfig
 
 

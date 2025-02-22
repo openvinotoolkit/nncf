@@ -43,7 +43,26 @@ def compare_with_reference_file(text_data: str, ref_path: Path, regen_ref_data: 
     )
 
 
-def get_reference_graph(graph: NNCFGraph) -> nx.DiGraph:
+def to_comparable_nx_graph(graph: NNCFGraph) -> nx.DiGraph:
+    """
+    Convert NNCFGraph to nx.DiGraph for comparison with references.
+
+    Attributes:
+        - NODE:
+            - id
+            - type
+            - metatype class name
+
+        - EDGE:
+            - dtype
+            - shape
+            - out_port_id
+            - in_port_id
+            - parallel_input_port_ids (if exists)
+
+    :param graph: NNCFGraph to convert.
+    :return: Graph in nx.DiGraph.
+    """
     out_graph = nx.DiGraph()
     for node in sorted(graph.get_all_nodes(), key=lambda x: x.node_id):
         attrs_node = {
@@ -54,7 +73,12 @@ def get_reference_graph(graph: NNCFGraph) -> nx.DiGraph:
         out_graph.add_node(node.node_name, **attrs_node)
 
     for edge in graph.get_all_edges():
-        attrs_edge = {"dtype": edge.dtype.value, "shape": edge.tensor_shape}
+        attrs_edge = {
+            "dtype": edge.dtype.value,
+            "shape": edge.tensor_shape,
+            "out_port_id": edge.output_port_id,
+            "in_port_id": edge.input_port_id,
+        }
         if edge.parallel_input_port_ids:
             attrs_edge["parallel_input_port_ids"] = edge.parallel_input_port_ids
 

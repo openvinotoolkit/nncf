@@ -94,7 +94,7 @@ def quantize_pt2e(
         model = deepcopy(model)
 
     _fuse_conv_bn_(model)
-    if isinstance(quantizer, OpenVINOQuantizer):
+    if isinstance(quantizer, OpenVINOQuantizer) or hasattr(quantizer, "get_nncf_quantization_setup"):
         quantizer = OpenVINOQuantizerAdapter(quantizer)
     else:
         quantizer = TorchAOQuantizerAdapter(quantizer)
@@ -143,7 +143,8 @@ def quantize_pt2e(
 
 
 def _quant_node_constraint(n: torch.fx.Node) -> bool:
-    """If there is any pure ops between get_attr and quantize op they will be const propagated
+    """
+    If there is any pure ops between get_attr and quantize op they will be const propagated
     e.g. get_attr(weight) -> transpose -> quantize -> dequantize*
     (Note: dequantize op is not going to be constant propagated)
 

@@ -11,7 +11,7 @@
 import math
 from abc import ABC
 from abc import abstractmethod
-from typing import List, TypeVar
+from typing import Dict, List, TypeVar
 
 import numpy as np
 import pytest
@@ -21,10 +21,12 @@ from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.data.dataset import Dataset
 from nncf.quantization import compress_weights
+from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import quantize_dequantize_weight
+from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 
@@ -39,13 +41,28 @@ MEAN_MAX = 2.333333  # np.mean(np.max(np.abs(ACTIVATION), 1))
 HESSIAN_TRACE = (16 + 1 + 4) * 2 / 9  # sum(i*i for i in NON_ZERO_ROW) * 2 / ACTIVATION.size
 MAX_BASELINE_SCORE = 1 / 1.1920928955078125e-07
 
+INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
+
 
 def get_relative_error(weight_1: Tensor, weight_2: Tensor, axis: int = 0) -> Tensor:
     diff = (weight_1 - weight_2) ** 2
     return fns.mean(diff, axis=axis) / fns.mean(weight_1**2, axis=axis)
 
 
+# Spy for AWQ
+spy_instance = None
+
+
+class SpyAWQ(AWQ):
+    def __init__(self, *agrs, **kwargs):
+        global spy_instance
+        super().__init__(*agrs, **kwargs)
+        spy_instance = self
+
+
 class TemplateWeightCompression(ABC):
+    # Test Mixed Precision
+
     @staticmethod
     @abstractmethod
     def cast_to(x: TTensor, dtype: TensorDataType) -> TTensor:
@@ -135,6 +152,8 @@ class TemplateWeightCompression(ABC):
         )
         self.check_weights(compressed_model, ref_ids)
 
+    # Scale Estimation Tests
+
     @staticmethod
     @abstractmethod
     def get_model_for_test_scale_estimation() -> TModel:
@@ -209,3 +228,91 @@ class TemplateWeightCompression(ABC):
         error_after_se = get_relative_error(original_weight, decompressed_weight_after_se)
         assert fns.argsort(error_after_se)[0] == OUTLIER_CHANNEL  # the smallest error on the outlier channel
         assert error_before_se[OUTLIER_CHANNEL] > error_after_se[OUTLIER_CHANNEL]
+
+    # AWQ Tests
+    @staticmethod
+    @abstractmethod
+    def get_awq_act_model(with_multiply, n_layers):
+        "Returns a backend model for test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul."
+
+    @staticmethod
+    @abstractmethod
+    def get_num_multiply_from_awq():
+        "Returns number of Multiply nodes from AWQ."
+
+    @pytest.fixture
+    def int4_mode(self, request):
+        return None
+
+    @pytest.mark.parametrize("with_multiply", (True, False))
+    def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(self, int4_mode, with_multiply):
+        n_layers = 8
+        n_awq_target = n_layers - 1  # first MatMul is always int8
+        model = self.get_awq_act_model(with_multiply, n_layers)
+
+        dataset = Dataset([self.to_tensor(np.ones([1, 8, 8], dtype=np.float32))])
+        model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
+
+        awq_num = self.get_num_multiply_from_awq(model)
+        assert awq_num == n_awq_target
+
+    @staticmethod
+    @abstractmethod
+    def get_awq_model() -> TModel:
+        "Returns a backend model for test_awq_with_ignored_scope."
+
+    @staticmethod
+    @abstractmethod
+    def get_num_int4_nodes(model: TModel):
+        "Returns number of int4 nodes."
+
+    @staticmethod
+    @abstractmethod
+    def get_ignored_scope_name() -> str:
+        "Returns ignored scope name for test_awq_with_ignored_scope."
+
+    def test_awq_with_ignored_scope(self):
+        model = self.get_awq_model()
+        sz = 8
+        n_samples = 10
+
+        dataset = Dataset([self.to_tensor(np.ones([1, i + 1, sz], dtype=np.float32)) for i in range(n_samples)])
+
+        compressed_model = compress_weights(
+            model,
+            mode=CompressWeightsMode.INT4_SYM,
+            ratio=1.0,
+            group_size=-1,
+            dataset=dataset,
+            awq=True,
+            ignored_scope=IgnoredScope(names=[self.get_ignored_scope_name()]),
+        )
+
+        int4_ref_num_compressed = 4  # first MatMul is always int8; one - is ignored; total 6 matmuls
+        int4_num_nodes = self.get_num_int4_nodes(compressed_model)
+        assert int4_num_nodes == int4_ref_num_compressed
+
+    @staticmethod
+    @abstractmethod
+    def get_reference_for_test_awq_scale_reference() -> Dict[str, Tensor]:
+        "Returns reference for test_awq_scale_reference."
+
+    def test_awq_scale_reference(self, monkeypatch):
+        monkeypatch.setattr("nncf.quantization.algorithms.weight_compression.algorithm.AWQ", SpyAWQ)
+        model = self.get_awq_model()
+
+        input = 0.01 * np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8) + 0.02
+        input = self.to_tensor(input)
+        dataset = Dataset([input])
+
+        _ = compress_weights(
+            model,
+            mode=CompressWeightsMode.INT4_SYM,
+            ratio=1.0,
+            group_size=-1,
+            dataset=dataset,
+            awq=True,
+        )
+        assert spy_instance is not None
+        for node_name, scales in spy_instance._scale_per_target_node.items():
+            assert fns.allclose(scales, self.get_reference_for_test_awq_scale_reference()[node_name])

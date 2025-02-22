@@ -166,7 +166,8 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
         self.groups = num_groups
 
         def _reverse_repeat_tuple(t, n):
-            r"""Reverse the order of `t` and repeat each element for `n` times.
+            """
+            Reverse the order of `t` and repeat each element for `n` times.
 
             This can be used to translate padding arg used by Conv and Pooling modules
             to the ones used by `F.pad`.
