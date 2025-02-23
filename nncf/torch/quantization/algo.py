@@ -605,8 +605,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 if qp.is_weight_quantization_point():
                     layer_attrs = target_node.layer_attributes
                     assert isinstance(layer_attrs, WeightedLayerAttributes)
-                    input_shape = layer_attrs.get_weight_shape()
-                    channel_idx = layer_attrs.get_target_dim_for_compression()
+                    input_shape = get_weight_shape_legacy(layer_attrs)
+                    channel_idx = get_target_dim_for_compression_legacy(layer_attrs)
                 else:
                     input_shape = target_model_graph.get_input_shape_for_insertion_point(qp.insertion_point)
                     channel_idx = 1  # channel dim for activations
