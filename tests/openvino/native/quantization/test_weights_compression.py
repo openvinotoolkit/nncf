@@ -1481,21 +1481,20 @@ def test_compression_with_different_algo_combinations(input_shape, kwargs):
 )
 def test_compression_with_transposed_activations(kwargs):
     dataset_size = 4
-    model = LMLinearModel(transpose_a=True, transpose_b=False).ov_model
+    model = LMLinearModel(transpose_a=True, transpose_b=True).ov_model
     input_data = [np.ones(inp.shape) for inp in model.inputs] * dataset_size
     dataset = Dataset(input_data)
 
-    with pytest.raises(nncf.UnsupportedModelError):
-        compress_weights(
-            model,
-            mode=CompressWeightsMode.INT4_SYM,
-            ratio=1.0,
-            group_size=8,
-            subset_size=2,
-            dataset=dataset,
-            all_layers=True,
-            **kwargs,
-        )
+    compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=1.0,
+        group_size=8,
+        subset_size=2,
+        dataset=dataset,
+        all_layers=True,
+        **kwargs,
+    )
 
 
 class TestOVTemplateWeightCompression(TemplateWeightCompression):

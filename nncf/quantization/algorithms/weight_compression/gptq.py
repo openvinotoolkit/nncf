@@ -170,19 +170,17 @@ class GPTQ:
         if node.metatype in self._backend_entity.convolution_metatypes:
             msg = "Convolution metatypes are not supported"
             raise nncf.UnsupportedModelError(msg)
-        if node.layer_attributes.input_attributes["transpose"]:
-            msg = "Transposed input is not supported"
-            raise nncf.UnsupportedModelError(msg)
 
+        hidden_dim = -2 if node.layer_attributes.input_attributes['transpose'] else -1
         hessian = fns.zeros(
-            (inputs[0].shape[-1], inputs[0].shape[-1]), backend=inputs[0].backend, dtype=TensorDataType.float32
+            (inputs[0].shape[hidden_dim], inputs[0].shape[hidden_dim]), backend=inputs[0].backend, dtype=TensorDataType.float32
         )
 
         for inp in inputs:
             batch_size = 1 if len(inp.shape) == 2 else inp.shape[0]
             if node.metatype in self._backend_entity.matmul_metatypes:
                 if len(inp.shape) == 3:
-                    inp = inp.reshape((-1, inp.shape[-1]))
+                    inp = inp.reshape((-1, inp.shape[hidden_dim]))
                 inp = fns.transpose(inp)
             hessian *= nsamples / (nsamples + batch_size)
             nsamples += batch_size
@@ -267,8 +265,9 @@ class GPTQ:
                         scales.append(scale)
                     else:
                         if self._scale_estimation and block_compression_config.num_bits == 4:
-                            activations = [inp[..., (i1 + i) : (i1 + i + group_size)] for inp in inputs]
-                            wc_statistics = ScaleEstimation.activations_to_wc_statistics(activations)
+                            transpose = wc_params.node_with_weight.layer_attributes.input_attributes['transpose']
+                            activations = [inp[:, (i1 + i) : (i1 + i + group_size), ...] for inp in inputs] if transpose else [inp[..., (i1 + i) : (i1 + i + group_size)] for inp in inputs]
+                            wc_statistics = ScaleEstimation.activations_to_wc_statistics(activations, transpose)
                             scale, zero_point = ScaleEstimation.calculate_quantization_params(
                                 wc_statistics,
                                 weight_tensor[:, (i1 + i) : (i1 + i + group_size)],
