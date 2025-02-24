@@ -215,7 +215,10 @@ NLP_DESCS = [
         model_desc=GeneralModelDesc(
             model_name="RoBERTa",
             input_info=[dict(sample_size=[1, 10], type="long")],
-            model_builder=partial(AutoModelForQuestionAnswering.from_config, RobertaConfig(num_hidden_layers=1)),
+            model_builder=partial(
+                AutoModelForQuestionAnswering.from_config,
+                RobertaConfig(num_hidden_layers=1),
+            ),
         ),
         ref_groups=[
             PruningGroup(block=PruningBlock(), producers={ProducerInfo(34)}, consumers={ConsumerInfo(36)}),
@@ -436,7 +439,6 @@ def test_groups(desc: GroupTestDesc, mocker, tmp_path):
     not_filtered_groups = get_pruning_groups(
         nncf_network.nncf.get_graph(), PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES, pruning_producing_types, tmp_path
     )
-
     nx_graph = get_graph_spy.spy_return
     path_to_dot = get_full_path_to_the_graph(f"{str(desc)}.dot", "pruning_groups")
     compare_nx_graph_with_reference(nx_graph, path_to_dot, sort_dot_graph=False)

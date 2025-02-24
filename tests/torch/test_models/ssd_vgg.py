@@ -74,7 +74,7 @@ class SSD_VGG(nn.Module):
         _, ext = os.path.splitext(base_file)
         if ext in [".pkl", ".pth"]:
             print("Loading weights into state dict...")
-            self.load_state_dict(torch.load(base_file, map_location=lambda storage, loc: storage))
+            self.load_state_dict(torch.load(base_file, map_location=lambda storage, loc: storage, weights_only=False))
             print("Finished!")
         else:
             print("Sorry only .pth and .pkl files supported.")
@@ -167,7 +167,7 @@ def build_ssd_vgg(cfg, size, num_classes, config):
         # may be used to perform arbitrary code execution during unpickling. Only load the data you
         # trust.
         #
-        basenet_weights = torch.load(config.basenet)
+        basenet_weights = torch.load(config.basenet, weights_only=False)
         new_weights = {}
         for wn, wv in basenet_weights.items():
             wn = wn.replace("features.", "")

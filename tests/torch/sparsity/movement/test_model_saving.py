@@ -100,8 +100,8 @@ class TestONNXExport:
             .model_config_(
                 image_size=384,
                 patch_size=4,
-                window_size=4,  # TODO: nlyayus: SwinModel changed logic for window size larger than input resolution
-                embed_dim=192,
+                window_size=4,  # TODO: nlyayus: SwinModel changed logic for window size
+                embed_dim=192,  # larger than input resolution Issue-162383
                 mlp_ratio=4,
                 depths=(2, 2, 5, 2),
                 num_heads=(6, 12, 24, 48),
@@ -112,6 +112,7 @@ class TestONNXExport:
     def test_same_outputs_in_torch_and_exported_onnx(self, tmp_path: Path, recipe: BaseMockRunRecipe):
         num_samples = 4
         recipe.log_dir_(tmp_path)
+        print(recipe.model_family)
         compression_ctrl, compressed_model = create_compressed_model(
             recipe.model(), recipe.nncf_config(), dump_graphs=False
         )
