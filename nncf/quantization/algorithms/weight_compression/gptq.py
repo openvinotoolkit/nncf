@@ -171,9 +171,11 @@ class GPTQ:
             msg = "Convolution metatypes are not supported"
             raise nncf.UnsupportedModelError(msg)
 
-        hidden_dim = -2 if node.layer_attributes.input_attributes['transpose'] else -1
+        hidden_dim = -2 if node.layer_attributes.input_attributes["transpose"] else -1
         hessian = fns.zeros(
-            (inputs[0].shape[hidden_dim], inputs[0].shape[hidden_dim]), backend=inputs[0].backend, dtype=TensorDataType.float32
+            (inputs[0].shape[hidden_dim], inputs[0].shape[hidden_dim]),
+            backend=inputs[0].backend,
+            dtype=TensorDataType.float32,
         )
 
         for inp in inputs:
@@ -265,8 +267,12 @@ class GPTQ:
                         scales.append(scale)
                     else:
                         if self._scale_estimation and block_compression_config.num_bits == 4:
-                            transpose = wc_params.node_with_weight.layer_attributes.input_attributes['transpose']
-                            activations = [inp[:, (i1 + i) : (i1 + i + group_size), ...] for inp in inputs] if transpose else [inp[..., (i1 + i) : (i1 + i + group_size)] for inp in inputs]
+                            transpose = wc_params.node_with_weight.layer_attributes.input_attributes["transpose"]
+                            activations = (
+                                [inp[:, (i1 + i) : (i1 + i + group_size), ...] for inp in inputs]
+                                if transpose
+                                else [inp[..., (i1 + i) : (i1 + i + group_size)] for inp in inputs]
+                            )
                             wc_statistics = ScaleEstimation.activations_to_wc_statistics(activations, transpose)
                             scale, zero_point = ScaleEstimation.calculate_quantization_params(
                                 wc_statistics,

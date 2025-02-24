@@ -201,7 +201,12 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             A_W = opset.constant(lora_A.data)
             B_W = opset.constant(lora_B.data)
 
-        A_MM = opset.matmul(input_node, A_W, transpose_a=wc_params.node_with_weight.layer_attributes.input_attributes['transpose'], transpose_b=True)
+        A_MM = opset.matmul(
+            input_node,
+            A_W,
+            transpose_a=wc_params.node_with_weight.layer_attributes.input_attributes["transpose"],
+            transpose_b=True,
+        )
         B_MM = opset.matmul(A_MM, B_W, transpose_a=False, transpose_b=True)
 
         node_output_port = mm_node.output(0)
