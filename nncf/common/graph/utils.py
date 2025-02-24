@@ -151,7 +151,7 @@ def get_weight_shape_legacy(layer_attributes: WeightedLayerAttributes) -> List[i
     if isinstance(layer_attributes, LinearLayerAttributes):
         return [layer_attributes.out_features, layer_attributes.in_features]
 
-    elif isinstance(layer_attributes, ConvolutionLayerAttributes):
+    if isinstance(layer_attributes, ConvolutionLayerAttributes):
         if not layer_attributes.transpose:
             return [
                 layer_attributes.out_channels,
@@ -164,12 +164,11 @@ def get_weight_shape_legacy(layer_attributes: WeightedLayerAttributes) -> List[i
             *layer_attributes.kernel_size,
         ]
 
-    elif isinstance(layer_attributes, GroupNormLayerAttributes):
+    if isinstance(layer_attributes, GroupNormLayerAttributes):
         return [layer_attributes.num_channels]
 
-    else:
-        assert isinstance(layer_attributes, GenericWeightedLayerAttributes)
-        return layer_attributes.weight_shape
+    assert isinstance(layer_attributes, GenericWeightedLayerAttributes)
+    return layer_attributes.weight_shape
 
 
 def get_target_dim_for_compression_legacy(layer_attributes: WeightedLayerAttributes) -> int:
@@ -182,9 +181,7 @@ def get_target_dim_for_compression_legacy(layer_attributes: WeightedLayerAttribu
     """
     if isinstance(layer_attributes, ConvolutionLayerAttributes):
         # Always quantize per each "out" channel
-        if layer_attributes.transpose:
-            return 1
-        return 0
+        return 1 if layer_attributes.transpose else 0
 
     else:
         assert isinstance(
@@ -201,11 +198,8 @@ def get_bias_shape_legacy(layer_attributes: WeightedLayerAttributes) -> int:
     :param layer_attributes: Linear layer attributes of NNCFNode.
     :return: Correspondent bias shape.
     """
-    if isinstance(layer_attributes, LinearLayerAttributes) and layer_attributes.with_bias:
-        return layer_attributes.out_features
-
-    else:
-        return 0
+    assert isinstance(layer_attributes, LinearLayerAttributes)
+    return layer_attributes.out_features if layer_attributes.with_bias is True else 0
 
 
 def get_num_filters_legacy(layer_attributes: WeightedLayerAttributes) -> int:
@@ -216,5 +210,6 @@ def get_num_filters_legacy(layer_attributes: WeightedLayerAttributes) -> int:
     :param layer_attributes: Layer attributes of NNCFNode.
     :return: Correspondent number of filters.
     """
+    assert isinstance(layer_attributes, WeightedLayerAttributes)
     weight_shape = get_weight_shape_legacy(layer_attributes)
     return weight_shape[get_target_dim_for_compression_legacy(layer_attributes)]
