@@ -9,22 +9,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from typing import Dict, Optional
 
 import torch
 from safetensors.torch import load_file as pt_load_file
 from safetensors.torch import save_file as pt_save_file
 
+from nncf.common.utils.os import fail_if_symlink
 from nncf.tensor import TensorDeviceType
 from nncf.tensor.functions import io as io
 from nncf.tensor.functions.torch_numeric import convert_to_torch_device
 
 
 def load_file(file_path: str, *, device: Optional[TensorDeviceType] = None) -> Dict[str, torch.Tensor]:
-    device = convert_to_torch_device(device)
-    return pt_load_file(file_path, device=device)
+    pt_device = convert_to_torch_device(device)
+    if pt_device is None:
+        pt_device = "cpu"
+    return pt_load_file(file_path, device=pt_device)
 
 
-@io.save_file.register(torch.Tensor)
-def _(data: Dict[str, torch.Tensor], file_path: str) -> None:
-    return pt_save_file(data, file_path)
+@io.save_file.register
+def _(data: Dict[str, torch.Tensor], file_path: Path) -> None:
+    fail_if_symlink(file_path)
+    pt_save_file(data, file_path)
