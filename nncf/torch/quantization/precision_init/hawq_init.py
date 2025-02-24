@@ -478,7 +478,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         tolerance: float,
     ) -> TracesPerLayer:
         if self._traces_per_layer_path:
-            return TracesPerLayer(torch.load(self._traces_per_layer_path).to(self._init_device))
+            return TracesPerLayer(torch.load(self._traces_per_layer_path, weights_only=False).to(self._init_device))
 
         quantizers_switcher = QuantizersSwitcher(list(self._all_quantizers_per_scope.values()))
         params_to_restore = self.disable_all_gradients_except_weights_of_quantized_modules(

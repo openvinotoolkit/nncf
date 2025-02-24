@@ -17,5 +17,5 @@
     "softmax": "PTSoftmaxMetatype",
     "transpose_1": "PTTransposeMetatype",
     "matmul_1": "PTMatMulMetatype",
-    "output_1": "PTOutputNoopMetatype"
+    "output": "PTOutputNoopMetatype"
 }

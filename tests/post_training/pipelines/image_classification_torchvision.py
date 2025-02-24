@@ -49,10 +49,14 @@ class ImageClassificationTorchvision(ImageClassificationBase):
             models.MobileNet_V3_Small_Weights.DEFAULT, _torch_export_for_training
         ),
         models.vit_b_16: VisionModelParams(
-            models.ViT_B_16_Weights.DEFAULT, _torch_export_for_training, export_torch_before_ov_convert=True
+            models.ViT_B_16_Weights.DEFAULT,
+            _torch_export_for_training,
+            export_torch_before_ov_convert=False,  # OV convert of exported model has issues Issue-162009
         ),
         models.swin_v2_s: VisionModelParams(
-            models.Swin_V2_S_Weights.DEFAULT, _torch_export, export_torch_before_ov_convert=True
+            models.Swin_V2_S_Weights.DEFAULT,
+            _torch_export,
+            export_torch_before_ov_convert=False,  # OV convert of exported model has issues Issue-162009
         ),
     }
 
@@ -118,7 +122,7 @@ class ImageClassificationTorchvision(ImageClassificationBase):
         if self.backend in PT_BACKENDS:
             with disable_patching():
                 ov_model = ov.convert_model(
-                    torch.export.export(self.model, args=(self.dummy_tensor,)),
+                    self.model,
                     example_input=self.dummy_tensor,
                     input=self.input_size,
                 )
