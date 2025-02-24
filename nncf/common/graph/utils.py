@@ -141,10 +141,12 @@ def get_reduction_axes(
 
 def get_weight_shape_legacy(layer_attributes: WeightedLayerAttributes) -> List[int]:
     """
-    Returns hard-coded weights shape layout only for Torch and Tensorflow models.
+    Returns hard-coded weights shape layout for the given layer attributes.
+    Applicable only for eager PyTorch and Tensorflow models.
 
-    :param layer_attributes: layer attributes of NNCFNode.
-    :return: weights shape layout.
+
+    :param layer_attributes: Layer attributes of NNCFNode.
+    :return: Weights shape layout.
     """
     if isinstance(layer_attributes, LinearLayerAttributes):
         return [layer_attributes.out_features, layer_attributes.in_features]
@@ -172,10 +174,11 @@ def get_weight_shape_legacy(layer_attributes: WeightedLayerAttributes) -> List[i
 
 def get_target_dim_for_compression_legacy(layer_attributes: WeightedLayerAttributes) -> int:
     """
-    Returns hard-coded target dim for compression only for Torch and Tensorflow models.
+    Returns hard-coded target dim for compression for the given layer attributes.
+    Applicable only for eager PyTorch and Tensorflow models.
 
-    :param layer_attributes: layer attributes of NNCFNode.
-    :return: target dim for compression.
+    :param layer_attributes: Layer attributes of NNCFNode.
+    :return: Target dim for compression.
     """
     if isinstance(layer_attributes, ConvolutionLayerAttributes):
         # Always quantize per each "out" channel
@@ -192,10 +195,11 @@ def get_target_dim_for_compression_legacy(layer_attributes: WeightedLayerAttribu
 
 def get_bias_shape_legacy(layer_attributes: WeightedLayerAttributes) -> int:
     """
-    Returns hard-coded bias shape only for Torch and Tensorflow models.
+    Returns hard-coded bias shape for the given linear layer attributes.
+    Applicable only for eager PyTorch and Tensorflow models.
 
-    :param layer_attributes: layer attributes of NNCFNode.
-    :return: bias shape.
+    :param layer_attributes: Linear layer attributes of NNCFNode.
+    :return: Correspondent bias shape.
     """
     if isinstance(layer_attributes, LinearLayerAttributes) and layer_attributes.with_bias:
         return layer_attributes.out_features
@@ -206,10 +210,11 @@ def get_bias_shape_legacy(layer_attributes: WeightedLayerAttributes) -> int:
 
 def get_num_filters_legacy(layer_attributes: WeightedLayerAttributes) -> int:
     """
-    Returns hard-coded number of filters only for Torch and Tensorflow models.
+    Returns hard-coded number of filters for the given layer attribues.
+    Applicable only for eager PyTorch and Tensorflow models.
 
-    :param layer_attributes: layer attributes of NNCFNode.
-    :return: number of filters.
+    :param layer_attributes: Layer attributes of NNCFNode.
+    :return: Correspondent number of filters.
     """
     weight_shape = get_weight_shape_legacy(layer_attributes)
     return weight_shape[get_target_dim_for_compression_legacy(layer_attributes)]
