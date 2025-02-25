@@ -18,6 +18,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.graph.utils import get_target_dim_for_compression_legacy
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.experimental.common.graph.netron import save_for_netron
@@ -76,7 +77,7 @@ def get_pruning_groups(
     roots = {}
     for node in all_nodes_to_prune:
         assert isinstance(node.layer_attributes, (LinearLayerAttributes, ConvolutionLayerAttributes))
-        pruning_dim = node.layer_attributes.get_target_dim_for_compression()
+        pruning_dim = get_target_dim_for_compression_legacy(node.layer_attributes)
         output_tensors_shapes = [x.tensor_shape for x in graph.get_output_edges(node)]
         assert not len(set(output_tensors_shapes)) > 1, node.node_name
         output_tensors_shape = output_tensors_shapes[0]

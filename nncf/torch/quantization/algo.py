@@ -35,6 +35,8 @@ from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns.manager import TargetDevice
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_first_nodes_of_type
+from nncf.common.graph.utils import get_target_dim_for_compression_legacy
+from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.hardware.config import get_hw_config_type
@@ -603,8 +605,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 if qp.is_weight_quantization_point():
                     layer_attrs = target_node.layer_attributes
                     assert isinstance(layer_attrs, WeightedLayerAttributes)
-                    input_shape = layer_attrs.get_weight_shape()
-                    channel_idx = layer_attrs.get_target_dim_for_compression()
+                    input_shape = get_weight_shape_legacy(layer_attrs)
+                    channel_idx = get_target_dim_for_compression_legacy(layer_attrs)
                 else:
                     input_shape = target_model_graph.get_input_shape_for_insertion_point(qp.insertion_point)
                     channel_idx = 1  # channel dim for activations
@@ -773,10 +775,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 layer_attributes = target_node.layer_attributes
                 assert isinstance(layer_attributes, WeightedLayerAttributes)
                 scale_shape = get_scale_shape(
-                    layer_attributes.get_weight_shape(),
+                    get_weight_shape_legacy(layer_attributes),
                     is_weights=True,
                     per_channel=qconfig.per_channel,
-                    channel_idx=layer_attributes.get_target_dim_for_compression(),
+                    channel_idx=get_target_dim_for_compression_legacy(layer_attributes),
                 )
             else:
                 input_shape = target_model_graph.get_input_shape_for_insertion_point(insertion_point)
@@ -1181,7 +1183,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             )
             module_node = target_model_graph.get_node_by_name(primary_ip.target_node_name)
             layer_attributes = module_node.layer_attributes
-            input_shape = layer_attributes.get_weight_shape()
+            input_shape = get_weight_shape_legacy(layer_attributes)
             self._quantizers_input_shapes[primary_qid] = tuple(input_shape)
         else:
             primary_qid = NonWeightQuantizerId(primary_ip.target_node_name, primary_ip.input_port_id)
