@@ -18,6 +18,8 @@ import torch.nn.functional as F
 
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.graph.utils import get_bias_shape_legacy
+from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.logging import nncf_logger
 from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
 from nncf.experimental.common.pruning.nodes_grouping import select_largest_groups
@@ -208,9 +210,9 @@ class StructuredMaskContext:
         """
         node = self.sparsifier_operand.target_module_node
         assert isinstance(node.layer_attributes, tuple(EXPECTED_NODE_LAYER_ATTRS))
-        weight_shape: Tuple[int, int] = tuple(node.layer_attributes.get_weight_shape())
+        weight_shape: Tuple[int, int] = tuple(get_weight_shape_legacy(node.layer_attributes))
         bias_shape: Tuple[int] = (
-            (node.layer_attributes.get_bias_shape(),) if self.sparsifier_operand.prune_bias else (0,)
+            (get_bias_shape_legacy(node.layer_attributes),) if self.sparsifier_operand.prune_bias else (0,)
         )
 
         pruned_weight_shape = list(weight_shape)
