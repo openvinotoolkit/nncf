@@ -138,7 +138,6 @@ class QuantizedConvModel(nn.Module):
 
 
 class SharedParamModel(nn.Module):
-
     @staticmethod
     def get_example_inputs():
         return torch.ones([1, 3])
