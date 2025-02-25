@@ -178,6 +178,9 @@ def get_integer_quantization_error(
     Calculates a quantity characterizing the difference between floating point weights and fake quantized
     (compressed and decompressed) to integer ones.
 
+    The error is computed as follows:
+    error = max(mean((decompressed_weight - weight)^2, axis=reduction_axes))
+
     :param weight: Weight array to compress.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param config: Information on how to compress (quantize) a specific weight.

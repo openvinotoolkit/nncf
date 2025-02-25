@@ -19,7 +19,8 @@ from nncf.common.utils.os import is_macos
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
-from nncf.openvino.graph.node_utils import get_const_value
+from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
+from nncf.openvino.graph.node_utils import get_const_value_as_ov_tensor
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.node_utils import get_weighted_layer_attributes
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -87,7 +88,9 @@ def test_get_const_value(precisions, as_ov_tensor):
     const_data = np.ones((1, 2, 3), dtype=np.float32)
     weight_const = opset.constant(const_data, dtype=precisions["type_for_const"])
 
-    const_value = get_const_value(weight_const, as_ov_tensor=as_ov_tensor)
+    const_value = (
+        get_const_value_as_ov_tensor(weight_const) if as_ov_tensor else get_const_value_as_numpy_tensor(weight_const)
+    )
     assert (const_value.data if as_ov_tensor else const_value).dtype == precisions["ref_type"]
 
 

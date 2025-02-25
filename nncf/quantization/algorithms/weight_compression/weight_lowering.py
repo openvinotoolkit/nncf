@@ -330,6 +330,9 @@ def get_integer_quantization_error(
     Calculates a quantity characterizing the difference between floating point weights and fake quantized
     (compressed and decompressed) to integer ones.
 
+    The error is computed as follows:
+    error = max(mean((decompressed_weight - weight)^2, axis=reduction_axes))
+
     :param weight: Weight array to compress.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param config: Information on how to compress (quantize) a specific weight.
@@ -343,7 +346,8 @@ def get_integer_quantization_error(
 
         return get_integer_quantization_error_ov(weight, reduction_axes, config)
 
-    weight = weight.as_numpy_tensor()
+    if weight.backend == TensorBackend.ov:
+        weight = weight.as_numpy_tensor()
     orig_shape = weight.shape
 
     if weight.dtype != TensorDataType.float32:
@@ -551,5 +555,4 @@ def _can_run_optimized(input_backend: TensorBackend) -> bool:
             nncf_logger.info_once(
                 "OpenVINO optimizations are disabled. Install OpenVINO to enable them and improve the performance."
             )
-            return False
     return False

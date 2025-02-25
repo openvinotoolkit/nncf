@@ -27,7 +27,7 @@ from nncf.common.utils.debug import nncf_debug
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.graph.model_transformer import OVModelTransformer
-from nncf.openvino.graph.node_utils import get_const_value
+from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.parameters import BackupMode
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
@@ -117,7 +117,7 @@ def get_next_node(node):
 def check_int8_node(op: ov.Node, mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM):
     dtype = ov.Type.u8 if mode == CompressWeightsMode.INT8_ASYM else ov.Type.i8
     assert op.get_element_type() == dtype
-    compressed_weight = get_const_value(op)
+    compressed_weight = get_const_value_as_numpy_tensor(op)
     stats = {"compressed_weight": compressed_weight}
 
     convert_node = get_next_node(op)
@@ -131,7 +131,7 @@ def check_int8_node(op: ov.Node, mode: CompressWeightsMode = CompressWeightsMode
         assert convert_node.get_type_name() == "Convert"
 
         zero_point_node = convert_node.input_value(0).get_node()
-        zero_point = get_const_value(zero_point_node)
+        zero_point = get_const_value_as_numpy_tensor(zero_point_node)
         stats["zero_point"] = zero_point
         reduced_weight_shape = list(op.shape)
         reduced_weight_shape[-1] = 1
@@ -142,7 +142,7 @@ def check_int8_node(op: ov.Node, mode: CompressWeightsMode = CompressWeightsMode
 
     assert mul_node.get_type_name() == "Multiply"
     scale_node = mul_node.input_value(1).get_node()
-    scale = get_const_value(scale_node)
+    scale = get_const_value_as_numpy_tensor(scale_node)
     stats["scale"] = scale
     return stats
 
@@ -151,7 +151,7 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
     dtype = ov.Type.u4 if mode == CompressWeightsMode.INT4_ASYM else ov.Type.i4
     assert op.get_element_type() == dtype
     weight_shape = op.shape
-    # NOTE: get_const_value doesn't work for 4-bit types
+    # NOTE: get_const_value_as_numpy_tensor doesn't work for 4-bit types
     assert list(weight_shape)[-1] == group_size
     reduced_weight_shape = list(weight_shape)
     reduced_weight_shape[-1] = 1
@@ -184,14 +184,14 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
     assert convert_node.get_type_name() == "Convert"
 
     return {
-        "scale": get_const_value(scale_node),
+        "scale": get_const_value_as_numpy_tensor(scale_node),
     }
 
 
 def check_nf4_grouped(op: ov.Node, group_size: int = 7):
     assert op.get_element_type() == ov.Type.nf4
     weight_shape = op.shape
-    # NOTE: get_const_value doesn't work for 4-bit types
+    # NOTE: get_const_value_as_numpy_tensor doesn't work for 4-bit types
     assert list(weight_shape)[-1] == group_size
     reduced_weight_shape = list(weight_shape)
     reduced_weight_shape[-1] = 1
@@ -211,7 +211,7 @@ def check_nf4_grouped(op: ov.Node, group_size: int = 7):
     assert convert_node.get_type_name() == "Convert"
 
     return {
-        "scale": get_const_value(scale_node),
+        "scale": get_const_value_as_numpy_tensor(scale_node),
     }
 
 

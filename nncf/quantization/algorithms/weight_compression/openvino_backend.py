@@ -33,7 +33,8 @@ from nncf.openvino.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import create_ov_const_from_tensor
-from nncf.openvino.graph.node_utils import get_const_value
+from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
+from nncf.openvino.graph.node_utils import get_const_value_as_ov_tensor
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -138,7 +139,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     ) -> Tensor:
         weight_name = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["name"]
         weight_node = self.name_to_node_mapping[weight_name]
-        weight_tensor = get_const_value(weight_node, as_ov_tensor)
+        weight_tensor = (
+            get_const_value_as_ov_tensor(weight_node) if as_ov_tensor else get_const_value_as_numpy_tensor(weight_node)
+        )
         return Tensor(weight_tensor)
 
     def get_weight_dtype(
@@ -308,7 +311,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             # Creation of ov.Tensor is required for two reasons:
             #   1. To be able to process BF16 weight properly
             #   2. To indicate that it is allowed for the compressed constant to be returned as int4/uint4 if needed
-            weight = Tensor(get_const_value(const_node, as_ov_tensor=True))
+            weight = Tensor(get_const_value_as_ov_tensor(const_node))
 
             should_add_convert_node = False
             if const_dtype != ov.Type.f16:
