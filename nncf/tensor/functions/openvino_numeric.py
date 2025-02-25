@@ -10,7 +10,7 @@
 # limitations under the License.
 from typing import Any, Dict, Tuple, Union
 
-import openvino as ov
+import openvino as ov  # type: ignore
 from numpy.typing import NDArray
 
 from nncf.tensor import Tensor
