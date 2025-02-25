@@ -13,3 +13,25 @@ updates:
     assignees:
       - "AlexanderDokuchaev"
     open-pull-requests-limit: 3
+
+  # Python
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "09:00"
+      timezone: "Asia/Dubai"
+    open-pull-requests-limit: 3
+    assignees:
+      - "AlexanderDokuchaev"
+    versioning-strategy: increase-if-necessary
+    ignore:
+      # Frameworks
+      - dependency-name: "onnx"
+      - dependency-name: "onnxruntime"
+      - dependency-name: "openvino"
+      - dependency-name: "tensorflow"
+      - dependency-name: "torch"
+      - dependency-name: "torchvision"
+      # Tests
+      - dependency-name: "pytest*"
