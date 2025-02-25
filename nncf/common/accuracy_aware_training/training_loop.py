@@ -604,10 +604,8 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         nncf_logger.info(f"Compressed training history: {training_history}")
         training_history[minimal_compression_rate] = runner.maximal_accuracy_drop  # type: ignore
         training_history[maximal_compression_rate] = -full_compression_factor * runner.maximal_accuracy_drop  # type: ignore
-        compression_rates, evaluated_acc_budgets = (
-            cast(List[float], training_history.keys()),
-            cast(List[float], training_history.values()),
-        )
+        compression_rates = cast(List[float], training_history.keys())
+        evaluated_acc_budgets = cast(List[float], training_history.values())
         interp_kind = "linear" if len(compression_rates) < 4 else "cubic"
         acc_budget_vs_comp_rate_curve = interp1d(compression_rates, evaluated_acc_budgets, kind=interp_kind)
         rate_interval = np.linspace(
