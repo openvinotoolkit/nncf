@@ -23,7 +23,7 @@ from nncf.common.utils.dot_file_rw import write_dot_graph
 
 
 def sort_dot(path):
-    with open(path, "r", encoding="utf8") as f:
+    with open(path, encoding="utf8") as f:
         content = f.readlines()
     start_line = "strict digraph  {\n"
     end_line = "}\n"
@@ -41,16 +41,18 @@ def sort_dot(path):
         ):
             if node_id is not None:
                 if edge_start_id is not None or edge_end_id is not None:
-                    raise nncf.ValidationError(
+                    msg = (
                         "Invalid node order parsed from graph line - "
                         "must specify either `node_id` or a pair of `edge_start_id`/`edge_end_id`!"
                     )
+                    raise nncf.ValidationError(msg)
             else:
                 if edge_start_id is None or edge_end_id is None:
-                    raise nncf.ValidationError(
+                    msg = (
                         "Invalid node order - must specify both `edge_start_id` and `edge_end_id` "
                         "if node_id is None!"
                     )
+                    raise nncf.ValidationError(msg)
             self.node_id = node_id
             self.edge_start_id = edge_start_id
             self.edge_end_id = edge_end_id
@@ -76,14 +78,16 @@ def sort_dot(path):
         extract_ids_regex = r'^"(\d+) '
         start_id_matches = re.search(extract_ids_regex, line)
         if start_id_matches is None:
-            raise nncf.InternalError(f"Could not parse first node ID in node name: {line}")
+            msg = f"Could not parse first node ID in node name: {line}"
+            raise nncf.InternalError(msg)
         start_id = int(start_id_matches.group(1))
         edge_indicator = " -> "
         if edge_indicator in line:
             end_node_and_attrs_str = line.split(edge_indicator)[1]
             end_id_matches = re.search(extract_ids_regex, end_node_and_attrs_str)
             if end_id_matches is None:
-                raise nncf.InternalError(f"Could not parse end node ID in node name: {end_node_and_attrs_str}")
+                msg = f"Could not parse end node ID in node name: {end_node_and_attrs_str}"
+                raise nncf.InternalError(msg)
             end_id = int(end_id_matches.group(1))
             return LineOrder(edge_start_id=start_id, edge_end_id=end_id)
         return LineOrder(node_id=int(start_id))

@@ -91,7 +91,6 @@ class PruningNodeSelector:
         :param graph: Graph to work with and their initialization parameters as values.
         :return: Clusterization of pruned nodes.
         """
-
         all_nodes_to_prune = graph.get_nodes_by_types(self._prune_operations_types)  # NNCFNodes here
 
         # 1. Clusters for special ops
@@ -102,8 +101,8 @@ class PruningNodeSelector:
 
         # 2. Clusters for nodes that should be pruned together (taking into account clusters for special ops)
         for i, cluster in enumerate(special_ops_clusterization.get_all_clusters()):
-            all_pruned_inputs = {}
-            clusters_to_merge = []
+            all_pruned_inputs: Dict[int, NNCFNode] = {}
+            clusters_to_merge: List[int] = []
 
             for node in cluster.elements:
                 sources = get_sources_of_node(node, graph, self._prune_operations_types)
@@ -116,7 +115,7 @@ class PruningNodeSelector:
                         all_pruned_inputs[source_node.node_id] = source_node
 
             if all_pruned_inputs:
-                cluster = Cluster[NNCFNode](i, all_pruned_inputs.values(), all_pruned_inputs.keys())
+                cluster = Cluster[NNCFNode](i, list(all_pruned_inputs.values()), list(all_pruned_inputs.keys()))
                 clusters_to_merge.append(cluster.id)
                 pruned_nodes_clusterization.add_cluster(cluster)
 
@@ -202,7 +201,7 @@ class PruningNodeSelector:
     def _pruning_dimensions_analysis(
         self,
         graph: NNCFGraph,
-        pruned_nodes_clusterization: Clusterization,
+        pruned_nodes_clusterization: Clusterization,  # type: ignore[type-arg]
         can_prune_after_check: Dict[int, PruningAnalysisDecision],
     ) -> Dict[int, PruningAnalysisDecision]:
         """
@@ -218,7 +217,6 @@ class PruningNodeSelector:
             are supported by the NNCF pruning algorithm
         :return: Pruning node analysis after model analyzer, pruning algo compatibility and pruning dimensions checks.
         """
-
         nodes_of_group_with_non_eq_pruning_dim = self._check_internal_groups_dim(pruned_nodes_clusterization)
         can_prune_after_check_updated = can_prune_after_check.copy()
         for node_id, val in nodes_of_group_with_non_eq_pruning_dim.items():
@@ -251,7 +249,7 @@ class PruningNodeSelector:
         return can_prune_updated
 
     def _check_internal_groups_dim(
-        self, pruned_nodes_clusterization: Clusterization
+        self, pruned_nodes_clusterization: Clusterization  # type: ignore[type-arg]
     ) -> Dict[int, PruningAnalysisDecision]:
         """
         Checks pruning dimensions of all nodes in each cluster group are equal and
@@ -278,7 +276,7 @@ class PruningNodeSelector:
     def _should_prune_groups_analysis(
         self,
         graph: NNCFGraph,
-        pruned_nodes_clusterization: Clusterization,
+        pruned_nodes_clusterization: Clusterization,  # type: ignore[type-arg]
         can_prune: Dict[int, PruningAnalysisDecision],
     ) -> Dict[int, PruningAnalysisDecision]:
         """
@@ -312,7 +310,7 @@ class PruningNodeSelector:
         return can_prune_updated
 
     def _filter_groups(
-        self, pruned_nodes_clusterization: Clusterization, can_prune: Dict[int, PruningAnalysisDecision]
+        self, pruned_nodes_clusterization: Clusterization, can_prune: Dict[int, PruningAnalysisDecision]  # type: ignore[type-arg]
     ) -> None:
         """
         Check whether all nodes in group can be pruned based on user-defined constraints and

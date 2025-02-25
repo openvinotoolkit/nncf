@@ -165,5 +165,4 @@ def test_compare_torch_function_with_handle_inner_function(torch_func):
             filtered_torch_func_code.append(line)
     filtered_torch_func_code = "\n".join(filtered_torch_func_code)
     func_code = _get_clean_source_code(func)
-
     assert filtered_torch_func_code == func_code

@@ -506,7 +506,8 @@ class ReshapePruningOp(BasePruningOp):
             elif mode == ReshapeMode.EXTEND:
                 for dim, groups in input_mask.dim_groups_map.items():
                     if len(groups) > 1:
-                        raise NotImplementedError("Extend reshape for several groups is not supported yet")
+                        msg = "Extend reshape for several groups is not supported yet"
+                        raise NotImplementedError(msg)
                     if len(in_map[dim]) == 1:
                         # pruning dimension is not extended, just assign a new location in the output
                         shifted_dim = in_map[dim][0]
@@ -517,7 +518,8 @@ class ReshapePruningOp(BasePruningOp):
                         list_output_channels = [output_shape[x] for x in in_map[dim]]
                         group = groups[0]
                         if group.has_children():
-                            raise NotImplementedError("Splitting BlockGroup with children is not implemented yet")
+                            msg = "Splitting BlockGroup with children is not implemented yet"
+                            raise NotImplementedError(msg)
                         child_groups = cls._split_group(group, input_channels, list_output_channels)
                         for child_group, in_dim in zip(child_groups, in_map[dim]):
                             output_mask.dim_groups_map[in_dim] = [child_group]

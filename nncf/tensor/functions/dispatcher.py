@@ -27,7 +27,8 @@ def tensor_guard(func: callable):
     def wrapper(*args, **kwargs):
         if isinstance(args[0], Tensor):
             return func(*args, **kwargs)
-        raise NotImplementedError(f"Function `{func.__name__}` is not implemented for {type(args[0])}")
+        msg = f"Function `{func.__name__}` is not implemented for {type(args[0])}"
+        raise NotImplementedError(msg)
 
     return wrapper
 
@@ -59,7 +60,8 @@ def dispatch_dict(fn: "functools._SingleDispatchCallable", tensor_dict: Dict[str
             tensor_backend = type(tensor.data)
         else:
             if tensor_backend is not type(tensor.data):
-                raise nncf.InternalError("All tensors in the dictionary should have the same backend")
+                msg = "All tensors in the dictionary should have the same backend"
+                raise nncf.InternalError(msg)
         unwrapped_dict[key] = tensor.data
 
     return fn.dispatch(tensor_backend)(unwrapped_dict, *args, **kwargs)

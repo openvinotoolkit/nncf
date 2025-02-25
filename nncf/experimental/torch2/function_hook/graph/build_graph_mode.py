@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple, Union, cast
+from typing import Any, Callable, Dict, Optional, Tuple, Union, cast
 
 import networkx as nx  # type: ignore[import-untyped]
 import torch
@@ -32,6 +32,7 @@ from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
 from nncf.experimental.torch2.function_hook.weak_map import WeakUnhashableKeyMap
 from nncf.experimental.torch2.function_hook.wrapper import ForwardWithHooks
 from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
+from nncf.torch.utils import training_mode_switcher
 
 
 class GraphBuilderMode(FunctionHookMode):
@@ -185,23 +186,25 @@ class GraphBuilderMode(FunctionHookMode):
         :param output: The output tensor.
         :param op_meta: Metadata about the operation.
         """
-        fn_name = None
+        func: Optional[Callable[..., Any]] = None
         fn_kwargs = None
 
         if output.grad_fn is not None:
             if output.grad_fn.name() == "TransposeBackward0":
-                fn_name = "transpose"
+                func = torch.transpose
                 # grad_fn collect arguments as _saved_dim0=18446744073709551614
+                # Use static arguments for .mT
+                # https://pytorch.org/docs/stable/tensors.html#torch.Tensor.mT
                 fn_kwargs = {
-                    "dim0": -(2**64 - output.grad_fn._saved_dim0),  # type: ignore[attr-defined]
-                    "dim1": -(2**64 - output.grad_fn._saved_dim1),  # type: ignore[attr-defined]
+                    "dim0": -2,
+                    "dim1": -1,
                 }
             if output.grad_fn.name() == "PermuteBackward0":
-                fn_name = "permute"
+                func = torch.permute
                 fn_kwargs = {"dims": output.grad_fn._saved_dims}  # type: ignore[attr-defined]
 
-        if fn_name is not None and fn_kwargs is not None:
-            self.graph.nodes[op_meta.extra_info["node_id"]]["meta"].fn_name = fn_name
+        if func is not None and fn_kwargs is not None:
+            self.graph.nodes[op_meta.extra_info["node_id"]]["meta"].func = func
             self.graph.nodes[op_meta.extra_info["node_id"]]["meta"].kwargs = fn_kwargs
 
     def execute_post_hooks(self, outputs: Any, op_meta: OpMeta) -> Any:
@@ -209,14 +212,15 @@ class GraphBuilderMode(FunctionHookMode):
         Overload execute_post_hooks to correct registered node for operation.
         Process __get__ function, to detect permute and transpose operation
         and remove node if operation return not tensor.
+
+        :param output: The output of the function.
+        :param op_meta: Metadata for the operation.
+        :return: The modified output after post-hooks.
         """
-        if op_meta.func.__name__ == "__get__":
-            if isinstance(outputs, torch.Tensor):
-                self.process_tensor_attributes(outputs, op_meta)
-            else:
-                # Remove the node corresponding to this operation from the graph, as non-tensor
-                # outputs (like `tensor.shape` or similar) are not relevant for further algorithmic use.
-                self.graph.remove_node(op_meta.extra_info["node_id"])
+        if op_meta.func.__name__ == "__get__" and not isinstance(outputs, torch.Tensor):
+            # Remove the node corresponding to this operation from the graph, as non-tensor
+            # outputs (like `tensor.shape` or similar) are not relevant for further algorithmic use.
+            self.graph.remove_node(op_meta.extra_info["node_id"])
         outputs = super().execute_post_hooks(outputs, op_meta)
         return outputs
 
@@ -272,22 +276,13 @@ class GraphBuilderMode(FunctionHookMode):
         :param node_id: Id if operation node.
         :param port_id: Port id of input argument.
         :param op_meta: Metadata about the operation.
-        :return: Descriptor of the input. For a Tensor, this is a `TensorMeta` object.
-             For a collection of Tensors, a collection of `TensorMeta` objects is returned.
-             For other types, the original input `arg` is returned as-is.
+        :return: Descriptor of the input.
+            For a Tensor, this is a `TensorMeta` object.
+            For other types, the original input `arg` is returned as-is.
         """
         if isinstance(arg, torch.Tensor):
             self.register_op_input_tensor(arg, node_id, port_id, op_meta)
             return TensorMeta.from_tensor(arg)
-        elif isinstance(arg, (list, tuple, set)):
-            op_attr = []
-            for x in arg:
-                if isinstance(x, torch.Tensor):
-                    self.register_op_input_tensor(x, node_id, port_id, op_meta)
-                    op_attr.append(TensorMeta.from_tensor(x))
-                else:
-                    op_attr.append(x)
-            return op_attr
         return arg
 
     def register_op_node(self, args: Tuple[Any], kwargs: Dict[str, Any], op_meta: OpMeta) -> None:
@@ -309,18 +304,35 @@ class GraphBuilderMode(FunctionHookMode):
 
         op_attrs = []
         op_kwargs = {}
-        for port_id, arg in enumerate(args):
-            op_attr = self.register_op_input(arg, node_id, port_id, op_meta)
-            op_attrs.append(op_attr)
+        port_id = 0
 
-        for port_id, (name, arg) in enumerate(kwargs.items(), start=len(args)):
-            op_attr = self.register_op_input(arg, node_id, port_id, op_meta)
-            op_kwargs[name] = op_attr
+        for value in args:
+            if isinstance(value, (list, tuple)) and all(isinstance(v, torch.Tensor) for v in value):
+                list_attr = [None] * len(value)
+                for idx, tensor in enumerate(value):
+                    op_attr = self.register_op_input(tensor, node_id, port_id, op_meta)
+                    list_attr[idx] = op_attr
+                    port_id += 1
+                op_attrs.append(tuple(list_attr) if isinstance(value, tuple) else list_attr)
+            else:
+                op_attr = self.register_op_input(value, node_id, port_id, op_meta)
+                op_attrs.append(op_attr)
+                port_id += 1
+
+        for kw_name, value in kwargs.items():
+            if isinstance(value, (list, tuple)) and all(isinstance(v, torch.Tensor) for v in value):
+                op_kwargs[kw_name] = [None] * len(value)
+                for tensor_idx, tensor in enumerate(value):
+                    op_kwargs[kw_name][tensor_idx] = self.register_op_input(value, node_id, port_id, op_meta)
+                    port_id += 1
+            else:
+                op_kwargs[kw_name] = self.register_op_input(value, node_id, port_id, op_meta)
+                port_id += 1
 
         self.graph.add_node(
             node_id,
             type=NodeType.fn_call,
-            meta=FunctionMeta(op_name=op_name, fn_name=op_meta.func.__name__, args=tuple(op_attrs), kwargs=op_kwargs),
+            meta=FunctionMeta(op_name=op_name, func=op_meta.func, args=tuple(op_attrs), kwargs=op_kwargs),
         )
 
         logger.debug(f"GraphBuilderMode.process_op_inputs: {node_id=} {op_name=} {op_attrs=} {op_kwargs=}")
@@ -356,12 +368,11 @@ def build_graph(model: nn.Module, *args: Any, **kwargs: Any) -> nx.MultiDiGraph:
     :param model: The PyTorch model for which the computational graph will be built.
     :return: A nx.MultiDiGraph where nodes represent operations of model.
     """
-
-    with torch.enable_grad():  # type: ignore
-        # Gradient use to get information about __get__ functions to detect tensor.(T, mT) attributes
-        with GraphBuilderMode(model=model, hook_storage=get_hook_storage(model)) as ctx:
-            args, kwargs = ctx.process_model_inputs(args, kwargs)
-            wrapped_forward = cast(ForwardWithHooks, model.forward)
-            outputs = wrapped_forward._func(*args, **kwargs)
-            outputs = ctx.process_model_outputs(outputs)
+    with training_mode_switcher(model, is_training=False):
+        with torch.no_grad():
+            with GraphBuilderMode(model=model, hook_storage=get_hook_storage(model)) as ctx:
+                args, kwargs = ctx.process_model_inputs(args, kwargs)
+                wrapped_forward = cast(ForwardWithHooks, model.forward)
+                outputs = wrapped_forward._func(*args, **kwargs)
+                outputs = ctx.process_model_outputs(outputs)
     return ctx.graph

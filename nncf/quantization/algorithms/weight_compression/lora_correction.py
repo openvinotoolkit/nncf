@@ -24,6 +24,7 @@ from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParamete
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.weight_lowering import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
@@ -105,7 +106,7 @@ class LoraCorrectionAlgorithm:
         return wc_params.compression_config.num_bits == 4
 
     def calculate_adapters(
-        self, weight: Tensor, compressed_weight: Tensor, wc_params: WeightCompressionParameters
+        self, weight: Tensor, compressed_weight: CompressedWeight, wc_params: WeightCompressionParameters
     ) -> Tuple[Tensor, Tensor, List[float]]:
         """
         Calculates low rank matrices for a given original and compressed weights.
@@ -134,7 +135,7 @@ class LoraCorrectionAlgorithm:
     @staticmethod
     def calculate_low_rank_matrices(
         weight: Tensor,
-        compressed_weight: Tensor,
+        compressed_weight: CompressedWeight,
         compression_config: WeightCompressionConfig,
         reduction_axes: Tuple[int, ...],
         lora_correction_params: AdvancedLoraCorrectionParameters,
@@ -179,9 +180,11 @@ class LoraCorrectionAlgorithm:
             indexes = do_nf4_quantization(compressed_weight.tensor, compressed_weight.scale, is_normalized_weight=True)
             fq_weights = do_nf4_dequantization(indexes, compressed_weight.scale, reduction_axis)
         else:
-            raise nncf.InternalError(
-                f"{mode.value} mode is invalid for Lora Correction algorithm. Supported modes: INT4_SYM, INT4_ASYM, NF4"
+            msg = (
+                f"{mode.value} mode is invalid for Lora Correction algorithm."
+                " Supported modes: INT4_SYM, INT4_ASYM, NF4"
             )
+            raise nncf.InternalError(msg)
         # fq_w + residual = w   =>  residual = w - fq_w
         svd_residual = fns.astype(weight - fq_weights, TensorDataType.float32)
 

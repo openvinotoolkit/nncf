@@ -145,9 +145,15 @@ mock_modules = [
     "nncf.tensor.functions.torch_linalg",
     "nncf.tensor.functions.torch_io",
     "nncf.tensor.functions.numpy_io",
+    "nncf.tensor.functions.openvino_numeric",
+    "nncf.torch.dynamic_graph.patch_pytorch",
 ]
 
 with mock(mock_modules):
+    import torch
+
+    # Set torch version to allow nncf.torch import
+    torch.__version__ = "0.0.0"
     api_info = collect_api_entities()
 
 module_fqns = set()

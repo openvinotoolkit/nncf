@@ -12,6 +12,7 @@
 import enum
 import os
 import textwrap
+import warnings
 from abc import ABC
 from abc import abstractmethod
 from multiprocessing.context import TimeoutError as MPTimeoutError
@@ -24,7 +25,6 @@ from torch.utils.cpp_extension import _get_build_directory
 
 import nncf
 from nncf.common.logging import nncf_logger
-from nncf.common.logging.logger import extension_is_loading_info_log
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.registry import Registry
 
@@ -95,27 +95,29 @@ class ExtensionNamespace:
         if self._loaded_namespace is None:
             timeout = int(os.environ.get(EXTENSION_LOAD_TIMEOUT_ENV_VAR, DEFAULT_EXTENSION_LOAD_TIMEOUT))
             timeout = timeout if timeout > 0 else None
-
-            with extension_is_loading_info_log(self._loader.name()):
-                try:
+            nncf_logger.info(f"Compiling and loading torch extension: {self._loader.name()}...")
+            try:
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", message="TORCH_CUDA_ARCH_LIST is not set")
                     pool = ThreadPool(processes=1)
                     async_result = pool.apply_async(self._loader.load)
                     self._loaded_namespace = async_result.get(timeout=timeout)
-                except MPTimeoutError as error:
-                    msg = textwrap.dedent(
-                        f"""\
-                        The extension load function failed to execute within {timeout} seconds.
-                        This may be due to leftover lock files from the PyTorch C++ extension build process.
-                        If this is the case, running the following command should help:
-                            rm -rf {self._loader.get_build_dir()}
-                        For a machine with poor performance, you may try increasing the time limit by setting the environment variable:
-                            {EXTENSION_LOAD_TIMEOUT_ENV_VAR}=180
-                        Or disable timeout by set:
-                            {EXTENSION_LOAD_TIMEOUT_ENV_VAR}=0
-                        For more information, see FAQ entry at: https://github.com/openvinotoolkit/nncf/blob/develop/docs/FAQ.md#importing-anything-from-nncftorch-hangs
-                        """  # noqa: E501
-                    )
-                    raise ExtensionLoaderTimeoutException(msg) from error
+            except MPTimeoutError as error:
+                msg = textwrap.dedent(
+                    f"""\
+                    The extension load function failed to execute within {timeout} seconds.
+                    This may be due to leftover lock files from the PyTorch C++ extension build process.
+                    If this is the case, running the following command should help:
+                        rm -rf {self._loader.get_build_dir()}
+                    For a machine with poor performance, you may try increasing the time limit by setting the environment variable:
+                        {EXTENSION_LOAD_TIMEOUT_ENV_VAR}=180
+                    Or disable timeout by set:
+                        {EXTENSION_LOAD_TIMEOUT_ENV_VAR}=0
+                    For more information, see FAQ entry at: https://github.com/openvinotoolkit/nncf/blob/develop/docs/FAQ.md#importing-anything-from-nncftorch-hangs
+                    """  # noqa: E501
+                )
+                raise ExtensionLoaderTimeoutException(msg) from error
+            nncf_logger.info(f"Finished loading torch extension: {self._loader.name()}")
 
         return getattr(self._loaded_namespace, fn_name)
 
@@ -139,7 +141,8 @@ def force_build_cuda_extensions():
 
 class CudaNotAvailableStub:
     def __getattr__(self, item):
-        raise nncf.InstallationError(
+        msg = (
             f"CUDA is not available on this machine. Check that the machine has a GPU and a proper "
             f"driver supporting CUDA {torch.version.cuda} is installed."
         )
+        raise nncf.InstallationError(msg)

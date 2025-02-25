@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, TypeVar
+from typing import List, TypeVar
 
 import nncf
 
@@ -23,24 +23,28 @@ class NNCFTensor:
     An interface of framework specific tensors for common NNCF algorithms.
     """
 
-    def __init__(self, tensor: Optional[TensorType]):
+    def __init__(self, tensor: TensorType):
         self._tensor = tensor
 
-    def __eq__(self, other: "NNCFTensor") -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, NNCFTensor):
+            msg = "Attempt to compare NNCFTensor with a non-NNCFTensor object"
+            raise nncf.InternalError(msg)
         return self._tensor == other.tensor
 
     @property
-    def tensor(self) -> TensorType:
+    def tensor(self) -> TensorType:  # type: ignore
         return self._tensor
 
     @property
     def shape(self) -> List[int]:
         if self._tensor is None:
-            raise nncf.InternalError("Attempt to get shape of empty NNCFTensor")
-        return self._tensor.shape
+            msg = "Attempt to get shape of empty NNCFTensor"
+            raise nncf.InternalError(msg)
+        return self._tensor.shape  # type: ignore
 
     @property
-    def device(self) -> DeviceType:
+    def device(self) -> DeviceType:  # type: ignore
         raise NotImplementedError
 
     def is_empty(self) -> bool:

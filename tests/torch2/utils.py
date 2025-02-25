@@ -11,6 +11,10 @@
 
 from pathlib import Path
 
+import networkx as nx
+
+from nncf.common.graph.graph import NNCFGraph
+
 
 def compare_with_reference_file(text_data: str, ref_path: Path, regen_ref_data: bool):
     """
@@ -37,3 +41,55 @@ def compare_with_reference_file(text_data: str, ref_path: Path, regen_ref_data: 
         f"Data mismatch between actual data and reference file: {ref_path}\n"
         f"Actual data and reference data differ. Please review the file contents."
     )
+
+
+def _quote_str(s: str) -> str:
+    """
+    Add quotes to a string if it contains a colon.
+    """
+    if ":" in s:
+        return f'"{s}"'
+    return s
+
+
+def to_comparable_nx_graph(graph: NNCFGraph) -> nx.DiGraph:
+    """
+    Convert NNCFGraph to nx.DiGraph for comparison with references.
+
+    Attributes:
+        - NODE:
+            - id
+            - type
+            - metatype class name
+
+        - EDGE:
+            - dtype
+            - shape
+            - out_port_id
+            - in_port_id
+            - parallel_input_port_ids (if exists)
+
+    :param graph: NNCFGraph to convert.
+    :return: Graph in nx.DiGraph.
+    """
+    out_graph = nx.DiGraph()
+    for node in sorted(graph.get_all_nodes(), key=lambda x: x.node_id):
+        attrs_node = {
+            "id": node.node_id,
+            "type": node.node_type,
+            "metatype": node.metatype.__name__,
+        }
+        out_graph.add_node(_quote_str(node.node_name), **attrs_node)
+
+    for edge in graph.get_all_edges():
+        attrs_edge = {
+            "dtype": edge.dtype.value,
+            "shape": edge.tensor_shape,
+            "out_port_id": edge.output_port_id,
+            "in_port_id": edge.input_port_id,
+        }
+        if edge.parallel_input_port_ids:
+            attrs_edge["parallel_input_port_ids"] = edge.parallel_input_port_ids
+
+        out_graph.add_edge(_quote_str(edge.from_node.node_name), _quote_str(edge.to_node.node_name), **attrs_edge)
+    return out_graph

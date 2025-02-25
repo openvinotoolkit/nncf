@@ -628,6 +628,21 @@ class ConstantFoldingTestModel(nn.Module):
         return x + y
 
 
+class ScalarCloneTestModel(nn.Module):
+    INPUT_SIZE = (1, 3, 3, 3)
+
+    def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(3, 3)
+
+    def forward(self, x: torch.Tensor):
+        # Emulating part of the torchvision SWIN masks generation impelemntation
+        y = x.new_zeros((3, 3))
+        y[1, :] = 2.0
+        y[2, :] = 3.0
+        return self.linear(x) + y
+
+
 class ShortTransformer(torch.nn.Module):
     def __init__(self, in_features, num_embeddings, share_weights=False):
         super().__init__()
@@ -662,3 +677,41 @@ class YOLO11N_SDPABlock(torch.nn.Module):
         kq /= 2**-2
         kq = torch.softmax(kq, -1)
         return torch.matmul(torch.transpose(kq, 1, 2), v)
+
+
+class ConcatSDPABlock(torch.nn.Module):
+    Q_INPUT_SHAPE = [2, 10, 6]
+    KV_INPUT_SHAPE = [2, 10, 12]
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x, y, z, w):
+        concatenated_input = torch.cat((x, y), dim=-1)
+        query = concatenated_input
+        key = z
+        value = w
+        attn_output = torch.nn.functional.scaled_dot_product_attention(query, key, value)
+
+        return attn_output
+
+
+class SimpleConcatModel(torch.nn.Module):
+    INPUT_SHAPE = (1, 3, 3, 3)
+
+    def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(3, 1, 1, bias=False)
+        self.conv.weight.data = 0.5 * torch.ones_like(self.conv.weight.data)
+
+        self.conv1 = torch.nn.Conv2d(3, 1, 1, bias=False)
+        self.conv1.weight.data = 0.33 * torch.ones_like(self.conv1.weight.data)
+
+        self.conv2 = torch.nn.Conv2d(2, 1, 1, bias=False)
+        self.conv2.weight.data = 0.25 * torch.ones_like(self.conv2.weight.data)
+
+    def forward(self, x):
+        a = self.conv(x)
+        b = self.conv1(x)
+        c = torch.cat([a, b], dim=1)
+        return self.conv2(c)

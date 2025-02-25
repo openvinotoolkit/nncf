@@ -87,7 +87,6 @@ class Evaluator:
 
         :return: Number of passed iterations during last validation process.
         """
-
         return self._num_passed_iterations
 
     def enable_iteration_count(self) -> None:
@@ -131,9 +130,8 @@ class Evaluator:
 
             return ONNXPreparedModel(model)
 
-        raise NotImplementedError(
-            f"The `prepare_model_for_inference()` method is not implemented for the {backend} backend."
-        )
+        msg = f"The `prepare_model_for_inference()` method is not implemented for the {backend} backend."
+        raise NotImplementedError(msg)
 
     def validate_prepared_model(
         self, prepared_model: PreparedModel, dataset: Dataset, indices: Optional[List[int]] = None
@@ -156,7 +154,8 @@ class Evaluator:
             self._metric_mode = Evaluator.determine_mode(prepared_model, dataset, self._validation_fn)
 
         if not self.is_metric_mode() and indices is not None:
-            raise ValueError("The `indices` parameter can be used only if Evaluator.is_metric_mode() = True")
+            msg = "The `indices` parameter can be used only if Evaluator.is_metric_mode() = True"
+            raise ValueError(msg)
 
         validation_dataset = dataset.get_data(indices)
         if self._enable_iteration_count:
@@ -230,10 +229,11 @@ class Evaluator:
         try:
             metric_value = metric_value if metric_value is None else float(metric_value)
         except Exception as ex:
-            raise nncf.InternalError(
+            msg = (
                 f"Metric value of {type(metric_value)} type was returned from the `validation_fn` "
                 "but the float value is expected."
-            ) from ex
+            )
+            raise nncf.InternalError(msg) from ex
 
         convert_to_float_possible = True
         if values_for_each_item is not None:
@@ -263,7 +263,8 @@ class Evaluator:
         if isinstance(metric_value, float) and (values_for_each_item is None or convert_to_float_possible):
             metric_mode = True
         elif values_for_each_item is not None and not isinstance(values_for_each_item[0], list):
-            raise nncf.InternalError("Unexpected return value from provided validation function.")
+            msg = "Unexpected return value from provided validation function."
+            raise nncf.InternalError(msg)
 
         return metric_mode
 

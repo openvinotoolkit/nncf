@@ -69,7 +69,7 @@ class PolynomialDecaySchedule:
         else:
             value = self.initial_value + (self.target_value - self.initial_value) * np.power(progress, self.power)
 
-        return value
+        return float(value)
 
 
 class MultiStepSchedule:
@@ -88,7 +88,8 @@ class MultiStepSchedule:
             equal to the number of elements in the `boundaries` list plus one.
         """
         if len(boundaries) + 1 != len(values):
-            raise ValueError("The length of `values` should be 1 more than the length of `boundaries`")
+            msg = "The length of `values` should be 1 more than the length of `boundaries`"
+            raise ValueError(msg)
 
         self.boundaries = boundaries
         self.values = values
@@ -141,7 +142,7 @@ class ExponentialDecaySchedule:
         if self.target_epoch == 0:
             return self.target_value
 
-        value = self.initial_value * np.power(self.decay_rate, epoch / self.target_epoch)
+        value = self.initial_value * float(np.power(self.decay_rate, epoch / self.target_epoch))
         return max(value, self.target_value)
 
 

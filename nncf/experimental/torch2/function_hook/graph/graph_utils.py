@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import torch
 
@@ -43,11 +43,10 @@ class TensorSource(Enum):
 class TensorMeta:
     dtype: torch.dtype
     shape: Tuple[int, ...]
-    requires_grad: bool
 
     @staticmethod
     def from_tensor(tensor: torch.Tensor) -> TensorMeta:
-        return TensorMeta(tensor.dtype, tuple(tensor.shape), tensor.requires_grad)
+        return TensorMeta(tensor.dtype, tuple(tensor.shape))
 
 
 @dataclass
@@ -75,9 +74,13 @@ class InOutMeta:
 @dataclass
 class FunctionMeta:
     op_name: str
-    fn_name: str
+    func: Callable[..., Any]
     args: Tuple[Any, ...]
     kwargs: Dict[str, Any]
+
+    @property
+    def func_name(self) -> str:
+        return self.func.__name__
 
 
 @dataclass

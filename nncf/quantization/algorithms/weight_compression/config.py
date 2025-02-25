@@ -40,11 +40,22 @@ class WeightCompressionConfig:
         """
         return 8 if self.mode in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM] else 4
 
+    @property
+    def is_asym_mode(self):
+        return self.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT8_ASYM]
+
+    @property
     def is_integer(self):
         """
         :return: True if compression type in integer, else False.
         """
         return self.mode not in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
+
+    def __hash__(self):
+        return hash((self.mode.value, self.group_size))
+
+    def __str__(self):
+        return f"{self.mode.value}_{self.group_size}"
 
 
 @dataclass

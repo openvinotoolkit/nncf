@@ -110,7 +110,8 @@ def range_mode_to_args(range_mode: str) -> Tuple[bool, bool]:
         return True, False
     if range_mode == "narrow_range":
         return False, True
-    raise ValueError(f"{range_mode} is not supported.")
+    msg = f"{range_mode} is not supported."
+    raise ValueError(msg)
 
 
 @pytest.mark.parametrize("input_size", INPUT_TEST_SCALES, ids=_idfn)

@@ -83,4 +83,4 @@ def test_track_context_manager(n, is_weighted):
     with track(total=n, description="Progress...", weights=weights if is_weighted else None) as pbar:
         for i in range(n):
             assert pbar.progress._tasks[pbar.task].completed == (sum(weights[:i]) if is_weighted else i)
-            pbar.progress.update(pbar.task, advance=1)
+            pbar.update(advance=1)

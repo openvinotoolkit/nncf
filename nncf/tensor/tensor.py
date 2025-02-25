@@ -196,6 +196,9 @@ class Tensor:
     def clone(self) -> float:
         return _call_function("clone", self)
 
+    def as_numpy_tensor(self) -> Tensor:
+        return _call_function("as_numpy_tensor", self)
+
 
 def _call_function(func_name: str, *args):
     """
@@ -262,6 +265,7 @@ def get_tensor_backend(backend: BackendType) -> TensorBackend:
         BackendType.TORCH: TensorBackend.torch,
     }
     if backend not in BACKEND_TO_TENSOR_BACKEND:
-        raise nncf.ValidationError(f"Unsupported backend type: {backend}")
+        msg = f"Unsupported backend type: {backend}"
+        raise nncf.ValidationError(msg)
 
     return BACKEND_TO_TENSOR_BACKEND[backend]

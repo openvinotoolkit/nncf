@@ -32,7 +32,7 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 
 def create_command_line(args: Dict[str, Any], sample_type: str, main_filename: str = "main.py") -> str:
     executable = EXAMPLES_DIR.joinpath("torch", sample_type, main_filename).as_posix()
-    cli_args = " ".join(key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items())
+    cli_args = " ".join(key if (val is None or val is True) else f"{key} {val}" for key, val in args.items())
     return f"{sys.executable} {executable} {cli_args}"
 
 
@@ -103,8 +103,8 @@ class ClassificationHandler(BaseSampleHandler):
         self, checkpoint_save_dir: str, checkpoint_name: Optional[str] = None, config_path: Optional[Path] = None
     ):
         checkpoint_path = self.get_checkpoint_path(checkpoint_save_dir, checkpoint_name, config_path)
-        assert os.path.exists(checkpoint_path), "Path to checkpoint {} does not exist".format(checkpoint_path)
-        accuracy = torch.load(checkpoint_path)["best_acc1"]
+        assert os.path.exists(checkpoint_path), f"Path to checkpoint {checkpoint_path} does not exist"
+        accuracy = torch.load(checkpoint_path, weights_only=False)["best_acc1"]
         return accuracy
 
     def get_sample_dir_name(self) -> str:

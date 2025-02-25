@@ -10,7 +10,7 @@
 # limitations under the License.
 
 """
-This module implements selected functions from the `torch` module, excluding the `hand_function` mechanism.
+This module implements selected functions from the `torch` module, excluding the `handle_torch_function` function.
 
 It processes inner functions to handle exception hooks and graph analysis. The implementation is designed
 to support custom handling of inner function exceptions for specific functions.
@@ -64,7 +64,6 @@ def multi_head_attention_forward(
 ) -> Tuple[Tensor, Optional[Tensor]]:
 
     is_batched = _mha_shape_check(query, key, value, key_padding_mask, attn_mask, num_heads)
-
     if not is_batched:
         query = query.unsqueeze(1)
         key = key.unsqueeze(1)
@@ -91,7 +90,6 @@ def multi_head_attention_forward(
         )
 
     if is_causal and key_padding_mask is None and not need_weights:
-
         attn_mask = None
     else:
         attn_mask = _canonical_mask(
@@ -104,7 +102,6 @@ def multi_head_attention_forward(
         )
 
         if key_padding_mask is not None:
-
             is_causal = False
 
     assert (
@@ -133,7 +130,17 @@ def multi_head_attention_forward(
             b_q = b_k = b_v = None
         else:
             b_q, b_k, b_v = in_proj_bias.chunk(3)
-        q, k, v = _in_projection(query, key, value, q_proj_weight, k_proj_weight, v_proj_weight, b_q, b_k, b_v)
+        q, k, v = _in_projection(
+            query,
+            key,
+            value,
+            q_proj_weight,
+            k_proj_weight,
+            v_proj_weight,
+            b_q,
+            b_k,
+            b_v,
+        )
 
     if attn_mask is not None:
         if attn_mask.dim() == 2:
@@ -195,10 +202,9 @@ def multi_head_attention_forward(
     src_len = k.size(1)
 
     if key_padding_mask is not None:
-        assert key_padding_mask.shape == (
-            bsz,
-            src_len,
-        ), f"expecting key_padding_mask shape of {(bsz, src_len)}, but got {key_padding_mask.shape}"
+        if not torch.jit.is_scripting() and not torch.jit.is_tracing():  # type: ignore
+            _check_key_padding_mask(key_padding_mask, src_len, bsz)  # type: ignore
+
         key_padding_mask = (
             key_padding_mask.view(bsz, 1, 1, src_len).expand(-1, num_heads, -1, -1).reshape(bsz * num_heads, 1, src_len)
         )
@@ -211,7 +217,7 @@ def multi_head_attention_forward(
         dropout_p = 0.0
 
     if need_weights:
-        B, Nt, E = q.shape  # noqa: F841
+        _B, _Nt, E = q.shape  # noqa: F841
         q_scaled = q * math.sqrt(1.0 / float(E))
 
         assert not (is_causal and attn_mask is None), "FIXME: is_causal not implemented for need_weights"

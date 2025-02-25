@@ -11,6 +11,7 @@
 """Interface for user-defined data usage during the compression algorithm initialization process."""
 from abc import ABC
 from abc import abstractmethod
+from typing import Any, Iterator
 
 from nncf.common.utils.api_marker import api
 
@@ -31,7 +32,7 @@ class NNCFDataLoader(ABC):
         """
 
     @abstractmethod
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Any]:
         """
         Creates an iterator for the elements of a custom data source.
         The returned iterator implements the Python Iterator protocol.

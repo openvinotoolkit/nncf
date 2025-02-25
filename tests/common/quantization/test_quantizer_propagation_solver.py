@@ -837,7 +837,45 @@ class TestQuantizerPropagationSolver:
                         None,
                         None
                     ])
-            })
+            }),
+        # Check configs with different narrow range params
+        # are not merging
+        MergeQConfigTestStruct(
+            branch_qconfig_lists_before_merge=[
+                [QuantizerConfig(narrow_range=True)],
+                [QuantizerConfig(narrow_range=True)],
+                [QuantizerConfig(narrow_range=False)],
+            ],
+            strategy_vs_solution_dict={
+                QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(narrow_range=True)],
+                        [QuantizerConfig(narrow_range=True)],
+                        [QuantizerConfig(narrow_range=False)],
+                    ], ),
+                QuantizerPropagationRule.MERGE_IF_ALL_BRANCHES_SAME : MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(narrow_range=True)],
+                        [QuantizerConfig(narrow_range=True)],
+                        [QuantizerConfig(narrow_range=False)],
+                    ], ),
+                QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(narrow_range=True)],
+                        [QuantizerConfig(narrow_range=True)],
+                        [QuantizerConfig(narrow_range=False)],
+                    ], ),
+                QuantizerPropagationRule.MERGE_ALL_IN_ONE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(narrow_range=True)],
+                        [QuantizerConfig(narrow_range=True)],
+                        [QuantizerConfig(narrow_range=False)],
+                    ], )
+            }),
     ]  # fmt: skip
 
     @staticmethod
@@ -1942,3 +1980,65 @@ def test_metatypes_to_ignore(mocker):
 
     solver._add_node_to_ignored.assert_called_once()
     assert "1 B" in solver._add_node_to_ignored.call_args[0]
+
+
+@pytest.mark.parametrize(
+    ("requanting_qconf", "base_qconf", "is_valid_requant"),
+    (
+        (QuantizerConfig(), QuantizerConfig(), True),
+        (QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=6), False),
+        (QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=8), True),
+        # Technically placing a per-channel quantization after a per-tensor should not break
+        # anything or limit the set of output values w.r.t to a single per-tensor quantizer.
+        (QuantizerConfig(num_bits=6, per_channel=True), QuantizerConfig(num_bits=6, per_channel=False), True),
+        (QuantizerConfig(num_bits=6, per_channel=False), QuantizerConfig(num_bits=6, per_channel=True), True),
+        (QuantizerConfig(num_bits=5, per_channel=True), QuantizerConfig(num_bits=6, per_channel=False), True),
+        (QuantizerConfig(num_bits=5, per_channel=False), QuantizerConfig(num_bits=6, per_channel=True), True),
+        (
+            QuantizerConfig(num_bits=5, mode=QuantizationMode.SYMMETRIC),
+            QuantizerConfig(num_bits=5, mode=QuantizationMode.ASYMMETRIC),
+            True,
+        ),
+        (
+            QuantizerConfig(num_bits=5, mode=QuantizationMode.ASYMMETRIC),
+            QuantizerConfig(num_bits=5, mode=QuantizationMode.SYMMETRIC),
+            False,
+        ),
+        (QuantizerConfig(signedness_to_force=True), QuantizerConfig(), True),
+        (QuantizerConfig(), QuantizerConfig(signedness_to_force=True), False),
+        (QuantizerConfig(signedness_to_force=False), QuantizerConfig(), True),
+        (QuantizerConfig(), QuantizerConfig(signedness_to_force=False), False),
+        (QuantizerConfig(signedness_to_force=True), QuantizerConfig(signedness_to_force=False), False),
+        (QuantizerConfig(signedness_to_force=False), QuantizerConfig(signedness_to_force=True), True),
+        (
+            QuantizerConfig(num_bits=4, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+            QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=True),
+            True,
+        ),
+        (
+            QuantizerConfig(num_bits=4, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+            QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False),
+            True,
+        ),
+        # Neither of the two configs here can requantize the other
+        (
+            QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC),
+            QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
+            False,
+        ),
+        (
+            QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
+            QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC),
+            False,
+        ),
+        # Check narrow range requantization rule
+        (
+            QuantizerConfig(narrow_range=True),
+            QuantizerConfig(narrow_range=False),
+            False,
+        ),
+    ),
+)
+def test_quantizer_ordering(requanting_qconf: QuantizerConfig, base_qconf: QuantizerConfig, is_valid_requant: bool):
+    test_result = requanting_qconf.is_valid_requantization_for(base_qconf)
+    assert test_result == is_valid_requant

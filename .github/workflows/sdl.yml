@@ -2,22 +2,27 @@ name: sdl
 permissions: read-all
 
 on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+      - release_v*
   pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
+    paths:
+      - '.github/workflows/sdl.yml'
+      - '**.py'
 
 jobs:
   bandit:
-    runs-on: ubuntu-20.04
+    name: Bandit
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
-      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: 3.10.14
       - name: Install bandit
@@ -25,3 +30,43 @@ jobs:
       - name: Run bandit
         run: bandit -c pyproject.toml -r .
 
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          lfs: true
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@9e8d0789d4a0fa9ceb6b1738f7e269594bdd67f0 # v3.28.9
+        with:
+          languages: python
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@9e8d0789d4a0fa9ceb6b1738f7e269594bdd67f0 # v3.28.9
+        with:
+          category: "/language:python"
+
+      # pdf reports always empty for pull_request
+      - name: Generate Security Report
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: rsdmike/github-security-report-action@a149b24539044c92786ec39af8ba38c93496495d # v3.0.4
+        with:
+          template: report
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rename Report
+        shell: bash
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          DATE=$(date +"%Y-%m-%d")
+          REF_NAME="${{ github.ref_name }}"
+          mv "report.pdf" "codeql_nncf_report_${DATE}_${REF_NAME//\//-}_${{ github.sha }}.pdf"
+      - name: Upload CodeQL Artifacts
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 #v4.6.0
+        with:
+          name: codeql-scan-results
+          path: "./codeql*.pdf"

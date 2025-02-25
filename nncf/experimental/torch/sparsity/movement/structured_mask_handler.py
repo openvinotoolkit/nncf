@@ -119,7 +119,8 @@ class StructuredMaskContext:
     @torch.no_grad()
     def independent_structured_mask(self, tensor: torch.Tensor):
         if self.structured_mask_shape != tensor.shape:
-            raise ValueError("Wrong shape about independent structured mask.")
+            msg = "Wrong shape about independent structured mask."
+            raise ValueError(msg)
         if self._independent_structured_mask is None:
             self._independent_structured_mask = tensor.clone()
         else:
@@ -138,7 +139,8 @@ class StructuredMaskContext:
     @torch.no_grad()
     def dependent_structured_mask(self, tensor: torch.Tensor):
         if self.structured_mask_shape != tensor.shape:
-            raise ValueError("Wrong shape about dependent structured mask.")
+            msg = "Wrong shape about dependent structured mask."
+            raise ValueError(msg)
         if self._dependent_structured_mask is None:
             self._dependent_structured_mask = tensor.clone()
         else:
@@ -185,7 +187,6 @@ class StructuredMaskContext:
          1111    &            1100               &             0000                =    0000
          1111                 1100                             1111                     1100
         """
-
         self.sparsifier_operand.weight_ctx.binary_mask.fill_(1)
         if self.sparsifier_operand.prune_bias:
             self.sparsifier_operand.bias_ctx.binary_mask.fill_(1)

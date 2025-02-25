@@ -100,8 +100,8 @@ class TestONNXExport:
             .model_config_(
                 image_size=384,
                 patch_size=4,
-                window_size=12,
-                embed_dim=192,
+                window_size=4,  # TODO: nlyayus: SwinModel changed logic for window size
+                embed_dim=192,  # larger than input resolution Issue-162383
                 mlp_ratio=4,
                 depths=(2, 2, 5, 2),
                 num_heads=(6, 12, 24, 48),
@@ -112,6 +112,7 @@ class TestONNXExport:
     def test_same_outputs_in_torch_and_exported_onnx(self, tmp_path: Path, recipe: BaseMockRunRecipe):
         num_samples = 4
         recipe.log_dir_(tmp_path)
+        print(recipe.model_family)
         compression_ctrl, compressed_model = create_compressed_model(
             recipe.model(), recipe.nncf_config(), dump_graphs=False
         )
@@ -139,8 +140,8 @@ class TestONNXExport:
         "desc",
         [
             Dict(
-                nncf_weight_ratio=0.43,
-                ov_weight_ratio=0.36,
+                nncf_weight_ratio=0.14,
+                ov_weight_ratio=0.11,
                 recipe=BertRunRecipe().model_config_(
                     max_position_embeddings=2,
                     intermediate_size=4,
@@ -152,8 +153,8 @@ class TestONNXExport:
                 ),
             ),
             Dict(
-                nncf_weight_ratio=0.31,
-                ov_weight_ratio=0.25,
+                nncf_weight_ratio=0.1,
+                ov_weight_ratio=0.08,
                 recipe=Wav2Vec2RunRecipe().model_config_(
                     intermediate_size=4,
                     num_labels=1,
@@ -163,7 +164,7 @@ class TestONNXExport:
                 ),
             ),
             Dict(
-                nncf_weight_ratio=0.41,
+                nncf_weight_ratio=0.08,
                 ov_weight_ratio=0.07,
                 recipe=Wav2Vec2RunRecipe().model_config_(
                     # stride, hidden size and num heads is selected to reproduce invalid parsing of reshape:
@@ -192,7 +193,7 @@ class TestONNXExport:
                 ),
             ),
             Dict(
-                nncf_weight_ratio=0.55,
+                nncf_weight_ratio=0.25,
                 ov_weight_ratio=0.20,
                 recipe=DistilBertRunRecipe().model_config_(),
             ),
@@ -216,8 +217,8 @@ class TestONNXExport:
                 ),
             ),
             Dict(
-                nncf_weight_ratio=0.47,
-                ov_weight_ratio=0.36,
+                nncf_weight_ratio=0.15,
+                ov_weight_ratio=0.12,
                 recipe=ClipVisionRunRecipe().model_config_(),
             ),
         ],

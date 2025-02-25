@@ -30,10 +30,11 @@ class TFCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
             "compression_lr_multiplier", self.name
         )
         if compression_lr_multiplier is not None:
-            raise Exception(
+            msg = (
                 "compression_lr_multiplier is not supported when your work with a TF model in NNCF. "
                 "Please remove the compression_lr_multiplier attribute from your NNCFConfig."
             )
+            raise Exception(msg)
 
     def _get_state_without_name(self) -> Dict[str, Any]:
         """

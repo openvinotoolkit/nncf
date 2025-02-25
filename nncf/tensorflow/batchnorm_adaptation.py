@@ -54,11 +54,12 @@ class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
         :param model: A model for which the algorithm will be applied.
         """
         if self._device is not None:
-            raise ValueError(
+            msg = (
                 "TF implementation of batchnorm adaptation algorithm "
                 "does not support switch of devices. Model initial device "
                 "is used by default for batchnorm adaptation."
             )
+            raise ValueError(msg)
         with BNTrainingStateSwitcher(model):
             for x, _ in ProgressBar(
                 islice(self._data_loader, self._num_bn_adaptation_steps),

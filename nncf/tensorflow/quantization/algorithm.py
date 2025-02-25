@@ -210,7 +210,6 @@ class TFQuantizationSetup:
 
         :return: state of the object
         """
-
         quantization_points_state = [qp.get_state() for qp in self._quantization_points]
         return {
             self._state_names.QUANTIZATION_POINTS: quantization_points_state,
@@ -256,9 +255,11 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._target_device = config.get("target_device", TARGET_DEVICE)
         algo_config = self._get_algo_specific_config_section()
         if self._target_device == "NPU" and "preset" in algo_config:
-            raise nncf.ValidationError("The NPU target device does not support presets.")
+            msg = "The NPU target device does not support presets."
+            raise nncf.ValidationError(msg)
         if self._target_device == "CPU_SPR":
-            raise nncf.ValidationError("The CPU_SPR target device does not supported.")
+            msg = "The CPU_SPR target device does not supported."
+            raise nncf.ValidationError(msg)
 
         self.global_quantizer_constraints = {}
         self.ignored_scopes_per_group = {}
@@ -346,14 +347,17 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 return True
         return False
 
-    def _create_quantizer(self, name: str, qspec: TFQuantizerSpec) -> Quantizer:
+    @staticmethod
+    def _create_quantizer(name: str, qspec: TFQuantizerSpec) -> Quantizer:
         quantizer_cls = NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode)
         return quantizer_cls(name, qspec)
 
-    def _build_insertion_commands_for_quantizer_setup(
-        self, quantizer_setup: TFQuantizationSetup
-    ) -> List[TFInsertionCommand]:
+    @staticmethod
+    def build_insertion_commands_for_quantizer_setup(
+        quantizer_setup: TFQuantizationSetup,
+    ) -> Tuple[List[TFInsertionCommand], List[str]]:
         insertion_commands = []
+        op_names = []
         quantization_points = quantizer_setup.get_quantization_points()
         non_unified_scales_quantization_point_ids = set(range(len(quantization_points)))
 
@@ -365,7 +369,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             quantizer_spec = qp.quantizer_spec
             op_name = qp.op_name + "/unified_scale_group"
             quantizer = FakeQuantize(quantizer_spec, name=op_name)
-            self._op_names.append(quantizer.op_name)
+            op_names.append(quantizer.op_name)
             target_points = []
             for us_qp_id in unified_scales_group:
                 non_unified_scales_quantization_point_ids.discard(us_qp_id)
@@ -387,24 +391,26 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             quantizer_spec = quantization_point.quantizer_spec
             target_point = quantization_point.target_point
             if quantization_point.is_weight_quantization():
-                quantizer = self._create_quantizer(op_name, quantizer_spec)
-                self._op_names.append(op_name)
+                quantizer = QuantizationBuilder._create_quantizer(op_name, quantizer_spec)
+                op_names.append(op_name)
             else:
                 quantizer = FakeQuantize(quantizer_spec, name=op_name)
-                self._op_names.append(quantizer.op_name)
+                op_names.append(quantizer.op_name)
             command = TFInsertionCommand(
                 target_point=target_point,
                 callable_object=quantizer,
                 priority=TransformationPriority.QUANTIZATION_PRIORITY,
             )
             insertion_commands.append(command)
-        return insertion_commands
+        return insertion_commands, op_names
 
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
         transformations = TFTransformationLayout()
         if self._quantizer_setup is None:
             self._quantizer_setup = self._get_quantizer_setup(model)
-        insertion_commands = self._build_insertion_commands_for_quantizer_setup(self._quantizer_setup)
+        insertion_commands, self._op_names = QuantizationBuilder.build_insertion_commands_for_quantizer_setup(
+            self._quantizer_setup
+        )
         for command in insertion_commands:
             transformations.register(command)
         return transformations
@@ -470,18 +476,20 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 target_node = nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
                 is_custom, layer_info = converter.get_layer_info_for_node(target_node.node_name)
                 if is_custom:
-                    raise nncf.InternalError("Quantizing custom layer weights is currently unsupported!")
+                    msg = "Quantizing custom layer weights is currently unsupported!"
+                    raise nncf.InternalError(msg)
                 layer_name = layer_info.layer_name
                 qconfig = qp.qconfig
                 if layer_name in quantized_layer_names_vs_qconfigs:
                     assigned_qconfig = quantized_layer_names_vs_qconfigs[layer_name]
                     if qconfig != assigned_qconfig:
-                        raise nncf.InternalError(
+                        msg = (
                             f"Inconsistent quantizer configurations selected by solver for one and the "
                             f"same quantizable layer! Tried to assign {qconfig} to {layer_name} as "
                             f"specified by QP {qp_id}, but the layer already has quantizer "
                             f"config {assigned_qconfig} assigned to it!"
                         )
+                        raise nncf.InternalError(msg)
                     continue  # The layer has already been quantized
                 quantized_layer_names_vs_qconfigs[layer_name] = qconfig
                 metatype = target_node.metatype
@@ -510,7 +518,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
                 is_custom, layer_info = converter.get_layer_info_for_node(target_node_name)
                 if is_custom:
-                    raise nncf.InternalError("Quantizing custom layer activations is currently unsupported!")
+                    msg = "Quantizing custom layer activations is currently unsupported!"
+                    raise nncf.InternalError(msg)
                 if input_port_id is not None:
                     target_point = TFBeforeLayer(
                         layer_info.layer_name, instance_idx=layer_info.instance_idx, input_port_id=input_port_id
@@ -547,7 +556,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             elif self._overflow_fix == "first_layer_only":
                 quantizers_with_overflow_fix_str = "first convolution weight quantizers"
             elif self._overflow_fix != "disable":
-                raise nncf.InternalError(f"Unknown overflow fix type: {self._overflow_fix}")
+                msg = f"Unknown overflow fix type: {self._overflow_fix}"
+                raise nncf.InternalError(msg)
             nncf_logger.info(f"Overflow issue fix was applied to {quantizers_with_overflow_fix_str}.")
 
     def _generate_unified_scale_groups(
@@ -707,7 +717,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
     def _get_fake_quantize_name(self, node_name: NNCFNodeName, input_port_id: int = None) -> str:
         original_node_name, instance_idx = get_original_name_and_instance_idx(node_name)
-        fq_name = "{}/fake_quantize".format(original_node_name)
+        fq_name = f"{original_node_name}/fake_quantize"
         if instance_idx != 0:
             fq_name += f"_{instance_idx}"
         if input_port_id is not None:

@@ -98,16 +98,16 @@ def load_checkpoint(checkpoint, ckpt_path):
     logger.info("Load from checkpoint is enabled")
     if tf.io.gfile.isdir(ckpt_path):
         path_to_checkpoint = tf.train.latest_checkpoint(ckpt_path)
-        logger.info("Latest checkpoint: {}".format(path_to_checkpoint))
+        logger.info(f"Latest checkpoint: {path_to_checkpoint}")
     else:
         path_to_checkpoint = ckpt_path if tf.io.gfile.exists(ckpt_path + ".index") else None
-        logger.info("Provided checkpoint: {}".format(path_to_checkpoint))
+        logger.info(f"Provided checkpoint: {path_to_checkpoint}")
 
     if not path_to_checkpoint:
         logger.info("No checkpoint detected")
         return 0
 
-    logger.info("Checkpoint file {} found and restoring from checkpoint".format(path_to_checkpoint))
+    logger.info(f"Checkpoint file {path_to_checkpoint} found and restoring from checkpoint")
     status = checkpoint.restore(path_to_checkpoint)
     status.expect_partial()
     logger.info("Completed loading from checkpoint")
@@ -182,7 +182,7 @@ def train(
 
     logger.info("Training...")
     for epoch in range(initial_epoch, epochs):
-        logger.info("Epoch: {}/{}".format(epoch, epochs))
+        logger.info(f"Epoch: {epoch}/{epochs}")
         compression_ctrl.scheduler.epoch_step(epoch)
 
         for step, x in enumerate(train_dist_dataset):
@@ -193,7 +193,7 @@ def train(
 
             if step == steps_per_epoch:
                 save_path = checkpoint_manager.save()
-                logger.info("Saved checkpoint for epoch={}: {}".format(epoch, save_path))
+                logger.info(f"Saved checkpoint for epoch={epoch}: {save_path}")
                 break
 
             compression_ctrl.scheduler.step()
@@ -201,7 +201,8 @@ def train(
             train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
 
             if np.isnan(train_metric_result["total_loss"]):
-                raise ValueError("total loss is NaN")
+                msg = "total loss is NaN"
+                raise ValueError(msg)
 
             train_metric_result.update({"learning_rate": get_learning_rate(optimizer, optimizer.iterations)})
 
@@ -209,8 +210,8 @@ def train(
 
             if step % print_freq == 0:
                 time = timer.toc(average=False)
-                logger.info("Step: {}/{} Time: {:.3f} sec".format(step, steps_per_epoch, time))
-                logger.info("Training metric = {}".format(train_metric_result))
+                logger.info(f"Step: {step}/{steps_per_epoch} Time: {time:.3f} sec")
+                logger.info(f"Training metric = {train_metric_result}")
                 timer.tic()
 
         statistics = compression_ctrl.statistics()
@@ -325,7 +326,8 @@ def main(argv):
     create_code_snapshot(nncf_root, os.path.join(config.log_dir, "snapshot.tar.gz"))
 
     if config.dataset_type != "tfrecords":
-        raise nncf.ValidationError("The train.py does not support TensorFlow Datasets (TFDS). Please use TFRecords.")
+        msg = "The train.py does not support TensorFlow Datasets (TFDS). Please use TFRecords."
+        raise nncf.ValidationError(msg)
 
     run_train(config)
 

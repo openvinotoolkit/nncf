@@ -179,7 +179,7 @@ def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     final_num_of_adjust_pad_ops = len(get_all_modules_by_type(model, "UpdatePaddingValue"))
     assert adjust_pad_creation_spy.call_count == final_num_of_adjust_pad_ops
 
-    path_to_dot = "{}_{}.dot".format(params.model_creator.__name__, params.config_builder.filename_suffix())
+    path_to_dot = f"{params.model_creator.__name__}_{params.config_builder.filename_suffix()}.dot"
     graph_dir = os.path.join("quantized", "autoq")
     check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir)
 

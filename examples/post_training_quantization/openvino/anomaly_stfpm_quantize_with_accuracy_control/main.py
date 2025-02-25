@@ -132,7 +132,7 @@ def run_example():
     download_and_extract(MODEL_PATH, MODEL_INFO)
     ov_model = ov.Core().read_model(MODEL_PATH / "stfpm_capsule.xml")
 
-    with open(MODEL_PATH / "meta_data_stfpm_capsule.json", "r", encoding="utf-8") as f:
+    with open(MODEL_PATH / "meta_data_stfpm_capsule.json", encoding="utf-8") as f:
         validation_params = json.load(f)
 
     ###############################################################################

@@ -95,12 +95,13 @@ class QuantizedFunctionsCUDALoader(ExtensionLoader):
             raise e
         except (subprocess.CalledProcessError, OSError, RuntimeError) as e:
             assert torch.cuda.is_available()
-            raise nncf.InstallationError(
+            msg = (
                 "CUDA is available for PyTorch, but NNCF could not compile "
                 "GPU quantization extensions. Make sure that you have installed CUDA development "
                 "tools (see https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html for "
                 "guidance) and that 'nvcc' is available on your system's PATH variable.\n"
-            ) from e
+            )
+            raise nncf.InstallationError(msg) from e
 
     @classmethod
     def name(cls) -> str:

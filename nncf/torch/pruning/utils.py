@@ -88,7 +88,8 @@ def _calculate_output_shape(graph: NNCFGraph, node: NNCFNode) -> Tuple[int, ...]
     elif isinstance(attrs, LinearLayerAttributes):
         shape = shape[:-1] + [attrs.out_features]
     else:
-        raise nncf.ValidationError(f"Unexpected node type {node.node_type} is fed to _calculate_output_shape")
+        msg = f"Unexpected node type {node.node_type} is fed to _calculate_output_shape"
+        raise nncf.ValidationError(msg)
     return tuple(shape)
 
 

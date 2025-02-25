@@ -98,7 +98,8 @@ class MobileNetSSD(nn.Module):
 
 def build_ssd_mobilenet(cfg, size, num_classes, config):
     if size != 300:
-        raise ValueError("Only Mobilenet-SSD with input size 300 is supported")
+        msg = "Only Mobilenet-SSD with input size 300 is supported"
+        raise ValueError(msg)
     mobilenet_ssd = MobileNetSSD(num_classes, cfg)
 
     if config.basenet and (config.resuming_checkpoint_path is None) and (config.weights is None):
@@ -108,7 +109,9 @@ def build_ssd_mobilenet(cfg, size, num_classes, config):
         # may be used to perform arbitrary code execution during unpickling. Only load the data you
         # trust.
         #
-        basenet_weights = torch.load(config.basenet, pickle_module=restricted_pickle_module)["state_dict"]
+        basenet_weights = torch.load(config.basenet, pickle_module=restricted_pickle_module, weights_only=False)[
+            "state_dict"
+        ]
         new_weights = {}
         for wn, wv in basenet_weights.items():
             wn = wn.replace("model.", "")

@@ -279,6 +279,15 @@ def quantization_aware_training_torch_anomalib(data: Union[str, None]):
     }
 
 
+def quantization_aware_training_tensorflow_mobilenet_v2() -> Dict[str, float]:
+    import tensorflow_datasets as tfds
+
+    tfds.display_progress_bar(enable=False)
+
+    example_root = str(PROJECT_ROOT / "examples" / "quantization_aware_training" / "tensorflow" / "mobilenet_v2")
+    return post_training_quantization_mobilenet_v2(example_root)
+
+
 def main(argv):
     parser = ArgumentParser()
     parser.add_argument("--name", help="Example name", required=True)

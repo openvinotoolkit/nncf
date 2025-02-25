@@ -22,15 +22,13 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
-from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.statistics_serializer import dump_statistics
 from nncf.common.tensor_statistics.statistics_serializer import load_statistics
 from nncf.common.utils.backend import BackendType
-from nncf.data.dataset import DataItem
 from nncf.data.dataset import Dataset
-from nncf.data.dataset import ModelInput
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
+from nncf.tensor import Tensor
 
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")
@@ -47,7 +45,7 @@ class StatisticsAggregator(ABC):
 
     BACKEND: BackendType
 
-    def __init__(self, dataset: Dataset[DataItem, ModelInput]):
+    def __init__(self, dataset: Dataset):
         self.dataset = dataset
         self.stat_subset_size = None
         self.statistic_points = StatisticPointsContainer()
@@ -80,7 +78,7 @@ class StatisticsAggregator(ABC):
         engine = factory.EngineFactory.create(model_with_outputs)
         iterations_number = self._get_iterations_number()
         processed_samples = 0
-        for input_data in track(  # type: ignore
+        for input_data in track(
             islice(self.dataset.get_inference_data(), iterations_number),
             total=iterations_number,
             description="Statistics collection",
@@ -117,7 +115,8 @@ class StatisticsAggregator(ABC):
             statistics = tensor_collector.get_statistics()
             statistics_key = self._get_statistics_key(statistics, statistic_point.target_point)
             if statistics_key not in data:
-                raise nncf.ValidationError(f"Not found statistics for {statistics_key}")
+                msg = f"Not found statistics for {statistics_key}"
+                raise nncf.ValidationError(msg)
             statistics.load_data(data[statistics_key])
             tensor_collector.set_cache(statistics)
 
@@ -167,7 +166,7 @@ class StatisticsAggregator(ABC):
                             self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
 
     @abstractmethod
-    def _register_statistics(self, outputs: Dict[str, NNCFTensor], statistic_points: StatisticPointsContainer) -> None:
+    def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
         """
         Process prepared raw model outputs and statistic points for the further usage.
 
@@ -205,7 +204,7 @@ class StatisticsAggregator(ABC):
 
     @staticmethod
     @abstractmethod
-    def _process_outputs(outputs: Any) -> Dict[str, NNCFTensor]:
+    def _process_outputs(outputs: Any) -> Dict[str, Tensor]:
         """
         Post-process model outputs for the further statistics collection.
 

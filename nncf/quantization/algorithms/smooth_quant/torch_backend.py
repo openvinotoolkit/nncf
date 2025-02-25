@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2025 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,7 +11,6 @@
 
 from typing import Any, Callable, Dict, List, Tuple
 
-import numpy as np
 import torch
 
 import nncf.torch.graph.operator_metatypes as om
@@ -21,16 +20,19 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
-from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
+from nncf.experimental.torch2.commands import PT2ConstUpdateCommand
+from nncf.experimental.torch2.commands import PT2InsertionCommand
+from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.command_creation import create_command_to_update_weight
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import CompressionParameter
 from nncf.torch.layer_utils import StatefullModuleInterface
@@ -120,14 +122,23 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_weight_value(node_with_weight: NNCFNode, model: NNCFNetwork, nncf_graph: NNCFGraph) -> Tensor:
+        if isinstance(model, GraphModelWrapper):
+            model = model.model
+
         weight_node = get_const_node(node_with_weight, node_with_weight.metatype.weight_port_ids[0], nncf_graph)
         if weight_node is None:
-            raise RuntimeError(f"{node_with_weight} node has no weight node.")
+            msg = f"{node_with_weight} node has no weight node."
+            raise RuntimeError(msg)
         weight_data = get_const_data(weight_node, model)
         return Tensor(weight_data)
 
     @staticmethod
-    def weight_update_command(node_with_weight: NNCFNode, weight_value: np.ndarray) -> OVWeightUpdateCommand:
+    def weight_update_command(
+        node_with_weight: NNCFNode, nncf_graph: NNCFGraph, weight_value: torch.Tensor
+    ) -> PTWeightUpdateCommand:
+        if is_experimental_torch_tracing_enabled():
+            weight_node = get_const_node(node_with_weight, node_with_weight.metatype.weight_port_ids[0], nncf_graph)
+            return PT2ConstUpdateCommand(weight_node, weight_value)
         return create_command_to_update_weight(node_with_weight, weight_value)
 
     @staticmethod
@@ -137,7 +148,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         source_output_port_id: int,
         nodes: List[NNCFNode],
         scale_node_name: str,
-    ) -> OVMultiplyInsertionCommand:
+    ) -> PTSharedFnInsertionCommand:
         input_port_id = 0
         target_points = []
         for node in nodes:
@@ -145,6 +156,9 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
         sq_multiply = SQMultiply(scale_value.shape)
         sq_multiply.scale = scale_value
+
+        if is_experimental_torch_tracing_enabled():
+            return PT2InsertionCommand(target_points=target_points, hook_module=sq_multiply)
         return PTSharedFnInsertionCommand(target_points, sq_multiply, scale_node_name)
 
     @staticmethod
@@ -161,6 +175,10 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        if is_experimental_torch_tracing_enabled():
+            weight_node = get_const_node(node, node.metatype.weight_port_ids[0], nncf_graph)
+            output_edges = nncf_graph.get_next_nodes(weight_node)
+            return len(output_edges) > 1
         return node.is_shared()
 
     @staticmethod

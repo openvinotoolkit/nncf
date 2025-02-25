@@ -71,12 +71,13 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
         """
         for dim in available_elasticity_dims:
             if dim not in progressivity_of_elasticity:
-                raise ValueError(
+                msg = (
                     f"Invalid elasticity dimension {dim} specified as available in `elasticity` section."
                     f" This dimension is not part of the progressivity_of_elasticity="
                     f"{progressivity_of_elasticity} which defines order of adding elasticity dimension"
                     f" by going from one training stage to another."
                 )
+                raise ValueError(msg)
 
     def initialize(self, model: NNCFNetwork) -> None:
         """

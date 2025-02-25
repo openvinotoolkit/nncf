@@ -23,7 +23,8 @@ class TracesOrder:
 
     def get_execution_order_configs(self, trace_ordered_configuration: List) -> List:
         if len(trace_ordered_configuration) != self._num_weights:
-            raise ValueError("Incompatible configuration size!")
+            msg = "Incompatible configuration size!"
+            raise ValueError(msg)
         execution_order_config = [None] * self._num_weights
         for i, config in enumerate(trace_ordered_configuration):
             execution_order_config[self._index_by_traces_to_execution_index[i]] = config
@@ -31,7 +32,8 @@ class TracesOrder:
 
     def get_traces_order_configs(self, execution_ordered_configuration: List) -> List:
         if len(execution_ordered_configuration) != self._num_weights:
-            raise ValueError("Incompatible configuration size!")
+            msg = "Incompatible configuration size!"
+            raise ValueError(msg)
         traces_order_config = [None] * self._num_weights
         for i, config in enumerate(execution_ordered_configuration):
             traces_order_config[self._index_by_execution_to_index_by_traces[i]] = config

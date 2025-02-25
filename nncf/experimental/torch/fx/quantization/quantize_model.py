@@ -66,9 +66,11 @@ def quantize_impl(
         " in case of errors or a poor model performance."
     )
     if target_device == TargetDevice.CPU_SPR:
-        raise nncf.InternalError("target_device == CPU_SPR is not supported")
+        msg = "target_device == CPU_SPR is not supported"
+        raise nncf.InternalError(msg)
     if mode is not None:
-        raise ValueError(f"mode={mode} is not supported")
+        msg = f"mode={mode} is not supported"
+        raise ValueError(msg)
 
     original_graph_meta = model.meta
 
@@ -135,7 +137,6 @@ def compress_weights_impl(
     """
     Implementation of the `compress_weights()` method for the Torch Fx backend.
     """
-
     compression_algorithm = WeightCompression(
         mode,
         ratio,

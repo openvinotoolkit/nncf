@@ -13,24 +13,32 @@ on:
         type: boolean
         default: false
         required: true
+      override_requirements:
+        description: 'Override requirements'
+        default: ''
+        type: string
+        required: false
 
 jobs:
   common:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: ${{ inputs.python_version }}
-          cache: pip
+      - name: Override constraints
+        if: ${{ inputs.override_requirements != '' }}
+        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+        shell: bash
       - name: Install NNCF and test requirements
-        run: make install-common-test
+        run: pip install . -r tests/common/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run common precommit test scope
@@ -40,19 +48,23 @@ jobs:
 
   onnx:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04-8-cores
+    runs-on: ubuntu-latest-8-cores
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: ${{ inputs.python_version }}
+      - name: Override constraints
+        if: ${{ inputs.override_requirements != '' }}
+        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+        shell: bash
       - name: Install NNCF and test requirements
-        run: make install-onnx-test
+        run: pip install . -r tests/onnx/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run ONNX precommit test scope
@@ -62,20 +74,23 @@ jobs:
 
   openvino:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04-8-cores
+    runs-on: ubuntu-latest-8-cores
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: ${{ inputs.python_version }}
-          cache: pip
+      - name: Override constraints
+        if: ${{ inputs.override_requirements != '' }}
+        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+        shell: bash
       - name: Install NNCF and test requirements
-        run: make install-openvino-test
+        run: pip install . -r tests/openvino/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run OV precommit test scope
@@ -85,7 +100,7 @@ jobs:
 
   pytorch-cpu:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04-8-cores
+    runs-on: ubuntu-latest-8-cores
     defaults:
       run:
         shell: bash
@@ -96,20 +111,23 @@ jobs:
         run : |
           sudo apt-get update
           sudo apt-get --assume-yes install gcc g++ build-essential ninja-build libgl1-mesa-dev libglib2.0-0
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: ${{ inputs.python_version }}
-          cache: pip
       - name: Runner info
         continue-on-error: true
         run: |
           cat /etc/*release
           cat /proc/cpuinfo
+      - name: Override constraints
+        if: ${{ inputs.override_requirements != '' }}
+        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+        shell: bash
       - name: Install NNCF and test requirements
-        run: make install-torch-test
+        run: pip install . -r tests/torch/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run PyTorch precommit test scope
@@ -144,15 +162,18 @@ jobs:
           nvidia-smi
           cat /proc/cpuinfo
           nvcc --version
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: ${{ inputs.python_version }}
-          cache: pip
+      - name: Override constraints
+        if: ${{ inputs.override_requirements != '' }}
+        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+        shell: bash
       - name: Install NNCF and test requirements
-        run: make install-torch-test
+        run: pip install . -r tests/torch/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Check CUDA
@@ -166,7 +187,7 @@ jobs:
 
   tensorflow:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04-8-cores
+    runs-on: ubuntu-latest-8-cores
     if: ${{ inputs.python_version != '3.12' }}
     defaults:
       run:
@@ -174,15 +195,18 @@ jobs:
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: ${{ inputs.python_version }}
-          cache: pip
+      - name: Override constraints
+        if: ${{ inputs.override_requirements != '' }}
+        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+        shell: bash
       - name: Install NNCF and test requirements
-        run: make install-tensorflow-test
+        run: pip install . -r tests/tensorflow/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run TensorFlow precommit test scope
@@ -192,19 +216,18 @@ jobs:
 
   tools:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: ${{ inputs.python_version }}
-          cache: pip
-      - name: Install NNCF and test requirements
+      - name: Install test requirements
         run: pip install -r tests/tools/requirements.txt
       - name: Print installed modules
         run: pip list
@@ -213,21 +236,24 @@ jobs:
 
   pytorch2-cpu:
     timeout-minutes: 40
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           lfs: true
-      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: ${{ inputs.python_version }}
-          cache: pip
+      - name: Override constraints
+        if: ${{ inputs.override_requirements != '' }}
+        run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+        shell: bash
       - name: Install NNCF and test requirements
         run: |
-          pip install -r tests/torch2/requirements.txt -e .
+          pip install . -r tests/torch2/requirements.txt
       - name: Print installed modules
         run: pip list
       - name: Run torch2 precommit test scope

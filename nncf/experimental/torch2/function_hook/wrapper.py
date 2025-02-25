@@ -14,7 +14,7 @@ from __future__ import annotations
 import inspect
 import types
 from types import MethodType
-from typing import Any, Callable, Dict, Tuple, cast
+from typing import Any, Callable, Dict, Tuple, TypeVar, cast
 
 from torch import nn
 
@@ -25,6 +25,8 @@ from nncf.experimental.torch2.function_hook.hook_storage import RemovableHookHan
 
 ATR_HOOK_STORAGE = "__nncf_hooks"
 
+TModel = TypeVar("TModel", bound=nn.Module)
+
 
 class ForwardWithHooks:
     """Class to wrap forward function of nn.Module, to forward function of the model with enabled FunctionHookMode"""
@@ -34,12 +36,14 @@ class ForwardWithHooks:
 
     def __new__(cls, orig_forward: Callable[..., Any]) -> ForwardWithHooks:
         if not callable(orig_forward):
-            raise TypeError("the first argument must be callable")
+            msg = "the first argument must be callable"
+            raise TypeError(msg)
 
         if isinstance(orig_forward, ForwardWithHooks):
-            raise TypeError("Func already wrapped")
+            msg = "Func already wrapped"
+            raise TypeError(msg)
 
-        self = super(ForwardWithHooks, cls).__new__(cls)
+        self = super().__new__(cls)
 
         self._func = orig_forward
         return self
@@ -60,12 +64,15 @@ class ForwardWithHooks:
 
     def __setstate__(self, state: Tuple[Any, Any]) -> None:
         if not isinstance(state, tuple):
-            raise TypeError("argument to __setstate__ must be a tuple")
+            msg = "argument to __setstate__ must be a tuple"
+            raise TypeError(msg)
         if len(state) != 2:
-            raise TypeError(f"expected 2 items in state, got {len(state)}")
+            msg = f"expected 2 items in state, got {len(state)}"
+            raise TypeError(msg)
         func, namespace = state
         if not callable(func) or (namespace is not None and not isinstance(namespace, dict)):
-            raise TypeError("invalid partial state")
+            msg = "invalid partial state"
+            raise TypeError(msg)
 
         if namespace is None:
             namespace = {}
@@ -101,12 +108,14 @@ class ReplicateForDataParallel:
 
     def __new__(cls, func: Callable[..., Any]) -> ReplicateForDataParallel:
         if not callable(func):
-            raise TypeError("the first argument must be callable")
+            msg = "the first argument must be callable"
+            raise TypeError(msg)
 
         if isinstance(func, ReplicateForDataParallel):
-            raise TypeError("Func already wrapped")
+            msg = "Func already wrapped"
+            raise TypeError(msg)
 
-        self = super(ReplicateForDataParallel, cls).__new__(cls)
+        self = super().__new__(cls)
 
         self._func = func
         return self
@@ -131,12 +140,15 @@ class ReplicateForDataParallel:
 
     def __setstate__(self, state: Dict[str, Any]) -> None:
         if not isinstance(state, tuple):
-            raise TypeError("argument to __setstate__ must be a tuple")
+            msg = "argument to __setstate__ must be a tuple"
+            raise TypeError(msg)
         if len(state) != 2:
-            raise TypeError(f"expected 2 items in state, got {len(state)}")
+            msg = f"expected 2 items in state, got {len(state)}"
+            raise TypeError(msg)
         func, namespace = state
         if not callable(func) or (namespace is not None and not isinstance(namespace, dict)):
-            raise TypeError("invalid partial state")
+            msg = "invalid partial state"
+            raise TypeError(msg)
 
         if namespace is None:
             namespace = {}
@@ -149,7 +161,7 @@ class ReplicateForDataParallel:
         return cast(MethodType, self._func)
 
 
-def wrap_model(model: nn.Module) -> nn.Module:
+def wrap_model(model: TModel) -> TModel:
     """
     Wraps a nn.Module to inject custom behavior into the forward pass and replication process.
 
@@ -164,9 +176,9 @@ def wrap_model(model: nn.Module) -> nn.Module:
     :param model: The nn.Module to be wrapped.
     :return: The modified model with the custom behavior injected.
     """
-
     if "forward" in model.__dict__:
-        raise nncf.InternalError("Wrapper does not supported models with overrided forward function")
+        msg = "Wrapper does not supported models with overrided forward function"
+        raise nncf.InternalError(msg)
     model.forward = ForwardWithHooks(model.forward)
     model._replicate_for_data_parallel = ReplicateForDataParallel(model._replicate_for_data_parallel)  # type: ignore
     model.add_module(ATR_HOOK_STORAGE, HookStorage())
@@ -197,7 +209,8 @@ def get_hook_storage(model: nn.Module) -> HookStorage:
     """
     storage = getattr(model, ATR_HOOK_STORAGE)
     if storage is None:
-        raise nncf.InstallationError("Hook storage is not exist in the model")
+        msg = "Hook storage is not exist in the model"
+        raise nncf.InstallationError(msg)
     return cast(HookStorage, getattr(model, ATR_HOOK_STORAGE))
 
 

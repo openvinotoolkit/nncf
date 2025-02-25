@@ -97,7 +97,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
-        return {om.ONNXConcatMetatype: self.overflow_fix_metatypes}
+        return {om.ONNXConcatMetatype: self.overflow_fix_metatypes + self.scaled_dot_product_attention_metatypes}
 
     @property
     def hw_config(self) -> HWConfig:
@@ -163,7 +163,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: ONNXTargetPoint,
         parameters: FakeConvertParameters,
     ) -> TransformationCommand:
-        raise nncf.InternalError("FakeConvert insertion not implemented in ONNX backend!")
+        msg = "FakeConvert insertion not implemented in ONNX backend!"
+        raise nncf.InternalError(msg)
 
     @staticmethod
     def _get_input_edges_mapping(nncf_graph: NNCFGraph):

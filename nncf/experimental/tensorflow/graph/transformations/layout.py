@@ -32,7 +32,8 @@ class TFTransformationLayoutV2(TransformationLayout):
         elif transformation.type == TransformationType.INSERT:
             self._register_insertion_transformation(transformation)
         else:
-            raise ValueError(f"Unknown type of transformation command: {transformation.type}")
+            msg = f"Unknown type of transformation command: {transformation.type}"
+            raise ValueError(msg)
 
     def _register_insertion_transformation(self, transformation: TransformationCommand) -> None:
         idx = None

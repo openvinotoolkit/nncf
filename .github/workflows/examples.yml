@@ -2,8 +2,7 @@ name: Test examples
 permissions: read-all
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
+  workflow_call:
   workflow_dispatch:
     inputs:
       pull_request_number:
@@ -24,7 +23,7 @@ concurrency:
 jobs:
   examples-cpu:
     name: Test exmaples CPU [${{ matrix.group }}/4]
-    runs-on: ubuntu-22.04-16-cores
+    runs-on: ubuntu-latest-16-cores
     strategy:
       fail-fast: false
       matrix:
@@ -33,7 +32,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
@@ -42,10 +41,9 @@ jobs:
         run: |
           git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
           git checkout pr-${{ github.event.inputs.pull_request_number }}
-      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: 3.10.14
-          cache: pip
       - name: cpuinfo
         run: cat /proc/cpuinfo
       - name: Install test requirements
@@ -85,7 +83,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
@@ -94,14 +92,12 @@ jobs:
         run: |
           git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
           git checkout pr-${{ github.event.inputs.pull_request_number }}
-      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: "3.10"
-          cache: pip
-      - uses: ilammy/msvc-dev-cmd@ed94116c4d30d2091601b81f339a2eaa1c2ba0a6 # v1.4.1
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       - name: Install NNCF and test requirements
         run: |
-          pip install -e .
           pip install -r tests/cross_fw/examples/requirements.txt
       - name: Print installed modules
         run: pip list

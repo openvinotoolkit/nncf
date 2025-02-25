@@ -101,17 +101,18 @@ def load_checkpoint(checkpoint, ckpt_path):
     logger.info("Load from checkpoint is enabled")
     if tf.io.gfile.isdir(ckpt_path):
         path_to_checkpoint = tf.train.latest_checkpoint(ckpt_path)
-        logger.info("Latest checkpoint: {}".format(path_to_checkpoint))
+        logger.info(f"Latest checkpoint: {path_to_checkpoint}")
     else:
         path_to_checkpoint = ckpt_path if tf.io.gfile.exists(ckpt_path + ".index") else None
-        logger.info("Provided checkpoint: {}".format(path_to_checkpoint))
+        logger.info(f"Provided checkpoint: {path_to_checkpoint}")
 
     if not path_to_checkpoint:
         logger.info("No checkpoint detected.")
         if ckpt_path:
-            raise nncf.ValidationError(f"ckpt_path was given, but no checkpoint detected in path: {ckpt_path}")
+            msg = f"ckpt_path was given, but no checkpoint detected in path: {ckpt_path}"
+            raise nncf.ValidationError(msg)
 
-    logger.info("Checkpoint file {} found and restoring from checkpoint".format(path_to_checkpoint))
+    logger.info(f"Checkpoint file {path_to_checkpoint} found and restoring from checkpoint")
     status = checkpoint.restore(path_to_checkpoint)
     status.expect_partial()
     logger.info("Completed loading from checkpoint")
@@ -135,10 +136,10 @@ def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
 
         if batch_idx % print_freq == 0:
             time = timer.toc(average=False)
-            logger.info("Predict for batch: {}/{} Time: {:.3f} sec".format(batch_idx, num_batches, time))
+            logger.info(f"Predict for batch: {batch_idx}/{num_batches} Time: {time:.3f} sec")
             timer.tic()
 
-    logger.info("Total time: {:.3f} sec".format(timer.total_time))
+    logger.info(f"Total time: {timer.total_time:.3f} sec")
 
     timer.reset()
 
@@ -146,7 +147,7 @@ def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
     timer.tic()
     result = metric.result()
     timer.toc(average=False)
-    logger.info("Total time: {:.3f} sec".format(timer.total_time))
+    logger.info(f"Total time: {timer.total_time:.3f} sec")
 
     return result
 
@@ -229,12 +230,12 @@ def run_evaluation(config, eval_timeout=None):
         logger.info(statistics.to_str())
         metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_batches, config.print_freq)
         eval_metric.reset_states()
-        logger.info("Test metric = {}".format(metric_result))
+        logger.info(f"Test metric = {metric_result}")
 
         if "export" in config.mode:
             save_path, save_format = get_saving_parameters(config)
             export_model(compression_ctrl.strip(), save_path, save_format)
-            logger.info("Saved to {}".format(save_path))
+            logger.info(f"Saved to {save_path}")
 
     elif "train" in config.mode:
         validation_summary_writer = SummaryWriter(config.log_dir, "validation")
@@ -250,15 +251,15 @@ def run_evaluation(config, eval_timeout=None):
             else:
                 checkpoint.restore(checkpoint_path).expect_partial()
 
-            logger.info("Checkpoint file {} found and restoring from checkpoint".format(checkpoint_path))
-            logger.info("Checkpoint step: {}".format(checkpoint.step.numpy()))
+            logger.info(f"Checkpoint file {checkpoint_path} found and restoring from checkpoint")
+            logger.info(f"Checkpoint step: {checkpoint.step.numpy()}")
             metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_batches, config.print_freq)
 
             current_step = checkpoint.step.numpy()
             validation_summary_writer(metrics=metric_result, step=current_step)
 
             eval_metric.reset_states()
-            logger.info("Validation metric = {}".format(metric_result))
+            logger.info(f"Validation metric = {metric_result}")
 
         validation_summary_writer.close()
 
@@ -274,7 +275,7 @@ def export(config):
 
     save_path, save_format = get_saving_parameters(config)
     export_model(compression_ctrl.strip(), save_path, save_format)
-    logger.info("Saved to {}".format(save_path))
+    logger.info(f"Saved to {save_path}")
 
 
 def main(argv):
@@ -285,7 +286,8 @@ def main(argv):
     patch_if_experimental_quantization(config.nncf_config)
 
     if config.dataset_type != "tfrecords":
-        raise nncf.ValidationError("The train.py does not support TensorFlow Datasets (TFDS). Please use TFRecords.")
+        msg = "The train.py does not support TensorFlow Datasets (TFDS). Please use TFRecords."
+        raise nncf.ValidationError(msg)
 
     if "train" in config.mode or "test" in config.mode:
         run_evaluation(config)

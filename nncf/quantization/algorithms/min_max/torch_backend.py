@@ -22,10 +22,11 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.experimental.torch2.commands import PT2InsertionCommand
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
@@ -40,7 +41,6 @@ from nncf.torch.graph.transformations.command_creation import create_shared_quan
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
-from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_weight_channel_axes
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.nncf_network import NNCFNetwork
@@ -116,7 +116,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
-        return {om.PTCatMetatype: self.overflow_fix_metatypes}
+        return {om.PTCatMetatype: self.overflow_fix_metatypes + self.scaled_dot_product_attention_metatypes}
 
     @property
     def hw_config(self) -> HWConfig:
@@ -140,18 +140,23 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
+        input_port_id: Optional[int] = port_id
         if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
-            port_id = None
-        if target_type in PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
+            input_port_id = None
+        if (
+            not is_experimental_torch_tracing_enabled()
+            and target_type in PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP
+        ):
             target_type = PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]
-        return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
+        return PTTargetPoint(target_type, target_node_name, input_port_id=input_port_id)
 
     @staticmethod
     def create_convert_insertion_command(
         target_point: PTTargetPoint,
         parameters: FakeConvertParameters,
     ) -> TransformationCommand:
-        raise nncf.InternalError("FakeConvert insertion not implemented in PyTorch backend!")
+        msg = "FakeConvert insertion not implemented in PyTorch backend!"
+        raise nncf.InternalError(msg)
 
     @staticmethod
     def get_target_point_shape(nncf_graph: PTNNCFGraph, node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int, ...]:
@@ -180,7 +185,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def _get_input_scale_shape(
-        nncf_graph: NNCFGraph, target_point: PTTargetPoint, per_channel: bool
+        nncf_graph: PTNNCFGraph, target_point: PTTargetPoint, per_channel: bool
     ) -> Tuple[int, ...]:
         """
         Determines the scale shape for the input data at a given target point in the NNCF graph.
@@ -191,17 +196,15 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         :return: Tuple[int, ...]: The shape of the scale to be applied to the input.
         """
-
         is_weights = target_point.is_weight_target_point()
+        input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
+
         if is_weights:
             node_with_weight = nncf_graph.get_node_by_name(target_point.target_node_name)
-            weight_node = get_const_node(node_with_weight, target_point.input_port_id, nncf_graph)
-            input_shape = weight_node.layer_attributes.shape
             channel_axes = get_weight_channel_axes(
                 node_with_weight.metatype, len(input_shape), target_point.input_port_id
             )
         else:
-            input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
             channel_axes = (1,)  # channel dim for activations
 
         if len(channel_axes):
@@ -212,7 +215,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             )
         else:
             # For cases where weights are vectors that should be quantized as per-tensor
-            scale_shape = [1]
+            scale_shape = (1,)
 
         return scale_shape
 
@@ -225,10 +228,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     ) -> BaseQuantizer:
         mode = quantizer_config.mode
         quantizer_cls = QUANTIZATION_MODULES.get(mode)
-        narrow_range = target_type == TargetType.OPERATION_WITH_WEIGHTS and mode == QuantizationMode.SYMMETRIC
         quantizer_spec = PTQuantizerSpec.from_config(
             quantizer_config,
-            narrow_range=narrow_range,
+            narrow_range=quantizer_config.narrow_range,
             scale_shape=scale_shape,
             half_range=False,
             logarithm_scale=False,
@@ -269,6 +271,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = PTMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_point.target_type
         )
+        if is_experimental_torch_tracing_enabled():
+            return PT2InsertionCommand(target_points=[target_point], hook_module=quantizer)
+
         return create_quantizer_insertion_command(target_point, quantizer)
 
     @staticmethod
@@ -285,6 +290,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = PTMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_points[0].target_type
         )
+        if is_experimental_torch_tracing_enabled():
+            return [PT2InsertionCommand(target_points=target_points, hook_module=quantizer)]
         return [create_shared_quantizer_insertion_command(target_points, quantizer)]
 
     @staticmethod
@@ -310,7 +317,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 # Batchnorm
                 om.PTBatchNormMetatype,
                 om.PTModuleBatchNormMetatype,
-                # Сomparison operations
+                # Comparison operations
                 om.PTGreaterEqualMetatype,
                 om.PTGreaterMetatype,
                 om.PTLessEqualMetatype,

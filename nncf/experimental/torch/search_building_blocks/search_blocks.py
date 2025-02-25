@@ -78,7 +78,7 @@ class BuildingBlock:
         return str(self)
 
     def __str__(self) -> str:
-        return "[START NODE: {}, END_NODE: {}]".format(self.start_node_name, self.end_node_name)
+        return f"[START NODE: {self.start_node_name}, END_NODE: {self.end_node_name}]"
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -304,7 +304,7 @@ def get_potential_candidate_for_block(search_graph: SearchGraph) -> Tuple[ShapeV
 
 def itemgetter_force_tuple(*indexes):
     """
-    itemgetter wrapper that always returns a tuple. The original function may return both: iterable and a single
+    Itemgetter wrapper that always returns a tuple. The original function may return both: iterable and a single
     non-iterable element, which is not convenient in the general case.
     """
     getter = itemgetter(*indexes)
@@ -372,10 +372,11 @@ def get_building_blocks(
       does not lead to duplicate activation layers
     """
     if min_block_size > max_block_size:
-        raise AttributeError(
+        msg = (
             f"Minimal value for block size {min_block_size} can not be more than maximum one "
             f"{max_block_size}. Change max_block_size or min_block_size."
         )
+        raise AttributeError(msg)
     orig_graph = compressed_model.nncf.get_original_graph()  # PTNNCFGraph
     blocks = get_potential_building_blocks(orig_graph, hw_fused_ops, min_block_size, max_block_size)
     sorted_blocks = sorted(blocks, key=cmp_to_key(compare_for_building_block))

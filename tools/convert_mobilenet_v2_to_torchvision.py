@@ -42,11 +42,11 @@ def main(argv):
     ]
 
     for src_file, dst_file, ref_file in pth_files:
-        ref_sd = torch.load(ref_file)
+        ref_sd = torch.load(ref_file, weights_only=False)
         if "state_dict" in ref_sd:
             ref_sd = ref_sd["state_dict"]
 
-        sd = pth = torch.load(src_file)
+        sd = pth = torch.load(src_file, weights_only=False)
         if "state_dict" in pth:
             sd = pth["state_dict"]
 

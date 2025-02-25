@@ -21,7 +21,7 @@ class UnifiedScalePropagatingQuantizerGroupManager:
     quantized model.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._next_gid = 0
         self._group_vs_prop_quants_dict: Dict[int, Set[PropagatingQuantizer]] = {}
 
@@ -39,14 +39,12 @@ class UnifiedScalePropagatingQuantizerGroupManager:
         """
         for pq in prop_quants:
             for gid, group in self._group_vs_prop_quants_dict.items():
-                assert pq not in group, "Propagating quantizer #{} is already registered in a group {}!".format(
-                    pq.id, gid
-                )
+                assert pq not in group, f"Propagating quantizer #{pq.id} is already registered in a group {gid}!"
         gid = self._get_next_gid()
         self._group_vs_prop_quants_dict[gid] = prop_quants
         return gid
 
-    def add_to_group(self, target_gid: int, prop_quant: PropagatingQuantizer):
+    def add_to_group(self, target_gid: int, prop_quant: PropagatingQuantizer) -> None:
         """
         Adds a propagating quantizer to an already existing group.
 
@@ -57,12 +55,12 @@ class UnifiedScalePropagatingQuantizerGroupManager:
         for gid, group in self._group_vs_prop_quants_dict.items():
             if target_gid != gid:
                 assert prop_quant not in group, (
-                    "Tried to add propagating quantizer #{} to group #{}, "
-                    "but it is already registered in a group {}!".format(prop_quant.id, target_gid, gid)
+                    f"Tried to add propagating quantizer #{prop_quant.id} to group #{target_gid}, "
+                    f"but it is already registered in a group {gid}!"
                 )
         self._group_vs_prop_quants_dict[target_gid].add(prop_quant)
 
-    def remove_from_group(self, group: int, prop_quant: PropagatingQuantizer):
+    def remove_from_group(self, group: int, prop_quant: PropagatingQuantizer) -> None:
         """
         Removes a propagating quantizer from a group.
 
@@ -91,7 +89,7 @@ class UnifiedScalePropagatingQuantizerGroupManager:
                     return gid
         return None
 
-    def merge_groups(self, merge_to_gid: int, merge_from_gid: int):
+    def merge_groups(self, merge_to_gid: int, merge_from_gid: int) -> None:
         """
         Merges two groups into a single one. The `merge_to_gid` group retains its group ID.
 
@@ -110,11 +108,11 @@ class QuantizersWaitingForMergeManager:
     and corresponding node keys.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._branching_node_keys_vs_quantizers_waiting_for_merge: Dict[str, Set[PropagatingQuantizer]] = {}
         self._quantizers_vs_branching_node_keys: Dict[PropagatingQuantizer, str] = {}
 
-    def add_propagating_quantizer_to_wait_on_node_key(self, pq: PropagatingQuantizer, branching_node_key: str):
+    def add_propagating_quantizer_to_wait_on_node_key(self, pq: PropagatingQuantizer, branching_node_key: str) -> None:
         """
         Registers a propagating quantizer as "waiting" on a node in QuantizerPropagationStateGraph.
 
@@ -146,10 +144,10 @@ class QuantizersWaitingForMergeManager:
         """
         return self._branching_node_keys_vs_quantizers_waiting_for_merge[node_key]
 
-    def __contains__(self, item: PropagatingQuantizer):
+    def __contains__(self, item: PropagatingQuantizer) -> bool:
         return item in self._quantizers_vs_branching_node_keys
 
-    def resolve_merged_node(self, branching_node_key: str):
+    def resolve_merged_node(self, branching_node_key: str) -> None:
         """
         De-registers any quantizers that were previously registered to be "waiting" on a given node key.
         :param branching_node_key: The node key in QuantizerPropagationStateGraph that some propagating

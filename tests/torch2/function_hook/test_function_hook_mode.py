@@ -23,8 +23,12 @@ from nncf.experimental.torch2.function_hook.hook_executor_mode import OpMeta
 from nncf.experimental.torch2.function_hook.hook_executor_mode import generate_normalized_op_name
 from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
 from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
+from nncf.experimental.torch2.function_hook.wrapper import register_pre_function_hook
+from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from tests.torch2.function_hook import helpers
 from tests.torch2.function_hook.helpers import CallCount
+from tests.torch2.function_hook.helpers import CounterHook
+from tests.torch2.function_hook.helpers import SharedParamModel
 
 
 @dataclass
@@ -107,10 +111,56 @@ def test_execute_post_hooks(example_outputs: Union[torch.Tensor, List[torch.Tens
     ctx = FunctionHookMode(nn.Identity(), hook_storage)
     op_meta = OpMeta("/relu/0", torch.relu)
     ret_val = ctx.execute_post_hooks(example_outputs, op_meta)
-    assert type(example_outputs) == type(ret_val)
+    assert type(example_outputs) is type(ret_val)
 
     assert hook_port_0.call_count == 1
     if isinstance(example_outputs, torch.Tensor):
         assert hook_port_1.call_count == 0
     else:
         assert hook_port_1.call_count == 1
+
+
+class ConcatModel(nn.Module):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.cat([x, x], dim=0)
+
+
+class AddModule(nn.Module):
+    def __init__(self, val: int) -> None:
+        super().__init__()
+        self.arg = val
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x + self.arg
+
+
+def test_execute_pre_hooks_for_concat():
+    model = wrap_model(ConcatModel())
+    op_name = "/cat/0"
+    register_pre_function_hook(model, op_name, 0, AddModule(1))
+    register_pre_function_hook(model, op_name, 1, AddModule(2))
+    ret_val = model(torch.zeros(2))
+    assert torch.allclose(ret_val, torch.tensor([1.0, 1.0, 2.0, 2.0])), ret_val
+
+
+def test_shared_parameters():
+    model = SharedParamModel()
+    hook_storage = HookStorage()
+    hook = CounterHook()
+    hook_storage.register_post_function_hook("module1:0:weight", 0, hook)
+
+    args = (model.get_example_inputs(),)
+    kwargs = {}
+    with FunctionHookMode(model, hook_storage) as ctx:
+        assert hook.counter == 0
+        assert ctx.cache_parameters == {}
+        assert ctx.counter_reusing_shared_weights == {id(model.module1[0].weight): 1}
+
+        args, kwargs = ctx.process_model_inputs(args, kwargs)
+        outputs = model.forward(*args, **kwargs)
+        outputs = ctx.process_model_outputs(outputs)
+
+    assert hook.counter == 1
+    # Check that the cache cleared in the end
+    assert ctx.cache_parameters == {}
+    assert ctx.counter_reusing_shared_weights == {}

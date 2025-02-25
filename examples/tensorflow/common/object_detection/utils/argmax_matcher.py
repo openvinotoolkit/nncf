@@ -65,22 +65,25 @@ class ArgMaxMatcher(matcher.Matcher):
             or if unmatched_threshold > matched_threshold.
         """
         if (matched_threshold is None) and (unmatched_threshold is not None):
-            raise ValueError("Need to also define matched_threshold when unmatched_threshold is defined")
+            msg = "Need to also define matched_threshold when unmatched_threshold is defined"
+            raise ValueError(msg)
 
         self._matched_threshold = matched_threshold
         if unmatched_threshold is None:
             self._unmatched_threshold = matched_threshold
         else:
             if unmatched_threshold > matched_threshold:
-                raise ValueError("unmatched_threshold needs to be smaller or equal to matched_threshold")
+                msg = "unmatched_threshold needs to be smaller or equal to matched_threshold"
+                raise ValueError(msg)
             self._unmatched_threshold = unmatched_threshold
 
         if not negatives_lower_than_unmatched and self._unmatched_threshold == self._matched_threshold:
-            raise ValueError(
+            msg = (
                 "When negatives are in between matched and "
                 "unmatched thresholds, these cannot be of equal "
-                "value. matched: {}, unmatched: {}".format(self._matched_threshold, self._unmatched_threshold)
+                f"value. matched: {self._matched_threshold}, unmatched: {self._unmatched_threshold}"
             )
+            raise ValueError(msg)
 
         self._force_match_for_each_row = force_match_for_each_row
         self._negatives_lower_than_unmatched = negatives_lower_than_unmatched

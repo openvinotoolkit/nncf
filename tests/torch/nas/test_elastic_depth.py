@@ -67,7 +67,7 @@ class DepthBasicConvTestModel(nn.Module):
         self.branch_with_blocks = nn.Sequential()
         for idx in range(depth):
             conv = create_conv(3, 3, 5, weight_init=idx + 1, bias_init=idx + 1, padding=2)
-            self.branch_with_blocks.add_module("conv{}".format(idx), conv)
+            self.branch_with_blocks.add_module(f"conv{idx}", conv)
         self.last_conv = create_conv(3, 1, 1)
 
     def forward(self, x):
