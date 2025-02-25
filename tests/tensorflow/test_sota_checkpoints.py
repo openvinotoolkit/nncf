@@ -247,9 +247,9 @@ def metrics_dump_dir(request: FixtureRequest):
         )
 
     dump_path.mkdir(exist_ok=True, parents=True)
-    assert not dump_path.is_dir() or not next(
-        dump_path.iterdir(), None
-    ), f"metrics_dump_path dir should be empty: {dump_path}"
+    assert not dump_path.is_dir() or not next(dump_path.iterdir(), None), (
+        f"metrics_dump_path dir should be empty: {dump_path}"
+    )
     print(f"metrics_dump_path: {dump_path}")
     return dump_path
 

@@ -41,9 +41,9 @@ class SymbolicMaskProducer:
         for mask in masks:
             for mask_producer in mask.mask_producers:
                 if mask_producer.id in merged_producers:
-                    assert (
-                        mask_producer.sparse_multiplier == merged_producers[mask_producer.id].sparse_multiplier
-                    ), f"Inconsistent sparse multiplier for NNCF node with id={mask_producer.id}"
+                    assert mask_producer.sparse_multiplier == merged_producers[mask_producer.id].sparse_multiplier, (
+                        f"Inconsistent sparse multiplier for NNCF node with id={mask_producer.id}"
+                    )
             merged_producers.update({p.id: p for p in mask.mask_producers})
         return list(merged_producers.values())
 

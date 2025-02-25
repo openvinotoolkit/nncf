@@ -28,7 +28,6 @@ class GPT(PTQTestPipeline):
     """Pipeline for causal language models from Hugging Face repository"""
 
     def prepare_model(self) -> None:
-
         if self.backend in PT_BACKENDS:
             self.model_hf = transformers.AutoModelForCausalLM.from_pretrained(self.model_id)
             self.model = self.model_hf

@@ -29,7 +29,6 @@ REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "handle_inner_functi
 
 
 class ReluModel(nn.Module):
-
     @staticmethod
     def example_input() -> Tuple[torch.Tensor, ...]:
         return (torch.rand(1, 1, 1),)
@@ -57,7 +56,6 @@ class BatchNormModel(nn.Module):
 
 
 class MultiHeadAttention(nn.Module):
-
     batch_size = 2
     seq_length = 5
     embed_dim = 16

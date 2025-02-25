@@ -514,9 +514,9 @@ def _is_supported_batch_norm_for_training(node: torch.fx.Node):
     return node.target in supported_ops
 
 
-def _get_pattern_replacement_per_channel() -> (
-    Tuple[Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, int, torch.dtype], torch.Tensor]]
-):
+def _get_pattern_replacement_per_channel() -> Tuple[
+    Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, int, torch.dtype], torch.Tensor]
+]:
     """
     Returns the patter and replacement function for the subgraph rewriter to
     match and replace for per_tensor quantization
@@ -537,9 +537,9 @@ def _get_pattern_replacement_per_channel() -> (
     return pattern_per_channel, replacement_graph_per_channel
 
 
-def _get_pattern_replacement_per_tensor() -> (
-    Tuple[Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, torch.dtype], torch.Tensor]]
-):
+def _get_pattern_replacement_per_tensor() -> Tuple[
+    Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, torch.dtype], torch.Tensor]
+]:
     """
     Returns the patter and replacement function for the subgraph rewriter to
     match and replace for per_tensor quantization

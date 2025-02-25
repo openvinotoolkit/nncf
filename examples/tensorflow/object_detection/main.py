@@ -320,9 +320,10 @@ def run(config):
     # Create dataset
     train_builder, test_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
     train_dataset, test_dataset = train_builder.build(), test_builder.build()
-    train_dist_dataset, test_dist_dataset = strategy.experimental_distribute_dataset(
-        train_dataset
-    ), strategy.experimental_distribute_dataset(test_dataset)
+    train_dist_dataset, test_dist_dataset = (
+        strategy.experimental_distribute_dataset(train_dataset),
+        strategy.experimental_distribute_dataset(test_dataset),
+    )
 
     # Training parameters
     epochs = config.epochs

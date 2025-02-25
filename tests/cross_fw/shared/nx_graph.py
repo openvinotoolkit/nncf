@@ -48,10 +48,7 @@ def sort_dot(path):
                     raise nncf.ValidationError(msg)
             else:
                 if edge_start_id is None or edge_end_id is None:
-                    msg = (
-                        "Invalid node order - must specify both `edge_start_id` and `edge_end_id` "
-                        "if node_id is None!"
-                    )
+                    msg = "Invalid node order - must specify both `edge_start_id` and `edge_end_id` if node_id is None!"
                     raise nncf.ValidationError(msg)
             self.node_id = node_id
             self.edge_start_id = edge_start_id
@@ -141,9 +138,9 @@ def check_nx_graph(
         assert node_identifier in id_vs_attrs, f"Expected to find node {node_identifier}, but there is no such node."
         expected_attrs = dict(sorted(expected_attrs.items()))
         attrs = dict(sorted(id_vs_attrs[node_identifier].items()))
-        assert (
-            expected_attrs == attrs
-        ), f"Incorrect attributes for node {node_identifier}. Expected {expected_attrs}, but actual {attrs}."
+        assert expected_attrs == attrs, (
+            f"Incorrect attributes for node {node_identifier}. Expected {expected_attrs}, but actual {attrs}."
+        )
 
     edge_vs_attrs = _build_edge_vs_attrs_dict(nx_graph, id_from_attr=unstable_node_names is True)
     expected_edge_vs_attrs = _build_edge_vs_attrs_dict(nx_graph, id_from_attr=unstable_node_names is True)

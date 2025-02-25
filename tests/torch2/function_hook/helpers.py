@@ -71,7 +71,6 @@ class ConvJitNormModel(nn.Module):
 
 
 class SimpleModel(nn.Module):
-
     @staticmethod
     def get_example_inputs():
         return torch.ones([1, 1, 3, 3])

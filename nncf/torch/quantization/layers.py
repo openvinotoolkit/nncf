@@ -291,7 +291,6 @@ class PTQuantizerSetup(QuantizerSetupBase):
 
 
 class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
-
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__()
         self._qspec = qspec

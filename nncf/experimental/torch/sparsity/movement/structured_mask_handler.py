@@ -245,9 +245,9 @@ class StructuredMaskContext:
 
     @staticmethod
     def _inflate_structured_mask(structured_mask: torch.Tensor, grid_size: Tuple[int, int]) -> torch.Tensor:
-        assert len(structured_mask.shape) == len(
-            grid_size
-        ), f"Unmatched dimension with structured_mask in shape {structured_mask.shape} and grid_size in 2D."
+        assert len(structured_mask.shape) == len(grid_size), (
+            f"Unmatched dimension with structured_mask in shape {structured_mask.shape} and grid_size in 2D."
+        )
         inflated_mask = structured_mask.clone()
         for axis, repeat_times in enumerate(grid_size):
             inflated_mask = inflated_mask.repeat_interleave(repeat_times, dim=axis)
