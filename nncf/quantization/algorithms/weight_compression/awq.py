@@ -133,106 +133,37 @@ class AWQ(Algorithm):
         """
         self._set_backend_entity(model, wc_backend_entity)
 
-        awq_data = self.get_awq_data(graph, all_weight_params, nodes_to_compress)
+        awq_data = self._get_awq_data(graph, all_weight_params, nodes_to_compress)
         if len(awq_data) == 0:
             return model
 
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(model, inplace=True)
 
-        alpha_step = (self._alpha_max - self._alpha_min) / self._steps
-
-        for k, awq_data_item in track(awq_data.items(), description="Applying AWQ"):
+        is_data_free = statistics is None
+        description = "Applying data-free AWQ" if is_data_free else "Applying AWQ"
+        
+        for k, awq_data_item in track(awq_data.items(), description=description):
             wp = awq_data_item.weight_params
             merge_node = awq_data_item.merge_node
             weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
             if len(weight_data) != 1:  # not supported by the algorithm
                 continue
 
-            nncf_logger.debug(f"Apply AWQ for: {wp.node_with_weight.node_name}")
+            nncf_logger.debug(f"{description} for: {wp.node_with_weight.node_name}")
 
             _, weight_port_id = weight_data[0]
-
-            config = wp.compression_config
-
-            s, X = process_stats(statistics[k], self._subset_size)
-
-            top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
-            topk_idxs = fns.argsort(-s)[:top_k]
-
-            group_size = config.group_size
-            if group_size == -1:
-                group_size = s.shape[0]
-
-            groups_to_correct = set()
-            for idx in topk_idxs:
-                groups_to_correct.add(idx.data // group_size)
-
-            groups_to_correct = list(groups_to_correct)
-
             weight = self._backend_entity.get_weight(
                 wp.node_with_weight, weight_port_id, model, graph
             )  # get_const_value(wp.weight_node)
-            assert isinstance(wp.reduction_axes, tuple) and len(wp.reduction_axes) == 1
-            reduction_axis = wp.reduction_axes[0]
 
-            if reduction_axis == 0:
-                weight = fns.transpose(weight)
-                reduction_axis = 1
-
-            shape_vector = fns.mean(X, axis=1)
-            scale = fns.ones_like(shape_vector)
-
-            awq_config = deepcopy(config)
-            awq_config.group_size = -1
-
-            for gi in groups_to_correct:
-                offset = gi * group_size
-                gscale = s[offset : offset + group_size]
-
-                a_min = fns.astype(fns.quantile(gscale, 0.1), TensorDataType.float32)
-                a_max = 1e2
-                gscale = fns.clip(gscale, a_min=a_min, a_max=a_max)
-
-                gweight = weight[:, offset : offset + group_size]
-                gacts = X[offset : offset + group_size, :]
-
-                fp32_out = fns.matmul(gweight, gacts)
-                min_diff = fns.max(fns.abs(fp32_out))
-                best_scale = None
-
-                alpha = self._alpha_min
-                for _ in range(self._steps):
-                    cur_scale = gscale**alpha
-                    weights_to_fake_quantize = gweight * cur_scale
-                    if config.mode == CompressWeightsMode.NF4:
-                        g_c_scale = calculate_nf4_scale(weights_to_fake_quantize, reduction_axis)
-                        g_compressed_weighs = do_nf4_quantization(weights_to_fake_quantize, g_c_scale)
-                        g_decompressed_weighs = do_nf4_dequantization(g_compressed_weighs, g_c_scale)
-                    else:
-                        g_decompressed_weighs = quantize_dequantize_weight(
-                            weights_to_fake_quantize, awq_config, reduction_axis
-                        )
-                    sacts = gacts / fns.unsqueeze(cur_scale, 1)
-
-                    cur_out = fns.matmul(g_decompressed_weighs, sacts)
-                    cur_diff = fns.mean(fns.abs(cur_out - fp32_out))
-                    if cur_diff < min_diff:
-                        min_diff = cur_diff
-                        best_scale = cur_scale
-                    alpha += alpha_step
-
-                if best_scale is not None:
-                    scale.data[offset : offset + group_size] = best_scale.data
-
-            a_scale = scale
-            w_scale = scale
-            if wp.reduction_axes[0] == 0:
-                w_scale = fns.unsqueeze(w_scale, 1)
-                a_scale = fns.unsqueeze(1.0 / a_scale, 0)
+            if is_data_free:
+                scale = self._data_free_step(weight)
             else:
-                w_scale = fns.unsqueeze(w_scale, 0)
-                a_scale = fns.unsqueeze(1.0 / a_scale, 1)
+                scale = self._data_aware_step(wp, weight, statistics[k])
+
+            w_scale = fns.unsqueeze(scale, 1 - wp.reduction_axes[0])
+            a_scale = fns.unsqueeze(1.0 / scale, wp.reduction_axes[0])
 
             scaled_weight = weight * w_scale
             self._backend_entity.set_weight(wp.node_with_weight, weight_port_id, model, graph, scaled_weight)
@@ -260,7 +191,7 @@ class AWQ(Algorithm):
 
         return transformed_model
 
-    def data_aware_step(self, wp, weight, statistics):
+    def _data_aware_step(self, wp, weight, statistics):
         alpha_step = (self._alpha_max - self._alpha_min) / self._steps
         config = wp.compression_config
         s, X = process_stats(statistics, self._subset_size)
@@ -332,97 +263,12 @@ class AWQ(Algorithm):
 
         return scale
 
-    def data_free_step(self, weight):
+    def _data_free_step(self, weight):
         eps = fns.finfo(weight).eps
         scale = fns.maximum(fns.mean(fns.abs(weight), axis=0), eps)
         return 1 / scale
 
-    def apply_data_free(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        all_weight_params: List[WeightCompressionParameters],
-        nodes_to_compress: List[NNCFNode],
-        wc_backend_entity: Optional[WeightCompressionAlgoBackend] = None,
-    ) -> TModel:
-        """
-        Applies the algorithm to the model.
-        :param model: Model for applying algorithm.
-        :param graph: Model graph.
-        :param all_weight_params: List of all weight parameters.
-        :param nodes_to_compress: List of nodes for processing.
-        :param wc_backend_entity: Weight compression algorithm backend.
-        :return: A resulting model.
-        """
-        self._set_backend_entity(model, wc_backend_entity)
-
-        awq_data = self.get_awq_data(graph, all_weight_params, nodes_to_compress)
-        if len(awq_data) == 0:
-            return model
-
-        transformation_layout = TransformationLayout()
-        model_transformer = ModelTransformerFactory.create(model, inplace=True)
-        for k, awq_data_item in track(awq_data.items(), description="Applying data-free AWQ"):
-            wp = awq_data_item.weight_params
-            merge_node = awq_data_item.merge_node
-            weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
-            if len(weight_data) != 1:  # not supported by the algorithm
-                continue
-
-            nncf_logger.debug(f"Apply data-free AWQ for: {wp.node_with_weight.node_name}")
-
-            _, weight_port_id = weight_data[0]
-
-            weight = self._backend_entity.get_weight(
-                wp.node_with_weight, weight_port_id, model, graph
-            )  # get_const_value(wp.weight_node)
-            assert isinstance(wp.reduction_axes, tuple) and len(wp.reduction_axes) == 1
-            reduction_axis = wp.reduction_axes[0]
-
-            if reduction_axis == 0:
-                weight = fns.transpose(weight)
-                reduction_axis = 1
-            
-            eps = fns.finfo(weight).eps
-
-            scale = fns.maximum(fns.mean(fns.abs(weight), axis=0), eps)
-
-            a_scale = scale
-            w_scale = scale
-            if wp.reduction_axes[0] == 0:
-                w_scale = fns.unsqueeze(1.0 / w_scale, 1)
-                a_scale = fns.unsqueeze(a_scale, 0)
-            else:
-                w_scale = fns.unsqueeze(1 / w_scale, 0)
-                a_scale = fns.unsqueeze(a_scale, 1)
-
-            scaled_weight = weight * w_scale
-            self._backend_entity.set_weight(wp.node_with_weight, weight_port_id, model, graph, scaled_weight)
-
-            if self._backend_entity.is_node_with_weights(
-                merge_node, graph
-            ):  # for MatMul->Multiply->MatMul pattern scale merged to first MatMul
-                for _, port_id in self._backend_entity.get_weight_names_and_port_ids(merge_node, graph):
-                    merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
-                    merge_weight = merge_weight * a_scale
-                    self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
-                a_scale = fns.transpose(a_scale)
-            else:  # for Act->Multiply->MatMul and Act->MatMul patterns scale inserted after Act as extra node
-                a_scale = fns.transpose(a_scale)
-                next_nodes = graph.get_next_nodes(merge_node)
-                source_node_output_port = graph.get_output_edges(merge_node)[0].output_port_id
-                scale_insertion_command = self._backend_entity.scale_insertion_command(
-                    merge_node, next_nodes, source_node_output_port, a_scale.data
-                )
-                transformation_layout.register(scale_insertion_command)
-
-            self._scale_per_target_node[k] = a_scale
-
-        transformed_model = model_transformer.transform(transformation_layout)
-
-        return transformed_model
-
-    def get_awq_data(self,
+    def _get_awq_data(self,
                     graph: NNCFGraph,
                     all_weight_params: List[WeightCompressionParameters],
                     nodes_to_compress: List[NNCFNode]) -> Dict[str, AWQCompressionInfo]:
@@ -483,6 +329,9 @@ class AWQ(Algorithm):
         return awq_data
 
     def update_statistics(self, statistics):
+        if statistics is None:
+            return statistics
+
         # Multiply activations by the computed scales
         for node_name, scale in self._scale_per_target_node.items():
             for mean_stat in statistics[node_name].mean_values:
