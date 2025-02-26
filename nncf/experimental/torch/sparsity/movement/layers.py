@@ -18,6 +18,8 @@ from torch import nn
 
 import nncf
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.utils import get_bias_shape_legacy
+from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.experimental.torch.sparsity.movement.functions import binary_mask_by_threshold
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import CompressionParameter
@@ -56,36 +58,35 @@ class SparseConfig:
                 (isinstance(sparse_factors, (tuple, list)) and tuple(sparse_factors) == (1, 1))
                 or sparse_factors is None
             ):
-                raise ValueError(
-                    f"{error_prefix} Fine sparse structure expects `sparse_factors` to be [1, 1] or unspecified."
-                )
+                msg = f"{error_prefix} Fine sparse structure expects `sparse_factors` to be [1, 1] or unspecified."
+                raise ValueError(msg)
             if sparse_axis is not None:
-                raise ValueError(f"{error_prefix} Fine sparse structure does not expect specified `axis`.")
+                msg = f"{error_prefix} Fine sparse structure does not expect specified `axis`."
+                raise ValueError(msg)
             self.sparse_factors = (1, 1)
 
         if self.mode == SparseStructure.BLOCK:
             if sparse_factors is None:
-                raise ValueError(
-                    f"{error_prefix} Missing `sparse_factors`. Block sparsity structure expects it specified."
-                )
+                msg = f"{error_prefix} Missing `sparse_factors`. Block sparsity structure expects it specified."
+                raise ValueError(msg)
             if not (isinstance(sparse_factors, (tuple, list)) and len(sparse_factors) == 2):
-                raise ValueError(
+                msg = (
                     f"{error_prefix} Invalid format of `sparse_factors. "
                     "Block sparsity structure expects tuple of two numbers."
                 )
+                raise ValueError(msg)
             if sparse_axis is not None:
-                raise ValueError(f"{error_prefix} Block sparse structure does not expect specified `axis`.")
+                msg = f"{error_prefix} Block sparse structure does not expect specified `axis`."
+                raise ValueError(msg)
             self.sparse_factors = tuple(sparse_factors)
 
         if self.mode == SparseStructure.PER_DIM:
             if sparse_axis is None:
-                raise ValueError(
-                    f"{error_prefix} Missing `axis`. Per-dim sparsity structure expects it to be specified."
-                )
+                msg = f"{error_prefix} Missing `axis`. Per-dim sparsity structure expects it to be specified."
+                raise ValueError(msg)
             if sparse_factors is not None:
-                raise ValueError(
-                    f"{error_prefix} Per-dim sparsity structure does not expect specified `sparse_factors`."
-                )
+                msg = f"{error_prefix} Per-dim sparsity structure does not expect specified `sparse_factors`."
+                raise ValueError(msg)
             self.sparse_axis = int(sparse_axis)
 
     @classmethod
@@ -131,7 +132,8 @@ class SparseConfigByScope:
         error_prefix = f"Invalid sparse structure by scopes {config}."
         target_scopes = config.get("target_scopes")
         if not target_scopes:
-            raise ValueError(f"{error_prefix} Missing `target_scopes`.")
+            msg = f"{error_prefix} Missing `target_scopes`."
+            raise ValueError(msg)
         sparse_config = SparseConfig.from_config(config)
         return cls(sparse_config, target_scopes)
 
@@ -167,7 +169,7 @@ class MovementSparsifier(nn.Module):
         self._importance_threshold = -math.inf
         self._importance_regularization_factor = 0.0
 
-        weight_shape: List[int] = target_module_node.layer_attributes.get_weight_shape()
+        weight_shape: List[int] = get_weight_shape_legacy(target_module_node.layer_attributes)
         assert len(weight_shape) == 2, "Unsupported module with weight shape not in 2D."
         self.weight_ctx = BinaryMask(weight_shape)
         self.sparse_factors = self._get_sparse_factors(weight_shape, sparse_cfg)
@@ -185,7 +187,7 @@ class MovementSparsifier(nn.Module):
         self.weight_ctx.binary_mask = self._calc_training_binary_mask()
 
         if self.prune_bias:
-            bias_shape = target_module_node.layer_attributes.get_bias_shape()
+            bias_shape = get_bias_shape_legacy(target_module_node.layer_attributes)
             self.bias_ctx = BinaryMask(bias_shape)
             bias_importance_shape = weight_importance_shape[0]
             self.bias_importance = CompressionParameter(
@@ -240,7 +242,8 @@ class MovementSparsifier(nn.Module):
         :param expanded: Whether should expand the importance to the same shape as module weight or bias.
         """
         if is_bias and (not self.prune_bias):
-            raise ValueError("The layer to sparsify does not contain bias.")
+            msg = "The layer to sparsify does not contain bias."
+            raise ValueError(msg)
         importance = self.bias_importance if is_bias else self.weight_importance
         if (not expanded) or self.sparse_factors == [1, 1]:
             return importance
@@ -305,7 +308,8 @@ class MovementSparsifier(nn.Module):
                 score_shape.append(dim // factor)
             return tuple(score_shape)
 
-        raise nncf.InternalError("Unknown sparse structure.")
+        msg = "Unknown sparse structure."
+        raise nncf.InternalError(msg)
 
     @staticmethod
     def _get_sparse_factors(weight_shape: List[int], sparse_config: SparseConfig) -> Tuple[int, int]:
@@ -317,9 +321,8 @@ class MovementSparsifier(nn.Module):
 
         if sparse_config.mode == SparseStructure.PER_DIM:
             if sparse_config.sparse_axis < 0 or sparse_config.sparse_axis >= len(weight_shape):
-                raise ValueError(
-                    "Invalid axis id {}, axes range is [0, {}]".format(sparse_config.sparse_axis, len(weight_shape))
-                )
+                msg = f"Invalid axis id {sparse_config.sparse_axis}, axes range is [0, {len(weight_shape)}]"
+                raise ValueError(msg)
             sparse_factors = deepcopy(weight_shape)
             sparse_factors[sparse_config.sparse_axis] = 1
             sparse_factors = tuple(sparse_factors)

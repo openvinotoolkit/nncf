@@ -42,7 +42,7 @@ def get_device_str(inference_type: str, gpu_id: int):
     if inference_type == "cpu":
         return "cpu"
     if gpu_id is not None:
-        return "cuda:{}".format(gpu_id)
+        return f"cuda:{gpu_id}"
 
     return "cuda"
 

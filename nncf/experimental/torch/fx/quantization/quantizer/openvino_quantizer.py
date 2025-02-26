@@ -23,33 +23,59 @@ from torch.ao.quantization.quantizer.quantizer import Quantizer as TorchAOQuanti
 from torch.ao.quantization.quantizer.quantizer import SharedQuantizationSpec as TorchAOSharedQuantizationSpec
 
 import nncf
+from nncf import IgnoredScope
+from nncf import ModelType
+from nncf import OverflowFix
+from nncf import QuantizationMode
+from nncf import QuantizationPreset
+from nncf import TargetDevice
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
-from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationRule
+from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
 from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.utils.api_marker import api
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.transformations import fold_constant_except_qdq
-from nncf.parameters import ModelType
-from nncf.parameters import QuantizationMode
-from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import FP8QuantizationParameters
-from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.scopes import IgnoredScope
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 
 QUANT_ANNOTATION_KEY = "quantization_annotation"
 
 
+@api(canonical_alias="nncf.experimental.torch.fx.OpenVINOQuantizer")
 class OpenVINOQuantizer(TorchAOQuantizer):
     """
     Implementation of the Torch AO quantizer which annotates models with quantization annotations
     optimally for the inference via OpenVINO.
+
+    :param mode: Defines optimization mode for the algorithm. None by default.
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performance`.
+    :param target_device: A target device the specificity of which will be taken
+        into account while compressing in order to obtain the best performance
+        for this type of device, defaults to TargetDevice.ANY.
+    :param model_type: Model type is needed to specify additional patterns
+        in the model. Supported only `transformer` now.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
+    :param overflow_fix: This option controls whether to apply the overflow issue
+        fix for the 8-bit quantization.
+    :param quantize_outputs: Whether to insert additional quantizers right before
+        each of the model outputs.
+    :param activations_quantization_params: Quantization parameters for model
+        activations.
+    :param weights_quantization_params: Quantization parameters for model weights.
+    :param quantizer_propagation_rule: The strategy to be used while propagating and merging quantizers.
+        MERGE_ALL_IN_ONE by default.
     """
 
     def __init__(
@@ -66,31 +92,6 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         weights_quantization_params: Optional[Union[QuantizationParameters, FP8QuantizationParameters]] = None,
         quantizer_propagation_rule: QuantizerPropagationRule = QuantizerPropagationRule.MERGE_ALL_IN_ONE,
     ):
-        """
-        :param mode: Defines optimization mode for the algorithm. None by default.
-        :param preset: A preset controls the quantization mode (symmetric and asymmetric).
-            It can take the following values:
-            - `performance`: Symmetric quantization of weights and activations.
-            - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
-            Default value is None. In this case, `mixed` preset is used for `transformer`
-            model type otherwise `performance`.
-        :param target_device: A target device the specificity of which will be taken
-            into account while compressing in order to obtain the best performance
-            for this type of device, defaults to TargetDevice.ANY.
-        :param model_type: Model type is needed to specify additional patterns
-            in the model. Supported only `transformer` now.
-        :param ignored_scope: An ignored scope that defined the list of model control
-            flow graph nodes to be ignored during quantization.
-        :param overflow_fix: This option controls whether to apply the overflow issue
-            fix for the 8-bit quantization.
-        :param quantize_outputs: Whether to insert additional quantizers right before
-            each of the model outputs.
-        :param activations_quantization_params: Quantization parameters for model
-            activations.
-        :param weights_quantization_params: Quantization parameters for model weights.
-        :param quantizer_propagation_rule: The strategy to be used while propagating and merging quantizers.
-        MERGE_ALL_IN_ONE by default.
-        """
         self._min_max_algo = MinMaxQuantization(
             mode=mode,
             preset=preset,
@@ -104,13 +105,50 @@ class OpenVINOQuantizer(TorchAOQuantizer):
             quantizer_propagation_rule=quantizer_propagation_rule,
         )
 
-    def get_quantization_setup(self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph) -> SingleConfigQuantizerSetup:
+    def set_ignored_scope(
+        self,
+        names: Optional[List[str]] = None,
+        patterns: Optional[List[str]] = None,
+        types: Optional[List[str]] = None,
+        subgraphs: Optional[List[Tuple[List[str], List[str]]]] = None,
+        validate: bool = True,
+    ) -> None:
+        """
+        Provides an option to specify portions of model to be excluded from compression.
+        The ignored scope defines model sub-graphs that should be excluded from the quantization process.
+
+        :param names: List of ignored node names.
+        :param patterns: List of regular expressions that define patterns for names of ignored nodes.
+        :param types: List of ignored operation types.
+        :param subgraphs: List of ignored subgraphs.
+        :param validate: If set to True, then a RuntimeError will be raised if any ignored scope does not match
+            in the model graph.
+        """
+        self._min_max_algo.set_ignored_scope(
+            nncf.IgnoredScope(
+                names=names or [],
+                patterns=patterns or [],
+                types=types or [],
+                subgraphs=subgraphs or [],
+                validate=validate,
+            )
+        )
+
+    def get_nncf_quantization_setup(
+        self, model: torch.fx.GraphModule, nncf_graph: NNCFGraph
+    ) -> SingleConfigQuantizerSetup:
         self._min_max_algo._set_backend_entity(model)
         return self._min_max_algo.find_quantization_setup(model, nncf_graph)
 
     def annotate(self, model: torch.fx.GraphModule) -> torch.fx.GraphModule:
+        """
+        Adds quantization annotations to the nodes in the model graph in-place.
+
+        :param model: A torch.fx.GraphModule to annotate.
+        :return: The torch.fx.GraphModule with updated annotations.
+        """
         nncf_graph = GraphConverter.create_nncf_graph(model)
-        quantization_setup = self.get_quantization_setup(model, nncf_graph)
+        quantization_setup = self.get_nncf_quantization_setup(model, nncf_graph)
 
         graph = model.graph
         node_vs_torch_annotation = defaultdict(TorchAOQuantizationAnnotation)
@@ -131,10 +169,11 @@ class OpenVINOQuantizer(TorchAOQuantizer):
 
             if any(root_qp.qconfig != quantization_setup.quantization_points[q_id].qconfig for q_id in quantizer_ids):
                 qps = [quantization_setup.quantization_points[q_id] for q_id in quantizer_ids]
-                raise nncf.InternalError(
+                msg = (
                     "Different quantization configs are set to one unified scale group:"
                     f"{[(qp.insertion_point.__dict__, str(qp.qconfig)) for qp in qps]}"
                 )
+                raise nncf.InternalError(msg)
 
             root_target_node = get_graph_node_by_name(graph, root_qp.insertion_point.target_node_name)
             root_edge_or_node = self._get_edge_or_node(root_target_node, root_qp, nncf_graph)
@@ -153,6 +192,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         for node, annotation in node_vs_torch_annotation.items():
             assert QUANT_ANNOTATION_KEY not in node.meta
             node.meta[QUANT_ANNOTATION_KEY] = annotation
+        return model
 
     @staticmethod
     def _get_unified_scales_root_quantizer_id(
@@ -301,8 +341,26 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         )
 
     def validate(self, model: torch.fx.GraphModule) -> None:
+        """
+        Validates the annotated model before the insertion of FakeQuantizers / observers.
+
+        :param model: Annotated torch.fx.GraphModule to validate after the  annotation.
+        """
         pass
 
     def transform_for_annotation(self, model: torch.fx.GraphModule) -> torch.fx.GraphModule:
+        """
+        Allows for user defined transforms to run before annotating the graph.
+        This allows quantizer to allow quantizing part of the model that are otherwise not quantizable.
+        For example quantizer can
+        a) decompose a compound operator like scaled dot product attention,
+        into bmm and softmax if quantizer knows how to quantize bmm/softmax but not sdpa
+        or b) transform scalars to tensor to allow quantizing scalares.
+
+        Note: this is an optional method
+
+        :param model: Given torch.fx.GraphModule to transform before the annotation.
+        :return: The transformed torch.fx.GraphModule ready for the annotation.
+        """
         fold_constant_except_qdq(model)
         return model

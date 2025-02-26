@@ -265,7 +265,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
                 [
                     TModel,
                     CompressionAlgorithmController,
-                    "TrainingRunner",
+                    TrainingRunner,
                     Optional[Union[str, pathlib.Path]],
                 ],
                 None,
@@ -307,7 +307,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         for key, value in prepare_for_tensorboard(statistics).items():
             if isinstance(value, (int, float)):
                 self.add_tensorboard_scalar(
-                    "compression/statistics/{0}".format(key),
+                    f"compression/statistics/{key}",
                     value,
                     self.cumulative_epoch_count,
                 )

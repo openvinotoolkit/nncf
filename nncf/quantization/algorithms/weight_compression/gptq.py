@@ -74,9 +74,8 @@ class GPTQ:
 
             self._backend_entity = OVWeightCompressionAlgoBackend(model)
         else:
-            raise nncf.UnsupportedBackendError(
-                f"Cannot return backend-specific entity because {self._backend.value} is not supported!"
-            )
+            msg = f"Cannot return backend-specific entity because {self._backend.value} is not supported!"
+            raise nncf.UnsupportedBackendError(msg)
 
     def apply(
         self,
@@ -169,9 +168,11 @@ class GPTQ:
         nsamples = 0
 
         if node.metatype in self._backend_entity.convolution_metatypes:
-            raise nncf.UnsupportedModelError("Convolution metatypes are not supported")
+            msg = "Convolution metatypes are not supported"
+            raise nncf.UnsupportedModelError(msg)
         if node.layer_attributes.input_attributes["transpose"]:
-            raise nncf.UnsupportedModelError("Transposed input is not supported")
+            msg = "Transposed input is not supported"
+            raise nncf.UnsupportedModelError(msg)
 
         hessian = fns.zeros(
             (inputs[0].shape[-1], inputs[0].shape[-1]), backend=inputs[0].backend, dtype=TensorDataType.float32
@@ -208,9 +209,11 @@ class GPTQ:
         :return: Scales and zero points used for quantization.
         """
         if wc_params.node_with_weight.metatype in self._backend_entity.convolution_metatypes:
-            raise RuntimeError("Convolution metatypes are not supported")
+            msg = "Convolution metatypes are not supported"
+            raise RuntimeError(msg)
         if not wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]["transpose"]:
-            raise RuntimeError("Transpose is not supported")
+            msg = "Transpose is not supported"
+            raise RuntimeError(msg)
 
         weight_tensor = self._backend_entity.get_weight(
             wc_params.node_with_weight, wc_params.weight_port_id, model, graph
@@ -270,18 +273,17 @@ class GPTQ:
                                 wc_statistics,
                                 weight_tensor[:, (i1 + i) : (i1 + i + group_size)],
                                 reduction_axes,
-                                wc_params.compression_config,
+                                block_compression_config,
                             )
-                            scales.append(scale.squeeze(axis=1))
-                            zero_points.append(zero_point if zero_point is None else zero_point.squeeze(axis=1))
                         else:
                             scale, zero_point = calculate_integer_quantization_params(
                                 weight_tensor[:, (i1 + i) : (i1 + i + group_size)],
                                 reduction_axes,
                                 block_compression_config,
                             )
-                            scales.append(scale)
-                            zero_points.append(zero_point)
+                        scales.append(scale)
+                        zero_points.append(zero_point)
+
                 if block_compression_config.mode == CompressWeightsMode.NF4:
                     compressed_weights = do_nf4_quantization(
                         fns.unsqueeze(weight_col, 1), scales[-1], is_normalized_weight=False

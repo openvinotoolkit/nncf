@@ -64,7 +64,7 @@ def get_ignored_node_names_from_subgraph(graph: NNCFGraph, subgraph: Subgraph) -
 @api(canonical_alias="nncf.IgnoredScope")
 @dataclass
 class IgnoredScope:
-    """
+    r"""
     Provides an option to specify portions of model to be excluded from compression.
 
     The ignored scope defines model sub-graphs that should be excluded from the compression process such as
@@ -148,7 +148,8 @@ def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List
     for p in ignored_scope.patterns:
         results.append("{re}" + p)
     if ignored_scope.types:
-        raise nncf.InternalError("Legacy ignored scope format does not support operation types")
+        msg = "Legacy ignored scope format does not support operation types"
+        raise nncf.InternalError(msg)
     return results
 
 

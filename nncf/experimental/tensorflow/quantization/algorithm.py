@@ -18,6 +18,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.utils import get_first_nodes_of_type
+from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
@@ -133,7 +134,7 @@ def _get_tensor_specs(
         assert len(metatype.weight_definitions) == 1
 
         channel_axes = metatype.weight_definitions[0].channel_axes
-        weight_shape = node.layer_attributes.get_weight_shape()
+        weight_shape = get_weight_shape_legacy(node.layer_attributes)
         tensor_specs.append((weight_shape, channel_axes))
     else:
         data_format = node.layer_attributes.get_data_format()
@@ -191,7 +192,8 @@ class QuantizationBuilderV2(QuantizationBuilder):
 
             for qp_id in unified_scales_group:
                 if was_processed[qp_id]:
-                    raise nncf.InternalError("Unexpected behavior")
+                    msg = "Unexpected behavior"
+                    raise nncf.InternalError(msg)
                 was_processed[qp_id] = True
 
                 curr_qp = quantization_points[qp_id]
@@ -246,9 +248,7 @@ class QuantizationBuilderV2(QuantizationBuilder):
         # Find out which metatypes unsupported by the quantization algorithm
         for node in nncf_graph.get_all_nodes():
             if node.metatype in UNSUPPORTED_TF_OP_METATYPES:
-                nncf_logger.warning(
-                    "The operation {} is unsupported by the quantization algorithm.".format(node.node_name)
-                )
+                nncf_logger.warning(f"The operation {node.node_name} is unsupported by the quantization algorithm.")
 
         # Possible configurations of quantizer for nodes with weights.
         possible_qconfigs_for_nodes_with_weight = self._get_quantizable_weighted_layer_nodes(nncf_graph)
@@ -272,12 +272,13 @@ class QuantizationBuilderV2(QuantizationBuilder):
                 if target_node.node_name in node_name_to_qconfig_map:
                     assigned_qconfig = node_name_to_qconfig_map[target_node.node_name]
                     if qp.qconfig != assigned_qconfig:
-                        raise nncf.InternalError(
+                        msg = (
                             "Inconsistent quantizer configurations selected by solver for one "
                             f"and the same quantizable op! Tried to assign {qp.qconfig} to "
                             f"{target_node.node_name} as specified by QP {qp_id}, but the op "
                             f"already has quantizer config {assigned_qconfig} assigned to it!"
                         )
+                        raise nncf.InternalError(msg)
                     continue  # The operation has already been quantized
                 node_name_to_qconfig_map[target_node.node_name] = qp.qconfig
 
@@ -286,7 +287,8 @@ class QuantizationBuilderV2(QuantizationBuilder):
                 narrow_range = not half_range
                 target_type = TargetType.OPERATOR_PRE_HOOK
                 if not issubclass(target_node.metatype, TFOpWithWeightsMetatype):
-                    raise nncf.InternalError(f"Unexpected type of metatype: {type(target_node.metatype)}")
+                    msg = f"Unexpected type of metatype: {type(target_node.metatype)}"
+                    raise nncf.InternalError(msg)
                 port_ids = [weight_def.port_id for weight_def in target_node.metatype.weight_definitions]
 
             else:
@@ -294,7 +296,8 @@ class QuantizationBuilderV2(QuantizationBuilder):
 
                 # Check correctness
                 if not isinstance(qp.insertion_point, ActivationQuantizationInsertionPoint):
-                    raise nncf.InternalError(f"Unexpected type of insertion point: {type(qp.insertion_point)}")
+                    msg = f"Unexpected type of insertion point: {type(qp.insertion_point)}"
+                    raise nncf.InternalError(msg)
 
                 # Parameters
                 half_range = False

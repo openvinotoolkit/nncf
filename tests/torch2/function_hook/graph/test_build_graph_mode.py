@@ -103,10 +103,10 @@ def test_execute_pre_hooks():
             op_name="/relu/0",
             func=torch.relu,
             args=(
-                TensorMeta(dtype=torch.float32, shape=(1,), requires_grad=False),
-                TensorMeta(dtype=torch.float32, shape=(1, 1, 1, 1), requires_grad=True),
+                TensorMeta(dtype=torch.float32, shape=(1,)),
+                TensorMeta(dtype=torch.float32, shape=(1, 1, 1, 1)),
             ),
-            kwargs={"b": TensorMeta(dtype=torch.float32, shape=(1,), requires_grad=True)},
+            kwargs={"b": TensorMeta(dtype=torch.float32, shape=(1,))},
         ),
     }
     assert len(nodes) == 3
@@ -178,31 +178,8 @@ class ModelTensorAttribute(nn.Module):
             return x.T
         if self.attr == ".mT":
             return x.mT
-        raise ValueError(f"Unexpected attribute: {self.attr}")
-
-
-@pytest.mark.parametrize("attr", [".T", ".mT"])
-def test_tensor_attributes(attr):
-    model = ModelTensorAttribute(attribute=attr)
-    model = wrap_model(model)
-    graph = build_graph(model, torch.ones(2, 3, requires_grad=True))
-
-    if attr == ".T":
-        ref_meta = FunctionMeta(
-            op_name="/__get__/0",
-            func=torch.permute,
-            args=(TensorMeta(dtype=torch.float32, shape=(2, 3), requires_grad=True),),
-            kwargs={"dims": (1, 0)},
-        )
-    else:
-        ref_meta = FunctionMeta(
-            op_name="/__get__/0",
-            func=torch.transpose,
-            args=(TensorMeta(dtype=torch.float32, shape=(2, 3), requires_grad=True),),
-            kwargs={"dim0": -2, "dim1": -1},
-        )
-    assert graph.nodes[1]["type"] == NodeType.fn_call
-    assert graph.nodes[1]["meta"] == ref_meta
+        msg = f"Unexpected attribute: {self.attr}"
+        raise ValueError(msg)
 
 
 class ModelTensorAttribute2(nn.Module):

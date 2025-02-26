@@ -102,7 +102,8 @@ class SearchParams:
         self.num_constraints = num_constraints
         self.population = population
         if population > num_evals:
-            raise ValueError("Population size must not be greater than number of evaluations.")
+            msg = "Population size must not be greater than number of evaluations."
+            raise ValueError(msg)
         self.num_evals = num_evals // population * population
         self.seed = seed
         self.crossover_prob = crossover_prob
@@ -249,14 +250,16 @@ class BaseSearchAlgorithm:
         algo_name = search_config.get("algorithm")
         algo_cls = SEARCH_ALGORITHMS.get(algo_name)
         if not algo_name:
-            raise NotImplementedError(f"Evolutionary Search Algorithm {algo_name} not implemented")
+            msg = f"Evolutionary Search Algorithm {algo_name} not implemented"
+            raise NotImplementedError(msg)
         return algo_cls(model, elasticity_ctrl, nncf_config)
 
     @classmethod
     def from_checkpoint(
         cls, model: NNCFNetwork, elasticity_ctrl: ElasticityController, bn_adapt_args, resuming_checkpoint_path: str
     ) -> "BaseSearchAlgorithm":
-        raise NotImplementedError("Evolutionary Search Algorithm from checkpoint not implemented")
+        msg = "Evolutionary Search Algorithm from checkpoint not implemented"
+        raise NotImplementedError(msg)
 
     @property
     def search_records(self):
@@ -334,7 +337,8 @@ class NSGA2SearchAlgorithm(BaseSearchAlgorithm):
 
         self._num_vars, self._vars_upper = self._elasticity_ctrl.multi_elasticity_handler.get_design_vars_info()
         if self._num_vars == 0 or self._vars_lower is None:
-            raise nncf.InternalError("Search space is empty")
+            msg = "Search space is empty"
+            raise nncf.InternalError(msg)
 
         self._result = None
         bn_adapt_params = search_config.get("batchnorm_adaptation", {})
@@ -354,7 +358,8 @@ class NSGA2SearchAlgorithm(BaseSearchAlgorithm):
         """
         if self._evaluator_handlers:
             return self._evaluator_handlers
-        raise nncf.ValidationError("Evaluator handlers haven't been defined")
+        msg = "Evaluator handlers haven't been defined"
+        raise nncf.ValidationError(msg)
 
     @property
     def acc_delta(self) -> float:

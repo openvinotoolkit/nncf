@@ -24,11 +24,16 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
+from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
 
 QuantizationPointId = int
 
 DEFAULT_QUANTIZER_CONFIG = QuantizerConfig(
-    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None, per_channel=False
+    num_bits=8,
+    mode=QuantizationMode.SYMMETRIC,
+    signedness_to_force=None,
+    per_channel=False,
+    narrow_range=QUANTIZATION_NARROW_RANGE,
 )
 
 
@@ -220,10 +225,10 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
             qconfig_any = deepcopy(qconfig)
             qconfig_any.signedness_to_force = None
             if qconfig_any not in self.possible_qconfigs:
-                raise ValueError(
-                    "Invalid selection for a quantizer config - "
-                    "tried to select {} among [{}]".format(qconfig, ",".join([str(q) for q in self.possible_qconfigs]))
+                msg = "Invalid selection for a quantizer config - tried to select {} among [{}]".format(
+                    qconfig, ",".join([str(q) for q in self.possible_qconfigs])
                 )
+                raise ValueError(msg)
             qconfig = qconfig_any
         return SingleConfigQuantizationPoint(self.insertion_point, qconfig, self.directly_quantized_operator_node_names)
 
@@ -253,7 +258,8 @@ class QuantizerSetupBase:
         for qp_id in qp_group:
             usg_id = self.get_unified_scale_group_id(qp_id)
             if usg_id is not None:
-                raise nncf.InternalError(f"QP id {qp_id} is already in unified scale group {usg_id}")
+                msg = f"QP id {qp_id} is already in unified scale group {usg_id}"
+                raise nncf.InternalError(msg)
         gid = self._next_unified_scale_gid
         self.unified_scale_groups[self._next_unified_scale_gid] = set(qp_group)
         self._next_unified_scale_gid += 1
@@ -263,7 +269,8 @@ class QuantizerSetupBase:
         for qp_id in qp_group:
             usg_id = self.get_shared_inputs_group_id(qp_id)
             if usg_id is not None:
-                raise nncf.InternalError(f"QP id {qp_id} is already in unified scale group {usg_id}")
+                msg = f"QP id {qp_id} is already in unified scale group {usg_id}"
+                raise nncf.InternalError(msg)
         gid = self._next_shared_inputs_gid
         self.shared_input_operation_set_groups[self._next_shared_inputs_gid] = set(qp_group)
         self._next_shared_inputs_gid += 1
@@ -311,13 +318,15 @@ class QuantizerSetupBase:
     ) -> None:
         gid = self.get_unified_scale_group_id(qp_id)
         if gid is not None:
-            raise nncf.InternalError("QP id {} is already in unified scale group {}".format(qp_id, gid))
+            msg = f"QP id {qp_id} is already in unified scale group {gid}"
+            raise nncf.InternalError(msg)
         self.unified_scale_groups[unified_scale_gid].add(qp_id)
 
     def register_existing_qp_id_in_shared_input_group(self, qp_id: QuantizationPointId, shared_inputs_gid: int) -> None:
         gid = self.get_shared_inputs_group_id(qp_id)
         if gid is not None:
-            raise nncf.InternalError("QP id {} is already in shared inputs group {}".format(qp_id, gid))
+            msg = f"QP id {qp_id} is already in shared inputs group {gid}"
+            raise nncf.InternalError(msg)
         self.shared_input_operation_set_groups[shared_inputs_gid].add(qp_id)
 
     def remove_unified_scale_from_point(self, qp_id: QuantizationPointId) -> None:
@@ -468,10 +477,11 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
         retval.shared_input_operation_set_groups = deepcopy(self.shared_input_operation_set_groups)
 
         if Counter(qp_id_vs_selected_qconfig_dict.keys()) != Counter(self.quantization_points.keys()):
-            raise ValueError(
+            msg = (
                 "The set of quantization points for a selection is inconsistent with quantization"
                 "points in the quantizer setup!"
             )
+            raise ValueError(msg)
         for qp_id, qp in self.quantization_points.items():
             if strict:
                 retval.quantization_points[qp_id] = qp.select_qconfig(qp_id_vs_selected_qconfig_dict[qp_id])

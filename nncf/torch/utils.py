@@ -33,7 +33,7 @@ from nncf.torch.structures import ExecutionParameters
 
 
 def get_node_name(module, module_name, prefix):
-    return "{prefix}/{cls}[{name}]".format(prefix=prefix, cls=module.__class__.__name__, name=module_name)
+    return f"{prefix}/{module.__class__.__name__}[{module_name}]"
 
 
 def get_all_modules(model, prefix=None):
@@ -93,7 +93,7 @@ def get_state_dict_names_with_modules(
 ) -> Dict[str, torch.nn.Module]:
     found = OrderedDict()
     for name, module in model.named_children():
-        full_node_name = "{}{}".format(prefix, name)
+        full_node_name = f"{prefix}{name}"
         if str_types is not None and type(module).__name__ in str_types:
             found[full_node_name] = module
         sub_found = get_state_dict_names_with_modules(module, str_types, prefix=full_node_name + ".")
@@ -160,9 +160,9 @@ def get_flat_tensor_contents_string(input_tensor):
     retval = "["
     for idx, el in enumerate(input_tensor.view(-1)):
         if idx >= 10:
-            retval += "... (first 10/{} elements shown only) ".format(len(input_tensor.view(-1)))
+            retval += f"... (first 10/{len(input_tensor.view(-1))} elements shown only) "
             break
-        retval += "{:.4f}, ".format(el.item())
+        retval += f"{el.item():.4f}, "
     retval += "]"
     return retval
 
@@ -340,7 +340,7 @@ def rename_legacy_names_in_state_dict(
     if legacy_names:
         warning_deprecated(
             "Legacy Batch Norm layer names was detected in checkpoint model state dict."
-            " All occurrences of `{}` in nodes names was replaced by `{}`".format(legacy_name, new_name)
+            f" All occurrences of `{legacy_name}` in nodes names was replaced by `{new_name}`"
         )
 
 
@@ -407,8 +407,8 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
                 new_name = LEGACY_VS_NEW_BN_MAP[old_name]
                 warning_deprecated(
                     "Legacy Batch Norm layer names was detected in quantization setup target"
-                    " point names. All occurrences of `{}` in nodes names was replaced by"
-                    " `{}`".format(old_name, new_name)
+                    f" point names. All occurrences of `{old_name}` in nodes names was replaced by"
+                    f" `{new_name}`"
                 )
 
 
@@ -420,7 +420,6 @@ def get_model_device(model: torch.nn.Module) -> torch.device:
     :return: The device where the first model parameter reside.
         Default cpu if the model has no parameters.
     """
-
     try:
         device = next(model.parameters()).device
     except StopIteration:
@@ -442,7 +441,6 @@ def is_multidevice(model: torch.nn.Module) -> bool:
     :return: True if the parameters reside on multiple devices, False otherwise.
         Default False if the models has no parameters
     """
-
     device_generator = get_all_model_devices_generator(model)
     try:
         curr_device = next(device_generator)
@@ -463,7 +461,6 @@ def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
     :return: The datatype of the first model parameter.
         Default to torch.float32 if the model has no parameters.
     """
-
     try:
         dtype = next(model.parameters()).dtype
     except StopIteration:

@@ -28,11 +28,13 @@ def pt_convert_stat_to_min_max_tensor_stat(statistic: TensorStatistic) -> MinMax
         )
     if isinstance(statistic, PercentileTensorStatistic):
         if len(statistic.percentile_vs_values_dict.keys()) < 2:
-            raise ValueError("Cannot create a min-max statistic for less than 2 percentile values")
+            msg = "Cannot create a min-max statistic for less than 2 percentile values"
+            raise ValueError(msg)
         min_pct = min(statistic.percentile_vs_values_dict.keys())
         max_pct = max(statistic.percentile_vs_values_dict.keys())
         return MinMaxTensorStatistic(
             min_values=statistic.percentile_vs_values_dict[min_pct],
             max_values=statistic.percentile_vs_values_dict[max_pct],
         )
-    raise ValueError("Unknown TensorStatistic to generate min-max stat from!")
+    msg = "Unknown TensorStatistic to generate min-max stat from!"
+    raise ValueError(msg)

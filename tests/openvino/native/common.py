@@ -56,7 +56,7 @@ def get_dataset_for_test(model):
 
 
 def load_json(stats_path):
-    with open(stats_path, "r", encoding="utf8") as json_file:
+    with open(stats_path, encoding="utf8") as json_file:
         return json.load(json_file)
 
 

@@ -321,10 +321,11 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         super().__init__(compression_controller)
         self.adaptive_controller = self._get_adaptive_compression_ctrl(compression_controller)
         if self.adaptive_controller is None:
-            raise nncf.InternalError(
+            msg = (
                 "No compression algorithm supported by the accuracy-aware training "
                 "runner was specified in the config"
             )
+            raise nncf.InternalError(msg)
 
         maximal_compression_rate = min(maximal_compression_rate, self.adaptive_controller.maximal_compression_rate)
 
@@ -350,11 +351,12 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                 for prefix in ("pt_", "tf_"):
                     if algo_name.startswith(prefix):
                         return algo_name[len(prefix) :]
-                raise nncf.ValidationError(
+                msg = (
                     "Compression algorithm names in the adaptive controllers "
                     'registry should be prefixed with "pt_" or "tf_" depending on the '
                     "backend framework"
                 )
+                raise nncf.ValidationError(msg)
 
             return {
                 remove_registry_prefix(algo_name): cast(CompressionAlgorithmController, controller_cls)
@@ -374,9 +376,8 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         ):
             return compression_controller
 
-        raise nncf.InternalError(
-            "No compression algorithm that supports adaptive compression accuracy-aware training was specified"
-        )
+        msg = "No compression algorithm that supports adaptive compression accuracy-aware training was specified"
+        raise nncf.InternalError(msg)
 
     def run(
         self,
@@ -570,7 +571,8 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                 current_compression_rate=runner.compression_rate_target,
             )
         else:
-            raise ValueError("Wrong stepping mode to determine compression rate step value provided")
+            msg = "Wrong stepping mode to determine compression rate step value provided"
+            raise ValueError(msg)
         return compression_step_updater(runner, **kwargs)
 
     @staticmethod
@@ -660,4 +662,5 @@ def create_accuracy_aware_training_loop(
             uncompressed_model_accuracy,
             **additional_runner_args,
         )
-    raise nncf.InternalError("Incorrect accuracy aware mode in the config file")
+    msg = "Incorrect accuracy aware mode in the config file"
+    raise nncf.InternalError(msg)

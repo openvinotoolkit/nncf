@@ -57,13 +57,13 @@ AVG_REL_ERROR = "average relative error"
 def check_format(df):
     missing_columns = [col for col in EXPECTED_COLUMNS if col not in df.columns]
     if missing_columns:
-        raise RuntimeError(f"The following columns are missing: {missing_columns}")
+        msg = f"The following columns are missing: {missing_columns}"
+        raise RuntimeError(msg)
 
     missing_in_mode = [item for item in EXPECTED_IN_MODE_COLUMN if not any(df[MODE].str.contains(item))]
     if missing_in_mode:
-        raise RuntimeError(
-            f"The `{MODE}` column must have at least one entry that includes the following words: {missing_in_mode}"
-        )
+        msg = f"The `{MODE}` column must have at least one entry that includes the following words: {missing_in_mode}"
+        raise RuntimeError(msg)
 
 
 def add_relative_metrics(df):

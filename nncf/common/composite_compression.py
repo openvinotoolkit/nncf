@@ -75,9 +75,9 @@ class CompositeCompressionLoss(CompressionLoss):
 
         :return: The compression loss value.
         """
-
         if len(self._child_losses) == 0:
-            raise nncf.InternalError("Cannot calculate the loss value because the number of child loss is 0.")
+            msg = "Cannot calculate the loss value because the number of child loss is 0."
+            raise nncf.InternalError(msg)
 
         result_loss = 0
         for loss in self._child_losses:
@@ -193,7 +193,8 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
     @property
     def name(self) -> str:
         if self._name is None:
-            raise nncf.InternalError("Internal error: algorithm name is not set for the controller")
+            msg = "Internal error: algorithm name is not set for the controller"
+            raise nncf.InternalError(msg)
         return self._name
 
     def add(self, child_ctrl: CompressionAlgorithmController) -> None:
@@ -203,9 +204,8 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         :param child_ctrl: A `CompressionAlgorithmController` instance.
         """
         if child_ctrl.model is not self.model:
-            raise nncf.InternalError(
-                "Cannot create a composite controller from controllers belonging to different models!"
-            )
+            msg = "Cannot create a composite controller from controllers belonging to different models!"
+            raise nncf.InternalError(msg)
 
         self._child_ctrls.append(child_ctrl)
         self._loss.add(child_ctrl.loss)
@@ -347,7 +347,8 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
 
     def get_compression_state(self) -> Dict[str, Any]:
         if self._builder_state is None:
-            raise nncf.InternalError("Internal error: builder state is not set for the controller")
+            msg = "Internal error: builder state is not set for the controller"
+            raise nncf.InternalError(msg)
 
         return {self.BUILDER_STATE: self._builder_state, self.CONTROLLER_STATE: self.get_state()}
 

@@ -340,7 +340,8 @@ def stack(x: List[Tensor], axis: int = 0) -> Tensor:
     """
     if isinstance(x, (list, deque)):
         return Tensor(dispatch_list(stack, x, axis=axis))
-    raise NotImplementedError(f"Function `stack` is not implemented for {type(x)}")
+    msg = f"Function `stack` is not implemented for {type(x)}"
+    raise NotImplementedError(msg)
 
 
 @functools.singledispatch
@@ -354,7 +355,8 @@ def concatenate(x: List[Tensor], axis: int = 0) -> Tensor:
     """
     if isinstance(x, (list, deque)):
         return Tensor(dispatch_list(concatenate, x, axis=axis))
-    raise NotImplementedError(f"Function `concatenate` is not implemented for {type(x)}")
+    msg = f"Function `concatenate` is not implemented for {type(x)}"
+    raise NotImplementedError(msg)
 
 
 @functools.singledispatch
@@ -933,8 +935,11 @@ def tensor(
 @tensor_guard
 def as_numpy_tensor(a: Tensor) -> Tensor:
     """
-    Change backend of the tensor to numpy. Leads to data copying when tensor data type is bf16, u4 or i4. Otherwise,
-    there is no data copying.
+    Convert tensor to numpy.
+    In certain cases, this conversion may involve data copying, depending on the
+    data type or device. Specifically:
+      - OV: if tensors data type is bf16, u4 or i4.
+      - PT: if tensors on the GPU or data type is not supported on Numpy.
 
     :param a: Tensor to change backend for.
     :return: Tensor in numpy backend.

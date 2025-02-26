@@ -68,4 +68,5 @@ class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
             # TODO(AlexanderDokuchaev): return atol=0.0001 after fix 109189
             assert np.all(np.isclose(bias_value, ref_bias, atol=0.01)), f"{bias_value} != {ref_bias}"
             return
-        raise ValueError("Not found node with bias")
+        msg = "Not found node with bias"
+        raise ValueError(msg)

@@ -55,7 +55,7 @@ class PreHookId:
         return self.__dict__ == other.__dict__
 
     def __str__(self):
-        return str(self.op_address) + "|INPUT{}".format(self.input_port_id)
+        return str(self.op_address) + f"|INPUT{self.input_port_id}"
 
     def __hash__(self):
         return hash(str(self))
@@ -81,9 +81,11 @@ class TracingThreadLocals(threading.local):
 
 
 class CopySafeThreadingVars:
-    """A class holding variables that are related to threading and
+    """
+    A class holding variables that are related to threading and
     thus impossible to deepcopy. The deepcopy will simply return a
-    new object without copying, but won't fail."""
+    new object without copying, but won't fail.
+    """
 
     def __init__(self):
         self.thread_local = TracingThreadLocals()
@@ -240,7 +242,6 @@ class TracingContext:
         be loaded if the model had changed in the meantime in a way that does not impact the major function call
         order (e.g. if comments were added to the .py file with the model)
         """
-
         call_order = self.get_operator_call_count_in_scope(operator_name, self.scope)
 
         op_address = OperationAddress(operator_name, self.scope, call_order)
@@ -255,7 +256,7 @@ class TracingContext:
 
     @staticmethod
     def _get_operator_counter_key(operator_name: str, scope: Scope):
-        return "{}_{}".format(str(scope), operator_name)
+        return f"{str(scope)}_{operator_name}"
 
     def register_operator_call(self, operator_name: str, scope: Scope):
         key = self._get_operator_counter_key(operator_name, scope)

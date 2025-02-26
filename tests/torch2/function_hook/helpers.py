@@ -136,3 +136,29 @@ class QuantizedConvModel(nn.Module):
         x = self.conv(x)
         x = torch.relu(x)
         return x
+
+
+class SharedParamModel(nn.Module):
+
+    @staticmethod
+    def get_example_inputs():
+        return torch.ones([1, 3])
+
+    def __init__(self):
+        super().__init__()
+        shared_linear = nn.Linear(3, 1, bias=False)
+        self.module1 = nn.Sequential(shared_linear)
+        self.module2 = nn.Sequential(shared_linear)
+
+    def forward(self, x):
+        return self.module1(x) + self.module2(x)
+
+
+class CounterHook(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.counter = 0
+
+    def forward(self, x):
+        self.counter += 1
+        return x + 1

@@ -59,11 +59,11 @@ def get_run_name(config: SampleConfig) -> str:
                 weights = algo_dict.get("weights", {})
                 w_bits = weights.get("bits", QUANTIZATION_BITS)
                 if a_bits == w_bits:
-                    retval += "_int{}".format(a_bits)
+                    retval += f"_int{a_bits}"
                 else:
-                    retval += "_a_int{}_w_int{}".format(a_bits, w_bits)
+                    retval += f"_a_int{a_bits}_w_int{w_bits}"
         else:
-            retval += "_{}".format(algo_name)
+            retval += f"_{algo_name}"
     return retval
 
 
@@ -121,7 +121,7 @@ def create_code_snapshot(root, dst_path, extensions=(".py", ".json", ".cpp", ".c
 def print_args(config, logger=default_logger):
     logger.info("\nConfiguration parameters:")
     for arg in sorted(config):
-        logger.info("{: <27s}: {}".format(arg, config.get(arg)))
+        logger.info(f"{arg: <27s}: {config.get(arg)}")
     logger.info("\n")
 
 

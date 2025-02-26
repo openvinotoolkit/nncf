@@ -39,9 +39,7 @@ class UnifiedScalePropagatingQuantizerGroupManager:
         """
         for pq in prop_quants:
             for gid, group in self._group_vs_prop_quants_dict.items():
-                assert pq not in group, "Propagating quantizer #{} is already registered in a group {}!".format(
-                    pq.id, gid
-                )
+                assert pq not in group, f"Propagating quantizer #{pq.id} is already registered in a group {gid}!"
         gid = self._get_next_gid()
         self._group_vs_prop_quants_dict[gid] = prop_quants
         return gid
@@ -57,8 +55,8 @@ class UnifiedScalePropagatingQuantizerGroupManager:
         for gid, group in self._group_vs_prop_quants_dict.items():
             if target_gid != gid:
                 assert prop_quant not in group, (
-                    "Tried to add propagating quantizer #{} to group #{}, "
-                    "but it is already registered in a group {}!".format(prop_quant.id, target_gid, gid)
+                    f"Tried to add propagating quantizer #{prop_quant.id} to group #{target_gid}, "
+                    f"but it is already registered in a group {gid}!"
                 )
         self._group_vs_prop_quants_dict[target_gid].add(prop_quant)
 

@@ -129,7 +129,7 @@ def get_lstm(input_1, node_name, input_shape):
     num_directions = 1
     hs = opset.constant(np.ones((batch_size, num_directions, hidden_size)), dtype=np.float32, name="hs")
     cs = opset.constant(np.ones((batch_size, num_directions, hidden_size)), dtype=np.float32, name="cs")
-    seq_len_const = opset.constant(np.ones((batch_size)), dtype=np.int32, name="seq_len_const")
+    seq_len_const = opset.constant(np.ones(batch_size), dtype=np.int32, name="seq_len_const")
     w = opset.constant(np.ones((num_directions, 4 * hidden_size, input_size)), dtype=np.float32, name="w")
     r = opset.constant(np.ones((num_directions, 4 * hidden_size, hidden_size)), dtype=np.float32, name="r")
     b = opset.constant(np.ones((num_directions, 4 * hidden_size)), dtype=np.float32, name="b")

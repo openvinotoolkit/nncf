@@ -178,12 +178,14 @@ def apply_args_defaults(
             elif idx < len(args):
                 args_dict[arg_desc] = args[idx]
             else:
-                raise ValueError("Incorrect args_signature, can not by applied to function arguments.")
+                msg = "Incorrect args_signature, can not by applied to function arguments."
+                raise ValueError(msg)
         elif isinstance(arg_desc, Tuple):
             arg_name, default = arg_desc
             args_dict[arg_name] = kwargs.get(arg_name, args[idx] if idx < len(args) else default)
         else:
-            raise ValueError("Incorrect args_signature, element of list should be str or tuple.")
+            msg = "Incorrect args_signature, element of list should be str or tuple."
+            raise ValueError(msg)
     return args_dict
 
 

@@ -191,7 +191,6 @@ def get_result_node_name(output_name: str, port_id: int) -> str:
     :param port_id: Node port.
     :return: Name of Result.
     """
-
     return f"Result_{output_name}.{port_id}"
 
 
@@ -203,7 +202,6 @@ def get_parameter_node_name(parameter_name: str, port_id: int) -> str:
     :param port_id: Node port.
     :return: Name of Parameter.
     """
-
     return f"Parameter_{parameter_name}.{port_id}"
 
 
@@ -486,9 +484,8 @@ def get_inplace_mean_per_ch(axis: int) -> InplaceInsertionFnType:
 def get_partial_shape_safe(node, port_id) -> Tuple[int, ...]:
     partial_shape = node.get_output_partial_shape(port_id)
     if partial_shape.rank.is_dynamic or not partial_shape.all_non_negative:
-        raise nncf.ValidationError(
-            f"Could not collect statistics for the node {node} because its output shape rank is dynamic or negative"
-        )
+        msg = f"Could not collect statistics for the node {node} because its output shape rank is dynamic or negative"
+        raise nncf.ValidationError(msg)
     return partial_shape
 
 
@@ -521,7 +518,8 @@ def get_weight_channel_axes(node: NNCFNode) -> List[int]:
     :return: Axes numbers of the weight tensor which correspond to its channels.
     """
     if node.metatype not in OPERATIONS_WITH_WEIGHTS:
-        raise ValueError("Channel axis cannot be defined for operation without weights.")
+        msg = "Channel axis cannot be defined for operation without weights."
+        raise ValueError(msg)
 
     if node.metatype in CONV_OPERATIONS:
         weights_layout = get_conv_weights_layout_from_node(node)

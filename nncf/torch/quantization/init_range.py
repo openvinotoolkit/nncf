@@ -18,6 +18,8 @@ import torch
 
 import nncf
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
+from nncf.common.graph.utils import get_target_dim_for_compression_legacy
+from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitParams
@@ -80,17 +82,15 @@ class PTRangeInitParams(RangeInitParams):
                     )
                 )
         if len(matches) > 1:
-            raise ValueError(
-                "Location {} matches more than one per-layer initialization parameter definition!".format(str(qid))
-            )
+            msg = f"Location {str(qid)} matches more than one per-layer initialization parameter definition!"
+            raise ValueError(msg)
         if len(matches) == 1:
             return matches[0]
         if not matches and self.global_init_config is not None:
             return deepcopy(self.global_init_config)
 
-        raise ValueError(
-            "Location {} does not match any per-layer initialization parameter definition!".format(str(qid))
-        )
+        msg = f"Location {str(qid)} does not match any per-layer initialization parameter definition!"
+        raise ValueError(msg)
 
 
 class PTRangeInitCollectorParams(RangeInitCollectorParams):
@@ -155,7 +155,8 @@ class StatCollectorGenerator:
         if num_samples_to_collect_override is not None:
             num_samples = num_samples_to_collect_override
         if init_config.init_type not in RANGE_INIT_TYPES_VS_DESCRIPTIONS:
-            raise nncf.InternalError("Unknown range init type: {}".format(init_config.init_type))
+            msg = f"Unknown range init type: {init_config.init_type}"
+            raise nncf.InternalError(msg)
 
         use_per_sample_stats = collector_params.use_per_sample_stats(init_config.init_type == "mixed_min_max")
         reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(use_per_sample_stats)
@@ -215,7 +216,8 @@ class StatCollectorGenerator:
                 scale_shape=scale_shape,
                 num_samples=num_samples,
             )
-        raise ValueError("Range init type not handled!")
+        msg = "Range init type not handled!"
+        raise ValueError(msg)
 
     @classmethod
     def get_all_scale_shapes_with_params(
@@ -226,8 +228,8 @@ class StatCollectorGenerator:
             module_node = target_nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
             layer_attributes = module_node.layer_attributes
             assert isinstance(layer_attributes, WeightedLayerAttributes)
-            input_shape = layer_attributes.get_weight_shape()
-            channel_idx = layer_attributes.get_target_dim_for_compression()
+            input_shape = get_weight_shape_legacy(layer_attributes)
+            channel_idx = get_target_dim_for_compression_legacy(layer_attributes)
         else:
             input_shape = target_nncf_graph.get_input_shape_for_insertion_point(qp.insertion_point)
             channel_idx = 1  # channel dim for activations

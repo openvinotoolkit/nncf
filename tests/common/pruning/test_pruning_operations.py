@@ -259,8 +259,8 @@ def test_linear_pruning_ops():
     )
     # Check linear layer always accept pruned input
     assert dummy_types.LinearPruningOp.accept_pruned_input(linear_op_target)
-    ones_input_mask = NPNNCFTensor(np.ones((in_features)))
-    ones_output_mask = NPNNCFTensor(np.ones((out_features)))
+    ones_input_mask = NPNNCFTensor(np.ones(in_features))
+    ones_output_mask = NPNNCFTensor(np.ones(out_features))
     # Check all combinations of masks
     for input_mask in [None, ones_input_mask]:
         for output_mask in [None, ones_output_mask]:

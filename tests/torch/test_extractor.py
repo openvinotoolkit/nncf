@@ -61,10 +61,10 @@ def test_extract_model(model_cls, input_node_name, output_node_name):
 
     model = wrap_model(model_cls().eval(), example_input=example_input, trace_parameters=True)
     extracted_module = extract_model(model, [input_node_name], [output_node_name])
-    with torch.no_grad():
-        ret1 = model(example_input)
-        ret2 = extracted_module(example_input)
-        assert torch.any(torch.isclose(ret1, ret2))
+    ret1 = model(example_input)
+    ret2 = extracted_module(example_input)
+    assert not ret2.grad_fn
+    assert torch.any(torch.isclose(ret1, ret2))
 
 
 @pytest.mark.parametrize(
@@ -122,10 +122,11 @@ def test_extract_model_for_node_with_fq(model_cls, input_node_name, output_node_
     q_model = transformer.transform(layout)
 
     extracted_module = extract_model(model, [input_node_name], [output_node_name])
-    with torch.no_grad():
-        ret1 = q_model(example_input)
-        ret2 = extracted_module(example_input)
-        assert torch.all(torch.isclose(ret1, ret2))
+
+    ret1 = q_model(example_input)
+    ret2 = extracted_module(example_input)
+    assert torch.all(torch.isclose(ret1, ret2))
+    assert not ret2.grad_fn
 
     extracted_fn = extracted_module
     if isinstance(extracted_fn, nn.Sequential):

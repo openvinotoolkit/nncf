@@ -71,7 +71,7 @@ class PTExporter(Exporter):
     This class provides export of the compressed model to the ONNX format.
     """
 
-    _ONNX_DEFAULT_OPSET = 13
+    _ONNX_DEFAULT_OPSET = 14
 
     @staticmethod
     def parse_format(save_format: str) -> Tuple[str, dict]:
@@ -94,7 +94,8 @@ class PTExporter(Exporter):
                 opset = int(split_format[1])
 
             if opset is not None and opset <= 0:
-                raise ValueError("Incorrect save_format, expected 'onnx' or 'onnx_<opset_version>'.")
+                msg = "Incorrect save_format, expected 'onnx' or 'onnx_<opset_version>'."
+                raise ValueError(msg)
 
             if opset != PTExporter._ONNX_DEFAULT_OPSET:
                 nncf_logger.warning(
@@ -117,7 +118,6 @@ class PTExporter(Exporter):
                 - `onnx_<opset_version>` for export to the ONNX format with specific opset version.
             The ONNX format will be used if `save_format` is not specified.
         """
-
         fn_args = {"save_path": save_path}
 
         save_format, extra_args = PTExporter.parse_format(save_format)
@@ -131,7 +131,8 @@ class PTExporter(Exporter):
 
         if export_fn is None:
             available_formats = list(format_to_export_fn.keys())
-            raise ValueError(f"Unsupported saving format: '{save_format}'. Available formats: {available_formats}")
+            msg = f"Unsupported saving format: '{save_format}'. Available formats: {available_formats}"
+            raise ValueError(msg)
 
         export_fn(**fn_args)
 

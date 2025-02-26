@@ -48,6 +48,7 @@ class TFModelTransformerV2(ModelTransformer):
                 # TODO(andrey-churkin): Add support
                 pass
             else:
-                raise ValueError(f"Transformation type {command.type} does not support.")
+                msg = f"Transformation type {command.type} does not support."
+                raise ValueError(msg)
 
         return self._model

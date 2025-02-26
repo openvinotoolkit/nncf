@@ -27,10 +27,10 @@ def get_module_by_scope(model: torch.nn.Module, scope: Scope) -> Optional[torch.
 
         next_module = curr_module._modules.get(scope_element.calling_field_name)
         if next_module is None:
-            raise nncf.InternalError(
-                "Could not find a {} module member in {} module of scope {} during node search".format(
-                    scope_element.calling_field_name, scope_element.calling_module_class_name, str(scope)
-                )
+            msg = (
+                f"Could not find a {scope_element.calling_field_name} module member in"
+                f" {scope_element.calling_module_class_name} module of scope {str(scope)} during node search"
             )
+            raise nncf.InternalError(msg)
         curr_module = next_module
     return curr_module

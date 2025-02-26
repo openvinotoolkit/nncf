@@ -11,7 +11,7 @@
 
 import inspect
 import os
-from typing import Callable, List
+from typing import Callable, Dict, List
 
 import numpy as np
 import openvino.runtime as ov
@@ -26,6 +26,7 @@ from nncf import SensitivityMetric
 from nncf.common.utils.debug import nncf_debug
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
+from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.parameters import BackupMode
 from nncf.quantization import compress_weights
@@ -45,6 +46,8 @@ from nncf.tensor import TensorDataType
 from tests.cross_fw.shared.comparator import compare_stats
 from tests.cross_fw.shared.json import dump_to_json
 from tests.cross_fw.shared.json import load_json
+from tests.cross_fw.test_templates.template_test_weights_compression import ACTIVATION
+from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import AWQActMatmulModel
 from tests.openvino.native.models import AWQMatmulModel
@@ -52,6 +55,7 @@ from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
 from tests.openvino.native.models import IdentityMatmul
 from tests.openvino.native.models import IntegerModel
+from tests.openvino.native.models import MatMul
 from tests.openvino.native.models import ModelNamedConsts
 from tests.openvino.native.models import OVReferenceModel
 from tests.openvino.native.models import SequentialMatmulModel
@@ -108,6 +112,10 @@ def get_next_node(node):
     assert len(target_inputs) == 1
     next_node = next(iter(target_inputs)).get_node()
     return next_node
+
+
+def get_shape_for_second_input(op_with_weights: ov.Node) -> List[int]:
+    return list(op_with_weights.inputs()[1].get_shape())
 
 
 def check_int8_node(op: ov.Node, mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM):
@@ -261,46 +269,6 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
     compare_stats(ref_stats, actual_stats)
 
 
-@pytest.mark.parametrize(
-    ("mode", "all_layers", "ratio", "ref_ids"),
-    (
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 3, 4]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, []),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0]),
-        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, []),
-        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2]),
-        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2]),
-    ),
-)
-def test_mixed_precision(mode, all_layers, ratio, ref_ids, mocker):
-    model = SequentialMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 3, 3]), np.arange(9).reshape(1, 3, 3)])
-    compressed_model = compress_weights(
-        model,
-        mode=CompressWeightsMode.NF4,
-        ratio=ratio,
-        group_size=1,
-        all_layers=all_layers,
-        sensitivity_metric=mode,
-        dataset=dataset,
-    )
-    names = {
-        op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.nf4
-    }
-    ref_nf4_nodes = {f"weights_{i}" for i in ref_ids}
-    assert ref_nf4_nodes == names
-
-
 @pytest.mark.parametrize("metric", DATA_BASED_SENSITIVITY_METRICS)
 def test_gather_in_4_bit_if_all_layers_with_data(metric):
     dim1 = 2  # sequence length dimension
@@ -426,46 +394,6 @@ def test_gather_in_8_bit_if_not_all_layers(metric):
         node = nodes_map[node_name]
         assert node.get_type_name() == "Constant"
         assert node.get_element_type() == ov.Type.u8
-
-
-MAX_BASELINE_SCORE = 1 / np.finfo(np.float32).eps
-NON_ZERO_ROW = [-4, 1, 2]
-ACTIVATION = np.array([[NON_ZERO_ROW, [0, 0, 0], [0, 0, 0]]])
-MAX_VAR = 3.555555  # np.max(np.var(ACTIVATION, 1))
-MEAN_VAR = 1.555555  # np.mean(np.var(ACTIVATION, 1))
-MEAN_MAX = 2.333333  # np.mean(np.max(np.abs(ACTIVATION), 1))
-HESSIAN_TRACE = (16 + 1 + 4) * 2 / 9  # sum(i*i for i in NON_ZERO_ROW) * 2 / ACTIVATION.size
-
-
-@pytest.mark.parametrize(
-    ("mode", "ref_act_scores", "ref_scores"),
-    (
-        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, HESSIAN_TRACE, 0),
-        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, MEAN_MAX, MEAN_MAX * MAX_BASELINE_SCORE),
-        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, MEAN_VAR, MEAN_VAR * MAX_BASELINE_SCORE),
-        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, MAX_VAR, MAX_VAR * MAX_BASELINE_SCORE),
-    ),
-)
-def test_data_based_criterion(mode, ref_scores, ref_act_scores, mocker):
-    model = IdentityMatmul().ov_model
-    dataset = Dataset([ACTIVATION])
-    criterion_cls = MIXED_PRECISION_CRITERIA.get(mode)
-    scores_spy = mocker.spy(criterion_cls, "_calc_sensitivity")
-    act_scores_spy = mocker.spy(criterion_cls, "_calc_activation_sensitivity")
-
-    compress_weights(
-        model,
-        mode=CompressWeightsMode.NF4,
-        ratio=0.5,
-        group_size=1,
-        dataset=dataset,
-        sensitivity_metric=mode,
-        all_layers=True,
-    )
-    scores = scores_spy.spy_return
-    act_scores = act_scores_spy.spy_return
-    assert np.allclose(scores, ref_scores)
-    assert np.allclose(act_scores, ref_act_scores)
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
@@ -802,23 +730,6 @@ def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
-@pytest.mark.parametrize("with_multiply", (True, False))
-def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(mode, with_multiply):
-    n_layers = 8
-    n_awq_target = n_layers - 1  # first MatMul is always int8
-    model = AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers).ov_model
-    dataset = Dataset([np.ones([1, 8, 8])])
-
-    compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
-
-    awq_num = 0
-    for op in model.get_ops():
-        if op.get_type_name() == "Constant" and "awq" in op.get_friendly_name():
-            awq_num += 1
-    assert awq_num == n_awq_target
-
-
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
     model = AWQMatmulModel(is_int8=True).ov_model
     dataset = Dataset([np.ones([1, 8, 8])])
@@ -950,7 +861,7 @@ def test_number_of_reduced_statistics_for_subset_size(
     mocker, dataset_size, subset_size, ref_size, compression_args, multiplier_of_calls
 ):
     model = IdentityMatmul().ov_model
-    dataset = Dataset([ACTIVATION] * dataset_size)
+    dataset = Dataset([np.array(ACTIVATION)] * dataset_size)
     stats_spy = mocker.spy(AggregatorBase, "register_reduced_input")
 
     compress_weights(model, dataset=dataset, subset_size=subset_size, **compression_args)
@@ -966,7 +877,7 @@ def test_default_subset_value():
 @pytest.mark.parametrize("subset_size", (-1, 0))
 def test_invalid_subset_size(subset_size):
     model = IdentityMatmul().ov_model
-    dataset = Dataset([ACTIVATION])
+    dataset = Dataset([np.array(ACTIVATION)])
     with pytest.raises(nncf.ValidationError):
         compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, dataset=dataset, subset_size=subset_size)
 
@@ -1028,6 +939,14 @@ def test_call_gptq(mode):
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, gptq=True)
 
 
+@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
+    model = AWQMatmulModel().ov_model
+    dataset = Dataset([np.ones([1, 8, 8])])
+
+    compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, gptq=True, scale_estimation=True)
+
+
 # TODO(andreyanufr) Waiting for the e2m1 in OV release
 @pytest.mark.xfail
 @pytest.mark.parametrize(
@@ -1053,7 +972,7 @@ def test_call_gptq(mode):
 )
 def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
     model = SequentialMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 3, 3]), np.arange(9).reshape(3, 3)])
+    dataset = Dataset([np.ones([1, 4, 4]), np.arange(16).reshape(4, 4)])
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.E2M1,
@@ -1142,20 +1061,6 @@ def test_int_quantization_with_precomputed_parameters(config, precompute_scale, 
         assert zero_point is None
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
-def test_call_max_var_criterion_with_dataset_gptq_neg_group_size(mode):
-    model = AWQMatmulModel().ov_model
-    sz = 8
-    dataset = Dataset([np.ones([1, sz, sz])])
-
-    compressed_model = compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, gptq=True)
-
-    for op in compressed_model.get_ordered_ops():
-        op_name = op.get_friendly_name()
-        if op.get_type_name() == "Constant" and ("/zero_point" in op_name or "/scale" in op_name):
-            assert op.get_shape() == [sz, 1]
-
-
 @pytest.mark.parametrize("mode", INT4_MODES)
 def test_one_dimentional_samples(mode):
     model = AWQMatmulModel().ov_model
@@ -1171,32 +1076,18 @@ def test_one_dimentional_samples(mode):
             assert op.get_shape() == [sz, 1]
 
 
-def test_awq_with_ignored_scope():
+@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+def test_call_max_var_criterion_with_dataset_gptq_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
     sz = 8
-    n_samples = 10
-    dataset = Dataset([np.ones([1, i + 1, sz]) for i in range(n_samples)])
+    dataset = Dataset([np.ones([1, sz, sz])])
 
-    compressed_model = compress_weights(
-        model,
-        mode=CompressWeightsMode.INT4_ASYM,
-        ratio=1.0,
-        group_size=-1,
-        dataset=dataset,
-        awq=True,
-        ignored_scope=IgnoredScope(names=["MatMul_6"]),
-    )
+    compressed_model = compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, gptq=True)
 
-    act_num = 0
-    num_compressed = 8
-    for op in compressed_model.get_ops():
-        if op.get_type_name() == "Constant" and op.get_element_type() == ov.Type.u4:
-            act_num += 1
-    assert act_num == num_compressed
-
-
-def get_shape_for_second_input(op_with_weights: ov.Node) -> List[int]:
-    return list(op_with_weights.inputs()[1].get_shape())
+    for op in compressed_model.get_ordered_ops():
+        op_name = op.get_friendly_name()
+        if op.get_type_name() == "Constant" and ("/zero_point" in op_name or "/scale" in op_name):
+            assert op.get_shape() == [sz, 1]
 
 
 @pytest.mark.parametrize(
@@ -1564,3 +1455,119 @@ def test_compression_with_transposed_activations(kwargs):
             all_layers=True,
             **kwargs,
         )
+
+
+class TestOVTemplateWeightCompression(TemplateWeightCompression):
+    @staticmethod
+    def get_matmul_model() -> ov.Model:
+        return IdentityMatmul().ov_model
+
+    @staticmethod
+    def get_sequential_matmul_model() -> ov.Model:
+        return SequentialMatmulModel().ov_model
+
+    @staticmethod
+    def get_model_for_test_scale_estimation():
+        return MatMul().ov_model
+
+    @staticmethod
+    def get_awq_model() -> ov.Model:
+        return AWQMatmulModel().ov_model
+
+    @staticmethod
+    def get_awq_act_model(with_multiply, n_layers):
+        return AWQActMatmulModel(with_multiply=with_multiply, n_layers=n_layers).ov_model
+
+    @staticmethod
+    def to_tensor(x) -> np.ndarray:
+        return np.array(x)
+
+    @staticmethod
+    def cast_to(x: np.ndarray, dtype: TensorDataType) -> np.ndarray:
+        if dtype is TensorDataType.float32:
+            return x.astype(np.float32)
+        if dtype is TensorDataType.float16:
+            return x.astype(np.float16)
+        raise NotImplementedError
+
+    @staticmethod
+    def check_weights(model: ov.Model, ref_ids: List[int]) -> None:
+        names = {op.get_friendly_name() for op in model.get_ordered_ops() if op.get_element_type() == ov.Type.i4}
+        low_precision_nodes = {f"weights_{i}" for i in ref_ids}
+        assert low_precision_nodes == names
+
+    @staticmethod
+    def get_scale_estimation_ref():
+        return np.array(
+            [
+                [[0.473328]],
+                [[0.929023]],
+                [[1.446527]],
+                [[1.920595]],
+                [[2.517053]],
+                [[3.030101]],
+                [[3.584278]],
+                [[4.04351]],
+                [[4.620007]],
+                [[5.165322]],
+                [[5.710637]],
+                [[6.122580]],
+                [[6.655914]],
+                [[7.237173]],
+                [[7.722581]],
+                [[8.255914]],
+            ]
+        )
+
+    @staticmethod
+    def get_orig_weight(model: ov.Model) -> Tensor:
+        for op in model.get_ordered_ops():
+            op_name = op.get_friendly_name()
+            if op.get_type_name() == "Constant" and op_name == "Weights":
+                return Tensor(op.data)
+
+    @staticmethod
+    def get_decompressed_weight(compressed_model: ov.Model, input: np.ndarray) -> Tensor:
+        # Insert extra output to get the compressed weights.
+        node = [op for op in compressed_model.get_ops() if op.get_friendly_name() == "Weights/fq_weights_1/convert"][0]
+        output = node.output(0)
+        extra_outputs = [(output, 0, None)]
+        model = OVModelTransformer._insert_outputs(compressed_model, extra_outputs)
+        compiled_model = ov.compile_model(model, device_name="CPU")
+        weight_output = compiled_model(input)[1]
+        return Tensor(weight_output)
+
+    @staticmethod
+    def get_ignored_scope_name() -> str:
+        return "MatMul_6"
+
+    @staticmethod
+    def get_num_int4_nodes(model: ov.Model) -> int:
+        num = 0
+        for op in model.get_ops():
+            if op.get_type_name() == "Constant" and op.get_element_type() == ov.Type.i4:
+                num += 1
+        return num
+
+    @pytest.fixture(params=INT4_NF4_MODES)
+    def int4_mode(self, request):
+        return request.param
+
+    @staticmethod
+    def get_num_multiply_from_awq(model):
+        awq_num = 0
+        for op in model.get_ops():
+            if op.get_type_name() == "Constant" and "awq" in op.get_friendly_name():
+                awq_num += 1
+        return awq_num
+
+    @staticmethod
+    def get_reference_for_test_awq_scale_reference() -> Dict[str, Tensor]:
+        return {
+            "MatMul_3": Tensor(
+                np.array(
+                    [[1.2264546, 1.2054994, 1.1413403, 1.0974358, 1.0643553, 1.0379708, 1.0161183, 0.9975262]],
+                    dtype=np.float32,
+                )
+            )
+        }

@@ -12,8 +12,9 @@ import datetime
 import itertools
 import os
 import os.path as osp
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Hashable, Iterable, List, Optional, TypeVar, Union
+from typing import Any, Dict, Hashable, Iterable, Iterator, List, Optional, TypeVar, Union
 
 from tabulate import tabulate
 
@@ -55,8 +56,8 @@ def configure_accuracy_aware_paths(log_dir: Union[str, Path]) -> Union[str, Path
     :return: Path to the accuracy-aware training subdirectory.
     """
     d = datetime.datetime.now()
-    run_id = "{:%Y-%m-%d__%H-%M-%S}".format(d)
-    acc_aware_log_dir = osp.join(log_dir, "accuracy_aware_training/{run_id}".format(run_id=run_id))
+    run_id = f"{d:%Y-%m-%d__%H-%M-%S}"
+    acc_aware_log_dir = osp.join(log_dir, f"accuracy_aware_training/{run_id}")
     os.makedirs(acc_aware_log_dir, exist_ok=True)
     return acc_aware_log_dir
 
@@ -75,3 +76,22 @@ def product_dict(d: Dict[TKey, List[Any]]) -> Iterable[Dict[TKey, Any]]:
     vals = d.values()
     for instance in itertools.product(*vals):
         yield dict(zip(keys, instance))
+
+
+@contextmanager
+def set_env_variable(key: str, value: str) -> Iterator[None]:
+    """
+    Temporarily sets an environment variable.
+
+    :param key: Environment variable name.
+    :param value: Environment variable value.
+    """
+    old_value = os.environ.get(key)
+    os.environ[key] = value
+    try:
+        yield
+    finally:
+        if old_value is not None:
+            os.environ[key] = old_value
+        else:
+            del os.environ[key]

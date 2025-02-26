@@ -158,10 +158,10 @@ class TemplateTestQuantizerConfig:
         )
 
         weight_default_config = QuantizerConfig(
-            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True
+            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True, narrow_range=True
         )
         activation_default_config = QuantizerConfig(
-            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=False
+            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=False, narrow_range=False
         )
 
         assert len(q_setup.quantization_points) == 2
@@ -244,10 +244,10 @@ class TemplateTestQuantizerConfig:
         )
 
         weight_default_config = QuantizerConfig(
-            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True
+            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True, narrow_range=True
         )
         activation_default_config = QuantizerConfig(
-            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=True
+            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=True, narrow_range=False
         )
 
         assert len(q_setup.quantization_points) == 2
@@ -263,37 +263,73 @@ class TemplateTestQuantizerConfig:
             4: {
                 "qip": {"target_node_name": "/K_0", "input_port_id": None},
                 "qip_class": "ActivationQuantizationInsertionPoint",
-                "qconfig": {"num_bits": 8, "mode": "symmetric", "signedness_to_force": None, "per_channel": False},
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
                 "directly_quantized_operator_node_names": ["/K_Q_0"],
             },
             5: {
                 "qip": {"target_node_name": "/Q_0", "input_port_id": None},
                 "qip_class": "ActivationQuantizationInsertionPoint",
-                "qconfig": {"num_bits": 8, "mode": "symmetric", "signedness_to_force": None, "per_channel": False},
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
                 "directly_quantized_operator_node_names": ["/K_Q_0"],
             },
             6: {
                 "qip": {"target_node_name": "/Input_1_0", "input_port_id": None},
                 "qip_class": "ActivationQuantizationInsertionPoint",
-                "qconfig": {"num_bits": 8, "mode": "asymmetric", "signedness_to_force": None, "per_channel": False},
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "asymmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
                 "directly_quantized_operator_node_names": ["/K_0", "/Q_0", "/V_0"],
             },
             8: {
                 "qip": {"target_node_name": "/K_0"},
                 "qip_class": "WeightQuantizationInsertionPoint",
-                "qconfig": {"num_bits": 8, "mode": "symmetric", "signedness_to_force": True, "per_channel": True},
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": True,
+                    "per_channel": True,
+                    "narrow_range": True,
+                },
                 "directly_quantized_operator_node_names": ["/K_0"],
             },
             9: {
                 "qip": {"target_node_name": "/Q_0"},
                 "qip_class": "WeightQuantizationInsertionPoint",
-                "qconfig": {"num_bits": 8, "mode": "symmetric", "signedness_to_force": True, "per_channel": True},
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": True,
+                    "per_channel": True,
+                    "narrow_range": True,
+                },
                 "directly_quantized_operator_node_names": ["/Q_0"],
             },
             10: {
                 "qip": {"target_node_name": "/V_0"},
                 "qip_class": "WeightQuantizationInsertionPoint",
-                "qconfig": {"num_bits": 8, "mode": "symmetric", "signedness_to_force": True, "per_channel": True},
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": True,
+                    "per_channel": True,
+                    "narrow_range": True,
+                },
                 "directly_quantized_operator_node_names": ["/V_0"],
             },
         },

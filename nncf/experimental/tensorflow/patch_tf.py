@@ -49,11 +49,12 @@ class Hook:
 
         arg_provider_cls = TF_ARG_PROVIDERS.registry_dict.get(self._target_point.op_type_name)
         if arg_provider_cls is None:
-            raise ValueError(
+            msg = (
                 f"Unexpected type of the TensorFlow operation: {self._target_point.op_type_name}. "
                 "Register an `ArgProvider` instance for this type in the "
                 "`TF_ARG_PROVIDERS` registry, please."
             )
+            raise ValueError(msg)
 
         self._arg_provider = arg_provider_cls()
 

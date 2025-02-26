@@ -250,7 +250,7 @@ def get_quantize_inputs_test_model(input_shapes):
 
     inputs = []
     for i, input_shape in enumerate(input_shapes):
-        inputs.append(tf.keras.Input(shape=input_shape[1:], name="input_{}".format(i + 1)))
+        inputs.append(tf.keras.Input(shape=input_shape[1:], name=f"input_{i + 1}"))
 
     input_1, input_2, input_3, input_4, input_5 = inputs
 

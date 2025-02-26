@@ -37,8 +37,6 @@ class Command:
         # set system/version dependent "start_new_session" analogs
         if is_windows():
             self.kwargs.update(creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
-        if sys.version_info < (3, 2):  # assume posix
-            self.kwargs.update(preexec_fn=os.setsid)
         else:  # Python 3.2+ and Unix
             self.kwargs.update(start_new_session=True)
 

@@ -868,7 +868,7 @@ strict digraph  {
 "866 slice_1" [id=866, type=slice];
 "867 select_36" [id=867, type=select];
 "868 linear_48" [id=868, type=linear];
-"869 output_1" [id=869, type=output];
+"869 output" [id=869, type=output];
 "0 encoder_pos_embedding" -> "309 add"  [label="(1, 197, 768)", style=solid];
 "1 _scale_0" -> "4 dequantize_per_channel_default"  [label="(768,)", style=solid];
 "2 _zero_point_0" -> "4 dequantize_per_channel_default"  [label="(768,)", style=solid];
@@ -1785,5 +1785,5 @@ strict digraph  {
 "865 dequantize_per_tensor_default_61" -> "866 slice_1"  [label=None, style=solid];
 "866 slice_1" -> "867 select_36"  [label="(1, 197, 768)", style=solid];
 "867 select_36" -> "868 linear_48"  [label="(1, 768)", style=solid];
-"868 linear_48" -> "869 output_1"  [label="(1, 1000)", style=solid];
+"868 linear_48" -> "869 output"  [label="(1, 1000)", style=solid];
 }

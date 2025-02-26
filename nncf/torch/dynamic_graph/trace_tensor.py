@@ -48,7 +48,7 @@ class TensorMeta:
         return hash((self.creator_id, self.index, self.shape))
 
     def __str__(self):
-        return "C{}_I{}_".format(self.creator_id, self.index) + "S" + "x".join([str(s) for s in self.shape])
+        return f"C{self.creator_id}_I{self.index}_" + "S" + "x".join([str(s) for s in self.shape])
 
 
 class TracedTensorMixin:
@@ -124,7 +124,6 @@ class TracedTensor(torch.Tensor, TracedTensorMixin):
         Required for PyTorch 1.7.0 compatibility - the handle_torch_function and __torch_function__
         API in general calls this after a wrapped function call; need to preserve the tensor_meta extensions
         """
-
         return self
 
     # NOTE: This disables the __torch_function__ API altogether when using NNCF.
@@ -182,7 +181,6 @@ class TracedParameter(torch.nn.Parameter, TracedTensorMixin):
         Required for PyTorch 1.7.0 compatibility - the handle_torch_function and __torch_function__
         API in general calls this after a wrapped function call; need to preserve the tensor_meta extensions
         """
-
         return self
 
     # NOTE: This disables the __torch_function__ API altogether when using NNCF.

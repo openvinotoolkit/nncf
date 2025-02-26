@@ -17,7 +17,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.quantization.algorithms.post_training.pipeline import experimental_create_ptq_pipeline
-from nncf.experimental.quantization.quantizers.quantizer import Quantizer
+from nncf.experimental.quantization.quantizer import Quantizer
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
@@ -94,10 +94,11 @@ class ExperimentalPostTrainingQuantization(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         if dataset is None and len(self._pipeline.pipeline_steps) > 1:
-            raise ValueError(
+            msg = (
                 "A dataset is required for the post-training quantization "
                 "algorithm to collect statistics for intermediate models."
             )
+            raise ValueError(msg)
 
         step_index_to_statistics = None
         if statistic_points:

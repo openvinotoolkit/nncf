@@ -25,4 +25,4 @@ class TestStatisticsCaching(TemplateTestStatisticsCaching):
         return FXStatisticsAggregator(None)
 
     def _create_dummy_min_max_tensor(self) -> Tensor:
-        return Tensor(torch.zeros((3))), Tensor(torch.ones((3)))
+        return Tensor(torch.zeros(3)), Tensor(torch.ones(3))

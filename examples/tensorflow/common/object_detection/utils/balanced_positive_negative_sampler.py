@@ -48,7 +48,8 @@ class BalancedPositiveNegativeSampler(minibatch_sampler.MinibatchSampler):
         """
         super().__init__()
         if positive_fraction < 0 or positive_fraction > 1:
-            raise ValueError("positive_fraction should be in range [0,1]. Received: {}.".format(positive_fraction))
+            msg = f"positive_fraction should be in range [0,1]. Received: {positive_fraction}."
+            raise ValueError(msg)
         self._positive_fraction = positive_fraction
         self._is_static = is_static
 
@@ -126,13 +127,16 @@ class BalancedPositiveNegativeSampler(minibatch_sampler.MinibatchSampler):
 
         # Check if indicator and labels have a static size.
         if not indicator.shape.is_fully_defined():
-            raise ValueError("indicator must be static in shape when is_static is True")
+            msg = "indicator must be static in shape when is_static is True"
+            raise ValueError(msg)
 
         if not labels.shape.is_fully_defined():
-            raise ValueError("labels must be static in shape when is_static is True")
+            msg = "labels must be static in shape when is_static is True"
+            raise ValueError(msg)
 
         if not isinstance(batch_size, int):
-            raise ValueError("batch_size has to be an integer when is_static is True.")
+            msg = "batch_size has to be an integer when is_static is True."
+            raise ValueError(msg)
 
         input_length = tf.shape(input=indicator)[0]
 
@@ -210,13 +214,17 @@ class BalancedPositiveNegativeSampler(minibatch_sampler.MinibatchSampler):
         """
 
         if len(indicator.get_shape().as_list()) != 1:
-            raise ValueError("indicator must be 1 dimensional, got a tensor of shape {}".format(indicator.get_shape()))
+            msg = f"indicator must be 1 dimensional, got a tensor of shape {indicator.get_shape()}"
+            raise ValueError(msg)
         if len(labels.get_shape().as_list()) != 1:
-            raise ValueError("labels must be 1 dimensional, got a tensor of shape {}".format(labels.get_shape()))
+            msg = f"labels must be 1 dimensional, got a tensor of shape {labels.get_shape()}"
+            raise ValueError(msg)
         if labels.dtype != tf.bool:
-            raise ValueError("labels should be of type bool. Received: {}".format(labels.dtype))
+            msg = f"labels should be of type bool. Received: {labels.dtype}"
+            raise ValueError(msg)
         if indicator.dtype != tf.bool:
-            raise ValueError("indicator should be of type bool. Received: {}".format(indicator.dtype))
+            msg = f"indicator should be of type bool. Received: {indicator.dtype}"
+            raise ValueError(msg)
         scope = scope or "BalancedPositiveNegativeSampler"
 
         with tf.name_scope(scope):

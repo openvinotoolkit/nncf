@@ -43,7 +43,6 @@ def load_state(
     :param keys_to_ignore: A list of parameter names that should be skipped from matching process.
     :return: The number of state_dict_to_load entries successfully matched and loaded into model.
     """
-
     model_state_dict = model.state_dict()
 
     from nncf.torch.utils import maybe_convert_legacy_names_in_model_state
@@ -131,7 +130,7 @@ class ProcessedKeys:
         error_msgs = []
 
         def add_error_msg(name, keys_):
-            error_msgs.insert(0, "{} key(s):\n{}. ".format(name, ",\n".join('\t\t"{}"'.format(k) for k in keys_)))
+            error_msgs.insert(0, "{} key(s):\n{}. ".format(name, ",\n".join(f'\t\t"{k}"' for k in keys_)))
 
         for key_status, keys in self._keys.items():
             is_missing = key_status == ProcessedKeyStatus.MISSING
@@ -246,7 +245,8 @@ class NormalizedKeys:
 
     @staticmethod
     def _split_unified_parameters(new_key: str) -> List[str]:
-        """covers unified activation quantizers case, e.g.
+        """
+        Covers unified activation quantizers case, e.g.
             external_quantizers.RELU_0;RELU_1;RELU_2.op
         Result of this function is full names of individual parameters:
             external_quantizers.RELU_2.op

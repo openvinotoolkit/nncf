@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import torch
 
@@ -19,14 +19,27 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import MaxVarianceTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MeanMagnitudeTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressWeightsMode
+from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
+from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
+from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
+from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
@@ -35,13 +48,17 @@ from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph import operator_metatypes as om
+from nncf.torch.graph.operator_metatypes import PTMulMetatype
+from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import find_const_node_in_constant_subgraph
+from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_transformer import PTModelTransformer
+from nncf.torch.model_transformer import update_parameter
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
@@ -173,12 +190,10 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     ) -> Tensor:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
         weight_name = weight_node.layer_attributes.name
-        module_name, weight_attr_name = split_const_name(weight_name)
-        module = get_module_by_name(module_name, model)
-        weight = getattr(module, weight_attr_name)
-        if weight is None or not isinstance(weight, torch.nn.Parameter):
-            raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
-
+        weight = get_const_data(weight_node, model)
+        if weight is None:
+            msg = f"Could not find a torch.nn.Parameter in the model by name {weight_name}."
+            raise nncf.InternalError(msg)
         return Tensor(weight)
 
     def get_weight_dtype(
@@ -194,12 +209,23 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph, weight: Tensor
     ):
-        pass
+        update_parameter(node_with_weight.node_name, "weight", weight.data, model)
 
     def insert_adapters(
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
     ) -> None:
-        pass
+        raise NotImplementedError()
+
+    @staticmethod
+    def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
+        def filter_func(point: StatisticPoint) -> bool:
+            return (
+                algorithm_key in point.algorithm_to_tensor_collectors
+                and point.target_point.type
+                == PTWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[TargetType.POST_LAYER_OPERATION]
+            )
+
+        return filter_func
 
     def transform_model(
         self,
@@ -218,15 +244,15 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 CompressWeightsMode.NF4,
                 CompressWeightsMode.E2M1,
             ]:
-                raise nncf.ParameterNotSupportedError(f"{compression_config.mode.value} is not supported.")
+                msg = f"{compression_config.mode.value} is not supported."
+                raise nncf.ParameterNotSupportedError(msg)
 
             weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
             weight_name = weight_node.layer_attributes.name
-            module_name, weight_attr_name = split_const_name(weight_name)
-            module = get_module_by_name(module_name, model)
-            weight = getattr(module, weight_attr_name)
-            if weight is None or not isinstance(weight, torch.nn.Parameter):
-                raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
+            weight = get_const_data(weight_node, model)
+            if weight is None:
+                msg = f"Could not find a torch.nn.Parameter in the model by name {weight_name}."
+                raise nncf.InternalError(msg)
 
             # calculates compressed weights and decompression parameters
             compressed_weight = compress_weight(
@@ -264,7 +290,15 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             packed_tensor = decompressor.pack_weight(compressed_weight.tensor.data)
 
             # sets compressed tensor
+            # TODO:(AlexanderDokuchaev): update set_const_data
             compressed_parameter = torch.nn.Parameter(packed_tensor, requires_grad=False)
+            module_name, weight_attr_name = split_const_name(weight_name)
+            module = get_module_by_name(module_name, model)
+            weight = getattr(module, weight_attr_name)
+            if not isinstance(weight, torch.nn.Parameter):
+                msg = f"Weight is not a torch.nn.Parameter in the model by name {weight_name}."
+                raise nncf.InternalError(msg)
+
             setattr(module, weight_attr_name, compressed_parameter)
 
             consumer_nodes = graph.get_next_nodes(weight_node)
@@ -291,3 +325,68 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         transformed_model = PTModelTransformer(model).transform(transformation_layout)
 
         return transformed_model
+
+
+class PTAWQAlgoAlgoBackend(AWQAlgoBackend, PTWeightCompressionAlgoBackend):
+    @staticmethod
+    def get_awq_patterns():
+        return get_awq_patterns(
+            PTWeightCompressionAlgoBackend.MATMUL_METATYPES,
+            PTMulMetatype,
+            ATOMIC_ACTIVATIONS_OPERATIONS[GraphPattern.METATYPE_ATTR],
+        )
+
+    @staticmethod
+    def scale_insertion_command(
+        source_node: NNCFNode,
+        next_nodes,
+        source_output_port_id: int,
+        scale: torch.Tensor,
+    ) -> PTSharedFnInsertionCommand:
+        input_port_id = 0
+        target_points = []
+        for node in next_nodes:
+            target_points.append(
+                PTTargetPoint(
+                    PTWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[TargetType.PRE_LAYER_OPERATION],
+                    node.node_name,
+                    input_port_id=input_port_id,
+                )
+            )
+
+        sq_multiply = SQMultiply(scale.shape)
+        sq_multiply.scale = scale
+        scale_node_name = f"{source_node.node_name}/awq_mul"
+        return PTSharedFnInsertionCommand(target_points, sq_multiply, scale_node_name)
+
+
+class PTMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, PTWeightCompressionAlgoBackend):
+    @staticmethod
+    def mean_variance_statistic_collector(
+        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+    ) -> TensorCollector:
+        reducer = MeanVarianceReducer(reduction_axes)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector(MeanVarianceTensorStatistic)
+        collector.register_statistic_branch(MeanVarianceTensorStatistic.MEAN_VARIANCE_STAT, reducer, aggregator)
+        return collector
+
+    @staticmethod
+    def max_variance_statistic_collector(
+        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+    ) -> TensorCollector:
+        reducer = MaxVarianceReducer(reduction_axes)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector(MaxVarianceTensorStatistic)
+        collector.register_statistic_branch(MaxVarianceTensorStatistic.MAX_VARIANCE_STAT, reducer, aggregator)
+        return collector
+
+    @staticmethod
+    def mean_abs_max_statistic_collector(
+        reduction_axes: Tuple[int], subset_size: Optional[int] = None
+    ) -> TensorCollector:
+        reducer = MeanAbsMaxReducer(reduction_axes)
+        aggregator = MeanAggregator(num_samples=subset_size)
+        collector = TensorCollector(MeanMagnitudeTensorStatistic)
+        collector.register_statistic_branch(MeanMagnitudeTensorStatistic.MEAN_MAGNITUDE_STAT, reducer, aggregator)
+        return collector

@@ -21,6 +21,7 @@ import nncf
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import ConstantLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
 from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
@@ -48,7 +49,8 @@ def get_node_type(type: NodeType, meta: Union[ConstMeta, FunctionMeta, InOutMeta
         return "nncf_model_const"
     if isinstance(meta, FunctionMeta):
         return meta.func_name
-    raise nncf.InternalError("Unexpected metadata type")
+    msg = "Unexpected metadata type"
+    raise nncf.InternalError(msg)
 
 
 def get_name_of_node(meta: Union[ConstMeta, FunctionMeta, InOutMeta]) -> str:
@@ -64,7 +66,8 @@ def get_name_of_node(meta: Union[ConstMeta, FunctionMeta, InOutMeta]) -> str:
         return meta.op_name
     if isinstance(meta, InOutMeta):
         return meta.name
-    raise nncf.InternalError("Unexpected metadata type")
+    msg = "Unexpected metadata type"
+    raise nncf.InternalError(msg)
 
 
 def get_dtype(dtype: torch.dtype) -> Dtype:
@@ -155,7 +158,8 @@ def get_layer_attributes(
     if isinstance(meta, FunctionMeta):
         constant_port_ids = get_constant_port_ids(nx_graph, node)
         return PT2OpLayerAttributes(meta.func, meta.args, meta.kwargs, constant_port_ids)
-
+    if isinstance(meta, ConstMeta):
+        return ConstantLayerAttributes(meta.name_in_model, list(meta.shape))
     return None
 
 
@@ -172,7 +176,8 @@ def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> PTNNCFGraph:
     for node, data in nx_graph.nodes(data=True):
         meta = data["meta"]
         if not isinstance(meta, (ConstMeta, FunctionMeta, InOutMeta)):
-            raise nncf.InternalError(f"Unknown metadata type: {type(meta)}")
+            msg = f"Unknown metadata type: {type(meta)}"
+            raise nncf.InternalError(msg)
         node_name = get_name_of_node(meta)
         node_type = get_node_type(data["type"], meta)
         meta_type = get_meta_type(node_type, meta)
@@ -225,17 +230,16 @@ class GraphModelWrapper:
     """
     A class that wraps a PyTorch model with examples inputs and provides an interface
     to build a computational graph of the model.
-
-    :param model: The PyTorch model to be wrapped.
-    :param example_input: A tuple of example input for the model.
     """
 
     def __init__(self, model: nn.Module, example_input: Any) -> None:
         """
-        Initialize the GraphModelWrapper.
+        :param model: The PyTorch model to be wrapped.
+        :param example_input: A tuple of example input for the model.
         """
         self.model = model
         self.example_input = example_input
+        self.graph: Optional[PTNNCFGraph] = None
 
     def build_graph(self) -> PTNNCFGraph:
         """
@@ -251,3 +255,19 @@ class GraphModelWrapper:
         if isinstance(self.example_input, tuple):
             return build_nncf_graph(self.model, *self.example_input)
         return build_nncf_graph(self.model, self.example_input)
+
+    def get_graph(self) -> PTNNCFGraph:
+        """
+        Returns the computational graph of the model.
+
+        :return: The PTNNCFGraph representing the model.
+        """
+        if self.graph is None:
+            self.graph = self.build_graph()
+        return self.graph
+
+    def reset_graph(self) -> None:
+        """
+        Resets the computational graph of the model.
+        """
+        self.graph = None

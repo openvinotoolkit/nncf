@@ -10,9 +10,8 @@
 # limitations under the License.
 import inspect
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from typing import OrderedDict as OrderedDictType
-from typing import Tuple
 
 from nncf.common.logging import nncf_logger
 from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator

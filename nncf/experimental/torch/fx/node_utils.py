@@ -33,7 +33,8 @@ def get_graph_node_by_name(graph: torch.fx.Graph, name: str) -> torch.fx.Node:
     for node in graph.nodes:
         if node.name == name:
             return node
-    raise RuntimeError(f"Node with name {name} is not found")
+    msg = f"Node with name {name} is not found"
+    raise RuntimeError(msg)
 
 
 def get_tensor_constant_from_node(constant_node: torch.fx.Node, model: torch.fx.GraphModule) -> torch.nn.Parameter:
@@ -47,12 +48,14 @@ def get_tensor_constant_from_node(constant_node: torch.fx.Node, model: torch.fx.
     if constant_node is None:
         return None
     if constant_node.op != "get_attr":
-        raise RuntimeError(f"Given node op == {constant_node.op}, but get_attr is expected.")
+        msg = f"Given node op == {constant_node.op}, but get_attr is expected."
+        raise RuntimeError(msg)
     target_atoms = constant_node.target.split(".")
     attr_itr = model
     for i, atom in enumerate(target_atoms):
         if not hasattr(attr_itr, atom):
-            raise RuntimeError(f"Node referenced nonexistent target {'.'.join(target_atoms[:i])}")
+            msg = f"Node referenced nonexistent target {'.'.join(target_atoms[:i])}"
+            raise RuntimeError(msg)
         attr_itr = getattr(attr_itr, atom)
     return attr_itr
 

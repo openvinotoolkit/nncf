@@ -20,7 +20,8 @@ import nncf
 
 def fail_if_symlink(file: Path) -> None:
     if file.is_symlink():
-        raise nncf.ValidationError("File {} is a symbolic link, aborting.".format(str(file)))
+        msg = f"File {str(file)} is a symbolic link, aborting."
+        raise nncf.ValidationError(msg)
 
 
 @contextmanager

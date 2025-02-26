@@ -101,7 +101,6 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
             algorithm-specific compression during fine-tuning.
         :return: The instance of the `RBSparsityController`.
         """
-
         return RBSparsityController(model, self.config, self._op_names)
 
     def initialize(self, model: tf.keras.Model) -> None:
@@ -124,7 +123,8 @@ class RBSparsityController(BaseSparsityController):
         sparsity_level_mode = params.get("sparsity_level_setting_mode", SPARSITY_LEVEL_SETTING_MODE)
 
         if sparsity_level_mode == "local":
-            raise NotImplementedError("RB sparsity algorithm do not support local sparsity loss")
+            msg = "RB sparsity algorithm do not support local sparsity loss"
+            raise NotImplementedError(msg)
 
         target_ops = []
         for wrapped_layer, _, op in get_nncf_operations(self.model, self._op_names):
@@ -134,7 +134,8 @@ class RBSparsityController(BaseSparsityController):
         schedule_type = params.get("schedule", "exponential")
 
         if schedule_type == "adaptive":
-            raise NotImplementedError("RB sparsity algorithm do not support adaptive scheduler")
+            msg = "RB sparsity algorithm do not support adaptive scheduler"
+            raise NotImplementedError(msg)
 
         scheduler_cls = SPARSITY_SCHEDULERS.get(schedule_type)
         self._scheduler = scheduler_cls(self, params)

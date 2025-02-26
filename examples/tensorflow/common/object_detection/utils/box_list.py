@@ -26,9 +26,11 @@ class BoxList:
               float32 format.
         """
         if len(boxes.get_shape()) != 2 or boxes.get_shape()[-1] != 4:
-            raise ValueError("Invalid dimensions for box data.")
+            msg = "Invalid dimensions for box data."
+            raise ValueError(msg)
         if boxes.dtype != tf.float32:
-            raise ValueError("Invalid tensor type: should be tf.float32")
+            msg = "Invalid tensor type: should be tf.float32"
+            raise ValueError(msg)
         self.data = {"boxes": boxes}
 
     def num_boxes(self):
@@ -91,7 +93,8 @@ class BoxList:
           ValueError: if invalid dimensions for bbox data
         """
         if len(boxes.get_shape()) != 2 or boxes.get_shape()[-1] != 4:
-            raise ValueError("Invalid dimensions for box data.")
+            msg = "Invalid dimensions for box data."
+            raise ValueError(msg)
         self.data["boxes"] = boxes
 
     def get_field(self, field):
@@ -127,7 +130,8 @@ class BoxList:
           ValueError: if the box_list does not have specified field.
         """
         if not self.has_field(field):
-            raise ValueError("field %s does not exist" % field)
+            msg = f"field {field} does not exist"
+            raise ValueError(msg)
         self.data[field] = value
 
     def get_center_coordinates_and_sizes(self, scope=None):
@@ -180,6 +184,7 @@ class BoxList:
             fields = self.get_all_fields()
         for field in fields:
             if not self.has_field(field):
-                raise ValueError("boxlist must contain all specified fields")
+                msg = "boxlist must contain all specified fields"
+                raise ValueError(msg)
             tensor_dict[field] = self.get_field(field)
         return tensor_dict

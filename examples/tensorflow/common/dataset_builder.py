@@ -88,7 +88,8 @@ class BaseDatasetBuilder(ABC):
 
         builder = dataset_builders.get(self._dataset_type, None)
         if builder is None:
-            raise nncf.UnknownDatasetError("Unknown dataset type {}".format(self._dataset_type))
+            msg = f"Unknown dataset type {self._dataset_type}"
+            raise nncf.UnknownDatasetError(msg)
 
         dataset = builder()
         dataset = self._pipeline(dataset)
@@ -96,7 +97,7 @@ class BaseDatasetBuilder(ABC):
         return dataset
 
     def _load_tfds(self):
-        logger.info("Using TFDS to load {} data.".format(self._split))
+        logger.info(f"Using TFDS to load {self._split} data.")
 
         set_hard_limit_num_open_files()
 
@@ -119,13 +120,14 @@ class BaseDatasetBuilder(ABC):
         return dataset
 
     def _load_tfrecords(self):
-        logger.info("Using TFRecords to load {} data.".format(self._split))
+        logger.info(f"Using TFRecords to load {self._split} data.")
 
         dataset_key = self._dataset_name.replace("/", "")
         if dataset_key in self._tfrecord_datasets:
             self._dataset_loader = self._tfrecord_datasets[dataset_key](config=self._config, is_train=self._is_train)
         else:
-            raise nncf.UnknownDatasetError("Unknown dataset name: {}".format(self._dataset_name))
+            msg = f"Unknown dataset name: {self._dataset_name}"
+            raise nncf.UnknownDatasetError(msg)
 
         dataset = self._dataset_loader.as_dataset()
 

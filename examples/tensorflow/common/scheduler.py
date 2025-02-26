@@ -75,7 +75,8 @@ class MultiStepLearningRate(tf.keras.optimizers.schedules.LearningRateSchedule):
 def schedule_base_lr_check(schedule_type, base_lr):
     schedules_with_base_lr = ["exponential", "multistep", "step", "cosine"]
     if schedule_type in schedules_with_base_lr and base_lr is None:
-        raise ValueError("`base_lr` parameter must be specified for the %s scheduler" % schedule_type)
+        msg = f"`base_lr` parameter must be specified for the {schedule_type} scheduler"
+        raise ValueError(msg)
 
 
 def build_scheduler(config, steps_per_epoch):
@@ -104,11 +105,13 @@ def build_scheduler(config, steps_per_epoch):
     elif schedule_type == "piecewise_constant":
         boundaries = schedule_params.get("boundaries", optimizer_config.get("boundaries", None))
         if boundaries is None:
-            raise ValueError("`boundaries` parameter must be specified for the `piecewise_constant` scheduler")
+            msg = "`boundaries` parameter must be specified for the `piecewise_constant` scheduler"
+            raise ValueError(msg)
 
         values = schedule_params.get("values", optimizer_config.get("values", None))
         if values is None:
-            raise ValueError("`values` parameter must be specified for the `piecewise_constant` scheduler")
+            msg = "`values` parameter must be specified for the `piecewise_constant` scheduler"
+            raise ValueError(msg)
 
         logger.info(
             "Using Piecewise constant decay with warmup. Parameters: boundaries: %s, values: %s", boundaries, values
@@ -120,7 +123,8 @@ def build_scheduler(config, steps_per_epoch):
         logger.info("Using MultiStep learning rate.")
         steps = schedule_params.get("steps", optimizer_config.get("steps", None))
         if steps is None:
-            raise ValueError("`steps` parameter must be specified for the `multistep` scheduler")
+            msg = "`steps` parameter must be specified for the `multistep` scheduler"
+            raise ValueError(msg)
         steps = [steps_per_epoch * x for x in steps]
         lr = MultiStepLearningRate(base_lr, steps, gamma=gamma)
 
@@ -144,6 +148,7 @@ def build_scheduler(config, steps_per_epoch):
         lr = tf.keras.experimental.CosineDecay(initial_learning_rate=base_lr, decay_steps=decay_steps)
 
     else:
-        raise KeyError(f"Unknown learning rate scheduler type: {schedule_type}")
+        msg = f"Unknown learning rate scheduler type: {schedule_type}"
+        raise KeyError(msg)
 
     return lr

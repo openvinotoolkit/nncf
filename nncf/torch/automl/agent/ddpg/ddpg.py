@@ -269,13 +269,13 @@ class DDPG:
         if output is None:
             return
 
-        self.actor.load_state_dict(torch.load("{}/actor.pkl".format(output)))
+        self.actor.load_state_dict(torch.load(f"{output}/actor.pkl", weights_only=False))
 
-        self.critic.load_state_dict(torch.load("{}/critic.pkl".format(output)))
+        self.critic.load_state_dict(torch.load(f"{output}/critic.pkl", weights_only=False))
 
     def save_model(self, output):
-        torch.save(self.actor.state_dict(), "{}/actor.pkl".format(output))
-        torch.save(self.critic.state_dict(), "{}/critic.pkl".format(output))
+        torch.save(self.actor.state_dict(), f"{output}/actor.pkl")
+        torch.save(self.critic.state_dict(), f"{output}/critic.pkl")
 
     def seed(self, s):
         torch.manual_seed(s)

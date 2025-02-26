@@ -2306,7 +2306,7 @@ strict digraph  {
 "2304 dequantize_per_tensor_default_148" [id=2304, type=dequantize_per_tensor];
 "2305 flatten" [id=2305, type=flatten];
 "2306 linear_147" [id=2306, type=linear];
-"2307 output_1" [id=2307, type=output];
+"2307 output" [id=2307, type=output];
 "0 _scale_0" -> "3 dequantize_per_channel_default"  [label="(288,)", style=solid];
 "1 _zero_point_0" -> "3 dequantize_per_channel_default"  [label="(288,)", style=solid];
 "2 _frozen_param2_1" -> "3 dequantize_per_channel_default"  [label="(288, 96)", style=solid];
@@ -4858,5 +4858,5 @@ strict digraph  {
 "2303 quantize_per_tensor_default_148" -> "2304 dequantize_per_tensor_default_148"  [label=None, style=solid];
 "2304 dequantize_per_tensor_default_148" -> "2305 flatten"  [label=None, style=solid];
 "2305 flatten" -> "2306 linear_147"  [label="(1, 768)", style=solid];
-"2306 linear_147" -> "2307 output_1"  [label="(1, 1000)", style=solid];
+"2306 linear_147" -> "2307 output"  [label="(1, 1000)", style=solid];
 }

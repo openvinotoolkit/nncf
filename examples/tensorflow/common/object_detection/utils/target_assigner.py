@@ -95,9 +95,11 @@ class TargetAssigner:
             box_list.BoxList
         """
         if not isinstance(anchors, box_list.BoxList):
-            raise ValueError("anchors must be an BoxList")
+            msg = "anchors must be an BoxList"
+            raise ValueError(msg)
         if not isinstance(groundtruth_boxes, box_list.BoxList):
-            raise ValueError("groundtruth_boxes must be an BoxList")
+            msg = "groundtruth_boxes must be an BoxList"
+            raise ValueError(msg)
 
         if groundtruth_labels is None:
             groundtruth_labels = tf.ones(tf.expand_dims(groundtruth_boxes.num_boxes(), 0))

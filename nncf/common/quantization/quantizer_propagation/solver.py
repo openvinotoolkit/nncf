@@ -51,6 +51,7 @@ from nncf.common.scopes import should_consider_scope
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
+from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
 
 
 class TransitionStatus(Enum):
@@ -126,9 +127,8 @@ class QuantizationProposal:
         """
         prior_list = self.quantizer_setup.quantization_points[quantization_point_id].possible_qconfigs
         if not all(qc in prior_list for qc in constrained_config_list):
-            raise nncf.InternalError(
-                "Constrained config list is incompatible with the result of the quantizer propagation!"
-            )
+            msg = "Constrained config list is incompatible with the result of the quantizer propagation!"
+            raise nncf.InternalError(msg)
         # TODO (vshampor): only allow to constrain 'input-group'-wise?
         self.quantizer_setup.quantization_points[quantization_point_id].possible_qconfigs = constrained_config_list
 
@@ -161,6 +161,7 @@ class QuantizationProposal:
                             final_qconfig.per_channel == initial_qconfig.per_channel
                             and final_qconfig.mode == initial_qconfig.mode
                             and final_qconfig.num_bits == initial_qconfig.num_bits
+                            and final_qconfig.narrow_range == initial_qconfig.narrow_range
                             and (
                                 final_qconfig.signedness_to_force == initial_qconfig.signedness_to_force
                                 or initial_qconfig.signedness_to_force is None
@@ -175,10 +176,11 @@ class QuantizationProposal:
                         )
                     )
                     if not compatible_initial_qconfs:
-                        raise nncf.InternalError(
+                        msg = (
                             "The final quantizer setup has configurations that were not present in the "
                             "initial proposal!"
                         )
+                        raise nncf.InternalError(msg)
                     if final_qconfig.signedness_to_force is None:
                         initial_qconfs_signedness_values = {qc.signedness_to_force for qc in compatible_initial_qconfs}
                         if None not in initial_qconfs_signedness_values and len(initial_qconfs_signedness_values) == 1:
@@ -301,7 +303,13 @@ class QuantizerPropagationSolver:
     """
 
     DEFAULT_QUANTIZATION_TYPES = [
-        QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None, per_channel=False)
+        QuantizerConfig(
+            num_bits=8,
+            mode=QuantizationMode.SYMMETRIC,
+            signedness_to_force=None,
+            per_channel=False,
+            narrow_range=QUANTIZATION_NARROW_RANGE,
+        )
     ]
 
     DEFAULT_PROPAGATION_STRATEGY = QuantizerPropagationRule.MERGE_ALL_IN_ONE
@@ -583,7 +591,8 @@ class QuantizerPropagationSolver:
         if Counter(final_weight_quantizable_node_names_vs_qconfig_dict.keys()) != Counter(
             self._weight_quantizable_node_names_vs_qconfigs.keys()
         ):
-            raise nncf.InternalError("Final weight quantizer setup is inconsistent with initial solver assumptions!")
+            msg = "Final weight quantizer setup is inconsistent with initial solver assumptions!"
+            raise nncf.InternalError(msg)
 
         multi_setup_with_one_config_per_point = quant_prop_graph.create_quantizer_setup(
             final_weight_quantizable_node_names_vs_qconfig_dict
@@ -667,7 +676,6 @@ class QuantizerPropagationSolver:
         :param quant_prop_graph: The propagation state graph for `curr_prop_quantizer` to be propagated in.
         :return: The new state of `quant_prop_graph` with `curr_prop_quantizer` propagated one step further.
         """
-
         curr_node_key = curr_prop_quantizer.current_location_node_key
         curr_node = quant_prop_graph.nodes[curr_node_key]
         curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
@@ -914,9 +922,9 @@ class QuantizerPropagationSolver:
         if self._active_propagating_quantizers_queue:
             next_id_str = str(self._active_propagating_quantizers_queue[-1].id)
         out_graph.graph["graph"] = {
-            "label": "Propagating quantizers: {}\n"
-            "Next quantizer to be propagated: {}\n"
-            "Finished quantizers: {}".format(active_ids_str, next_id_str, finished_ids_str),
+            "label": f"Propagating quantizers: {active_ids_str}\n"
+            f"Next quantizer to be propagated: {next_id_str}\n"
+            f"Finished quantizers: {finished_ids_str}",
             "labelloc": "t",
         }
         pth = deepcopy(dump_path)
@@ -993,7 +1001,6 @@ class QuantizerPropagationSolver:
           corresponding TargetPoints.
         :return: A list of TargetPoint groups; each group is a list of TargetPoint's.
         """
-
         if linked_scopes_groups_list is None:
             return [[ip] for ip in target_insertion_points]
         retval: List[List[TargetPoint]] = []
@@ -1008,18 +1015,16 @@ class QuantizerPropagationSolver:
                     )
                 )
                 if len(matching_indices) == 0:
-                    raise nncf.ValidationError(
-                        "No match for linked quantizer entry {} among activation quantizers!".format(
-                            group_member_node_name
-                        )
-                    )
+                    msg = f"No match for linked quantizer entry {group_member_node_name} among activation quantizers!"
+                    raise nncf.ValidationError(msg)
 
                 for target_idx in matching_indices:
                     if target_idx in insertion_point_indices_vs_group_id:
-                        raise nncf.InternalError(
-                            "Linked activation quantizer groups {} and {} "
-                            "overlap!".format(group_idx, insertion_point_indices_vs_group_id[target_idx])
+                        msg = (
+                            f"Linked activation quantizer groups {group_idx} and "
+                            f" {insertion_point_indices_vs_group_id[target_idx]} overlap!"
                         )
+                        raise nncf.InternalError(msg)
                 for target_idx in matching_indices:
                     insertion_point_indices_vs_group_id[target_idx] = group_idx
 
@@ -1117,11 +1122,12 @@ class QuantizerPropagationSolver:
             op_meta_name = metatype.__class__.__name__
             if len(per_tensor_qconf_list) != len(qconf_list):
                 if not per_tensor_qconf_list:
-                    raise nncf.InternalError(
+                    msg = (
                         "Unified scales currently do not support per-channel configuration - dropping"
-                        "per-channel configuration options for {} resulted in no valid quantization "
-                        "configs!".format(op_meta_name)
+                        f"per-channel configuration options for {op_meta_name} resulted in no valid quantization "
+                        "configs!"
                     )
+                    raise nncf.InternalError(msg)
                 nncf_logger.warning(
                     f"Unified scales currently do not support per-channel configuration - dropping"
                     f"per-channel configuration options for {op_meta_name}"
@@ -1305,7 +1311,6 @@ class QuantizerPropagationSolver:
           cloned before transition, which impacts the logic of the function.
         :return: The status of the transition determining how it should proceed.
         """
-
         for from_node_key, to_node_key in path:
             from_node = quant_prop_graph.nodes[from_node_key]
 
@@ -1373,7 +1378,7 @@ class QuantizerPropagationSolver:
         Returns a tuple, of which the first node is the qconfig list for the quantizer to be placed
         above the branching node (i.e. that will affect all of the downward branches), and a list
         of nodes which are either None (which means that the corresponding branch quantizer has been successfully
-        merged, or qconfigs list to be set for the corresponding branch quantizer if it cannot be merged (e.g. if
+        merged), or qconfigs list to be set for the corresponding branch quantizer if it cannot be merged (e.g. if
         requantization to a lower bitwidth has to be done for this branch)
 
         :param potential_qconfigs_for_each_branch: For each branch defines the list of available configurations
@@ -1382,7 +1387,6 @@ class QuantizerPropagationSolver:
           of the merged quantizer, if any, and the second element corresponds to configurations of the quantizers
           that would have to remain on the branches (if any).
         """
-
         if self._propagation_strategy == QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES:
             # Do not merge at all
             return None, potential_qconfigs_for_each_branch
@@ -1424,7 +1428,8 @@ class QuantizerPropagationSolver:
         elif self._propagation_strategy == QuantizerPropagationRule.MERGE_ALL_IN_ONE:
             compatible_fn = compatible_wo_requant
         else:
-            raise nncf.ValidationError(f"Unknown propagation strategy: {self._propagation_strategy}")
+            msg = f"Unknown propagation strategy: {self._propagation_strategy}"
+            raise nncf.ValidationError(msg)
 
         for qconf in qconfigs_union:
             if all(compatible_fn(qconf, qconf_list) for qconf_list in potential_qconfigs_for_each_branch):
@@ -1494,7 +1499,8 @@ class QuantizerPropagationSolver:
         """
         The input list should be sorted in descending order of priority. In case some qconfigs in the list have the
         same priority, this function will resolve the ambiguity in ordering these qconfigs in the final returned
-        list.
+        list. Quantization configs could not contain different narrow range parameters, so it does
+        not participate in __lt__ method of the QConfigComparator.
         """
 
         class QConfigComparator:

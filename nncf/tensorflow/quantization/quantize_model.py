@@ -28,7 +28,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import apply_advanced_parameters_to_config
 from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
-from nncf.tensorflow.helpers.model_creation import create_compressed_model
+from nncf.tensorflow.helpers.model_creation import create_compressed_model_impl
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
 
@@ -148,20 +148,25 @@ def quantize_impl(
     Implementation of the `quantize()` method for the TensorFlow backend.
     """
     if model_type is not None:
-        raise ValueError(f"model_type={model_type} is not supported")
+        msg = f"model_type={model_type} is not supported"
+        raise ValueError(msg)
     if fast_bias_correction is False:
-        raise ValueError(f"fast_bias_correction={fast_bias_correction} is not supported")
+        msg = f"fast_bias_correction={fast_bias_correction} is not supported"
+        raise ValueError(msg)
     if ignored_scope is not None and ignored_scope.types:
-        raise nncf.InternalError(
+        msg = (
             "Quantization algorithm form the TensorFlow backend "
             "does not support operation types in the ignored "
             "scopes yet"
         )
+        raise nncf.InternalError(msg)
     if target_device == TargetDevice.CPU_SPR:
-        raise nncf.InternalError("target_device == CPU_SPR is not supported.")
+        msg = "target_device == CPU_SPR is not supported."
+        raise nncf.InternalError(msg)
 
     if mode is not None:
-        raise ValueError(f"mode={mode} is not supported")
+        msg = f"mode={mode} is not supported"
+        raise ValueError(msg)
 
     if preset is None:
         preset = QuantizationPreset.PERFORMANCE
@@ -176,6 +181,12 @@ def quantize_impl(
         ]
     )
 
-    _, compressed_model = create_compressed_model(model=model, config=nncf_config)
+    compression_ctrl, compressed_model = create_compressed_model_impl(model=model, config=nncf_config)
+
+    # NOTE: We set the config here to properly save/load the quantized model during training into tf.train.Checkpoint.
+    # You can obtain that config via the nncf.tensorflow.get_config() method and save/load it to/from
+    # tf.train.Checkpoint using the nncf.tensorflow.ConfigState class.
+    config = compression_ctrl.get_compression_state()["builder_state"]
+    setattr(compressed_model, "_nncf_config", config)
 
     return compressed_model
