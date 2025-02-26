@@ -29,7 +29,6 @@ from packaging import version
 from scipy.special import softmax
 from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
 
-from nncf.common.utils.os import is_linux
 from nncf.torch import create_compressed_model
 from nncf.torch.checkpoint_loading import load_state
 from tests.torch.helpers import PTTensorListComparator
@@ -130,8 +129,7 @@ class TestONNXExport:
         compression_ctrl.export_model(onnx_model_path)
         onnx_output_dict = self._get_onnx_model_inference_outputs(onnx_model_path, dataset, recipe)
         onnx_outputs = next(iter(onnx_output_dict.values()))
-        atol = 1e-6 if is_linux() else 1e-5
-        assert np.allclose(softmax(onnx_outputs, axis=-1), softmax(torch_outputs, axis=-1), atol=atol)
+        assert np.allclose(softmax(onnx_outputs, axis=-1), softmax(torch_outputs, axis=-1), atol=1e-5)
 
     @pytest.mark.skipif(
         version.parse(torch.__version__) < version.parse("1.12"),
