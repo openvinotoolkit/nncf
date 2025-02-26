@@ -88,9 +88,7 @@ class WeightCompressionAlgoBackend(ABC):
         """
 
     @abstractmethod
-    def get_weight(
-        self, node_with_weight: NNCFNode, weight_port_id: int, model: TModel, graph: NNCFGraph, **kwargs
-    ) -> Tensor:
+    def get_weight(self, node_with_weight: NNCFNode, weight_port_id: int, model: TModel, graph: NNCFGraph) -> Tensor:
         """
         Returns a weight associated with the given node on the given port id.
 

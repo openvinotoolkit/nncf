@@ -129,7 +129,7 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return PTWeightCompressionAlgoBackend.get_activation_port_id(node, graph)
 
     def get_weight(
-        self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.fx.GraphModule, graph: NNCFGraph, **kwargs
+        self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.fx.GraphModule, graph: NNCFGraph
     ) -> Tensor:
         weight_edge = graph.get_input_edge_by_port_id(node_with_weight, weight_port_id)
         weight_node = weight_edge.from_node

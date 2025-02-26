@@ -179,7 +179,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return activation_ports[0]
 
     def get_weight(
-        self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph, **kwargs
+        self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph
     ) -> Tensor:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
         weight_name = weight_node.layer_attributes.name
