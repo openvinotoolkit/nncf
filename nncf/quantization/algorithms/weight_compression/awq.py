@@ -142,7 +142,7 @@ class AWQ(Algorithm):
 
         is_data_free = statistics is None
         description = "Applying data-free AWQ" if is_data_free else "Applying AWQ"
-        
+
         for k, awq_data_item in track(awq_data.items(), description=description):
             wp = awq_data_item.weight_params
             merge_node = awq_data_item.merge_node
@@ -268,17 +268,16 @@ class AWQ(Algorithm):
         scale = fns.maximum(fns.mean(fns.abs(weight), axis=0), eps)
         return 1 / scale
 
-    def _get_awq_data(self,
-                    graph: NNCFGraph,
-                    all_weight_params: List[WeightCompressionParameters],
-                    nodes_to_compress: List[NNCFNode]) -> Dict[str, AWQCompressionInfo]:
+    def _get_awq_data(
+        self, graph: NNCFGraph, all_weight_params: List[WeightCompressionParameters], nodes_to_compress: List[NNCFNode]
+    ) -> Dict[str, AWQCompressionInfo]:
         """
         Finds awq patterns in graph and returns it.
         :param graph: Model graph.
         :param all_weight_params: List of all weight parameters.
         :param nodes_to_compress: List of nodes for processing.
         :return: A dict with node names and matched AWQ patterns.
-        """        
+        """
         matches = []
         inference_nncf_graph = transform_to_inference_graph(deepcopy(graph), [], [], [], [])
         nx_graph = inference_nncf_graph.get_nx_graph_copy()
