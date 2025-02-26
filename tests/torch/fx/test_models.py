@@ -252,9 +252,7 @@ def test_dynamic_edge():
     for edge in nncf_graph.get_all_edges():
         edge_shape = edge.tensor_shape
         assert isinstance(edge_shape, tuple)
-        for dim in edge_shape:
-            assert isinstance(dim, int)
-            assert not isinstance(dim, torch.SymInt)
+        assert all(isinstance(dim, int) for dim in edge_shape)
 
 
 def check_fq_values(quantized_model):

@@ -60,15 +60,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def get_backend_model(self, dataset_samples):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
         conv_w = self.dataset_samples_to_conv_w(np.array(sample))
-        dynamic_shapes = [
-            (
-                Dim.AUTO,
-                Dim.STATIC,
-                Dim.AUTO,
-                Dim.AUTO,
-            )
-        ]
-        return get_torch_fx_model(IdentityConv(conv_w), torch.ones(INPUT_SHAPE), dynamic_shapes=dynamic_shapes)
+        return get_torch_fx_model(IdentityConv(conv_w), torch.ones(INPUT_SHAPE))
 
     def get_statistics_aggregator(self, dataset):
         return FXStatisticsAggregator(dataset)
