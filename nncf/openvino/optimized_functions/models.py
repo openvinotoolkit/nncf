@@ -203,7 +203,6 @@ def get_compress_weight_model(
     scale_shape: Optional[Tuple] = None,
     zero_point_shape: Optional[Tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
-    return_nodes: Optional[bool] = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
     """
     Get a model that compresses weights using the given configuration.
@@ -217,8 +216,6 @@ def get_compress_weight_model(
         as an input.
     :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale (and z.p.) are provided as
         inputs.
-    :param return_nodes: Whether to return the OV model inputs parameters and results nodes instead of the model
-        callable.
     :return: A model callable that compresses weights using the given configuration. Or a model as nodes, if
         `return_nodes` is True.
     """
@@ -233,7 +230,6 @@ def get_compress_weight_model(
         scale_shape,
         zero_point_shape,
         reduction_axes,
-        return_nodes=return_nodes,
     )
 
 
@@ -245,7 +241,6 @@ def get_compress_decompress_weight_model(
     zero_point_shape: Optional[Tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
     return_compressed_weight: Optional[bool] = False,
-    return_nodes: Optional[bool] = False,
 ) -> ModelCallable:
     """
     Get a model that performs compression and decompression of the given weight.
@@ -261,8 +256,6 @@ def get_compress_decompress_weight_model(
         inputs.
     :param return_compressed_weight: Whether to also return compressed weight, scale, (and zero point) besides the
         decompressed weight.
-    :param return_nodes: Whether to return the OV model inputs parameters and results nodes instead of the model
-        callable.
     :return: A model callable that returns a decompressed weight, and optionally compressed weight, scale,
         (and zero point) if `return_compressed_weight` is True.
     """
@@ -278,7 +271,6 @@ def get_compress_decompress_weight_model(
         zero_point_shape,
         reduction_axes,
         return_compressed_weight,
-        return_nodes,
     )
 
 
