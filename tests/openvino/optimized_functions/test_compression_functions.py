@@ -77,8 +77,8 @@ def get_random_float_tensor(shape, dtype, backend, seed=0):
         data = Tensor(ov.Tensor(data, shape, DTYPE_MAP_OV[DTYPE_MAP_REV_NP[data.dtype]]))
         if dtype == TensorDataType.bfloat16:
             data = data.astype(TensorDataType.bfloat16)
-            if backend == TensorBackend.numpy:
-                data = data.as_numpy_tensor()
+    if backend == TensorBackend.numpy:
+        data = data.as_numpy_tensor() if dtype == TensorDataType.bfloat16 else Tensor(data)
     return Tensor(data)
 
 
@@ -218,8 +218,7 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
 @pytest.mark.parametrize("config", INT4_COMPRESSION_CONFIGS, ids=[str(c) for c in INT4_COMPRESSION_CONFIGS])
 @pytest.mark.parametrize("tensor_backend", [TensorBackend.numpy, "auto"])
 @pytest.mark.parametrize("dtype", [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16])
-@pytest.mark.parametrize("aggregation", ["max_mean", "frobenius"])
-def test_integer_quantization_error_alignment(weight_shape, config, tensor_backend, dtype, aggregation):
+def test_integer_quantization_error_alignment(weight_shape, config, tensor_backend, dtype):
     results = defaultdict(dict)
     # Iterate over two implementations
     for cb in [ComputationBackend.NumPy, ComputationBackend.OV]:
@@ -234,18 +233,14 @@ def test_integer_quantization_error_alignment(weight_shape, config, tensor_backe
             fn_to_patch = opt_fns.get_integer_quantization_error
             patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
             with patch(patch_path, side_effect=fn_to_patch) as mock:
-                results[cb]["quantization_error"] = get_integer_quantization_error(
-                    weight, REDUCTION_AXES, config, aggregation=aggregation
-                )
+                results[cb]["quantization_error"] = get_integer_quantization_error(weight, REDUCTION_AXES, config)
 
             if cb == ComputationBackend.NumPy:
                 mock.assert_not_called()
             else:
                 mock.assert_called_once()
 
-    # TODO (Nikita Savelyev): figure out the reason behind the misalignment
-    atol = 1e-5 if aggregation == "frobenius" and dtype in [TensorDataType.float16, TensorDataType.bfloat16] else 0
-    _check_values(results, atol=atol)
+    _check_values(results)
 
 
 def _check_backends_and_dtypes(
@@ -292,7 +287,7 @@ def _check_backends_and_dtypes(
             assert decompressed_weight.dtype == TensorDataType.float32
 
 
-def _check_values(results, atol=0):
+def _check_values(results):
     # Check that the computed tensors are equal between implementations
     keys = set(results[ComputationBackend.OV]).union(set(results[ComputationBackend.NumPy]))
     for key in keys:
@@ -307,5 +302,5 @@ def _check_values(results, atol=0):
         # misalignments equal to 1 quant between OV and NumPy. For more details see ticket 156511.
 
         np.testing.assert_allclose(
-            ov_result.data, numpy_result.data, atol=atol, rtol=0, err_msg=f"Results do not align for {key}."
+            ov_result.data, numpy_result.data, atol=0, rtol=0, err_msg=f"Results do not align for {key}."
         )

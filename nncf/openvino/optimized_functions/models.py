@@ -277,11 +277,10 @@ def get_compress_decompress_weight_model(
 def get_quantization_error_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
-    aggregation: str,
+    original_weight_shape: Tuple,
     weight_shape: Tuple,
+    original_reduction_axes: ReductionAxes,
     reduction_axes: ReductionAxes,
-    original_weight_shape: Optional[Tuple] = None,
-    original_reduction_axes: Optional[ReductionAxes] = None,
 ) -> ModelCallable:
     """
     Get a model that calculates the quantization error for a given weight.
@@ -291,7 +290,6 @@ def get_quantization_error_model(
 
     :param ov_model_params: OV model parameters.
     :param config: Compression configuration.
-    :param aggregation: The mode of aggregation of the error values. Possible values: ['max_mean', 'frobenius'].
     :param original_weight_shape: Shape of the original weight tensor.
     :param weight_shape: Shape of the weight tensor to be compressed.
     :param original_reduction_axes: Reduction axes of the original weight tensor before reshaping.
@@ -301,13 +299,7 @@ def get_quantization_error_model(
     weight_shape, _, _ = _prepare_compression_model_inputs(ov_model_params, weight_shape, None, None, reduction_axes)
 
     return _build_quantization_error_model(
-        config,
-        aggregation,
-        ov_model_params,
-        weight_shape,
-        reduction_axes,
-        original_weight_shape,
-        original_reduction_axes,
+        config, ov_model_params, original_weight_shape, weight_shape, original_reduction_axes, reduction_axes
     )
 
 
@@ -524,12 +516,11 @@ def _build_compress_decompress_model(
 @cache_results(OV_MODEL_CACHE)
 def _build_quantization_error_model(
     config: WeightCompressionConfig,
-    aggregation: str,
     ov_model_params: OVModelParameters,
+    original_weight_shape: Tuple,
     weight_shape: Tuple,
+    original_reduction_axes: ReductionAxes,
     reduction_axes: ReductionAxes,
-    original_weight_shape: Optional[Tuple] = None,
-    original_reduction_axes: Optional[ReductionAxes] = None,
 ) -> ModelCallable:
     ov_parameters, ov_results, ov_model_params = _build_compress_decompress_model(
         config,
@@ -543,17 +534,13 @@ def _build_quantization_error_model(
     weight = ov_parameters[0]
     decompressed_weight = ov_results[0]
 
-    weight = convert_op(weight, ov.Type.f32)
-    if aggregation == "max_mean":
-        weight = opset.reshape(weight, original_weight_shape, special_zero=False)
-        decompressed_weight = opset.reshape(decompressed_weight, original_weight_shape, special_zero=False)
-        diff = opset.squared_difference(decompressed_weight, weight)
-        layer_err = opset.reduce_mean(diff, reduction_axes=original_reduction_axes)
-        quantization_error = opset.reduce_max(layer_err, reduction_axes=tuple(range(len(layer_err.shape))))
-    else:
-        diff = opset.reshape(decompressed_weight - weight, (-1,), special_zero=False)
-        quantization_error = opset.matmul(diff, diff, transpose_a=False, transpose_b=False)
-        quantization_error = opset.sqrt(quantization_error)
+    weight = convert_op(opset.reshape(weight, original_weight_shape, special_zero=False), ov.Type.f32)
+    decompressed_weight = convert_op(
+        opset.reshape(decompressed_weight, original_weight_shape, special_zero=False), ov.Type.f32
+    )
+    diff = opset.squared_difference(decompressed_weight, weight)
+    layer_err = opset.reduce_mean(diff, reduction_axes=original_reduction_axes)
+    quantization_error = opset.reduce_max(layer_err, reduction_axes=tuple(range(len(layer_err.shape))))
 
     model = ov.Model([quantization_error], ov_parameters)
     compiled_model = _compile_ov_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})
