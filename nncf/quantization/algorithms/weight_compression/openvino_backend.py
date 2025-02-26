@@ -50,6 +50,7 @@ from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
 from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
+from nncf.quantization.algorithms.weight_compression.backend import TModel
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
@@ -135,13 +136,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_port_id: int,
         model: ov.Model,
         graph: NNCFGraph,
-        as_ov_tensor: bool = False,
     ) -> Tensor:
         weight_name = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["name"]
         weight_node = self.name_to_node_mapping[weight_name]
-        weight_tensor = (
-            get_const_value_as_ov_tensor(weight_node) if as_ov_tensor else get_const_value_as_numpy_tensor(weight_node)
-        )
+        weight_tensor = get_const_value_as_numpy_tensor(weight_node)
         return Tensor(weight_tensor)
 
     def get_weight_dtype(
@@ -373,6 +371,19 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return filter_func
 
 
+class OVTensorWeightCompressionAlgoBackend(OVWeightCompressionAlgoBackend):
+    """
+    OpenVINO backend for weight compression algorithms that fetches model weights as openvino.Tensor instances.
+    This allows to natively process BF16/FP16 weights.
+    """
+
+    def get_weight(self, node_with_weight: NNCFNode, weight_port_id: int, model: TModel, graph: NNCFGraph) -> Tensor:
+        weight_name = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["name"]
+        weight_node = self.name_to_node_mapping[weight_name]
+        weight_tensor = get_const_value_as_ov_tensor(weight_node)
+        return Tensor(weight_tensor)
+
+
 class OVAWQAlgoAlgoBackend(AWQAlgoBackend, OVWeightCompressionAlgoBackend):
     @staticmethod
     def get_awq_patterns():
@@ -385,7 +396,7 @@ class OVAWQAlgoAlgoBackend(AWQAlgoBackend, OVWeightCompressionAlgoBackend):
         )
 
 
-class OVMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, OVWeightCompressionAlgoBackend):
+class OVMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, OVTensorWeightCompressionAlgoBackend):
     @staticmethod
     def mean_variance_statistic_collector(
         reduction_axes: Tuple[int], subset_size: Optional[int] = None
