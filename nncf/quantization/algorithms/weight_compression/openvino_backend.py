@@ -368,7 +368,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_input_hidden_dim(node: NNCFNode) -> int:
-        return -2 if node.layer_attributes.input_attributes["transpose"] else -1
+        if (node is not None) and (node.layer_attributes is not None):
+            return -2 if node.layer_attributes.input_attributes["transpose"] else -1
+        return -1
 
 
 class OVAWQAlgoAlgoBackend(AWQAlgoBackend, OVWeightCompressionAlgoBackend):
