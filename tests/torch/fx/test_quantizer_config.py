@@ -14,6 +14,8 @@ import pytest
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.utils.backend import BackendType
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
+from tests.cross_fw.test_templates.models import NNCFGraphConstantBranchWithWeightedNode
+from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsConstantPath
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
@@ -51,4 +53,29 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             mul_metatype=om.PTMulMetatype,
             const_metatype=om.PTConstNoopMetatype,
             transpose_metatype=om.PTTransposeMetatype,
+        )
+
+    @pytest.fixture
+    def embedding_nncf_graph_shape_of(self) -> NNCFGraphToTest:
+        return None
+
+    @pytest.mark.skip("Torch does not have shape of subgraphs")
+    def test_embedding_model_qconfig_shape_of(self, embedding_nncf_graph_shape_of):
+        pass
+
+    @pytest.fixture
+    def embedding_nncf_graph_constant_path(self) -> NNCFGraphToTest:
+        return NNCFGraphModelWithEmbeddingsConstantPath(
+            const_metatype=om.PTConstNoopMetatype,
+            embedding_metatype=om.PTModuleEmbeddingMetatype,
+            conv_metatype=om.PTModuleConv2dMetatype,
+            add_metatype=om.PTAddMetatype,
+        )
+
+    @pytest.fixture
+    def constant_branch_nncf_graph(self) -> NNCFGraphToTest:
+        return NNCFGraphConstantBranchWithWeightedNode(
+            const_metatype=om.PTConstNoopMetatype,
+            conv_metatype=om.PTModuleConv2dMetatype,
+            add_metatype=om.PTAddMetatype,
         )
