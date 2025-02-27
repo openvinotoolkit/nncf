@@ -12,7 +12,7 @@ updates:
       timezone: "Asia/Dubai"
     assignees:
       - "AlexanderDokuchaev"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 10
 
   # Python
   - package-ecosystem: pip
@@ -21,7 +21,7 @@ updates:
       interval: "daily"
       time: "09:00"
       timezone: "Asia/Dubai"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 10
     assignees:
       - "AlexanderDokuchaev"
     versioning-strategy: increase-if-necessary
