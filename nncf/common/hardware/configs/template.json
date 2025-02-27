@@ -16,14 +16,20 @@
                 "granularity": [
                     "pertensor",
                     "perchannel"
-                ]
+                ],
+                /*
+                 * Narrow range: should NNCF use 2**num_bits quants or 2**num_bits - 1
+                 */
+                "narrow_range": false
             },
-            "q8_sym_tnr_-128_127": { // Alias name for set of hyperparameters
+            "q8_sym_tnr_signed": { // Alias name for set of hyperparameters
                 "bits": 8, // Number of quantization bits
                 "mode": "symmetric", // Quantization mode
                 "granularity": "pertensor", // Granularity: one scale for output tensor
-                "level_low": -128, // Low quantization level
-                "level_high": 127  // High quantization level
+                "signedness_to_force": true, // signedness_to_force: True if the quantizer must be signed, False if must be unsigned,
+                                             // None if the signed/unsigned attribute should be determined based on the incoming activation
+                                             // statistics during range initialization.
+                "narrow_range": true
             }
         }
     },

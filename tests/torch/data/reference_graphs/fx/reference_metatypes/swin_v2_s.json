@@ -2680,5 +2680,5 @@
     "adaptive_avg_pool2d": "PTAvgPool2dMetatype",
     "flatten": "PTReshapeMetatype",
     "linear_147": "PTLinearMetatype",
-    "output_1": "PTOutputNoopMetatype"
+    "output": "PTOutputNoopMetatype"
 }

@@ -81,9 +81,11 @@ class TracingThreadLocals(threading.local):
 
 
 class CopySafeThreadingVars:
-    """A class holding variables that are related to threading and
+    """
+    A class holding variables that are related to threading and
     thus impossible to deepcopy. The deepcopy will simply return a
-    new object without copying, but won't fail."""
+    new object without copying, but won't fail.
+    """
 
     def __init__(self):
         self.thread_local = TracingThreadLocals()
@@ -240,7 +242,6 @@ class TracingContext:
         be loaded if the model had changed in the meantime in a way that does not impact the major function call
         order (e.g. if comments were added to the .py file with the model)
         """
-
         call_order = self.get_operator_call_count_in_scope(operator_name, self.scope)
 
         op_address = OperationAddress(operator_name, self.scope, call_order)

@@ -29,7 +29,6 @@ from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
-from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.torch.model_creation import wrap_model
@@ -47,6 +46,7 @@ class CaseSymParams:
     per_channel: bool
     quant_group: QuantizerGroup
     ref_scale: np.ndarray
+    narrow_range: bool
 
 
 SYM_CASES = (
@@ -59,6 +59,7 @@ SYM_CASES = (
             256,
         ),
         per_channel=False,
+        narrow_range=False,
         quant_group=QuantizerGroup.ACTIVATIONS,
         ref_scale=0.49530452,
     ),
@@ -71,6 +72,7 @@ SYM_CASES = (
             255,
         ),
         per_channel=False,
+        narrow_range=True,
         quant_group=QuantizerGroup.WEIGHTS,
         ref_scale=0.49530452,
     ),
@@ -83,6 +85,7 @@ SYM_CASES = (
             256,
         ),
         per_channel=True,
+        narrow_range=False,
         quant_group=QuantizerGroup.ACTIVATIONS,
         ref_scale=torch.tensor([0.4797816, 0.49920455, 0.48837382]).reshape(1, 3, 1, 1),
     ),
@@ -95,6 +98,7 @@ SYM_CASES = (
             255,
         ),
         per_channel=True,
+        narrow_range=True,
         quant_group=QuantizerGroup.WEIGHTS,
         ref_scale=torch.tensor([0.48837382, 0.49530452]).reshape(2, 1, 1, 1),
     ),
@@ -106,7 +110,10 @@ def test_quantizer_params_sym(case_to_test: CaseSymParams):
     per_ch = case_to_test.per_channel
     fq_params = case_to_test.fq_params
     quant_group = case_to_test.quant_group
-    qconfig = QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=per_ch)
+    narrow_range = case_to_test.narrow_range
+    qconfig = QuantizerConfig(
+        num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=per_ch, narrow_range=narrow_range
+    )
 
     if not per_ch:
         scale_shape = [1]
@@ -196,7 +203,7 @@ def test_quantizer_params_asym(case_to_test: CaseSymParams):
     per_ch = case_to_test.per_channel
     fq_params = case_to_test.fq_params
     quant_group = case_to_test.quant_group
-    qconfig = QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=per_ch)
+    qconfig = QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=per_ch, narrow_range=False)
 
     if not per_ch:
         scale_shape = [1]
@@ -272,9 +279,12 @@ def calculate_statistics(data, mode, qgroup, half_range=False):
         min_values=Tensor(torch.tensor(min_values)), max_values=Tensor(torch.tensor(max_values))
     )
     signedness_to_force = True if qgroup == QuantizerGroup.WEIGHTS else None
-    qconfig = QuantizerConfig(num_bits=8, mode=mode, per_channel=per_ch, signedness_to_force=signedness_to_force)
-    narrow_range = get_quantizer_narrow_range(qconfig, qgroup)
-    fq_params = calculate_quantizer_parameters(statistics, qconfig, qgroup, narrow_range, half_range)
+    narrow_range = mode == QuantizationMode.SYMMETRIC and qgroup == QuantizerGroup.WEIGHTS
+    qconfig = QuantizerConfig(
+        num_bits=8, mode=mode, per_channel=per_ch, signedness_to_force=signedness_to_force, narrow_range=narrow_range
+    )
+
+    fq_params = calculate_quantizer_parameters(statistics, qconfig, qgroup, half_range)
     return {"input_low": fq_params.input_low, "input_high": fq_params.input_high}
 
 

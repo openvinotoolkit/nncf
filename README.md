@@ -59,8 +59,6 @@ learning frameworks.
 - GPU-accelerated layers for faster compressed model fine-tuning.
 - Distributed training support.
 - Git patch for prominent third-party repository ([huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines.
-- Seamless combination of pruning, sparsity, and quantization algorithms. Please refer to [optimum-intel](https://github.com/huggingface/optimum-intel/tree/main/examples/openvino) for examples of
-joint (movement) pruning, quantization, and distillation (JPQD), end-to-end from NNCF optimization to compressed OpenVINO IR.
 - Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai).
 - Support for [Accuracy-Aware model training](./docs/usage/training_time_compression/other_algorithms/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
@@ -201,6 +199,9 @@ def transform_fn(data_item):
 calibration_dataset = nncf.Dataset(val_dataset, transform_fn)
 # Step 3: Run the quantization pipeline
 quantized_model = nncf.quantize(model, calibration_dataset)
+# Step 4: Remove auxiliary layers and operations added during the quantization process,
+# resulting in a clean, fully quantized model ready for deployment.
+stripped_model = nncf.strip(quantized_model)
 ```
 
 </details>
@@ -511,4 +512,4 @@ You can opt-out at any time by running the following command in the Python envir
 
 `opt_in_out --opt_out`
 
-More information available on [OpenVINO telemetry](https://docs.openvino.ai/2024/about-openvino/additional-resources/telemetry.html).
+More information available on [OpenVINO telemetry](https://docs.openvino.ai/2025/about-openvino/additional-resources/telemetry.html).

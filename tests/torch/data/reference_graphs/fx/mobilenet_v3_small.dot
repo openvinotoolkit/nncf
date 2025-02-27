@@ -401,7 +401,7 @@ strict digraph  {
 "399 hardswish__18" [id=399, type=hardswish_];
 "400 dropout_" [id=400, type=dropout_];
 "401 linear_1" [id=401, type=linear];
-"402 output_1" [id=402, type=output];
+"402 output" [id=402, type=output];
 "0 features_0_0_weight" -> "245 conv2d"  [label="(16, 3, 3, 3)", style=solid];
 "1 features_0_1_weight" -> "246 batch_norm"  [label="(16,)", style=solid];
 "2 features_0_1_bias" -> "246 batch_norm"  [label="(16,)", style=solid];
@@ -784,5 +784,5 @@ strict digraph  {
 "398 linear" -> "399 hardswish__18"  [label="(1, 1024)", style=solid];
 "399 hardswish__18" -> "400 dropout_"  [label="(1, 1024)", style=solid];
 "400 dropout_" -> "401 linear_1"  [label="(1, 1024)", style=solid];
-"401 linear_1" -> "402 output_1"  [label="(1, 1000)", style=solid];
+"401 linear_1" -> "402 output"  [label="(1, 1000)", style=solid];
 }

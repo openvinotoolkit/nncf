@@ -27,6 +27,7 @@ from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.utils import get_num_filters_legacy
 from nncf.common.logging import nncf_logger
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
@@ -294,7 +295,7 @@ class ElasticOutputWidthOp(ElasticWidthOp):
     @property
     def width_list(self) -> List[int]:
         """
-        list of all available widths to select from. Each value corresponds to a single element in the search space of
+        List of all available widths to select from. Each value corresponds to a single element in the search space of
         operation. The search space of the model is cartesian product of search spaces of operation.
         If all widths starting from 1 to maximum number of channels with step size 1 are available, the search space
         would be prohibitively large to efficiently train and search.
@@ -556,7 +557,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         self._filter_importance_fn = filter_importance_fn
         self._external_importance = None
         if external_importance_path is not None:
-            self._external_importance = torch.load(external_importance_path)
+            self._external_importance = torch.load(external_importance_path, weights_only=False)
             nncf_logger.debug("Loaded custom external weight importance.")
         self._weights_normalizer_fn = weights_normalizer_fn
         self._add_dynamic_inputs = add_dynamic_inputs
@@ -1204,7 +1205,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
     def _create_dynamic_bn_input_op(generic_layer_attrs: BaseLayerAttributes, node_name: str) -> UpdateBatchNormParams:
         assert isinstance(generic_layer_attrs, GenericWeightedLayerAttributes)
         dynamic_bn_input_op = ElasticInputWidthBatchNormOp(
-            max_width=generic_layer_attrs.get_num_filters(), node_name=node_name
+            max_width=get_num_filters_legacy(generic_layer_attrs), node_name=node_name
         )
         return UpdateBatchNormParams(dynamic_bn_input_op)
 
@@ -1212,7 +1213,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
     def _create_dynamic_ln_input_op(generic_layer_attrs: BaseLayerAttributes, node_name: str) -> UpdateLayerNormParams:
         assert isinstance(generic_layer_attrs, GenericWeightedLayerAttributes)
         dynamic_ln_input_op = ElasticInputWidthLayerNormOp(
-            max_width=generic_layer_attrs.get_num_filters(), node_name=node_name
+            max_width=get_num_filters_legacy(generic_layer_attrs), node_name=node_name
         )
         return UpdateLayerNormParams(dynamic_ln_input_op)
 

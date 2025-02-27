@@ -7,7 +7,8 @@
                 "mode": [
                     "symmetric"
                 ],
-                "granularity": "pertensor"
+                "granularity": "pertensor",
+                "narrow_range": false
             },
             "q8_a": {
                 "bits": 8,
@@ -15,7 +16,8 @@
                     "symmetric",
                     "asymmetric"
                 ],
-                "granularity": "pertensor"
+                "granularity": "pertensor",
+                "narrow_range": false
             },
             "q8_a_ch": {
                 "bits": 8,
@@ -26,19 +28,28 @@
                 "granularity": [
                     "perchannel",
                     "pertensor"
-                ]
+                ],
+                "narrow_range": false
             },
             "q8_w_sym": {
                 "bits": 8,
                 "mode": "symmetric",
-                "level_low": -128,
-                "level_high": 127,
-                "granularity": ["perchannel", "pertensor"]
+                "signedness_to_force": true,
+                "granularity": ["perchannel", "pertensor"],
+                "narrow_range": true
+            },
+            "q8_w_sym_any_nr": {
+                "bits": 8,
+                "mode": "symmetric",
+                "signedness_to_force": true,
+                "granularity": ["perchannel", "pertensor"],
+                "narrow_range": [true, false]
             },
             "q8_w_asym": {
                 "bits": 8,
                 "mode": "asymmetric",
-                "granularity": ["perchannel", "pertensor"]
+                "granularity": ["perchannel", "pertensor"],
+                "narrow_range": false
             }
         }
     },
@@ -288,7 +299,7 @@
         {
             "type": "Embedding",
             "quantization": {
-                "weights": ["q8_w_sym", "q8_w_asym"]
+                "weights": ["q8_w_sym_any_nr", "q8_w_asym"]
             }
         },
         {"type": "EmbeddingBag"}

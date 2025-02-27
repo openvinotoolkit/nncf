@@ -14,7 +14,7 @@ from __future__ import annotations
 import inspect
 import types
 from types import MethodType
-from typing import Any, Callable, Dict, Tuple, cast
+from typing import Any, Callable, Dict, Tuple, TypeVar, cast
 
 from torch import nn
 
@@ -24,6 +24,8 @@ from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
 from nncf.experimental.torch2.function_hook.hook_storage import RemovableHookHandle
 
 ATR_HOOK_STORAGE = "__nncf_hooks"
+
+TModel = TypeVar("TModel", bound=nn.Module)
 
 
 class ForwardWithHooks:
@@ -159,7 +161,7 @@ class ReplicateForDataParallel:
         return cast(MethodType, self._func)
 
 
-def wrap_model(model: nn.Module) -> nn.Module:
+def wrap_model(model: TModel) -> TModel:
     """
     Wraps a nn.Module to inject custom behavior into the forward pass and replication process.
 
@@ -174,7 +176,6 @@ def wrap_model(model: nn.Module) -> nn.Module:
     :param model: The nn.Module to be wrapped.
     :return: The modified model with the custom behavior injected.
     """
-
     if "forward" in model.__dict__:
         msg = "Wrapper does not supported models with overrided forward function"
         raise nncf.InternalError(msg)

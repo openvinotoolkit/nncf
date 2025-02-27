@@ -62,7 +62,13 @@ def read_ref_fq_params(q_group, q_config, narrow_range, hf_range):
     return ref_quantize_params
 
 
-def dump_fq_params(fq_params, q_group, q_config, narrow_range, hf_range):
+def dump_fq_params(
+    fq_params: FakeQuantizeParameters,
+    q_group: QuantizerGroup,
+    q_config: QuantizerConfig,
+    narrow_range: bool,
+    hf_range: bool,
+):
     key = get_test_reference_key(q_group, q_config, narrow_range, hf_range)
     all_fq_params = load_json(FQ_CALCULATED_PARAMETERS_PATH)
     fq_params_dict = parse_fq_params_to_dict(fq_params)
@@ -70,13 +76,13 @@ def dump_fq_params(fq_params, q_group, q_config, narrow_range, hf_range):
     dump_to_json(FQ_CALCULATED_PARAMETERS_PATH, all_fq_params)
 
 
-def parse_fq_params_to_dict(fq_params):
+def parse_fq_params_to_dict(fq_params: FakeQuantizeParameters):
     return {
         "levels": fq_params.levels,
-        "input_low": fq_params.input_low,
-        "input_high": fq_params.input_high,
-        "output_low": fq_params.output_low,
-        "output_high": fq_params.output_high,
+        "input_low": fq_params.input_low.as_numpy_tensor().data,
+        "input_high": fq_params.input_high.as_numpy_tensor().data,
+        "output_low": fq_params.output_low.as_numpy_tensor().data,
+        "output_high": fq_params.output_high.as_numpy_tensor().data,
     }
 
 
@@ -84,7 +90,6 @@ def parse_fq_params_to_dict(fq_params):
 class CaseFQParams:
     q_config: QuantizerConfig
     q_group: QuantizerGroup
-    narrow_range: bool
     half_range: bool
     should_fail: bool
 
@@ -94,42 +99,36 @@ TO_TEST = [
     CaseFQParams(
         q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True),
         q_group=QuantizerGroup.WEIGHTS,
-        narrow_range=True,
         half_range=True,
         should_fail=False,
     ),
     CaseFQParams(
         q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True),
         q_group=QuantizerGroup.WEIGHTS,
-        narrow_range=True,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
         q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True),
         q_group=QuantizerGroup.WEIGHTS,
-        narrow_range=False,
         half_range=True,
         should_fail=False,
     ),
     CaseFQParams(
         q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True),
         q_group=QuantizerGroup.WEIGHTS,
-        narrow_range=False,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
         q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC),
         q_group=QuantizerGroup.WEIGHTS,
-        narrow_range=False,
         half_range=True,
         should_fail=True,
     ),
     CaseFQParams(
         q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC),
         q_group=QuantizerGroup.WEIGHTS,
-        narrow_range=False,
         half_range=False,
         should_fail=False,
     ),
@@ -137,55 +136,57 @@ TO_TEST = [
     CaseFQParams(
         q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
         q_group=QuantizerGroup.ACTIVATIONS,
-        narrow_range=False,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
         q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=True),
         q_group=QuantizerGroup.ACTIVATIONS,
-        narrow_range=False,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
         q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False),
         q_group=QuantizerGroup.ACTIVATIONS,
-        narrow_range=False,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
         q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=True),
         q_group=QuantizerGroup.ACTIVATIONS,
-        narrow_range=False,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
         q_config=QuantizerConfig(
-            num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=False
+            num_bits=8,
+            mode=QuantizationMode.ASYMMETRIC,
+            signedness_to_force=True,
+            per_channel=False,
         ),
         q_group=QuantizerGroup.ACTIVATIONS,
-        narrow_range=False,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
         q_config=QuantizerConfig(
-            num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=True
+            num_bits=8,
+            mode=QuantizationMode.ASYMMETRIC,
+            signedness_to_force=True,
+            per_channel=True,
         ),
         q_group=QuantizerGroup.ACTIVATIONS,
-        narrow_range=False,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
         q_config=QuantizerConfig(
-            num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=True
+            num_bits=8,
+            mode=QuantizationMode.ASYMMETRIC,
+            signedness_to_force=True,
+            per_channel=True,
         ),
         q_group=QuantizerGroup.ACTIVATIONS,
-        narrow_range=False,
         half_range=True,
         should_fail=True,
     ),
@@ -200,12 +201,13 @@ class TemplateTestFQParams(ABC):
     @pytest.mark.parametrize(
         "case_to_test",
         TO_TEST,
-        ids=[get_test_reference_key(c.q_group, c.q_config, c.narrow_range, c.half_range) for c in TO_TEST],
+        ids=[get_test_reference_key(c.q_group, c.q_config, c.q_config.narrow_range, c.half_range) for c in TO_TEST],
     )
-    def test_calculate_quantizer_parameters(self, case_to_test):
+    @pytest.mark.parametrize("narrow_range", [False, True], ids=["", "narrow_range"])
+    def test_calculate_quantizer_parameters(self, case_to_test, narrow_range):
         q_config = case_to_test.q_config
+        q_config.narrow_range = narrow_range
         quant_group = case_to_test.q_group
-        narrow_range = case_to_test.narrow_range
         half_range = case_to_test.half_range
 
         rng = np.random.default_rng(0)
@@ -226,11 +228,12 @@ class TemplateTestFQParams(ABC):
             max_values=self.to_nncf_tensor(max_values),
         )
         if not case_to_test.should_fail:
-            fq_params = calculate_quantizer_parameters(statistics, q_config, quant_group, narrow_range, half_range)
-            # Uncomment lines below to generate reference for new models.
+            fq_params = calculate_quantizer_parameters(statistics, q_config, quant_group, half_range)
+            # Use OpenVINO backend to collect new reference files.
+            # Uncomment lines below to generate reference for new parameters.
             # dump_fq_params(fq_params, quant_group, q_config, narrow_range, half_range)
-            ref_fq_params = read_ref_fq_params(quant_group, q_config, narrow_range, half_range)
+            ref_fq_params = read_ref_fq_params(quant_group, q_config, q_config.narrow_range, half_range)
             compare_fq_parameters(fq_params, ref_fq_params)
         else:
             with pytest.raises(nncf.ValidationError):
-                calculate_quantizer_parameters(statistics, q_config, quant_group, narrow_range, half_range)
+                calculate_quantizer_parameters(statistics, q_config, quant_group, half_range)

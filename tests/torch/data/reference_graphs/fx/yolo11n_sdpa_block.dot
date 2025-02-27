@@ -17,7 +17,7 @@ strict digraph  {
 "15 softmax" [id=15, type=softmax];
 "16 transpose_1" [id=16, type=transpose];
 "17 matmul_1" [id=17, type=matmul];
-"18 output_1" [id=18, type=output];
+"18 output" [id=18, type=output];
 "0 kqv_weight" -> "2 linear"  [label="(12, 4)", style=solid];
 "1 x" -> "2 linear"  [label="(1, 2, 4)", style=solid];
 "2 linear" -> "3 slice_1"  [label="(1, 2, 12)", style=solid];
@@ -37,5 +37,5 @@ strict digraph  {
 "14 div_" -> "15 softmax"  [label="(1, 2, 2)", style=solid];
 "15 softmax" -> "16 transpose_1"  [label="(1, 2, 2)", style=solid];
 "16 transpose_1" -> "17 matmul_1"  [label="(1, 2, 2)", style=solid];
-"17 matmul_1" -> "18 output_1"  [label="(1, 2, 4)", style=solid];
+"17 matmul_1" -> "18 output"  [label="(1, 2, 4)", style=solid];
 }

@@ -22,8 +22,11 @@ from openvino._pyopenvino.properties.hint import inference_precision
 from openvino.runtime import Node
 from openvino.runtime import opset13 as opset
 
+from nncf.common.utils.backend import is_openvino_at_least
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
+from nncf.common.utils.cpu_info import is_lnl_cpu
+from nncf.common.utils.helpers import set_env_variable
 from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import non_convertable_divide_op
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -113,6 +116,16 @@ ModelAsNodes = Tuple[List[Parameter], List[Node], OVModelParameters]
 
 def clear_ov_model_cache():
     OV_MODEL_CACHE.clear()
+
+
+def _compile_ov_model(model: ov.Model, device_name: str, config: Dict[str, str]) -> ov.CompiledModel:
+    if is_lnl_cpu() and not is_openvino_at_least("2025.1"):
+        with set_env_variable("DNNL_MAX_CPU_ISA", "AVX2_VNNI"):
+            compiled_model = ov.compile_model(model, device_name=device_name, config=config)
+    else:
+        compiled_model = ov.compile_model(model, device_name=device_name, config=config)
+
+    return compiled_model
 
 
 def _infer_ov_model(
@@ -209,7 +222,6 @@ def get_compress_weight_model(
     :return: A model callable that compresses weights using the given configuration. Or a model as nodes, if
         `return_nodes` is True.
     """
-
     weight_shape, scale_shape, zero_point_shape = _prepare_compression_model_inputs(
         ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes
     )
@@ -251,7 +263,6 @@ def get_compress_decompress_weight_model(
     :return: A model callable that returns a decompressed weight, and optionally compressed weight, scale,
         (and zero point) if `return_compressed_weight` is True.
     """
-
     weight_shape, scale_shape, zero_point_shape = _prepare_compression_model_inputs(
         ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes
     )
@@ -412,7 +423,7 @@ def _build_compress_model(
         return ov_parameters, ov_results, ov_model_params
 
     model = ov.Model(ov_results, ov_parameters)
-    compiled_model = ov.compile_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})
+    compiled_model = _compile_ov_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})
 
     return partial(_infer_ov_model, ov_model_params, compiled_model)
 
@@ -467,7 +478,7 @@ def _build_compress_decompress_model(
 
     ov_results = [decompressed_weight] + ov_results if return_compressed_weight else [decompressed_weight]
     model = ov.Model(ov_results, ov_parameters)
-    compiled_model = ov.compile_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})
+    compiled_model = _compile_ov_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})
 
     return partial(_infer_ov_model, ov_model_params, compiled_model)
 
@@ -509,6 +520,6 @@ def _build_astype_model(ov_model_params: OVModelParameters, arg_shape: Tuple) ->
     arg = opset.parameter(arg_shape, dtype=DTYPE_MAP_OV[input_dtypes["input"]], name="input")
     res = opset.convert(arg, DTYPE_MAP_OV[output_dtypes["output"]])
     model = ov.Model([res], [arg])
-    compiled_model = ov.compile_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})
+    compiled_model = _compile_ov_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})
 
     return partial(_infer_ov_model, ov_model_params, compiled_model)

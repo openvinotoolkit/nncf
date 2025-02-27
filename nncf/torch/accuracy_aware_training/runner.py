@@ -122,7 +122,7 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         if self._load_checkpoint_fn is not None:
             self._load_checkpoint_fn(model, checkpoint_path)
         else:
-            resuming_checkpoint = torch.load(checkpoint_path, map_location="cpu")
+            resuming_checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
             resuming_model_state_dict = resuming_checkpoint.get("state_dict", resuming_checkpoint)
             load_state(model, resuming_model_state_dict, is_resume=True)
 

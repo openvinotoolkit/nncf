@@ -94,7 +94,6 @@ class MaskPropagationAlgorithm:
             are supported by the NNCF pruning algorithm.
         :return: Dict of node indices vs the decision made by symbolic mask propagation algorithm.
         """
-
         can_be_closing_convs = self._get_can_closing_convs(prunable_layers_types)
         can_prune_by_dim: Dict[int, PruningAnalysisDecision] = {k: None for k in can_be_closing_convs}  # type: ignore
         for node in self._graph.topological_sort():

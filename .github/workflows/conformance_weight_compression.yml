@@ -15,7 +15,7 @@ on:
 jobs:
   examples-cpu:
     name: Weight compression [${{ matrix.group }}/3]
-    runs-on: ubuntu-22.04-16-cores
+    runs-on: ubuntu-latest-16-cores
     timeout-minutes: 40
     strategy:
       fail-fast: false
@@ -25,7 +25,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
@@ -34,7 +34,7 @@ jobs:
         run: |
           git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
           git checkout pr-${{ github.event.inputs.pull_request_number }}
-      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           python-version: 3.10.14
       - name: cpuinfo
@@ -62,7 +62,7 @@ jobs:
         run: column -s, -t < tmp/results.csv || echo "no file"
       - name: Upload artifact
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b #v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 #v4.6.0
         with:
           name: wc_results_${{ matrix.group }}
           path: tmp/results.csv

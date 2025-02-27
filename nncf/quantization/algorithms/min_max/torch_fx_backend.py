@@ -22,7 +22,6 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
@@ -200,10 +199,9 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     ) -> FakeQuantize:
         mode = quantizer_config.mode
         quantizer_cls = QUANTIZATION_MODULES.get(mode)
-        narrow_range = target_type == TargetType.OPERATION_WITH_WEIGHTS and mode == QuantizationMode.SYMMETRIC
         quantizer_spec = PTQuantizerSpec.from_config(
             quantizer_config,
-            narrow_range=narrow_range,
+            narrow_range=quantizer_config.narrow_range,
             scale_shape=scale_shape,
             half_range=False,
             logarithm_scale=False,

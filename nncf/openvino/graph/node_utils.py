@@ -191,7 +191,6 @@ def get_result_node_name(output_name: str, port_id: int) -> str:
     :param port_id: Node port.
     :return: Name of Result.
     """
-
     return f"Result_{output_name}.{port_id}"
 
 
@@ -203,7 +202,6 @@ def get_parameter_node_name(parameter_name: str, port_id: int) -> str:
     :param port_id: Node port.
     :return: Name of Parameter.
     """
-
     return f"Parameter_{parameter_name}.{port_id}"
 
 

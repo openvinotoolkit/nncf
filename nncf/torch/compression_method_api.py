@@ -111,9 +111,8 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
 
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         """
-        Arguments:
-          `config` - a dictionary that contains parameters of compression method
-          `should_init` - if False, trainable parameter initialization will be skipped during building
+        :param config: a dictionary that contains parameters of compression method
+        :param should_init: if False, trainable parameter initialization will be skipped during building
         """
         super().__init__(config, should_init)
         self.compressed_nncf_module_names = self._nncf_module_types_to_compress()
