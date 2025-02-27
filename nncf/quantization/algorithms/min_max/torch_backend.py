@@ -22,6 +22,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
+from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
@@ -136,7 +137,13 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_start_nodes_for_activation_path_tracing(nncf_graph: PTNNCFGraph) -> List[NNCFNode]:
-        return nncf_graph.get_nodes_with_missed_input_edges() + nncf_graph.get_input_nodes()
+        return (
+            nncf_graph.get_nodes_with_missed_input_edges()
+            + nncf_graph.get_input_nodes()
+            + nncf_graph.get_nodes_by_metatypes(
+                DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS]
+            )
+        )
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
