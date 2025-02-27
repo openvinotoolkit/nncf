@@ -267,7 +267,7 @@ class GPTQ:
                         scales.append(scale)
                     else:
                         if self._scale_estimation and block_compression_config.num_bits == 4:
-                            transpose = True if self._backend_entity.get_input_hidden_dim(wc_params.node_with_weight) == -2 else False
+                            transpose = self._backend_entity.get_input_hidden_dim(wc_params.node_with_weight) == -2
                             activations = (
                                 [inp[:, (i1 + i) : (i1 + i + group_size), ...] for inp in inputs]
                                 if transpose

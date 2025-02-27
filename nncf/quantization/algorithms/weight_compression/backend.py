@@ -249,7 +249,7 @@ class WeightCompressionAlgoBackend(ABC):
     @staticmethod
     def get_input_hidden_dim(input_node: NNCFNode) -> int:
         return -1
-    
+
 
 class AWQAlgoBackend(WeightCompressionAlgoBackend):
     @staticmethod
