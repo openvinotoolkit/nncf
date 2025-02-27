@@ -126,7 +126,7 @@ class ReplicateForDataParallel:
 
         # Ensure that the forwarding method is not overridden. If it is, calling forward()
         # will raise a RuntimeError due to mismatched device assignments, e.g.:
-        #   "Expected all tensors to be on the same device, but found at least two devices, cuda:1 and cuda:0!"
+        # "Expected all tensors to be on the same device, but found at least two devices, cuda:1 and cuda:0!"
         # This happens because __self__ still references the original model for all replicas
         # in an overridden forward method.
 
