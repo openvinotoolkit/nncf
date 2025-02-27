@@ -246,6 +246,10 @@ class WeightCompressionAlgoBackend(ABC):
         :return: Backend-specific callable to filter statistic containers according to its statistic point.
         """
 
+    @staticmethod
+    def get_input_hidden_dim(input_node: NNCFNode) -> int:
+        return -1
+    
 
 class AWQAlgoBackend(WeightCompressionAlgoBackend):
     @staticmethod

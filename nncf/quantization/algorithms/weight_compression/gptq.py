@@ -171,7 +171,7 @@ class GPTQ:
             msg = "Convolution metatypes are not supported"
             raise nncf.UnsupportedModelError(msg)
 
-        hidden_dim = -2 if node.layer_attributes.input_attributes["transpose"] else -1
+        hidden_dim = self._backend_entity.get_input_hidden_dim(node)
         hessian = fns.zeros(
             (inputs[0].shape[hidden_dim], inputs[0].shape[hidden_dim]),
             backend=inputs[0].backend,
@@ -267,7 +267,7 @@ class GPTQ:
                         scales.append(scale)
                     else:
                         if self._scale_estimation and block_compression_config.num_bits == 4:
-                            transpose = wc_params.node_with_weight.layer_attributes.input_attributes["transpose"]
+                            transpose = True if self._backend_entity.get_input_hidden_dim(wc_params.node_with_weight) == -2 else False
                             activations = (
                                 [inp[:, (i1 + i) : (i1 + i + group_size), ...] for inp in inputs]
                                 if transpose
