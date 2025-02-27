@@ -137,6 +137,7 @@ def quantize(
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+    **kwargs,
 ) -> TModel:
     """
     Applies post-training quantization to the provided model.
@@ -311,6 +312,7 @@ def quantize_with_accuracy_control(
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters] = None,
     advanced_accuracy_restorer_parameters: Optional[AdvancedAccuracyRestorerParameters] = None,
+    **kwargs,
 ) -> TModel:
     """
     Applies post-training quantization algorithm with accuracy control to provided model.
@@ -441,6 +443,7 @@ def compress_weights(
     lora_correction: Optional[bool] = None,
     backup_mode: Optional[BackupMode] = None,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
+    **kwargs,
 ) -> TModel:
     """
     Compress model weights.
@@ -658,6 +661,7 @@ def quantize_with_tune_hyperparams(
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters] = None,
+    **kwargs,
 ) -> TModel:
     """
     Applies post-training quantization algorithm with tune hyperparameters to provided model.
