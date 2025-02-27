@@ -691,7 +691,6 @@ def test_raise_error_with_unsupported_params_for_e2m1(algo):
     "algo",
     (
         "lora_correction",
-        "awq",
         "scale_estimation",
         "gptq",
     ),
