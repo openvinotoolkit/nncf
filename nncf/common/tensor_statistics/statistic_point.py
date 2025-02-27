@@ -21,7 +21,7 @@ class StatisticPoint:
     StatisticPoint stores information is necessary for statistics collection process:
     target_point from which statistics is collected: node_name and target_type determines the node edge.
     tensor_collector determines how to aggregate statistics in target_point
-    algorithm implies on what algorithm nedeed this statistics.
+    algorithm implies on what algorithm needed this statistics.
     """
 
     def __init__(self, target_point: TargetPoint, tensor_collector: TensorCollector, algorithm: str):

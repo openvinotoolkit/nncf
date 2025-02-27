@@ -38,7 +38,7 @@ class MinMaxRangeEstimator(Algorithm):
             for the given model.
         :param subset_size: Size of a subset to calculate activations statistics used
             for quantization, defaults to 300.
-        :param inplace_statistics: Defines wheather to calculate quantizers statistics
+        :param inplace_statistics: Defines whether to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
         :param batchwise_statistics: Determines whether quantizer statistics should be calculated

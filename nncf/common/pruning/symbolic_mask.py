@@ -18,7 +18,7 @@ from nncf.common.tensor import NNCFTensor
 
 class SymbolicMaskProducer:
     """
-    Container of information about a NNCFNode which is produsing a symbolic mask.
+    Container of information about a NNCFNode which is producing a symbolic mask.
     NNCFNode produced a (symbolic or not) mask means this mask was set as an output
     mask to this NNCFNode during (symbolic or not) mask propagation.
     """
@@ -152,7 +152,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
         if any(shape <= 0 for shape in output_shapes) or tensor.shape[0] != sum(output_shapes):
             msg = (
                 "Symbolic mask split was called with"
-                f"invalid parammeters: input mask shape: {tensor.shape[0]}, output masks shapes: {output_shapes}"
+                f"invalid parameters: input mask shape: {tensor.shape[0]}, output masks shapes: {output_shapes}"
             )
             raise AssertionError(msg)
 
