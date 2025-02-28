@@ -20,9 +20,12 @@ from torch import nn
 from torch.nn import Module
 
 import nncf
+import nncf.torch.graph.operator_metatypes as om
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.logging import nncf_logger
 from nncf.common.scopes import matches_any
 from nncf.torch.dynamic_graph.scope import Scope
@@ -467,3 +470,46 @@ def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
         # The model had no parameters at all, assume FP32
         dtype = torch.float32
     return dtype
+
+
+def get_weight_nodes_in_inference_grpah(
+    inference_nncf_graph: NNCFGraph, mat_mul_metatypes: List[om.PTOperatorMetatype]
+) -> List[NNCFNode]:
+    """
+    Returns nodes that have weights.
+
+    :param nncf_graph: Instance of inference NNCFGraph,
+        wich does not contain shape of and constant subgraphs.
+    :return: All nodes with weights.
+    """
+    weight_nodes_candidates = [
+        node
+        for node in inference_nncf_graph.get_all_nodes()
+        if issubclass(node.metatype, om.PTOperatorMetatype) and node.metatype.weight_port_ids
+    ]
+    weight_nodes = []
+    for node in weight_nodes_candidates:
+        if node.metatype in mat_mul_metatypes and not is_matmul_with_constant_in_inference_graph(
+            node, inference_nncf_graph
+        ):
+            continue
+        weight_nodes.append(node)
+    return weight_nodes
+
+
+def is_matmul_with_constant_in_inference_graph(node: NNCFNode, inference_nncf_graph: NNCFGraph) -> bool:
+    """
+    Determines whether the given node in the NNCF graph represents a matmul with a constant input.
+
+    :param node: A NNCFNode instance.
+    :param inference_nncf_graph: An inference NNCFGraph instance.
+    :return: True if given node is a matmul with a constant input, False otherwise.
+    """
+    if node.metatype == om.PTLinearMetatype:
+        return True
+
+    # Inference graph does not containt constans, so
+    # any missed input edge means it is a constant branch.
+    return node.metatype in [om.PTMatMulMetatype, om.PTAddmmMetatype] and len(
+        inference_nncf_graph.get_input_edges(node)
+    ) < len(node.metatype.weight_port_ids)
