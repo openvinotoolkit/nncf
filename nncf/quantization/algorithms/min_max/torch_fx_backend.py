@@ -49,6 +49,7 @@ from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
+from nncf.torch.utils import get_weight_nodes_in_inference_grpah
 
 
 class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -304,18 +305,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
         return set()
 
-    def get_weight_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        weight_nodes_candidates = [
-            node
-            for node in nncf_graph.get_all_nodes()
-            if issubclass(node.metatype, om.PTOperatorMetatype) and node.metatype.weight_port_ids
-        ]
-        weight_nodes = []
-        for node in weight_nodes_candidates:
-            if node.metatype in self.mat_mul_metatypes and not self.is_matmul_with_constant(node, nncf_graph):
-                continue
-            weight_nodes.append(node)
-        return weight_nodes
+    def get_weight_nodes(self, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        return get_weight_nodes_in_inference_grpah(inference_nncf_graph, self.mat_mul_metatypes)
 
     def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return node.metatype in self.mat_mul_metatypes and len(get_weight_tensor_port_ids(node, nncf_graph)) > 0
