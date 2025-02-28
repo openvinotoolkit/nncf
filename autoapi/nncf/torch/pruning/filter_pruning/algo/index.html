@@ -414,7 +414,7 @@ need to keep track of statistics on each training batch/step/iteration.</p>
 <dt class="sig sig-object py" id="nncf.torch.pruning.filter_pruning.algo.FilterPruningController.set_pruning_level">
 <span class="sig-name descname"><span class="pre">set_pruning_level</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pruning_level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_batchnorm_adaptation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/pruning/filter_pruning/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.pruning.filter_pruning.algo.FilterPruningController.set_pruning_level" title="Permalink to this definition">#</a></dt>
 <dd><p>Set the global or groupwise pruning level in the model.
-If pruning_level is a float, the correspoding global pruning level is set in the model,
+If pruning_level is a float, the corresponding global pruning level is set in the model,
 either in terms of the percentage of filters pruned or as the percentage of flops
 removed, the latter being true in case the “prune_flops” flag of the controller is
 set to True.

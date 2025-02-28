@@ -79,7 +79,7 @@ Classes
    .. py:method:: set_pruning_level(pruning_level, run_batchnorm_adaptation = False)
 
       Set the global or groupwise pruning level in the model.
-      If pruning_level is a float, the correspoding global pruning level is set in the model,
+      If pruning_level is a float, the corresponding global pruning level is set in the model,
       either in terms of the percentage of filters pruned or as the percentage of flops
       removed, the latter being true in case the "prune_flops" flag of the controller is
       set to True.
