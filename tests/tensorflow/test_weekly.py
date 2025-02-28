@@ -276,9 +276,9 @@ def run_sample(tc, args):
     if "metrics-dump" in args:
         actual_acc = get_actual_acc(args["metrics-dump"])
         ref_acc = tc["expected_accuracy"]
-        assert actual_acc == approx(
-            ref_acc, abs=tc[f"absolute_tolerance_{mode}"]
-        ), "Test accuracy doesn't meet the expected accuracy within threshold."
+        assert actual_acc == approx(ref_acc, abs=tc[f"absolute_tolerance_{mode}"]), (
+            "Test accuracy doesn't meet the expected accuracy within threshold."
+        )
 
 
 def test_weekly_train_eval(_params, tmp_path):

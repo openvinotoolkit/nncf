@@ -889,9 +889,8 @@ class QuantizerPropagationSolver:
     def _get_operator_qconfigs_map(self) -> Dict[Type[OperatorMetatype], Optional[List[QuantizerConfig]]]:
         # TODO (vshampor): ensure that there are no name collisions between ops in different torch subpackages
         #  with the same name
-        retval: Dict[Type[OperatorMetatype], Optional[List[QuantizerConfig]]] = (
-            {}
-        )  # Metas not in retval will correspond to wildcard quantization
+        # Metas not in retval will correspond to wildcard quantization
+        retval: Dict[Type[OperatorMetatype], Optional[List[QuantizerConfig]]] = {}
         if self._hw_config is None:
             for trait, meta_list in self._default_trait_to_metatype_map.items():
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
@@ -1139,9 +1138,9 @@ class QuantizerPropagationSolver:
         for pred_ip_key in preds:
             pred_node = quant_prop_graph.nodes[pred_ip_key]
             pred_node_type = pred_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
-            assert QuantizerPropagationStateGraph.is_insertion_point(
-                pred_node_type
-            ), "Invalid insertion point graph supplied for quantizer propagation!"
+            assert QuantizerPropagationStateGraph.is_insertion_point(pred_node_type), (
+                "Invalid insertion point graph supplied for quantizer propagation!"
+            )
 
             ip = pred_node[QuantizerPropagationStateGraph.QUANT_INSERTION_POINT_DATA_NODE_ATTR]
             input_port_id = ip.input_port_id
@@ -1457,7 +1456,8 @@ class QuantizerPropagationSolver:
 
         merged_qconfig_list_counter = Counter(merged_qconfig_list)
         resulting_branch_qconfig_lists: List[List[QuantizerConfig]] = [
-            None for _ in potential_qconfigs_for_each_branch  # type: ignore[misc]
+            None  # type: ignore[misc]
+            for _ in potential_qconfigs_for_each_branch
         ]
 
         if self._propagation_strategy == QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION:

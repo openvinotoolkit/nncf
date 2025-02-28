@@ -161,7 +161,6 @@ class OpenVINOQuantizer(TorchAOQuantizer):
             self._fill_torch_ao_annotation(edge_or_node, qspec, annotation)
 
         for quantizer_ids in quantization_setup.unified_scale_groups.values():
-
             root_quantizer_id = self._get_unified_scales_root_quantizer_id(
                 nncf_graph, quantizer_ids, quantization_setup
             )

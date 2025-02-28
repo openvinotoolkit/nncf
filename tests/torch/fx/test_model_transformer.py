@@ -343,8 +343,7 @@ class TestQDQInsertion:
 
         nncf_graph = GraphConverter.create_nncf_graph(captured_model)
         ref_name = (
-            f"qdq_insert_{_target_point_to_str(target_point)}"
-            f"_{'per_channel' if is_per_channel else 'per_tensor'}.dot"
+            f"qdq_insert_{_target_point_to_str(target_point)}_{'per_channel' if is_per_channel else 'per_tensor'}.dot"
         )
         check_graph(
             nncf_graph,

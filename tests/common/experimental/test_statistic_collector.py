@@ -476,6 +476,6 @@ class TemplateTestStatisticCollector:
         # Register new input after clearing cache
         collector.register_input_for_all_reducers(Tensor(np.array(8)))
         statistics = collector.get_statistics()
-        assert statistics == {
-            "container_key": Tensor(np.array(8))
-        }, "Statistics should reflect the new input after clearing cache"
+        assert statistics == {"container_key": Tensor(np.array(8))}, (
+            "Statistics should reflect the new input after clearing cache"
+        )
