@@ -485,6 +485,25 @@ class PTQTestPipeline(BaseTestPipeline):
             self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
         self.run_info.time_compression = time.perf_counter() - start_time
 
+    def _rename_files(self, folder_path, new_name):
+        model_folder = folder_path / "model"
+        bin_file = None
+        xml_file = None
+        for file in os.listdir(model_folder):
+            if file.endswith(".bin"):
+                bin_file = file
+            elif file.endswith(".xml"):
+                xml_file = file
+        if bin_file is None or xml_file is None:
+            return
+        bin_new_path = folder_path / f'{new_name}.bin'
+        xml_new_path = folder_path / f'{new_name}.xml'
+        
+        os.rename(os.path.join(model_folder, bin_file), bin_new_path)
+        os.rename(os.path.join(model_folder, xml_file), xml_new_path)
+
+        os.rmdir(model_folder)
+
     def save_compressed_model(self) -> None:
         """
         Save compressed model to IR.
@@ -500,9 +519,15 @@ class PTQTestPipeline(BaseTestPipeline):
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in FX_BACKENDS:
             exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
-            ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor.cpu(), input=self.input_size)
-            ov_model.reshape(self.input_size)
-            ov.serialize(ov_model, self.path_compressed_ir)
+            # TODO Uncomment these lines after Issue - 162009
+            # ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor.cpu(), input=self.input_size)
+            # ov_model.reshape(self.input_size)
+            # ov.serialize(ov_model, self.path_compressed_ir)
+            # TODO Remove after Issue - 162009
+            torch.export.save(exported_model, self.output_model_dir / "model.pt2")
+            mod = torch.compile(exported_model.module(), backend="openvino", options = {"model_caching" : True, "cache_dir": str(self.output_model_dir)})
+            mod(self.dummy_tensor)
+            self._rename_files(self.output_model_dir, 'model')
 
             if self.backend == BackendType.CUDA_FX_TORCH:
                 self.model = self.model.cuda()

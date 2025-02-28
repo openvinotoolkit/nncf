@@ -130,8 +130,11 @@ class ImageClassificationTorchvision(ImageClassificationBase):
 
         if self.backend in FX_BACKENDS:
             exported_model = torch.export.export(self.model.cpu(), (self.dummy_tensor.cpu(),))
-            ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor, input=self.input_size)
-            ov.serialize(ov_model, self.fp32_model_dir / "fx_model_fp32.xml")
+            # TODO Uncomment these lines after Issue - 162009
+            # ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor, input=self.input_size) 
+            # ov.serialize(ov_model, self.fp32_model_dir / "fx_model_fp32.xml")
+            # TODO Remove after Issue - 162009
+            torch.export.save(exported_model, self.fp32_model_dir / "fx_model_fp32.pt2")
 
             if self.backend is BackendType.CUDA_FX_TORCH:
                 self.model = self.model.cuda()
