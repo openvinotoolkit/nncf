@@ -76,8 +76,9 @@ class PTOperatorMetatype(OperatorMetatype):
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         output = set()
-        for _, function_names in cls.module_to_function_names.items():
+        for namespace, function_names in cls.module_to_function_names.items():
             output = output.union(function_names)
+            output = output.union(f"{namespace.value}.{i}" for i in function_names)
         if cls.external_op_names is not None:
             output = output.union(cls.external_op_names)
         return list(output)
@@ -988,7 +989,7 @@ class PTEmbeddingMetatype(PTOperatorMetatype):
 
 
 @FX_OPERATOR_METATYPES.register()
-class PTAtenEmbeddingMetatype(OperatorMetatype):
+class PTAtenEmbeddingMetatype(PTOperatorMetatype):
     name = "EmbeddingOp"
     module_to_function_names = {NamespaceTarget.ATEN: ["embedding"]}
     hw_config_names = [HWConfigOpName.EMBEDDING]

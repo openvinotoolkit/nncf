@@ -95,10 +95,10 @@ class GraphConverter:
             else:
                 # TODO(dlyakhov): get correct nodes types from this nodes as well
                 node_type = str(node.target)
-            node_metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_func(node_type)
+            node_metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
             # For FX specific metatypes not registered in PT operator metatype
             node_metatype = (
-                FX_OPERATOR_METATYPES.get_operator_metatype_by_func(node_type)
+                FX_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
                 if node_metatype == UnknownMetatype
                 else node_metatype
             )
