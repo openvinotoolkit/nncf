@@ -387,7 +387,7 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
     def forward(self, x: Union[torch.Tensor, tuple]):
         """
         Method that unwraps return types if it is needed
-        before acutal quantization forward impl
+        before actual quantization forward impl
         """
         x_unwrapped = maybe_get_values_from_torch_return_type(x)
         result = self._forward_impl(x_unwrapped)

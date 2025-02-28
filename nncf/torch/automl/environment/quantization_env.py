@@ -294,7 +294,7 @@ class QuantizationEnv:
         # By design, AutoQ requires quantizers in execution order.
         # RL assumes that state satisfies Markov assumption in which
         # the future is independent of the past given current state.
-        # Stated differently, curret state should represent well of historical dynamics.
+        # Stated differently, current state should represent well of historical dynamics.
         # Given sequential nature of NN, state transition in the order of
         # quantizer being executed is a natural design to conform the assumption.
         quantizers_in_exec_order = []

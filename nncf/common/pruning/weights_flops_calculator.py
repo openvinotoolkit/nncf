@@ -69,10 +69,10 @@ class WeightsFlopsCalculator:
         :return number of FLOPs for the model
                 number of weights (params) in the model
         """
-        flops_pers_node, weights_per_node = self.count_flops_and_weights_per_node(
+        flops_per_node, weights_per_node = self.count_flops_and_weights_per_node(
             graph, output_shapes, input_channels, output_channels, kernel_sizes, op_addresses_to_skip
         )
-        return sum(flops_pers_node.values()), sum(weights_per_node.values())
+        return sum(flops_per_node.values()), sum(weights_per_node.values())
 
     def count_flops_and_weights_per_node(
         self,

@@ -97,8 +97,7 @@ def quantize_impl(
     else:
         fq_weights_transformation(quantized_model)
 
-    # Magic. Without this call compiled model
-    # is not preformant
+    # Magic. Without this call compiled model is not performant
     quantized_model = GraphModule(quantized_model, quantized_model.graph)
 
     quantized_model = _fold_conv_bn_qat(quantized_model)

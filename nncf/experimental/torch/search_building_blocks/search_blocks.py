@@ -658,17 +658,17 @@ def get_all_node_op_addresses_in_block(graph: NNCFGraph, block: BuildingBlock) -
 
 
 def get_all_modules_in_blocks(
-    compressed_model: NNCFNetwork, op_adresses_in_blocks: Set[OperationAddress]
+    compressed_model: NNCFNetwork, op_addresses_in_blocks: Set[OperationAddress]
 ) -> List[torch.nn.Module]:
     """
     Returns set of all modules included in the block.
 
     :param compressed_model: Target model.
-    :param op_adresses_in_blocks: Set of operation addresses for building block.
+    :param op_addresses_in_blocks: Set of operation addresses for building block.
     :return: List of module for building block.
     """
     modules = []
-    for op_address in op_adresses_in_blocks:
+    for op_address in op_addresses_in_blocks:
         if op_address.operator_name in NNCF_MODULES_OP_NAMES:
             modules.append(compressed_model.nncf.get_module_by_scope(op_address.scope_in_model))
     return modules

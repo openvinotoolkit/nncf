@@ -56,11 +56,11 @@ class NNCFPruningBaseTensorProcessor:
     @abstractmethod
     def repeat(cls, tensor: NNCFTensor, repeats: int) -> NNCFTensor:
         """
-        Successively repeat each element of given NNCFTesnor.
+        Successively repeat each element of given NNCFTensor.
 
         :param tensor: Given NNCFTensor.
         :param repeats: The number of repetitions for each element.
-        :return: NNCFTensor with repited elements.
+        :return: NNCFTensor with repeated elements.
         """
 
     @classmethod
@@ -78,7 +78,7 @@ class NNCFPruningBaseTensorProcessor:
     @abstractmethod
     def split(cls, tensor: NNCFTensor, output_shapes: List[int]) -> List[NNCFTensor]:
         """
-        Split/chunk NNCFTensor into chunks along an exsiting dimension.
+        Split/chunk NNCFTensor into chunks along an existing dimension.
 
         :param tensor: Given NNCFTensor.
         :param output_shapes: Given shapes of the output masks
