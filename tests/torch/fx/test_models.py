@@ -161,7 +161,7 @@ TEST_MODELS_QUANIZED = (
     (
         ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
         {"model_type": nncf.ModelType.TRANSFORMER},
-        [(4, 4), (2, 2)],
+        [(5, 5), (2, 2)],
     ),
     (
         ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
