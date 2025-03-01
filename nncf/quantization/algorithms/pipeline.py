@@ -36,7 +36,7 @@ def collect_statistics(
 
     :param statistic_points: Statistic points that need to be collected.
     :param model: A model.
-    :param graph: A graph assosiated with a model.
+    :param graph: A graph associated with a model.
     :param dataset: A dataset.
     :return: Collected statistics.
     """
@@ -105,7 +105,7 @@ class Pipeline:
         :param step_index: Zero-based index of the pipeline step that should be executed
         :param step_statistics: Statistics required to execute a pipeline step.
         :param model: A model to which a pipeline step will be applied.
-        :param graph: A graph assosiated with a model.
+        :param graph: A graph associated with a model.
         :return: The updated model after executing the pipeline step.
         """
         current_model = model
@@ -134,7 +134,7 @@ class Pipeline:
         :param model: This is the model after the (start_step_index - 1)-th pipeline
             step, or the initial model if start_step_index is 0.
         :param dataset: A dataset that holds the data items for pipeline steps.
-        :param graph: A graph assosiated with a model.
+        :param graph: A graph associated with a model.
         :param start_step_index: Zero-based pipeline step index from which the pipeline
             should be executed.
         :param step_index_to_statistics: A mapping from pipeline step index to statistics
@@ -175,7 +175,7 @@ class Pipeline:
 
         :param step_index: Zero-based index of the pipeline step.
         :param model: A model.
-        :param graph: A graph assosiated with a model.
+        :param graph: A graph associated with a model.
         :return: Statistics that should be collected to execute `step_index`-th pipeline step.
         """
         container = StatisticPointsContainer()

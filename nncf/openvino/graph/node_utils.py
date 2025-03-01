@@ -465,10 +465,10 @@ def get_inplace_mean_per_ch(axis: int) -> InplaceInsertionFnType:
 
         keeped_dims = transposed_shape[:2]
         keeped_dims = [0 if dim < 0 else dim for dim in keeped_dims]
-        squized_dims = -1 if -1 in transposed_shape[2:] else np.prod(transposed_shape[2:])
+        squeezed_dims = -1 if -1 in transposed_shape[2:] else np.prod(transposed_shape[2:])
         reshape_op = opset.reshape(
             reshape_input_node.output(output_port_id),
-            output_shape=np.array((keeped_dims[0], keeped_dims[1], squized_dims)),
+            output_shape=np.array((keeped_dims[0], keeped_dims[1], squeezed_dims)),
             special_zero=True,
         )
         return opset.reduce_mean(
@@ -500,7 +500,7 @@ def get_reducer_output_node_names(
         used for reduction.
     :param port_id: Target port id of the target node.
     :param fn_output_port_id: Port id of the reducer subgraph.
-    :param inplace: Wheather reducer calculated inplace or not.
+    :param inplace: Whether reducer calculated inplace or not.
     :return: Output names to feed to a reducer node.
     """
     if inplace:

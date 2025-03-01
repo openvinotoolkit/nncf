@@ -354,7 +354,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         For example quantizer can
         a) decompose a compound operator like scaled dot product attention,
         into bmm and softmax if quantizer knows how to quantize bmm/softmax but not sdpa
-        or b) transform scalars to tensor to allow quantizing scalares.
+        or b) transform scalars to tensor to allow quantizing scalars.
 
         Note: this is an optional method
 

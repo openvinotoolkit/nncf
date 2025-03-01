@@ -60,14 +60,14 @@ class GradientsCalculator:
         criterion: _Loss,
         data_loader: PTInitializingDataLoader,
         num_data_iter: int,
-        paramerter_handler: ParameterHandler,
+        parameter_handler: ParameterHandler,
     ):
         self._model = model
         self._criterion_fn = criterion_fn
         self._criterion = criterion
         self._data_loader = data_loader
         self._num_data_iter = num_data_iter
-        self._parameter_handler = paramerter_handler
+        self._parameter_handler = parameter_handler
         self.num_iter = 0
 
     def __iter__(self):

@@ -162,8 +162,8 @@ class OVModelTransformer(ModelTransformer):
         """
         Collects extra model outputs based on transformations.
 
-        :param transformations: lisf of the OVOutputInsertionCommand.
-        :return: list of tuples with ov.Output & port_id.
+        :param transformations: List of the OVOutputInsertionCommand.
+        :return: List of tuples with ov.Output & port_id.
         """
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         extra_model_outputs = []
@@ -681,7 +681,7 @@ class OVModelTransformer(ModelTransformer):
         """
         Applies inplace fn insertion transformation to the model.
 
-        :param transformations: lisf of the OVInplaceFnInsertionCommand.
+        :param transformations: List of the OVInplaceFnInsertionCommand.
         :returns: Transformed model.
         """
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)

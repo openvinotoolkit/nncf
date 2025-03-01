@@ -69,7 +69,7 @@ class PTStatisticsAggregator(StatisticsAggregator):
     def _get_merged_statistic_points(
         statistic_points: StatisticPointsContainer, model: TModel, graph: NNCFGraph
     ) -> StatisticPointsContainer:
-        # TODO: mirgate to experimental statistic collector and use common merging algorithm
+        # TODO: migrate to experimental statistic collector and use common merging algorithm
         return statistic_points
 
     @staticmethod

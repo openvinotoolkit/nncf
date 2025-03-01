@@ -180,7 +180,7 @@ class FunctionHookMode(TorchFunctionMode):
         super().__enter__()  # type: ignore
         if self.nested_enter_count == 0:
             # Wrap _call_impl function of instance each module.
-            # Note: __call__ can`t not be overrided for instance, the function can be override only in class namespace.
+            # Note: __call__ can`t not be overridden for instance, the function can be override only in class namespace.
             logger.debug("FunctionHookMode.__enter__: wrap _call_impl function")
             for _, module in self.model.named_modules():
                 module._call_impl = types.MethodType(self._get_wrapped_call(module._call_impl), module)

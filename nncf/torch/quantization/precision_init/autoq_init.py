@@ -453,7 +453,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
     def _generate_tensorboard_logging_string(
         self, bit_stats_df: pd.DataFrame, master_df: pd.DataFrame, info_tuple: Tuple, skip_constraint=False
     ) -> str:
-        qdf = master_df  # For readibility
+        qdf = master_df  # For readability
         episode, reward, accuracy, model_ratio, bop_ratio = info_tuple
 
         text_string = bit_stats_df.to_markdown() + "\n\n\n"

@@ -80,7 +80,7 @@ DEFAULT_QCONFIG = QuantizerConfig(
 @dataclasses.dataclass
 class ModeBasedDefaults:
     """
-    Contains default values that should be set in case of abscense.
+    Contains default values that should be set in case of absence.
     """
 
     overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
@@ -176,7 +176,7 @@ class MinMaxQuantization(Algorithm):
             fix for the 8-bit quantization.
         :param quantize_outputs: Whether to insert additional quantizers right before
             each of the model outputs.
-        :param inplace_statistics: Defines wheather to calculate quantizers statistics
+        :param inplace_statistics: Defines whether to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
         :param batchwise_statistics: Determines whether quantizer statistics should be calculated
@@ -509,7 +509,7 @@ class MinMaxQuantization(Algorithm):
         Returns statistic collector.
 
         :param range_estimator_params: Parameters that specify estimators types.
-        :param use_abs_max: Wheather reduce absolute values of input tensors or not.
+        :param use_abs_max: Whether reduce absolute values of input tensors or not.
         :param reduction_axes: Axes for reducer.
         :param aggregation_axes: Axes for aggregator.
         :param inplace: Whether to calculate statistic inplace or not.
