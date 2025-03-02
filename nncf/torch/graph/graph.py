@@ -99,7 +99,7 @@ class PTNNCFGraph(NNCFGraph):
         Requires MultipleInputLayerAttributes for nodes with several inputs and
         right `num_expected_input_edges` parameter setted for nncf nodes metatypes.
 
-        :return: List of NNCFNodes that are identified as diconected.
+        :return: List of NNCFNodes that are identified as disconnected.
         """
         input_nodes = set()
         for node in self.get_all_nodes():
@@ -112,6 +112,6 @@ class PTNNCFGraph(NNCFGraph):
                 input_edges = self.get_input_edges(node)
                 if len(input_edges) < num_expected_input_edges:
                     # If node has missed input edges we assume this node is an input node
-                    # that was disconected from an activation input.
+                    # that was disconnected from an activation input.
                     input_nodes.add(node)
         return list(input_nodes)

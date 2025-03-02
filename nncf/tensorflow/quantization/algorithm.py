@@ -317,9 +317,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         if self._target_device in ["ANY", "CPU", "GPU"] or self._target_device == "TRIAL" and preset is not None:
             preset = QuantizationPreset(quant_config.get("preset", "performance"))
             params_dict = preset.get_params_configured_by_preset(quantizer_group)
-            overriden_params = params_dict.keys() & params_dict_from_config.keys()
-            if overriden_params:
-                nncf_logger.info(f"Preset quantizer parameters {overriden_params} explicitly overridden by config.")
+            overridden_params = params_dict.keys() & params_dict_from_config.keys()
+            if overridden_params:
+                nncf_logger.info(f"Preset quantizer parameters {overridden_params} explicitly overridden by config.")
         params_dict.update(params_dict_from_config)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
         self.ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get("ignored_scopes", [])

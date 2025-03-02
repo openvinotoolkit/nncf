@@ -215,9 +215,9 @@ class QuantizationEnv:
             msg = "Q.Env Master Dataframe has null value(s)"
             raise ValueError(msg)
 
-        assert len(self.quantizer_table) == len(
-            self.qctrl.all_quantizations
-        ), "Number of Quantizer is not tally between quantizer table and quantization controller"
+        assert len(self.quantizer_table) == len(self.qctrl.all_quantizations), (
+            "Number of Quantizer is not tally between quantizer table and quantization controller"
+        )
 
         # MinMaxScaler for State Embedding
         self.state_scaler = MinMaxScaler()
@@ -287,14 +287,14 @@ class QuantizationEnv:
         for qid in self.qctrl.all_quantizations:
             adjq_gid_map[qid] = self.groups_of_adjacent_quantizers.get_group_id_for_quantizer(qid)
 
-        assert (
-            len(set(self.qconfig_space_map.keys()) - set(adjq_gid_map.keys())) == 0
-        ), "both qconfig_space_map and adjq_gid_map must have exact keys."
+        assert len(set(self.qconfig_space_map.keys()) - set(adjq_gid_map.keys())) == 0, (
+            "both qconfig_space_map and adjq_gid_map must have exact keys."
+        )
 
         # By design, AutoQ requires quantizers in execution order.
         # RL assumes that state satisfies Markov assumption in which
         # the future is independent of the past given current state.
-        # Stated differently, curret state should represent well of historical dynamics.
+        # Stated differently, current state should represent well of historical dynamics.
         # Given sequential nature of NN, state transition in the order of
         # quantizer being executed is a natural design to conform the assumption.
         quantizers_in_exec_order = []
@@ -486,9 +486,9 @@ class QuantizationEnv:
         return quantized_score
 
     def _get_quantizer_bitwidth(self) -> Dict[BaseQuantizer, int]:
-        assert (
-            len(set(self.model_bitwidth_space) - set(self.master_df.action.values)) >= 0
-        ), "there is bitwidth choice not within model bitwidth space"
+        assert len(set(self.model_bitwidth_space) - set(self.master_df.action.values)) >= 0, (
+            "there is bitwidth choice not within model bitwidth space"
+        )
         return OrderedDict(zip(self.master_df.qid_obj, self.master_df.action))
 
     def _constrain_model_size(self, collected_strategy: List, skip=False) -> List:

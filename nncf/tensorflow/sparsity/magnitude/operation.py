@@ -43,7 +43,7 @@ class BinaryMask(NNCFOperation):
         """
         Returns binary mask from weights of the operation.
 
-        :param op_weights: Weights of the operaton.
+        :param op_weights: Weights of the operation.
         :return: Binary mask.
         """
         return op_weights["mask"]

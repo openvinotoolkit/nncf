@@ -36,7 +36,6 @@ from nncf.torch.tensor_statistics.collectors import get_raw_stat_collector
 
 
 class FXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
-
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
         return get_target_point(target_type, target_node_name, port_id)

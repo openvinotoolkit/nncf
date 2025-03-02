@@ -94,9 +94,9 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
             ref_value = torch.tensor(ref_value)
             actual_data = data_map[names_map[ref_names]].data
             assert actual_data.shape == ref_value.shape
-            assert torch.all(
-                torch.isclose(actual_data, ref_value, rtol=1e-4)
-            ), f"{ref_names}: {actual_data=} != {ref_value=}"
+            assert torch.all(torch.isclose(actual_data, ref_value, rtol=1e-4)), (
+                f"{ref_names}: {actual_data=} != {ref_value=}"
+            )
 
     @pytest.mark.parametrize(
         "node_metatype, layer_attributes, port_id, reference_value",

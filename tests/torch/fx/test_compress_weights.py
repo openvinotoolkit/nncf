@@ -163,9 +163,9 @@ def test_compressed_model_inference(mode):
     compressed_model = compress_weights(exported_model, mode=mode, **kwargs)
     compressed_model_outputs = compressed_model(input_ids)
 
-    assert (
-        exported_model_output.shape == compressed_model_outputs.shape
-    ), "Compressed model output shape is not equal to the model output shape"
+    assert exported_model_output.shape == compressed_model_outputs.shape, (
+        "Compressed model output shape is not equal to the model output shape"
+    )
     assert torch.all(torch.isclose(exported_model_output, compressed_model_outputs, atol=1)).item()
 
 

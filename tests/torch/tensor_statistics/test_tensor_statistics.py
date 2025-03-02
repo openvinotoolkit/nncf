@@ -225,7 +225,6 @@ class TestCollectedStatistics:
 
 
 class TestCollectorTensorProcessor:
-
     def test_unstack(self):
         # Unstack tensor with dimensions
         tensor1 = torch.tensor([1.0])

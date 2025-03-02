@@ -128,7 +128,6 @@ sparsify_activations_algorithm_test_descs = [
 @pytest.mark.parametrize("compress_weights", [False, True], scope="class")
 @pytest.mark.parametrize("use_cuda", [False, True], ids=["cpu", "cuda"], scope="class")
 class TestSparsifyActivationsAlgorithm:
-
     @pytest.fixture(autouse=True, scope="class")
     def setup(self, request, desc: SparsifyActivationsAlgorithmTestDesc, compress_weights: bool, use_cuda: bool):
         if use_cuda and not torch.cuda.is_available():

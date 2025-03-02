@@ -83,7 +83,7 @@ class TracedTensorMixin:
 
         :param tensor: The input tensor.
         :param tensor_meta: The metadata associated with the tensor.
-        :return: The patched ternsor.
+        :return: The patched tensor.
         """
         if not isinstance(tensor, TracedTensorMixin):
             original_class = tensor.__class__

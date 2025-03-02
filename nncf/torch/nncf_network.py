@@ -829,12 +829,12 @@ class NNCFNetworkInterface(torch.nn.Module):
             :param hook: External op call hook to check correctness.
             :param info: Info to log in case op call hook references are broken.
             """
-            assert hasattr(
-                self, hook._storage_name
-            ), f"Storage name {hook._storage_name} is not registered. Info: {info}"
-            assert hook._storage_key in getattr(
-                self, hook._storage_name
-            ), f"Key {hook._storage_key} is not registered in {hook._storage_name}. Info: {info}"
+            assert hasattr(self, hook._storage_name), (
+                f"Storage name {hook._storage_name} is not registered. Info: {info}"
+            )
+            assert hook._storage_key in getattr(self, hook._storage_name), (
+                f"Key {hook._storage_key} is not registered in {hook._storage_name}. Info: {info}"
+            )
 
         context_hooks = defaultdict(lambda: defaultdict(list))
         transformation_layout = PTTransformationLayout()

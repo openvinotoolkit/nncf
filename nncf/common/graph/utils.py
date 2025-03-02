@@ -203,7 +203,7 @@ def get_bias_shape_legacy(layer_attributes: WeightedLayerAttributes) -> int:
 
 def get_num_filters_legacy(layer_attributes: WeightedLayerAttributes) -> int:
     """
-    Returns hard-coded number of filters for the given layer attribues.
+    Returns hard-coded number of filters for the given layer attributes.
     Applicable only for eager PyTorch and Tensorflow models.
 
     :param layer_attributes: Layer attributes of a NNCFNode.

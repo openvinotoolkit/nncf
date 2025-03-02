@@ -42,17 +42,17 @@ class TemplateTestMixedPrecisionAlgoBackend:
     def check_aggregator(self, collector: TensorCollector, expected_aggregator_type, subset_size: int):
         assert len(collector.aggregators) == 1, "Collector should have exactly one aggregator."
         _, aggregator = collector.aggregators.popitem()
-        assert isinstance(
-            aggregator, expected_aggregator_type
-        ), f"Expected aggregator of type {expected_aggregator_type.__name__}, got {type(aggregator).__name__}."
+        assert isinstance(aggregator, expected_aggregator_type), (
+            f"Expected aggregator of type {expected_aggregator_type.__name__}, got {type(aggregator).__name__}."
+        )
         assert aggregator.num_samples == subset_size, "Aggregator num_samples does not match the provided subset size."
 
     def check_reducer(self, collector: TensorCollector, expected_reducer_type):
         assert len(collector.reducers) == 1
         reducer = collector.reducers.pop()
-        assert isinstance(
-            reducer, expected_reducer_type
-        ), f"Expected reducer of type {expected_reducer_type.__name__}, got {type(reducer).__name__}."
+        assert isinstance(reducer, expected_reducer_type), (
+            f"Expected reducer of type {expected_reducer_type.__name__}, got {type(reducer).__name__}."
+        )
 
     @pytest.mark.parametrize("subset_size", [1, 10, None])
     @pytest.mark.parametrize(

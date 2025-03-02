@@ -79,7 +79,9 @@ def get_weight_compression_configuration(
     group_size = (
         -1
         if group_size is None and mode in INT8_MODES
-        else 128 if group_size is None and mode in NON_INT8_MODES else group_size
+        else 128
+        if group_size is None and mode in NON_INT8_MODES
+        else group_size
     )
 
     return {
