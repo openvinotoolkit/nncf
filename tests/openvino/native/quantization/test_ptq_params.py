@@ -27,6 +27,7 @@ from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.parameters import TargetDevice
+from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 from nncf.scopes import IgnoredScope
@@ -48,11 +49,22 @@ def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPatter
     return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.OPENVINO, device=device)
 
 
-@pytest.mark.parametrize("target_device", [TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU])
+@pytest.mark.parametrize("target_device", [TargetDevice.CPU, TargetDevice.GPU])
 def test_target_device(target_device):
     min_max_algo = MinMaxQuantization(target_device=target_device)
     min_max_algo._backend_entity = OVMinMaxAlgoBackend()
     assert min_max_algo._target_device.value == HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value]
+
+
+@pytest.mark.parametrize("num_bits, ref_hw_target_device", zip([8, 4], [TargetDevice.CPU, TargetDevice.NPU]))
+def test_npu_target_device(num_bits, ref_hw_target_device):
+    min_max_algo = MinMaxQuantization(
+        target_device=TargetDevice.NPU,
+        activations_quantization_params=QuantizationParameters(num_bits=num_bits),
+        weights_quantization_params=QuantizationParameters(num_bits=num_bits),
+    )
+    min_max_algo._backend_entity = OVMinMaxAlgoBackend()
+    assert min_max_algo._target_device.value == HW_CONFIG_TYPE_TARGET_DEVICE_MAP[ref_hw_target_device.value]
 
 
 class TestPTQParams(TemplateTestPTQParams):
