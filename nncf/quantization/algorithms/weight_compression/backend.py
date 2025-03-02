@@ -248,6 +248,12 @@ class WeightCompressionAlgoBackend(ABC):
 
     @staticmethod
     def get_input_hidden_dim(input_node: NNCFNode) -> int:
+        """
+        Returns the index of the hidden dimension in the shape of the input node.
+
+        :param input_node: The input node.
+        :return: The index of the hidden dimension in the shape of the input node.
+        """
         return -1
 
 
