@@ -120,7 +120,6 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
     Walks through the indexable container hierarchy of obj and replaces all sub-objects matching a criterion
     with the result of a given function application.
     """
-
     if memo is None:
         memo = set()
 

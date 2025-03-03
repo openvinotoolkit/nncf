@@ -59,7 +59,6 @@ class SmoothQuant(Algorithm):
             The default value for each layer in the ALPHA_MAP.
             Negative value switches off the algorithm for correspondent nodes.
         """
-
         super().__init__()
         self._subset_size = subset_size
         self._inplace_statistics = inplace_statistics
@@ -160,7 +159,9 @@ class SmoothQuant(Algorithm):
                 weight_value = self._backend_entity.get_weight_value(node_to_smooth, model, graph)
                 weights_scale = self._calculate_weight_scale(best_scale, node_to_smooth, weight_value)
                 scaled_weight = weight_value * weights_scale
-                weight_update_command = self._backend_entity.weight_update_command(node_to_smooth, scaled_weight.data)
+                weight_update_command = self._backend_entity.weight_update_command(
+                    node_to_smooth, graph, scaled_weight.data
+                )
                 transformation_layout.register(weight_update_command)
 
             activations_by_output_id = {e.output_port_id: e for e in graph.get_output_edges(source_node)}
@@ -189,7 +190,6 @@ class SmoothQuant(Algorithm):
         :param quantile: Base quantile value.
         :return: Calculated base scale value & ratio.
         """
-
         eps = fns.finfo(activations).eps
         scales = fns.power(activations, alpha) / (fns.power(weights, 1 - alpha) + eps)
 
@@ -232,7 +232,6 @@ class SmoothQuant(Algorithm):
         :param act_port: Activation port id.
         :return: List of the TTensor instances.
         """
-
         statistics_for_node = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name,
@@ -392,11 +391,11 @@ class SmoothQuant(Algorithm):
 
     def _create_scale_node_name(self, source_name: str, source_port_id: int) -> str:
         """
-        Returns uniqie scale node name for new layer.
+        Returns unique scale node name for new layer.
 
         :param source_name: Source layer name.
         :param source_port_id: Source port id.
-        :return: Generated uniqie name.
+        :return: Generated unique name.
         """
         scale_node_name = f"{source_name}_{source_port_id}"
         unique_index = self._cached_multiply_names[scale_node_name]

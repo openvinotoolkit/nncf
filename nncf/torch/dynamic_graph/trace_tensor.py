@@ -83,7 +83,7 @@ class TracedTensorMixin:
 
         :param tensor: The input tensor.
         :param tensor_meta: The metadata associated with the tensor.
-        :return: The patched ternsor.
+        :return: The patched tensor.
         """
         if not isinstance(tensor, TracedTensorMixin):
             original_class = tensor.__class__
@@ -124,7 +124,6 @@ class TracedTensor(torch.Tensor, TracedTensorMixin):
         Required for PyTorch 1.7.0 compatibility - the handle_torch_function and __torch_function__
         API in general calls this after a wrapped function call; need to preserve the tensor_meta extensions
         """
-
         return self
 
     # NOTE: This disables the __torch_function__ API altogether when using NNCF.
@@ -182,7 +181,6 @@ class TracedParameter(torch.nn.Parameter, TracedTensorMixin):
         Required for PyTorch 1.7.0 compatibility - the handle_torch_function and __torch_function__
         API in general calls this after a wrapped function call; need to preserve the tensor_meta extensions
         """
-
         return self
 
     # NOTE: This disables the __torch_function__ API altogether when using NNCF.

@@ -131,9 +131,7 @@ def inception_resnet_block(x, scale, block_type, block_idx, activation="relu"):
         branches = [branch_0, branch_1]
     else:
         raise ValueError(
-            "Unknown Inception-ResNet block type. "
-            'Expects "block35", "block17" or "block8", '
-            "but got: " + str(block_type)
+            'Unknown Inception-ResNet block type. Expects "block35", "block17" or "block8", but got: ' + str(block_type)
         )
 
     block_name = block_type + "_" + str(block_idx)

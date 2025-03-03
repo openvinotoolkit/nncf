@@ -179,7 +179,6 @@ class track(Generic[ProgressType]):
             it takes to process sequence elements. Useful when processing time is strongly non-uniform.
         :return: An iterable of the values in the sequence.
         """
-
         self.sequence = sequence
         self.weights = weights
         self.total = sum(self.weights) if self.weights is not None else total

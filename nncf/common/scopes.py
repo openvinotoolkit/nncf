@@ -34,7 +34,6 @@ def matches_any(tested_str: str, strs_to_match_to: Union[Iterable[str], str, Non
     :return: A boolean value specifying whether a tested_str should matches at least one element
         in strs_to_match_to.
     """
-
     if strs_to_match_to is None:
         return False
 
@@ -125,8 +124,7 @@ def check_scopes_in_graph(
 
     if not_matched_ignored_scopes or not_matched_target_scopes:
         err_message = (
-            "No match has been found among the model operations "
-            "for the following ignored/target scope definitions:\n"
+            "No match has been found among the model operations for the following ignored/target scope definitions:\n"
         )
         if not_matched_ignored_scopes:
             err_message += f" - ignored_scope: {not_matched_ignored_scopes}\n"

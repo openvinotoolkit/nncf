@@ -60,7 +60,7 @@ class FXStatisticsAggregator(StatisticsAggregator):
         with torch.no_grad():
             super().collect_statistics(model, graph)
         # All statistics are collected as a dead code,
-        # so eliminate dead core removed statistcs collector
+        # so eliminate dead core removed statistics collector
         # from the target model. No additional code required
         # for that, horay!
         model.graph.eliminate_dead_code()
@@ -72,7 +72,7 @@ class FXStatisticsAggregator(StatisticsAggregator):
     @staticmethod
     def _get_statistic_collector_name(tp: PTTargetPoint, module_to_insert: torch.nn.Module) -> str:
         """
-        Compouses unique statistic collector name according to given target point and module.
+        Composes unique statistic collector name according to given target point and module.
 
         :param tp: Given target point.
         :param module_to_insert: Given statistic collection module.
@@ -118,7 +118,7 @@ class FXStatisticsAggregator(StatisticsAggregator):
     def _get_merged_statistic_points(
         statistic_points: StatisticPointsContainer, model: TModel, graph: NNCFGraph
     ) -> StatisticPointsContainer:
-        # TODO(dlyakhov): mirgate to experimental statistic collector and use common merging algorithm
+        # TODO(dlyakhov): migrate to experimental statistic collector and use common merging algorithm
         return statistic_points
 
     @staticmethod

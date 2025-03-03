@@ -314,13 +314,11 @@ BOOTSTRAP_NAS_SEARCH_SCHEMA = {
         "mutation_prob": with_attributes(NUMBER, description="Mutation probability for genetic algorithm."),
         "acc_delta": with_attributes(
             NUMBER,
-            description="Defines the absolute difference in accuracy that is tolerated "
-            "when looking for a subnetwork.",
+            description="Defines the absolute difference in accuracy that is tolerated when looking for a subnetwork.",
         ),
         "ref_acc": with_attributes(
             NUMBER,
-            description="Defines the reference accuracy from the pre-trained model used "
-            "to generate the super-network.",
+            description="Defines the reference accuracy from the pre-trained model used to generate the super-network.",
         ),
         "aspiration_points": with_attributes(
             ARRAY_OF_NUMBERS, description="Information to indicate the preferred parts of the Pareto front"

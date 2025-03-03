@@ -783,7 +783,6 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         Returns scopes of the operations in the graph which are executed in evaluation mode.
         """
-
         tracer = GraphTracer(dummy_forward_fn)
         result = []
         eval_graph = tracer.trace_graph(model, as_eval=True)
@@ -830,12 +829,12 @@ class NNCFNetworkInterface(torch.nn.Module):
             :param hook: External op call hook to check correctness.
             :param info: Info to log in case op call hook references are broken.
             """
-            assert hasattr(
-                self, hook._storage_name
-            ), f"Storage name {hook._storage_name} is not registered. Info: {info}"
-            assert hook._storage_key in getattr(
-                self, hook._storage_name
-            ), f"Key {hook._storage_key} is not registered in {hook._storage_name}. Info: {info}"
+            assert hasattr(self, hook._storage_name), (
+                f"Storage name {hook._storage_name} is not registered. Info: {info}"
+            )
+            assert hook._storage_key in getattr(self, hook._storage_name), (
+                f"Key {hook._storage_key} is not registered in {hook._storage_name}. Info: {info}"
+            )
 
         context_hooks = defaultdict(lambda: defaultdict(list))
         transformation_layout = PTTransformationLayout()
@@ -1179,7 +1178,6 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         Wraps the original forward call, doing additional actions before and after the call to facilitate model
         graph tracing and calling compression-related hooks.
         """
-
         with self.nncf._compressed_context as ctx:
             ctx.base_module_thread_local_replica = self
 

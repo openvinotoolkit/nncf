@@ -265,7 +265,6 @@ def calculate_convert_parameters(
     :param activation_scale: Factor for calculated activation scale.
     :return: Parameters of the FakeConvert layer.
     """
-
     destination_type_maximum = {FP8Type.E4M3: 448, FP8Type.E5M2: 57344}
 
     max_values = statistics.max_values

@@ -47,9 +47,9 @@ class ONNXModelTransformer(ModelTransformer):
     ZERO_POINT_NAME_PREFIX = "zero_point_"
 
     def __init__(self, model: onnx.ModelProto):
-        infered_model = onnx.shape_inference.infer_shapes(model)
-        super().__init__(infered_model)
-        self.onnx_model_extractor = onnx.utils.Extractor(infered_model)
+        inferred_model = onnx.shape_inference.infer_shapes(model)
+        super().__init__(inferred_model)
+        self.onnx_model_extractor = onnx.utils.Extractor(inferred_model)
 
     def _get_target_edge(
         self,

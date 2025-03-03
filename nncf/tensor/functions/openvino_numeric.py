@@ -17,6 +17,7 @@ from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDeviceType
+from nncf.tensor.definitions import TypeInfo
 from nncf.tensor.functions import numeric
 
 DTYPE_MAP = {
@@ -86,6 +87,11 @@ def _(a: ov.Tensor) -> np.ndarray:
     return a.data
 
 
+@numeric.finfo.register(ov.Tensor)
+def _(a: ov.Tensor) -> TypeInfo:
+    return numeric.finfo(a.data)
+
+
 def _astype_ov(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
     """
     Cast to a different data type using an OpenVINO model.
@@ -93,7 +99,6 @@ def _astype_ov(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:
     :param dtype: Data type to cast to.
     :return: Casted openvino tensor.
     """
-
     from nncf.openvino.optimized_functions import astype
 
     return astype(Tensor(a), dtype).data

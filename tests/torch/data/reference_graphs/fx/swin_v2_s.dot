@@ -2680,7 +2680,7 @@ strict digraph  {
 "2678 adaptive_avg_pool2d" [id=2678, type=adaptive_avg_pool2d];
 "2679 flatten" [id=2679, type=flatten];
 "2680 linear_147" [id=2680, type=linear];
-"2681 output_1" [id=2681, type=output];
+"2681 output" [id=2681, type=output];
 "0 features_1_0_attn_qkv_weight" -> "570 linear_2"  [label="(288, 96)", style=solid];
 "1 features_1_0_attn_proj_weight" -> "595 linear_3"  [label="(96, 96)", style=solid];
 "2 features_1_0_attn_qkv_bias" -> "567 clone"  [label="(288,)", style=solid];
@@ -5606,5 +5606,5 @@ strict digraph  {
 "2677 permute_108" -> "2678 adaptive_avg_pool2d"  [label="(1, 768, 7, 7)", style=solid];
 "2678 adaptive_avg_pool2d" -> "2679 flatten"  [label="(1, 768, 1, 1)", style=solid];
 "2679 flatten" -> "2680 linear_147"  [label="(1, 768)", style=solid];
-"2680 linear_147" -> "2681 output_1"  [label="(1, 1000)", style=solid];
+"2680 linear_147" -> "2681 output"  [label="(1, 1000)", style=solid];
 }

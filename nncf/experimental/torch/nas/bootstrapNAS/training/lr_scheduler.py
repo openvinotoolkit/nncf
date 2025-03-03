@@ -101,7 +101,7 @@ class LRSchedulerParams:
     @classmethod
     def from_dict(cls, lr_scheduler_config: Dict[str, Any]) -> "LRSchedulerParams":
         """
-        Initialize learning rate scheduler parameters storage clas from Dict.
+        Initialize learning rate scheduler parameters storage class from Dict.
         :param lr_scheduler_config: Dict with parameters of learning rate scheduler.
         :return:
         """

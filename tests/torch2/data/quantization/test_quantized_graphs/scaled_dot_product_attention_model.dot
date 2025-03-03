@@ -1,19 +1,19 @@
-strict digraph  {
-query [id=0, metatype=PTInputNoopMetatype, type=nncf_model_input];
-"__nncf_hooks.post_hooks.query__0.0._scale_param_storage" [id=1, metatype=PTConstNoopMetatype, type=nncf_model_const];
-"post_hook__query__0[0]/symmetric_quantize/0" [id=2, metatype=UnknownMetatype, type=symmetric_quantize];
-key [id=3, metatype=PTInputNoopMetatype, type=nncf_model_input];
-"__nncf_hooks.post_hooks.key__0.0._scale_param_storage" [id=4, metatype=PTConstNoopMetatype, type=nncf_model_const];
-"post_hook__key__0[0]/symmetric_quantize/0" [id=5, metatype=UnknownMetatype, type=symmetric_quantize];
-value [id=6, metatype=PTInputNoopMetatype, type=nncf_model_input];
-"/scaled_dot_product_attention/0" [id=7, metatype=PTScaledDotProductAttentionMetatype, type=scaled_dot_product_attention];
-output [id=8, metatype=PTOutputNoopMetatype, type=nncf_model_output];
-query -> "post_hook__query__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 8, 16)"];
-"__nncf_hooks.post_hooks.query__0.0._scale_param_storage" -> "post_hook__query__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(1,)"];
-"post_hook__query__0[0]/symmetric_quantize/0" -> "/scaled_dot_product_attention/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 8, 16)"];
-key -> "post_hook__key__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 8, 16)"];
-"__nncf_hooks.post_hooks.key__0.0._scale_param_storage" -> "post_hook__key__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(1,)"];
-"post_hook__key__0[0]/symmetric_quantize/0" -> "/scaled_dot_product_attention/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 8, 16)"];
-value -> "/scaled_dot_product_attention/0"  [dtype=float, in_port_id=2, out_port_id=0, shape="(1, 8, 16)"];
-"/scaled_dot_product_attention/0" -> output  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 8, 16)"];
+strict digraph {
+query [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
+"__nncf_hooks.post_hooks.query__0.0._scale_param_storage" [id=1, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"post_hook__query__0[0]/symmetric_quantize/0" [id=2, type="symmetric_quantize", metatype=UnknownMetatype];
+key [id=3, type="nncf_model_input", metatype=PTInputNoopMetatype];
+"__nncf_hooks.post_hooks.key__0.0._scale_param_storage" [id=4, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"post_hook__key__0[0]/symmetric_quantize/0" [id=5, type="symmetric_quantize", metatype=UnknownMetatype];
+value [id=6, type="nncf_model_input", metatype=PTInputNoopMetatype];
+"/scaled_dot_product_attention/0" [id=7, type="scaled_dot_product_attention", metatype=PTScaledDotProductAttentionMetatype];
+output [id=8, type="nncf_model_output", metatype=PTOutputNoopMetatype];
+query -> "post_hook__query__0[0]/symmetric_quantize/0" [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.post_hooks.query__0.0._scale_param_storage" -> "post_hook__query__0[0]/symmetric_quantize/0" [dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
+"post_hook__query__0[0]/symmetric_quantize/0" -> "/scaled_dot_product_attention/0" [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
+key -> "post_hook__key__0[0]/symmetric_quantize/0" [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.post_hooks.key__0.0._scale_param_storage" -> "post_hook__key__0[0]/symmetric_quantize/0" [dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
+"post_hook__key__0[0]/symmetric_quantize/0" -> "/scaled_dot_product_attention/0" [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=1];
+value -> "/scaled_dot_product_attention/0" [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=2];
+"/scaled_dot_product_attention/0" -> output [dtype=float, shape="(1, 8, 16)", out_port_id=0, in_port_id=0];
 }

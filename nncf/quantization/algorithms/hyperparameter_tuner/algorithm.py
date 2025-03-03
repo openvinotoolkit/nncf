@@ -345,7 +345,7 @@ class HyperparameterTuner:
 
         :param step_index: Zero-based index of pipeline step that should be prepared.
         :param step_model: A model.
-        :param step_graph: A graph assosiated with a model.
+        :param step_graph: A graph associated with a model.
         :param step_combinations: Combinations that change parameters only for the step_index-th pipeline step.
         """
         # Create a separate pipeline for each combination

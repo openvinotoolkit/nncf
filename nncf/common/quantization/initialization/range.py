@@ -87,7 +87,6 @@ class PerLayerRangeInitConfig(RangeInitConfig):
             specified type of range initialization will be applied. It can be
             quantizers group for activations or weights.
         """
-
         super().__init__(
             range_init_config.init_type, range_init_config.num_init_samples, range_init_config.init_type_specific_params
         )

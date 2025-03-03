@@ -692,14 +692,14 @@ class SearchProblem(Problem):
         self._model = search._model
         self._lower_bound_acc = search.search_params.ref_acc - search.acc_delta
 
-    def _evaluate(self, x: List[float], out: Dict[str, Any], *args, **kargs) -> NoReturn:
+    def _evaluate(self, x: List[float], out: Dict[str, Any], *args, **kwargs) -> NoReturn:
         """
         Evaluates a population of sub-networks.
 
         :param x: set of sub-networks to evaluate.
         :param out: measurements obtained by evaluating sub-networks.
         :param args:
-        :param kargs:
+        :param kwargs:
         :return:
         """
         evaluators_arr = [[] for i in range(len(self._search.evaluator_handlers))]

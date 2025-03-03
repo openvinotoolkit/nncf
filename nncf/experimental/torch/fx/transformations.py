@@ -75,7 +75,7 @@ def _set_new_node_meta(
     model: torch.fx.GraphModule,
 ):
     """
-    Sets correct meta \"val\" value to the new node.
+    Sets correct meta 'val' value to the new node.
 
     :param new_node: The new node.
     :param prev_node: Input node of the new node.
@@ -316,7 +316,6 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
         target node.
     :param quantizer: Quantizer module to inherit quantization parameters from.
     """
-
     # Copied from torch.ao.quantization.quantize_pt2e.convert_pt2e
     # 1. extract information for inserting q/dq node from activation_post_process
     node_type = "call_function"
@@ -515,9 +514,9 @@ def _is_supported_batch_norm_for_training(node: torch.fx.Node):
     return node.target in supported_ops
 
 
-def _get_pattern_replacement_per_channel() -> (
-    Tuple[Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, int, torch.dtype], torch.Tensor]]
-):
+def _get_pattern_replacement_per_channel() -> Tuple[
+    Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, int, torch.dtype], torch.Tensor]
+]:
     """
     Returns the patter and replacement function for the subgraph rewriter to
     match and replace for per_tensor quantization
@@ -538,9 +537,9 @@ def _get_pattern_replacement_per_channel() -> (
     return pattern_per_channel, replacement_graph_per_channel
 
 
-def _get_pattern_replacement_per_tensor() -> (
-    Tuple[Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, torch.dtype], torch.Tensor]]
-):
+def _get_pattern_replacement_per_tensor() -> Tuple[
+    Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, torch.dtype], torch.Tensor]
+]:
     """
     Returns the patter and replacement function for the subgraph rewriter to
     match and replace for per_tensor quantization
@@ -613,7 +612,6 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) 
 
     :param: model: Model to apply transformations to.
     """
-
     for match in matches:
         mul_node = match.replacements[0]
         sub_node = match.replacements[1]

@@ -478,7 +478,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         tolerance: float,
     ) -> TracesPerLayer:
         if self._traces_per_layer_path:
-            return TracesPerLayer(torch.load(self._traces_per_layer_path).to(self._init_device))
+            return TracesPerLayer(torch.load(self._traces_per_layer_path, weights_only=False).to(self._init_device))
 
         quantizers_switcher = QuantizersSwitcher(list(self._all_quantizers_per_scope.values()))
         params_to_restore = self.disable_all_gradients_except_weights_of_quantized_modules(
@@ -523,7 +523,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         :param quantizers_switcher: object that is responsible for enabling and disabling quantizers
         :param model: model to access all parameters
         :param weight_quantizers: modules with quantized weights per scope
-        :param params_to_restore: storage names of the parameters that should restore reguires_grad property
+        :param params_to_restore: storage names of the parameters that should restore requires_grad property
         """
         for wq_info in weight_quantizers.values():
             quantized_module = wq_info.quantized_module

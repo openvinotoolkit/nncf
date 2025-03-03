@@ -51,7 +51,7 @@ class TFTracingContextState:
 
         if model is None and in_call:
             msg = (
-                f"Inconsisten values `{in_call}` and `{model}` for `in_call` and `model` parameters. "
+                f"Inconsistent values `{in_call}` and `{model}` for `in_call` and `model` parameters. "
                 "The `None` value is specified that model is undefined at this moment. This is only "
                 "possible when `in_call` is equal to `False`."
             )

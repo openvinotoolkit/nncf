@@ -53,7 +53,7 @@ The tests results will be saved in `nncf-tests.xml`.
 
 ### test_sanity_sample.py
 
-In this file, you will **test the basic training and evalutation loop in NNCF**. The `generate_config_params` function will generate some test configs that will be tested, and it will be saved into `CONFIG_PARAMS`. One example in `CONFIG_PARAMS` is like: `('classification', '{nncf-dir}/tests/tensorflow/data/configs/resnet50_cifar10_magnitude_sparsity_int8.json', 'cifar10', 'tfrecord')`.
+In this file, you will **test the basic training and evaluation loop in NNCF**. The `generate_config_params` function will generate some test configs that will be tested, and it will be saved into `CONFIG_PARAMS`. One example in `CONFIG_PARAMS` is like: `('classification', '{nncf-dir}/tests/tensorflow/data/configs/resnet50_cifar10_magnitude_sparsity_int8.json', 'cifar10', 'tfrecord')`.
 
 The functions `test_model_eval`, `test_model_train`, `test_trained_model_eval`, or other similar functions are the key functions in this file. It receives parameters from config which is generated as sample, and the variable `main` in this function will get main function which is defined in each task(e.g. for classification: `examples/tensorflow/classification/main.py`). Each function will test the model from checkpoint, or train the model with 1~2 epochs, or test the onnx exporting of the tf model.
 
@@ -91,7 +91,7 @@ pytest --junitxml nncf-tests.xml tests/tensorflow/test_weekly.py -s \
 
 ### test_sota_checkpoints.py
 
-In this file, you can **test whether the trained models from weekly test match the expected performance**. You can see the configurations are written in `sota_checkpoints_eval.json`, which contains the tasks / datasets / topologies. In topologies, it contains model name as a key and various datas such as config file path, ckpt path, target performance based on metric_type, compression method or etc. OV test will extract the `IR` or `frozen graph` from each model and test the extraced graph's accuracy. You can run the test from OV extracted model or eval from tensorflow model as follow:
+In this file, you can **test whether the trained models from weekly test match the expected performance**. You can see the configurations are written in `sota_checkpoints_eval.json`, which contains the tasks / datasets / topologies. In topologies, it contains model name as a key and various datas such as config file path, ckpt path, target performance based on metric_type, compression method or etc. OV test will extract the `IR` or `frozen graph` from each model and test the extracted graph's accuracy. You can run the test from OV extracted model or eval from tensorflow model as follow:
 
 ```bash
 pytest test_sota_checkpoints.py -s \

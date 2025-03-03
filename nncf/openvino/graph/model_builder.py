@@ -184,7 +184,6 @@ class OVModelBuilder:
         :param node_mapping: Original nodes mapping.
         :return: Builded ov.Model based on parameters.
         """
-
         parameters, results = [], []
         clone_nodes = deque()
 

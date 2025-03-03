@@ -79,7 +79,9 @@ def get_weight_compression_configuration(
     group_size = (
         -1
         if group_size is None and mode in INT8_MODES
-        else 128 if group_size is None and mode in NON_INT8_MODES else group_size
+        else 128
+        if group_size is None and mode in NON_INT8_MODES
+        else group_size
     )
 
     return {
@@ -257,6 +259,16 @@ class WeightCompression(Algorithm):
         criterion_cls = MIXED_PRECISION_CRITERIA.get(self._sensitivity_metric)
         self._mixed_precision_algo = criterion_cls(primary_config, self._ratio, self._subset_size)
         self._statistics_path = self._advanced_parameters.statistics_path
+
+        if self._awq:
+            awq_params = self._advanced_parameters.awq_params
+            self.awq_algo = AWQ(
+                awq_params.subset_size,
+                awq_params.percent_to_apply,
+                awq_params.alpha_min,
+                awq_params.alpha_max,
+                awq_params.steps,
+            )
         if self._gptq:
             gptq_params = self._advanced_parameters.gptq_params
             self._gptq_algo = GPTQ(
@@ -586,26 +598,12 @@ class WeightCompression(Algorithm):
             nodes_to_compress = list(
                 filter(lambda node: node.node_name not in nodes_names_to_exclude, nodes_to_compress)
             )
-
         if self._awq:
-            awq_params = self._advanced_parameters.awq_params
-            awq_algo = AWQ(
-                model,
-                self._backend_entity.name_to_node_mapping,
-                all_weight_params,
-                nodes_to_compress,
-                statistics,
-                awq_params.subset_size,
-                awq_params.percent_to_apply,
-                awq_params.alpha_min,
-                awq_params.alpha_max,
-                awq_params.steps,
-            )
-            awq_algo.apply(model, graph)
+            self.awq_algo.apply(model, graph, all_weight_params, nodes_to_compress, statistics, self._backend_entity)
             # After applying AWQ we need to update statistics since AWQ alters the activations
-            statistics = awq_algo.update_statistics(statistics)
+            statistics = self.awq_algo.update_statistics(statistics)
             # del is used to prematurely mark non-necessary data as free for garbage collection
-            del awq_algo
+            del self.awq_algo
 
         scales = {}
         zero_points = {}
@@ -809,7 +807,6 @@ class WeightCompression(Algorithm):
         :param statistic_points: Statistic points object.
         :return: Collected statistics.
         """
-
         # For each node we store statistics in a WCTensorStatistics data-class. It contains the following fields:
         #   mean_values=[mean_value_1, ..., mean_value_n]
         #   shapes=[shape_1, ..., shape_n]

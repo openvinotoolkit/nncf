@@ -60,16 +60,16 @@ the [PEP 8 -- Style Guide for Python Code](https://www.python.org/dev/peps/pep-0
 
 ## 2 Automating Code Formatting
 
-To maintain consistency and readability throughout the codebase, we use the [black](https://github.com/psf/black)
-and [isort](https://github.com/PyCQA/isort) tools for formatting. Before committing any changes,
-it's important to run a pre-commit command to ensure that the code is properly formatted.
+To maintain consistency and readability throughout the codebase, we use the [ruff](https://docs.astral.sh/ruff/)
+tool for formatting. Before committing any changes, it's important to run a pre-commit command to ensure
+that the code is properly formatted.
 You can use the following commands for this:
 
 ```bash
 make pre-commit
 ```
 
-Also recommend configuring your IDE to run Black and isort tools automatically when saving files.
+Also recommend configuring your IDE to run Ruff tools automatically when saving files.
 
 Automatic code formatting is mandatory for all Python files, but you can disable it for specific cases if required:
 
@@ -87,7 +87,7 @@ import b
 import a
 ```
 
-Example for 'black':
+Example for 'ruff format':
 
 ```python
 arr1 = [

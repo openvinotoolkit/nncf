@@ -169,8 +169,7 @@ class ResNet(nn.Module):
             replace_stride_with_dilation = [False, False, False]
         if len(replace_stride_with_dilation) != 3:
             msg = (
-                "replace_stride_with_dilation should be None "
-                f"or a 3-element tuple, got {replace_stride_with_dilation}"
+                f"replace_stride_with_dilation should be None or a 3-element tuple, got {replace_stride_with_dilation}"
             )
             raise ValueError(msg)
         self.groups = groups
@@ -270,7 +269,7 @@ def _resnet(arch, block, layers, pretrained, progress, device, **kwargs):
     model = ResNet(block, layers, **kwargs)
     if pretrained:
         script_dir = os.path.dirname(__file__)
-        state_dict = torch.load(script_dir + "/state_dicts/" + arch + ".pt", map_location=device)
+        state_dict = torch.load(script_dir + "/state_dicts/" + arch + ".pt", map_location=device, weights_only=False)
         model.load_state_dict(state_dict)
     return model
 

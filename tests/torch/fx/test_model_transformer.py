@@ -122,7 +122,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
     (
         (
             ModelExtractionTestCase(
-                ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output_1"])
+                ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output"])
             ),
             False,
             "(conv2d,)",
@@ -131,14 +131,14 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithNotTensorBiasModel,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand(["conv2d"], ["conv2d", "output_1", "conv2d"]),
+                PTModelExtractionCommand(["conv2d"], ["conv2d", "output", "conv2d"]),
             ),
             False,
             "(conv2d, conv2d, conv2d)",
         ),
         (
             ModelExtractionTestCase(
-                ConvolutionWithSeveralOutputs, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output_1"])
+                ConvolutionWithSeveralOutputs, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output"])
             ),
             False,
             "([conv2d, add],)",
@@ -147,14 +147,14 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithSeveralOutputs,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand(["conv2d"], ["conv2d", "output_1", "conv2d"]),
+                PTModelExtractionCommand(["conv2d"], ["conv2d", "output", "conv2d"]),
             ),
             False,
             "(conv2d, [conv2d, add], conv2d)",
         ),
         (
             ModelExtractionTestCase(
-                ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output_1"])
+                ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand(["conv2d"], ["output"])
             ),
             True,
             "(conv2d,)",
@@ -163,7 +163,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithNotTensorBiasModel,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand(["conv2d"], ["conv2d", "output_1", "conv2d"]),
+                PTModelExtractionCommand(["conv2d"], ["conv2d", "output", "conv2d"]),
             ),
             True,
             "(conv2d, conv2d, conv2d)",
@@ -343,8 +343,7 @@ class TestQDQInsertion:
 
         nncf_graph = GraphConverter.create_nncf_graph(captured_model)
         ref_name = (
-            f"qdq_insert_{_target_point_to_str(target_point)}"
-            f"_{'per_channel' if is_per_channel else 'per_tensor'}.dot"
+            f"qdq_insert_{_target_point_to_str(target_point)}_{'per_channel' if is_per_channel else 'per_tensor'}.dot"
         )
         check_graph(
             nncf_graph,
@@ -559,7 +558,7 @@ def test_constant_folding_scalar_clone(use_cuda):
         with disable_patching():
             # Use export function instead of export_for_training to
             # reproduce SWIN model capturing
-            captured_model = torch.export.export(model, args=(ex_input,)).module()
+            captured_model = torch.export.export(model, args=(ex_input,)).run_decompositions(decomp_table={}).module()
     assert captured_model.lifted_tensor_0.device == torch.device("cpu")
 
     folded_model = deepcopy(captured_model)

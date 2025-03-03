@@ -97,7 +97,7 @@ class LayerwiseScheduler:
         :param graph: The graph to be scheduled.
         :param target_nodes: The nodes that are targeted for layer-wise processing.
         :param collect_inputs: If True (default) collects inputs for target nodes
-            oterwise collects outputs of target nodes.
+            otherwise collects outputs of target nodes.
         :return: The scheduled steps for layer-wise processing.
         """
         # Initialize input nodes and create a copy of the graph for inference
