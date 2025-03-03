@@ -149,13 +149,13 @@ def calculate_signed_scale(weight: Tensor, reduction_axes: ReductionAxes, num_bi
     :param num_bits: number of bits in compression.
     :return: Scale tensor.
     """
-    level_high = 2 ** (num_bits - 1)
+    factor = 2 ** (num_bits - 1)
 
     w_abs_min = fns.abs(fns.min(weight, axis=reduction_axes, keepdims=True))
     w_max = fns.max(weight, axis=reduction_axes, keepdims=True)
 
     scale = fns.where(w_abs_min >= w_max, w_abs_min, -w_max)
-    scale /= level_high
+    scale /= factor
 
     eps = fns.finfo(scale).eps
     scale = fns.where(fns.abs(scale) < eps, eps, scale)

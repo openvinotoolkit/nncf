@@ -24,6 +24,7 @@ from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import HessianTensorStatistic
+from nncf.parameters import CompressionFormat
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
@@ -147,6 +148,7 @@ class WeightCompressionAlgoBackend(ABC):
         weight_compression_parameters: Iterable[WeightCompressionParameters],
         precomputed_scales: Dict[str, Tensor] = None,
         precomputed_zero_points: Dict[str, Tensor] = None,
+        compression_format: CompressionFormat = CompressionFormat.DQ,
     ) -> TModel:
         """
         Applies weight compression transformations to the model.

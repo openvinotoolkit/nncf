@@ -31,6 +31,7 @@ from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import BackupMode
+from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
@@ -71,6 +72,7 @@ def get_weight_compression_configuration(
     ignored_scope: Optional[IgnoredScope] = None,
     sensitivity_metric: Optional[SensitivityMetric] = None,
     backup_mode: Optional[BackupMode] = None,
+    compression_format: Optional[CompressionFormat] = None,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> Dict[str, Any]:
     """
@@ -104,6 +106,7 @@ def get_weight_compression_configuration(
             else sensitivity_metric
         ),
         "backup_mode": backup_mode or BackupMode.INT8_ASYM,
+        "compression_format": compression_format or CompressionFormat.DQ,
         "advanced_parameters": advanced_parameters or AdvancedCompressionParameters(),
     }
 
@@ -195,6 +198,7 @@ class WeightCompression(Algorithm):
         gptq: bool,
         lora_correction: bool,
         backup_mode: BackupMode = BackupMode.INT8_ASYM,
+        compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ):
         """
@@ -251,6 +255,7 @@ class WeightCompression(Algorithm):
         self._gptq = gptq
         self._lora_correction = lora_correction
         self._backup_mode = backup_mode
+        self._compression_format = compression_format
         self._advanced_parameters = (
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
@@ -646,6 +651,7 @@ class WeightCompression(Algorithm):
             scales,
             zero_points,
             lora_correction_algo,
+            self._compression_format,
         )
 
         self._backend_entity.dump_parameters(

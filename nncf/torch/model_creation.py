@@ -396,6 +396,7 @@ def load_from_config(model: torch.nn.Module, config: Dict[str, Any], example_inp
         of keywords arguments.
     :return: NNCFNetwork builded from given model with additional modules recovered from given NNCFNetwork config.
     """
-    nncf_network = wrap_model(model, example_input, trace_parameters=config.pop(NNCFNetwork.TRACE_PARAMETERS_KEY))
+    # TODO: why pop?
+    nncf_network = wrap_model(model, example_input, trace_parameters=config[NNCFNetwork.TRACE_PARAMETERS_KEY])
     transformation_layout = deserialize_transformations(config)
     return PTModelTransformer(nncf_network).transform(transformation_layout)

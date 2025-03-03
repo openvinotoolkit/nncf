@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from abc import ABC
 from abc import abstractmethod
 from enum import Enum
@@ -47,12 +46,14 @@ from nncf.torch.quantization.quantize_functions import ExportQuantizeToFakeQuant
 from nncf.torch.quantization.quantize_functions import ExportQuantizeToONNXQuantDequant
 from nncf.torch.quantization.quantize_functions import TuneRange
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize
+from nncf.torch.quantization.quantize_functions import asymmetric_quantize_lora
 from nncf.torch.quantization.quantize_functions import decompress_asymmetric
 from nncf.torch.quantization.quantize_functions import decompress_symmetric
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 from nncf.torch.quantization.quantize_functions import pack_int4
 from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import symmetric_quantize
+from nncf.torch.quantization.quantize_functions import symmetric_quantize_lora
 from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
 from nncf.torch.return_types import maybe_get_values_from_torch_return_type
@@ -71,20 +72,19 @@ class QuantizerExportMode(Enum):
     ONNX_QUANTIZE_DEQUANTIZE_PAIRS = "quantize_dequantize"
 
 
-class PTQSpecStateNames:
-    NUM_BITS = "num_bits"
-    MODE = "mode"
-    SIGNED_TO_FORCE = "signedness_to_force"
-    NARROW_RANGE = "narrow_range"
-    HALF_RANGE = "half_range"
-    SCALE_SHAPE = "scale_shape"
-    LOGARITHM_SCALE = "logarithm_scale"
-    IS_QUANTIZED_ON_EXPORT = "is_quantized_on_export"
-    COMPRESSION_LR_MULTIPLIER = "compression_lr_multiplier"
-
-
 class PTQuantizerSpec(QuantizerSpec):
-    _state_names = PTQSpecStateNames
+    _arg_names = [
+        "num_bits",
+        "mode",
+        "signedness_to_force",
+        "narrow_range",
+        "half_range",
+        "scale_shape",
+        "weight_shape",
+        "logarithm_scale",
+        "is_quantized_on_export",
+        "compression_lr_multiplier",
+    ]
 
     def __init__(
         self,
@@ -94,6 +94,7 @@ class PTQuantizerSpec(QuantizerSpec):
         narrow_range: bool,
         half_range: bool,
         scale_shape: Tuple[int, ...],
+        weight_shape: Tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool = False,
         compression_lr_multiplier: Optional[float] = None,
@@ -108,6 +109,7 @@ class PTQuantizerSpec(QuantizerSpec):
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
         self.per_channel = scale_shape != (1,)
         self.scale_shape = scale_shape
+        self.weight_shape = weight_shape
         self.logarithm_scale = logarithm_scale
         self.compression_lr_multiplier = compression_lr_multiplier
         self.is_quantized_on_export = is_quantized_on_export
@@ -119,6 +121,7 @@ class PTQuantizerSpec(QuantizerSpec):
         narrow_range: bool,
         half_range: bool,
         scale_shape: Tuple[int, ...],
+        weight_shape: Tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool,
         compression_lr_multiplier: Optional[float],
@@ -130,6 +133,7 @@ class PTQuantizerSpec(QuantizerSpec):
             narrow_range,
             half_range,
             scale_shape,
+            weight_shape,
             logarithm_scale,
             is_quantized_on_export,
             compression_lr_multiplier,
@@ -139,37 +143,46 @@ class PTQuantizerSpec(QuantizerSpec):
         return self.__dict__ == other.__dict__
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "PTQuantizationPoint":
+    def from_state(cls, state: Dict[str, Any]) -> "PTQuantizerSpec":
         """
         Creates the object from its state.
 
         :param state: Output of `get_state()` method.
         """
-        kwargs = {
-            cls._state_names.NUM_BITS: state["num_bits"],
-            cls._state_names.MODE: state["mode"],
-            cls._state_names.SIGNED_TO_FORCE: state["signedness_to_force"],
-            cls._state_names.NARROW_RANGE: state["narrow_range"],
-            cls._state_names.HALF_RANGE: state["half_range"],
-            cls._state_names.SCALE_SHAPE: state["scale_shape"],
-            cls._state_names.LOGARITHM_SCALE: state["logarithm_scale"],
-            cls._state_names.IS_QUANTIZED_ON_EXPORT: state["is_quantized_on_export"],
-            cls._state_names.COMPRESSION_LR_MULTIPLIER: state["compression_lr_multiplier"],
-        }
+        kwargs = {arg: state[arg] for arg in cls.get_arg_names()}
         return cls(**kwargs)
 
     def get_state(self):
-        return {
-            self._state_names.NUM_BITS: self.num_bits,
-            self._state_names.MODE: self.mode,
-            self._state_names.SIGNED_TO_FORCE: self.signedness_to_force,
-            self._state_names.NARROW_RANGE: self.narrow_range,
-            self._state_names.HALF_RANGE: self.half_range,
-            self._state_names.SCALE_SHAPE: self.scale_shape,
-            self._state_names.LOGARITHM_SCALE: self.logarithm_scale,
-            self._state_names.IS_QUANTIZED_ON_EXPORT: self.is_quantized_on_export,
-            self._state_names.COMPRESSION_LR_MULTIPLIER: self.compression_lr_multiplier,
-        }
+        return {arg: getattr(self, arg) for arg in self.get_arg_names()}
+
+    @classmethod
+    def get_arg_names(cls):
+        return cls._arg_names
+
+
+class PTLoraSpec:
+    _arg_names = ["lora_rank", "orig_weight_shape"]
+
+    def __init__(
+        self,
+        lora_rank: int,
+        orig_weight_shape: List[int],
+    ):
+        self.lora_rank = lora_rank
+        self.orig_weight_shape = orig_weight_shape
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> "PTLoraSpec":
+        """
+        Creates the object from its state.
+
+        :param state: Output of `get_state()` method.
+        """
+        kwargs = {arg: state[arg] for arg in cls._arg_names}
+        return cls(**kwargs)
+
+    def get_state(self):
+        return {arg: getattr(self, arg) for arg in self._arg_names}
 
 
 class PTQPointStateNames:
@@ -362,7 +375,6 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
     def levels(self):
         return get_num_levels(self.level_low, self.level_high)
 
-    @abstractmethod
     def enable_gradients(self):
         pass
 
@@ -421,9 +433,8 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
     def reset_call_counter(self):
         self.call_count = 0
 
-    @abstractmethod
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
-        pass
+        return {}
 
     def apply_minmax_init(self, min_values: torch.Tensor, max_values: torch.Tensor, log_module_name: str = None):
         """min_values and max_values must have the same shape as specified in self.scale_shape"""
@@ -666,7 +677,7 @@ class SymmetricQuantizer(BaseQuantizer):
             self,
             self._SCALE_PARAM_STORAGE_ATTR,
             CompressionParameter(
-                torch.ones(self.scale_shape),
+                torch.ones(self.scale_shape, dtype=torch.float32),
                 requires_grad=True,
                 compression_lr_multiplier=qspec.compression_lr_multiplier,
             ),
@@ -721,6 +732,7 @@ class SymmetricQuantizer(BaseQuantizer):
             super().__setattr__(key, value)
 
     def enable_gradients(self):
+        super().enable_gradients()
         self._scale_param_storage.requires_grad = True
 
     def disable_gradients(self):
@@ -749,7 +761,7 @@ class SymmetricQuantizer(BaseQuantizer):
         )
 
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
-        return {self.SCALE_PARAM_NAME: self.scale.detach()}
+        return {self.SCALE_PARAM_NAME: self.scale}
 
     def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         sign = torch.any(torch.lt(min_values, 0))
@@ -944,8 +956,8 @@ class AsymmetricQuantizer(BaseQuantizer):
 
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
         return {
-            self.INPUT_LOW_PARAM_NAME: self.input_low.detach(),
-            self.INPUT_RANGE_PARAM_NAME: self.input_range.detach(),
+            self.INPUT_LOW_PARAM_NAME: self.input_low,
+            self.INPUT_RANGE_PARAM_NAME: self.input_range,
         }
 
     def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
@@ -1031,6 +1043,126 @@ class AsymmetricQuantizer(BaseQuantizer):
             signedness_to_force=self.signed,
             per_channel=self.per_channel,
         )
+
+
+class LoraMixin:
+    LORA_A_PARAM_NAME = "lora_A"
+    LORA_B_PARAM_NAME = "lora_B"
+
+    def __init__(self, lspec: PTLoraSpec):
+        self._lspec = lspec
+        out_features, in_features = lspec.orig_weight_shape
+        # TODO: what if training in float16?
+        self._lora_A = torch.nn.Parameter(torch.ones((lspec.lora_rank, in_features), dtype=torch.bfloat16))
+        self._lora_B = torch.nn.Parameter(torch.zeros((out_features, lspec.lora_rank), dtype=torch.bfloat16))
+
+    def enable_gradients(self):
+        self._lora_A.requires_grad = True
+        self._lora_B.requires_grad = True
+
+    @abstractmethod
+    def disable_gradients(self):
+        self._lora_A.requires_grad = False
+        self._lora_B.requires_grad = False
+
+    def get_adapters(self) -> Dict[str, torch.Tensor]:
+        return {
+            self.LORA_A_PARAM_NAME: self._lora_A,
+            self.LORA_B_PARAM_NAME: self._lora_B,
+        }
+
+
+@COMPRESSION_MODULES.register()
+@QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC_LORA)
+class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
+    _arg_names = ["qspec", "lspeq"]
+
+    def __init__(self, qspec: PTQuantizerSpec, lspec: PTLoraSpec):
+        super().__init__(qspec)
+        LoraMixin.__init__(self, lspec)
+
+    def quantize(self, x, execute_traced_op_as_identity: bool = False):
+        self.to(x.device)
+        return asymmetric_quantize_lora(
+            x,
+            self._qspec.weight_shape,
+            self._lora_A,
+            self._lora_B,
+            self.input_low,
+            self.input_range,
+            self.level_low,
+            self.level_high,
+            self.levels,
+            self.eps,
+            skip=execute_traced_op_as_identity,
+        )
+
+    def enable_gradients(self) -> Dict[str, torch.Tensor]:
+        super().enable_gradients()
+        LoraMixin.enable_gradients(self)
+
+    def disable_gradients(self) -> Dict[str, torch.Tensor]:
+        super().disable_gradients()
+        LoraMixin.disable_gradients(self)
+
+    def get_trainable_params(self) -> Dict[str, torch.Tensor]:
+        params = super().get_trainable_params()
+        params.update(LoraMixin.get_adapters(self))
+        return params
+
+    def get_config(self):
+        return {"qspec": super().get_config(), "lspec": self._lspec.get_state()}
+
+    @classmethod
+    def from_config(cls, state) -> "AsymmetricLoraQuantizer":
+        qspec = PTQuantizerSpec.from_state(state["qspec"])
+        lspec = PTLoraSpec.from_state(state["lspec"])
+        return cls(qspec, lspec)
+
+
+@COMPRESSION_MODULES.register()
+@QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC_LORA)
+class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
+    def __init__(self, qspec: PTQuantizerSpec, lspec: PTLoraSpec):
+        super().__init__(qspec)
+        LoraMixin.__init__(self, lspec)
+
+    def quantize(self, x, execute_traced_op_as_identity: bool = False):
+        self.to(x.device)
+        return symmetric_quantize_lora(
+            x,
+            self._qspec.weight_shape,
+            self._lora_A,
+            self._lora_B,
+            self.scale,
+            self.level_low,
+            self.level_high,
+            self.levels,
+            self.eps,
+            skip=execute_traced_op_as_identity,
+        )
+
+    def enable_gradients(self) -> Dict[str, torch.Tensor]:
+        super().enable_gradients()
+        LoraMixin.enable_gradients(self)
+
+    def disable_gradients(self) -> Dict[str, torch.Tensor]:
+        super().disable_gradients()
+        LoraMixin.disable_gradients(self)
+
+    def get_trainable_params(self) -> Dict[str, torch.Tensor]:
+        params = super().get_trainable_params()
+        params.update(LoraMixin.get_adapters(self))
+        return params
+
+    def get_config(self):
+        return {"qspec": super().get_config(), "lspec": self._lspec.get_state()}
+
+    @classmethod
+    def from_config(cls, state) -> "SymmetricLoraQuantizer":
+        qspec = PTQuantizerSpec.from_state(state["qspec"])
+        lspec = PTLoraSpec.from_state(state["lspec"])
+        return cls(qspec, lspec)
 
 
 def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: Optional[int] = None) -> List[int]:

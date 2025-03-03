@@ -35,6 +35,8 @@ class QuantizationScheme(StrEnum):
 
     SYMMETRIC = "symmetric"
     ASYMMETRIC = "asymmetric"
+    SYMMETRIC_LORA = "symmetric_lora"
+    ASYMMETRIC_LORA = "asymmetric_lora"
 
 
 class QuantizerConfig:

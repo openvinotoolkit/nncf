@@ -96,6 +96,20 @@ class CompressWeightsMode(StrEnum):
     E2M1 = "e2m1"
 
 
+@api(canonical_alias="nncf.CompressionFormat")
+class CompressionFormat(StrEnum):
+    """
+    TBD
+    :param DQ: TBD
+    :param FQ: TBD
+    :param FQ_LORA: TBD
+    """
+
+    DQ = "dequantize"
+    FQ = "fake_quantize"
+    FQ_LORA = "fake_quantize_with_lora"
+
+
 @api(canonical_alias="nncf.BackupMode")
 class BackupMode(StrEnum):
     """

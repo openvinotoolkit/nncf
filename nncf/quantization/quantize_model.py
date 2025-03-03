@@ -23,6 +23,7 @@ from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
 from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.parameters import BackupMode
+from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -433,6 +434,7 @@ def compress_weights(
     all_layers: Optional[bool] = None,
     dataset: Optional[Dataset] = None,
     sensitivity_metric: Optional[SensitivityMetric] = None,
+    compression_format: Optional[CompressionFormat] = None,
     *,
     subset_size: int = 128,
     awq: Optional[bool] = None,
@@ -628,6 +630,7 @@ def compress_weights(
         ignored_scope,
         sensitivity_metric,
         backup_mode,
+        compression_format,
         advanced_parameters,
     )
 
