@@ -40,7 +40,7 @@ MODEL_SIZE_METRICS = "model_size_metrics"
 PERFORMANCE_METRICS = "performance_metrics"
 
 NUM_RETRY_ON_CONNECTION_ERROR = 2
-RETRY_TIMEOUT = 30
+RETRY_TIMEOUT = 60
 
 
 def example_test_cases():
