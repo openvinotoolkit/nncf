@@ -65,11 +65,11 @@ def test_device_configuration_alignment(target_device):
         assert layer_type in test_quantization_config, f"{layer_type} was not found in test configuration"
         test_layer_config = test_quantization_config[layer_type]
         for config_type, type_options in layer_configs.items():
-            assert (
-                config_type in test_layer_config
-            ), f"{config_type} was not found in test configuration for {layer_type}"
+            assert config_type in test_layer_config, (
+                f"{config_type} was not found in test configuration for {layer_type}"
+            )
             test_type_options = test_layer_config[config_type]
             for idx, option in enumerate(type_options):
-                assert (
-                    option == test_type_options[idx]
-                ), f"#{idx} option was not aligned for {config_type} type in {layer_type}"
+                assert option == test_type_options[idx], (
+                    f"#{idx} option was not aligned for {config_type} type in {layer_type}"
+                )

@@ -31,7 +31,7 @@ def ref_graph() -> nx.DiGraph:
     graph.add_node("E", label="no_label")
     graph.add_node("F", label="has^label")
     graph.add_node("F", label="has^label")
-    graph.add_edge("Node::A", "Node::B", label="foo:bar"),
+    graph.add_edge("Node::A", "Node::B", label="foo:bar")
     return graph
 
 

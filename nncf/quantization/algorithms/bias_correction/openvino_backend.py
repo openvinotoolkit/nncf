@@ -35,7 +35,6 @@ from nncf.tensor import Tensor
 
 
 class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
-
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
         return OVTargetPoint(target_type, target_node_name, port_id)

@@ -444,10 +444,7 @@ class TFInsertionCommand(TFTransformationCommand):
 
     def union(self, other: TFTransformationCommand) -> "TFInsertionCommand":
         if isinstance(self.target_point, TFMultiLayerPoint):
-            msg = (
-                "A command of TFInsertionCommand type with TFMultiLayerPoint "
-                "could not be united with another command"
-            )
+            msg = "A command of TFInsertionCommand type with TFMultiLayerPoint could not be united with another command"
             raise NotImplementedError(msg)
 
         if not self.check_command_compatibility(other):

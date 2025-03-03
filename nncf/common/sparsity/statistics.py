@@ -86,8 +86,7 @@ class SparsifiedModelStatistics(Statistics):
         )
 
         pretty_string = (
-            f"Statistics of the sparsified model:\n{model_string}\n\n"
-            f"Statistics by sparsified layers:\n{layers_string}"
+            f"Statistics of the sparsified model:\n{model_string}\n\nStatistics by sparsified layers:\n{layers_string}"
         )
         return pretty_string
 
@@ -231,7 +230,6 @@ class MovementSparsityStatistics(Statistics):
         )
 
         pretty_string = (
-            f"{self.model_statistics.to_str()}\n\n"
-            f"Statistics of the movement-sparsity algorithm:\n{algorithm_string}"
+            f"{self.model_statistics.to_str()}\n\nStatistics of the movement-sparsity algorithm:\n{algorithm_string}"
         )
         return pretty_string

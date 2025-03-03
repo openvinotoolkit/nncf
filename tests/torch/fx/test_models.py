@@ -91,7 +91,6 @@ def get_full_path_to_json(model_json_name: str, attributes: bool = False) -> str
 def get_ref_from_json(
     model_name: str, model_metatypes: Dict[NNCFNodeName, Union[Type[OperatorMetatype], bool]], attributes=False
 ) -> Dict[NNCFNodeName, Union[Type[OperatorMetatype], bool]]:
-
     model_json_name = get_json_filename(model_name)
     complete_path = get_full_path_to_json(model_json_name, attributes)
 

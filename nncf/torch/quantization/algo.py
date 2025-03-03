@@ -12,6 +12,7 @@
 """
 Contains builder and controller class definitions for the quantization algorithm.
 """
+
 from collections import Counter
 from collections import OrderedDict
 from copy import deepcopy

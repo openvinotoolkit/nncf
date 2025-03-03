@@ -249,7 +249,8 @@ class PruningNodeSelector:
         return can_prune_updated
 
     def _check_internal_groups_dim(
-        self, pruned_nodes_clusterization: Clusterization  # type: ignore[type-arg]
+        self,
+        pruned_nodes_clusterization: Clusterization,  # type: ignore[type-arg]
     ) -> Dict[int, PruningAnalysisDecision]:
         """
         Checks pruning dimensions of all nodes in each cluster group are equal and
@@ -310,7 +311,9 @@ class PruningNodeSelector:
         return can_prune_updated
 
     def _filter_groups(
-        self, pruned_nodes_clusterization: Clusterization, can_prune: Dict[int, PruningAnalysisDecision]  # type: ignore[type-arg]
+        self,
+        pruned_nodes_clusterization: Clusterization,  # type: ignore[type-arg]
+        can_prune: Dict[int, PruningAnalysisDecision],
     ) -> None:
         """
         Check whether all nodes in group can be pruned based on user-defined constraints and
@@ -332,12 +335,12 @@ class PruningNodeSelector:
                             cannot_prune_messages.append(message)
 
                 nncf_logger.debug(
-                    f'Could not prune node group [{", ".join(nodes_names)}], '
-                    f'reason: {", ".join(cannot_prune_messages)}.'
+                    f"Could not prune node group [{', '.join(nodes_names)}], "
+                    f"reason: {', '.join(cannot_prune_messages)}."
                 )
                 pruned_nodes_clusterization.delete_cluster(cluster.id)
             else:
-                nncf_logger.debug(f'Node group [{", ".join(nodes_names)}] will be pruned together.')
+                nncf_logger.debug(f"Node group [{', '.join(nodes_names)}] will be pruned together.")
 
     def _is_module_prunable(self, graph: NNCFGraph, node: NNCFNode) -> PruningAnalysisDecision:
         """

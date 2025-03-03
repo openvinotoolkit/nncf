@@ -192,8 +192,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                     and weight_def.weight_attr_name == "gamma"
                 ):
                     nncf_logger.debug(
-                        "Fused gamma parameter encountered in BatchNormalization layer. "
-                        "Won't add a pruning mask to it."
+                        "Fused gamma parameter encountered in BatchNormalization layer. Won't add a pruning mask to it."
                     )
                     continue
 

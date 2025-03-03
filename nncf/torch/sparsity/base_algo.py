@@ -11,6 +11,7 @@
 """
 Base classes for NNCF PyTorch sparsity algorithm builder and controller objects.
 """
+
 from typing import List
 
 import torch

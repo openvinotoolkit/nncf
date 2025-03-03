@@ -41,9 +41,9 @@ def trace_parameters_fixture(request) -> bool:
     return request.param
 
 
-def _get_trace_params_target_types_command_builders_and_models_cls() -> (
-    Tuple[bool, Type[torch.nn.Module], TargetType, callable]
-):
+def _get_trace_params_target_types_command_builders_and_models_cls() -> Tuple[
+    bool, Type[torch.nn.Module], TargetType, callable
+]:
     """
     Returns list of all avaliable command builders
     """

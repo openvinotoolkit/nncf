@@ -232,7 +232,10 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
     IS_MERGED_GRAPH_ATTR = "is_merged"
 
     def __init__(
-        self, compressed_model: NNCFNetwork, qctrl: "QuantizationController", target_device: TargetDevice  # noqa: F821
+        self,
+        compressed_model: NNCFNetwork,
+        qctrl: "QuantizationController",  # noqa: F821
+        target_device: TargetDevice,
     ):  # noqa: E501, F821
         self._compressed_model = compressed_model
         self._qctrl = qctrl

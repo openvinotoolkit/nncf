@@ -32,7 +32,6 @@ from tests.torch.fx.helpers import get_torch_fx_model_q_transformed
 
 
 class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
-
     @staticmethod
     def list_to_backend_type(data: List) -> torch.Tensor:
         return torch.tensor(data)

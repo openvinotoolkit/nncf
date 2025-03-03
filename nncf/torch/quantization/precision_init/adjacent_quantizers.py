@@ -98,8 +98,7 @@ class GroupsOfAdjacentQuantizers:
                 a_qp_id = quantized_node_per_activation_qp_id[weight_quantized_module_node_name]
                 if w_qp_id in self.weight_qp_id_per_activation_qp_id:
                     nncf_logger.debug(
-                        f"Multiple weight quantizers per activation quantizer "
-                        f"for {weight_quantized_module_node_name}"
+                        f"Multiple weight quantizers per activation quantizer for {weight_quantized_module_node_name}"
                     )
                     continue
                 self.weight_qp_id_per_activation_qp_id[w_qp_id] = a_qp_id

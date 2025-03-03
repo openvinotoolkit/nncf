@@ -31,7 +31,8 @@ def get_position(nodes_list: List[NNCFNode], idx: int) -> Optional[int]:
 
 
 def merge_clusters_for_nodes(
-    nodes_to_merge: List[NNCFNode], clusterization: Clusterization  # type:ignore[type-arg]
+    nodes_to_merge: List[NNCFNode],
+    clusterization: Clusterization,  # type:ignore[type-arg]
 ) -> None:
     """
     Merges clusters to which nodes from nodes_to_merge belongs.

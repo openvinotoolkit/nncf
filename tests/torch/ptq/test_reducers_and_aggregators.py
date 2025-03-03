@@ -34,7 +34,6 @@ from tests.common.experimental.test_reducers_and_aggregators import TemplateTest
 
 
 class BaseTestReducersAggregators(TemplateTestReducersAggregators, ABC):
-
     def _get_torch_tensor(self, x: np.ndarray, dtype: Optional[Dtype] = None):
         torch_tensor = torch.tensor(x)
         if dtype == Dtype.FLOAT:

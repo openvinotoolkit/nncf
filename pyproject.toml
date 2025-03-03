@@ -72,9 +72,6 @@ where = ["."]
 exclude = ["tests", "tests.*", "examples", "examples.*", "tools", "tools.*"]
 namespaces = false
 
-[tool.black]
-line-length = 120
-
 [tool.md_dead_link_check]
 exclude_files = ["ReleaseNotes.md"]
 

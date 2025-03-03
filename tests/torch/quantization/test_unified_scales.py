@@ -708,9 +708,7 @@ def test_unified_scales_with_shared_nodes():
     nncf_config["target_device"] = "NPU"
     register_bn_adaptation_init_args(nncf_config)
 
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(
-        SharedEmbeddingAddModel(), nncf_config
-    )  # type: NNCFNetwork, QuantizationController
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(SharedEmbeddingAddModel(), nncf_config)
 
     assert len(compression_ctrl.weight_quantizers) == 1  # The two embedding nodes point to a single shared layer
     assert len(compression_ctrl.non_weight_quantizers) == 0  # The "add" operation has its inputs already quantized

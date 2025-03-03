@@ -203,7 +203,6 @@ def get_compress_weight_model(
     scale_shape: Optional[Tuple] = None,
     zero_point_shape: Optional[Tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
-    return_nodes: Optional[bool] = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
     """
     Get a model that compresses weights using the given configuration.
@@ -217,8 +216,6 @@ def get_compress_weight_model(
         as an input.
     :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale (and z.p.) are provided as
         inputs.
-    :param return_nodes: Whether to return the OV model inputs parameters and results nodes instead of the model
-        callable.
     :return: A model callable that compresses weights using the given configuration. Or a model as nodes, if
         `return_nodes` is True.
     """
@@ -233,7 +230,6 @@ def get_compress_weight_model(
         scale_shape,
         zero_point_shape,
         reduction_axes,
-        return_nodes=return_nodes,
     )
 
 
@@ -275,6 +271,35 @@ def get_compress_decompress_weight_model(
         zero_point_shape,
         reduction_axes,
         return_compressed_weight,
+    )
+
+
+def get_quantization_error_model(
+    ov_model_params: OVModelParameters,
+    config: WeightCompressionConfig,
+    original_weight_shape: Tuple,
+    weight_shape: Tuple,
+    original_reduction_axes: ReductionAxes,
+    reduction_axes: ReductionAxes,
+) -> ModelCallable:
+    """
+    Get a model that calculates the quantization error for a given weight.
+
+    This function builds a model that compresses and then decompresses the given weight, and calculates the
+    quantization error by comparing the original weight with the decompressed weight.
+
+    :param ov_model_params: OV model parameters.
+    :param config: Compression configuration.
+    :param original_weight_shape: Shape of the original weight tensor.
+    :param weight_shape: Shape of the weight tensor to be compressed.
+    :param original_reduction_axes: Reduction axes of the original weight tensor before reshaping.
+    :param reduction_axes: Axes to reduce the weight tensor.
+    :return: A model callable that returns the quantization error.
+    """
+    weight_shape, _, _ = _prepare_compression_model_inputs(ov_model_params, weight_shape, None, None, reduction_axes)
+
+    return _build_quantization_error_model(
+        config, ov_model_params, original_weight_shape, weight_shape, original_reduction_axes, reduction_axes
     )
 
 
@@ -437,7 +462,8 @@ def _build_compress_decompress_model(
     zero_point_shape: Optional[Tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
     return_compressed_weight: Optional[bool] = False,
-) -> ModelCallable:
+    return_nodes: Optional[bool] = False,
+) -> Union[ModelCallable, ModelAsNodes]:
     default_output_dtypes = {"decompressed_weight": TensorDataType.float32}
     if not return_compressed_weight:
         # If compressed weight is not returned to a user, we can keep it in float32 to avoid additional conversion
@@ -451,8 +477,8 @@ def _build_compress_decompress_model(
         raise ValueError(msg)
 
     # Get compression model as input/result nodes and potentially modified ov model parameters
-    ov_parameters, ov_results, ov_model_params = get_compress_weight_model(
-        ov_model_params, config, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_nodes=True
+    ov_parameters, ov_results, ov_model_params = _build_compress_model(
+        config, ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_nodes=True
     )
 
     if config.is_asym_mode:
@@ -477,7 +503,46 @@ def _build_compress_decompress_model(
     decompressed_weight = opset.multiply(scale, convert_op(compressed_weight, ov.Type.f32))
 
     ov_results = [decompressed_weight] + ov_results if return_compressed_weight else [decompressed_weight]
+
+    if return_nodes:
+        return ov_parameters, ov_results, ov_model_params
+
     model = ov.Model(ov_results, ov_parameters)
+    compiled_model = _compile_ov_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})
+
+    return partial(_infer_ov_model, ov_model_params, compiled_model)
+
+
+@cache_results(OV_MODEL_CACHE)
+def _build_quantization_error_model(
+    config: WeightCompressionConfig,
+    ov_model_params: OVModelParameters,
+    original_weight_shape: Tuple,
+    weight_shape: Tuple,
+    original_reduction_axes: ReductionAxes,
+    reduction_axes: ReductionAxes,
+) -> ModelCallable:
+    ov_parameters, ov_results, ov_model_params = _build_compress_decompress_model(
+        config,
+        ov_model_params,
+        weight_shape,
+        reduction_axes=reduction_axes,
+        return_compressed_weight=False,
+        return_nodes=True,
+    )
+
+    weight = ov_parameters[0]
+    decompressed_weight = ov_results[0]
+
+    weight = convert_op(opset.reshape(weight, original_weight_shape, special_zero=False), ov.Type.f32)
+    decompressed_weight = convert_op(
+        opset.reshape(decompressed_weight, original_weight_shape, special_zero=False), ov.Type.f32
+    )
+    diff = opset.squared_difference(decompressed_weight, weight)
+    layer_err = opset.reduce_mean(diff, reduction_axes=original_reduction_axes)
+    quantization_error = opset.reduce_max(layer_err, reduction_axes=tuple(range(len(layer_err.shape))))
+
+    model = ov.Model([quantization_error], ov_parameters)
     compiled_model = _compile_ov_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})
 
     return partial(_infer_ov_model, ov_model_params, compiled_model)

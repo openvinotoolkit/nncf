@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Post-training quantization APIs."""
+
 from nncf.common.quantization.structs import QuantizationPreset as QuantizationPreset
 from nncf.quantization.quantize_model import compress_weights as compress_weights
 from nncf.quantization.quantize_model import quantize as quantize

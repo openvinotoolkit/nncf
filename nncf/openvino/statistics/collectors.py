@@ -44,25 +44,21 @@ from nncf.quantization.advanced_parameters import StatisticsType
 
 
 class OVMinReducer(MinReducer):
-
     def get_inplace_fn(self):
         return get_inplace_min_op(self._reduction_axes)
 
 
 class OVMaxReducer(MaxReducer):
-
     def get_inplace_fn(self):
         return get_inplace_max_op(self._reduction_axes, False)
 
 
 class OVAbsMaxReducer(AbsMaxReducer):
-
     def get_inplace_fn(self):
         return get_inplace_max_op(self._reduction_axes, True)
 
 
 class OVMeanReducer(MeanReducer):
-
     def get_inplace_fn(self):
         return get_inplace_mean_op(self._reduction_axes)
 
@@ -88,13 +84,11 @@ class OVShapeReducer(ShapeReducer):
 
 
 class OVBatchMeanReducer(BatchMeanReducer):
-
     def get_inplace_fn(self):
         return get_inplace_batch_mean_op()
 
 
 class OVMeanPerChanelReducer(MeanPerChReducer):
-
     def get_inplace_fn(self):
         return get_inplace_mean_per_ch(self._channel_axis)
 
@@ -105,7 +99,6 @@ class OVQuantileReducer(QuantileReducer):
 
 
 class OVAbsQuantileReducer(AbsQuantileReducer):
-
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
         return None
 

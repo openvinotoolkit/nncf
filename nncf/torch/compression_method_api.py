@@ -15,6 +15,7 @@
 This package defines the API for the NNCF compression methods so that the user could
 extend the existing algorithms.
 """
+
 from abc import abstractmethod
 from typing import Any, Dict, List, Tuple, TypeVar
 
@@ -167,8 +168,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         ctrl = self._build_controller(model)
         if not isinstance(ctrl, PTCompressionAlgorithmController):
             msg = (
-                "Internal error: builder must create controller inherited from "
-                "`PTCompressionAlgorithmController` class"
+                "Internal error: builder must create controller inherited from `PTCompressionAlgorithmController` class"
             )
             raise nncf.InternalError(msg)
         ctrl.set_builder_state_with_name(self.name, self.get_state())
@@ -208,10 +208,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
                 )
             else:
                 msg = (
-                    f"{reason}.\n"
-                    f"Please unfreeze them or put into the Ignored Scope.\n"
-                    f"Frozen Layers:\n"
-                    f"{scopes_to_print}"
+                    f"{reason}.\nPlease unfreeze them or put into the Ignored Scope.\nFrozen Layers:\n{scopes_to_print}"
                 )
                 raise nncf.InternalError(msg)
 

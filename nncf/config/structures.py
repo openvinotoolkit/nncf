@@ -11,6 +11,7 @@
 """
 Structures for passing live Python objects into NNCF algorithms.
 """
+
 from typing import Any, Callable, Optional
 
 from nncf.common.initialization.dataloader import NNCFDataLoader

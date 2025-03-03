@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Interface for user-defined data usage during the compression algorithm initialization process."""
+
 from abc import ABC
 from abc import abstractmethod
 from typing import Any, Iterator

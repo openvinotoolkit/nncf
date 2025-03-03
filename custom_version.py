@@ -43,7 +43,6 @@ This can be done using the following command:
 This ensures that `nncf/version.py` remains in its original state after the dynamic versioning process.
 """
 
-
 from __future__ import annotations
 
 import contextlib
@@ -98,7 +97,6 @@ version: str
 
 
 def __getattr__(name: str) -> str:
-
     if name == "version":
         global version
         version = get_custom_version()

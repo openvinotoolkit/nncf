@@ -137,7 +137,7 @@ TEST_PARAM_STRUCTS: List[ParamStruct] = [
         timing_mode=timing,
         ref=ref,
     )
-    for ref, timing, narrow_range, dtype, exec_type, batch, device, tensor_type, granularity, symmetric, in product(
+    for ref, timing, narrow_range, dtype, exec_type, batch, device, tensor_type, granularity, symmetric in product(
         TEST_REFERENCE,
         TEST_TIMING_MODE,
         TEST_NARROW_RANGE,

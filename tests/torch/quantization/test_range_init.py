@@ -88,9 +88,9 @@ def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     for layer in get_all_modules_by_type(quant_model, "SymmetricQuantizer").values():
         act_sum += layer.scale.sum()
     ref_sum = 3720.864
-    assert act_sum.item() == approx(
-        ref_sum, 0.01
-    ), f"sum of scales is not expected {act_sum.item()} vs {ref_sum} rank {config.rank}"
+    assert act_sum.item() == approx(ref_sum, 0.01), (
+        f"sum of scales is not expected {act_sum.item()} vs {ref_sum} rank {config.rank}"
+    )
 
     out_file_path = get_path_after_broadcast(tmp_path, config.rank)
     save_params(quant_model, out_file_path)

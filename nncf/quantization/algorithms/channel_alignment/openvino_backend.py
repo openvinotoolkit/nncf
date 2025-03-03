@@ -100,8 +100,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
             weights_layout = get_linear_weights_layout_from_node(node=node)
         else:
             msg = (
-                f"Metatype {node.metatype} of node {node.node_name} dimensions"
-                " description retrieving is not supported"
+                f"Metatype {node.metatype} of node {node.node_name} dimensions description retrieving is not supported"
             )
             raise nncf.InternalError(msg)
 

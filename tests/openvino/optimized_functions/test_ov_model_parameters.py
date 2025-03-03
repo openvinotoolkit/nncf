@@ -19,6 +19,7 @@ from nncf.openvino.optimized_functions.models import _infer_ov_model
 from nncf.openvino.optimized_functions.models import get_astype_model
 from nncf.openvino.optimized_functions.models import get_compress_decompress_weight_model
 from nncf.openvino.optimized_functions.models import get_compress_weight_model
+from nncf.openvino.optimized_functions.models import get_quantization_error_model
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
@@ -128,6 +129,21 @@ MODEL_GETTERS = [
             input_shape=(10, 4),
         ),
     ),
+    ModelGetter(
+        get_model_fn=get_quantization_error_model,
+        ov_model_params_kwargs=dict(
+            input_dtypes={
+                "weight": TensorDataType.float32,
+            },
+        ),
+        get_model_kwargs=dict(
+            config=WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, group_size=2),
+            original_weight_shape=(10, 4),
+            weight_shape=(10, 2, 2),
+            original_reduction_axes=(1,),
+            reduction_axes=(2,),
+        ),
+    ),
 ]
 
 
@@ -210,7 +226,15 @@ def test_recompile(model_getter, recompile):
             model_getter.get()
     else:
         model_getter.get()
-    ref_size = 0 if recompile else (2 if model_getter._get_model_fn == get_compress_decompress_weight_model else 1)
+    if recompile:
+        ref_size = 0
+    elif model_getter._get_model_fn == get_compress_decompress_weight_model:
+        ref_size = 2
+    elif model_getter._get_model_fn == get_quantization_error_model:
+        ref_size = 3
+    else:
+        ref_size = 1
+
     assert len(OV_MODEL_CACHE._cache) == ref_size
 
 

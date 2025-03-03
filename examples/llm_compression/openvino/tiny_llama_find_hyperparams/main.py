@@ -135,7 +135,7 @@ def print_results(optimized_model: ov.Model, similarity: float) -> None:
     else:
         print(best_params_info)
     footprint = Path(MODEL_PATH).with_suffix(".bin").stat().st_size
-    print(f"Memory footprint: {footprint / 2**20 :.2f} MB")
+    print(f"Memory footprint: {footprint / 2**20:.2f} MB")
     print(f"Similarity: {similarity:.2f}")
 
 

@@ -192,9 +192,9 @@ def check_quant_moved(test_input, test_val, ref_val, quant_len, input_low, input
     # one quant. 0.05 is added as an eps diff between two fp16 values
     inp_out_deviation_mult = 1.05 if is_fp16 else 1.0
     inp_out_abs_diff = (test_input[mask_in] - test_val[mask_in]).abs()
-    assert (
-        inp_out_abs_diff < inp_out_deviation_mult * quant_len_broadcasted
-    ).all(), "quantized values are outside of closest quant"
+    assert (inp_out_abs_diff < inp_out_deviation_mult * quant_len_broadcasted).all(), (
+        "quantized values are outside of closest quant"
+    )
 
     t_numpy = test_val.cpu().detach().numpy()
     bad_elems = ~np.isclose(t_numpy, ref_val, rtol, atol)

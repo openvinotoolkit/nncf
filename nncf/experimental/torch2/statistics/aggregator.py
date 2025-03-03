@@ -81,7 +81,9 @@ class PT2StatisticsAggregator(StatisticsAggregator):
 
     @staticmethod
     def _get_merged_statistic_points(
-        statistic_points: StatisticPointsContainer, model: GraphModelWrapper, graph: NNCFGraph  # type: ignore[override]
+        statistic_points: StatisticPointsContainer,
+        model: GraphModelWrapper,  # type: ignore[override]
+        graph: NNCFGraph,
     ) -> StatisticPointsContainer:
         # TODO: migrate to experimental statistic collector and use common merging algorithm
         return statistic_points

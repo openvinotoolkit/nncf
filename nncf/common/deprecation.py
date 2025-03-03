@@ -41,7 +41,6 @@ def deprecated(
     """
 
     def decorator(obj: TObj) -> TObj:
-
         if isinstance(obj, types.FunctionType):
 
             @wraps(obj)

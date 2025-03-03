@@ -11,4 +11,5 @@
 """
 NNCF configuration file schemata and associated structures.
 """
+
 from nncf.config.config import NNCFConfig as NNCFConfig

@@ -50,17 +50,13 @@ def pytest_addoption(parser: Parser):
         "--regen-dot",
         action="store_true",
         default=False,
-        help="If specified, the "
-        "reference .dot files will be regenerated "
-        "using the current state of the repository.",
+        help="If specified, the reference .dot files will be regenerated using the current state of the repository.",
     )
     parser.addoption(
         "--regen-json",
         action="store_true",
         default=False,
-        help="If specified, the "
-        "reference .json files will be regenerated "
-        "using the current state of the repository.",
+        help="If specified, the reference .json files will be regenerated using the current state of the repository.",
     )
     parser.addoption(
         "--torch-home", type=str, default=None, help="Path to cached test models, downloaded by torchvision"
@@ -105,9 +101,7 @@ def pytest_addoption(parser: Parser):
         "--torch-with-cuda11",
         action="store_true",
         default=False,
-        help="To trigger installation of pytorch with "
-        "CUDA11. It's required for 3rd sanity tests "
-        "on RTX3090 cards",
+        help="To trigger installation of pytorch with CUDA11. It's required for 3rd sanity tests on RTX3090 cards",
     )
     parser.addoption("--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVINO")
     parser.addoption("--onnx-dir", type=str, default=None, help="Path to converted onnx models")

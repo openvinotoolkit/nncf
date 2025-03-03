@@ -215,7 +215,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         # Saving ranking coefficients to the specified file
         if params.get("save_ranking_coeffs_path"):
-            nncf_logger.info(f'Saving ranking coefficients to the file {params.get("save_ranking_coeffs_path")}')
+            nncf_logger.info(f"Saving ranking coefficients to the file {params.get('save_ranking_coeffs_path')}")
             with safe_open(Path(params.get("save_ranking_coeffs_path")), "w", encoding="utf8") as f:
                 json.dump(self.ranking_coeffs, f)
 

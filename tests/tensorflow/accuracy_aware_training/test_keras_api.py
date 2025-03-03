@@ -66,9 +66,7 @@ def get_const_target_mock_regression_dataset(num_samples=20, img_size=10, target
         def __call__(self):
             for i, _ in enumerate(self.X):
                 xi = np.expand_dims(self.X[i], axis=0)
-                yield xi, [
-                    target_value,
-                ]
+                yield xi, [target_value]
 
     X = [np.random.uniform(0, 255, size=(img_size, img_size, 1)).astype(np.uint8) for _ in range(num_samples)]
     gen = SingleBatchGenerator(X)

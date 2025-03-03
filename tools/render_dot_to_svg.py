@@ -12,6 +12,7 @@
 """
 Useful when the .dot file is so large that no tool, online or offline, can effectively visualize it.
 """
+
 import sys
 from argparse import ArgumentParser
 from pathlib import Path

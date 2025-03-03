@@ -11,6 +11,7 @@
 """
 PyTorch-specific structure definitions for passing arguments into certain NNCF calls.
 """
+
 from typing import Any, Callable, Optional, Tuple
 
 import torch

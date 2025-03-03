@@ -110,19 +110,28 @@ def get_number_if_op(model: ov.Model) -> int:
     return cnt_if_op(model, 0)
 
 
-def get_const_value(const_node: ov.Node, cast_bf16_to_fp32: bool = True) -> np.ndarray:
+def get_const_value_as_numpy_tensor(const_node: ov.Node) -> np.ndarray:
     """
-    Returns the constant tensor for the node.
+    Returns the constant tensor for the node as an instance of np.ndarray. BF16 constants will be converted to FP32.
     This method is applicable only for the floating-point constant data.
 
     :param const_node: OpenVINO node.
-    :param cast_bf16_to_fp32: Whether to cast bf16 node data to fp32 or not. If False and the node contains bf16 data,
-        the resulting bf16 value will be returned encoded inside a numpy.float16 array.
     :return: The constant value.
     """
-    if const_node.get_element_type() == ov.Type.bf16 and cast_bf16_to_fp32:
+    if const_node.get_element_type() == ov.Type.bf16:
         return const_node.get_data(dtype=np.float32)
     return const_node.data
+
+
+def get_const_value_as_ov_tensor(const_node: ov.Node) -> ov.Tensor:
+    """
+    Returns the constant tensor for the node as an instance of openvino.Tensor which is useful when BF16 constant
+    needs to be retrieved as is.
+
+    :param const_node: OpenVINO node.
+    :return: The constant value as openvino.Tensor.
+    """
+    return ov.Tensor(const_node.data, const_node.get_output_shape(0), const_node.get_element_type())
 
 
 def get_bias_value(
@@ -141,7 +150,7 @@ def get_bias_value(
         node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
     bias_constant = get_node_with_bias_value(get_add_bias_node(node_with_bias, nncf_graph), nncf_graph)
     ov_bias_constant = node_mapping[bias_constant.node_name]
-    return get_const_value(ov_bias_constant)
+    return get_const_value_as_numpy_tensor(ov_bias_constant)
 
 
 def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
@@ -157,7 +166,7 @@ def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) 
     const_op_friendly_name = node_with_weight.layer_attributes.constant_attributes[port_id]["name"]
     friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
     const_op = friendly_name_to_op_map[const_op_friendly_name]
-    weight_tensor = get_const_value(const_op)
+    weight_tensor = get_const_value_as_numpy_tensor(const_op)
     return weight_tensor
 
 
