@@ -163,7 +163,6 @@ class ImageClassificationBase(PTQTestPipeline):
         self.run_info.metric_value = acc_top1
 
     def get_transform_calibration_fn(self):
-
         if self.backend in FX_BACKENDS + PT_BACKENDS:
             device = torch.device(
                 "cuda" if self.backend in [BackendType.CUDA_TORCH, BackendType.CUDA_FX_TORCH] else "cpu"
