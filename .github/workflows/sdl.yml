@@ -75,6 +75,7 @@ jobs:
     name: Trivy
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Skip trivy for PRs to avoid blocking merge PRs by found vulnerabilities in requirements
     if: ${{ github.event_name != 'pull_request' }}
     steps:
       - name: Checkout repository
