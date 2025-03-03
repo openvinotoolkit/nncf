@@ -1,0 +1,74 @@
+name: Post Training Quantization
+permissions: read-all
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: 'The pull request number'
+        default: ''
+      pytest_args:
+        description: 'Pytest arguments'
+        default: ''
+
+jobs:
+  examples-cpu:
+    name: Post Training Quantization [${{ matrix.group }}/6]
+    runs-on: ubuntu-latest-16-cores
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1, 2, 3, 4, 5, 6]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+            lfs: true
+            fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
+      - name: Fetch and Checkout the Pull Request Branch
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
+        run: |
+          git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
+          git checkout pr-${{ github.event.inputs.pull_request_number }}
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: 3.10.14
+      - name: cpuinfo
+        run: cat /proc/cpuinfo
+      - name: Install NNCF and test requirements
+        run: pip install . -r tests/post_training/requirements.txt
+      - name: Print installed modules
+        run: pip list
+      - name: Run examples test scope
+        run: |
+          python -m pytest -s -ra tests/post_training/test_quantize_conformance.py::test_ptq_quantization \
+            --junit-xml=pytest-results.xml \
+            --durations-path=tests/post_training/data/ptq_test_durations.json \
+            --splitting-algorithm=least_duration \
+            --splits 6 \
+            --group ${{ matrix.group }} \
+            ${{ github.event.inputs.pytest_args || '' }}
+          ret=$?
+          [ $ret -eq 5 ] && [ -n "${{ github.event.inputs.pytest_args || '' }}" ]  && exit 0 || exit $ret
+        env:
+          TQDM_DISABLE: 1
+          HOME_HF: "/home/runner/hf_home"
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      - name: Print results.csv
+        if: ${{ !cancelled() }}
+        run: column -s, -t < tmp/results.csv || echo "no file"
+      - name: Upload artifact
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 #v4.6.0
+        with:
+          name: ptq_results_${{ matrix.group }}
+          path: tmp/results.csv
+      - name: Test Summary
+        if: ${{ !cancelled() }}
+        run: |
+          pip install defusedxml==0.7.1
+          python .github/scripts/pytest_md_summary.py pytest-results.xml >> $GITHUB_STEP_SUMMARY

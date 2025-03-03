@@ -267,7 +267,6 @@ def run_pipeline(
 def test_ptq_quantization(
     ptq_reference_data: dict,
     test_case_name: str,
-    data_dir: Path,
     output_dir: Path,
     result_data: Dict[str, RunInfo],
     no_eval: bool,
@@ -287,7 +286,7 @@ def test_ptq_quantization(
         PTQ_TEST_CASES,
         result_data,
         output_dir,
-        data_dir,
+        None,
         no_eval,
         batch_size,
         run_fp32_backend,

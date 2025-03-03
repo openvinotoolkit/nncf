@@ -11,25 +11,79 @@
 
 import copy
 import os
+import types
 
 import numpy as np
 import openvino as ov
 import torch
+from datasets import Split
+from datasets import SplitGenerator
+from datasets import load_dataset_builder
 from sklearn.metrics import accuracy_score
-from torchvision import datasets
+from torchvision import transforms
 
 import nncf
 from nncf.common.logging.track_progress import track
 from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
 from tests.post_training.pipelines.base import FX_BACKENDS
+from tests.post_training.pipelines.base import PT_BACKENDS
+from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import PTQTestPipeline
+
+
+def hf_imagenet_1k_val(model_transform):
+    """
+    Download only VAL subset of ImageNet-1k dataset from Hugging Face.
+    load_dataset("imagenet-1k") loads full dataset, which is not needed.
+    """
+
+    builder_instance = load_dataset_builder("imagenet-1k")
+
+    def val_split_generators(self, dl_manager):
+        DATA_URL_VAL = {
+            "val": ["data/val_images.tar.gz"],
+        }
+        archives = dl_manager.download(DATA_URL_VAL)
+
+        return [
+            SplitGenerator(
+                name=Split.VALIDATION,
+                gen_kwargs={
+                    "archives": [dl_manager.iter_archive(archive) for archive in archives["val"]],
+                    "split": "validation",
+                },
+            ),
+        ]
+
+    builder_instance._split_generators = types.MethodType(val_split_generators, builder_instance)
+    builder_instance.download_and_prepare()
+    dataset = builder_instance.as_dataset(split=Split.VALIDATION)
+
+    def transform_fn(examples):
+        def f(image):
+            """If input image grayscale, convert it to RGB"""
+            if len(image.getbands()) < 3:
+                return transforms.Grayscale(num_output_channels=3)(image)
+            return image
+
+        transform = transforms.Compose(
+            [
+                transforms.Lambda(f),
+                model_transform,
+            ]
+        )
+        examples["image"] = [transform(img) for img in examples["image"]]
+        return examples
+
+    dataset.set_transform(transform_fn)
+    return dataset
 
 
 class ImageClassificationBase(PTQTestPipeline):
     """Base pipeline for Image Classification models"""
 
     def prepare_calibration_dataset(self):
-        dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
+        dataset = hf_imagenet_1k_val(self.transform)
         loader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, num_workers=2, shuffle=False)
 
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
@@ -63,7 +117,9 @@ class ImageClassificationBase(PTQTestPipeline):
 
             infer_queue.set_callback(process_result)
 
-            for i, (images, target) in enumerate(val_loader):
+            for i, data in enumerate(val_loader):
+                images = data["image"]
+                target = data["label"]
                 # W/A for memory leaks when using torch DataLoader and OpenVINO
                 image_copies = copy.deepcopy(images.numpy())
                 infer_queue.start_async(image_copies, userdata=i)
@@ -76,7 +132,9 @@ class ImageClassificationBase(PTQTestPipeline):
         self, val_loader: torch.utils.data.DataLoader, predictions: np.ndarray, references: np.ndarray
     ):
         compiled_model = torch.compile(self.compressed_model.cpu(), backend="openvino")
-        for i, (images, target) in enumerate(val_loader):
+        for i, data in enumerate(val_loader):
+            images = data["image"]
+            target = data["label"]
             # W/A for memory leaks when using torch DataLoader and OpenVINO
             pred = compiled_model(images)
             pred = torch.argmax(pred, dim=1)
@@ -85,7 +143,7 @@ class ImageClassificationBase(PTQTestPipeline):
         return predictions, references
 
     def _validate(self) -> None:
-        val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
+        val_dataset = hf_imagenet_1k_val(self.transform)
         val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=2, shuffle=False)
 
         dataset_size = len(val_loader)
@@ -103,3 +161,20 @@ class ImageClassificationBase(PTQTestPipeline):
 
         self.run_info.metric_name = "Acc@1"
         self.run_info.metric_value = acc_top1
+
+    def get_transform_calibration_fn(self):
+
+        if self.backend in FX_BACKENDS + PT_BACKENDS:
+            device = torch.device(
+                "cuda" if self.backend in [BackendType.CUDA_TORCH, BackendType.CUDA_FX_TORCH] else "cpu"
+            )
+
+            def transform_fn(data_item):
+                return data_item["image"].to(device)
+
+        else:
+
+            def transform_fn(data_item):
+                return {self.input_name: np.array(data_item["image"], dtype=np.float32)}
+
+        return transform_fn
