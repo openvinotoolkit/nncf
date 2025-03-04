@@ -99,6 +99,7 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: Dict[QuantizationTrait, List[PTOperatorMetaty
     QuantizationTrait.CONCAT: [operator_metatypes.PTCatMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [
         operator_metatypes.PTEmbeddingMetatype,
+        operator_metatypes.PTAtenEmbeddingMetatype,
         operator_metatypes.PTModuleEmbeddingMetatype,
         operator_metatypes.PTEmbeddingBagMetatype,
         operator_metatypes.PTModuleEmbeddingBagMetatype,

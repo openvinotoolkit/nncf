@@ -1268,6 +1268,7 @@ QUANTIZE_NODE_TYPES = [
 # It could lead to inaccurate/incorrect statistics result.
 OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     PTEmbeddingMetatype,
+    PTAtenEmbeddingMetatype,
     PTEmbeddingBagMetatype,
     PTModuleEmbeddingBagMetatype,
     PTModuleEmbeddingMetatype,

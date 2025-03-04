@@ -127,18 +127,6 @@ class OperatorMetatypeRegistry(Registry):
             return UnknownMetatype
         return self._op_name_to_op_meta_dict[op_name]
 
-    def get_operator_metatype_by_func(self, func_name: str) -> Type[OperatorMetatype]:
-        """
-        Returns the operator metatype by function name.
-
-        :param func_name: The function name.
-        :return: The operator metatype.
-        """
-        if func_name not in self._func_name_to_op_meta_dict:
-            return UnknownMetatype
-        obj = self._func_name_to_op_meta_dict[func_name]
-        return obj
-
 
 NOOP_METATYPES = Registry("noop_metatypes")
 INPUT_NOOP_METATYPES = Registry("input_noop_metatypes")
