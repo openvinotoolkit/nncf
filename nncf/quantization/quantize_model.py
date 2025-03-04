@@ -435,7 +435,7 @@ def compress_weights(
     sensitivity_metric: Optional[SensitivityMetric] = None,
     *,
     subset_size: int = 128,
-    awq: Optional[bool] = None,
+    awq: Optional[bool] = True,
     scale_estimation: Optional[bool] = None,
     gptq: Optional[bool] = None,
     lora_correction: Optional[bool] = None,
