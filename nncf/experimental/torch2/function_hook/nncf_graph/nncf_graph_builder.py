@@ -91,7 +91,11 @@ def get_meta_type(node_type: str, meta: Union[ConstMeta, FunctionMeta, InOutMeta
     :return: The PTOperatorMetatype object.
     """
     metatype = om.PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
-    metatype = om.PT2_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type) if metatype == UnknownMetatype else metatype
+    metatype = (
+        om.PT2_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
+        if metatype == UnknownMetatype
+        else metatype
+    )
 
     node_metatype = cast(type[om.PTOperatorMetatype], metatype)
     node_sub_meta_type: Optional[type[om.PTOperatorMetatype]] = None

@@ -22,7 +22,6 @@ from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 
@@ -772,6 +771,7 @@ class PTBatchNormMetatype(PTOperatorMetatype):
     weight_port_ids = [3]
     bias_port_id = 4
 
+
 @PT2_OPERATOR_METATYPES.register()
 class PT2BatchNormMetatype(PTOperatorMetatype):
     name = "BatchNormOp"
@@ -781,6 +781,7 @@ class PT2BatchNormMetatype(PTOperatorMetatype):
     subtypes = [PTModuleBatchNormMetatype]
     weight_port_ids = [1]
     bias_port_id = 2
+
 
 @PT_OPERATOR_METATYPES.register()
 class PTAvgPool2dMetatype(PTOperatorMetatype):
