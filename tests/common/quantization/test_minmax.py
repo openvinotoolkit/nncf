@@ -263,3 +263,19 @@ def test_npu_target_device(num_bits, ref_hw_target_device):
         weights_quantization_params=QuantizationParameters(num_bits=num_bits),
     )
     assert min_max_algo._target_device == ref_hw_target_device
+
+
+@pytest.mark.parametrize("activation_bits", [8, 4])
+@pytest.mark.parametrize("weight_bits", [8, 4])
+def test_overflow_fix(activation_bits, weight_bits):
+    quant_scheme_a8w8 = activation_bits == 8 and weight_bits == 8
+
+    min_max_algo = MinMaxQuantization(
+        activations_quantization_params=QuantizationParameters(num_bits=activation_bits),
+        weights_quantization_params=QuantizationParameters(num_bits=weight_bits),
+    )
+
+    if quant_scheme_a8w8:
+        assert min_max_algo._overflow_fix == OverflowFix.FIRST_LAYER
+    else:
+        assert min_max_algo._overflow_fix == OverflowFix.DISABLE
