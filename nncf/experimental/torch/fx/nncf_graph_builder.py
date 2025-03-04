@@ -180,6 +180,7 @@ class GraphConverter:
         if source_node.op in ("get_attr",):
             tensor = get_tensor_constant_from_node(source_node, model)
             tensor_shape = tuple(tensor.shape)
+            tensor_dtype = Dtype.INTEGER if tensor.dtype == torch.int else tensor_dtype
         elif "val" in source_node.meta:
             if source_nncf_node.metatype is om.PTBatchNormMetatype and isinstance(
                 source_node.meta["val"], (tuple, list)
@@ -193,8 +194,8 @@ class GraphConverter:
                 tensor = source_node.meta["val"]
             if isinstance(tensor, torch.Tensor):
                 tensor_shape = tuple(tensor.shape)
-        
-        tensor_dtype = Dtype.INTEGER if tensor.dtype == torch.int else tensor_dtype
+
+            tensor_dtype = Dtype.INTEGER if tensor.dtype == torch.int else tensor_dtype
 
         if tensor_shape is None:
             # TODO(dlyakhov): Refactor algorithms to always have knowns edges shapes.
