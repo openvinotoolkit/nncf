@@ -51,7 +51,7 @@ LINEAR_OPERATIONS = {
 }
 
 BATCH_NORMALIZATION_OPERATIONS = {
-    GraphPattern.METATYPE_ATTR: [om.PTBatchNormMetatype, om.PTModuleBatchNormMetatype],
+    GraphPattern.METATYPE_ATTR: [om.PTBatchNormMetatype, om.PT2BatchNormMetatype, om.PTModuleBatchNormMetatype],
     GraphPattern.LABEL_ATTR: "BATCH_NORMALIZATION",
 }
 

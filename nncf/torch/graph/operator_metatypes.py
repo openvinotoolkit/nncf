@@ -30,6 +30,7 @@ ModuleAttributes = TypeVar("ModuleAttributes", bound=BaseLayerAttributes)
 
 PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 FX_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
+PT2_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 
 
 class PTOperatorMetatype(OperatorMetatype):
@@ -284,7 +285,11 @@ class PTDepthwiseConv2dSubtype(PTDepthwiseConvOperatorSubtype):
 class PTConv2dMetatype(PTOperatorMetatype):
     name = "Conv2DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"], NamespaceTarget.ATEN: ["conv2d"]}
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"],
+        NamespaceTarget.TORCH: ["conv2d"],
+        NamespaceTarget.ATEN: ["conv2d"],
+    }
     subtypes = [PTModuleConv2dMetatype, PTDepthwiseConv2dSubtype]
     output_channel_axis = 1
     num_expected_input_edges = 2
@@ -764,16 +769,18 @@ class PTBatchNormMetatype(PTOperatorMetatype):
         NamespaceTarget.ATEN: ["_native_batch_norm_legit_no_training", "cudnn_batch_norm", "batch_norm"],
     }
     subtypes = [PTModuleBatchNormMetatype]
+    weight_port_ids = [3]
+    bias_port_id = 4
 
-    if is_experimental_torch_tracing_enabled():
-        # torch.batch_norm
-        weight_port_ids = [1]
-        bias_port_id = 2
-    else:
-        # torch.nn.functional.batch_norm
-        weight_port_ids = [3]
-        bias_port_id = 4
-
+@PT2_OPERATOR_METATYPES.register()
+class PT2BatchNormMetatype(PTOperatorMetatype):
+    name = "BatchNormOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH: ["batch_norm"],
+    }
+    subtypes = [PTModuleBatchNormMetatype]
+    weight_port_ids = [1]
+    bias_port_id = 2
 
 @PT_OPERATOR_METATYPES.register()
 class PTAvgPool2dMetatype(PTOperatorMetatype):

@@ -40,7 +40,7 @@ CONV_META_TYPES = [
 ]
 
 OPERATORS_WITH_BIAS_METATYPES = CONV_META_TYPES
-CONV_FUSED_META_TYPES = [om.PTBatchNormMetatype]
+CONV_FUSED_META_TYPES = [om.PTBatchNormMetatype, om.PT2BatchNormMetatype]
 
 
 def find_const_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> Optional[NNCFNode]:

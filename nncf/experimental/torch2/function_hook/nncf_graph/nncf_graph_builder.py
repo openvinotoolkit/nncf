@@ -23,6 +23,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConstantLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
 from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
 from nncf.experimental.torch2.function_hook.graph.graph_utils import EdgeMeta
@@ -48,7 +49,7 @@ def get_node_type(type: NodeType, meta: Union[ConstMeta, FunctionMeta, InOutMeta
     if isinstance(meta, ConstMeta):
         return "nncf_model_const"
     if isinstance(meta, FunctionMeta):
-        return meta.func_name
+        return meta.func_namespace
     msg = "Unexpected metadata type"
     raise nncf.InternalError(msg)
 
@@ -89,9 +90,10 @@ def get_meta_type(node_type: str, meta: Union[ConstMeta, FunctionMeta, InOutMeta
     :param meta: The metadata associated with the node.
     :return: The PTOperatorMetatype object.
     """
-    node_metatype = cast(
-        type[om.PTOperatorMetatype], om.PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
-    )
+    metatype = om.PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
+    metatype = om.PT2_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type) if metatype == UnknownMetatype else metatype
+
+    node_metatype = cast(type[om.PTOperatorMetatype], metatype)
     node_sub_meta_type: Optional[type[om.PTOperatorMetatype]] = None
     if node_metatype.get_subtypes() and isinstance(meta, FunctionMeta):
         node_sub_meta_type = node_metatype.determine_subtype(function_args=meta.args, functions_kwargs=meta.kwargs)
@@ -187,7 +189,7 @@ def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> PTNNCFGraph:
             layer_name=node_name,
             node_metatype=meta_type,
             node_name=node_name,
-            node_type=node_type,
+            node_type=node_type.split(".")[-1],
         )
         map_nx_node_to_nncf_node[node] = nncf_node
 

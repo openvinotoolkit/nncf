@@ -44,6 +44,7 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: Dict[QuantizationTrait, List[PTOperatorMetaty
         operator_metatypes.PTRoundMetatype,
         operator_metatypes.PTPixelShuffleMetatype,
         operator_metatypes.PTBatchNormMetatype,
+        operator_metatypes.PT2BatchNormMetatype,
         operator_metatypes.PTModuleBatchNormMetatype,
         operator_metatypes.PTAvgPool2dMetatype,
         operator_metatypes.PTAvgPool3dMetatype,

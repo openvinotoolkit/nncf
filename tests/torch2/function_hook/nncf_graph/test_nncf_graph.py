@@ -44,7 +44,7 @@ REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "nncf_graph"
     [
         [NodeType.input, InOutMeta(torch.float32, (1), "input"), "nncf_model_input"],
         [NodeType.output, InOutMeta(torch.float32, (1), "output"), "nncf_model_output"],
-        [NodeType.output, FunctionMeta("op", torch.relu, [], {}), "relu"],
+        [NodeType.output, FunctionMeta("op", torch.relu, [], {}), "torch.relu"],
         [NodeType.output, ConstMeta(torch.float32, (1), "model.bias"), "nncf_model_const"],
     ],
 )
@@ -144,7 +144,7 @@ def test_model_graph(desc: ModelDesc, regen_ref_data: bool):
     graph = to_comparable_nx_graph(nncf_graph)
     nx_nncf_graph = nx.nx_pydot.to_pydot(graph)
     ref_file = REF_DIR / f"model_graph_{desc}.dot"
-    compare_with_reference_file(str(nx_nncf_graph), ref_file, regen_ref_data)
+    compare_with_reference_file(str(nx_nncf_graph), ref_file, False)
 
 
 def test_model_graph_with_shared_parameters(regen_ref_data):

@@ -82,6 +82,14 @@ class FunctionMeta:
     def func_name(self) -> str:
         return self.func.__name__
 
+    @property
+    def func_namespace(self) -> str:
+        if self.func.__qualname__.split(".")[0] == "TensorBase":
+            return f"torch.tensor.{str(self.func.__name__)}"
+        elif self.func.__qualname__ == self.func.__name__:
+            return f"torch.nn.functional.{str(self.func.__name__)}"
+        return f"{str(self.func.__module__)}.{str(self.func.__name__)}"
+
 
 @dataclass
 class EdgeMeta:
