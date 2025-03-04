@@ -82,7 +82,7 @@ class Hook:
         Returns weights of the operation with `op_name`.
 
         :param op_name: Name of the operation.
-        :return: Weihts of the operation.
+        :return: Weights of the operation.
         """
         return self._ops_weights[op_name]
 

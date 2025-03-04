@@ -162,8 +162,8 @@ class OVModelTransformer(ModelTransformer):
         """
         Collects extra model outputs based on transformations.
 
-        :param transformations: lisf of the OVOutputInsertionCommand.
-        :return: list of tuples with ov.Output & port_id.
+        :param transformations: List of the OVOutputInsertionCommand.
+        :return: List of tuples with ov.Output & port_id.
         """
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         extra_model_outputs = []
@@ -543,7 +543,9 @@ class OVModelTransformer(ModelTransformer):
         for transformation in transformations:
             node_with_weight = name_to_node_mapping[transformation.target_point.target_node_name]
             OVModelTransformer._set_const_value(
-                node_with_weight, transformation.target_point.port_id, transformation.weight_value  # Weight port id
+                node_with_weight,
+                transformation.target_point.port_id,  # Weight port id
+                transformation.weight_value,
             )
         return model
 
@@ -679,7 +681,7 @@ class OVModelTransformer(ModelTransformer):
         """
         Applies inplace fn insertion transformation to the model.
 
-        :param transformations: lisf of the OVInplaceFnInsertionCommand.
+        :param transformations: List of the OVInplaceFnInsertionCommand.
         :returns: Transformed model.
         """
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)

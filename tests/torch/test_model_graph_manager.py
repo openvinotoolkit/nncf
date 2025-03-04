@@ -372,7 +372,6 @@ def test_update_fused_bias(model_cls):
 
 
 class TestGetWeightChannelAxes:
-
     @pytest.mark.parametrize(
         "ndim1, ndim2, ref_dim1, ref_dim2",
         (

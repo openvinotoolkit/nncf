@@ -53,7 +53,7 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: Dict[QuantizationTrait, List[PTOperatorMetaty
         # https://docs.openvino.ai/2023.1/openvino_docs_OV_UG_lpt.html#input-model-requirements
         # 2. In case an activation from Torch is fused to
         # a specific OpenVINO operation in runtime, it is better to not quantize
-        # this actictivation to keep specific operations fusing.
+        # this activation to keep specific operations fusing.
         # operator_metatypes.PTHardTanhMetatype,
         # operator_metatypes.PTHardSwishMetatype,
         # operator_metatypes.PTHardSigmoidMetatype,

@@ -33,7 +33,7 @@ from nncf.tensor.definitions import TensorBackend
 # create zeros tensor where data is numpy array
 nncf_tensor = fns.zeros((2,2), backend=TensorBackend.numpy)
 
-# create zeros tensor where data is troch tensor
+# create zeros tensor where data is torch tensor
 nncf_tensor = fns.zeros((2,2), backend=TensorBackend.torch)
 ```
 

@@ -782,11 +782,7 @@ class NNCF_RNN(nn.Module):
         self.num_directions = 2 if bidirectional else 1
 
         if not isinstance(dropout, numbers.Number) or not 0 <= dropout <= 1 or isinstance(dropout, bool):
-            msg = (
-                "dropout should be a number in range [0, 1] "
-                "representing the probability of an element being "
-                "zeroed"
-            )
+            msg = "dropout should be a number in range [0, 1] representing the probability of an element being zeroed"
             raise ValueError(msg)
         if dropout > 0 and num_layers == 1:
             nncf_logger.debug(

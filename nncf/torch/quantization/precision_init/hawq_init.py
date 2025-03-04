@@ -523,7 +523,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         :param quantizers_switcher: object that is responsible for enabling and disabling quantizers
         :param model: model to access all parameters
         :param weight_quantizers: modules with quantized weights per scope
-        :param params_to_restore: storage names of the parameters that should restore reguires_grad property
+        :param params_to_restore: storage names of the parameters that should restore requires_grad property
         """
         for wq_info in weight_quantizers.values():
             quantized_module = wq_info.quantized_module

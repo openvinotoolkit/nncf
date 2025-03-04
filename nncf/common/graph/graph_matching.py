@@ -92,13 +92,13 @@ def _is_subgraph_matching_strict(graph: nx.DiGraph, pattern: nx.DiGraph, subgrap
         predecessors_keys = graph.pred[node_from_graph].keys()
         successor_keys = graph.succ[node_from_graph].keys()
         has_external_successors = any(successor_key not in subgraph for successor_key in successor_keys)
-        has_external_predcessors = any(predecessor_key not in subgraph for predecessor_key in predecessors_keys)
+        has_external_predecessors = any(predecessor_key not in subgraph for predecessor_key in predecessors_keys)
         if node_from_pattern in starting_nodes and has_external_successors:
             return False
-        if node_from_pattern in last_nodes and has_external_predcessors:
+        if node_from_pattern in last_nodes and has_external_predecessors:
             return False
         if (node_from_pattern not in last_nodes and node_from_pattern not in starting_nodes) and (
-            has_external_successors or has_external_predcessors
+            has_external_successors or has_external_predecessors
         ):
             return False
     return True

@@ -116,6 +116,6 @@ def test_shared_nodes_in_wrapped_model_with_trace_parameters(model_cls, shared_n
     graph = model.nncf.get_graph()
     for node in graph.get_all_nodes():
         ref_is_shared = node.node_name in shared_node_names
-        assert (
-            node.is_shared() == ref_is_shared
-        ), f"Attribute is_shared expect to be {ref_is_shared} for {node.node_name} node"
+        assert node.is_shared() == ref_is_shared, (
+            f"Attribute is_shared expect to be {ref_is_shared} for {node.node_name} node"
+        )

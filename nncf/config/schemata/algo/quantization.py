@@ -298,8 +298,7 @@ PRECISION_INITIALIZER_SCHEMA = {
                 "items": [NUMBER, STRING],
                 "description": "A tuple of a bitwidth and a scope of the quantizer to assign the bitwidth to.",
             },
-            "description": "Manual settings for the quantizer bitwidths. Scopes are used to identify "
-            "the quantizers.",
+            "description": "Manual settings for the quantizer bitwidths. Scopes are used to identify the quantizers.",
             "examples": [
                 [
                     [2, "ResNet/NNCFConv2d[conv1]/conv2d_0|WEIGHT"],
@@ -463,8 +462,7 @@ QUANTIZATION_SCHEMA = {
         ),
         "quantize_inputs": with_attributes(
             BOOLEAN,
-            description="Whether the model inputs should be immediately quantized prior "
-            "to any other model operations.",
+            description="Whether the model inputs should be immediately quantized prior to any other model operations.",
             default=QUANTIZE_INPUTS,
         ),
         "quantize_outputs": with_attributes(

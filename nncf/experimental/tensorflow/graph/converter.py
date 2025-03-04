@@ -69,7 +69,7 @@ class TensorFlowGraphBuilder:
         # List of output tensors
         output_tensors = frozen_func.outputs
 
-        # Step 2: Run a Grappler pass to oprimize the TensorFlow graph.
+        # Step 2: Run a Grappler pass to optimize the TensorFlow graph.
 
         # Creates a ConfigProto for configuring Grappler
         grappler_config = _get_grappler_config(graph_optimizers)
