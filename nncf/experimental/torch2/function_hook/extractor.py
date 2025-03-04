@@ -176,7 +176,7 @@ def extract_conv(
     if input_node == output_node:
         return conv_module
 
-    if output_node.metatype is not om.PTBatchNormMetatype:
+    if output_node.metatype != om.PT2BatchNormMetatype:
         msg = f"Support only PTBatchNormMetatype as output node, actual: {output_node.metatype}"
         raise nncf.InternalError(msg)
 

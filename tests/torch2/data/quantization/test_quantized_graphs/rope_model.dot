@@ -1,21 +1,25 @@
-strict digraph {
-x [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
-"/unsqueeze/0" [id=1, type=unsqueeze, metatype=PTReshapeMetatype];
-"/reshape/0" [id=2, type=reshape, metatype=PTReshapeMetatype];
-"/matmul/0" [id=3, type=matmul, metatype=PTMatMulMetatype];
-"/transpose/0" [id=4, type=transpose, metatype=PTTransposeMetatype];
-"/cat/0" [id=5, type=cat, metatype=PTCatMetatype];
-"/sin/0" [id=6, type=sin, metatype=PTSinMetatype];
-"/cos/0" [id=7, type=cos, metatype=PTCosMetatype];
-output_0 [id=8, type="nncf_model_output", metatype=PTOutputNoopMetatype];
-output_1 [id=9, type="nncf_model_output", metatype=PTOutputNoopMetatype];
-x -> "/unsqueeze/0" [dtype=float, shape="(1, 10)", out_port_id=0, in_port_id=0];
-"/unsqueeze/0" -> "/matmul/0" [dtype=float, shape="(1, 1, 10)", out_port_id=0, in_port_id=1];
-"/reshape/0" -> "/matmul/0" [dtype=float, shape="(1, 5, 1)", out_port_id=0, in_port_id=0];
-"/matmul/0" -> "/transpose/0" [dtype=float, shape="(1, 5, 10)", out_port_id=0, in_port_id=0];
-"/transpose/0" -> "/cat/0" [dtype=float, shape="(1, 10, 5)", out_port_id=0, in_port_id=0];
-"/cat/0" -> "/sin/0" [dtype=float, shape="(1, 10, 5)", out_port_id=0, in_port_id=0];
-"/cat/0" -> "/cos/0" [dtype=float, shape="(1, 10, 5)", out_port_id=0, in_port_id=0];
-"/sin/0" -> output_0 [dtype=float, shape="(1, 10, 5)", out_port_id=0, in_port_id=0];
-"/cos/0" -> output_1 [dtype=float, shape="(1, 10, 5)", out_port_id=0, in_port_id=0];
+strict digraph  {
+x [id=0, metatype=PTInputNoopMetatype, type=nncf_model_input];
+"__nncf_hooks.post_hooks.x__0.0._scale_param_storage" [id=1, metatype=PTConstNoopMetatype, type=nncf_model_const];
+"post_hook__x__0[0]/symmetric_quantize/0" [id=2, metatype=UnknownMetatype, type=symmetric_quantize];
+"/unsqueeze/0" [id=3, metatype=PTReshapeMetatype, type=unsqueeze];
+"/reshape/0" [id=4, metatype=UnknownMetatype, type=reshape];
+"/matmul/0" [id=5, metatype=PTMatMulMetatype, type=matmul];
+"/transpose/0" [id=6, metatype=PTTransposeMetatype, type=transpose];
+"/cat/0" [id=7, metatype=PTCatMetatype, type=cat];
+"/sin/0" [id=8, metatype=UnknownMetatype, type=sin];
+"/cos/0" [id=9, metatype=UnknownMetatype, type=cos];
+output_0 [id=10, metatype=PTOutputNoopMetatype, type=nncf_model_output];
+output_1 [id=11, metatype=PTOutputNoopMetatype, type=nncf_model_output];
+x -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 10)"];
+"__nncf_hooks.post_hooks.x__0.0._scale_param_storage" -> "post_hook__x__0[0]/symmetric_quantize/0"  [dtype=float, in_port_id=4, out_port_id=0, shape="(1,)"];
+"post_hook__x__0[0]/symmetric_quantize/0" -> "/unsqueeze/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 10)"];
+"/unsqueeze/0" -> "/matmul/0"  [dtype=float, in_port_id=1, out_port_id=0, shape="(1, 1, 10)"];
+"/reshape/0" -> "/matmul/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 5, 1)"];
+"/matmul/0" -> "/transpose/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 5, 10)"];
+"/transpose/0" -> "/cat/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 10, 5)"];
+"/cat/0" -> "/sin/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 10, 5)"];
+"/cat/0" -> "/cos/0"  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 10, 5)"];
+"/sin/0" -> output_0  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 10, 5)"];
+"/cos/0" -> output_1  [dtype=float, in_port_id=0, out_port_id=0, shape="(1, 10, 5)"];
 }
