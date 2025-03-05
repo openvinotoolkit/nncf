@@ -132,7 +132,7 @@ class RBSparsityController(BaseSparsityAlgoController):
         if not self._distributed or get_world_size() == 1:
             return 1
 
-        nvalues = 0
+        nun_values = 0
         ncor_values = 0
         eps = 1e-4
         for minfo in self.sparsified_module_info:
@@ -145,9 +145,9 @@ class RBSparsityController(BaseSparsityAlgoController):
             for i in range(1, len(mask_list)):
                 rel_error = (mask_list[0] - mask_list[i]) / mask_list[0]
                 ncor_values = ncor_values + (rel_error.abs() < eps).sum(dtype=mask.dtype)
-                nvalues = nvalues + mask_list[i].numel()
+                nun_values = nun_values + mask_list[i].numel()
 
-        return ncor_values / nvalues
+        return ncor_values / nun_values
 
     def statistics(self, quickly_collected_only=False) -> NNCFStatistics:
         collector = PTSparseModelStatisticsCollector(self.model, self.sparsified_module_info)

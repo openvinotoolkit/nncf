@@ -117,7 +117,7 @@ def create_se_block() -> GraphPattern:
         GraphPattern.METATYPE_ATTR: [om.PTAvgPool2dMetatype, om.PTAvgPool3dMetatype, om.PTMeanMetatype],
         GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
     }
-    SYGMOID_OPERATIONS = {
+    SIGMOID_OPERATIONS = {
         GraphPattern.LABEL_ATTR: "SIGMOID",
         GraphPattern.METATYPE_ATTR: [om.PTSigmoidMetatype, om.PTHardSigmoidMetatype],
     }
@@ -134,7 +134,7 @@ def create_se_block() -> GraphPattern:
         linear_node_1 = pattern.add_node(**LINEAR_OPERATIONS)
         activation_node_1 = pattern.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
         linear_node_2 = pattern.add_node(**LINEAR_OPERATIONS)
-        activation_node_2 = pattern.add_node(**SYGMOID_OPERATIONS)
+        activation_node_2 = pattern.add_node(**SIGMOID_OPERATIONS)
         multiply_node = pattern.add_node(**MUL_OPERATION)
 
         pattern.add_edge(any_node, reduce_mean_node)
@@ -155,7 +155,7 @@ def create_se_block() -> GraphPattern:
         activation_node_1 = pattern.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
         linear_node_2 = pattern.add_node(**LINEAR_OPERATIONS)
         add_node_2 = pattern.add_node(label="ADD_BIAS", type=[om.PTAddMetatype, om.PTSubMetatype])
-        activation_node_2 = pattern.add_node(**SYGMOID_OPERATIONS)
+        activation_node_2 = pattern.add_node(**SIGMOID_OPERATIONS)
         multiply_node = pattern.add_node(**MUL_OPERATION)
 
         pattern.add_edge(any_node, reduce_mean_node)
@@ -182,7 +182,7 @@ def create_se_block() -> GraphPattern:
         linear_node_1 = pattern.add_node(**LINEAR_OPERATIONS)
         activation_node_1 = pattern.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
         linear_node_2 = pattern.add_node(**LINEAR_OPERATIONS)
-        activation_node_2 = pattern.add_node(**SYGMOID_OPERATIONS)
+        activation_node_2 = pattern.add_node(**SIGMOID_OPERATIONS)
         reshape_node_2 = pattern.add_node(**RESHAPE_NODES)
         multiply_node = pattern.add_node(**MUL_OPERATION)
 
@@ -207,7 +207,7 @@ def create_se_block() -> GraphPattern:
         activation_node_1 = pattern.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
         linear_node_2 = pattern.add_node(**LINEAR_OPERATIONS)
         add_node_2 = pattern.add_node(label="ADD_BIAS", type=[om.PTAddMetatype, om.PTSubMetatype])
-        activation_node_2 = pattern.add_node(**SYGMOID_OPERATIONS)
+        activation_node_2 = pattern.add_node(**SIGMOID_OPERATIONS)
         reshape_node_2 = pattern.add_node(**RESHAPE_NODES)
         multiply_node = pattern.add_node(**MUL_OPERATION)
 

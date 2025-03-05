@@ -27,4 +27,4 @@ repos:
           - --no-summary
           - --gitignore
           - --files
-        files: (^nncf/common/.*\.py$|.*\.md$)
+        files: (^nncf/torch/.*\.py$|.*\.md$)
