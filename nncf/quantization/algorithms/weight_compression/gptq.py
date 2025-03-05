@@ -123,8 +123,13 @@ class GPTQ:
             ]:
                 continue
             _, input_tensors = next(iter(inputs.items()))
-            hessian = self._calculate_hessian(node, input_tensors)
-            scale, zero_point = self._quantize_weights(model, graph, wc_params, hessian, input_tensors)
+            input_channel_axis = self._backend_entity.get_activation_channel_axis(
+                node, self._backend_entity.get_activation_port_id(node, graph), input_tensors[0].shape
+            )
+            hessian = self._calculate_hessian(node, input_tensors, input_channel_axis)
+            scale, zero_point = self._quantize_weights(
+                model, graph, wc_params, hessian, input_tensors, input_channel_axis
+            )
             scales[wc_params.weight_name] = scale
             zero_points[wc_params.weight_name] = zero_point
 
@@ -157,7 +162,7 @@ class GPTQ:
 
         return self._layerwise_engine.get_statistic_points(model, graph, filtered_nodes)
 
-    def _calculate_hessian(self, node: NNCFNode, inputs: List[Tensor]) -> Tensor:
+    def _calculate_hessian(self, node: NNCFNode, inputs: List[Tensor], input_channel_axis: int) -> Tensor:
         """
         Calculates the Hessian matrix for the given node and inputs.
 
@@ -171,9 +176,8 @@ class GPTQ:
             msg = "Convolution metatypes are not supported"
             raise nncf.UnsupportedModelError(msg)
 
-        hidden_dim = self._backend_entity.get_input_hidden_dim(node)
         hessian = fns.zeros(
-            (inputs[0].shape[hidden_dim], inputs[0].shape[hidden_dim]),
+            (inputs[0].shape[input_channel_axis], inputs[0].shape[input_channel_axis]),
             backend=inputs[0].backend,
             dtype=TensorDataType.float32,
         )
@@ -182,7 +186,7 @@ class GPTQ:
             batch_size = 1 if len(inp.shape) == 2 else inp.shape[0]
             if node.metatype in self._backend_entity.matmul_metatypes:
                 if len(inp.shape) == 3:
-                    inp = inp.reshape((-1, inp.shape[hidden_dim]))
+                    inp = inp.reshape((-1, inp.shape[input_channel_axis]))
                 inp = fns.transpose(inp)
             hessian *= nsamples / (nsamples + batch_size)
             nsamples += batch_size
@@ -198,6 +202,7 @@ class GPTQ:
         wc_params: WeightCompressionParameters,
         hessian: Tensor,
         inputs: List[Tensor],
+        input_channel_axis: int,
     ):
         """
         Quantizes the weights of the model based on the calculated Hessian matrix.
@@ -267,13 +272,14 @@ class GPTQ:
                         scales.append(scale)
                     else:
                         if self._scale_estimation and block_compression_config.num_bits == 4:
-                            transpose = self._backend_entity.get_input_hidden_dim(wc_params.node_with_weight) == -2
                             activations = (
-                                [inp[:, (i1 + i) : (i1 + i + group_size), ...] for inp in inputs]
-                                if transpose
+                                [inp[..., (i1 + i) : (i1 + i + group_size), :] for inp in inputs]
+                                if input_channel_axis != (len(inputs[0].shape) - 1)
                                 else [inp[..., (i1 + i) : (i1 + i + group_size)] for inp in inputs]
                             )
-                            wc_statistics = ScaleEstimation.activations_to_wc_statistics(activations, transpose)
+                            wc_statistics = ScaleEstimation.activations_to_wc_statistics(
+                                activations, input_channel_axis
+                            )
                             scale, zero_point = ScaleEstimation.calculate_quantization_params(
                                 wc_statistics,
                                 weight_tensor[:, (i1 + i) : (i1 + i + group_size)],

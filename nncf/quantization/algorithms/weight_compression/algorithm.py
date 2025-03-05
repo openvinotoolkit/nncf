@@ -772,15 +772,15 @@ class WeightCompression(Algorithm):
                 statistic_point = self._backend_entity.target_point(
                     TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
                 )
-                # Reduce activations across all but the last dimension. The last dimension is assumed to be the hidden
-                # size dimension.
+                # Reduce activations across all but the hidden dimension.
                 output_edge = graph.get_output_edges_by_port_id(node, output_port_id)[0]
-                n_dims = len(output_edge.tensor_shape)
-                reduction_axes = tuple(
-                    i
-                    for i in range(n_dims)
-                    if i != n_dims + self._backend_entity.get_input_hidden_dim(output_edge.to_node)
+                node = output_edge.to_node
+                input_shape = output_edge.tensor_shape
+                input_channel_axis = self._backend_entity.get_activation_channel_axis(
+                    node, self._backend_entity.get_activation_port_id(node, graph), input_shape
                 )
+                n_dims = len(input_shape)
+                reduction_axes = tuple(set(range(n_dims)) - {input_channel_axis})
                 stat_collector = self._backend_entity.mean_statistic_collector(
                     reduction_axes=reduction_axes, subset_size=self._subset_size
                 )

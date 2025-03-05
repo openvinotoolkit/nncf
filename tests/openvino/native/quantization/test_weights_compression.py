@@ -1437,6 +1437,7 @@ def test_compression_with_different_algo_combinations(input_shape, kwargs):
             advanced_parameters=CompressionParams(gptq_params=GPTQParams(subset_size=2)),
         ),
     ],
+    ids=["se", "lora", "gptq_se_awq"],
 )
 def test_compression_with_transposed_activations(kwargs):
     dataset_size = 4

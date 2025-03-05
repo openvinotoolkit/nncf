@@ -33,6 +33,7 @@ from nncf.openvino.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import create_ov_const_from_tensor
+from nncf.openvino.graph.node_utils import get_activation_channel_axis
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.openvino.graph.node_utils import get_const_value_as_ov_tensor
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
@@ -366,10 +367,8 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return filter_func
 
     @staticmethod
-    def get_input_hidden_dim(node: NNCFNode) -> int:
-        if (node is not None) and (node.layer_attributes is not None):
-            return -2 if node.layer_attributes.input_attributes["transpose"] else -1
-        return -1
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
+        return get_activation_channel_axis(node, port_id, input_shape)
 
 
 class OVTensorWeightCompressionAlgoBackend(OVWeightCompressionAlgoBackend):

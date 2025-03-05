@@ -247,14 +247,16 @@ class WeightCompressionAlgoBackend(ABC):
         """
 
     @staticmethod
-    def get_input_hidden_dim(input_node: NNCFNode) -> int:
+    @abstractmethod
+    def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: Tuple[int]) -> int:
         """
-        Returns the index of the hidden dimension in the shape of the input node.
+        Returns axis number of the activation tensor which correspond to it channel.
 
-        :param input_node: The input node.
-        :return: The index of the hidden dimension in the shape of the input node.
+        :param node: NNCFNode instance.
+        :param port_id: Port ID for input.
+        :param input_shape: Shape of the input.
+        :return: Channel axis number.
         """
-        return -1
 
 
 class AWQAlgoBackend(WeightCompressionAlgoBackend):
