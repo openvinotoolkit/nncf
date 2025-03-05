@@ -780,7 +780,7 @@ class WeightCompression(Algorithm):
                     node, self._backend_entity.get_activation_port_id(node, graph), input_shape
                 )
                 n_dims = len(input_shape)
-                reduction_axes = tuple(set(range(n_dims)) - {input_channel_axis})
+                reduction_axes = tuple(set(range(n_dims)) - {input_channel_axis % n_dims})
                 stat_collector = self._backend_entity.mean_statistic_collector(
                     reduction_axes=reduction_axes, subset_size=self._subset_size
                 )
