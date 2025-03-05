@@ -247,12 +247,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return filter_func
 
     @staticmethod
-    def get_fq_insertion_command(
-        compressed_weight,
-        wc_params,
-        orig_weight_shape,
-        compression_format,
-    ):
+    def get_fq_insertion_command(compressed_weight, wc_params, orig_weight_shape, compression_format):
         compression_config = wc_params.compression_config
         mode_vs_schema_map = {
             CompressWeightsMode.INT4_ASYM: QuantizationScheme.ASYMMETRIC_LORA,
@@ -269,7 +264,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         lora_rank = 256
         device = compressed_weight.tensor.data.device
         scale = compressed_weight.scale.data
-        zero_point = compressed_weight.zero_point.data
+
         weight_shape = compressed_weight.tensor.shape
 
         quantizer_spec = PTQuantizerSpec(
@@ -279,13 +274,12 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             narrow_range=False,
             half_range=False,
             scale_shape=scale.shape,
-            weight_shape=weight_shape,
             logarithm_scale=False,
         )
 
         quantizer_cls = QUANTIZATION_MODULES.get(schema)
         if schema in [QuantizationScheme.ASYMMETRIC_LORA, QuantizationScheme.SYMMETRIC_LORA]:
-            lora_spec = PTLoraSpec(lora_rank=lora_rank, orig_weight_shape=orig_weight_shape)
+            lora_spec = PTLoraSpec(lora_rank=lora_rank, orig_weight_shape=orig_weight_shape, weight_shape=weight_shape)
             quantizer = quantizer_cls(quantizer_spec, lora_spec)
             # TODO: re-evaluate for all types: float32, float16, bfloat16
             lora_dtype = quantizer._lora_A.dtype
@@ -299,12 +293,13 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         levels = quantizer.levels
         if schema in [QuantizationScheme.ASYMMETRIC_LORA, QuantizationScheme.ASYMMETRIC]:
+            zero_point = compressed_weight.zero_point.data
             dtype = quantizer.input_low.dtype
             # NOTE: loose some accuracy, because of invertion of round
             input_low = -zero_point * scale
             input_range = scale * (levels - 1)
             quantizer.input_low = torch.nn.Parameter(input_low.type(dtype))
-            quantizer.input_range = torch.nn.Parameter(input_range.type(dtype))
+            quantizer.input_range = torch.nn.Parameter(input_range.type(dtype) - quantizer.eps)
         else:
             scale = scale.type(quantizer.scale.dtype)
             quantizer.scale = torch.nn.Parameter(scale * levels / 2)
@@ -434,6 +429,9 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             else:
                 command = self.get_fq_insertion_command(compressed_weight, wc_params, weight.shape, compression_format)
             transformation_layout.register(command)
+
+        # To have FQ's with requires_grad=True only
+        model.requires_grad_(False)
 
         # apply transformations
         transformed_model = PTModelTransformer(model).transform(transformation_layout)

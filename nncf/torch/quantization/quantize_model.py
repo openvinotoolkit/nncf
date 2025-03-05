@@ -119,6 +119,7 @@ def compress_weights_impl(
         gptq,
         lora_correction,
         backup_mode,
+        compression_format,
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)

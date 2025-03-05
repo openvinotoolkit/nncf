@@ -80,7 +80,6 @@ class PTQuantizerSpec(QuantizerSpec):
         "narrow_range",
         "half_range",
         "scale_shape",
-        "weight_shape",
         "logarithm_scale",
         "is_quantized_on_export",
         "compression_lr_multiplier",
@@ -94,7 +93,6 @@ class PTQuantizerSpec(QuantizerSpec):
         narrow_range: bool,
         half_range: bool,
         scale_shape: Tuple[int, ...],
-        weight_shape: Tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool = False,
         compression_lr_multiplier: Optional[float] = None,
@@ -109,7 +107,6 @@ class PTQuantizerSpec(QuantizerSpec):
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
         self.per_channel = scale_shape != (1,)
         self.scale_shape = scale_shape
-        self.weight_shape = weight_shape
         self.logarithm_scale = logarithm_scale
         self.compression_lr_multiplier = compression_lr_multiplier
         self.is_quantized_on_export = is_quantized_on_export
@@ -121,7 +118,6 @@ class PTQuantizerSpec(QuantizerSpec):
         narrow_range: bool,
         half_range: bool,
         scale_shape: Tuple[int, ...],
-        weight_shape: Tuple[int, ...],
         logarithm_scale: bool,
         is_quantized_on_export: bool,
         compression_lr_multiplier: Optional[float],
@@ -133,7 +129,6 @@ class PTQuantizerSpec(QuantizerSpec):
             narrow_range,
             half_range,
             scale_shape,
-            weight_shape,
             logarithm_scale,
             is_quantized_on_export,
             compression_lr_multiplier,
@@ -161,15 +156,17 @@ class PTQuantizerSpec(QuantizerSpec):
 
 
 class PTLoraSpec:
-    _arg_names = ["lora_rank", "orig_weight_shape"]
+    _arg_names = ["lora_rank", "orig_weight_shape", "weight_shape"]
 
     def __init__(
         self,
         lora_rank: int,
         orig_weight_shape: List[int],
+        weight_shape: List[int],
     ):
         self.lora_rank = lora_rank
         self.orig_weight_shape = orig_weight_shape
+        self.weight_shape = weight_shape
 
     @classmethod
     def from_state(cls, state: Dict[str, Any]) -> "PTLoraSpec":
@@ -1046,13 +1043,12 @@ class AsymmetricQuantizer(BaseQuantizer):
 
 
 class LoraMixin:
-    LORA_A_PARAM_NAME = "lora_A"
-    LORA_B_PARAM_NAME = "lora_B"
+    LORA_A_PARAM_NAME = "_lora_A"
+    LORA_B_PARAM_NAME = "_lora_B"
 
     def __init__(self, lspec: PTLoraSpec):
         self._lspec = lspec
         out_features, in_features = lspec.orig_weight_shape
-        # TODO: what if training in float16?
         self._lora_A = torch.nn.Parameter(torch.ones((lspec.lora_rank, in_features), dtype=torch.bfloat16))
         self._lora_B = torch.nn.Parameter(torch.zeros((out_features, lspec.lora_rank), dtype=torch.bfloat16))
 
@@ -1085,7 +1081,7 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
         self.to(x.device)
         return asymmetric_quantize_lora(
             x,
-            self._qspec.weight_shape,
+            self._lspec.weight_shape,
             self._lora_A,
             self._lora_B,
             self.input_low,
@@ -1131,7 +1127,7 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
         self.to(x.device)
         return symmetric_quantize_lora(
             x,
-            self._qspec.weight_shape,
+            self._lspec.weight_shape,
             self._lora_A,
             self._lora_B,
             self.scale,

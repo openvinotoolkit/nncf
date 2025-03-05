@@ -185,6 +185,7 @@ class ScaleEstimation:
 
         s, X = process_stats(statistics, subset_size)
 
+        X = X.astype(TensorDataType.float32)
         weight = weight.astype(TensorDataType.float32)
         eps = fns.finfo(weight).eps
 
