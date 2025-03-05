@@ -1,0 +1,16 @@
+{
+  "files": [
+      "**/*.md"
+  ],
+
+  "ignorePaths": ["../ReleaseNotes.md"],
+
+  "dictionaryDefinitions": [
+    {
+      "name": "nncf",
+      "path": "cspell_dict.txt",
+      "addWords": true
+    }
+  ],
+  "dictionaries": ["nncf", "python", "latex", "softwareTerms", "en_US", "en-gb", "filetype", "bash"]
+}
