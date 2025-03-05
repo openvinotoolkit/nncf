@@ -15,11 +15,25 @@ import torch
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
+from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
+from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.model_graph_manager import get_const_node
+from nncf.torch.model_graph_manager import get_module_by_name
+from nncf.torch.model_graph_manager import split_const_name
+from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import SymmetricQuantizer
+from nncf.torch.quantization.quantize_functions import TuneRange
 
 SUPPORTED_NUM_BITS_FOR_STRIP_MODEL = [8]
 
@@ -174,3 +188,128 @@ def strip_quantized_model(model: NNCFNetwork):
     model = replace_quantizer_to_torch_native_module(model)
     model = remove_disabled_quantizers(model)
     return model
+
+
+def strip_lora_model(model: NNCFNetwork) -> NNCFNetwork:
+    """ """
+
+    transformation_layout = TransformationLayout()
+
+    model_layout = model.nncf.transformation_layout()
+    model = model.nncf.get_clean_shallow_copy()
+    graph = model.nncf.get_graph()
+
+    for command in model_layout.transformations:
+        quantizer = command.fn
+
+        if len(command.target_points) > 1:
+            msg = "Command contains more than one target point!"
+            raise nncf.ValidationError(msg)
+
+        tp = command.target_points[0]
+        node_with_weight = graph.get_node_by_name(tp.target_node_name)
+        weight_node = get_const_node(node_with_weight, tp.input_port_id, graph)
+
+        module_name, weight_attr_name = split_const_name(weight_node.layer_attributes.name)
+        module = get_module_by_name(module_name, model)
+        original_weight = getattr(module, weight_attr_name)
+
+        original_dtype = original_weight.dtype
+        original_shape = original_weight.shape
+        original_eps = torch.finfo(original_dtype).eps
+
+        # Quantize-dequantize using universal quantization formula
+        qdq_weight = quantizer.quantize(original_weight)
+        qdq_weight = qdq_weight.reshape(quantizer._qspec.weight_shape)
+        qdq_weight = qdq_weight.to(original_dtype)
+
+        # Quantize qdq_value using weight lowering formula
+        if isinstance(quantizer, AsymmetricQuantizer):
+            input_range_safe = abs(quantizer.input_range) + quantizer.eps
+            input_low, input_range = TuneRange.apply(quantizer.input_low, input_range_safe, quantizer.levels)
+
+            integer_dtype = torch.uint8
+
+            input_low = input_low.to(original_dtype)
+            input_range = input_range.to(original_dtype)
+
+            scale = input_range / quantizer.level_high
+            scale = torch.where(torch.abs(scale) < original_eps, original_eps, scale)
+            scale = scale.to(original_dtype)
+
+            zero_point = quantizer.level_low - torch.round(input_low / scale)
+            zero_point = torch.clip(zero_point, quantizer.level_low, quantizer.level_high)
+            zero_point = zero_point.to(integer_dtype)
+
+            q_weight = qdq_weight / scale
+            q_weight = q_weight + zero_point
+            q_weight = torch.round(q_weight)
+            q_weight = torch.clip(q_weight, quantizer.level_low, quantizer.level_high)
+            q_weight = q_weight.to(integer_dtype)
+
+            if quantizer.num_bits == 8:
+                decompressor = INT8AsymmetricWeightsDecompressor(
+                    scale=scale, zero_point=zero_point, result_dtype=original_dtype
+                )
+            else:
+                decompressor = INT4AsymmetricWeightsDecompressor(
+                    scale=scale,
+                    zero_point=zero_point,
+                    compressed_weight_shape=q_weight.shape,
+                    result_shape=original_shape,
+                    result_dtype=original_dtype,
+                )
+
+        elif isinstance(quantizer, SymmetricQuantizer):
+            integer_dtype = torch.int8
+
+            scale = quantizer.scale / abs(quantizer.level_low)
+            scale = torch.where(torch.abs(scale) < original_eps, original_eps, scale)
+            scale = scale.to(original_dtype)
+
+            q_weight = qdq_weight / scale
+            q_weight = torch.round(q_weight)
+            q_weight = torch.clip(q_weight, quantizer.level_low, quantizer.level_high)
+            q_weight = q_weight.to(integer_dtype)
+
+            if quantizer.num_bits == 8:
+                decompressor = INT8SymmetricWeightsDecompressor(scale=scale, result_dtype=original_dtype)
+            else:
+                decompressor = INT4SymmetricWeightsDecompressor(
+                    scale=scale,
+                    compressed_weight_shape=q_weight.shape,
+                    result_shape=original_shape,
+                    result_dtype=original_dtype,
+                )
+
+        packed_tensor = decompressor.pack_weight(q_weight)
+
+        # sets compressed tensor
+        compressed_parameter = torch.nn.Parameter(packed_tensor, requires_grad=False)
+        setattr(module, weight_attr_name, compressed_parameter)
+
+        consumer_nodes = graph.get_next_nodes(weight_node)
+        if len(consumer_nodes) > 1:
+            for comsumer_node in consumer_nodes:
+                consumer_module = model.nncf.get_module_by_scope(Scope.from_str(comsumer_node.layer_name))
+                for name, param in consumer_module.named_parameters(recurse=False, remove_duplicate=False):
+                    if id(param) == id(original_weight):
+                        setattr(consumer_module, name, compressed_parameter)
+
+        # registry weight decompression module in the model
+        decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
+
+        # inserts the weight decompressor into the model as the post hook on the model weight
+        target_point = PTTargetPoint(
+            TargetType.OPERATOR_POST_HOOK,
+            target_node_name=weight_node.node_name,
+        )
+        transformation_layout.register(
+            PTSharedFnInsertionCommand(
+                [target_point],
+                decompressor,
+                decompressor_name,
+            )
+        )
+
+    return PTModelTransformer(model).transform(transformation_layout)

@@ -27,6 +27,7 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
+from nncf.torch.quantization.strip import strip_lora_model
 from tests.common.quantization.data_generators import check_outputs
 from tests.common.quantization.data_generators import generate_lazy_sweep_data
 from tests.common.quantization.data_generators import generate_random_low_and_range_by_input_size
@@ -34,6 +35,7 @@ from tests.common.quantization.data_generators import generate_random_scale_by_i
 from tests.common.quantization.data_generators import generate_sweep_data
 from tests.common.quantization.data_generators import get_quant_len_by_range
 from tests.torch.helpers import BasicConvTestModel
+from tests.torch.helpers import LinearModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_functions import get_test_data
@@ -325,3 +327,42 @@ def test_nncf_strip_api(strip_type, do_copy):
 
     assert isinstance(strip_model.conv.get_pre_op("0").op, FakeQuantize)
     assert isinstance(strip_model.nncf.external_quantizers["/nncf_model_input_0|OUTPUT"], FakeQuantize)
+
+
+WEIGHT = torch.tensor([[-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]])
+
+
+@pytest.mark.parametrize(
+    ("mode", "torch_dtype"),
+    (
+        (nncf.CompressWeightsMode.INT4_ASYM, torch.float32),
+        (nncf.CompressWeightsMode.INT4_ASYM, torch.float16),
+        (nncf.CompressWeightsMode.INT4_ASYM, torch.bfloat16),
+        (nncf.CompressWeightsMode.INT4_SYM, torch.float32),
+        (nncf.CompressWeightsMode.INT4_SYM, torch.float16),
+        (nncf.CompressWeightsMode.INT4_SYM, torch.bfloat16),
+    ),
+)
+def test_nncf_strip_lora_model(mode, torch_dtype):
+    model = LinearModel(weight=WEIGHT, torch_dtype=torch_dtype)
+    with torch.no_grad():
+        example = torch.ones(WEIGHT.shape).to(torch_dtype)
+        dataset = [example]
+
+        compressed_model = nncf.compress_weights(
+            model,
+            ratio=1,
+            group_size=2,
+            mode=mode,
+            backup_mode=None,
+            dataset=nncf.Dataset(dataset),
+            all_layers=True,
+            compression_format=nncf.CompressionFormat.FQ_LORA,
+        )
+
+        compressed_output = compressed_model(example)
+
+        strip_compressed_model = strip_lora_model(compressed_model)
+        stripped_output = strip_compressed_model(example)
+
+        assert torch.allclose(compressed_output, stripped_output)

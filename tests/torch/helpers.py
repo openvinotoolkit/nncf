@@ -773,3 +773,14 @@ class HookChecker:
             assert len(actual_hooks) == len(ref_hooks)
             for actual_hook, ref_hook in zip(actual_hooks, ref_hooks):
                 assert actual_hook is ref_hook
+
+
+class LinearModel(nn.Module):
+    def __init__(self, weight, torch_dtype):
+        super().__init__()
+        shape = weight.shape
+        self.linear = nn.Linear(shape[1], shape[0], bias=False)
+        self.linear.weight.data = weight.to(torch_dtype)
+
+    def forward(self, x):
+        return self.linear(x)
