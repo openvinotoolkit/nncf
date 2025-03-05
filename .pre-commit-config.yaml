@@ -14,5 +14,4 @@ repos:
     rev: v0.43.0
     hooks:
       - id: markdownlint
-        args: [--config=.markdownlint.yaml]
-
+        args: [--config=.ci/markdownlint.yaml]
