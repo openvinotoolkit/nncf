@@ -144,7 +144,7 @@ def test_model_graph(desc: ModelDesc, regen_ref_data: bool):
     graph = to_comparable_nx_graph(nncf_graph)
     nx_nncf_graph = nx.nx_pydot.to_pydot(graph)
     ref_file = REF_DIR / f"model_graph_{desc}.dot"
-    compare_with_reference_file(str(nx_nncf_graph), ref_file, False)
+    compare_with_reference_file(str(nx_nncf_graph), ref_file, regen_ref_data)
 
 
 def test_model_graph_with_shared_parameters(regen_ref_data):
