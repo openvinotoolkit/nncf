@@ -17,6 +17,7 @@ from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDeviceType
+from nncf.tensor.definitions import TypeInfo
 from nncf.tensor.functions import numeric
 
 DTYPE_MAP: Dict[TensorDataType, ov.Type] = {
@@ -84,6 +85,11 @@ def _(a: ov.Tensor) -> NDArray[Any]:
             dtype = TensorDataType.int8
         a = _astype_ov(a, dtype)
     return a.data
+
+
+@numeric.finfo.register(ov.Tensor)
+def _(a: ov.Tensor) -> TypeInfo:
+    return numeric.finfo(a.data)
 
 
 def _astype_ov(a: ov.Tensor, dtype: TensorDataType) -> ov.Tensor:

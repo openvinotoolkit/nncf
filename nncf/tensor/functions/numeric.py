@@ -359,7 +359,7 @@ def power(a: Tensor, exponent: Union[Tensor, float]) -> Tensor:
     """
     Takes the power of each element in input with exponent and returns a tensor with the result.
     Exponent can be either a single float number or a broadcastable Tensor. In case exponent is
-    a brodcastable tensor, the exponent is being broadcasted and the return tensor contains
+    a broadcastable tensor, the exponent is being broadcasted and the return tensor contains
     the power of each element in input with exponent elementwise.
 
     :param a: Input data.

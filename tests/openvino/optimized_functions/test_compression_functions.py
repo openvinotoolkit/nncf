@@ -24,6 +24,7 @@ from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import quantize_dequantize_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.tensor import Tensor
@@ -45,14 +46,21 @@ class QuantizationTask(Enum):
     Q_DQ_RQ = "quantize_dequantize_return_quantized"
 
 
-COMPRESSION_CONFIGS = [
+INT8_COMPRESSION_CONFIGS = [
     WeightCompressionConfig(CompressWeightsMode.INT8_ASYM),
     WeightCompressionConfig(CompressWeightsMode.INT8_SYM),
+]
+
+INT4_COMPRESSION_CONFIGS = [
     WeightCompressionConfig(CompressWeightsMode.INT4_ASYM),
     WeightCompressionConfig(CompressWeightsMode.INT4_SYM),
     WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, group_size=2),
     WeightCompressionConfig(CompressWeightsMode.INT4_SYM, group_size=2),
 ]
+
+COMPRESSION_CONFIGS = INT8_COMPRESSION_CONFIGS + INT4_COMPRESSION_CONFIGS
+
+WEIGHT_SHAPE = (10000, 4)
 
 REDUCTION_AXES = (1,)
 
@@ -93,7 +101,7 @@ def openvino_available(available: bool):
     nncf.common.utils.backend._OPENVINO_AVAILABLE = original_value
 
 
-@pytest.mark.parametrize("weight_shape", [(100000, 4)], ids=[""])
+@pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
 @pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
 @pytest.mark.parametrize(
     ("quantization_task", "tensor_backend"),
@@ -206,6 +214,35 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
     _check_values(results)
 
 
+@pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
+@pytest.mark.parametrize("config", INT4_COMPRESSION_CONFIGS, ids=[str(c) for c in INT4_COMPRESSION_CONFIGS])
+@pytest.mark.parametrize("tensor_backend", [TensorBackend.numpy, "auto"])
+@pytest.mark.parametrize("dtype", [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16])
+def test_integer_quantization_error_alignment(weight_shape, config, tensor_backend, dtype):
+    results = defaultdict(dict)
+    # Iterate over two implementations
+    for cb in [ComputationBackend.NumPy, ComputationBackend.OV]:
+        # A context manager to enable/disable ov implementation
+        with openvino_available(cb == ComputationBackend.OV):
+            if tensor_backend == TensorBackend.ov or cb == ComputationBackend.OV and tensor_backend == "auto":
+                weight_tensor_backend = TensorBackend.ov
+            else:
+                weight_tensor_backend = TensorBackend.numpy
+
+            weight = get_random_float_tensor(weight_shape, dtype, weight_tensor_backend)
+            fn_to_patch = opt_fns.get_integer_quantization_error
+            patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
+            with patch(patch_path, side_effect=fn_to_patch) as mock:
+                results[cb]["quantization_error"] = get_integer_quantization_error(weight, REDUCTION_AXES, config)
+
+            if cb == ComputationBackend.NumPy:
+                mock.assert_not_called()
+            else:
+                mock.assert_called_once()
+
+    _check_values(results)
+
+
 def _check_backends_and_dtypes(
     quantization_task,
     cb,
@@ -256,6 +293,10 @@ def _check_values(results):
     for key in keys:
         numpy_result = results[ComputationBackend.NumPy][key]
         ov_result = results[ComputationBackend.OV][key]
+
+        if isinstance(numpy_result, float) and isinstance(ov_result, float):
+            numpy_result = np.array([numpy_result], dtype=np.float32)
+            ov_result = np.array([ov_result], dtype=np.float32)
 
         # Note: For static-shaped OV models doing asymmetric compression with convertable divisions there maybe
         # misalignments equal to 1 quant between OV and NumPy. For more details see ticket 156511.

@@ -179,7 +179,7 @@ class Quantizer(NNCFOperation):
                     new_shape.append(val)
             if switch_counter > 1:
                 msg = (
-                    "Quntizer could not transform input to apply per-channel quantization: "
+                    "Quantizer could not transform input to apply per-channel quantization: "
                     f"input_shape {input_shape}, channel_axes {channel_axes}"
                 )
                 raise NotImplementedError(msg)

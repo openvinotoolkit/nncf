@@ -14,7 +14,7 @@ from __future__ import annotations
 import inspect
 import types
 from types import MethodType
-from typing import Any, Callable, Dict, Tuple, cast
+from typing import Any, Callable, Dict, Tuple, TypeVar, cast
 
 from torch import nn
 
@@ -24,6 +24,8 @@ from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
 from nncf.experimental.torch2.function_hook.hook_storage import RemovableHookHandle
 
 ATR_HOOK_STORAGE = "__nncf_hooks"
+
+TModel = TypeVar("TModel", bound=nn.Module)
 
 
 class ForwardWithHooks:
@@ -120,13 +122,30 @@ class ReplicateForDataParallel:
 
     def __call__(self, *args: Any, **kwargs: Any) -> nn.Module:
         module = cast(nn.Module, self._func.__self__)  # type: ignore[attr-defined]
-        saved_wrapped_forward = module.forward
+        saved_forward_with_hooks = module.forward
+
+        # Ensure that the forwarding method is not overridden. If it is, calling forward()
+        # will raise a RuntimeError due to mismatched device assignments, e.g.:
+        # "Expected all tensors to be on the same device, but found at least two devices, cuda:1 and cuda:0!"
+        # This happens because __self__ still references the original model for all replicas
+        # in an overridden forward method.
+
+        if not isinstance(saved_forward_with_hooks, ForwardWithHooks):
+            msg = "Not supported overridden forward method, expected ForwardWithHooks"
+            raise nncf.InternalError(msg)
+
+        if not (
+            isinstance(saved_forward_with_hooks._func, types.MethodType)
+            and saved_forward_with_hooks._func.__func__ is module.__class__.forward
+        ):
+            msg = "Not supported overridden forward method of original module"
+            raise nncf.InternalError(msg)
+
         module.__dict__.pop("forward")
 
         replica: nn.Module = self._func(*args, **kwargs)
-
         replica.forward = ForwardWithHooks(replica.forward)
-        module.forward = saved_wrapped_forward
+        module.forward = saved_forward_with_hooks
 
         return replica
 
@@ -159,7 +178,7 @@ class ReplicateForDataParallel:
         return cast(MethodType, self._func)
 
 
-def wrap_model(model: nn.Module) -> nn.Module:
+def wrap_model(model: TModel) -> TModel:
     """
     Wraps a nn.Module to inject custom behavior into the forward pass and replication process.
 
@@ -174,9 +193,6 @@ def wrap_model(model: nn.Module) -> nn.Module:
     :param model: The nn.Module to be wrapped.
     :return: The modified model with the custom behavior injected.
     """
-    if "forward" in model.__dict__:
-        msg = "Wrapper does not supported models with overrided forward function"
-        raise nncf.InternalError(msg)
     model.forward = ForwardWithHooks(model.forward)
     model._replicate_for_data_parallel = ReplicateForDataParallel(model._replicate_for_data_parallel)  # type: ignore
     model.add_module(ATR_HOOK_STORAGE, HookStorage())

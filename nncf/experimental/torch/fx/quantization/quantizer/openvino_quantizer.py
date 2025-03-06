@@ -161,7 +161,6 @@ class OpenVINOQuantizer(TorchAOQuantizer):
             self._fill_torch_ao_annotation(edge_or_node, qspec, annotation)
 
         for quantizer_ids in quantization_setup.unified_scale_groups.values():
-
             root_quantizer_id = self._get_unified_scales_root_quantizer_id(
                 nncf_graph, quantizer_ids, quantization_setup
             )
@@ -355,7 +354,7 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         For example quantizer can
         a) decompose a compound operator like scaled dot product attention,
         into bmm and softmax if quantizer knows how to quantize bmm/softmax but not sdpa
-        or b) transform scalars to tensor to allow quantizing scalares.
+        or b) transform scalars to tensor to allow quantizing scalars.
 
         Note: this is an optional method
 

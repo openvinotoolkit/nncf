@@ -29,6 +29,7 @@ from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import get_dtype
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import get_name_of_node
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import get_node_type
+from nncf.experimental.torch2.function_hook.wrapper import register_post_function_hook
 from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch2.function_hook import helpers
@@ -143,4 +144,14 @@ def test_model_graph(desc: ModelDesc, regen_ref_data: bool):
     graph = to_comparable_nx_graph(nncf_graph)
     nx_nncf_graph = nx.nx_pydot.to_pydot(graph)
     ref_file = REF_DIR / f"model_graph_{desc}.dot"
+    compare_with_reference_file(str(nx_nncf_graph), ref_file, regen_ref_data)
+
+
+def test_model_graph_with_shared_parameters(regen_ref_data):
+    model = wrap_model(helpers.SharedParamModel())
+    register_post_function_hook(model, "module1:0:weight", 0, helpers.CounterHook())
+    nncf_graph = build_nncf_graph(model, model.get_example_inputs())
+    graph = to_comparable_nx_graph(nncf_graph)
+    nx_nncf_graph = nx.nx_pydot.to_pydot(graph)
+    ref_file = REF_DIR / "model_graph_with_shared_parameters.dot"
     compare_with_reference_file(str(nx_nncf_graph), ref_file, regen_ref_data)

@@ -191,7 +191,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
 
     @staticmethod
     def _insertion_point_to_quant_insertion_point(
-        ip: Union[PreHookInsertionPoint, PostHookInsertionPoint]
+        ip: Union[PreHookInsertionPoint, PostHookInsertionPoint],
     ) -> QuantizationInsertionPointBase:
         if isinstance(ip, PreHookInsertionPoint):
             return ActivationQuantizationInsertionPoint(ip.target_node_name, input_port_id=ip.input_port_id)
@@ -1389,7 +1389,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
         )
         for pq_set in pq_sets_grouped_by_unified_scale:
             setup.register_unified_scale_group_with_types(
-                [pqid_vs_qpid[pq.id] for pq in pq_set], [pq.unified_scale_type for pq in pq_set]  # type: ignore
+                [pqid_vs_qpid[pq.id] for pq in pq_set],
+                [pq.unified_scale_type for pq in pq_set],  # type: ignore
             )
 
         setup = self._handle_output_quantizers_for_weights_as_outputs_ops(setup, pqid_vs_qpid, wao_op_node_key_vs_wq_id)

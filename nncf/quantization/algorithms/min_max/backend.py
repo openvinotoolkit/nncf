@@ -52,7 +52,7 @@ class MinMaxAlgoBackend(ABC):
     @abstractmethod
     def post_processing_metatypes(self) -> List[Type[OperatorMetatype]]:
         """
-        Property for the backend-specific post-processing metatypes (NonMaximumSupression, TopK, etc.).
+        Property for the backend-specific post-processing metatypes (NonMaximumSuppression, TopK, etc.).
         """
 
     @property
@@ -228,7 +228,7 @@ class MinMaxAlgoBackend(ABC):
 
         :param nncf_graph: NNCFGraph instance.
         :param node: NNCFNode.
-        :param target_point: Target point of which tensor shape is seeked.
+        :param target_point: Target point of which tensor shape is sought.
         :return: Shape of target point tensor.
         """
 

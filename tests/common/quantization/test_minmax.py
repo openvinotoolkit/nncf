@@ -245,3 +245,37 @@ def test_min_max_caching():
     for _ in range(run_nums):
         algo._get_quantization_target_points(None, None)
     assert find_called == fill_called == 2
+
+
+@pytest.mark.parametrize(
+    "target_device", [target_device for target_device in TargetDevice if target_device != TargetDevice.NPU]
+)
+def test_target_device(target_device):
+    min_max_algo = MinMaxQuantization(target_device=target_device)
+    assert min_max_algo._target_device == target_device
+
+
+@pytest.mark.parametrize("num_bits, ref_hw_target_device", zip([8, 4], [TargetDevice.CPU, TargetDevice.NPU]))
+def test_npu_target_device(num_bits, ref_hw_target_device):
+    min_max_algo = MinMaxQuantization(
+        target_device=TargetDevice.NPU,
+        activations_quantization_params=QuantizationParameters(num_bits=num_bits),
+        weights_quantization_params=QuantizationParameters(num_bits=num_bits),
+    )
+    assert min_max_algo._target_device == ref_hw_target_device
+
+
+@pytest.mark.parametrize("activation_bits", [8, 4])
+@pytest.mark.parametrize("weight_bits", [8, 4])
+def test_overflow_fix(activation_bits, weight_bits):
+    quant_scheme_a8w8 = activation_bits == 8 and weight_bits == 8
+
+    min_max_algo = MinMaxQuantization(
+        activations_quantization_params=QuantizationParameters(num_bits=activation_bits),
+        weights_quantization_params=QuantizationParameters(num_bits=weight_bits),
+    )
+
+    if quant_scheme_a8w8:
+        assert min_max_algo._overflow_fix == OverflowFix.FIRST_LAYER
+    else:
+        assert min_max_algo._overflow_fix == OverflowFix.DISABLE

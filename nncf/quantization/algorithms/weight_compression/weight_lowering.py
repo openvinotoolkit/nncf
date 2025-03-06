@@ -330,11 +330,24 @@ def get_integer_quantization_error(
     Calculates a quantity characterizing the difference between floating point weights and fake quantized
     (compressed and decompressed) to integer ones.
 
+    The error is computed as follows:
+    error = max(mean((decompressed_weight - weight)^2, axis=reduction_axes))
+
     :param weight: Weight array to compress.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param config: Information on how to compress (quantize) a specific weight.
     :return: The quantity characterizing the error of integer quantization.
     """
+    # Optimized implementation
+    if _can_run_optimized(weight.backend):
+        from nncf.openvino.optimized_functions import (
+            get_integer_quantization_error as get_integer_quantization_error_ov,
+        )
+
+        return get_integer_quantization_error_ov(weight, reduction_axes, config)
+
+    if weight.backend == TensorBackend.ov:
+        weight = weight.as_numpy_tensor()
     orig_shape = weight.shape
 
     if weight.dtype != TensorDataType.float32:
@@ -459,15 +472,11 @@ def do_int_quantization(
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
 
     # Optimized implementation
-    if is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy]:
+    if _can_run_optimized(weight.backend):
         from nncf.openvino.optimized_functions import do_int_quantization as do_int_quantization_ov
 
         return do_int_quantization_ov(
             weight, config, reduction_axes, precomputed_scale, precomputed_zero_point, **kwargs
-        )
-    if not is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy]:
-        nncf_logger.info_once(
-            "OpenVINO optimizations are disabled. Install OpenVINO to enable them and improve the performance."
         )
 
     # Reference implementation
@@ -514,7 +523,7 @@ def quantize_dequantize_weight(
         (and zero point).
     """
     # Optimized implementation
-    if is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy]:
+    if _can_run_optimized(weight.backend):
         from nncf.openvino.optimized_functions import quantize_dequantize_weight as quantize_dequantize_weight_ov
 
         return quantize_dequantize_weight_ov(
@@ -526,10 +535,6 @@ def quantize_dequantize_weight(
             return_compressed_weight,
             **kwargs,
         )
-    if not is_openvino_available() and weight.backend in [TensorBackend.ov, TensorBackend.numpy]:
-        nncf_logger.info_once(
-            "OpenVINO optimizations are disabled. Install OpenVINO to enable them and improve the performance."
-        )
 
     # Reference implementation
     compressed_weight, scale, zero_point = do_int_quantization(
@@ -540,3 +545,14 @@ def quantize_dequantize_weight(
         return decompressed_weight, compressed_weight, scale, zero_point
     else:
         return decompressed_weight
+
+
+def _can_run_optimized(input_backend: TensorBackend) -> bool:
+    if input_backend in [TensorBackend.ov, TensorBackend.numpy]:
+        if is_openvino_available():
+            return True
+        else:
+            nncf_logger.info_once(
+                "OpenVINO optimizations are disabled. Install OpenVINO to enable them and improve the performance."
+            )
+    return False

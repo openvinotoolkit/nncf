@@ -169,8 +169,7 @@ def validate_single_compression_algo_schema(
         )
         if algo_name in ALGO_NAME_VS_README_URL:
             e.message += (
-                f"or to the algorithm documentation for examples of the configs: "
-                f"{ALGO_NAME_VS_README_URL[algo_name]}"
+                f"or to the algorithm documentation for examples of the configs: {ALGO_NAME_VS_README_URL[algo_name]}"
             )
         raise e
 
