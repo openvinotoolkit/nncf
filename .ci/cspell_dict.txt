@@ -224,6 +224,7 @@ lyalyushkin
 mapillary
 maskrcnn
 mathbb
+matmuls
 maxcolwidths
 maxpool
 maxs
