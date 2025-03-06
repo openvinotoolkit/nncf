@@ -349,7 +349,7 @@ def wrap_model(
         as an example input of a set of non keyword arguments, and a dict as an example input of a set
         of keywords arguments.
     :param trace_parameters: Whether to trace model parameters. Default is False.
-    :return: A model wrapped by NNCFNetwork.
+    :return: A model wrapped by NNCFNetwork or GraphModelWrapper if experimental PyTorch model tracing is enabled.
     """
     if is_experimental_torch_tracing_enabled():
         if not trace_parameters:
@@ -379,7 +379,7 @@ def wrap_model(
     return nncf_network
 
 
-def is_wrapped_model(model: torch.nn.Module) -> bool:
+def is_wrapped_model(model: Any) -> bool:
     """
     Check that the model was wrapped by NNCFNetwork or GraphModelWrapper.
 
