@@ -117,7 +117,7 @@ def tensor_dispatcher(func: Callable[P, R]) -> DispatchCallable[P, R]:
 
 
 def _find_arguments_to_unwrap(
-    parameters: types.MappingProxyType[str, inspect.Parameter]
+    parameters: types.MappingProxyType[str, inspect.Parameter],
 ) -> Tuple[List[int], List[str]]:
     """
     Get the arguments to unwrap from a given function.

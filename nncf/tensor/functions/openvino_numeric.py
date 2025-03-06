@@ -87,7 +87,7 @@ def _(a: ov.Tensor) -> NDArray[Any]:
     return a.data
 
 
-@numeric.finfo.register(ov.Tensor)
+@numeric.finfo.register
 def _(a: ov.Tensor) -> TypeInfo:
     return numeric.finfo(a.data)
 
