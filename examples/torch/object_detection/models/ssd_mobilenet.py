@@ -109,7 +109,9 @@ def build_ssd_mobilenet(cfg, size, num_classes, config):
         # may be used to perform arbitrary code execution during unpickling. Only load the data you
         # trust.
         #
-        basenet_weights = torch.load(config.basenet, pickle_module=restricted_pickle_module)["state_dict"]
+        basenet_weights = torch.load(config.basenet, pickle_module=restricted_pickle_module, weights_only=False)[
+            "state_dict"
+        ]
         new_weights = {}
         for wn, wv in basenet_weights.items():
             wn = wn.replace("model.", "")

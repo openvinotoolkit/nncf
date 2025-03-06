@@ -83,7 +83,7 @@ class BiasCorrection(Algorithm):
             quantized nodes, if the node has no bias then a bias node will be inserted,
             and if False, then the bias correction will only be applied to quantized
             nodes that have a bias.
-        :param inplace_statistics: Defines wheather to calculate quantizers statistics
+        :param inplace_statistics: Defines whether to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
         :param backend_params: Backend specific parameters.

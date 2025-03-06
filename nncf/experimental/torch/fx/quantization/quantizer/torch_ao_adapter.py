@@ -70,12 +70,12 @@ class TorchAOQuantizerAdapter(Quantizer):
     def _get_quantization_points(
         from_node: torch.fx.Node,
         to_nodes: List[torch.fx.Node],
-        anotated_model: torch.fx.GraphModule,
+        annotated_model: torch.fx.GraphModule,
         qconfig: QuantizerConfig,
     ) -> List[QuantizationPointBase]:
         to_n = to_nodes[0]
         if from_node.op == "get_attr":
-            _, metatype = GraphConverter.get_node_type_and_metatype(to_n, anotated_model)
+            _, metatype = GraphConverter.get_node_type_and_metatype(to_n, annotated_model)
             # Check that the constant is placed on the actual weight port, as it is possible for
             # activations to be a constant as well.
             if TorchAOQuantizerAdapter._get_node_args(to_n).index(from_node) in metatype.weight_port_ids:
@@ -101,8 +101,8 @@ class TorchAOQuantizerAdapter(Quantizer):
         return node.args
 
     @staticmethod
-    def get_quantizer_config_from_annotated_model(anotated_model: torch.fx.GraphModule) -> SingleConfigQuantizerSetup:
-        edge_or_node_to_qspec = _get_edge_or_node_to_qspec(anotated_model)
+    def get_quantizer_config_from_annotated_model(annotated_model: torch.fx.GraphModule) -> SingleConfigQuantizerSetup:
+        edge_or_node_to_qspec = _get_edge_or_node_to_qspec(annotated_model)
 
         q_map = defaultdict(list)
         for edge, qspec in edge_or_node_to_qspec.items():
@@ -133,7 +133,7 @@ class TorchAOQuantizerAdapter(Quantizer):
                 )
                 qconfig = QuantizerConfig(mode=mode, signedness_to_force=signed, per_channel=per_channel)
 
-                qps = TorchAOQuantizerAdapter._get_quantization_points(from_n, to_nodes, anotated_model, qconfig)
+                qps = TorchAOQuantizerAdapter._get_quantization_points(from_n, to_nodes, annotated_model, qconfig)
                 for qp in qps:
                     q_setup.add_independent_quantization_point(qp)
 

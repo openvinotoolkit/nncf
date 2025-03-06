@@ -233,9 +233,9 @@ class PruningOperationsMetatypeRegistry(Registry):
                 if name not in self._op_name_to_op_class:
                     self._op_name_to_op_class[name] = obj
                 else:
-                    assert (
-                        self._op_name_to_op_class[name] == obj
-                    ), "Inconsistent operator type registry - single patched op name maps to multiple metatypes!"
+                    assert self._op_name_to_op_class[name] == obj, (
+                        "Inconsistent operator type registry - single patched op name maps to multiple metatypes!"
+                    )
             return obj
 
         return wrap

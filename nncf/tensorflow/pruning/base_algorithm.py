@@ -192,8 +192,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                     and weight_def.weight_attr_name == "gamma"
                 ):
                     nncf_logger.debug(
-                        "Fused gamma parameter encountered in BatchNormalization layer. "
-                        "Won't add a pruning mask to it."
+                        "Fused gamma parameter encountered in BatchNormalization layer. Won't add a pruning mask to it."
                     )
                     continue
 
@@ -236,7 +235,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
     def _get_related_batchnorms(self, layer_name: str, group: Cluster, graph: NNCFGraph) -> List[NNCFNode]:
         """
         Returns List of batchnorm elements related to the layer.
-        Note: Single node per layer for shared bactchnorm layers
+        Note: Single node per layer for shared batchnorm layers
         """
         layer_nodes = [node_ for node_ in group.elements if node_.layer_name == layer_name]
         bn_nodes = []

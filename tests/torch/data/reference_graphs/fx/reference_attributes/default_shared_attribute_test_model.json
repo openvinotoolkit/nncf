@@ -14,5 +14,5 @@
     "add": false,
     "conv2d_2": false,
     "add_1": false,
-    "output_1": false
+    "output": false
 }

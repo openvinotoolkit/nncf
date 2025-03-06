@@ -39,11 +39,7 @@ from tests.torch.test_compressed_graph import get_basic_quantization_config
 from tests.torch.test_sanity_sample import create_command_line
 
 GLOBAL_CONFIG = {
-    TEST_ROOT
-    / "torch"
-    / "data"
-    / "configs"
-    / "squeezenet1_1_cifar10_rb_sparsity_int8.json": [
+    TEST_ROOT / "torch" / "data" / "configs" / "squeezenet1_1_cifar10_rb_sparsity_int8.json": [
         {
             "checkpoint_name": "squeezenet1_1_custom_cifar10_rb_sparsity_int8_dp.pth",
             "dataset": "cifar10",
@@ -74,8 +70,7 @@ for config_path_, cases_list_ in GLOBAL_CONFIG.items():
 def _params(request, backward_compat_models_path):
     if backward_compat_models_path is None:
         pytest.skip(
-            "Path to models weights for backward compatibility testing is not set,"
-            " use --backward-compat-models option."
+            "Path to models weights for backward compatibility testing is not set, use --backward-compat-models option."
         )
     config_path, case_params = request.param
     checkpoint_path = str(os.path.join(backward_compat_models_path, case_params["checkpoint_name"]))
@@ -123,7 +118,7 @@ def test_model_can_be_loaded_with_resume(_params):
     if config.distributed:
         compression_ctrl.distributed()
 
-    checkpoint = torch.load(checkpoint_path, map_location="cpu")
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     load_state(model, checkpoint["state_dict"], is_resume=True)
 
 
@@ -158,7 +153,9 @@ def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path, dataset_di
     with open(metrics_path, encoding="utf8") as metric_file:
         metrics = json.load(metric_file)
         # accuracy is rounded to hundredths
-        assert torch.load(checkpoint_path)["best_acc1"] == pytest.approx(metrics["Accuracy"], abs=1e-2)
+        assert torch.load(checkpoint_path, weights_only=False)["best_acc1"] == pytest.approx(
+            metrics["Accuracy"], abs=1e-2
+        )
 
 
 # BN Wrapping backward compatibility test

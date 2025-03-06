@@ -201,7 +201,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.ONNXSqrtMetatype,
                 om.ONNXReciprocalMetatype,
                 om.ONNXBatchNormMetatype,
-                # Сomparison operations
+                # Comparison operations
                 om.ONNXGreaterMetatype,
                 om.ONNXLessMetatype,
                 om.ONNXEqualMetatype,

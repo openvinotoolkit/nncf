@@ -184,7 +184,7 @@ class ShapePruningProcessor:
         :param pruning_groups: `Clusterization` of pruning groups.
         :return Dictionary of next nodes by cluster {cluster_id: [node]}.
         """
-        # 1. Propagate symbolic masks throught the net
+        # 1. Propagate symbolic masks through the net
         for pruned_layer_info in pruning_groups.get_all_nodes():
             node = graph.get_node_by_id(pruned_layer_info.nncf_node_id)
             node.attributes["output_mask"] = SymbolicMask(get_output_channels(node), node.node_id)

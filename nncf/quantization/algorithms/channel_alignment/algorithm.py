@@ -64,7 +64,7 @@ class ChannelAlignment(Algorithm):
         """
         :param subset_size: Size of a subset for the statistics collection,
             defaults to 100.
-        :param inplace_statistics: Defines wheather to calculate quantizers statistics
+        :param inplace_statistics: Defines whether to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
         """
@@ -127,7 +127,7 @@ class ChannelAlignment(Algorithm):
             ):
                 nncf_logger.debug(
                     f"Skipping channel alignment for pairs {conv_in.node_name}, {conv_out.node_name} "
-                    " because one of the node is 1D MatMul, 1D Matmuls are not supported by CA algortihm yet."
+                    " because one of the node is 1D MatMul, 1D Matmuls are not supported by CA algorithm yet."
                 )
                 continue
 
@@ -440,7 +440,7 @@ class StatedTensor:
 
 class ConvParamsContainer:
     """
-    Convolution container class which is incapsulating common convolutional parameters collection.
+    Convolution container class which is encapsulating common convolutional parameters collection.
     """
 
     def __init__(

@@ -63,7 +63,7 @@ class CompressionTrainer(Trainer):
         super()._load_from_checkpoint(resume_from_checkpoint, model)
         state_path = Path(str(resume_from_checkpoint), NNCF_COMPRESSION_STATE_NAME)
         if self.compression_ctrl is not None and state_path.is_file():
-            compression_state = torch.load(state_path)
+            compression_state = torch.load(state_path, weights_only=False)
             self.compression_ctrl.load_state(compression_state.get(CTRL_STATE_NAME, {}))
         len_dataloader = len(self.get_train_dataloader())
         steps_per_epoch = max(1, len_dataloader // self.args.gradient_accumulation_steps)

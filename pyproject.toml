@@ -56,7 +56,7 @@ dependencies = [
 [project.optional-dependencies]
 plots = [
     "kaleido>=0.2.1",
-    "matplotlib>=3.3.4, <3.6",
+    "matplotlib>=3.3.4",
     "pillow>=9.0.0",
     "plotly-express>=0.4.1",
 ]
@@ -71,9 +71,6 @@ version = { attr = "custom_version.version" }
 where = ["."]
 exclude = ["tests", "tests.*", "examples", "examples.*", "tools", "tools.*"]
 namespaces = false
-
-[tool.black]
-line-length = 120
 
 [tool.md_dead_link_check]
 exclude_files = ["ReleaseNotes.md"]

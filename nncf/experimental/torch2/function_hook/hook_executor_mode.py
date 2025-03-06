@@ -93,12 +93,13 @@ class FunctionHookMode(TorchFunctionMode):
     This mode wraps the function calls in the model to allow custom hooks to be executed before
     and after the actual function calls.
 
-
     :param model: The PyTorch model to which the hooks will be applied.
     :param hook_storage: Storage for hooks to be executed.
     :param module_call_stack: A stack tracking the modules being called.
     :param nested_enter_count: A counter to track nested context manager entries.
     :param op_calls: A dictionary to track operation calls.
+    :param counter_reusing_shared_weights: A dictionary to track shared weights.
+    :param cache_parameters: A dictionary to cache modified parameters.
     """
 
     def __init__(self, model: nn.Module, hook_storage: HookStorage) -> None:
@@ -126,6 +127,14 @@ class FunctionHookMode(TorchFunctionMode):
         self.hooks_module_to_group_name: Dict[ReferenceType[nn.Module], str] = {}
         self._get_named_hooks(self.hook_storage.pre_hooks, "pre_hook")
         self._get_named_hooks(self.hook_storage.post_hooks, "post_hook")
+
+        # Collect how many times shared parameter used
+        counter_shared_weights: Dict[int, int] = defaultdict(int)
+        for name, parameter in chain(self.model.named_parameters(remove_duplicate=False)):
+            counter_shared_weights[id(parameter)] += 1
+
+        self.counter_reusing_shared_weights = {k: v - 1 for k, v in counter_shared_weights.items() if v > 1}
+        self.cache_parameters: Dict[int, Tensor] = {}
 
     def _get_named_hooks(self, storage: nn.ModuleDict, prefix: str) -> None:
         """
@@ -171,7 +180,7 @@ class FunctionHookMode(TorchFunctionMode):
         super().__enter__()  # type: ignore
         if self.nested_enter_count == 0:
             # Wrap _call_impl function of instance each module.
-            # Note: __call__ can`t not be overrided for instance, the function can be override only in class namespace.
+            # Note: __call__ can`t not be overridden for instance, the function can be override only in class namespace.
             logger.debug("FunctionHookMode.__enter__: wrap _call_impl function")
             for _, module in self.model.named_modules():
                 module._call_impl = types.MethodType(self._get_wrapped_call(module._call_impl), module)
@@ -306,18 +315,41 @@ class FunctionHookMode(TorchFunctionMode):
         Executes post-hooks for a model parameter if a hook is defined for it.
         If the input is not a `torch.nn.Parameter`, or if no hook is defined, the original tensor is returned unchanged.
 
+        For shared parameters that are used more than once, the function caches the modified parameters.
+        Caching mechanism allows the function to avoid redundant computations for shared parameters.
+
         :param value: The tensor to which the post-hook will be applied..
         :return: The processed tensor with the applied post-hook, if applicable.
         """
         if not isinstance(value, torch.nn.Parameter):
             return value
 
+        id_param = id(value)
+        if id_param in self.cache_parameters:
+            ret = self.cache_parameters[id_param]
+            self.counter_reusing_shared_weights[id_param] -= 1
+            if self.counter_reusing_shared_weights[id_param] == 0:
+                # Clean cache for parameters for last used
+                del self.cache_parameters[id_param]
+                del self.counter_reusing_shared_weights[id_param]
+            return ret
+
+        ret_value = value
         name_in_model = self.const_name_map.get(value, None)
         if name_in_model is not None and not self.in_process_const:
             self.in_process_const = True
-            value = self.hook_storage.execute_post_function_hooks(name_in_model.replace(".", ":"), 0, value)
+            ret_value = self.hook_storage.execute_post_function_hooks(name_in_model.replace(".", ":"), 0, value)
             self.in_process_const = False
-        return value
+
+            if self.counter_reusing_shared_weights.get(id_param):
+                if ret_value is value:
+                    # Remove counter for parameters that does not change parameter
+                    del self.counter_reusing_shared_weights[id_param]
+                else:
+                    # Save modified parameters
+                    self.cache_parameters[id_param] = ret_value
+
+        return ret_value
 
     def process_parameters(self, args: List[Any], kwargs: Dict[str, Any]) -> Tuple[List[Any], Dict[str, Any]]:
         """

@@ -80,7 +80,7 @@ DEFAULT_QCONFIG = QuantizerConfig(
 @dataclasses.dataclass
 class ModeBasedDefaults:
     """
-    Contains default values that should be set in case of abscense.
+    Contains default values that should be set in case of absence.
     """
 
     overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
@@ -176,7 +176,7 @@ class MinMaxQuantization(Algorithm):
             fix for the 8-bit quantization.
         :param quantize_outputs: Whether to insert additional quantizers right before
             each of the model outputs.
-        :param inplace_statistics: Defines wheather to calculate quantizers statistics
+        :param inplace_statistics: Defines whether to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
         :param batchwise_statistics: Determines whether quantizer statistics should be calculated
@@ -208,16 +208,12 @@ class MinMaxQuantization(Algorithm):
         self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
         self.quantizer_propagation_rule = quantizer_propagation_rule
 
-        # preset definition
-        if self._preset is None:
-            if model_type == ModelType.TRANSFORMER:
-                self._preset = QuantizationPreset.MIXED
-            else:
-                self._preset = QuantizationPreset.PERFORMANCE
+        # validate input parameter types
+        self._validate_param_types()
 
-        self._override_device()
-        self._set_mode_based_defaults()
-        self._review_mode_based_defaults()
+        # set and validate mode based parameters
+        self._set_mode_based_params()
+        self._review_mode_based_params()
 
         self._quantization_params = {
             QuantizerGroup.WEIGHTS: self._weights_quantization_params,
@@ -238,25 +234,54 @@ class MinMaxQuantization(Algorithm):
         self._reset_cache()
         self._algorithm_key = f"MMQ_{hash(self)}"
 
-    def _override_device(self) -> None:
+    def _validate_param_types(self) -> None:
         """
-        Overrides NPU device to use CPU quantization scheme.
+        Validates the types of the provided quantization parameters.
+
+        Raises:
+            nncf.ParameterNotSupportedError: If the parameter types do not match the expected quantization mode.
         """
-        if self._target_device == TargetDevice.NPU:
-            act_bits, weight_bits = 8, 8
+        expected_cls = QuantizationParameters
+        if self._mode in (QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2):
+            expected_cls = FP8QuantizationParameters
+
+        for param, name in [
+            (self._weights_quantization_params, "weights"),
+            (self._activations_quantization_params, "activations"),
+        ]:
+            if param and not isinstance(param, expected_cls):
+                msg = f"Quantization parameters for {name} ({param}) are not supported with the selected mode!"
+                raise nncf.ParameterNotSupportedError(msg)
+
+    def _set_mode_based_params(self) -> None:
+        """
+        Sets parameters for the algorithms based on the provided mode.
+        """
+        if self._mode is None:
+            if self._preset is None:
+                if self._model_type == ModelType.TRANSFORMER:
+                    self._preset = QuantizationPreset.MIXED
+                else:
+                    self._preset = QuantizationPreset.PERFORMANCE
+
+            act_bits = DEFAULT_QCONFIG.num_bits
+            weight_bits = DEFAULT_QCONFIG.num_bits
             if self._activations_quantization_params and self._activations_quantization_params.num_bits:
                 act_bits = self._activations_quantization_params.num_bits
             if self._weights_quantization_params and self._weights_quantization_params.num_bits:
                 weight_bits = self._weights_quantization_params.num_bits
 
-            if act_bits == 8 and weight_bits == 8:
-                self._target_device == TargetDevice.CPU
+            quant_scheme_a8w8 = act_bits == 8 and weight_bits == 8
+            if self._target_device == TargetDevice.NPU and quant_scheme_a8w8:
+                self._target_device = TargetDevice.CPU
                 nncf_logger.debug("Target device NPU was changed to CPU!")
 
-    def _set_mode_based_defaults(self) -> None:
-        """
-        Sets defaults for the algorithms based on the provided mode.
-        """
+            if self._overflow_fix is None and not quant_scheme_a8w8:
+                self._overflow_fix = OverflowFix.DISABLE
+                nncf_logger.debug("Overflow fix was disabled because quantization scheme is not A8W8.")
+        elif self._preset is None:
+            self._preset = QuantizationPreset.PERFORMANCE
+
         mode_based_defaults = MODE_BASED_DEFAULTS[self._mode]
         for field in dataclasses.fields(mode_based_defaults):
             self_name = "_" + field.name
@@ -264,9 +289,9 @@ class MinMaxQuantization(Algorithm):
             if getattr(self, self_name) is None:
                 setattr(self, self_name, default_value)
 
-    def _review_mode_based_defaults(self):
+    def _review_mode_based_params(self):
         """
-        Reviews default values because mode option doesn't support them.
+        Reviews parameter values because mode option doesn't support them.
         """
         if self._mode in (QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2):
             nncf_logger.warning(f"You're using experimental option mode with {self._mode} value.")
@@ -285,38 +310,6 @@ class MinMaxQuantization(Algorithm):
 
             if self._quantize_outputs:
                 msg = "quantize_outputs option is not supported with the mode option!"
-                raise nncf.ParameterNotSupportedError(msg)
-
-            if isinstance(self._weights_quantization_params, QuantizationParameters):
-                msg = (
-                    "quantization_params option for weights with "
-                    f"{self._weights_quantization_params} "
-                    "value is not supported with the mode option!"
-                )
-                raise nncf.ParameterNotSupportedError(msg)
-
-            if isinstance(self._activations_quantization_params, QuantizationParameters):
-                msg = (
-                    "quantization_params option for activations with "
-                    f"{self._activations_quantization_params} "
-                    "value is not supported with the mode option!"
-                )
-                raise nncf.ParameterNotSupportedError(msg)
-        elif self._mode is None:
-            if isinstance(self._weights_quantization_params, FP8QuantizationParameters):
-                msg = (
-                    "quantization_params option for weights with "
-                    f"{self._weights_quantization_params} "
-                    "value is not supported with the mode: None option!"
-                )
-                raise nncf.ParameterNotSupportedError(msg)
-
-            if isinstance(self._activations_quantization_params, FP8QuantizationParameters):
-                msg = (
-                    "quantization_params option for activations with "
-                    f"{self._activations_quantization_params} "
-                    "value is not supported with the mode: None option!"
-                )
                 raise nncf.ParameterNotSupportedError(msg)
 
     def _reset_cache(self) -> None:
@@ -509,7 +502,7 @@ class MinMaxQuantization(Algorithm):
         Returns statistic collector.
 
         :param range_estimator_params: Parameters that specify estimators types.
-        :param use_abs_max: Wheather reduce absolute values of input tensors or not.
+        :param use_abs_max: Whether reduce absolute values of input tensors or not.
         :param reduction_axes: Axes for reducer.
         :param aggregation_axes: Axes for aggregator.
         :param inplace: Whether to calculate statistic inplace or not.
