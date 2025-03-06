@@ -124,7 +124,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
 
     ```python
     @tensor_dispatcher
-    def foo(a: TTensor, arg1: Type) -> TTensor:
+    def foo(a: Tensor, arg1: Type) -> Tensor:
         """
         __description__
 
@@ -133,6 +133,10 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
         :return: __description__
         """
     ```
+
+    **NOTE** The wrapping of the return value depends on the return type annotation of the function.
+    If return type collect `Tensor` than return value will be wrapped in `Tensor` class according annotation,
+    otherwise return value will be returned as is.
 
 3. Add backend specific implementation of method to corresponding module:
 
