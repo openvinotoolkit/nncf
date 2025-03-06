@@ -611,7 +611,7 @@ def create_linear_activations_unsqueeze_bn_squeeze():
 
 
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.HSWISH_ACTIVATION_CLAMP_MULTIPLY)
-def create_clamp_mult_const() -> GraphPattern:
+def create_clamp_multiply_const() -> GraphPattern:
     pattern = GraphPattern()
     clamp_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "CLAMP", GraphPattern.METATYPE_ATTR: om.OVClampMetatype})
     multiply_node = pattern.add_node(

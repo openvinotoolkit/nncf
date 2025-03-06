@@ -99,14 +99,14 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode) -> bool:
-        # Metatypes of linears and convolutions guarantee
+        # Metatypes of linear and convolution operators guarantee
         # all nodes with the metatypes have weights, we can skip
         # this check by returning True.
         return True
 
     @staticmethod
     def get_activations_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        # Metatypes of linears and convolutions guarantee
+        # Metatypes of linear and convolution operators guarantee
         # all nodes with the metatypes have 0 activation port id.
         return 0
 

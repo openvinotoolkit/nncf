@@ -273,7 +273,7 @@ class DataBasedCriterion(DataFreeCriterion, ABC):
             n_dims = len(graph.get_output_edges_by_port_id(act_node, output_port_id)[0].tensor_shape)
             if n_dims < 2:
                 msg = (
-                    f"Data-aware mixed precision criteria are not supported for MatMuls with 1D inputs. "
+                    f"Data-aware mixed precision criteria are not supported for MatMul with 1D inputs. "
                     f"Node: {act_node.node_name}, number of dimensions: {n_dims}."
                 )
                 raise RuntimeError(msg)
