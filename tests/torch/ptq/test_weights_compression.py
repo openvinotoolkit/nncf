@@ -499,11 +499,11 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_orig_weight(model: torch.nn.Module) -> Tensor:
-        return Tensor(model.linear.weight)
+        return Tensor(model.linear.weight.data.detach())
 
     @staticmethod
     def get_decompressed_weight(compressed_model: torch.nn.Module, input: torch.Tensor) -> Tensor:
-        weight = compressed_model.linear.weight
+        weight = compressed_model.linear.weight.data.detach()
         unpacked_w = compressed_model.nncf.external_op.weights_decompressor_linear_weight(weight)
         return Tensor(unpacked_w)
 
