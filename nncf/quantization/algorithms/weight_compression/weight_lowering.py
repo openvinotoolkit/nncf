@@ -215,6 +215,23 @@ def do_nf4_dequantization(nf4_weight: Tensor, scale: Tensor, reduction_axis: int
     return decompressed_weight
 
 
+def calculate_fp4_scale(weight: Tensor, reduction_axes: ReductionAxes, mode: CompressWeightsMode) -> Tensor:
+    """
+    Calculates the scale for fp4 quantization based on the specified mode (NF4 or E2M1).
+
+    :param weight: Weight array to compress.
+    :param reduction_axes: Axes along which to reduce (collect) different statistics (e.g., min, max).
+    :param mode: The mode of fp4 quantization (NF4 or E2M1).
+    :return: Scale tensor of float32 type for fp4 quantization.
+    """
+    assert mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1], "Unsupported mode for fp4 quantization"
+
+    if mode == CompressWeightsMode.NF4:
+        return calculate_nf4_scale(weight, reduction_axes)
+    elif mode == CompressWeightsMode.E2M1:
+        return calculate_e2m1_scale(weight, reduction_axes)
+
+
 def calculate_normalized_weight_and_fp4_scale(
     weight: Tensor,
     reduction_axes: ReductionAxes,
@@ -241,10 +258,7 @@ def calculate_normalized_weight_and_fp4_scale(
         # weights are reshaped: [a1, r, a2] -> [a1, r//gs, gs, a2]
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, group_size)
 
-    if mode == CompressWeightsMode.NF4:
-        scale = calculate_nf4_scale(weight, reduction_axes) if precomputed_scale is None else precomputed_scale
-    if mode == CompressWeightsMode.E2M1:
-        scale = calculate_e2m1_scale(weight, reduction_axes) if precomputed_scale is None else precomputed_scale
+    scale = calculate_fp4_scale(weight, reduction_axes, mode) if precomputed_scale is None else precomputed_scale
     norm_weight = calculate_normalized_weight(weight, scale)
     return norm_weight, scale
 
@@ -392,6 +406,47 @@ def compress_weight(
     )
 
     return CompressedWeight(compressed_weight, scale, zero_point)
+
+
+def calculate_compression_params(
+    weight: Tensor,
+    reduction_axes: ReductionAxes,
+    config: WeightCompressionConfig,
+    precomputed_scale: Tensor = None,
+    precomputed_zero_point: Tensor = None,
+) -> Tuple[Tensor, Tensor]:
+    """
+    Calculates the compression parameters (scale and zero point) for the given weight tensor based on the provided
+    configuration.
+
+    :param weight: The weight tensor to compress.
+    :param reduction_axes: Axes along which to reduce (collect) statistics (e.g., min, max).
+    :param config: The weight compression configuration.
+    :param precomputed_scale: Optional precomputed scale tensor.
+    :param precomputed_zero_point: Optional precomputed zero point tensor.
+    :return: A tuple containing the scale and zero point tensors.
+    """
+    if config.group_size != -1:
+        # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
+        weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
+
+    if weight.backend == TensorBackend.ov:
+        weight = weight.as_numpy_tensor()
+
+    if not config.is_integer:
+        if precomputed_scale is not None:
+            return precomputed_scale, None
+
+        scale = calculate_fp4_scale(weight, reduction_axes, config.mode)
+        return scale, None
+
+    if precomputed_scale is None or (config.is_asym_mode and precomputed_zero_point is None):
+        scale, zero_point = calculate_integer_quantization_params(weight, reduction_axes, config)
+    if precomputed_scale is not None:
+        scale = precomputed_scale
+    if precomputed_zero_point is not None:
+        zero_point = precomputed_zero_point
+    return scale, zero_point
 
 
 def ungroup_weights(weights: Tensor, reduction_axis: int) -> Tensor:
