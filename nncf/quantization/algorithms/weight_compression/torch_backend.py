@@ -50,7 +50,6 @@ from nncf.quantization.algorithms.weight_compression.lora_correction import Lora
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
-from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.operator_metatypes import PTMulMetatype
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
@@ -326,10 +325,10 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 msg = f"Weight is not a torch.nn.Parameter in the model by name {weight_name}."
                 raise nncf.InternalError(msg)
 
-            if is_experimental_torch_tracing_enabled():
-                weight.requires_grad = False
-                weight.data = packed_tensor
+            weight.requires_grad = False
+            weight.data = packed_tensor
 
+            if is_experimental_torch_tracing_enabled():
                 transformation_layout.register(
                     PT2InsertionCommand(
                         [
@@ -341,18 +340,6 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     )
                 )
             else:
-                compressed_parameter = torch.nn.Parameter(packed_tensor, requires_grad=False)
-
-                setattr(module, weight_attr_name, compressed_parameter)
-
-                consumer_nodes = graph.get_next_nodes(weight_node)
-                if len(consumer_nodes) > 1:
-                    for c_node in consumer_nodes:
-                        c_module = model.nncf.get_module_by_scope(Scope.from_str(c_node.layer_name))
-                        for name, param in c_module.named_parameters(recurse=False, remove_duplicate=False):
-                            if id(param) == id(weight):
-                                setattr(c_module, name, compressed_parameter)
-
                 # registry weight decompression module in the model
                 decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
 
