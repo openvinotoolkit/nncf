@@ -15,6 +15,8 @@ import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from transformers import AutoModelForCausalLM
+from transformers import AutoTokenizer
 
 import nncf
 from nncf import BackupMode
@@ -434,6 +436,22 @@ def test_pack_int4():
     assert packed_w.numel() * 2 == w_int8.numel()
     unpacked_w = unpack_int4(packed_w).reshape(w_int8.shape)
     assert torch.all(unpacked_w == w_int8)
+
+
+@pytest.mark.parametrize("dtype", [torch.bfloat16, torch.float16])
+def test_half_precision_models(dtype):
+    model_id = "hf-internal-testing/tiny-random-OPTForCausalLM"
+    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=dtype)
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    inputs = tokenizer("dummy_input", return_tensors="pt")
+    compress_weights(
+        model,
+        group_size=2,
+        mode=CompressWeightsMode.INT4_SYM,
+        scale_estimation=True,
+        awq=True,
+        dataset=nncf.Dataset([dict(inputs)]),
+    )
 
 
 class TestPTTemplateWeightCompression(TemplateWeightCompression):
