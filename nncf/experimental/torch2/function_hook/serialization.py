@@ -34,6 +34,7 @@ def get_config(model: nn.Module) -> Dict[str, Any]:
     """
     Returns serializable config which contains all information required to recover all additional modules placement.
 
+    :param model: The model to serialize.
     :return: Serializable config.
     """
     hook_storage = get_hook_storage(model)
