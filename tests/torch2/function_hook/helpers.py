@@ -15,7 +15,7 @@ from torch import nn
 from nncf.experimental.torch2.function_hook.wrapper import register_post_function_hook
 from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from nncf.torch.layer_utils import COMPRESSION_MODULES
-from nncf.torch.layer_utils import StatefullModuleInterface
+from nncf.torch.layer_utils import StatefulModuleInterface
 
 
 class CallCount(torch.nn.Module):
@@ -165,7 +165,7 @@ class CounterHook(nn.Module):
 
 
 @COMPRESSION_MODULES.register()
-class HookWithState(torch.nn.Module, StatefullModuleInterface):
+class HookWithState(torch.nn.Module, StatefulModuleInterface):
     def __init__(self, state: str):
         super().__init__()
         self._state = state

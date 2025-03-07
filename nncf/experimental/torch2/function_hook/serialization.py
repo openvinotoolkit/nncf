@@ -18,7 +18,7 @@ import nncf
 from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from nncf.torch.layer_utils import COMPRESSION_MODULES
-from nncf.torch.layer_utils import StatefullModuleInterface
+from nncf.torch.layer_utils import StatefulModuleInterface
 
 COMPRESSION_STATE_ATTR = "compression_state"
 TModel = TypeVar("TModel", bound=nn.Module)
@@ -61,8 +61,8 @@ def get_config(model: nn.Module) -> Dict[str, Any]:
                 "Please register your module in the COMPRESSION_MODULES registry."
             )
             raise nncf.InternalError(msg)
-        if not isinstance(module, StatefullModuleInterface):
-            msg = "Support only StatefullModuleInterface modules"
+        if not isinstance(module, StatefulModuleInterface):
+            msg = "Support only StatefulModuleInterface modules"
             raise nncf.InternalError(msg)
 
         serialized_transformations.append(
