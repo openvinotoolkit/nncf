@@ -100,7 +100,7 @@ def tensor_dispatcher(func: Callable[P, R]) -> DispatchCallable[P, R]:
         """
         Register a function to the dispatcher registry.
 
-        :param rfunc (callable): The function to be registered.
+        :param rfunc: The function to be registered.
         :return: The registered function.
         """
         _check_signature(func, rfunc)
@@ -122,7 +122,7 @@ def _find_arguments_to_unwrap(
     """
     Get the arguments to unwrap from a given function.
 
-    :param params: The parameters of the function.
+    :param parameters: The parameters of the function.
     :return: A tuple containing two lists - the indexes of the arguments to unwrap and their names.
     """
     indexes: List[int] = []
