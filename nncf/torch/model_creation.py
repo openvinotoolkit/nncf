@@ -338,7 +338,7 @@ def wrap_model(
     model: torch.nn.Module,
     example_input: Any,
     trace_parameters: bool = False,
-) -> NNCFNetwork:
+) -> Any:
     """
     Wraps a PyTorch model to the NNCFNetwork class.
 
