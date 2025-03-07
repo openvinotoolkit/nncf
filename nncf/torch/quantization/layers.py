@@ -768,8 +768,9 @@ class SymmetricQuantizer(BaseQuantizer):
         self.set_levels()
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # in multi-device case with device_map=auto after loading nncf checkpoint, quantizers have a different device.
-        self.to(x.device)
+        with DisableTorchFunction():
+            # in multi-device case after loading nncf checkpoint, quantizers have a different device.
+            self.to(x.device)
         return symmetric_quantize(
             x, self.levels, self.level_low, self.level_high, self.scale, self.eps, skip=execute_traced_op_as_identity
         )
@@ -957,8 +958,9 @@ class AsymmetricQuantizer(BaseQuantizer):
         self.level_low, self.level_high = calculate_asymmetric_level_ranges(self.num_bits - scaled_num_bits)
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # in multi-device case with device_map=auto after loading nncf checkpoint, quantizers have a different device.
-        self.to(x.device)
+        with DisableTorchFunction():
+            # in multi-device case after loading nncf checkpoint, quantizers have a different device.
+            self.to(x.device)
         return asymmetric_quantize(
             x,
             self.levels,
@@ -1101,7 +1103,7 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
         LoraMixin.__init__(self, lspec)
 
     def quantize(self, x: torch.Tensor, execute_traced_op_as_identity: bool = False):
-        # in multi-device case with device_map=auto after loading nncf checkpoint, quantizers have a different device.
+        # in multi-device case after loading nncf checkpoint, quantizers have a different device.
         self.to(x.device)
         return asymmetric_quantize_lora(
             x,
@@ -1148,7 +1150,7 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
         LoraMixin.__init__(self, lspec)
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
-        # in multi-device case with device_map=auto after loading nncf checkpoint, quantizers have a different device.
+        # in multi-device case after loading nncf checkpoint, quantizers have a different device.
         self.to(x.device)
         return symmetric_quantize_lora(
             x,
