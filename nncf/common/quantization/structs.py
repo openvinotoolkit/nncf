@@ -27,10 +27,16 @@ from nncf.parameters import TargetDevice
 @api()
 class QuantizationScheme(StrEnum):
     """
-    Basic enumeration for quantization scheme specification.
+    Enumeration for specifying quantization schemes.
 
-    :param SYMMETRIC:
-    :param ASYMMETRIC:
+    :param SYMMETRIC: Symmetric quantization where the range is defined by a single parameter - scale.
+        This range can include both negative and positive values if signed, or only positive values if unsigned.
+    :param ASYMMETRIC: Asymmetric quantization where the range is defined by two parameters - input_low and input_high,
+        representing the lower and upper boundaries of the range, respectively.
+    :param SYMMETRIC_LORA: Symmetric quantization with Low-Rank Adapters (LoRA), involving the sum of weights and
+        the multiplication of low-rank adapters.
+    :param ASYMMETRIC_LORA: Asymmetric quantization with Low-Rank Adapters (LoRA), involving the sum of weights and
+        the multiplication of low-rank adapters.
     """
 
     SYMMETRIC = "symmetric"

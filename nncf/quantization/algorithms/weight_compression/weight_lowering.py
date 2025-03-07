@@ -355,7 +355,7 @@ def compress_weight(
     config: WeightCompressionConfig,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-):
+) -> CompressedWeight:
     """
     Compress weight using compression configuration.
 

@@ -26,14 +26,14 @@ from nncf.torch.quantization.layers import SymmetricQuantizer as SQ
     ids=["se_awq", "data_free"],
 )
 @pytest.mark.parametrize(
-    "mode, backup_mode",
+    ("mode", "backup_mode", "ref_num_trainable"),
     (
-        (nncf.CompressWeightsMode.INT4_ASYM, nncf.CompressWeightsMode.INT8_ASYM),
-        (nncf.CompressWeightsMode.INT4_SYM, nncf.CompressWeightsMode.INT8_SYM),
+        (nncf.CompressWeightsMode.INT4_ASYM, nncf.CompressWeightsMode.INT8_ASYM, 4 + 2),
+        (nncf.CompressWeightsMode.INT4_SYM, nncf.CompressWeightsMode.INT8_SYM, 3 + 1),
     ),
     ids=["asym", "sym"],
 )
-def test_fq_lora_tuning(mode, backup_mode, compression_kwargs, _seed):
+def test_fq_lora_tuning(mode, backup_mode, compression_kwargs, ref_num_trainable, _seed):
     model_id = "facebook/opt-125m"
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device)
@@ -61,6 +61,8 @@ def test_fq_lora_tuning(mode, backup_mode, compression_kwargs, _seed):
         expected_names.add(SQ._SCALE_PARAM_STORAGE_ATTR)
     actual_names = {name.split(".")[-1] for name, param in model.named_parameters() if param.requires_grad}
     assert actual_names == expected_names
+    actual_num_trainable = sum(1 for param in model.parameters() if param.requires_grad)
+    assert actual_num_trainable == ref_num_trainable
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
     model_kwargs = dict(

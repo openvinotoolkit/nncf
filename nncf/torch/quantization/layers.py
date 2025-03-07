@@ -98,6 +98,15 @@ class PTQuantizerSpec(QuantizerSpec):
         compression_lr_multiplier: Optional[float] = None,
     ):
         """
+        :param num_bits: Bitwidth of the quantization.
+        :param mode: The mode of quantization (symmetric or asymmetric).
+        :param signedness_to_force: True if the quantizer *must* be signed, False if *must* be unsigned,
+            None if the signed/unsigned attribute should be determined based on the incoming activation
+            statistics during range initialization.
+        :param narrow_range: True if the range of quantized values should be narrowed as compared to the
+            naive case, False if all 2^`num_bits` quantizations should be used.
+        :param half_range: If ``True`` effectively only a half of an quantizer range are used.
+            False - the full range are used.
         :param scale_shape: Shape of quantizer scale parameters
         :param logarithm_scale: Whether to use log of scale as optimized parameter instead of scale itself.
         :param compression_lr_multiplier: Used to increase/decrease gradients for quantization parameters.
@@ -164,6 +173,12 @@ class PTLoraSpec:
         orig_weight_shape: List[int],
         weight_shape: List[int],
     ):
+        """
+        :param lora_rank: The rank of the adapters.
+        :param orig_weight_shape: The rank of the adapters.
+        :param weight_shape: The shape of the weight tensor before applying quantization. In case of group-wise
+            quantization, weights are reshaped from [Cout, Cin] to [Cout, Cin // group_size, group_size].
+        """
         self.lora_rank = lora_rank
         self.orig_weight_shape = orig_weight_shape
         self.weight_shape = weight_shape
@@ -674,7 +689,7 @@ class SymmetricQuantizer(BaseQuantizer):
             self,
             self._SCALE_PARAM_STORAGE_ATTR,
             CompressionParameter(
-                torch.ones(self.scale_shape, dtype=torch.float32),
+                torch.ones(self.scale_shape),
                 requires_grad=True,
                 compression_lr_multiplier=qspec.compression_lr_multiplier,
             ),
@@ -753,6 +768,8 @@ class SymmetricQuantizer(BaseQuantizer):
         self.set_levels()
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
+        # in multi-device case with device_map=auto after loading nncf checkpoint, quantizers have a different device.
+        self.to(x.device)
         return symmetric_quantize(
             x, self.levels, self.level_low, self.level_high, self.scale, self.eps, skip=execute_traced_op_as_identity
         )
@@ -940,6 +957,8 @@ class AsymmetricQuantizer(BaseQuantizer):
         self.level_low, self.level_high = calculate_asymmetric_level_ranges(self.num_bits - scaled_num_bits)
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
+        # in multi-device case with device_map=auto after loading nncf checkpoint, quantizers have a different device.
+        self.to(x.device)
         return asymmetric_quantize(
             x,
             self.levels,
@@ -1043,6 +1062,10 @@ class AsymmetricQuantizer(BaseQuantizer):
 
 
 class LoraMixin:
+    """
+    Represents learnable LoRA (Low-Rank Adaptation) adapters for quantization modules.
+    """
+
     LORA_A_PARAM_NAME = "_lora_A"
     LORA_B_PARAM_NAME = "_lora_B"
 
@@ -1077,7 +1100,8 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
         super().__init__(qspec)
         LoraMixin.__init__(self, lspec)
 
-    def quantize(self, x, execute_traced_op_as_identity: bool = False):
+    def quantize(self, x: torch.Tensor, execute_traced_op_as_identity: bool = False):
+        # in multi-device case with device_map=auto after loading nncf checkpoint, quantizers have a different device.
         self.to(x.device)
         return asymmetric_quantize_lora(
             x,
@@ -1093,20 +1117,20 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
             skip=execute_traced_op_as_identity,
         )
 
-    def enable_gradients(self) -> Dict[str, torch.Tensor]:
+    def enable_gradients(self) -> None:
         super().enable_gradients()
         LoraMixin.enable_gradients(self)
 
-    def disable_gradients(self) -> Dict[str, torch.Tensor]:
+    def disable_gradients(self) -> None:
         super().disable_gradients()
         LoraMixin.disable_gradients(self)
 
-    def get_trainable_params(self) -> Dict[str, torch.Tensor]:
+    def get_trainable_params(self) -> Dict[str, torch.nn.Parameter]:
         params = super().get_trainable_params()
         params.update(LoraMixin.get_adapters(self))
         return params
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         return {"qspec": super().get_config(), "lspec": self._lspec.get_state()}
 
     @classmethod
@@ -1124,6 +1148,7 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
         LoraMixin.__init__(self, lspec)
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
+        # in multi-device case with device_map=auto after loading nncf checkpoint, quantizers have a different device.
         self.to(x.device)
         return symmetric_quantize_lora(
             x,
@@ -1138,11 +1163,11 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
             skip=execute_traced_op_as_identity,
         )
 
-    def enable_gradients(self) -> Dict[str, torch.Tensor]:
+    def enable_gradients(self) -> None:
         super().enable_gradients()
         LoraMixin.enable_gradients(self)
 
-    def disable_gradients(self) -> Dict[str, torch.Tensor]:
+    def disable_gradients(self) -> None:
         super().disable_gradients()
         LoraMixin.disable_gradients(self)
 
@@ -1151,7 +1176,7 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
         params.update(LoraMixin.get_adapters(self))
         return params
 
-    def get_config(self):
+    def get_config(self) -> Dict[str, Any]:
         return {"qspec": super().get_config(), "lspec": self._lspec.get_state()}
 
     @classmethod

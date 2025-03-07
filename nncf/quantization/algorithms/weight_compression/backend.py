@@ -25,7 +25,9 @@ from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import HessianTensorStatistic
 from nncf.parameters import CompressionFormat
+from nncf.quantization.advanced_parameters import AdvancedCompressionFormatParameters
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 
@@ -148,16 +150,23 @@ class WeightCompressionAlgoBackend(ABC):
         weight_compression_parameters: Iterable[WeightCompressionParameters],
         precomputed_scales: Dict[str, Tensor] = None,
         precomputed_zero_points: Dict[str, Tensor] = None,
+        lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
+        compression_format_params: AdvancedCompressionFormatParameters = AdvancedCompressionFormatParameters(),
     ) -> TModel:
         """
         Applies weight compression transformations to the model.
 
         :param model: Model in which the weights will be compressed according to the weight compression description.
         :param graph: The graph associated with the model.
-        :param weight_compression_parameters: List of weight compression parameters.
-        :param precomputed_scales: Precomputed scales for weights compression.
-        :param precomputed_zero_points: Precomputed zero points for weights compression.
+        :param weight_compression_parameters: An iterable of weight compression parameters.
+        :param precomputed_scales: Precomputed scales for weight compression.
+        :param precomputed_zero_points: Precomputed zero points for weight compression.
+        :param lora_correction_algo: An optional algorithm to reduce quantization noise after weight compression by
+            using low-rank adapters. This algorithm not only overrides weights with their quantized counterparts but
+            also expands the model's execution graph following the Low-Rank Adaptation (LoRA) concept.
+        :param compression_format: The format in which the model is saved after weight compression.
+        :param compression_format_params: Describes advanced parameters of compression formats.
         :return: The transformed model.
         """
 

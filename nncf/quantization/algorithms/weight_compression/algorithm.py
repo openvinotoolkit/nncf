@@ -125,6 +125,7 @@ def check_user_compression_configuration(
     ignored_scope: Optional[IgnoredScope],
     sensitivity_metric: Optional[SensitivityMetric],
     backup_mode: Optional[BackupMode],
+    compression_format: Optional[CompressionFormat],
     advanced_parameters: Optional[AdvancedCompressionParameters],
 ) -> None:
     """
@@ -173,6 +174,10 @@ def check_user_compression_configuration(
     ):
         msg = f"Mixed precision selection with sensitivity metric={sensitivity_metric.value} \
             requires a dataset, but it's not provided."
+        raise nncf.ValidationError(msg)
+
+    if lora_correction and compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA]:
+        msg = "LoRA Correction algorithm is not compatible with FQ and FQ_LORA compression formats."
         raise nncf.ValidationError(msg)
 
 
@@ -237,6 +242,7 @@ class WeightCompression(Algorithm):
                 In this mode, weights are retained in their original precision without any quantization.
             INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
             INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
+        :param compression_format: Describes the format in which the model is saved after weight compression.
         :param advanced_parameters: advanced parameters for algorithms in compression pipeline.
         """
         super().__init__()
@@ -668,6 +674,7 @@ class WeightCompression(Algorithm):
                 "gptq": self._gptq,
                 "lora_correction": self._lora_correction,
                 "backup_mode": self._backup_mode.value,
+                "compression_format": self._compression_format.value,
                 "advanced_parameters": convert_to_dict_recursively(self._advanced_parameters),
             },
             algo_name="weight_compression",

@@ -41,7 +41,6 @@ class ReferenceQuantize:
             return tensor.astype(dtype)
         return tensor.type(dtype)
 
-    # TODO: rewrite by using nncf.tensor.Tensor
     def _sign(self, tensor: GeneralizedTensor) -> GeneralizedTensor:
         if self.backend is np:
             return np.sign(tensor)
