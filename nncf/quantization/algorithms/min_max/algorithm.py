@@ -444,7 +444,16 @@ class MinMaxQuantization(Algorithm):
         qconfig: QuantizerConfig,
         batchwise_statistics: bool,
     ) -> TensorCollector:
+        """
+        Creates and returns a statistic collector based on the quantizer's configuration.
 
+        :param nncf_graph: NNCFGraph instance.
+        :param target_point: Target point indicates where statistics should be collected.
+        :param quantizer_config: Configuration of a quantizer layer,
+        defining the configuration of created statistic collector.
+        :param num_samples: Number of samples to collect from the 'target_point'.
+        :return: Statistic Collector.
+        """
         is_weight = target_point.is_weight_target_point()
         node = graph.get_node_by_name(target_point.target_node_name)
         shape = self._backend_entity.get_target_point_shape(graph, node, target_point)
