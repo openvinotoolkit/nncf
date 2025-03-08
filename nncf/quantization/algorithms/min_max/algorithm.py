@@ -444,29 +444,31 @@ class MinMaxQuantization(Algorithm):
         qconfig: QuantizerConfig,
         batchwise_statistics: bool,
     ) -> TensorCollector:
-        """
-        Creates and returns a statistic collector based on the quantizer's configuration.
 
-        :param graph: NNCFGraph instance.
-        :param target_point: Target point indicates where statistics should be collected.
-        :param qconfig: Configuration of a quantizer layer,
-        defining the configuration of created statistic collector.
-        :param batchwise_statistics: Determines whether quantizer statistics should be calculated
-            for each item of the batch or for the entire batch.
-        :return: Statistic Collector.
-        """
         is_weight = target_point.is_weight_target_point()
         node = graph.get_node_by_name(target_point.target_node_name)
         shape = self._backend_entity.get_target_point_shape(graph, node, target_point)
-        range_estimator_params = self._get_range_estimator_parameters(target_point, qconfig)
-
+        
+        # Get channel axes considering ConvTranspose layers
         channel_axes = ()
         if qconfig.per_channel:
-            channel_axes = (
-                self._backend_entity.get_weight_quantization_axes(node, target_point, len(shape)) if is_weight else (1,)
-            )
+            if is_weight:
+                if node.metatype.__name__.startswith("PTConvTranspose"):
+                    channel_axes = (1,)  # Output channels for transpose conv
+                else:
+                    channel_axes = self._backend_entity.get_weight_quantization_axes(
+                        node, target_point, len(shape)
+                    )
+            else:
+                channel_axes = (1,)
 
-        # Weight statistics is constant, so only one collection is enough.
+        # Align statistics collection with scale shape
+        reduction_axes, aggregation_axes = None, None
+        if shape is not None and channel_axes:
+            all_axes = set(range(len(shape)))
+            reduction_axes = tuple(all_axes - set(channel_axes))
+
+        range_estimator_params = self._get_range_estimator_parameters(target_point, qconfig)
         num_samples = self._subset_size if not is_weight else 1
 
         batchwise_statistics = batchwise_statistics and not is_weight
