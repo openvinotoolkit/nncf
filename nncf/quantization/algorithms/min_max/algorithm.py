@@ -459,28 +459,15 @@ class MinMaxQuantization(Algorithm):
         node = graph.get_node_by_name(target_point.target_node_name)
         shape = self._backend_entity.get_target_point_shape(graph, node, target_point)
         
-        # Get channel axes considering ConvTranspose layers
         channel_axes = ()
         if qconfig.per_channel:
             if is_weight:
-                if node.metatype.__name__.startswith("PTConvTranspose"):
-                    channel_axes = (1,)  # Output channels for transpose conv
-                else:
-                    channel_axes = self._backend_entity.get_weight_quantization_axes(
-                        node, target_point, len(shape)
-                    )
+                channel_axes = self._backend_entity.get_weight_quantization_axes(node, target_point, len(shape))
             else:
                 channel_axes = (1,)
 
-        # Align statistics collection with scale shape
-        reduction_axes, aggregation_axes = None, None
-        if shape is not None and channel_axes:
-            all_axes = set(range(len(shape)))
-            reduction_axes = tuple(all_axes - set(channel_axes))
-
         range_estimator_params = self._get_range_estimator_parameters(target_point, qconfig)
         num_samples = self._subset_size if not is_weight else 1
-
         batchwise_statistics = batchwise_statistics and not is_weight
 
         collector_params = RangeInitCollectorParams(
