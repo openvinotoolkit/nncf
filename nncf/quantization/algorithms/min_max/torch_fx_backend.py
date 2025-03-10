@@ -150,8 +150,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_quantization_axes(node: NNCFNode, target_point: PTTargetPoint, ndims: int) -> Tuple[int]:
-        # TODO(dlyakhov): support transpose conv and other cases
-        return (0,)
+        return get_weight_channel_axes(node.metatype, ndims, target_point.input_port_id)
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
@@ -179,32 +178,22 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     ) -> Tuple[Tuple[int, ...], Tuple[int, ...], int]:
         is_weights = target_point.is_weight_target_point()
         input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
-        
+
         if is_weights:
             node = nncf_graph.get_node_by_name(target_point.target_node_name)
-            # Get channel axes considering weight port ID
-            channel_axes = get_weight_channel_axes(
-                node.metatype, 
-                len(input_shape), 
-                target_point.input_port_id
-            )
-            if channel_axes:
-                channel_idx = channel_axes[0]
-                scale_shape = tuple(get_scale_shape(
-                    input_shape, 
-                    is_weights=True, 
-                    per_channel=per_channel, 
-                    channel_idx=channel_idx
-                ))
-            else:
-                scale_shape = (1,)
-                channel_idx = 0
+            channel_axes = get_weight_channel_axes(node.metatype, len(input_shape), target_point.input_port_id)
         else:
-            channel_idx = 1
+            channel_axes = [1]
+
+        channel_idx = channel_axes[0] if channel_axes else 0
+
+        if is_weights and not channel_axes:
+            scale_shape = (1,)
+        else:
             scale_shape = tuple(get_scale_shape(
-                input_shape, 
-                is_weights=False, 
-                per_channel=per_channel, 
+                input_shape,
+                is_weights=is_weights,
+                per_channel=per_channel,
                 channel_idx=channel_idx
             ))
 
