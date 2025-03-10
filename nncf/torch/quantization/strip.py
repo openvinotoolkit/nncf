@@ -26,12 +26,14 @@ from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import SymmetricLoraQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.quantize_functions import TuneRange
 
@@ -191,8 +193,12 @@ def strip_quantized_model(model: NNCFNetwork):
 
 
 def strip_lora_model(model: NNCFNetwork) -> NNCFNetwork:
-    """ """
+    """
+    Returns the model without LoRA adapters replaced with Decompressors.
 
+    :param model: Compressed model with LoRA adapters.
+    :return: The modified NNCF network.
+    """
     transformation_layout = TransformationLayout()
 
     model_layout = model.nncf.transformation_layout()
@@ -220,11 +226,11 @@ def strip_lora_model(model: NNCFNetwork) -> NNCFNetwork:
 
         # Quantize-dequantize using universal quantization formula
         qdq_weight = quantizer.quantize(original_weight)
-        qdq_weight = qdq_weight.reshape(quantizer._qspec.weight_shape)
+        qdq_weight = qdq_weight.reshape(quantizer._lspec.weight_shape)
         qdq_weight = qdq_weight.to(original_dtype)
 
         # Quantize qdq_value using weight lowering formula
-        if isinstance(quantizer, AsymmetricQuantizer):
+        if isinstance(quantizer, AsymmetricLoraQuantizer):
             input_range_safe = abs(quantizer.input_range) + quantizer.eps
             input_low, input_range = TuneRange.apply(quantizer.input_low, input_range_safe, quantizer.levels)
 
@@ -260,7 +266,7 @@ def strip_lora_model(model: NNCFNetwork) -> NNCFNetwork:
                     result_dtype=original_dtype,
                 )
 
-        elif isinstance(quantizer, SymmetricQuantizer):
+        elif isinstance(quantizer, SymmetricLoraQuantizer):
             integer_dtype = torch.int8
 
             scale = quantizer.scale / abs(quantizer.level_low)
@@ -290,8 +296,8 @@ def strip_lora_model(model: NNCFNetwork) -> NNCFNetwork:
 
         consumer_nodes = graph.get_next_nodes(weight_node)
         if len(consumer_nodes) > 1:
-            for comsumer_node in consumer_nodes:
-                consumer_module = model.nncf.get_module_by_scope(Scope.from_str(comsumer_node.layer_name))
+            for consumer_node in consumer_nodes:
+                consumer_module = model.nncf.get_module_by_scope(Scope.from_str(consumer_node.layer_name))
                 for name, param in consumer_module.named_parameters(recurse=False, remove_duplicate=False):
                     if id(param) == id(original_weight):
                         setattr(consumer_module, name, compressed_parameter)
