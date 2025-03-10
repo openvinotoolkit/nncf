@@ -246,10 +246,6 @@ class ScaleEstimation:
         zero_scale = 0.001
         zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
-        # This is required for alignment with a previous OpenVINO models implementation
-        # TODO(Nikita Savelyev): remove this
-        opt_fns_kwargs = dict(dynamic_shapes=False, convertable_division=True)
-
         # iterative rectification of initial scale
         for i in range(initial_steps):
             near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
@@ -264,7 +260,6 @@ class ScaleEstimation:
                     config,
                     precomputed_scale=near_to_ideal_scale,
                     precomputed_zero_point=zp,
-                    **opt_fns_kwargs,
                 )
 
             q_weights_ = fns.zeros_like(original_weight) + out
@@ -299,7 +294,6 @@ class ScaleEstimation:
                         config,
                         precomputed_scale=near_to_ideal_scale,
                         precomputed_zero_point=zp,
-                        **opt_fns_kwargs,
                     )
                 compressed_weights = fns.zeros_like(original_weight) + out
                 target, zero_mask = get_target_zero_mask(compressed_weights, zp)
@@ -318,7 +312,6 @@ class ScaleEstimation:
                     config,
                     precomputed_scale=scaled_scale,
                     precomputed_zero_point=zp,
-                    **opt_fns_kwargs,
                 )
             compressed_weights = fns.zeros_like(original_weight) + out
 
@@ -336,7 +329,6 @@ class ScaleEstimation:
                     config,
                     precomputed_scale=near_to_ideal_scale,
                     precomputed_zero_point=zp,
-                    **opt_fns_kwargs,
                 )
             q_weights_ = fns.zeros_like(original_weight) + out
 
