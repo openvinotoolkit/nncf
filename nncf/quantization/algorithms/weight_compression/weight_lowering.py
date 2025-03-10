@@ -443,7 +443,6 @@ def do_int_quantization(
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-    **kwargs,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
     Performs integer quantization on the given weight tensor.
@@ -475,9 +474,7 @@ def do_int_quantization(
     if _can_run_optimized(weight.backend):
         from nncf.openvino.optimized_functions import do_int_quantization as do_int_quantization_ov
 
-        return do_int_quantization_ov(
-            weight, config, reduction_axes, precomputed_scale, precomputed_zero_point, **kwargs
-        )
+        return do_int_quantization_ov(weight, config, reduction_axes, precomputed_scale, precomputed_zero_point)
 
     # Reference implementation
     if weight.backend == TensorBackend.ov:
@@ -507,7 +504,6 @@ def quantize_dequantize_weight(
     precomputed_scale: Optional[Tensor] = None,
     precomputed_zero_point: Optional[Tensor] = None,
     return_compressed_weight: Optional[bool] = False,
-    **kwargs,
 ) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor, Tensor]]:
     """
     First quantizes the given weight tensor and then dequantizes it back to obtain float32 values.
@@ -533,7 +529,6 @@ def quantize_dequantize_weight(
             precomputed_scale,
             precomputed_zero_point,
             return_compressed_weight,
-            **kwargs,
         )
 
     # Reference implementation
