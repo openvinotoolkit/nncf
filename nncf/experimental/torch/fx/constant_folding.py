@@ -197,9 +197,9 @@ class ConstantFolder(torch.fx.Interpreter):
 
             self.add_node_replacement(node, out)
 
-            flattened_node_inps = pytree.arg_tree_leaves(*node.args, **node.kwargs)
+            flattened_node_inputs = pytree.arg_tree_leaves(*node.args, **node.kwargs)
 
-            for n in flattened_node_inps:
+            for n in flattened_node_inputs:
                 if not isinstance(n, torch.fx.Node):
                     continue
 

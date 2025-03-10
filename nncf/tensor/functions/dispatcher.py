@@ -44,7 +44,7 @@ P = ParamSpec("P")
 class DispatchCallable(Protocol[P, R]):
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
 
-    def register(self, rfunc: F) -> F: ...
+    def register(self, r_func: F) -> F: ...
 
     registry: MutableMapping[type, Callable[..., Any]]
 
@@ -96,20 +96,20 @@ def tensor_dispatcher(func: Callable[P, R]) -> DispatchCallable[P, R]:
         ret = dispatched_func(*args, **kwargs)
         return _wrap_output(ret, signature.return_annotation)
 
-    def register(rfunc: F) -> F:
+    def register(r_func: F) -> F:
         """
         Register a function to the dispatcher registry.
 
-        :param rfunc: The function to be registered.
+        :param r_func: The function to be registered.
         :return: The registered function.
         """
-        _check_signature(func, rfunc)
+        _check_signature(func, r_func)
         spec = getfullargspec(func)
-        type_alias = get_type_hints(rfunc).get(spec.args[0])
+        type_alias = get_type_hints(r_func).get(spec.args[0])
         types = _get_register_types(type_alias)
         for t in types:
-            registry[t] = rfunc
-        return rfunc
+            registry[t] = r_func
+        return r_func
 
     wrapper.register = register  # type: ignore[attr-defined]
     wrapper.registry = registry  # type: ignore[attr-defined]
@@ -137,23 +137,23 @@ def _find_arguments_to_unwrap(
     return indexes, names
 
 
-def _check_signature(func: Callable[..., Any], rfunc: Callable[..., Any]) -> None:
+def _check_signature(func: Callable[..., Any], r_func: Callable[..., Any]) -> None:
     """
     Check the signature of the dispatched function compared with expected signature.
 
     :param func: The original function.
-    :param rfunc: The dispatched function.
+    :param r_func: The dispatched function.
     """
     sign_func = getfullargspec(func)
-    sign_rfunc = getfullargspec(rfunc)
+    sign_r_func = getfullargspec(r_func)
 
     def _raise_error(text: str, expected: Any, actual: Any) -> None:
         """
         Raises a RuntimeError with detailed information about the error.
         """
-        file_line = f"{inspect.getsourcefile(rfunc)}:{inspect.getsourcelines(rfunc)[1]}"
+        file_line = f"{inspect.getsourcefile(r_func)}:{inspect.getsourcelines(r_func)[1]}"
         msg = (
-            f"Differ {text} for dispatched a function {func.__name__} in {rfunc.__module__}.\n"
+            f"Differ {text} for dispatched a function {func.__name__} in {r_func.__module__}.\n"
             f"Path: {file_line}\n"
             f"Expected: {expected}\n"
             f"Actual:   {actual}"
@@ -161,23 +161,23 @@ def _check_signature(func: Callable[..., Any], rfunc: Callable[..., Any]) -> Non
         raise RuntimeError(msg)
 
     # Check names of argument
-    if sign_func.args != sign_rfunc.args or sign_func.kwonlyargs != sign_rfunc.kwonlyargs:
+    if sign_func.args != sign_r_func.args or sign_func.kwonlyargs != sign_r_func.kwonlyargs:
         _raise_error(
             "names of arguments",
             f"{sign_func.args} {sign_func.kwonlyargs}",
-            f"{sign_rfunc.args} {sign_rfunc.kwonlyargs}",
+            f"{sign_r_func.args} {sign_r_func.kwonlyargs}",
         )
 
     # Check that default values is same
-    if sign_func.defaults != sign_rfunc.defaults:
-        _raise_error("default values", sign_func.defaults, sign_rfunc.defaults)
+    if sign_func.defaults != sign_r_func.defaults:
+        _raise_error("default values", sign_func.defaults, sign_r_func.defaults)
 
     # Check number of annotated arguments
-    if len(sign_func.annotations.items()) != len(sign_rfunc.annotations.items()):
-        _raise_error("count of annotated arguments", sign_func.annotations, sign_rfunc.annotations)
+    if len(sign_func.annotations.items()) != len(sign_r_func.annotations.items()):
+        _raise_error("count of annotated arguments", sign_func.annotations, sign_r_func.annotations)
 
     # Check annotation for arguments that not expect Tensor as input
-    for (name, ann), rann in zip(sign_func.annotations.items(), sign_rfunc.annotations.values()):
+    for (name, ann), rann in zip(sign_func.annotations.items(), sign_r_func.annotations.values()):
         if Tensor not in _get_register_types(ann) and ann != rann:
             _raise_error(f"annotations for argument '{name}'", ann, rann)
 

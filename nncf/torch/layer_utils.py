@@ -23,7 +23,7 @@ from nncf.common.utils.registry import Registry
 COMPRESSION_MODULES = Registry("compression modules")
 
 
-class StatefullModuleInterface(ABC):
+class StatefulModuleInterface(ABC):
     """
     Interface that should be implemented for every registered compression module to make it possible
     to save an compression modules state and create an compression module from the saved state.

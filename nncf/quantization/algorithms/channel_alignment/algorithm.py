@@ -127,7 +127,7 @@ class ChannelAlignment(Algorithm):
             ):
                 nncf_logger.debug(
                     f"Skipping channel alignment for pairs {conv_in.node_name}, {conv_out.node_name} "
-                    " because one of the node is 1D MatMul, 1D Matmuls are not supported by CA algorithm yet."
+                    "because one of the nodes is 1D MatMul, 1D MatMuls are not supported by CA algorithm yet."
                 )
                 continue
 

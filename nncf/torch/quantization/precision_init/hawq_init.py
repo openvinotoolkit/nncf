@@ -155,12 +155,12 @@ class TraceOrderBitwidthMatcher:
         # For each index, put the largest qconf subset that only varies in bitwidth on top
         # so that the associated covering configurations would not require model regeneration
         optimized_observed_qconfs: List[List[QuantizerConfig]] = []
-        for qconf_oset in observed_qconfs:
+        for qconf_observed_set in observed_qconfs:
             variants: List[List[QuantizerConfig]] = []
-            for qconf in qconf_oset:
-                variants.append(list(filter(qconf.is_a_bitwidth_variant, qconf_oset.keys())))
+            for qconf in qconf_observed_set:
+                variants.append(list(filter(qconf.is_a_bitwidth_variant, qconf_observed_set.keys())))
             max_bw_varying_variant = max(variants, key=len)
-            other_qconfs = list(filter(lambda x: x not in max_bw_varying_variant, qconf_oset.keys()))
+            other_qconfs = list(filter(lambda x: x not in max_bw_varying_variant, qconf_observed_set.keys()))
             optimized_observed_qconfs.append(max_bw_varying_variant + other_qconfs)
 
         max_depth = max([len(qconfs_for_trace_idx) for qconfs_for_trace_idx in optimized_observed_qconfs])

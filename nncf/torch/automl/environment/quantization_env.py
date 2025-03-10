@@ -224,8 +224,8 @@ class QuantizationEnv:
         self.state_scaler.fit(self.master_df[self.state_list])
 
         # Mapping required for quantizer BW alignment flow
-        self.adjq_groupwise_intersecting_bw_space = self._create_map_of_adjq_groupid_to_common_bw_space()
-        self.adjq_groupwise_df_lut_keys = self._create_map_of_adjq_groupid_to_df_lut_keys()
+        self.adjq_groupwise_intersecting_bw_space = self._create_map_of_adjq_group_id_to_common_bw_space()
+        self.adjq_groupwise_df_lut_keys = self._create_map_of_adjq_group_id_to_df_lut_keys()
 
         # Model Size Calculation
         self.model_size_calculator = ModelSizeCalculator(self.qmodel, self.qconfig_space_map)
@@ -298,11 +298,11 @@ class QuantizationEnv:
         # Given sequential nature of NN, state transition in the order of
         # quantizer being executed is a natural design to conform the assumption.
         quantizers_in_exec_order = []
-        hooklist = []
+        hook_list = []
         for qid, qmod in self.qctrl.all_quantizations.items():
-            hooklist.append(qmod.register_forward_hook(get_hook(qid, quantizers_in_exec_order)))
+            hook_list.append(qmod.register_forward_hook(get_hook(qid, quantizers_in_exec_order)))
         self.qmodel.nncf.do_dummy_forward(force_eval=True)
-        for h in hooklist:
+        for h in hook_list:
             h.remove()
 
         d = OrderedDict()
@@ -356,7 +356,7 @@ class QuantizationEnv:
         # create master dataframe
         master_df = pd.concat([df, layer_attr_df], axis="columns")
 
-        # Annotate a min and a max value in prev_action before minmaxscaler fitting
+        # Annotate a min and a max value in prev_action before minmax scaler fitting
         master_df.loc[master_df.index[0], "prev_action"] = max(self.model_bitwidth_space)
         master_df.loc[master_df.index[-1], "prev_action"] = min(self.model_bitwidth_space)
 
@@ -418,7 +418,7 @@ class QuantizationEnv:
 
         return pd.Series(feature)
 
-    def _create_map_of_adjq_groupid_to_common_bw_space(self) -> Dict:
+    def _create_map_of_adjq_group_id_to_common_bw_space(self) -> Dict:
         # Extracting common bitwidth space per group of quantizer
         bwassigner_df = deepcopy(self.master_df)
         bwassigner_df["bw_space"] = list(map(lambda x: [qc.num_bits for qc in x], bwassigner_df.qconf_space.values))
@@ -440,7 +440,7 @@ class QuantizationEnv:
 
         return adjq_groupwise_intersecting_bw_space
 
-    def _create_map_of_adjq_groupid_to_df_lut_keys(self) -> Dict:
+    def _create_map_of_adjq_group_id_to_df_lut_keys(self) -> Dict:
         adjq_groupwise_df_lut_keys = {}
 
         for i, _ in enumerate(self.groups_of_adjacent_quantizers):
