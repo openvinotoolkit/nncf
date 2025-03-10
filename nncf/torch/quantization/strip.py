@@ -192,7 +192,7 @@ def strip_quantized_model(model: NNCFNetwork):
     """
     model_layout = model.nncf.transformation_layout()
     transformations = model_layout.transformations
-    if any([q.fn in [AsymmetricLoraQuantizer, SymmetricLoraQuantizer] for q in transformations]):
+    if any([type(q.fn) in [AsymmetricLoraQuantizer, SymmetricLoraQuantizer] for q in transformations]):
         model = replace_with_decopmressors(model, transformations)
     else:
         model = replace_quantizer_to_torch_native_module(model)

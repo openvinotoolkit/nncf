@@ -776,11 +776,11 @@ class HookChecker:
 
 
 class LinearModel(nn.Module):
-    def __init__(self, weight, torch_dtype):
+    def __init__(self, input_shape=List[int]):
         super().__init__()
-        shape = weight.shape
-        self.linear = nn.Linear(shape[1], shape[0], bias=False)
-        self.linear.weight.data = weight.to(torch_dtype)
+        with set_torch_seed():
+            self.linear = nn.Linear(input_shape[1], input_shape[0], bias=False)
+            self.linear.weight.data = torch.randn(input_shape) - 0.5
 
     def forward(self, x):
         return self.linear(x)

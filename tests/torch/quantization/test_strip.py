@@ -27,7 +27,6 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
-from nncf.torch.quantization.strip import replace_with_decopmressors
 from tests.common.quantization.data_generators import check_outputs
 from tests.common.quantization.data_generators import generate_lazy_sweep_data
 from tests.common.quantization.data_generators import generate_random_low_and_range_by_input_size
@@ -329,30 +328,29 @@ def test_nncf_strip_api(strip_type, do_copy):
     assert isinstance(strip_model.nncf.external_quantizers["/nncf_model_input_0|OUTPUT"], FakeQuantize)
 
 
-WEIGHT = torch.tensor([[-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]])
-
-
 @pytest.mark.parametrize(
-    ("mode", "torch_dtype", "ref"),
+    ("mode", "torch_dtype", "atol"),
     (
-        (nncf.CompressWeightsMode.INT4_ASYM, torch.float32, [-1]),
-        (nncf.CompressWeightsMode.INT4_ASYM, torch.float16, [-1]),
-        (nncf.CompressWeightsMode.INT4_ASYM, torch.bfloat16, [-1]),
-        (nncf.CompressWeightsMode.INT4_SYM, torch.float32, [-8.5]),
-        (nncf.CompressWeightsMode.INT4_SYM, torch.float16, [-8.5]),
-        (nncf.CompressWeightsMode.INT4_SYM, torch.bfloat16, [-8.5]),
+        (nncf.CompressWeightsMode.INT4_ASYM, torch.float32, 0.01),
+        (nncf.CompressWeightsMode.INT4_ASYM, torch.float16, 0.01),
+        (nncf.CompressWeightsMode.INT4_ASYM, torch.bfloat16, 0.01),
+        (nncf.CompressWeightsMode.INT4_SYM, torch.float32, 0.01),
+        (nncf.CompressWeightsMode.INT4_SYM, torch.float16, 0.01),
+        (nncf.CompressWeightsMode.INT4_SYM, torch.bfloat16, 0.01),
     ),
 )
-def test_nncf_strip_lora_model(mode, torch_dtype, ref):
-    model = LinearModel(weight=WEIGHT, torch_dtype=torch_dtype)
+def test_nncf_strip_lora_model(mode, torch_dtype, atol):
+    input_shape = [1, 16]
+    model = LinearModel(input_shape=input_shape)
+    model = model.to(torch_dtype)
     with torch.no_grad():
-        example = torch.ones(WEIGHT.shape).to(torch_dtype)
+        example = torch.ones(input_shape).to(torch_dtype)
         dataset = [example]
 
         compressed_model = nncf.compress_weights(
             model,
             ratio=1,
-            group_size=2,
+            group_size=4,
             mode=mode,
             backup_mode=None,
             dataset=nncf.Dataset(dataset),
@@ -360,8 +358,9 @@ def test_nncf_strip_lora_model(mode, torch_dtype, ref):
             compression_format=nncf.CompressionFormat.FQ_LORA,
         )
 
-        strip_compressed_model = replace_with_decopmressors(compressed_model)
+        compressed_output = compressed_model(example)
+
+        strip_compressed_model = nncf.strip(compressed_model, do_copy=True)
         stripped_output = strip_compressed_model(example)
 
-        ref = torch.tensor([ref]).to(torch_dtype)
-        assert torch.allclose(stripped_output, ref)
+        assert torch.allclose(compressed_output, stripped_output, atol=atol)
