@@ -27,7 +27,7 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
-from nncf.torch.quantization.strip import strip_lora_model
+from nncf.torch.quantization.strip import replace_with_decopmressors
 from tests.common.quantization.data_generators import check_outputs
 from tests.common.quantization.data_generators import generate_lazy_sweep_data
 from tests.common.quantization.data_generators import generate_random_low_and_range_by_input_size
@@ -360,7 +360,7 @@ def test_nncf_strip_lora_model(mode, torch_dtype, ref):
             compression_format=nncf.CompressionFormat.FQ_LORA,
         )
 
-        strip_compressed_model = strip_lora_model(compressed_model)
+        strip_compressed_model = replace_with_decopmressors(compressed_model)
         stripped_output = strip_compressed_model(example)
 
         ref = torch.tensor([ref]).to(torch_dtype)

@@ -92,6 +92,7 @@ dblp
 ddof
 ddpg
 deconv
+decopmressors
 densenet
 denum
 depsilon

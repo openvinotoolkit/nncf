@@ -10,11 +10,14 @@
 # limitations under the License.
 
 
+from typing import List
+
 import numpy as np
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
+from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.torch.dynamic_graph.scope import Scope
@@ -187,25 +190,32 @@ def strip_quantized_model(model: NNCFNetwork):
     :param model: Compressed model.
     :return: The modified NNCF network.
     """
-    model = replace_quantizer_to_torch_native_module(model)
-    model = remove_disabled_quantizers(model)
+    model_layout = model.nncf.transformation_layout()
+    transformations = model_layout.transformations
+    if any([q.fn in [AsymmetricLoraQuantizer, SymmetricLoraQuantizer] for q in transformations]):
+        model = replace_with_decopmressors(model, transformations)
+    else:
+        model = replace_quantizer_to_torch_native_module(model)
+        model = remove_disabled_quantizers(model)
     return model
 
 
-def strip_lora_model(model: NNCFNetwork) -> NNCFNetwork:
+def replace_with_decopmressors(model: NNCFNetwork, transformations: List[Command]) -> NNCFNetwork:
     """
-    Returns the model without LoRA adapters replaced with Decompressors.
+    Returns the model with Quantizers replaced with Decompressors.
 
-    :param model: Compressed model with LoRA adapters.
+    For the Quantizers containing LoRA adapters, it is important to quantize and
+    dequantize weights in the same manner and then quantize them using a Decompressor-friendly formula.
+    This approach allows us to prevent floating-point errors that can occur due to the different order of operations.
+
+    :param model: Compressed model with Decompressors.
     :return: The modified NNCF network.
     """
     transformation_layout = TransformationLayout()
-
-    model_layout = model.nncf.transformation_layout()
     model = model.nncf.get_clean_shallow_copy()
     graph = model.nncf.get_graph()
 
-    for command in model_layout.transformations:
+    for command in transformations:
         quantizer = command.fn
 
         if len(command.target_points) > 1:
@@ -224,13 +234,13 @@ def strip_lora_model(model: NNCFNetwork) -> NNCFNetwork:
         original_shape = original_weight.shape
         original_eps = torch.finfo(original_dtype).eps
 
-        # Quantize-dequantize using universal quantization formula
         qdq_weight = quantizer.quantize(original_weight)
-        qdq_weight = qdq_weight.reshape(quantizer._lspec.weight_shape)
+        if hasattr(quantizer, "_lspec"):
+            # Special reshape for LoRA-grouped output
+            qdq_weight = qdq_weight.reshape(quantizer._lspec.weight_shape)
         qdq_weight = qdq_weight.to(original_dtype)
 
-        # Quantize qdq_value using weight lowering formula
-        if isinstance(quantizer, AsymmetricLoraQuantizer):
+        if isinstance(quantizer, AsymmetricQuantizer):
             input_range_safe = abs(quantizer.input_range) + quantizer.eps
             input_low, input_range = TuneRange.apply(quantizer.input_low, input_range_safe, quantizer.levels)
 
@@ -266,7 +276,7 @@ def strip_lora_model(model: NNCFNetwork) -> NNCFNetwork:
                     result_dtype=original_dtype,
                 )
 
-        elif isinstance(quantizer, SymmetricLoraQuantizer):
+        elif isinstance(quantizer, SymmetricQuantizer):
             integer_dtype = torch.int8
 
             scale = quantizer.scale / abs(quantizer.level_low)
