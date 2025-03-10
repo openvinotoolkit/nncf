@@ -11,15 +11,18 @@
 from __future__ import annotations
 
 import operator
-from typing import Any, Dict, Optional, Tuple, TypeVar, Union
+from typing import Any, Dict, Iterator, Optional, Tuple, Union, cast
 
 import nncf
 from nncf.common.utils.backend import BackendType
+from nncf.tensor.definitions import T_AXIS
+from nncf.tensor.definitions import T_NUMBER
+from nncf.tensor.definitions import T_SHAPE
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
 from nncf.tensor.definitions import TensorDeviceType
 
-TTensor = TypeVar("TTensor")
+TTensor = Any
 
 
 class Tensor:
@@ -40,28 +43,28 @@ class Tensor:
 
     @property
     def ndim(self) -> int:
-        return self.data.ndim
+        return cast(int, self.data.ndim)
 
     @property
     def device(self) -> TensorDeviceType:
-        return _call_function("device", self)
+        return cast(TensorDeviceType, _call_function("device", self))
 
     @property
     def dtype(self) -> TensorDataType:
-        return _call_function("dtype", self)
+        return cast(TensorDataType, _call_function("dtype", self))
 
     @property
     def backend(self) -> TensorBackend:
-        return _call_function("backend", self)
+        return cast(TensorBackend, _call_function("backend", self))
 
     @property
     def size(self) -> int:
-        return _call_function("size", self)
+        return cast(int, _call_function("size", self))
 
     def __bool__(self) -> bool:
         return bool(self.data)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tensor]:
         return TensorIterator(self.data)
 
     def __getitem__(self, index: Union[Tensor, int, Tuple[Union[Tensor, int], ...]]) -> Tensor:
@@ -76,69 +79,72 @@ class Tensor:
     def __repr__(self) -> str:
         return f"nncf.Tensor({repr(self.data)})"
 
+    def __len__(self) -> int:
+        return len(self.data)
+
     # built-in operations
 
-    def __add__(self, other: Union[Tensor, float]) -> Tensor:
+    def __add__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(self.data + unwrap_tensor_data(other))
 
-    def __radd__(self, other: Union[Tensor, float]) -> Tensor:
+    def __radd__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(unwrap_tensor_data(other) + self.data)
 
-    def __iadd__(self, other: Union[Tensor, float]) -> Tensor:
+    def __iadd__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         self._data += unwrap_tensor_data(other)
         return self
 
-    def __sub__(self, other: Union[Tensor, float]) -> Tensor:
+    def __sub__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(self.data - unwrap_tensor_data(other))
 
-    def __rsub__(self, other: Union[Tensor, float]) -> Tensor:
+    def __rsub__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(unwrap_tensor_data(other) - self.data)
 
-    def __isub__(self, other: Union[Tensor, float]) -> Tensor:
+    def __isub__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         self._data -= unwrap_tensor_data(other)
         return self
 
-    def __mul__(self, other: Union[Tensor, float]) -> Tensor:
+    def __mul__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(self.data * unwrap_tensor_data(other))
 
-    def __rmul__(self, other: Union[Tensor, float]) -> Tensor:
+    def __rmul__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(unwrap_tensor_data(other) * self.data)
 
-    def __imul__(self, other: Union[Tensor, float]) -> Tensor:
+    def __imul__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         self._data *= unwrap_tensor_data(other)
         return self
 
-    def __pow__(self, other: Union[Tensor, float]) -> Tensor:
+    def __pow__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(self.data ** unwrap_tensor_data(other))
 
-    def __rpow__(self, other: Union[Tensor, float]) -> Tensor:
+    def __rpow__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(unwrap_tensor_data(other) ** self.data)
 
-    def __ipow__(self, other: Union[Tensor, float]) -> Tensor:
+    def __ipow__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         self._data **= unwrap_tensor_data(other)
         return self
 
-    def __truediv__(self, other: Union[Tensor, float]) -> Tensor:
-        return _call_function("_binary_op_nowarn", self, other, operator.truediv)
+    def __truediv__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
+        return cast(Tensor, _call_function("_binary_op_nowarn", self, other, operator.truediv))
 
-    def __rtruediv__(self, other: Union[Tensor, float]) -> Tensor:
-        return _call_function("_binary_reverse_op_nowarn", self, other, operator.truediv)
+    def __rtruediv__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
+        return cast(Tensor, _call_function("_binary_reverse_op_nowarn", self, other, operator.truediv))
 
-    def __itruediv__(self, other: Union[Tensor, float]) -> Tensor:
+    def __itruediv__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         self._data /= unwrap_tensor_data(other)
         return self
 
-    def __floordiv__(self, other: Union[Tensor, float]) -> Tensor:
-        return _call_function("_binary_op_nowarn", self, other, operator.floordiv)
+    def __floordiv__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
+        return cast(Tensor, _call_function("_binary_op_nowarn", self, other, operator.floordiv))
 
-    def __rfloordiv__(self, other: Union[Tensor, float]) -> Tensor:
-        return _call_function("_binary_reverse_op_nowarn", self, other, operator.floordiv)
+    def __rfloordiv__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
+        return cast(Tensor, _call_function("_binary_reverse_op_nowarn", self, other, operator.floordiv))
 
-    def __ifloordiv__(self, other: Union[Tensor, float]) -> Tensor:
-        self._data /= unwrap_tensor_data(other)
+    def __ifloordiv__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
+        self._data //= unwrap_tensor_data(other)
         return self
 
-    def __matmul__(self, other: Union[Tensor, float]) -> Tensor:
+    def __matmul__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(self.data @ unwrap_tensor_data(other))
 
     def __neg__(self) -> Tensor:
@@ -146,61 +152,61 @@ class Tensor:
 
     # Comparison operators
 
-    def __lt__(self, other: Union[Tensor, float]) -> Tensor:
+    def __lt__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(self.data < unwrap_tensor_data(other))
 
-    def __le__(self, other: Union[Tensor, float]) -> Tensor:
+    def __le__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(self.data <= unwrap_tensor_data(other))
 
-    def __eq__(self, other: Union[Tensor, float]) -> Tensor:
+    def __eq__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:  # type: ignore[override]
         return Tensor(self.data == unwrap_tensor_data(other))
 
-    def __ne__(self, other: Union[Tensor, float]) -> Tensor:
+    def __ne__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:  # type: ignore[override]
         return Tensor(self.data != unwrap_tensor_data(other))
 
-    def __gt__(self, other: Union[Tensor, float]) -> Tensor:
+    def __gt__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(self.data > unwrap_tensor_data(other))
 
-    def __ge__(self, other: Union[Tensor, float]) -> Tensor:
+    def __ge__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return Tensor(self.data >= unwrap_tensor_data(other))
 
     # Tensor functions
 
-    def squeeze(self, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
-        return _call_function("squeeze", self, axis)
+    def squeeze(self, axis: T_AXIS = None) -> Tensor:
+        return cast(Tensor, _call_function("squeeze", self, axis))
 
     def flatten(self) -> Tensor:
-        return _call_function("flatten", self)
+        return cast(Tensor, _call_function("flatten", self))
 
-    def max(self, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
-        return _call_function("max", self, axis, keepdims)
+    def max(self, axis: T_AXIS = None, keepdims: Optional[bool] = False) -> Tensor:
+        return cast(Tensor, _call_function("max", self, axis, keepdims))
 
-    def min(self, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
-        return _call_function("min", self, axis, keepdims)
+    def min(self, axis: T_AXIS = None, keepdims: Optional[bool] = False) -> Tensor:
+        return cast(Tensor, _call_function("min", self, axis, keepdims))
 
     def abs(self) -> Tensor:
-        return _call_function("abs", self)
+        return cast(Tensor, _call_function("abs", self))
 
     def isempty(self) -> bool:
-        return _call_function("isempty", self)
+        return cast(bool, _call_function("isempty", self))
 
     def astype(self, dtype: TensorDataType) -> Tensor:
-        return _call_function("astype", self, dtype)
+        return cast(Tensor, _call_function("astype", self, dtype))
 
-    def reshape(self, shape: Tuple[int, ...]) -> Tensor:
-        return _call_function("reshape", self, shape)
+    def reshape(self, shape: T_SHAPE) -> Tensor:
+        return cast(Tensor, _call_function("reshape", self, shape))
 
-    def item(self) -> float:
-        return _call_function("item", self)
+    def item(self) -> T_NUMBER:
+        return cast(T_NUMBER, _call_function("item", self))
 
-    def clone(self) -> float:
-        return _call_function("clone", self)
+    def clone(self) -> Tensor:
+        return cast(Tensor, _call_function("clone", self))
 
     def as_numpy_tensor(self) -> Tensor:
-        return _call_function("as_numpy_tensor", self)
+        return cast(Tensor, _call_function("as_numpy_tensor", self))
 
 
-def _call_function(func_name: str, *args):
+def _call_function(func_name: str, *args: Any) -> Any:
     """
     Call function from functions.py to avoid circular imports.
 
@@ -213,10 +219,10 @@ def _call_function(func_name: str, *args):
     return fn(*args)
 
 
-class TensorIterator:
+class TensorIterator(Iterator[Tensor]):
     """Iterator for Tensor class"""
 
-    def __init__(self, tensor):
+    def __init__(self, tensor: Tensor) -> None:
         self._tensor = tensor
         self._index = 0
 
