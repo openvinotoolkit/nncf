@@ -24,7 +24,6 @@ from nncf.common.logging import nncf_logger
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.torch.dynamic_graph.layer_attributes_handlers import apply_args_defaults
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import FX_OPERATOR_METATYPES
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
 
@@ -96,12 +95,6 @@ class GraphConverter:
                 # TODO(dlyakhov): get correct nodes types from this nodes as well
                 node_type = str(node.target)
             node_metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
-            # For FX specific metatypes not registered in PT operator metatype
-            node_metatype = (
-                FX_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
-                if node_metatype == UnknownMetatype
-                else node_metatype
-            )
         else:
             node_type = node.op
             node_metatype = UnknownMetatype
@@ -162,7 +155,7 @@ class GraphConverter:
         source_nncf_node: NNCFNode,
         dist_node: torch.fx.Node,
         output_idx: int,
-    ) -> Tuple[int, int, Tuple[int, ...]]:
+    ) -> Tuple[int, int, Tuple[int, ...], Dtype]:
         """
         Retrieves edge params from the given source_node and dist_node pair.
 

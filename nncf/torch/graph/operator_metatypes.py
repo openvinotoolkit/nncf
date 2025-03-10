@@ -28,8 +28,6 @@ from nncf.torch.dynamic_graph.structs import NamespaceTarget
 ModuleAttributes = TypeVar("ModuleAttributes", bound=BaseLayerAttributes)
 
 PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
-FX_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
-PT2_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 
 
 class PTOperatorMetatype(OperatorMetatype):
@@ -528,9 +526,9 @@ class PTLayerNormMetatype(PTOperatorMetatype):
     weight_port_ids = [2]
 
 
-@FX_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register()
 class PTAtenLayerNormMetatype(PTOperatorMetatype):
-    name = "LayerNormOp"
+    name = "aten.layer_norm"
     module_to_function_names = {
         NamespaceTarget.ATEN: ["layer_norm"],
     }
@@ -772,12 +770,9 @@ class PTBatchNormMetatype(PTOperatorMetatype):
     bias_port_id = 4
 
 
-@PT2_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register()
 class PT2BatchNormMetatype(PTOperatorMetatype):
-    name = "BatchNormOp"
-    module_to_function_names = {
-        NamespaceTarget.TORCH: ["batch_norm"],
-    }
+    name = "torch.batch_norm"
     subtypes = [PTModuleBatchNormMetatype]
     weight_port_ids = [1]
     bias_port_id = 2
@@ -996,10 +991,9 @@ class PTEmbeddingMetatype(PTOperatorMetatype):
     weight_port_ids = [1]
 
 
-@FX_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register()
 class PTAtenEmbeddingMetatype(PTOperatorMetatype):
-    name = "EmbeddingOp"
-    module_to_function_names = {NamespaceTarget.ATEN: ["embedding"]}
+    name = "aten.embedding"
     hw_config_names = [HWConfigOpName.EMBEDDING]
     weight_port_ids = [0]
 
@@ -1206,11 +1200,7 @@ def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
 
     :return: List of operator metatypes .
     """
-    return (
-        list(PT_OPERATOR_METATYPES.registry_dict.values())
-        + list(FX_OPERATOR_METATYPES.registry_dict.values())
-        + list(PT2_OPERATOR_METATYPES.registry_dict.values())
-    )
+    return list(PT_OPERATOR_METATYPES.registry_dict.values())
 
 
 OPERATORS_WITH_WEIGHTS_METATYPES = [

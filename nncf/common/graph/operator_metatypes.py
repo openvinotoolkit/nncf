@@ -78,7 +78,6 @@ class OperatorMetatypeRegistry(Registry):
         """
         super().__init__(name)
         self._op_name_to_op_meta_dict: Dict[str, Type[OperatorMetatype]] = {}
-        self._func_name_to_op_meta_dict: Dict[str, Type[OperatorMetatype]] = {}
 
     def register(self, name: Optional[str] = None, is_subtype: bool = False) -> Callable[..., Type[OperatorMetatype]]:
         """
