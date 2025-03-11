@@ -51,6 +51,7 @@ class PTOperatorMetatype(OperatorMetatype):
     external_op_names: List[str] = []
     num_expected_input_edges: Optional[int] = None
     weight_port_ids: List[int] = []
+    op_names: List[str] = []
 
     module_to_function_names: Dict[NamespaceTarget, List[str]] = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
@@ -79,7 +80,8 @@ class PTOperatorMetatype(OperatorMetatype):
             output = output.union(f"{namespace.value}.{i}" for i in function_names)
         if cls.external_op_names is not None:
             output = output.union(cls.external_op_names)
-        output = output.union([cls.name])
+        if cls.op_names is not None:
+            output = output.union(cls.op_names)
         return list(output)
 
     @classmethod
@@ -530,7 +532,8 @@ class PTLayerNormMetatype(PTOperatorMetatype):
 
 @PT_OPERATOR_METATYPES.register()
 class PTAtenLayerNormMetatype(PTOperatorMetatype):
-    name = f"{NamespaceTarget.ATEN.value}.layer_norm"
+    name = "LayerNormOp"
+    op_names = [f"{NamespaceTarget.ATEN.value}.layer_norm"]
     hw_config_names = [HWConfigOpName.MVN]
     subtypes = [PTModuleLayerNormMetatype]
     num_expected_input_edges = 1
@@ -771,7 +774,8 @@ class PTBatchNormMetatype(PTOperatorMetatype):
 
 @PT_OPERATOR_METATYPES.register()
 class PT2BatchNormMetatype(PTOperatorMetatype):
-    name = f"{NamespaceTarget.TORCH.value}.batch_norm"
+    name = "BatchNormOp"
+    op_names = [f"{NamespaceTarget.TORCH.value}.batch_norm"]
     subtypes = [PTModuleBatchNormMetatype]
     weight_port_ids = [1]
     bias_port_id = 2
@@ -992,7 +996,8 @@ class PTEmbeddingMetatype(PTOperatorMetatype):
 
 @PT_OPERATOR_METATYPES.register()
 class PTAtenEmbeddingMetatype(PTOperatorMetatype):
-    name = f"{NamespaceTarget.ATEN.value}.embedding"
+    name = "EmbeddingOp"
+    op_names = [f"{NamespaceTarget.ATEN.value}.embedding"]
     hw_config_names = [HWConfigOpName.EMBEDDING]
     weight_port_ids = [0]
 
