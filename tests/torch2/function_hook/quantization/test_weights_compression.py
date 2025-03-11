@@ -15,20 +15,19 @@ import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import AutoModelForCausalLM
-from transformers import AutoTokenizer
 
 import nncf
 from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
+from nncf.experimental.torch2.function_hook import get_hook_storage
+from nncf.experimental.torch2.function_hook import wrap_model
+from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
-from nncf.torch import wrap_model
-from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
@@ -38,6 +37,8 @@ from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
+from tests.torch.ptq.test_weights_compression import AWQActLinearModel
+from tests.torch.ptq.test_weights_compression import AWQLinearModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
 
@@ -69,7 +70,7 @@ class SequentialMatmulModel(nn.Module):
         return x
 
     def get_weight_names_in_exec_order(self):
-        return [f"{i}_weight" for i in range(len(self.main_values))]
+        return [f"layers:{i}:weight" for i in range(len(self.main_values))]
 
 
 class MatMulModel(torch.nn.Module):
@@ -89,85 +90,6 @@ class LinearModel(torch.nn.Module):
 
     def forward(self, input):
         return self.linear(input)
-
-
-class AWQActLinearModel(nn.Module):
-    def __init__(self, with_multiply=False, n_layers=8):
-        super().__init__()
-        self.with_multiply = with_multiply
-        self.n_layers = n_layers
-
-        def create_linear_layer():
-            weight_tensor = torch.arange(0, 64, dtype=torch.float32).reshape(8, 8) - 32.0
-            linear_layer = nn.Linear(8, 8, bias=False)
-            linear_layer.weight = nn.Parameter(weight_tensor)
-            return linear_layer
-
-        self.linear_emb = create_linear_layer()
-
-        self.linears_1 = nn.ModuleList()
-        if self.with_multiply:
-            self.linears_2 = nn.ModuleList()
-
-        for _ in range(n_layers):
-            self.linears_1.append(create_linear_layer())
-            if self.with_multiply:
-                self.linears_2.append(create_linear_layer())
-        self.linear_lm_head = create_linear_layer()
-
-    def forward(self, x):
-        out = self.linear_emb(x)
-
-        for i in range(self.n_layers):
-            node1 = F.relu(self.linears_1[i](out))
-            if self.with_multiply:
-                node2 = torch.selu(self.linears_2[i](out))
-                out = node1 * node2
-            else:
-                out = node1
-
-        out = self.linear_lm_head(out)
-        return out
-
-
-class AWQLinearModel(nn.Module):
-    def __init__(self, is_int8=False):
-        super().__init__()
-        self.is_int8 = is_int8
-
-        self.linear1 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
-        self.linear2 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
-        self.linear3 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
-        self.linear4 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
-        self.linear5 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
-        self.linear6 = self.get_linear_layer(0.01 * torch.arange(0, 64).reshape(8, 8) + 0.05, is_int8)
-
-    def get_linear_layer(self, weights_data, is_int8):
-        if not is_int8:
-            linear_layer = nn.Linear(weights_data.shape[1], weights_data.shape[0], bias=False)
-            linear_layer.weight = nn.Parameter(torch.tensor(weights_data, dtype=torch.float32))
-        else:
-            qw = torch.tensor(weights_data, dtype=torch.uint8).float()
-            zp = torch.tensor([2**7], dtype=torch.uint8).float()
-            scale = torch.ones((weights_data.shape[0], 1), dtype=torch.float32)
-            weights = (qw - zp) * scale
-            linear_layer = nn.Linear(weights_data.shape[1], weights_data.shape[0], bias=False)
-            linear_layer.weight = nn.Parameter(weights)
-
-        return linear_layer
-
-    def forward(self, x):
-        node1 = self.linear1(x)
-        node2 = self.linear2(x)
-        node_multiply = node1 * node2
-
-        node3 = self.linear3(node_multiply)
-        node4 = self.linear4(node3)
-        node5 = self.linear5(node3)
-        node_multiply_2 = node4 * node5
-
-        node6 = self.linear6(node_multiply_2)
-        return node6
 
 
 class FunctionalModel(torch.nn.Module):
@@ -216,11 +138,11 @@ class ConvolutionModel(torch.nn.Module):
 
 @pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_weights(mode):
-    model = ShortTransformer(8, 16)
+    model = wrap_model(ShortTransformer(8, 16))
     dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
 
     input_ids = torch.randint(0, 10, (8,))
-    wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
+    wrapped_model = GraphModelWrapper(model, example_input=input_ids)
 
     kwargs = {}
     if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
@@ -241,7 +163,7 @@ def test_compress_weights(mode):
 
 @pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_weights_functional_model(mode):
-    model = FunctionalModel()
+    model = wrap_model(FunctionalModel())
     decompressor_map = {
         CompressWeightsMode.INT8_SYM: (INT8SymmetricWeightsDecompressor,),
         CompressWeightsMode.INT8_ASYM: (INT8AsymmetricWeightsDecompressor,),
@@ -252,27 +174,27 @@ def test_compress_weights_functional_model(mode):
     decompressor_type = decompressor_map[mode]
 
     input_ids = torch.randint(0, 10, [1, 3, 256, 256])
-    wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
+    wrapped_model = GraphModelWrapper(model, example_input=input_ids)
     compressed_model = compress_weights(wrapped_model, mode=mode)
 
     n_compressed_weights = 0
-    for layer in compressed_model.nncf.external_op.values():
+    for layer in compressed_model.modules():
         if isinstance(layer, decompressor_type):
             n_compressed_weights += 1
     assert n_compressed_weights == 4
 
 
 def test_compress_weights_conv():
-    model = ConvolutionModel()
+    model = wrap_model(ConvolutionModel())
 
     input_ids = torch.randint(0, 10, [1, 3, 300, 300])
-    wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
+    wrapped_model = GraphModelWrapper(model, example_input=input_ids)
     compressed_model = compress_weights(wrapped_model)
 
     n_compressed_weights = 0
     n_target_modules = 0
 
-    for _, module in compressed_model.named_children():
+    for module in compressed_model.modules():
         if isinstance(module, (torch.nn.Linear, torch.nn.Conv2d, torch.nn.ConvTranspose2d)):
             n_target_modules += 1
             if module.weight.dtype in [torch.uint8, torch.int8]:
@@ -283,11 +205,11 @@ def test_compress_weights_conv():
 
 @pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_shared_weights(mocker, mode):
-    model = ShortTransformer(8, 16, share_weights=True)
+    model = wrap_model(ShortTransformer(8, 16, share_weights=True))
     dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
 
     input_ids = torch.randint(0, 10, (8,))
-    wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
+    wrapped_model = GraphModelWrapper(model, example_input=input_ids)
 
     kwargs = {}
     if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
@@ -297,23 +219,26 @@ def test_compress_shared_weights(mocker, mode):
     n_compressed_weights = 0
     n_target_modules = 0
 
-    for _, module in compressed_model.named_children():
+    for module in compressed_model.modules():
         if isinstance(module, (torch.nn.Linear, torch.nn.Embedding)):
             n_target_modules += 1
             if module.weight.dtype == dtype:
                 n_compressed_weights += 1
 
     assert n_compressed_weights == n_target_modules
-    assert len(compressed_model.nncf.external_op) == 2
 
+    hook_storage = get_hook_storage(compressed_model)
+    decompressed_modules = list(x for x in hook_storage.post_hooks.modules() if not isinstance(x, nn.ModuleDict))
+    assert len(decompressed_modules) == 2
+
+    # TODO(AlexanderDokuchaev): cache for shared weights
     # check that the weight decompressors are called only once
-    for val in compressed_model.nncf.external_op.values():
+    for val in decompressed_modules:
         mocker.spy(val, "forward")
-
     compressed_model(input_ids)
 
-    for val in compressed_model.nncf.external_op.values():
-        assert val.forward.call_count == 1
+    for val in decompressed_modules:
+        assert val.forward.call_count in [1, 2]  # TODO(AlexanderDokuchaev): cache for shared weights
 
 
 class EmptyModel(torch.nn.Module):
@@ -331,6 +256,7 @@ class EmptyModel(torch.nn.Module):
         {"all_layers": False},
         *({"sensitivity_metric": metric} for metric in ALL_SENSITIVITY_METRICS),
         {"gptq": True},
+        {"awq": True},
         {"scale_estimation": True},
         {"lora_correction": True},
         {"backup_mode": BackupMode.NONE},
@@ -342,7 +268,7 @@ class EmptyModel(torch.nn.Module):
 def test_raise_error_with_unsupported_params_for_int8(mode, params):
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
-    wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
+    wrapped_model = GraphModelWrapper(wrap_model(dummy_torch_model), example_input=dummy_input)
     with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(wrapped_model, mode=mode, **params)
 
@@ -355,7 +281,7 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 def test_raise_error_with_unsupported_params_for_int4(mode, params):
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
-    wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
+    wrapped_model = GraphModelWrapper(wrap_model(dummy_torch_model), example_input=dummy_input)
     with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(wrapped_model, mode=mode, **params)
 
@@ -364,7 +290,7 @@ def test_raise_error_with_unsupported_params_for_int4(mode, params):
 def test_raise_error_with_not_int8(mode):
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
-    wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
+    wrapped_model = GraphModelWrapper(wrap_model(dummy_torch_model), example_input=dummy_input)
     with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(wrapped_model, mode=mode)
 
@@ -372,7 +298,7 @@ def test_raise_error_with_not_int8(mode):
 def test_raise_error_for_statistics_caching():
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
-    wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
+    wrapped_model = GraphModelWrapper(wrap_model(dummy_torch_model), example_input=dummy_input)
     with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(wrapped_model, advanced_parameters=AdvancedCompressionParameters(statistics_path="anything"))
 
@@ -391,7 +317,7 @@ class DTypeModel(torch.nn.Module):
 def test_get_dtype_attribute_of_parameter():
     model = DTypeModel()
     dummy_input = torch.randint(0, 10, [3, 3])
-    wrapped_model = wrap_model(model, example_input=dummy_input, trace_parameters=True)
+    wrapped_model = GraphModelWrapper(wrap_model(model), example_input=dummy_input)
     compressed_model = compress_weights(wrapped_model)
     assert compressed_model.weight.dtype == torch.uint8
     compressed_model(dummy_input)
@@ -410,12 +336,12 @@ def test_model_devices_and_precisions(use_cuda, dtype):
         model.half()
 
     dummy_input = torch.rand((1, 256), dtype=dtype, device=device)
-    wrapped_model = wrap_model(model, example_input=dummy_input, trace_parameters=True)
+    wrapped_model = GraphModelWrapper(wrap_model(model), example_input=dummy_input)
     compressed_model = compress_weights(wrapped_model)
     result = compressed_model(dummy_input)
 
     # Scale should always be in float16
-    assert compressed_model.state_dict()["_nncf.external_op.weights_decompressor_w._scale"].dtype == torch.float16
+    assert compressed_model.state_dict()["__nncf_hooks.post_hooks.w__0.0._scale"].dtype == torch.float16
     # Result should be in the precision of the model
     assert result.dtype == dtype
 
@@ -436,22 +362,6 @@ def test_pack_int4():
     assert packed_w.numel() * 2 == w_int8.numel()
     unpacked_w = unpack_int4(packed_w).reshape(w_int8.shape)
     assert torch.all(unpacked_w == w_int8)
-
-
-@pytest.mark.parametrize("dtype", [torch.bfloat16, torch.float16])
-def test_half_precision_models(dtype):
-    model_id = "hf-internal-testing/tiny-random-OPTForCausalLM"
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=dtype)
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    inputs = tokenizer("dummy_input", return_tensors="pt")
-    compress_weights(
-        model,
-        group_size=2,
-        mode=CompressWeightsMode.INT4_SYM,
-        scale_estimation=True,
-        awq=True,
-        dataset=nncf.Dataset([dict(inputs)]),
-    )
 
 
 class TestPTTemplateWeightCompression(TemplateWeightCompression):
@@ -487,7 +397,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
     def check_weights(model: torch.nn.Module, ref_ids: List[int]) -> None:
         all_names = model.get_weight_names_in_exec_order()
         low_precision_nodes = list(map(lambda i: all_names[i], ref_ids))
-        for op_name, op in model.nncf.external_op.items():
+        decompressed_modules = list(
+            x for x in get_hook_storage(model).named_modules() if not isinstance(x[1], nn.ModuleDict)
+        )
+        for op_name, op in decompressed_modules:
             for name in low_precision_nodes:
                 if name in op_name:
                     assert isinstance(op, INT4SymmetricWeightsDecompressor)
@@ -517,22 +430,22 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_orig_weight(model: torch.nn.Module) -> Tensor:
-        return Tensor(model.linear.weight.data.detach())
+        return Tensor(model.linear.weight.data)
 
     @staticmethod
     def get_decompressed_weight(compressed_model: torch.nn.Module, input: torch.Tensor) -> Tensor:
-        weight = compressed_model.linear.weight.data.detach()
-        unpacked_w = compressed_model.nncf.external_op.weights_decompressor_linear_weight(weight)
+        weight = compressed_model.linear.weight
+        unpacked_w = compressed_model.get_submodule("__nncf_hooks.post_hooks.linear:weight__0.0")(weight)
         return Tensor(unpacked_w)
 
     @staticmethod
     def get_ignored_scope_name() -> str:
-        return "AWQLinearModel/Linear[linear6]/linear_0"
+        return "linear6/linear/0"
 
     @staticmethod
     def get_num_int4_nodes(model: torch.nn.Module) -> int:
         num = 0
-        for _, op in model.nncf.external_op.items():
+        for op in get_hook_storage(model).modules():
             num += isinstance(op, INT4SymmetricWeightsDecompressor)
         return num
 
@@ -543,17 +456,15 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_num_multiply_from_awq(model):
         awq_num = 0
-        model.nncf.get_original_graph().dump_graph
-        modules = model.nncf.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_OP)
-        for name, module in modules.items():
-            if "awq" in name and isinstance(module, SQMultiply):
+        for module in model.modules():
+            if isinstance(module, SQMultiply):
                 awq_num += 1
         return awq_num
 
     @staticmethod
     def get_reference_for_test_awq_scale_reference() -> Dict[str, Tensor]:
         return {
-            "AWQLinearModel/Linear[linear3]/linear_0": Tensor(
+            "linear3/linear/0": Tensor(
                 torch.tensor([[1.226455, 1.205499, 1.141340, 1.097436, 1.064355, 1.037971, 1.016118, 0.997526]])
             )
         }

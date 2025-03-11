@@ -123,8 +123,8 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
 2. Add function to functions module
 
     ```python
-    @functools.singledispatch
-    def foo(a: TTensor, arg1: Type) -> TTensor:
+    @tensor_dispatcher
+    def foo(a: Tensor, arg1: Type) -> Tensor:
         """
         __description__
 
@@ -132,36 +132,26 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
         :param arg1: __description__
         :return: __description__
         """
-        if isinstance(a, tensor.Tensor):
-            return tensor.Tensor(foo(a.data, axis))
-        return NotImplemented(f"Function `foo` is not implemented for {type(a)}")
     ```
 
-    **NOTE** For the case when the first argument has type `List[Tensor]`, use the `_dispatch_list` function. This function dispatches function by first element in the first argument.
-
-    ```python
-    @functools.singledispatch
-    def foo(x: List[Tensor], axis: int = 0) -> Tensor:
-        if isinstance(x, List):
-            unwrapped_x = [i.data for i in x]
-            return Tensor(_dispatch_list(foo, unwrapped_x, axis=axis))
-        raise NotImplementedError(f"Function `foo` is not implemented for {type(x)}")
-    ```
+    **NOTE** The wrapping of the return value depends on the return type annotation of the function.
+    If return type collect `Tensor` than return value will be wrapped in `Tensor` class according annotation,
+    otherwise return value will be returned as is.
 
 3. Add backend specific implementation of method to corresponding module:
 
     - `functions/numpy_*.py`
 
         ```python
-        @_register_numpy_types(fns.foo)
-        def _(a: TType, arg1: Type) -> np.ndarray:
+        @fns.foo.register
+        def _(a: T_NUMPY_ARRAY, arg1: Type) -> T_NUMPY_ARRAY:
             return np.foo(a, arg1)
         ```
 
     - `functions/torch_*.py`
 
         ```python
-        @fns.foo.register(torch.Tensor)
+        @fns.foo.register
         def _(a: torch.Tensor, arg1: Type) -> torch.Tensor:
             return torch.foo(a, arg1)
         ```

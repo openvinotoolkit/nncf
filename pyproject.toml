@@ -93,8 +93,15 @@ files = [
     "nncf/quantization/range_estimator.py",
     "nncf/quantization/telemetry_extractors.py",
     "nncf/telemetry/",
+    "nncf/tensor/",
     "nncf/*py",
 ]
+disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
+module = "nncf.tensor.functions.*"
+disable_error_code = ["empty-body", "no-any-return"]
+
 
 [tool.ruff]
 line-length = 120

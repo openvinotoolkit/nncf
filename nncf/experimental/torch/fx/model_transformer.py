@@ -42,7 +42,7 @@ class FXModelTransformer(ModelTransformer):
         Transforms the target model according to given transformation layout.
 
         :param transformation_layout: Given transformation layout.
-        :return: Target model transformered according to the given transformation layout.
+        :return: Target model transformed according to the given transformation layout.
         """
         # TODO(dlyakhov): Manage priorities of transformations.
         transformations = transformation_layout.transformations
