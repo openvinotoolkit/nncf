@@ -1184,13 +1184,13 @@ class PTScaledDotProductAttentionMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTCosMetatype(PTOperatorMetatype):
     name = "CosOp"
-    module_to_function_names = {NamespaceTarget.TORCH: ["cos"]}
+    module_to_function_names = {NamespaceTarget.TORCH: ["cos"], NamespaceTarget.TORCH_TENSOR: ["cos"]}
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTSinMetatype(PTOperatorMetatype):
     name = "SinOp"
-    module_to_function_names = {NamespaceTarget.TORCH: ["sin"]}
+    module_to_function_names = {NamespaceTarget.TORCH: ["sin"], NamespaceTarget.TORCH_TENSOR: ["sin"]}
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
