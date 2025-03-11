@@ -381,6 +381,7 @@ class PTConvTranspose2dMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose2d"],
+        NamespaceTarget.TORCH: ["conv_transpose2d"],
         NamespaceTarget.ATEN: ["conv_transpose2d"],
     }
     subtypes = [PTModuleConvTranspose2dMetatype]

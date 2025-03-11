@@ -5,7 +5,7 @@ rankdir=TB;
 2 [label="{type: const|name: bn.bias|dtype: torch.float32|shape: (1,)}", fillcolor="#ffffff", fontcolor="#000000", shape=record, style="filled,rounded"];
 3 [label="{type: const|name: bn.running_mean|dtype: torch.float32|shape: (1,)}", fillcolor="#ffffff", fontcolor="#000000", shape=record, style="filled,rounded"];
 4 [label="{type: const|name: bn.running_var|dtype: torch.float32|shape: (1,)}", fillcolor="#ffffff", fontcolor="#000000", shape=record, style="filled,rounded"];
-5 [label="{type: function_call|op_name: bn/batch_norm/0|fn_name: batch_norm|args: [\nTensorMeta(dtype=torch.float32, shape=(1, 1, 1)),\nTensorMeta(dtype=torch.float32, shape=(1,)),\nTensorMeta(dtype=torch.float32, shape=(1,)),\nTensorMeta(dtype=torch.float32, shape=(1,)),\nTensorMeta(dtype=torch.float32, shape=(1,)),\nFalse,\n0.1,\n1e-05,\nTrue,\n]|kwargs: \{\}}", fillcolor="#ffadad", fontcolor="#000000", shape=record, style="filled,rounded"];
+5 [label="{type: function_call|op_name: bn/batch_norm/0|fn_name: torch.batch_norm|args: [\nTensorMeta(dtype=torch.float32, shape=(1, 1, 1)),\nTensorMeta(dtype=torch.float32, shape=(1,)),\nTensorMeta(dtype=torch.float32, shape=(1,)),\nTensorMeta(dtype=torch.float32, shape=(1,)),\nTensorMeta(dtype=torch.float32, shape=(1,)),\nFalse,\n0.1,\n1e-05,\nTrue,\n]|kwargs: \{\}}", fillcolor="#fdffb6", fontcolor="#000000", shape=record, style="filled,rounded"];
 6 [label="{type: output|name: output|dtype: torch.float32|shape: (1, 1, 1)}", fillcolor="#adadad", fontcolor="#000000", shape=record, style="filled,rounded"];
 0 -> 5 [label="(1, 1, 1)\n0 → 0"];
 1 -> 5 [label="(1,)\n0 → 1"];
