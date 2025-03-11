@@ -35,8 +35,8 @@ strict digraph  {
 "3 dequantize_per_tensor_default" -> "9 linear"  [label="(1, 2, 4)", style=solid];
 "4 linear_scale_0" -> "7 quantize_per_channel_default"  [label="(12,)", style=solid];
 "4 linear_scale_0" -> "8 dequantize_per_channel_default"  [label="(12,)", style=solid];
-"5 linear_zero_point_0" -> "7 quantize_per_channel_default"  [label="(12,)", style=solid];
-"5 linear_zero_point_0" -> "8 dequantize_per_channel_default"  [label="(12,)", style=solid];
+"5 linear_zero_point_0" -> "7 quantize_per_channel_default"  [label="(12,)", style=dashed];
+"5 linear_zero_point_0" -> "8 dequantize_per_channel_default"  [label="(12,)", style=dashed];
 "6 compressed_weight_updated_constant0" -> "7 quantize_per_channel_default"  [label="(12, 4)", style=solid];
 "7 quantize_per_channel_default" -> "8 dequantize_per_channel_default"  [label="(12, 4)", style=solid];
 "8 dequantize_per_channel_default" -> "9 linear"  [label="(12, 4)", style=solid];

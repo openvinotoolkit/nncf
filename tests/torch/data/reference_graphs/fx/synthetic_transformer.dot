@@ -14,7 +14,7 @@ strict digraph  {
 "2 linear_bias" -> "7 linear"  [label="(5,)", style=solid];
 "3 lm_head_weight" -> "8 linear_1"  [label="(10, 5)", style=solid];
 "4 lm_head_bias" -> "8 linear_1"  [label="(10,)", style=solid];
-"5 input_ids" -> "6 embedding"  [label="(5,)", style=solid];
+"5 input_ids" -> "6 embedding"  [label="(5,)", style=dashed];
 "6 embedding" -> "7 linear"  [label="(5, 5)", style=solid];
 "7 linear" -> "8 linear_1"  [label="(5, 5)", style=solid];
 "8 linear_1" -> "9 output"  [label="(5, 10)", style=solid];

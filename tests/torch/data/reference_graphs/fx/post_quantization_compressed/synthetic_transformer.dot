@@ -29,11 +29,11 @@ strict digraph  {
 "27 output" [id=27, type=output];
 "0 linear_bias" -> "17 linear"  [label="(5,)", style=solid];
 "1 lm_head_bias" -> "26 linear_1"  [label="(10,)", style=solid];
-"2 input_ids" -> "8 embedding"  [label="(5,)", style=solid];
+"2 input_ids" -> "8 embedding"  [label="(5,)", style=dashed];
 "3 scale_updated_constant0" -> "5 mul_tensor"  [label="(10, 1)", style=solid];
 "4 compressed_weight_updated_constant0" -> "5 mul_tensor"  [label="(10, 5)", style=solid];
 "5 mul_tensor" -> "7 sub_tensor"  [label="(10, 5)", style=solid];
-"6 zero_point_updated_constant0" -> "7 sub_tensor"  [label="(10, 1)", style=solid];
+"6 zero_point_updated_constant0" -> "7 sub_tensor"  [label="(10, 1)", style=dashed];
 "7 sub_tensor" -> "8 embedding"  [label="(10, 5)", style=solid];
 "8 embedding" -> "9 embedding_0_0_nncf_smooth_quant_0"  [label="(5, 5)", style=solid];
 "9 embedding_0_0_nncf_smooth_quant_0" -> "10 quantize_per_tensor_default"  [label="(5, 5)", style=solid];
@@ -42,7 +42,7 @@ strict digraph  {
 "12 scale_updated_constant1" -> "14 mul_tensor_1"  [label="(5, 1)", style=solid];
 "13 compressed_weight_updated_constant1" -> "14 mul_tensor_1"  [label="(5, 5)", style=solid];
 "14 mul_tensor_1" -> "16 sub_tensor_1"  [label="(5, 5)", style=solid];
-"15 zero_point_updated_constant1" -> "16 sub_tensor_1"  [label="(5, 1)", style=solid];
+"15 zero_point_updated_constant1" -> "16 sub_tensor_1"  [label="(5, 1)", style=dashed];
 "16 sub_tensor_1" -> "17 linear"  [label="(5, 5)", style=solid];
 "17 linear" -> "18 linear_0_0_nncf_smooth_quant_0"  [label="(5, 5)", style=solid];
 "18 linear_0_0_nncf_smooth_quant_0" -> "19 quantize_per_tensor_default_1"  [label="(5, 5)", style=solid];
@@ -51,7 +51,7 @@ strict digraph  {
 "21 scale_updated_constant2" -> "23 mul_tensor_2"  [label="(10, 1)", style=solid];
 "22 compressed_weight_updated_constant2" -> "23 mul_tensor_2"  [label="(10, 5)", style=solid];
 "23 mul_tensor_2" -> "25 sub_tensor_2"  [label="(10, 5)", style=solid];
-"24 zero_point_updated_constant2" -> "25 sub_tensor_2"  [label="(10, 1)", style=solid];
+"24 zero_point_updated_constant2" -> "25 sub_tensor_2"  [label="(10, 1)", style=dashed];
 "25 sub_tensor_2" -> "26 linear_1"  [label="(10, 5)", style=solid];
 "26 linear_1" -> "27 output"  [label="(5, 10)", style=solid];
 }

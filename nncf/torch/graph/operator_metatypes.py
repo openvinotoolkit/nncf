@@ -74,11 +74,12 @@ class PTOperatorMetatype(OperatorMetatype):
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         output = set()
-        for namespace, function_names in cls.module_to_function_names.items():
+        for namespace, function_names in cls.get_all_namespace_to_function_names().items():
             output = output.union(function_names)
             output = output.union(f"{namespace.value}.{i}" for i in function_names)
         if cls.external_op_names is not None:
             output = output.union(cls.external_op_names)
+        output = output.union([cls.name])
         return list(output)
 
     @classmethod
@@ -528,10 +529,7 @@ class PTLayerNormMetatype(PTOperatorMetatype):
 
 @PT_OPERATOR_METATYPES.register()
 class PTAtenLayerNormMetatype(PTOperatorMetatype):
-    name = "aten.layer_norm"
-    module_to_function_names = {
-        NamespaceTarget.ATEN: ["layer_norm"],
-    }
+    name = f"{NamespaceTarget.ATEN.value}.layer_norm"
     hw_config_names = [HWConfigOpName.MVN]
     subtypes = [PTModuleLayerNormMetatype]
     num_expected_input_edges = 1
@@ -709,7 +707,7 @@ class PTMatMulMetatype(PTOperatorMetatype):
 
 @PT_OPERATOR_METATYPES.register()
 class PTAddmmMetatype(PTOperatorMetatype):
-    name = "MatMulOp"
+    name = "AddmmOp"
     module_to_function_names = {NamespaceTarget.TORCH: ["addmm", "baddbmm"]}
     hw_config_names = [HWConfigOpName.MATMUL]
     # 0-th arg to the baddbmm is basically a (b)ias to be (add)ed to the (bmm) operation,
@@ -772,7 +770,7 @@ class PTBatchNormMetatype(PTOperatorMetatype):
 
 @PT_OPERATOR_METATYPES.register()
 class PT2BatchNormMetatype(PTOperatorMetatype):
-    name = "torch.batch_norm"
+    name = f"{NamespaceTarget.TORCH.value}.batch_norm"
     subtypes = [PTModuleBatchNormMetatype]
     weight_port_ids = [1]
     bias_port_id = 2
@@ -993,7 +991,7 @@ class PTEmbeddingMetatype(PTOperatorMetatype):
 
 @PT_OPERATOR_METATYPES.register()
 class PTAtenEmbeddingMetatype(PTOperatorMetatype):
-    name = "aten.embedding"
+    name = f"{NamespaceTarget.ATEN.value}.embedding"
     hw_config_names = [HWConfigOpName.EMBEDDING]
     weight_port_ids = [0]
 
