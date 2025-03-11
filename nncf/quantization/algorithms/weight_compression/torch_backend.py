@@ -291,17 +291,16 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             # creates weight decompressor
             if compression_config.mode == CompressWeightsMode.INT8_SYM:
-                decompressor = INT8SymmetricWeightsDecompressor(compressed_weight.scale.data, result_dtype=weight.dtype)
+                decompressor = INT8SymmetricWeightsDecompressor(compressed_weight.scale.data)
             elif compression_config.mode == CompressWeightsMode.INT8_ASYM:
                 decompressor = INT8AsymmetricWeightsDecompressor(
-                    compressed_weight.scale.data, compressed_weight.zero_point.data, result_dtype=weight.dtype
+                    compressed_weight.scale.data, compressed_weight.zero_point.data
                 )
             elif compression_config.mode == CompressWeightsMode.INT4_SYM:
                 decompressor = INT4SymmetricWeightsDecompressor(
                     scale=compressed_weight.scale.data,
                     compressed_weight_shape=compressed_weight.tensor.shape,
                     result_shape=weight.shape,
-                    result_dtype=weight.dtype,
                 )
             elif compression_config.mode == CompressWeightsMode.INT4_ASYM:
                 decompressor = INT4AsymmetricWeightsDecompressor(
@@ -309,7 +308,6 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     zero_point=compressed_weight.zero_point.data,
                     compressed_weight_shape=compressed_weight.tensor.shape,
                     result_shape=weight.shape,
-                    result_dtype=weight.dtype,
                 )
 
             # pack tensor

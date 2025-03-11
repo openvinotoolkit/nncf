@@ -1100,16 +1100,14 @@ class INT8AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
     Applies asymmetric decompression of compressed weights in the forward pass
     """
 
-    def __init__(self, scale: torch.Tensor, zero_point: torch.Tensor, result_dtype: Optional[torch.dtype] = None):
+    def __init__(self, scale: torch.Tensor, zero_point: torch.Tensor):
         """
         :param scale: A scale in quantization scheme
         :param zero_point: A zero point in quantization scheme
-        :param result_dtype: (Optional) A data type that result should be cast to
         """
         super().__init__()
         self.register_buffer("_scale", scale.type(dtype=torch.float16))
         self.register_buffer("_zero_point", self.pack_weight(zero_point))
-        self.result_dtype = result_dtype
 
     @property
     def quantization_mode(self) -> QuantizationMode:
@@ -1126,7 +1124,7 @@ class INT8AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
 
     def forward(self, x) -> torch.Tensor:
         result = decompress_asymmetric(x, self._scale, self._zero_point)
-        result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
+        result = result.type(dtype=torch.float32)
         return result
 
 
@@ -1135,14 +1133,12 @@ class INT8SymmetricWeightsDecompressor(BaseWeightsDecompressor):
     Applies symmetric decompression of compressed weights in the forward pass
     """
 
-    def __init__(self, scale: torch.Tensor, result_dtype: Optional[torch.dtype] = None):
+    def __init__(self, scale: torch.Tensor):
         """
         :param scale: A scale in quantization scheme
-        :param result_dtype: (Optional) A data type that result should be cast to
         """
         super().__init__()
         self.register_buffer("_scale", scale.type(dtype=torch.float16))
-        self.result_dtype = result_dtype
 
     @property
     def quantization_mode(self) -> QuantizationMode:
@@ -1156,7 +1152,7 @@ class INT8SymmetricWeightsDecompressor(BaseWeightsDecompressor):
 
     def forward(self, x) -> torch.Tensor:
         result = decompress_symmetric(x, self._scale)
-        result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
+        result = result.type(dtype=torch.float32)
         return result
 
 
@@ -1167,14 +1163,12 @@ class INT4AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
         zero_point: torch.Tensor,
         compressed_weight_shape: Tuple[int, ...],
         result_shape: Optional[Tuple[int, ...]] = None,
-        result_dtype: Optional[torch.dtype] = None,
     ):
         """
         :param scale: A scale in quantization scheme
         :param zero_point: A zero point in quantization scheme
         :param compressed_weight_shape: A compressed weight shape
         :param result_shape: (Optional) A shape that result should be reshaped
-        :param result_dtype: (Optional) A data type that result should be cast to
         """
         super().__init__()
         self.register_buffer("_scale", scale.type(dtype=torch.float16))
@@ -1184,7 +1178,6 @@ class INT4AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
 
         self.compressed_weight_shape = compressed_weight_shape
         self.result_shape = result_shape
-        self.result_dtype = result_dtype
 
     @property
     def quantization_mode(self) -> QuantizationMode:
@@ -1205,7 +1198,7 @@ class INT4AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
 
         result = decompress_asymmetric(x, self._scale, zero_point)
         result = result.reshape(self.result_shape) if self.result_shape is not None else result
-        result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
+        result = result.type(dtype=torch.float32)
         return result
 
 
@@ -1215,20 +1208,17 @@ class INT4SymmetricWeightsDecompressor(BaseWeightsDecompressor):
         scale: torch.Tensor,
         compressed_weight_shape: Tuple[int, ...],
         result_shape: Optional[Tuple[int, ...]] = None,
-        result_dtype: Optional[torch.dtype] = None,
     ):
         """
         :param scale: A scale in quantization scheme
         :param compressed_weight_shape: A compressed weight shape
         :param result_shape: (Optional) A shape that result should be reshaped
-        :param result_dtype: (Optional) A data type that result should be cast to
         """
         super().__init__()
         self.register_buffer("_scale", scale.type(dtype=torch.float16))
 
         self.compressed_weight_shape = compressed_weight_shape
         self.result_shape = result_shape
-        self.result_dtype = result_dtype
 
     @property
     def quantization_mode(self) -> QuantizationMode:
@@ -1249,5 +1239,5 @@ class INT4SymmetricWeightsDecompressor(BaseWeightsDecompressor):
 
         result = decompress_symmetric(x, self._scale)
         result = result.reshape(self.result_shape) if self.result_shape is not None else result
-        result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
+        result = result.type(dtype=torch.float32)
         return result

@@ -29,8 +29,6 @@ import nncf
 from nncf.experimental.torch.sparsify_activations import sparsify_activations
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
 from nncf.experimental.torch.sparsify_activations.torch_backend import PTSparsifyActivationsAlgoBackend
-from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
-from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
@@ -251,9 +249,6 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
         self.path_compressed_ir = self.output_model_dir / self.OV_MODEL_NAME
         if self.backend == BackendType.CUDA_TORCH:
             self.model_hf.float()
-            for module in self.model_hf.nncf.modules():
-                if isinstance(module, (INT8AsymmetricWeightsDecompressor, INT8SymmetricWeightsDecompressor)):
-                    module.result_dtype = torch.float32
             export_from_model(
                 self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32", device="cuda"
             )

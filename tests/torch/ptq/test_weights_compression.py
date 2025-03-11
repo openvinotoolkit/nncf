@@ -15,6 +15,7 @@ import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from optimum.exporters.openvino.convert import export_from_model
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
@@ -451,6 +452,35 @@ def test_half_precision_models(dtype):
         scale_estimation=True,
         awq=True,
         dataset=nncf.Dataset([dict(inputs)]),
+    )
+
+
+@pytest.mark.nightly
+@pytest.mark.parametrize(
+    ("dtype", "copmression_option", "patch_16bit_model"),
+    [
+        (torch.float32, "fp32", False),
+        (torch.bfloat16, "bf16", True),
+        (torch.float16, "fp16", True),
+    ],
+)
+def test_models_export(tmp_path, dtype, copmression_option, patch_16bit_model):
+    model_id = "hf-internal-testing/tiny-random-OPTForCausalLM"
+    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=dtype)
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    inputs = tokenizer("dummy_input", return_tensors="pt")
+    compressed_model = compress_weights(
+        model,
+        group_size=2,
+        mode=CompressWeightsMode.INT4_SYM,
+        dataset=nncf.Dataset([dict(inputs)]),
+    )
+    export_from_model(
+        compressed_model,
+        tmp_path,
+        stateful=False,
+        compression_option=copmression_option,
+        patch_16bit_model=patch_16bit_model,
     )
 
 
