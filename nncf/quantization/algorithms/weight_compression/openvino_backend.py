@@ -263,7 +263,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         def make_compressed_tensor_fn(
             const_node, reduction_axes, compression_config, scale, zero_point, compression_dtype
         ):
-            def compress_tensor():
+            def compress_tensor(tensor):
                 weight = Tensor(get_const_value_as_ov_tensor(const_node))
 
                 compressed_weight = compress_weight(
@@ -274,7 +274,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     zero_point,
                 )
                 shape = compressed_weight.tensor.shape
-                return ov.Tensor(compressed_weight.tensor.data, shape, compression_dtype)
+                return ov.Tensor(compressed_weight.tensor.data, shape, compression_dtype).copy_to(tensor)
 
             return compress_tensor
 
@@ -284,6 +284,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             make_compressed_tensor_fn(
                 const_node, reduction_axes, compression_config, scale, zero_point, compression_dtype
             ),
+            name=const_node_name,
         )
         # compressed_const = create_ov_const_from_tensor(
         #     compressed_weight.tensor, compression_dtype, name=const_node_name
