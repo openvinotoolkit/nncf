@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
@@ -18,6 +18,7 @@ import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
+from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -86,7 +87,7 @@ def quantize_impl(
 
 
 def compress_weights_impl(
-    model: torch.nn.Module,
+    model: Union[GraphModelWrapper, torch.nn.Module],
     dataset: Dataset,
     mode: CompressWeightsMode,
     ratio: float,
@@ -123,4 +124,8 @@ def compress_weights_impl(
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)
-    return compression_algorithm.apply(model, graph, dataset=dataset)
+
+    compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
+    if isinstance(compressed_model, GraphModelWrapper):
+        compressed_model = compressed_model.model
+    return compressed_model

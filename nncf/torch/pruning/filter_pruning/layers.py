@@ -18,11 +18,11 @@ from torch import nn
 import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.torch.layer_utils import COMPRESSION_MODULES
-from nncf.torch.layer_utils import StatefullModuleInterface
+from nncf.torch.layer_utils import StatefulModuleInterface
 
 
 @COMPRESSION_MODULES.register()
-class FilterPruningMask(nn.Module, StatefullModuleInterface):
+class FilterPruningMask(nn.Module, StatefulModuleInterface):
     """
     A module contains the mask for pruning.
     On forward pass applying the mask to weight and bias of the module.

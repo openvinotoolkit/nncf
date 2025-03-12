@@ -17,6 +17,7 @@ from nncf.openvino.optimized_functions.models import OVModelParameters
 from nncf.openvino.optimized_functions.models import get_astype_model
 from nncf.openvino.optimized_functions.models import get_compress_decompress_weight_model
 from nncf.openvino.optimized_functions.models import get_compress_weight_model
+from nncf.openvino.optimized_functions.models import get_quantization_error_model
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.tensor import Tensor
@@ -32,7 +33,6 @@ def do_int_quantization(
     reduction_axes: Optional[ReductionAxes] = None,
     precomputed_scale: Tensor = None,
     precomputed_zero_point: Tensor = None,
-    **kwargs,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
     Quantizes the given weight tensor.
@@ -49,10 +49,7 @@ def do_int_quantization(
     scale_shape = None if precomputed_scale is None else precomputed_scale.shape
     zero_point_shape = None if precomputed_zero_point is None else precomputed_zero_point.shape
 
-    ov_model_params = OVModelParameters(
-        dynamic_shapes=kwargs.get("dynamic_shapes") is True,
-        convertable_division=kwargs.get("convertable_division") is True,
-    )
+    ov_model_params = OVModelParameters()
     ov_model_params.input_dtypes["weight"] = weight.dtype
     if precomputed_scale is not None:
         ov_model_params.input_dtypes["scale"] = precomputed_scale.dtype
@@ -107,7 +104,6 @@ def quantize_dequantize_weight(
     precomputed_scale: Optional[Tensor] = None,
     precomputed_zero_point: Optional[Tensor] = None,
     return_compressed_weight: Optional[bool] = False,
-    **kwargs,
 ) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor, Tensor]]:
     """
     Quantizes the given weight tensor and then dequantizes it back to obtain float32 values.
@@ -132,10 +128,7 @@ def quantize_dequantize_weight(
     scale_shape = precomputed_scale.shape if precomputed_scale is not None else None
     zero_point_shape = precomputed_zero_point.shape if precomputed_zero_point is not None else None
 
-    ov_model_params = OVModelParameters(
-        dynamic_shapes=kwargs.get("dynamic_shapes") is True,
-        convertable_division=kwargs.get("convertable_division") is True,
-    )
+    ov_model_params = OVModelParameters()
     ov_model_params.input_dtypes["weight"] = weight.dtype
     if precomputed_scale is not None:
         ov_model_params.input_dtypes["scale"] = precomputed_scale.dtype
@@ -166,6 +159,42 @@ def quantize_dequantize_weight(
         return decompressed_weight, compressed_weight, scale, zero_point
     else:
         return decompressed_weight
+
+
+def get_integer_quantization_error(
+    weight: Tensor,
+    reduction_axes: ReductionAxes,
+    config: WeightCompressionConfig,
+) -> float:
+    """
+    Calculates a quantity characterizing the difference between floating point weights and fake quantized
+    (compressed and decompressed) to integer ones.
+
+    The error is computed as follows:
+    error = max(mean((decompressed_weight - weight)^2, axis=reduction_axes))
+
+    :param weight: Weight array to compress.
+    :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
+    :param config: Information on how to compress (quantize) a specific weight.
+    :return: The quantity characterizing the error of integer quantization.
+    """
+    original_weight_shape = weight.shape
+    original_reduction_axes = reduction_axes
+
+    # When reduction axes are not provided, assuming that the weights are already reshaped
+    if config.group_size != -1 and reduction_axes is not None:
+        # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
+        weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
+
+    ov_model_params = OVModelParameters()
+    ov_model_params.input_dtypes["weight"] = weight.dtype
+    model = get_quantization_error_model(
+        ov_model_params, config, original_weight_shape, weight.shape, original_reduction_axes, reduction_axes
+    )
+
+    quantization_error = model([weight])[0].item()
+
+    return quantization_error
 
 
 def astype(a: Tensor, dtype: TensorDataType) -> Tensor:

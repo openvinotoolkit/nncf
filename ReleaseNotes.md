@@ -83,7 +83,7 @@ Post-training Quantization:
   - [Post-Training Optimization of CatVTON Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/catvton/catvton.ipynb)
   - [Post-Training Optimization of Stable Diffusion v3 Model in Torch FX Representation](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/stable-diffusion-v3/stable-diffusion-v3-torch-fx.ipynb)
 - Known issues:
-  - (ONNX) `nncf.quantize()` method can generate inaccurate INT8 results for MobileNet models with the BiasCorrection algorithm.  
+  - (ONNX) `nncf.quantize()` method can generate inaccurate INT8 results for MobileNet models with the BiasCorrection algorithm.
 
 Deprecations/Removals:
 
@@ -185,7 +185,7 @@ Post-training Quantization:
   - (OpenVINO) Added support for models with BF16 weights in the weights compression method, `nncf.compress_weights()`.
   - (PyTorch) Added support for quantization and weight compression of the custom modules.
 - Fixes:
-  - (OpenVINO) Fixed incorrect node with bias determination in Fast-/BiasCorrection and ChannelAlighnment algorithms.
+  - (OpenVINO) Fixed incorrect node with bias determination in Fast-/BiasCorrection and ChannelAlignment algorithms.
   - (OpenVINO, PyTorch) Fixed incorrect behaviour of `nncf.compress_weights()` in case of compressed model as input.
   - (OpenVINO, PyTorch) Fixed SmoothQuant algorithm to work with Split ports correctly.
 - Improvements:
@@ -427,13 +427,13 @@ Post-training Quantization:
   - Fixed detection of decomposed post-processing in models.
   - Multiple fixes (new patterns, bugfixes, etc.) to solve [#1936](https://github.com/openvinotoolkit/nncf/issues/1936) issue.
   - Fixed model reshaping while quantization to keep original model shape.
-  - (OpenVINO) Added support for sequential models quanitzation.
+  - (OpenVINO) Added support for sequential models quantization.
   - (OpenVINO) Fixed in-place statistics cast to support empty dimensions.
   - (OpenVINO, ONNX) Fixed quantization of the MatMul operation with weights rank > 2.
   - (OpenVINO, ONNX) Fixed BiasCorrection algorithm to enable [CLIP model quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/228-clip-zero-shot-image-classification).
 - Improvements:
   - Optimized `quantize(…)` pipeline (up to 4.3x speed up in total).
-  - Optimized `quantize_with_accuracy_control(…)` pipelilne (up to 8x speed up for [122-quantizing-model-with-accuracy-control](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/122-quantizing-model-with-accuracy-control) notebook).
+  - Optimized `quantize_with_accuracy_control(…)` pipeline (up to 8x speed up for [122-quantizing-model-with-accuracy-control](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/122-quantizing-model-with-accuracy-control) notebook).
   - Optimized general statistics collection (up to 1.2x speed up for ONNX backend).
   - Ignored patterns separated from Fused patterns scheme (with multiple patterns addition).
 - Tutorials:

@@ -196,7 +196,9 @@ class GraphConverter:
             else:
                 tensor = source_node.meta["val"]
             if isinstance(tensor, torch.Tensor):
-                tensor_shape = tuple(tensor.shape)
+                tensor_shape = tuple(-1 if isinstance(i, torch.SymInt) else i for i in tensor.shape)
+            elif isinstance(tensor, torch.SymInt):
+                tensor_shape = (-1,)
 
         if tensor_shape is None:
             # TODO(dlyakhov): Refactor algorithms to always have knowns edges shapes.

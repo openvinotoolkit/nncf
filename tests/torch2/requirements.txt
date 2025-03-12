@@ -12,3 +12,4 @@ torchvision
 
 addict>=2.4.0
 efficientnet_pytorch==0.7.1
+transformers==4.48.3

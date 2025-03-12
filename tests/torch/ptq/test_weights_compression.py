@@ -15,6 +15,8 @@ import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from transformers import AutoModelForCausalLM
+from transformers import AutoTokenizer
 
 import nncf
 from nncf import BackupMode
@@ -442,6 +444,22 @@ def test_pack_int4():
     assert torch.all(unpacked_w == w_int8)
 
 
+@pytest.mark.parametrize("dtype", [torch.bfloat16, torch.float16])
+def test_half_precision_models(dtype):
+    model_id = "hf-internal-testing/tiny-random-OPTForCausalLM"
+    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=dtype)
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    inputs = tokenizer("dummy_input", return_tensors="pt")
+    compress_weights(
+        model,
+        group_size=2,
+        mode=CompressWeightsMode.INT4_SYM,
+        scale_estimation=True,
+        awq=True,
+        dataset=nncf.Dataset([dict(inputs)]),
+    )
+
+
 class TestPTTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_matmul_model() -> torch.nn.Module:
@@ -505,11 +523,11 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_orig_weight(model: torch.nn.Module) -> Tensor:
-        return Tensor(model.linear.weight)
+        return Tensor(model.linear.weight.data.detach())
 
     @staticmethod
     def get_decompressed_weight(compressed_model: torch.nn.Module, input: torch.Tensor) -> Tensor:
-        weight = compressed_model.linear.weight
+        weight = compressed_model.linear.weight.data.detach()
         unpacked_w = compressed_model.nncf.external_op.weights_decompressor_linear_weight(weight)
         return Tensor(unpacked_w)
 

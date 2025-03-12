@@ -14,13 +14,13 @@ import torch
 from torch import nn
 
 from nncf.torch.layer_utils import COMPRESSION_MODULES
-from nncf.torch.layer_utils import StatefullModuleInterface
+from nncf.torch.layer_utils import StatefulModuleInterface
 from nncf.torch.sparsity.functions import apply_binary_mask as apply_binary_mask_impl
 from nncf.torch.utils import is_tracing_state
 
 
 @COMPRESSION_MODULES.register()
-class BinaryMask(nn.Module, StatefullModuleInterface):
+class BinaryMask(nn.Module, StatefulModuleInterface):
     SHAPE_KEY = "shape"
 
     def __init__(self, shape: List[int]):
