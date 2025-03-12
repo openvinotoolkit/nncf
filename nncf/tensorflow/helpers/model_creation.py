@@ -168,7 +168,7 @@ def load_from_config(model: tf.keras.Model, config: Dict[str, Any]) -> tf.keras.
     Does not recover additional modules weights as they are located in a corresponded checkpoint file.
 
     :param model: TensorFlow model.
-    :parem config: Config.
+    :param config: Config.
     :return: tf.keras.Model builded from given model with additional layers recovered from given config.
     """
     quantizer_setup_state = config["quantization"]["quantizer_setup"]

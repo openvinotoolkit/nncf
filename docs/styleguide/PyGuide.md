@@ -60,16 +60,16 @@ the [PEP 8 -- Style Guide for Python Code](https://www.python.org/dev/peps/pep-0
 
 ## 2 Automating Code Formatting
 
-To maintain consistency and readability throughout the codebase, we use the [black](https://github.com/psf/black)
-and [ruff](https://docs.astral.sh/ruff/) tools for formatting. Before committing any changes,
-it's important to run a pre-commit command to ensure that the code is properly formatted.
+To maintain consistency and readability throughout the codebase, we use the [ruff](https://docs.astral.sh/ruff/)
+tool for formatting. Before committing any changes, it's important to run a pre-commit command to ensure
+that the code is properly formatted.
 You can use the following commands for this:
 
 ```bash
 make pre-commit
 ```
 
-Also recommend configuring your IDE to run Black and Ruff tools automatically when saving files.
+Also recommend configuring your IDE to run Ruff tools automatically when saving files.
 
 Automatic code formatting is mandatory for all Python files, but you can disable it for specific cases if required:
 
@@ -87,7 +87,7 @@ import b
 import a
 ```
 
-Example for 'black':
+Example for 'ruff format':
 
 ```python
 arr1 = [
@@ -125,7 +125,7 @@ Do not add new third-party dependencies unless absolutely necessary. All things 
 
 Avoid global variables.
 
-- Module-level constants are permitted and encouraged. For example: `MAX_HOLY_HANDGRENADE_COUNT = 3`. Constants must be
+- Module-level constants are permitted and encouraged. For example: `MAX_HOLY_HAND_GRENADE_COUNT = 3`. Constants must be
   named using all caps with underscores.
 - If needed, globals should be declared at the module level and made internal to the module by prepending an `_` to the
   name. External access must be done through public module-level functions.
@@ -235,7 +235,7 @@ with open("hello.txt") as hello_file:
 ```
 
 Use `pathlib.Path` instead of `os.*` methods for handling paths.
-It is preferrable to have `pathlib.Path` objects instead of `str` to represent file paths in the code logic if performance is not critical, converting these to `str` for external APIs that cannot handle `Path` objects.
+It is preferable to have `pathlib.Path` objects instead of `str` to represent file paths in the code logic if performance is not critical, converting these to `str` for external APIs that cannot handle `Path` objects.
 
 <a id="s3.7-abstract-classes"></a>
 <a id="37-abstract-classes"></a>
@@ -416,7 +416,7 @@ hashing all fields as a tuple in `__hash__` or concatenating string-like objects
 For instance, this simple `__init__` method may omit the method description in the docstring (the parameter description is, however, still required):
 
 ```python
-class Klass:
+class MyClass:
     # ...
     def __init__(self, param1: int, param2: float):
         """
@@ -430,7 +430,7 @@ class Klass:
 while this `__init__` requires a description of external dependencies and potential side effects of creating objects of the class:
 
 ```python
-class ComplexKlass(BaseClass):
+class ComplexClass(BaseClass):
     # ...
     def __init__(self, param1: ParamType, param2: AnotherParamType):
         """
@@ -801,7 +801,7 @@ def log_current_time(log_stream: LogStream):
     ...
 ```
 
-*checkpointing/converter.py*
+*checkpoint_converter.py*
 
 ```python3
 class CheckpointConverter:
@@ -873,7 +873,7 @@ Xunit-style testing seems to be outdated ("old", as stated in pytest docs) since
 
 Test cases may be parametrized either using a `@pytest.mark.parametrize` decorator (for simple parametrizations), or by using [parametrized fixtures](https://docs.pytest.org/en/7.4.x/how-to/fixtures.html#parametrizing-fixtures) in case the test requires complex parametrization, or in case the parameters have to be preprocessed in a complex fashion before being passed into the test.
 The parameter set ("test structs") for each test case should be represented as a collection of type-hinted class objects (or dataclass objects).
-Do not use tuples, or namedtuples, or dicts to represent an individual parameter - these cannot be typed or refactored effectively, and for complex cases it is hard to visually tell by looking at the definiton of the parameter (test struct) just what each sub-parameter means.
+Do not use tuples, or namedtuples, or dicts to represent an individual parameter - these cannot be typed or refactored effectively, and for complex cases it is hard to visually tell by looking at the definition of the parameter (test struct) just what each sub-parameter means.
 A set of IDs should be defined manually or by using an `idfn` for each case defined by the structs so that it is easier to distinguish visually between the test cases.
 When instantiating a test struct object, specify init arguments explicitly as keywords for increased visibility.
 

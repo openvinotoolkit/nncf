@@ -28,7 +28,6 @@ from tests.common.experimental.test_reducers_and_aggregators import TemplateTest
 
 
 class TestReducersAggregators(TemplateTestReducersAggregators):
-
     def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
         if dtype is Dtype.INTEGER:
             x = x.astype(np.int64)

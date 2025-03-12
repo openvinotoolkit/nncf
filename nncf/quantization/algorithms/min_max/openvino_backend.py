@@ -191,7 +191,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.OVDivideMetatype,
                 om.OVSqrtMetatype,
                 om.OVMaximumMetatype,
-                # Сomparison operations
+                # Comparison operations
                 om.OVGreaterEqualMetatype,
                 om.OVGreaterMetatype,
                 om.OVLessEqualMetatype,

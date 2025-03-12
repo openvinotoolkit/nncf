@@ -36,7 +36,7 @@ class Patcher:
     ) -> None:
         """
         Apply patching
-        :param obj_cls: Function to be overriden.
+        :param obj_cls: Function to be overridden.
         :param wrapper: Wrapper function to override with.
         :param force: Whether to override previously applied patches or not.
         """

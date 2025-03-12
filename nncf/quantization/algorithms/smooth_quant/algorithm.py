@@ -391,11 +391,11 @@ class SmoothQuant(Algorithm):
 
     def _create_scale_node_name(self, source_name: str, source_port_id: int) -> str:
         """
-        Returns uniqie scale node name for new layer.
+        Returns unique scale node name for new layer.
 
         :param source_name: Source layer name.
         :param source_port_id: Source port id.
-        :return: Generated uniqie name.
+        :return: Generated unique name.
         """
         scale_node_name = f"{source_name}_{source_port_id}"
         unique_index = self._cached_multiply_names[scale_node_name]

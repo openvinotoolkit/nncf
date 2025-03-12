@@ -37,10 +37,10 @@ class RBSparsifyingWeight(NNCFOperation):
 
     def build(self, input_shape, input_type: InputType, name: str, layer: NNCFWrapper):
         """
-        :param input_shape: Shape of weights which needs to be sparsifyed.
+        :param input_shape: Shape of weights which needs to be sparsified.
         :param input_type: Type of operation input, must be InputType.WEIGHTS.
-        :param name: Name of weight attribute which needs to be sparsifyed.
-        :param layer: Layer which needs to be sparsifyed.
+        :param name: Name of weight attribute which needs to be sparsified.
+        :param layer: Layer which needs to be sparsified.
         """
         if input_type is not InputType.WEIGHTS:
             msg = f"RB Sparsity mask operation could not be applied to input of the layer: {layer.name}"
@@ -127,7 +127,7 @@ class RBSparsifyingWeight(NNCFOperation):
         """
         Returns binary mask from weights of the operation.
 
-        :param op_weights: Weights of the operaton.
+        :param op_weights: Weights of the operation.
         :return: Binary mask.
         """
         return binary_mask(op_weights["mask"])

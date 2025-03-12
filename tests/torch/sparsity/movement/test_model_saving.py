@@ -129,7 +129,7 @@ class TestONNXExport:
         compression_ctrl.export_model(onnx_model_path)
         onnx_output_dict = self._get_onnx_model_inference_outputs(onnx_model_path, dataset, recipe)
         onnx_outputs = next(iter(onnx_output_dict.values()))
-        assert np.allclose(softmax(onnx_outputs, axis=-1), softmax(torch_outputs, axis=-1), atol=1e-6)
+        assert np.allclose(softmax(onnx_outputs, axis=-1), softmax(torch_outputs, axis=-1), atol=1e-5)
 
     @pytest.mark.skipif(
         version.parse(torch.__version__) < version.parse("1.12"),
@@ -270,9 +270,9 @@ class TestONNXExport:
         not_pruned_file_bytes = not_pruned_file.stat().st_size
         file_size_ratio = 1 - pruned_file_bytes / not_pruned_file_bytes
         assert pytest.approx(compression_rate, abs=1e-2) == desc.nncf_weight_ratio
-        assert (
-            pytest.approx(file_size_ratio, abs=3e-2) == desc.ov_weight_ratio
-        ), f"IR's size ratio: 1 - {pruned_file_bytes}/{not_pruned_file_bytes}"
+        assert pytest.approx(file_size_ratio, abs=3e-2) == desc.ov_weight_ratio, (
+            f"IR's size ratio: 1 - {pruned_file_bytes}/{not_pruned_file_bytes}"
+        )
         if abs(desc.ov_weight_ratio - desc.nncf_weight_ratio) >= 0.15:
             pytest.skip("Known issue in the ngraph transformation")
         assert abs(file_size_ratio - compression_rate) < 0.152

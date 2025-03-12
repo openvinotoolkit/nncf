@@ -79,9 +79,7 @@ def pytest_addoption(parser):
         "--regen-dot",
         action="store_true",
         default=False,
-        help="If specified, the "
-        "reference .dot files will be regenerated "
-        "using the current state of the repository.",
+        help="If specified, the reference .dot files will be regenerated using the current state of the repository.",
     )
     parser.addoption("--data", type=str, default=None, help="Directory path to cached data.")
 

@@ -42,7 +42,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TargetType
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import CompressionParameter
-from nncf.torch.layer_utils import StatefullModuleInterface
+from nncf.torch.layer_utils import StatefulModuleInterface
 from nncf.torch.quantization.quantize_functions import ExportQuantizeToFakeQuantize
 from nncf.torch.quantization.quantize_functions import ExportQuantizeToONNXQuantDequant
 from nncf.torch.quantization.quantize_functions import TuneRange
@@ -290,8 +290,7 @@ class PTQuantizerSetup(QuantizerSetupBase):
         self.quantization_points[qp_id] = qp
 
 
-class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
-
+class BaseQuantizer(nn.Module, StatefulModuleInterface, ABC):
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__()
         self._qspec = qspec
@@ -387,7 +386,7 @@ class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
     def forward(self, x: Union[torch.Tensor, tuple]):
         """
         Method that unwraps return types if it is needed
-        before acutal quantization forward impl
+        before actual quantization forward impl
         """
         x_unwrapped = maybe_get_values_from_torch_return_type(x)
         result = self._forward_impl(x_unwrapped)

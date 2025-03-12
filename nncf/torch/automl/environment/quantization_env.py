@@ -215,17 +215,17 @@ class QuantizationEnv:
             msg = "Q.Env Master Dataframe has null value(s)"
             raise ValueError(msg)
 
-        assert len(self.quantizer_table) == len(
-            self.qctrl.all_quantizations
-        ), "Number of Quantizer is not tally between quantizer table and quantization controller"
+        assert len(self.quantizer_table) == len(self.qctrl.all_quantizations), (
+            "Number of Quantizer is not tally between quantizer table and quantization controller"
+        )
 
         # MinMaxScaler for State Embedding
         self.state_scaler = MinMaxScaler()
         self.state_scaler.fit(self.master_df[self.state_list])
 
         # Mapping required for quantizer BW alignment flow
-        self.adjq_groupwise_intersecting_bw_space = self._create_map_of_adjq_groupid_to_common_bw_space()
-        self.adjq_groupwise_df_lut_keys = self._create_map_of_adjq_groupid_to_df_lut_keys()
+        self.adjq_groupwise_intersecting_bw_space = self._create_map_of_adjq_group_id_to_common_bw_space()
+        self.adjq_groupwise_df_lut_keys = self._create_map_of_adjq_group_id_to_df_lut_keys()
 
         # Model Size Calculation
         self.model_size_calculator = ModelSizeCalculator(self.qmodel, self.qconfig_space_map)
@@ -287,22 +287,22 @@ class QuantizationEnv:
         for qid in self.qctrl.all_quantizations:
             adjq_gid_map[qid] = self.groups_of_adjacent_quantizers.get_group_id_for_quantizer(qid)
 
-        assert (
-            len(set(self.qconfig_space_map.keys()) - set(adjq_gid_map.keys())) == 0
-        ), "both qconfig_space_map and adjq_gid_map must have exact keys."
+        assert len(set(self.qconfig_space_map.keys()) - set(adjq_gid_map.keys())) == 0, (
+            "both qconfig_space_map and adjq_gid_map must have exact keys."
+        )
 
         # By design, AutoQ requires quantizers in execution order.
         # RL assumes that state satisfies Markov assumption in which
         # the future is independent of the past given current state.
-        # Stated differently, curret state should represent well of historical dynamics.
+        # Stated differently, current state should represent well of historical dynamics.
         # Given sequential nature of NN, state transition in the order of
         # quantizer being executed is a natural design to conform the assumption.
         quantizers_in_exec_order = []
-        hooklist = []
+        hook_list = []
         for qid, qmod in self.qctrl.all_quantizations.items():
-            hooklist.append(qmod.register_forward_hook(get_hook(qid, quantizers_in_exec_order)))
+            hook_list.append(qmod.register_forward_hook(get_hook(qid, quantizers_in_exec_order)))
         self.qmodel.nncf.do_dummy_forward(force_eval=True)
-        for h in hooklist:
+        for h in hook_list:
             h.remove()
 
         d = OrderedDict()
@@ -356,7 +356,7 @@ class QuantizationEnv:
         # create master dataframe
         master_df = pd.concat([df, layer_attr_df], axis="columns")
 
-        # Annotate a min and a max value in prev_action before minmaxscaler fitting
+        # Annotate a min and a max value in prev_action before minmax scaler fitting
         master_df.loc[master_df.index[0], "prev_action"] = max(self.model_bitwidth_space)
         master_df.loc[master_df.index[-1], "prev_action"] = min(self.model_bitwidth_space)
 
@@ -418,7 +418,7 @@ class QuantizationEnv:
 
         return pd.Series(feature)
 
-    def _create_map_of_adjq_groupid_to_common_bw_space(self) -> Dict:
+    def _create_map_of_adjq_group_id_to_common_bw_space(self) -> Dict:
         # Extracting common bitwidth space per group of quantizer
         bwassigner_df = deepcopy(self.master_df)
         bwassigner_df["bw_space"] = list(map(lambda x: [qc.num_bits for qc in x], bwassigner_df.qconf_space.values))
@@ -440,7 +440,7 @@ class QuantizationEnv:
 
         return adjq_groupwise_intersecting_bw_space
 
-    def _create_map_of_adjq_groupid_to_df_lut_keys(self) -> Dict:
+    def _create_map_of_adjq_group_id_to_df_lut_keys(self) -> Dict:
         adjq_groupwise_df_lut_keys = {}
 
         for i, _ in enumerate(self.groups_of_adjacent_quantizers):
@@ -486,9 +486,9 @@ class QuantizationEnv:
         return quantized_score
 
     def _get_quantizer_bitwidth(self) -> Dict[BaseQuantizer, int]:
-        assert (
-            len(set(self.model_bitwidth_space) - set(self.master_df.action.values)) >= 0
-        ), "there is bitwidth choice not within model bitwidth space"
+        assert len(set(self.model_bitwidth_space) - set(self.master_df.action.values)) >= 0, (
+            "there is bitwidth choice not within model bitwidth space"
+        )
         return OrderedDict(zip(self.master_df.qid_obj, self.master_df.action))
 
     def _constrain_model_size(self, collected_strategy: List, skip=False) -> List:

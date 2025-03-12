@@ -18,6 +18,8 @@ import torch.nn.functional as F
 
 from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.graph.utils import get_bias_shape_legacy
+from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.logging import nncf_logger
 from nncf.experimental.common.pruning.nodes_grouping import get_pruning_groups
 from nncf.experimental.common.pruning.nodes_grouping import select_largest_groups
@@ -208,9 +210,9 @@ class StructuredMaskContext:
         """
         node = self.sparsifier_operand.target_module_node
         assert isinstance(node.layer_attributes, tuple(EXPECTED_NODE_LAYER_ATTRS))
-        weight_shape: Tuple[int, int] = tuple(node.layer_attributes.get_weight_shape())
+        weight_shape: Tuple[int, int] = tuple(get_weight_shape_legacy(node.layer_attributes))
         bias_shape: Tuple[int] = (
-            (node.layer_attributes.get_bias_shape(),) if self.sparsifier_operand.prune_bias else (0,)
+            (get_bias_shape_legacy(node.layer_attributes),) if self.sparsifier_operand.prune_bias else (0,)
         )
 
         pruned_weight_shape = list(weight_shape)
@@ -245,9 +247,9 @@ class StructuredMaskContext:
 
     @staticmethod
     def _inflate_structured_mask(structured_mask: torch.Tensor, grid_size: Tuple[int, int]) -> torch.Tensor:
-        assert len(structured_mask.shape) == len(
-            grid_size
-        ), f"Unmatched dimension with structured_mask in shape {structured_mask.shape} and grid_size in 2D."
+        assert len(structured_mask.shape) == len(grid_size), (
+            f"Unmatched dimension with structured_mask in shape {structured_mask.shape} and grid_size in 2D."
+        )
         inflated_mask = structured_mask.clone()
         for axis, repeat_times in enumerate(grid_size):
             inflated_mask = inflated_mask.repeat_interleave(repeat_times, dim=axis)

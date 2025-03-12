@@ -115,8 +115,8 @@ def tune_range(
     if unify_zp:
         scale = (right_border - left_border) / level_high
         zero_point = -left_border / scale
-        avg_zpts = fns.round(fns.mean(zero_point))
-        qval = fns.ones_like(left_border) * avg_zpts
+        avg_zero_point = fns.round(fns.mean(zero_point))
+        qval = fns.ones_like(left_border) * avg_zero_point
     else:
         s = level_high / (right_border - left_border)
         fval = -left_border * s

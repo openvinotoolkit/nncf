@@ -74,7 +74,7 @@ class FXSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode) -> bool:
-        # Metatypes of linears and convolutions guarantee
+        # Metatypes of linear and convolution operators guarantee
         # all nodes with the metatypes have weights, we can skip
         # this check by returning True.
         return True

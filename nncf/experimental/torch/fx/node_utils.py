@@ -22,7 +22,7 @@ from nncf.tensor import Tensor
 # torch version update (>= 2.4)
 def get_graph_node_by_name(graph: torch.fx.Graph, name: str) -> torch.fx.Node:
     """
-    Retrieves a node with the specified name from the grpah.
+    Retrieves a node with the specified name from the graph.
     Raises a runtime error if graph does not contain node with
     the given name.
 
