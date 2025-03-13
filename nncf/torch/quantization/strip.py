@@ -20,6 +20,8 @@ import nncf
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
+from nncf.experimental.torch2.commands import PT2InsertionCommand
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
@@ -202,7 +204,17 @@ def strip_quantized_model(model: NNCFNetwork):
 
 def replace_with_decompressors(model: NNCFNetwork, transformations: List[Command]) -> NNCFNetwork:
     """
-    Performs transformation from fake quantize format (FQ) to dequantization one (DQ). The former takes floating-point input, quantizes and dequantizes, and returns a floating-point value, while the latter takes a quantized integer representation, dequantizes it, and outputs a floating-point result. Mathematically, both methods lead to the same outcome, but due to differences in the order of operations and rounding errors, the actual results may differ. In particular, this error can occur for values that are located in the midpoint between two quantized values ("quants"). The FQ format may round these values to one "quant", while the DQ format rounds them to another "quant". To avoid these issues, the compressed representation should be provided not by directly quantizing the input, but by quantizing a pre-processed, fake-quantized, floating-point representation.   
+    Performs transformation from fake quantize format (FQ) to dequantization one (DQ).
+    The former takes floating-point input, quantizes and dequantizes, and returns a floating-point value,
+    while the latter takes a quantized integer representation, dequantizes it, and outputs a floating-point result.
+
+    Mathematically, both methods lead to the same outcome, but due to differences in the order of operations and
+    rounding errors, the actual results may differ. In particular, this error can occur for values
+    that are located in the midpoint between two quantized values ("quants").
+
+    The FQ format may round these values to one "quant", while the DQ format rounds them to another "quant".
+    To avoid these issues, the compressed representation should be provided not by directly quantizing the input,
+    but by quantizing a pre-processed, fake-quantized, floating-point representation.
 
     :param model: Compressed model with Decompressors.
     :return: The modified NNCF network.
@@ -308,20 +320,25 @@ def replace_with_decompressors(model: NNCFNetwork, transformations: List[Command
                     if id(param) == id(original_weight):
                         setattr(consumer_module, name, compressed_parameter)
 
-        # registry weight decompression module in the model
-        decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
-
-        # inserts the weight decompressor into the model as the post hook on the model weight
-        target_point = PTTargetPoint(
-            TargetType.OPERATOR_POST_HOOK,
-            target_node_name=weight_node.node_name,
-        )
-        transformation_layout.register(
-            PTSharedFnInsertionCommand(
-                [target_point],
-                decompressor,
-                decompressor_name,
+        if is_experimental_torch_tracing_enabled():
+            transformation_layout.register(
+                PT2InsertionCommand(
+                    [
+                        PTTargetPoint(
+                            TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name.replace(".", ":")
+                        )
+                    ],
+                    decompressor,
+                )
             )
-        )
+        else:
+            decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
+            transformation_layout.register(
+                PTSharedFnInsertionCommand(
+                    [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name)],
+                    decompressor,
+                    decompressor_name,
+                )
+            )
 
     return PTModelTransformer(model).transform(transformation_layout)
