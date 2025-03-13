@@ -19,7 +19,6 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import TargetDevice
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.scopes import IgnoredScope
 from nncf.torch.graph.graph import PTNNCFGraph
@@ -66,13 +65,6 @@ class OneDepthwiseConvModel(nn.Module, ToNNCFNetworkInterface):
     def forward(self, x):
         # input_shape = [1, 3, 32, 32]
         return self.depthwise_conv(x)
-
-
-@pytest.mark.parametrize("target_device", TargetDevice)
-def test_target_device(target_device):
-    min_max_algo = MinMaxQuantization(target_device=target_device)
-    min_max_algo._backend_entity = PTMinMaxAlgoBackend()
-    assert min_max_algo._target_device == target_device
 
 
 class TestPTQParams(TemplateTestPTQParams):

@@ -70,3 +70,40 @@ jobs:
         with:
           name: codeql-scan-results
           path: "./codeql*.pdf"
+
+  trivy:
+    name: Trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Skip trivy for PRs to avoid blocking merge PRs by found vulnerabilities in requirements
+    if: ${{ github.event_name != 'pull_request' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Run trivy
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # v0.29.0
+        with:
+          scan-type: "fs"
+          scan-ref: .
+          severity: "CRITICAL,HIGH"
+          scanners: "misconfig,license,vuln"
+          format: template
+          template: "@.github/scripts/trivy_html.tpl"
+          output: trivy_report.html
+          cache: false
+          hide-progress: true
+          exit-code: 1
+      - name: Rename Report
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          DATE=$(date +"%Y-%m-%d")
+          REF_NAME="${{ github.ref_name }}"
+          mv "trivy_report.html" "trivy_report_${DATE}_${REF_NAME//\//-}_${{ github.sha }}.html"
+      - name: Upload Scan Results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 #v4.6.0
+        with:
+          name: trivy-report
+          path: "./trivy_report*.html"
+          retention-days: 30

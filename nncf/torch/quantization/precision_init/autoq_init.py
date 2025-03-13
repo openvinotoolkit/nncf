@@ -284,7 +284,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                     if i == 0:
                         prev_action = 0.0
                     else:
-                        prev_action = env.master_df["action"][i - 1] / 8  # ducktape scaling
+                        prev_action = env.master_df["action"][i - 1] / 8  # duct tape scaling
                     if prev_action != s_t["prev_action"]:
                         s_t["prev_action"] = prev_action
                     # EO ------------------------

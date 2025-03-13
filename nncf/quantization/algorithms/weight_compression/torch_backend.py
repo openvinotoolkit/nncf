@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, Iterable, List, Optional, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import torch
 
@@ -23,6 +23,7 @@ from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
@@ -35,6 +36,9 @@ from nncf.experimental.common.tensor_statistics.statistics import MaxVarianceTen
 from nncf.experimental.common.tensor_statistics.statistics import MeanMagnitudeTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.experimental.torch2.commands import PT2InsertionCommand
+from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.experimental.torch2.model_transformer import PT2ModelTransformer
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
@@ -46,7 +50,6 @@ from nncf.quantization.algorithms.weight_compression.lora_correction import Lora
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
-from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.operator_metatypes import PTMulMetatype
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
@@ -186,8 +189,14 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return activation_ports[0]
 
     def get_weight(
-        self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph
+        self,
+        node_with_weight: NNCFNode,
+        weight_port_id: int,
+        model: Union[GraphModelWrapper, torch.nn.Module],
+        graph: NNCFGraph,
     ) -> Tensor:
+        if isinstance(model, GraphModelWrapper):
+            model = model.model
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
         weight_name = weight_node.layer_attributes.name
         weight = get_const_data(weight_node, model)
@@ -197,7 +206,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return Tensor(weight)
 
     def get_weight_dtype(
-        self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph
+        self,
+        node_with_weight: NNCFNode,
+        weight_port_id: int,
+        model: Union[GraphModelWrapper, torch.nn.Module],
+        graph: NNCFGraph,
     ) -> TensorDataType:
         return self.get_weight(node_with_weight, weight_port_id, model, graph).dtype
 
@@ -209,7 +222,14 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph, weight: Tensor
     ):
-        update_parameter(node_with_weight.node_name, "weight", weight.data, model)
+        if is_experimental_torch_tracing_enabled():
+            weight_node = get_const_node(node_with_weight, weight_port_id, graph)
+            module_name, weight_attr_name = split_const_name(weight_node.layer_attributes.name)
+            module = get_module_by_name(module_name, model.model)
+            weight_param = getattr(module, weight_attr_name)
+            weight_param.data = weight.data
+        else:
+            update_parameter(node_with_weight.node_name, "weight", weight.data, model)
 
     def insert_adapters(
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
@@ -229,13 +249,19 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     def transform_model(
         self,
-        model: NNCFNetwork,
+        model: Union[GraphModelWrapper, torch.nn.Module],
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
         precomputed_scales: Dict[str, Tensor] = None,
         precomputed_zero_points: Dict[str, Tensor] = None,
         lora_correction_algo: LoraCorrectionAlgorithm = None,
     ) -> NNCFNetwork:
+        if isinstance(model, GraphModelWrapper):
+            model_transformer = PT2ModelTransformer(model)
+            model = model.model
+        else:
+            model_transformer = PTModelTransformer(model)
+
         transformation_layout = TransformationLayout()
 
         for wc_params in weight_compression_parameters:
@@ -291,38 +317,43 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             # sets compressed tensor
             # TODO:(AlexanderDokuchaev): update set_const_data
-            compressed_parameter = torch.nn.Parameter(packed_tensor, requires_grad=False)
             module_name, weight_attr_name = split_const_name(weight_name)
             module = get_module_by_name(module_name, model)
             weight = getattr(module, weight_attr_name)
+
             if not isinstance(weight, torch.nn.Parameter):
                 msg = f"Weight is not a torch.nn.Parameter in the model by name {weight_name}."
                 raise nncf.InternalError(msg)
 
-            setattr(module, weight_attr_name, compressed_parameter)
+            weight.requires_grad = False
+            weight.data = packed_tensor
 
-            consumer_nodes = graph.get_next_nodes(weight_node)
-            if len(consumer_nodes) > 1:
-                for c_node in consumer_nodes:
-                    c_module = model.nncf.get_module_by_scope(Scope.from_str(c_node.layer_name))
-                    for name, param in c_module.named_parameters(recurse=False, remove_duplicate=False):
-                        if id(param) == id(weight):
-                            setattr(c_module, name, compressed_parameter)
-
-            # registry weight decompression module in the model
-            decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
-
-            # inserts the weight decompressor into the model as the post hook on the model weight
-            transformation_layout.register(
-                PTSharedFnInsertionCommand(
-                    [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name)],
-                    decompressor,
-                    decompressor_name,
+            if is_experimental_torch_tracing_enabled():
+                transformation_layout.register(
+                    PT2InsertionCommand(
+                        [
+                            PTTargetPoint(
+                                TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name.replace(".", ":")
+                            )
+                        ],
+                        decompressor,
+                    )
                 )
-            )
+            else:
+                # registry weight decompression module in the model
+                decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
+
+                # inserts the weight decompressor into the model as the post hook on the model weight
+                transformation_layout.register(
+                    PTSharedFnInsertionCommand(
+                        [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name)],
+                        decompressor,
+                        decompressor_name,
+                    )
+                )
 
         # apply transformations
-        transformed_model = PTModelTransformer(model).transform(transformation_layout)
+        transformed_model = model_transformer.transform(transformation_layout)
 
         return transformed_model
 
@@ -360,6 +391,9 @@ class PTAWQAlgoAlgoBackend(AWQAlgoBackend, PTWeightCompressionAlgoBackend):
 
         sq_multiply = SQMultiply(scale.shape)
         sq_multiply.scale = scale
+
+        if is_experimental_torch_tracing_enabled():
+            return PT2InsertionCommand(target_points, sq_multiply)
         scale_node_name = f"{source_node.node_name}/awq_mul"
         return PTSharedFnInsertionCommand(target_points, sq_multiply, scale_node_name)
 
