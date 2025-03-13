@@ -11,6 +11,10 @@
 
 import pytest
 import torch
+from optimum.exporters.openvino.convert import export_from_model
+from optimum.intel.openvino import OVModelForCausalLM
+from sentence_transformers import SentenceTransformer
+from sentence_transformers import util
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
@@ -18,6 +22,44 @@ import nncf
 from nncf.torch.quantization.layers import AsymmetricQuantizer as AQ
 from nncf.torch.quantization.layers import LoraMixin
 from nncf.torch.quantization.layers import SymmetricQuantizer as SQ
+
+
+class ValidationMock:
+    def __init__(self) -> None:
+        model_id = "sentence-transformers/all-mpnet-base-v2"
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+        self.model = SentenceTransformer(
+            model_id, tokenizer_kwargs={"pad_token": self.tokenizer.pad_token}, trust_remote_code=True
+        )
+
+    def calculate_similarity(self, gold: str, prediction: str) -> torch.Tensor:
+        embeddings = self.model.encode([gold, prediction])
+        cos_sim = util.cos_sim(embeddings, embeddings)
+        return torch.mean(cos_sim)
+
+    @property
+    def validation_ref(self) -> torch.Tensor:
+        return torch.tensor(1.0)
+
+
+def generate_control_output(model: AutoModelForCausalLM, tokenizer: AutoTokenizer) -> torch.Tensor:
+    control_input = tokenizer("What is Pytorch?", return_tensors="pt")
+    control_input = control_input.to(model.device)
+    control_output = model.generate(**control_input, do_sample=False)
+    return tokenizer.batch_decode(control_output, skip_special_tokens=True)[0]
+
+
+def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausalLM:
+    model = model.cpu()
+    export_from_model(model, tmp_path)
+
+    return OVModelForCausalLM.from_pretrained(
+        model_id=tmp_path,
+        trust_remote_code=True,
+        load_in_8bit=False,
+        compile=True,
+        ov_config={"KV_CACHE_PRECISION": "f16", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
+    )
 
 
 @pytest.mark.parametrize(
@@ -33,7 +75,7 @@ from nncf.torch.quantization.layers import SymmetricQuantizer as SQ
     ),
     ids=["asym", "sym"],
 )
-def test_fq_lora_tuning(mode, backup_mode, compression_kwargs, ref_num_trainable, _seed):
+def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num_trainable, _seed):
     model_id = "facebook/opt-125m"
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device)
@@ -80,3 +122,21 @@ def test_fq_lora_tuning(mode, backup_mode, compression_kwargs, ref_num_trainable
 
     assert first_loss > 8
     assert float(loss) < 1
+
+    tuned_output = generate_control_output(model, tokenizer)
+
+    # Workaround till export from the optimum would be fixed - CVS-164159
+    model = model.to(torch.float32)
+
+    model = nncf.strip(model)
+    stripped_output = generate_control_output(model, tokenizer)
+
+    model = get_ov_model(model, tmp_path)
+    stripped_ov_output = generate_control_output(model, tokenizer)
+
+    vm = ValidationMock()
+    tuned_vs_stripped = vm.calculate_similarity(tuned_output, stripped_output)
+    tuned_vs_stripped_ov = vm.calculate_similarity(tuned_output, stripped_ov_output)
+
+    assert torch.allclose(tuned_vs_stripped, vm.validation_ref, atol=0.01)
+    assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=0.01)

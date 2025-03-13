@@ -331,11 +331,11 @@ def test_nncf_strip_api(strip_type, do_copy):
 @pytest.mark.parametrize(
     ("mode", "torch_dtype", "atol"),
     (
-        (nncf.CompressWeightsMode.INT4_ASYM, torch.float32, 0.01),
-        (nncf.CompressWeightsMode.INT4_ASYM, torch.float16, 0.01),
+        (nncf.CompressWeightsMode.INT4_ASYM, torch.float32, 0.0005),
+        (nncf.CompressWeightsMode.INT4_ASYM, torch.float16, 0.0005),
         (nncf.CompressWeightsMode.INT4_ASYM, torch.bfloat16, 0.01),
-        (nncf.CompressWeightsMode.INT4_SYM, torch.float32, 0.01),
-        (nncf.CompressWeightsMode.INT4_SYM, torch.float16, 0.01),
+        (nncf.CompressWeightsMode.INT4_SYM, torch.float32, 0.0005),
+        (nncf.CompressWeightsMode.INT4_SYM, torch.float16, 0.0005),
         (nncf.CompressWeightsMode.INT4_SYM, torch.bfloat16, 0.01),
     ),
 )
