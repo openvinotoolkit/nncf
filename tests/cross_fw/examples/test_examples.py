@@ -95,7 +95,13 @@ def test_examples(
 
     if ov_version_override is not None:
         ov_version_cmd_line = f"{pip_with_venv} install {ov_version_override}"
+        uninstall_cmd_line = f"{pip_with_venv} uninstall --yes openvino-genai openvino_tokenizers"
+        extra_index_url = f"https://storage.openvinotoolkit.org/simple/wheels/nightly"
+        wwb_module_string = f"whowhatbench@git+https://github.com/openvinotoolkit/openvino.genai.git#subdirectory=tools/who_what_benchmark"
+        wwb_override_cmd_line = f"{pip_with_venv} install --pre --extra-index-url {extra_index_url} {wwb_module_string}"
         subprocess.run(ov_version_cmd_line, check=True, shell=True)
+        subprocess.run(uninstall_cmd_line, check=True, shell=True)
+        subprocess.run(wwb_override_cmd_line, check=True, shell=True)
 
     subprocess.run(f"{pip_with_venv} list", check=True, shell=True)
 
