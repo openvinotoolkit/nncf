@@ -25,7 +25,7 @@ from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import HessianTensorStatistic
 from nncf.parameters import CompressionFormat
-from nncf.quantization.advanced_parameters import AdvancedCompressionFormatParameters
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.tensor import Tensor
@@ -152,7 +152,7 @@ class WeightCompressionAlgoBackend(ABC):
         precomputed_zero_points: Dict[str, Tensor] = None,
         lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
-        compression_format_params: AdvancedCompressionFormatParameters = AdvancedCompressionFormatParameters(),
+        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
     ) -> TModel:
         """
         Applies weight compression transformations to the model.

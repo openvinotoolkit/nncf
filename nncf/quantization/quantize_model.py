@@ -441,7 +441,7 @@ def compress_weights(
     gptq: Optional[bool] = None,
     lora_correction: Optional[bool] = None,
     backup_mode: Optional[BackupMode] = None,
-    compression_format: Optional[CompressionFormat] = None,
+    compression_format: Optional[CompressionFormat] = CompressionFormat.DQ,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> TModel:
     """
@@ -499,6 +499,7 @@ def compress_weights(
         INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
     :type backup_mode: nncf.BackupMode
     :param compression_format: Describes the format in which the model is saved after weight compression.
+        Defaults to nncf.CompressionFormat.DQ.
     :type compression_format: nncf.CompressionFormat
     :param advanced_parameters: Advanced parameters for compression algorithms.
     :type advanced_parameters: nncf.AdvancedCompressionParameters
@@ -532,7 +533,7 @@ def compress_weights(
             msg = "Torch backend does not support statistics caching."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if compression_format == CompressionFormat.FQ and group_size == -1:
+        if compression_format == CompressionFormat.FQ and group_size != -1:
             msg = "Torch backend does not support FQ compression format for group-wise quantization."
             raise nncf.ParameterNotSupportedError(msg)
 
@@ -648,7 +649,6 @@ def compress_weights(
         ignored_scope,
         sensitivity_metric,
         backup_mode,
-        compression_format,
         advanced_parameters,
     )
 

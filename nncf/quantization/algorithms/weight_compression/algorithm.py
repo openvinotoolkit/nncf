@@ -72,7 +72,6 @@ def get_weight_compression_configuration(
     ignored_scope: Optional[IgnoredScope] = None,
     sensitivity_metric: Optional[SensitivityMetric] = None,
     backup_mode: Optional[BackupMode] = None,
-    compression_format: Optional[CompressionFormat] = None,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> Dict[str, Any]:
     """
@@ -106,7 +105,6 @@ def get_weight_compression_configuration(
             else sensitivity_metric
         ),
         "backup_mode": backup_mode or BackupMode.INT8_ASYM,
-        "compression_format": compression_format or CompressionFormat.DQ,
         "advanced_parameters": advanced_parameters or AdvancedCompressionParameters(),
     }
 

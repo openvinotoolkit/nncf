@@ -48,7 +48,7 @@ from nncf.openvino.statistics.collectors import OVMeanVarianceReducer
 from nncf.openvino.statistics.collectors import OVShapeReducer
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
-from nncf.quantization.advanced_parameters import AdvancedCompressionFormatParameters
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
 from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
@@ -286,7 +286,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         precomputed_zero_points: Dict[str, Tensor] = None,
         lora_correction_algo: LoraCorrectionAlgorithm = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
-        compression_format_params: AdvancedCompressionFormatParameters = AdvancedCompressionFormatParameters(),
+        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
     ) -> ov.Model:
         for wc_params in weight_compression_parameters:
             const_attributes = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]

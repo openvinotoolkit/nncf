@@ -44,7 +44,7 @@ from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import
 from nncf.experimental.torch2.model_transformer import PT2ModelTransformer
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
-from nncf.quantization.advanced_parameters import AdvancedCompressionFormatParameters
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
 from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
@@ -282,7 +282,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         wc_params: WeightCompressionParameters,
         orig_weight_shape: Tuple[int, ...],
         compression_format: CompressionFormat,
-        compression_format_params: AdvancedCompressionFormatParameters,
+        lora_adapter_rank: int,
     ) -> PTTransformationCommand:
         """
         Creates a fake quantization insertion command for the given compressed weight.
@@ -306,7 +306,6 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         schema = mode_vs_schema_map[compression_config.mode]
 
-        lora_rank = compression_format_params.adapter_rank
         device = compressed_weight.tensor.data.device
         scale = compressed_weight.scale.data
 
@@ -324,12 +323,14 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         quantizer_cls = QUANTIZATION_MODULES.get(schema)
         if schema in [QuantizationScheme.ASYMMETRIC_LORA, QuantizationScheme.SYMMETRIC_LORA]:
-            lora_spec = PTLoraSpec(lora_rank=lora_rank, orig_weight_shape=orig_weight_shape, weight_shape=weight_shape)
+            lora_spec = PTLoraSpec(
+                lora_rank=lora_adapter_rank, orig_weight_shape=orig_weight_shape, weight_shape=weight_shape
+            )
             quantizer = quantizer_cls(quantizer_spec, lora_spec)
             lora_dtype = quantizer._lora_A.dtype
             svd_residual = torch.rand(weight_shape).to(device) * scale / 100  # value on [0,1] * (1/100 of quant size)
             svd_residual = svd_residual.reshape(orig_weight_shape)
-            B, A = PTWeightCompressionAlgoBackend.init_lora_adapters(svd_residual, rank=lora_rank)
+            B, A = PTWeightCompressionAlgoBackend.init_lora_adapters(svd_residual, rank=lora_adapter_rank)
             quantizer._lora_A = torch.nn.Parameter(A.type(dtype=lora_dtype))
             quantizer._lora_B = torch.nn.Parameter(B.type(dtype=lora_dtype))
         else:
@@ -459,7 +460,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         precomputed_zero_points: Dict[str, Tensor] = None,
         lora_correction_algo: LoraCorrectionAlgorithm = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
-        compression_format_params: AdvancedCompressionFormatParameters = AdvancedCompressionFormatParameters(),
+        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
     ) -> NNCFNetwork:
         if isinstance(model, GraphModelWrapper):
             model_transformer = PT2ModelTransformer(model)
@@ -498,8 +499,9 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             if compression_format == CompressionFormat.DQ:
                 command = self.get_dq_insertion_command(compressed_weight, wc_params, model, graph, weight_node)
             else:
+                rank = advanced_parameters.lora_adapter_rank
                 command = self.get_fq_insertion_command(
-                    compressed_weight, wc_params, weight.shape, compression_format, compression_format_params
+                    compressed_weight, wc_params, weight.shape, compression_format, rank
                 )
             transformation_layout.register(command)
 
