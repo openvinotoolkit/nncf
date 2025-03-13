@@ -202,11 +202,7 @@ def strip_quantized_model(model: NNCFNetwork):
 
 def replace_with_decompressors(model: NNCFNetwork, transformations: List[Command]) -> NNCFNetwork:
     """
-    Returns the model with Quantizers replaced with Decompressors.
-
-    For the Quantizers containing LoRA adapters, it is important to quantize and
-    dequantize weights in the same manner and then quantize them using a Decompressor-friendly formula.
-    This approach allows us to prevent floating-point errors that can occur due to the different order of operations.
+    Performs transformation from fake quantize format (FQ) to dequantization one (DQ). The former takes floating-point input, quantizes and dequantizes, and returns a floating-point value, while the latter takes a quantized integer representation, dequantizes it, and outputs a floating-point result. Mathematically, both methods lead to the same outcome, but due to differences in the order of operations and rounding errors, the actual results may differ. In particular, this error can occur for values that are located in the midpoint between two quantized values ("quants"). The FQ format may round these values to one "quant", while the DQ format rounds them to another "quant". To avoid these issues, the compressed representation should be provided not by directly quantizing the input, but by quantizing a pre-processed, fake-quantized, floating-point representation.   
 
     :param model: Compressed model with Decompressors.
     :return: The modified NNCF network.
