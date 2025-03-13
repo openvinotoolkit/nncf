@@ -20,6 +20,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
@@ -32,6 +33,7 @@ from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
@@ -79,7 +81,9 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @staticmethod
     def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[Tuple[int]]:
-        return (get_weight_quantization_axis(node_with_weight, weight_port_id),)
+        channel_axes = (get_weight_quantization_axis(node_with_weight, weight_port_id),)
+        const_shape = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["shape"]
+        return get_reduction_axes(channel_axes, const_shape)
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:
@@ -157,12 +161,21 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 None if precomputed_scales is None else precomputed_scales.get(wc_params.weight_name),
                 None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name),
             )
+            if compression_config.mode == CompressWeightsMode.INT8_SYM:
+                dtype = onnx.TensorProto.INT8
+            elif compression_config.mode == CompressWeightsMode.INT8_ASYM:
+                dtype = onnx.TensorProto.UINT8
+            elif compression_config.mode == CompressWeightsMode.INT4_SYM:
+                dtype = onnx.TensorProto.INT4
+            elif compression_config.mode == CompressWeightsMode.INT4_ASYM:
+                dtype = onnx.TensorProto.UINT4
             add_dequantize_linear_layer(
                 model,
                 compressed_weight.tensor,
                 compressed_weight.scale,
                 compressed_weight.zero_point,
                 wc_params.weight_name,
+                dtype,
             )
         return model
 
@@ -183,7 +196,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         raise NotImplementedError()
 
 
-def add_dequantize_linear_layer(model, quantized_weights, scale, zero_point, weight_name):
+def add_dequantize_linear_layer(model, quantized_weights, scale, zero_point, weight_name, dtype):
     quantized_weights = quantized_weights.data
     scale = scale.data
     if zero_point is not None:
@@ -196,7 +209,12 @@ def add_dequantize_linear_layer(model, quantized_weights, scale, zero_point, wei
     )
 
     # Create initializers for the quantized weights, scale, and zero point
-    quantized_weights_initializer = numpy_helper.from_array(quantized_weights, name=weight_name + "_quantized")
+    quantized_weights_initializer = onnx.helper.make_tensor(
+        weight_name + "_quantized",
+        dtype,
+        quantized_weights.shape,
+        quantized_weights,
+    )
     scale_initializer = numpy_helper.from_array(np.array(scale, dtype=np.float32), name=weight_name + "_scale")
     initials = [quantized_weights_initializer, scale_initializer]
     if zero_point is not None:
@@ -206,7 +224,7 @@ def add_dequantize_linear_layer(model, quantized_weights, scale, zero_point, wei
         initials.append(zero_point_initializer)
     # Add the node and initializers to the model
     model.graph.node.append(dequantize_node)
-    model.graph.initializer.extend([quantized_weights_initializer, scale_initializer, zero_point_initializer])
+    model.graph.initializer.extend(initials)
 
     # Update the consumer nodes to use the dequantized weights
     for node in model.graph.node:

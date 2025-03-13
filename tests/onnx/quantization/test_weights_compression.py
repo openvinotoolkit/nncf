@@ -14,6 +14,7 @@ from onnx import TensorProto
 from onnx import helper
 from onnx import numpy_helper
 
+from nncf import CompressWeightsMode
 from nncf.quantization import compress_weights
 
 
@@ -60,5 +61,5 @@ def create_model():
 
 def test_wc():
     model = create_model()
-    model = compress_weights(model)
+    model = compress_weights(model, CompressWeightsMode.INT4_SYM)
     onnx.save_model(model, "compressed_model.onnx")
