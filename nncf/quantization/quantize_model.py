@@ -660,6 +660,7 @@ def compress_weights(
         model=model,
         dataset=dataset,
         subset_size=subset_size,
+        compression_format=compression_format,
         **weight_compression_configuration,
     )
 
