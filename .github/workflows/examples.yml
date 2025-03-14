@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   examples-cpu:
-    name: Test exmaples CPU [${{ matrix.group }}/4]
+    name: Test examples CPU [${{ matrix.group }}/4]
     runs-on: ubuntu-latest-16-cores
     strategy:
       fail-fast: false
@@ -72,7 +72,7 @@ jobs:
           python .github/scripts/pytest_md_summary.py pytest-results.xml >> $GITHUB_STEP_SUMMARY
 
   examples-win-cpu:
-    name: Test exmaples CPU Windows [${{ matrix.group }}/4]
+    name: Test examples CPU Windows [${{ matrix.group }}/4]
     runs-on: windows-2019-16-core
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_windows == 'false' }}
     strategy:
