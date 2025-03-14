@@ -297,6 +297,21 @@ def asymmetric_quantize(input_, levels, level_low, level_high, input_low, input_
 def asymmetric_quantize_lora(
     input_, input_shape, A, B, input_low_, input_range_, level_low, level_high, levels, eps, skip: bool = False
 ):
+    if has_torch_function_unary(input_):
+        return handle_torch_function(
+            asymmetric_quantize_lora,
+            (input_,),
+            input_shape,
+            A,
+            B,
+            input_low_,
+            input_range_,
+            level_low,
+            level_high,
+            levels,
+            eps,
+            skip,
+        )
     if skip:
         return input_
     input_range_safe = abs(input_range_) + eps
@@ -315,6 +330,20 @@ def asymmetric_quantize_lora(
 
 @register_operator()
 def symmetric_quantize_lora(input_, input_shape, A, B, scale, level_low, level_high, levels, eps, skip: bool = False):
+    if has_torch_function_unary(input_):
+        return handle_torch_function(
+            symmetric_quantize_lora,
+            (input_,),
+            input_shape,
+            A,
+            B,
+            scale,
+            level_low,
+            level_high,
+            levels,
+            eps,
+            skip,
+        )
     if skip:
         return input_
     scale_safe = torch.where(torch.abs(scale) < eps, eps, scale)

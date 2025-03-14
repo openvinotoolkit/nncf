@@ -327,12 +327,12 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 lora_rank=lora_adapter_rank, orig_weight_shape=orig_weight_shape, weight_shape=weight_shape
             )
             quantizer = quantizer_cls(quantizer_spec, lora_spec)
-            lora_dtype = quantizer._lora_A.dtype
+            lora_dtype = quantizer.lora_A.dtype
             svd_residual = torch.rand(weight_shape).to(device) * scale / 100  # value on [0,1] * (1/100 of quant size)
             svd_residual = svd_residual.reshape(orig_weight_shape)
             B, A = PTWeightCompressionAlgoBackend.init_lora_adapters(svd_residual, rank=lora_adapter_rank)
-            quantizer._lora_A = torch.nn.Parameter(A.type(dtype=lora_dtype))
-            quantizer._lora_B = torch.nn.Parameter(B.type(dtype=lora_dtype))
+            quantizer.lora_A = torch.nn.Parameter(A.type(dtype=lora_dtype))
+            quantizer.lora_B = torch.nn.Parameter(B.type(dtype=lora_dtype))
         else:
             quantizer = quantizer_cls(quantizer_spec)
 
@@ -477,8 +477,6 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             ]:
                 msg = f"{compression_config.mode.value} is not supported."
                 raise nncf.ParameterNotSupportedError(msg)
-
-            print(f"Quantize {wc_params.weight_name} to {compression_config.mode.value}")
 
             weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
             weight_name = weight_node.layer_attributes.name
