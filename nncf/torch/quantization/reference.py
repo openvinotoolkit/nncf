@@ -16,7 +16,6 @@ import numpy as np
 import torch
 
 import nncf
-from nncf import nncf_logger
 from nncf.torch.utils import sum_like
 
 GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)
@@ -112,14 +111,5 @@ class ReferenceQuantize:
 
 class ReferenceQuantizedFunctions:
     _executor = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
-    try:
-        Quantize_forward = torch.compile(_executor.forward)
-        Quantize_backward = torch.compile(_executor.backward)
-    except Exception as e:
-        nncf_logger.warning(
-            f"Could not use torch.compile with reference functions. "
-            f"Falling back on not compiled versions - "
-            f"Reason: {str(e)}"
-        )
-        Quantize_forward = _executor.forward
-        Quantize_backward = _executor.backward
+    Quantize_forward = torch.compile(_executor.forward)
+    Quantize_backward = torch.compile(_executor.backward)
