@@ -293,7 +293,7 @@
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.common.quantization.structs.QuantizationScheme" title="nncf.common.quantization.structs.QuantizationScheme"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationScheme</span></code></a></p></td>
-<td><p>Basic enumeration for quantization scheme specification.</p></td>
+<td><p>Enumeration for specifying quantization schemes.</p></td>
 </tr>
 </tbody>
 </table>
@@ -302,12 +302,18 @@
 <dt class="sig sig-object py" id="nncf.common.quantization.structs.QuantizationScheme">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.common.quantization.structs.</span></span><span class="sig-name descname"><span class="pre">QuantizationScheme</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/quantization/structs.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.common.quantization.structs.QuantizationScheme" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">nncf.parameters.StrEnum</span></code></p>
-<p>Basic enumeration for quantization scheme specification.</p>
+<p>Enumeration for specifying quantization schemes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>SYMMETRIC</strong> – </p></li>
-<li><p><strong>ASYMMETRIC</strong> – </p></li>
+<li><p><strong>SYMMETRIC</strong> – Symmetric quantization where the range is defined by a single parameter - scale.
+This range can include both negative and positive values if signed, or only positive values if unsigned.</p></li>
+<li><p><strong>ASYMMETRIC</strong> – Asymmetric quantization where the range is defined by two parameters - input_low and input_high,
+representing the lower and upper boundaries of the range, respectively.</p></li>
+<li><p><strong>SYMMETRIC_LORA</strong> – Symmetric quantization with Low-Rank Adapters (LoRA), involving the sum of weights and
+the multiplication of low-rank adapters.</p></li>
+<li><p><strong>ASYMMETRIC_LORA</strong> – Asymmetric quantization with Low-Rank Adapters (LoRA), involving the sum of weights and
+the multiplication of low-rank adapters.</p></li>
 </ul>
 </dd>
 </dl>

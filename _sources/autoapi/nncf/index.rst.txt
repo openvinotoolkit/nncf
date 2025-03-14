@@ -33,6 +33,7 @@ Classes
    nncf.NNCFConfig
    nncf.Dataset
    nncf.BackupMode
+   nncf.CompressionFormat
    nncf.CompressWeightsMode
    nncf.DropType
    nncf.ModelType
@@ -196,6 +197,25 @@ Functions
        https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization
 
 
+.. py:class:: CompressionFormat
+
+   Bases: :py:obj:`StrEnum`
+
+   Describes the format in which the model is saved after weight compression.
+
+   :param DQ: Represents the 'dequantize' format, where weights are stored in low-bit precision,
+       and a dequantization subgraph is added to the model. This is the default format for post-training weight
+       compression methods.
+   :param FQ: Represents the 'fake_quantize' format, where quantization is simulated by applying
+       quantization and dequantization operations. Weights remain in the same precision. This format is
+       suitable for quantization-aware training (QAT).
+   :param FQ_LORA: Represents the 'fake_quantize_with_lora' format, which combines fake quantization
+       with absorbable low-rank adapters (LoRA). Quantization is applied to the sum of weights and
+       the multiplication of adapters. This makes quantization-aware training (QAT) more efficient in terms of
+       accuracy, as adapters can also be tuned and remain computationally affordable during training due to their
+       small dimensions.
+
+
 .. py:class:: CompressWeightsMode
 
    Bases: :py:obj:`StrEnum`
@@ -293,7 +313,7 @@ Functions
    An enum with values corresponding to the available quantization presets.
 
 
-.. py:function:: compress_weights(model, mode=CompressWeightsMode.INT8_ASYM, ratio = None, group_size = None, ignored_scope = None, all_layers = None, dataset = None, sensitivity_metric = None, *, subset_size = 128, awq = None, scale_estimation = None, gptq = None, lora_correction = None, backup_mode = None, advanced_parameters = None)
+.. py:function:: compress_weights(model, mode=CompressWeightsMode.INT8_ASYM, ratio = None, group_size = None, ignored_scope = None, all_layers = None, dataset = None, sensitivity_metric = None, *, subset_size = 128, awq = None, scale_estimation = None, gptq = None, lora_correction = None, backup_mode = None, compression_format = CompressionFormat.DQ, advanced_parameters = None)
 
    Compress model weights.
 
@@ -348,6 +368,9 @@ Functions
        INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
        INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
    :type backup_mode: nncf.BackupMode
+   :param compression_format: Describes the format in which the model is saved after weight compression.
+       Defaults to nncf.CompressionFormat.DQ.
+   :type compression_format: nncf.CompressionFormat
    :param advanced_parameters: Advanced parameters for compression algorithms.
    :type advanced_parameters: nncf.AdvancedCompressionParameters
    :return: The non-trainable model with compressed weights.
