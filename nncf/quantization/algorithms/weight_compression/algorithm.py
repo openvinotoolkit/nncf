@@ -160,9 +160,27 @@ def check_user_compression_configuration(
         msg = f"The ratio should be between 0 and 1, but ratio={ratio} is specified."
         raise nncf.ValidationError(msg)
 
-    if subset_size <= 0:
-        msg = f"The subset_size value should be positive, but subset_size={subset_size} is given."
-        raise nncf.ValidationError(msg)
+    values_to_check = [subset_size]
+    ranks = []
+    if advanced_parameters:
+        values_to_check.extend(
+            [
+                advanced_parameters.awq_params.subset_size,
+                advanced_parameters.scale_estimation_params.subset_size,
+                advanced_parameters.gptq_params.subset_size,
+                advanced_parameters.lora_correction_params.subset_size,
+            ]
+        )
+        ranks = [advanced_parameters.lora_adapter_rank, advanced_parameters.lora_correction_params.adapter_rank]
+    for size in values_to_check:
+        if size <= 0:
+            msg = f"The subset_size value should be positive, but subset_size={size} is given."
+            raise nncf.ValidationError(msg)
+
+    for rank in ranks:
+        if rank <= 0:
+            msg = f"The lora adapter rank should be positive, but rank={rank} is given."
+            raise nncf.ValidationError(msg)
 
     if (
         ratio
@@ -656,6 +674,7 @@ class WeightCompression(Algorithm):
             zero_points,
             lora_correction_algo,
             self._compression_format,
+            self._advanced_parameters,
         )
 
         self._backend_entity.dump_parameters(
