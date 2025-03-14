@@ -23,6 +23,6 @@ def load_file(file_path: str, *, device: Optional[TensorDeviceType] = None) -> D
     return tf_load_file(file_path)
 
 
-@io.save_file.register(tf.Tensor)
+@io.save_file.register
 def _(data: Dict[str, tf.Tensor], file_path: str) -> None:
     return tf_save_file(data, file_path)
