@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Tuple
+
 import pytest
 import torch
 from optimum.exporters.openvino.convert import export_from_model
@@ -41,102 +43,142 @@ class ValidationMock:
     def validation_ref(self) -> torch.Tensor:
         return torch.tensor(1.0)
 
+    @staticmethod
+    def generate_control_output(model: AutoModelForCausalLM, tokenizer: AutoTokenizer) -> torch.Tensor:
+        control_input = tokenizer("What is Pytorch?", return_tensors="pt")
+        control_input = control_input.to(model.device)
+        control_output = model.generate(**control_input, do_sample=False)
+        return tokenizer.batch_decode(control_output, skip_special_tokens=True)[0]
 
-def generate_control_output(model: AutoModelForCausalLM, tokenizer: AutoTokenizer) -> torch.Tensor:
-    control_input = tokenizer("What is Pytorch?", return_tensors="pt")
-    control_input = control_input.to(model.device)
-    control_output = model.generate(**control_input, do_sample=False)
-    return tokenizer.batch_decode(control_output, skip_special_tokens=True)[0]
 
+class TestLoraTuning:
+    @property
+    def ignored_scope(self) -> nncf.IgnoredScope:
+        except_lm_head_and_5th_vproj = (
+            r"^(?!.*(OPTDecoderLayer\[5\]/OPTSdpaAttention\[self_attn\]/Linear\[v_proj\]/l|lm_head).*$).*$"
+        )
+        return nncf.IgnoredScope(patterns=[except_lm_head_and_5th_vproj])
 
-def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausalLM:
-    model = model.cpu()
-    export_from_model(model, tmp_path)
+    @property
+    def model_id(self) -> str:
+        return "facebook/opt-125m"
 
-    return OVModelForCausalLM.from_pretrained(
-        model_id=tmp_path,
-        trust_remote_code=True,
-        load_in_8bit=False,
-        compile=True,
-        ov_config={"KV_CACHE_PRECISION": "f16", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
+    def compress_model(self, model, mode, backup_mode, inputs, compression_kwargs) -> AutoModelForCausalLM:
+        return nncf.compress_weights(
+            model,
+            group_size=64,
+            mode=mode,
+            backup_mode=backup_mode,
+            dataset=nncf.Dataset([dict(inputs)]),
+            compression_format=nncf.CompressionFormat.FQ_LORA,
+            ignored_scope=self.ignored_scope,
+            **compression_kwargs,
+        )
+
+    @staticmethod
+    def verify_model(model, mode, ref_num_trainable) -> None:
+        expected_names = {LoraMixin.LORA_A_PARAM_NAME, LoraMixin.LORA_B_PARAM_NAME}
+        if mode == nncf.CompressWeightsMode.INT4_ASYM:
+            expected_names.update([AQ.INPUT_LOW_PARAM_NAME, AQ._INPUT_RANGE_PARAM_STORAGE_ATTR])
+        else:
+            expected_names.add(SQ._SCALE_PARAM_STORAGE_ATTR)
+        actual_names = {name.split(".")[-1] for name, param in model.named_parameters() if param.requires_grad}
+        assert actual_names == expected_names
+        actual_num_trainable = sum(1 for param in model.parameters() if param.requires_grad)
+        assert actual_num_trainable == ref_num_trainable
+
+    @staticmethod
+    def tune_model(model, inputs) -> Tuple[torch.tensor, torch.tensor]:
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
+        model_kwargs = dict(
+            input_ids=inputs["input_ids"][:, :-1],
+            attention_mask=inputs["attention_mask"][:, :-1],
+            labels=inputs["input_ids"][:, 1:],
+        )
+        for i in range(5):
+            optimizer.zero_grad()
+            loss = model(**model_kwargs).loss
+            if i == 0:
+                first_loss = float(loss)
+            loss.backward()
+            optimizer.step()
+        return first_loss, loss
+
+    @staticmethod
+    def strip_model(model) -> AutoModelForCausalLM:
+        # Workaround till export from the optimum would be fixed - CVS-164159
+        model = model.to(torch.float32)
+        return nncf.strip(model)
+
+    @staticmethod
+    def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausalLM:
+        model = model.cpu()
+        export_from_model(model, tmp_path)
+
+        return OVModelForCausalLM.from_pretrained(
+            model_id=tmp_path,
+            trust_remote_code=True,
+            load_in_8bit=False,
+            compile=True,
+            ov_config={"KV_CACHE_PRECISION": "f16", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
+        )
+
+    @pytest.mark.parametrize(
+        "compression_kwargs",
+        (dict(scale_estimation=True, awq=True), dict(scale_estimation=False, awq=False)),
+        ids=["se_awq", "data_free"],
     )
-
-
-@pytest.mark.parametrize(
-    "compression_kwargs",
-    (dict(scale_estimation=True, awq=True), dict(scale_estimation=False, awq=False)),
-    ids=["se_awq", "data_free"],
-)
-@pytest.mark.parametrize(
-    ("mode", "backup_mode", "ref_num_trainable"),
-    (
-        (nncf.CompressWeightsMode.INT4_ASYM, nncf.CompressWeightsMode.INT8_ASYM, 4 + 2),
-        (nncf.CompressWeightsMode.INT4_SYM, nncf.CompressWeightsMode.INT8_SYM, 3 + 1),
-    ),
-    ids=["asym", "sym"],
-)
-def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num_trainable, _seed):
-    model_id = "facebook/opt-125m"
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device)
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    inputs = tokenizer("overfit " * 10, return_tensors="pt").to(device)
-
-    except_lm_head_and_5th_vproj = (
-        r"^(?!.*(OPTDecoderLayer\[5\]/OPTSdpaAttention\[self_attn\]/Linear\[v_proj\]/l|lm_head).*$).*$"
+    @pytest.mark.parametrize(
+        ("mode", "backup_mode", "ref_num_trainable"),
+        (
+            (nncf.CompressWeightsMode.INT4_ASYM, nncf.CompressWeightsMode.INT8_ASYM, 4 + 2),
+            (nncf.CompressWeightsMode.INT4_SYM, nncf.CompressWeightsMode.INT8_SYM, 3 + 1),
+        ),
+        ids=["asym", "sym"],
     )
-    model = nncf.compress_weights(
-        model,
-        group_size=64,
-        mode=mode,
-        backup_mode=backup_mode,
-        dataset=nncf.Dataset([dict(inputs)]),
-        compression_format=nncf.CompressionFormat.FQ_LORA,
-        ignored_scope=nncf.IgnoredScope(patterns=[except_lm_head_and_5th_vproj]),
-        **compression_kwargs,
+    def test_fq_lora_tuning(self, mode, backup_mode, compression_kwargs, ref_num_trainable, _seed):
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = AutoModelForCausalLM.from_pretrained(self.model_id, torch_dtype=torch.bfloat16, device_map=device)
+        tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+        inputs = tokenizer("overfit " * 10, return_tensors="pt").to(device)
+
+        model = self.compress_model(model, mode, backup_mode, inputs, compression_kwargs)
+        self.verify_model(model, mode, ref_num_trainable)
+
+        first_loss, loss = self.tune_model(model, inputs)
+        assert first_loss > 8
+        assert float(loss) < 1
+
+    @pytest.mark.parametrize(
+        ("mode", "backup_mode"),
+        (
+            (nncf.CompressWeightsMode.INT4_ASYM, nncf.CompressWeightsMode.INT8_ASYM),
+            (nncf.CompressWeightsMode.INT4_SYM, nncf.CompressWeightsMode.INT8_SYM),
+        ),
+        ids=["asym", "sym"],
     )
+    def test_fq_lora_strip(self, tmp_path, mode, backup_mode, _seed):
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = AutoModelForCausalLM.from_pretrained(self.model_id, torch_dtype=torch.bfloat16, device_map=device)
+        tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+        inputs = tokenizer("overfit " * 10, return_tensors="pt").to(device)
 
-    expected_names = {LoraMixin.LORA_A_PARAM_NAME, LoraMixin.LORA_B_PARAM_NAME}
-    if mode == nncf.CompressWeightsMode.INT4_ASYM:
-        expected_names.update([AQ.INPUT_LOW_PARAM_NAME, AQ._INPUT_RANGE_PARAM_STORAGE_ATTR])
-    else:
-        expected_names.add(SQ._SCALE_PARAM_STORAGE_ATTR)
-    actual_names = {name.split(".")[-1] for name, param in model.named_parameters() if param.requires_grad}
-    assert actual_names == expected_names
-    actual_num_trainable = sum(1 for param in model.parameters() if param.requires_grad)
-    assert actual_num_trainable == ref_num_trainable
+        model = self.compress_model(model, mode, backup_mode, inputs, {})
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
-    model_kwargs = dict(
-        input_ids=inputs["input_ids"][:, :-1],
-        attention_mask=inputs["attention_mask"][:, :-1],
-        labels=inputs["input_ids"][:, 1:],
-    )
-    for i in range(5):
-        optimizer.zero_grad()
-        loss = model(**model_kwargs).loss
-        if i == 0:
-            first_loss = float(loss)
-        loss.backward()
-        optimizer.step()
+        self.tune_model(model, inputs)
 
-    assert first_loss > 8
-    assert float(loss) < 1
+        vm = ValidationMock()
 
-    tuned_output = generate_control_output(model, tokenizer)
+        tuned_output = vm.generate_control_output(model, tokenizer)
 
-    # Workaround till export from the optimum would be fixed - CVS-164159
-    model = model.to(torch.float32)
+        model = self.strip_model(model)
+        stripped_output = vm.generate_control_output(model, tokenizer)
 
-    model = nncf.strip(model)
-    stripped_output = generate_control_output(model, tokenizer)
+        model = self.get_ov_model(model, tmp_path)
+        stripped_ov_output = vm.generate_control_output(model, tokenizer)
 
-    model = get_ov_model(model, tmp_path)
-    stripped_ov_output = generate_control_output(model, tokenizer)
+        tuned_vs_stripped = vm.calculate_similarity(tuned_output, stripped_output)
+        tuned_vs_stripped_ov = vm.calculate_similarity(tuned_output, stripped_ov_output)
 
-    vm = ValidationMock()
-    tuned_vs_stripped = vm.calculate_similarity(tuned_output, stripped_output)
-    tuned_vs_stripped_ov = vm.calculate_similarity(tuned_output, stripped_ov_output)
-
-    assert torch.allclose(tuned_vs_stripped, vm.validation_ref, atol=0.01)
-    assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=0.01)
+        assert torch.allclose(tuned_vs_stripped, vm.validation_ref, atol=0.01)
+        assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=0.01)
