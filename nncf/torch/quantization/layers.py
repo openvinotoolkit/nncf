@@ -1072,14 +1072,15 @@ class LoraMixin:
     LORA_B_PARAM_NAME = "lora_B"
 
     def init_lora(self, lspec: PTLoraSpec):
+        self._lspec = lspec
         default_lora_dtype = torch.bfloat16
         out_features, in_features = lspec.orig_weight_shape
         rank = lspec.lora_rank
         if rank > out_features or rank > in_features:
             msg = f"Specified LoRA rank={rank} cannot exceed any dimension of the weight tensor"
             raise nncf.ValidationError(msg)
-        self._lora_A = torch.nn.Parameter(torch.ones((rank, in_features), dtype=default_lora_dtype))
-        self._lora_B = torch.nn.Parameter(torch.zeros((out_features, rank), dtype=default_lora_dtype))
+        self.lora_A = torch.nn.Parameter(torch.ones((rank, in_features), dtype=default_lora_dtype))
+        self.lora_B = torch.nn.Parameter(torch.zeros((out_features, rank), dtype=default_lora_dtype))
 
     def enable_gradients(self):
         self.lora_A.requires_grad = True
