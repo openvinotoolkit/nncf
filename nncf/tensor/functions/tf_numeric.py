@@ -388,7 +388,8 @@ def _(a: tf.Tensor, k: int = 0) -> tf.Tensor:
         elif rank == 2:
             return tf.linalg.diag_part(a, k=k)
         else:
-            raise ValueError("Input tensor must be 1D or 2D.")
+            error_msg = "Input tensor must be 1D or 2D."
+            raise ValueError(error_msg)
 
 
 @numeric.logical_or.register(tf.Tensor)
@@ -439,14 +440,16 @@ def _(a: tf.Tensor, axis: Union[int, Tuple[int, ...], List[int]]) -> np.ndarray:
         axis = (axis,)
 
     if len(set(axis)) != len(axis):
-        raise ValueError("repeated axis")
+        error_msg = "repeated axis"
+        raise ValueError(error_msg)
 
     out_ndim = len(axis) + a.ndim
 
     norm_axis = []
     for ax in axis:
         if ax < -out_ndim or ax >= out_ndim:
-            raise ValueError(f"axis {ax} is out of bounds for array of dimension {out_ndim}")
+            error_msg = f"axis {ax} is out of bounds for array of dimension {out_ndim}"
+            raise ValueError(error_msg)
         norm_axis.append(ax + out_ndim if ax < 0 else ax)
 
     shape_it = iter(a.shape)
@@ -463,9 +466,11 @@ def _(a: tf.Tensor) -> tf.Tensor:
 @numeric.searchsorted.register(tf.Tensor)
 def _(a: tf.Tensor, v: tf.Tensor, side: str = "left", sorter: Optional[tf.Tensor] = None) -> tf.Tensor:
     if side not in ["right", "left"]:
-        raise ValueError(f"Invalid value for 'side': {side}. Expected 'right' or 'left'.")
+        error_msg = f"Invalid value for 'side': {side}. Expected 'right' or 'left'."
+        raise ValueError(error_msg)
     if a.ndim != 1:
-        raise ValueError(f"Input tensor 'a' must be 1-D. Received {a.ndim}-D tensor.")
+        error_msg = f"Input tensor 'a' must be 1-D. Received {a.ndim}-D tensor."
+        raise ValueError(error_msg)
     sorted_a = tf.sort(a)
     return tf.searchsorted(sorted_sequence=sorted_a, values=v, side=side)
 
