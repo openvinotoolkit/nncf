@@ -619,6 +619,12 @@ def compress_weights(
             raise nncf.ParameterNotSupportedError(msg)
 
         compression_weights_impl = ov_compress_weights_impl
+
+    if backend == BackendType.ONNX:
+        from nncf.onnx.quantization.quantize_model import compress_weights_impl as onnx_compress_weights_impl
+
+        compression_weights_impl = onnx_compress_weights_impl
+
     check_user_compression_configuration(
         mode,
         subset_size,
