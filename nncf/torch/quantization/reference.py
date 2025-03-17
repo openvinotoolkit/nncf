@@ -121,5 +121,5 @@ class ReferenceQuantize:
 
 class ReferenceQuantizedFunctions:
     _executor = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
-    Quantize_forward = _executor.forward
-    Quantize_backward = _executor.backward
+    Quantize_forward = torch.compile(_executor.forward)
+    Quantize_backward = torch.compile(_executor.backward)
