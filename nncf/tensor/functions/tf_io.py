@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from typing import Dict, Optional
 
 import tensorflow as tf
@@ -19,10 +20,10 @@ from nncf.tensor import TensorDeviceType
 from nncf.tensor.functions import io as io
 
 
-def load_file(file_path: str, *, device: Optional[TensorDeviceType] = None) -> Dict[str, tf.Tensor]:
+def load_file(file_path: Path, *, device: Optional[TensorDeviceType] = None) -> Dict[str, tf.Tensor]:
     return tf_load_file(file_path)
 
 
 @io.save_file.register
-def _(data: Dict[str, tf.Tensor], file_path: str) -> None:
+def _(data: Dict[str, tf.Tensor], file_path: Path) -> None:
     return tf_save_file(data, file_path)

@@ -293,13 +293,13 @@ def _(
 @numeric._binary_op_nowarn.register(tf.Tensor)
 def _(a: tf.Tensor, b: Union[tf.Tensor, float], operator_fn: Callable) -> tf.Tensor:
     with tf.device(a.device):
-        return operator_fn(a, b)
+        return tf.identity(operator_fn(a, b))
 
 
 @numeric._binary_reverse_op_nowarn.register(tf.Tensor)
 def _(a: tf.Tensor, b: Union[tf.Tensor, float], operator_fn: Callable) -> tf.Tensor:
     with tf.device(a.device):
-        return operator_fn(b, a)
+        return tf.identity(operator_fn(b, a))
 
 
 @numeric.clip.register(tf.Tensor)

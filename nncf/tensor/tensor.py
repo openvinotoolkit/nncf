@@ -140,7 +140,7 @@ class Tensor:
     def __rfloordiv__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         return cast(Tensor, _call_function("_binary_reverse_op_nowarn", self, other, operator.floordiv))
 
-    def __ifloordiv__(self, other: Union[Tensor, float]) -> Tensor:
+    def __ifloordiv__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
         self._data //= unwrap_tensor_data(other)
         return self
 

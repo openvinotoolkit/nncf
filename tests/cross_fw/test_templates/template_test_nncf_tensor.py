@@ -113,8 +113,7 @@ class TemplateTestNNCFTensorOperators:
         assert res.dtype == res_nncf.data.dtype
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
-        if not (self.backend() == TensorBackend.tf and self.device() == TensorDeviceType.CPU):
-            assert res_nncf.device == nncf_tensor_a.device
+        assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
     def test_operators_int(self, op_name):
