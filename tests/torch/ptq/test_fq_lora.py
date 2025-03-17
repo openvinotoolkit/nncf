@@ -99,9 +99,6 @@ def test_checkpoint_loading(tmp_path):
     model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map="auto")
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     example_input = tokenizer("dummy", return_tensors="pt").to(device)
-    ref_output = tokenizer.decode(
-        model.generate(**example_input, do_sample=False, max_new_tokens=20)[0], skip_special_tokens=True
-    )
     except_lm_head_and_5th_vproj = (
         r"^(?!.*(GPTNeoXLayer\[2\]/GPTNeoXSdpaAttention\[attention\]/Linear\[query_key_value\]/l|embed_out).*$).*$"
     )
