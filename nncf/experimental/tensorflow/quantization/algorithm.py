@@ -35,6 +35,7 @@ from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 from nncf.experimental.tensorflow.quantization.init_range import RangeInitializerV2
 from nncf.experimental.tensorflow.quantization.init_range import TFRangeInitParamsV2
 from nncf.experimental.tensorflow.quantization.quantizers import create_quantizer
+from nncf.parameters import StripFormat
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.graph.metatypes.tf_ops import TFOpWithWeightsMetatype
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
@@ -353,7 +354,9 @@ class QuantizationBuilderV2(QuantizationBuilder):
 
 
 class QuantizationControllerV2(QuantizationController):
-    def strip_model(self, model: NNCFNetwork, do_copy: bool = False) -> NNCFNetwork:
+    def strip_model(
+        self, model: NNCFNetwork, do_copy: bool = False, strip_format: StripFormat = StripFormat.NATIVE
+    ) -> NNCFNetwork:
         if do_copy:
             model = copy_model(model)
         return model

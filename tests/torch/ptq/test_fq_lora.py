@@ -19,6 +19,7 @@ from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
 import nncf
+from nncf.parameters import StripFormat
 from nncf.torch.quantization.layers import AsymmetricQuantizer as AQ
 from nncf.torch.quantization.layers import LoraMixin
 from nncf.torch.quantization.layers import SymmetricQuantizer as SQ
@@ -123,20 +124,21 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
     assert first_loss > 8
     assert float(loss) < 1
 
-    tuned_output = generate_control_output(model, tokenizer)
+    with torch.no_grad():
+        tuned_output = generate_control_output(model, tokenizer)
 
-    # Workaround till export from the optimum would be fixed - CVS-164159
-    model = model.to(torch.float32)
+        # Workaround till export from the optimum would be fixed - CVS-164159
+        model = model.to(torch.float32)
 
-    model = nncf.strip(model)
-    stripped_output = generate_control_output(model, tokenizer)
+        model = nncf.strip(model, strip_format=StripFormat.DQ)
+        stripped_output = generate_control_output(model, tokenizer)
 
-    model = get_ov_model(model, tmp_path)
-    stripped_ov_output = generate_control_output(model, tokenizer)
+        model = get_ov_model(model, tmp_path)
+        stripped_ov_output = generate_control_output(model, tokenizer)
 
-    vm = ValidationMock()
-    tuned_vs_stripped = vm.calculate_similarity(tuned_output, stripped_output)
-    tuned_vs_stripped_ov = vm.calculate_similarity(tuned_output, stripped_ov_output)
+        vm = ValidationMock()
+        tuned_vs_stripped = vm.calculate_similarity(tuned_output, stripped_output)
+        tuned_vs_stripped_ov = vm.calculate_similarity(tuned_output, stripped_ov_output)
 
-    assert torch.allclose(tuned_vs_stripped, vm.validation_ref, atol=0.01)
-    assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=0.01)
+        assert torch.allclose(tuned_vs_stripped, vm.validation_ref, atol=0.01)
+        assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=0.01)

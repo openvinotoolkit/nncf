@@ -20,8 +20,7 @@ import nncf
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
-from nncf.experimental.torch2.commands import PT2InsertionCommand
+from nncf.parameters import StripFormat
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
@@ -31,14 +30,12 @@ from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
-from nncf.torch.quantization.layers import SymmetricLoraQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.quantize_functions import TuneRange
 
@@ -184,21 +181,26 @@ def remove_disabled_quantizers(model: NNCFNetwork) -> NNCFNetwork:
     return model
 
 
-def strip_quantized_model(model: NNCFNetwork):
+def strip_quantized_model(model: NNCFNetwork, strip_format: StripFormat = StripFormat.NATIVE):
     """
-    Returns the model with as much custom NNCF additions as possible removed
-    while still preserving the functioning of the model object as a compressed model.
+    Removes auxiliary layers and operations added during the quantization process,
+    resulting in a clean quantized model ready for deployment. The functionality of the model object is still preserved
+    as a compressed model.
 
     :param model: Compressed model.
+    :param strip format: Describes the format in which model is saved after strip.
     :return: The modified NNCF network.
     """
     model_layout = model.nncf.transformation_layout()
     transformations = model_layout.transformations
-    if any([type(q.fn) in [AsymmetricLoraQuantizer, SymmetricLoraQuantizer] for q in transformations]):
+    if strip_format == StripFormat.DQ:
         model = replace_with_decompressors(model, transformations)
-    else:
+    elif strip_format == StripFormat.NATIVE:
         model = replace_quantizer_to_torch_native_module(model)
         model = remove_disabled_quantizers(model)
+    else:
+        msg = f"Unsupported strip format: {strip_format}"
+        raise nncf.ParameterNotSupportedError(msg)
     return model
 
 
@@ -226,8 +228,16 @@ def replace_with_decompressors(model: NNCFNetwork, transformations: List[Command
     for command in transformations:
         quantizer = command.fn
 
-        if len(command.target_points) > 1:
+        msg = None
+        if not isinstance(quantizer, (SymmetricQuantizer, AsymmetricQuantizer)):
+            msg = f"Unexpected compression module on strip: {quantizer.__class__}"
+        elif quantizer._qspec.half_range or quantizer._qspec.narrow_range:
+            msg = "Unexpected parameters of quantizers on strip: half_range and narrow_range should be False."
+        elif quantizer.num_bits not in [4, 8]:
+            msg = f"Unsupported number of bits {quantizer.num_bits} for the quantizer {quantizer}"
+        elif len(command.target_points) > 1:
             msg = "Command contains more than one target point!"
+        if msg:
             raise nncf.ValidationError(msg)
 
         tp = command.target_points[0]
@@ -244,7 +254,7 @@ def replace_with_decompressors(model: NNCFNetwork, transformations: List[Command
 
         qdq_weight = quantizer.quantize(original_weight)
         if hasattr(quantizer, "_lspec"):
-            # Special reshape for LoRA-grouped output
+            # Reshape for group-wise quantization, implemented for classes with lora spec only
             qdq_weight = qdq_weight.reshape(quantizer._lspec.weight_shape)
         qdq_weight = qdq_weight.to(original_dtype)
 
@@ -283,8 +293,7 @@ def replace_with_decompressors(model: NNCFNetwork, transformations: List[Command
                     result_shape=original_shape,
                     result_dtype=original_dtype,
                 )
-
-        elif isinstance(quantizer, SymmetricQuantizer):
+        else:
             integer_dtype = torch.int8
 
             scale = quantizer.scale / abs(quantizer.level_low)
@@ -320,25 +329,13 @@ def replace_with_decompressors(model: NNCFNetwork, transformations: List[Command
                     if id(param) == id(original_weight):
                         setattr(consumer_module, name, compressed_parameter)
 
-        if is_experimental_torch_tracing_enabled():
-            transformation_layout.register(
-                PT2InsertionCommand(
-                    [
-                        PTTargetPoint(
-                            TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name.replace(".", ":")
-                        )
-                    ],
-                    decompressor,
-                )
+        decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
+        transformation_layout.register(
+            PTSharedFnInsertionCommand(
+                [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name)],
+                decompressor,
+                decompressor_name,
             )
-        else:
-            decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
-            transformation_layout.register(
-                PTSharedFnInsertionCommand(
-                    [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name)],
-                    decompressor,
-                    decompressor_name,
-                )
-            )
+        )
 
     return PTModelTransformer(model).transform(transformation_layout)

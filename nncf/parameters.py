@@ -119,6 +119,23 @@ class CompressionFormat(StrEnum):
     FQ_LORA = "fake_quantize_with_lora"
 
 
+@api(canonical_alias="nncf.StripFormat")
+class StripFormat(StrEnum):
+    """
+    Describes the format in which model is saved after strip: operation that removes auxiliary layers and
+    operations added during the compression process, resulting in a clean model ready for deployment.
+    The functionality of the model object is still preserved as a compressed model.
+
+    :param NATIVE: Returns the model with as much custom NNCF additions as possible,
+    :param DQ: Replaces FakeQuantize operations with dequantization subgraph and compressed weights in low-bit
+        precision using fake quantize parameters. This is the default format for deployment of models with compressed
+        weights.
+    """
+
+    NATIVE = "native"
+    DQ = "dequantize"
+
+
 @api(canonical_alias="nncf.BackupMode")
 class BackupMode(StrEnum):
     """

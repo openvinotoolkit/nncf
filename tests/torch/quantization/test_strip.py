@@ -22,6 +22,8 @@ from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.config import NNCFConfig
+from nncf.parameters import CompressWeightsMode
+from nncf.parameters import StripFormat
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
@@ -331,36 +333,36 @@ def test_nncf_strip_api(strip_type, do_copy):
 @pytest.mark.parametrize(
     ("mode", "torch_dtype", "atol"),
     (
-        (nncf.CompressWeightsMode.INT4_ASYM, torch.float32, 0.0005),
-        (nncf.CompressWeightsMode.INT4_ASYM, torch.float16, 0.0005),
-        (nncf.CompressWeightsMode.INT4_ASYM, torch.bfloat16, 0.01),
-        (nncf.CompressWeightsMode.INT4_SYM, torch.float32, 0.0005),
-        (nncf.CompressWeightsMode.INT4_SYM, torch.float16, 0.0005),
-        (nncf.CompressWeightsMode.INT4_SYM, torch.bfloat16, 0.01),
+        (CompressWeightsMode.INT4_ASYM, torch.float32, 5e-4),
+        (CompressWeightsMode.INT4_ASYM, torch.float16, 5e-4),
+        (CompressWeightsMode.INT4_ASYM, torch.bfloat16, 1e-2),
+        (CompressWeightsMode.INT4_SYM, torch.float32, 5e-4),
+        (CompressWeightsMode.INT4_SYM, torch.float16, 5e-4),
+        (CompressWeightsMode.INT4_SYM, torch.bfloat16, 1e-2),
+        (CompressWeightsMode.INT8_SYM, torch.bfloat16, 5e-2),  # int8 uses per-channel vs int4 group-wise
+        (CompressWeightsMode.INT8_ASYM, torch.bfloat16, 5e-2),  # int8 uses per-channel vs int4 group-wise
     ),
 )
 def test_nncf_strip_lora_model(mode, torch_dtype, atol):
     input_shape = [1, 16]
     model = LinearModel(input_shape=input_shape)
     model = model.to(torch_dtype)
+    example = torch.ones(input_shape).to(torch_dtype)
+    dataset = [example]
+
+    compression_kwargs = dict(
+        mode=mode,
+        dataset=nncf.Dataset(dataset),
+        compression_format=nncf.CompressionFormat.FQ_LORA,
+    )
+    if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
+        compression_kwargs.update(dict(ratio=1, group_size=4, all_layers=True))
+    compressed_model = nncf.compress_weights(model, **compression_kwargs)
+
     with torch.no_grad():
-        example = torch.ones(input_shape).to(torch_dtype)
-        dataset = [example]
-
-        compressed_model = nncf.compress_weights(
-            model,
-            ratio=1,
-            group_size=4,
-            mode=mode,
-            backup_mode=None,
-            dataset=nncf.Dataset(dataset),
-            all_layers=True,
-            compression_format=nncf.CompressionFormat.FQ_LORA,
-        )
-
         compressed_output = compressed_model(example)
 
-        strip_compressed_model = nncf.strip(compressed_model, do_copy=True)
+        strip_compressed_model = nncf.strip(compressed_model, do_copy=True, strip_format=StripFormat.DQ)
         stripped_output = strip_compressed_model(example)
 
         assert torch.allclose(compressed_output, stripped_output, atol=atol)
