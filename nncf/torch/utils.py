@@ -473,13 +473,13 @@ def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
 
 
 def get_weight_nodes_in_inference_grpah(
-    inference_nncf_graph: NNCFGraph, mat_mul_metatypes: List[om.PTOperatorMetatype]
+    inference_nncf_graph: NNCFGraph, mat_mul_metatypes: List[Type[om.PTOperatorMetatype]]
 ) -> List[NNCFNode]:
     """
     Returns nodes that have weights.
 
     :param nncf_graph: Instance of inference NNCFGraph,
-        wich does not contain shape of and constant subgraphs.
+        which does not contain shape of and constant subgraphs.
     :return: All nodes with weights.
     """
     weight_nodes_candidates = [
@@ -508,7 +508,7 @@ def is_matmul_with_constant_in_inference_graph(node: NNCFNode, inference_nncf_gr
     if node.metatype == om.PTLinearMetatype:
         return True
 
-    # Inference graph does not containt constans, so
+    # Inference graph does not contain constants, so
     # any missed input edge means it is a constant branch.
     return node.metatype in [om.PTMatMulMetatype, om.PTAddmmMetatype] and len(
         inference_nncf_graph.get_input_edges(node)
