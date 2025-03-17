@@ -301,7 +301,7 @@ class MinMaxAlgoBackend(ABC):
         """
         Returns nodes that have weights.
 
-        :param nncf_graph: Instance of inference NNCFGraph,
+        :param inference_nncf_graph: Instance of inference NNCFGraph,
             which does not contain shape of and constant subgraphs.
         :return: All nodes with weights.
         """
