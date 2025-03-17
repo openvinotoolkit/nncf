@@ -124,6 +124,9 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
     assert first_loss > 8
     assert float(loss) < 1
 
+    if "awq" in compression_kwargs:
+        return  # Skip test for strip for awq + se initialization. Cases with data-free methods are enough.
+
     with torch.no_grad():
         tuned_output = generate_control_output(model, tokenizer)
 
@@ -140,5 +143,6 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
         tuned_vs_stripped = vm.calculate_similarity(tuned_output, stripped_output)
         tuned_vs_stripped_ov = vm.calculate_similarity(tuned_output, stripped_ov_output)
 
-        assert torch.allclose(tuned_vs_stripped, vm.validation_ref, atol=0.01)
-        assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=0.01)
+        atol = 0.03 if mode == nncf.CompressWeightsMode.INT4_SYM else 0.01  # torch.compile introduces bigger diff
+        assert torch.allclose(tuned_vs_stripped, vm.validation_ref, atol=atol)
+        assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=atol)

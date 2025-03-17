@@ -337,7 +337,7 @@ def test_nncf_strip_api(strip_type, do_copy):
         (CompressWeightsMode.INT4_ASYM, torch.float16, 5e-4),
         (CompressWeightsMode.INT4_ASYM, torch.bfloat16, 1e-2),
         (CompressWeightsMode.INT4_SYM, torch.float32, 5e-4),
-        (CompressWeightsMode.INT4_SYM, torch.float16, 5e-4),
+        (CompressWeightsMode.INT4_SYM, torch.float16, 1e-3),  # torch.compile introduces bigger diff for sym
         (CompressWeightsMode.INT4_SYM, torch.bfloat16, 1e-2),
         (CompressWeightsMode.INT8_SYM, torch.bfloat16, 5e-2),  # int8 uses per-channel vs int4 group-wise
         (CompressWeightsMode.INT8_ASYM, torch.bfloat16, 5e-2),  # int8 uses per-channel vs int4 group-wise
