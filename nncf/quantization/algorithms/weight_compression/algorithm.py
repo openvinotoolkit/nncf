@@ -789,13 +789,13 @@ class WeightCompression(Algorithm):
         statistic_container = StatisticPointsContainer()
         # Statistics for data aware algorithms
         if self._data_aware_compression:
-            for node, output_port_id, channel_axis in nodes_and_port_ids:
+            for node, output_port_id, input_channel_axis in nodes_and_port_ids:
                 statistic_point = self._backend_entity.target_point(
                     TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
                 )
                 # Reduce activations across all but the hidden dimension.
                 n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
-                reduction_axes = tuple(set(range(n_dims)) - {channel_axis % n_dims})
+                reduction_axes = tuple(set(range(n_dims)) - {input_channel_axis % n_dims})
                 stat_collector = self._backend_entity.mean_statistic_collector(
                     reduction_axes=reduction_axes, subset_size=self._subset_size
                 )
