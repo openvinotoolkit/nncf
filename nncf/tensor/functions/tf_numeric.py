@@ -46,7 +46,7 @@ def convert_to_tf_dtype(dtype: TensorDataType) -> tf.DType:
     return DTYPE_MAP[dtype] if dtype is not None else None
 
 
-@numeric.device.register(tf.Tensor)
+@numeric.device.register
 def _(a: tf.Tensor) -> TensorDeviceType:
     if "CPU" in a.device:
         return DEVICE_MAP_REV["CPU"]
@@ -54,59 +54,59 @@ def _(a: tf.Tensor) -> TensorDeviceType:
         return DEVICE_MAP_REV["GPU"]
 
 
-@numeric.backend.register(tf.Tensor)
+@numeric.backend.register
 def _(a: tf.Tensor) -> TensorBackend:
     return TensorBackend.tf
 
 
-@numeric.squeeze.register(tf.Tensor)
+@numeric.squeeze.register
 def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Tensor:
     with tf.device(a.device):
         return tf.squeeze(a, axis)
 
 
-@numeric.flatten.register(tf.Tensor)
+@numeric.flatten.register
 def _(a: tf.Tensor) -> tf.Tensor:
     with tf.device(a.device):
         return tf.reshape(a, [-1])
 
 
-@numeric.max.register(tf.Tensor)
+@numeric.max.register
 def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> tf.Tensor:
     with tf.device(a.device):
         return tf.reduce_max(a, axis=axis, keepdims=keepdims)
 
 
-@numeric.min.register(tf.Tensor)
+@numeric.min.register
 def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> tf.Tensor:
     with tf.device(a.device):
         return tf.reduce_min(a, axis=axis, keepdims=keepdims)
 
 
-@numeric.abs.register(tf.Tensor)
+@numeric.abs.register
 def _(a: tf.Tensor) -> tf.Tensor:
     with tf.device(a.device):
         return tf.abs(a)
 
 
-@numeric.astype.register(tf.Tensor)
+@numeric.astype.register
 def _(a: tf.Tensor, dtype: TensorDataType) -> tf.Tensor:
     with tf.device(a.device):
         return tf.cast(a, DTYPE_MAP[dtype])
 
 
-@numeric.dtype.register(tf.Tensor)
+@numeric.dtype.register
 def _(a: tf.Tensor) -> TensorDataType:
     return DTYPE_MAP_REV[a.dtype]
 
 
-@numeric.reshape.register(tf.Tensor)
+@numeric.reshape.register
 def _(a: tf.Tensor, shape: Tuple[int, ...]) -> tf.Tensor:
     with tf.device(a.device):
         return tf.reshape(a, shape)
 
 
-@numeric.all.register(tf.Tensor)
+@numeric.all.register
 def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Tensor:
     with tf.device(a.device):
         if axis is None:
@@ -114,7 +114,7 @@ def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Te
         return tf.reduce_all(a, axis=axis)
 
 
-@numeric.allclose.register(tf.Tensor)
+@numeric.allclose.register
 def _(
     a: tf.Tensor, b: Union[tf.Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
 ) -> bool:
@@ -122,7 +122,7 @@ def _(
         return bool(tf.experimental.numpy.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan))
 
 
-@numeric.any.register(tf.Tensor)
+@numeric.any.register
 def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Tensor:
     with tf.device(a.device):
         if axis is None:
@@ -130,18 +130,18 @@ def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Te
         return tf.reduce_any(a, axis=axis)
 
 
-@numeric.count_nonzero.register(tf.Tensor)
+@numeric.count_nonzero.register
 def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Tensor:
     with tf.device(a.device):
         return tf.math.count_nonzero(a, axis=axis)
 
 
-@numeric.isempty.register(tf.Tensor)
+@numeric.isempty.register
 def _(a: tf.Tensor) -> bool:
     return bool(tf.equal(tf.size(a), 0))
 
 
-@numeric.isclose.register(tf.Tensor)
+@numeric.isclose.register
 def _(
     a: tf.Tensor, b: Union[tf.Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
 ) -> tf.Tensor:
@@ -149,49 +149,49 @@ def _(
         return tf.experimental.numpy.isclose(a, b, atol=atol, rtol=rtol, equal_nan=equal_nan)
 
 
-@numeric.maximum.register(tf.Tensor)
+@numeric.maximum.register
 def _(x1: tf.Tensor, x2: Union[tf.Tensor, float]) -> tf.Tensor:
     with tf.device(x1.device):
         return tf.maximum(x1, x2)
 
 
-@numeric.minimum.register(tf.Tensor)
+@numeric.minimum.register
 def _(x1: tf.Tensor, x2: Union[tf.Tensor, float]) -> tf.Tensor:
     with tf.device(x1.device):
         return tf.minimum(x1, x2)
 
 
-@numeric.ones_like.register(tf.Tensor)
+@numeric.ones_like.register
 def _(a: tf.Tensor) -> tf.Tensor:
     with tf.device(a.device):
         return tf.ones_like(a)
 
 
-@numeric.where.register(tf.Tensor)
+@numeric.where.register
 def _(condition: tf.Tensor, x: Union[tf.Tensor, float, bool], y: Union[tf.Tensor, float, bool]) -> tf.Tensor:
     with tf.device(condition.device):
         return tf.where(condition, x, y)
 
 
-@numeric.zeros_like.register(tf.Tensor)
+@numeric.zeros_like.register
 def _(a: tf.Tensor) -> tf.Tensor:
     with tf.device(a.device):
         return tf.zeros_like(a)
 
 
-@numeric.stack.register(tf.Tensor)
+@numeric.stack.register
 def _(x: List[tf.Tensor], axis: int = 0) -> tf.Tensor:
     with tf.device(x[0].device):
         return tf.stack(x, axis=axis)
 
 
-@numeric.concatenate.register(tf.Tensor)
+@numeric.concatenate.register
 def _(x: List[tf.Tensor], axis: int = 0) -> tf.Tensor:
     with tf.device(x[0].device):
         return tf.concat(x, axis=axis)
 
 
-@numeric.unstack.register(tf.Tensor)
+@numeric.unstack.register
 def _(x: tf.Tensor, axis: int = 0) -> List[tf.Tensor]:
     with tf.device(x.device):
         if not list(x.shape):
@@ -199,13 +199,13 @@ def _(x: tf.Tensor, axis: int = 0) -> List[tf.Tensor]:
         return tf.unstack(x, axis=axis)
 
 
-@numeric.moveaxis.register(tf.Tensor)
+@numeric.moveaxis.register
 def _(a: tf.Tensor, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> tf.Tensor:
     with tf.device(a.device):
         return tf.experimental.numpy.moveaxis(a, source, destination)
 
 
-@numeric.mean.register(tf.Tensor)
+@numeric.mean.register
 def _(
     a: tf.Tensor,
     axis: Union[int, Tuple[int, ...]] = None,
@@ -217,7 +217,7 @@ def _(
         return tf.reduce_mean(a, axis=axis, keepdims=keepdims)
 
 
-@numeric.median.register(tf.Tensor)
+@numeric.median.register
 def _(
     a: tf.Tensor,
     axis: Union[int, Tuple[int, ...]] = None,
@@ -250,7 +250,7 @@ def _(
         return median
 
 
-@numeric.round.register(tf.Tensor)
+@numeric.round.register
 def _(a: tf.Tensor, decimals: int = 0) -> tf.Tensor:
     scale_factor = 10**decimals
     scaled_tensor = a * scale_factor
@@ -259,13 +259,13 @@ def _(a: tf.Tensor, decimals: int = 0) -> tf.Tensor:
         return rounded_tensor / scale_factor
 
 
-@numeric.power.register(tf.Tensor)
+@numeric.power.register
 def _(a: tf.Tensor, exponent: Union[tf.Tensor, float]) -> tf.Tensor:
     with tf.device(a.device):
         return tf.pow(a, exponent)
 
 
-@numeric.quantile.register(tf.Tensor)
+@numeric.quantile.register
 def quantile(
     a: tf.Tensor,
     q: Union[float, List[float]],
@@ -278,7 +278,7 @@ def quantile(
         return tf.constant(quantile_np)
 
 
-@numeric.percentile.register(tf.Tensor)
+@numeric.percentile.register
 def _(
     a: tf.Tensor,
     q: Union[float, List[float]],
@@ -290,54 +290,54 @@ def _(
         return numeric.quantile(a, q=q, axis=axis, keepdims=keepdims)
 
 
-@numeric._binary_op_nowarn.register(tf.Tensor)
+@numeric._binary_op_nowarn.register
 def _(a: tf.Tensor, b: Union[tf.Tensor, float], operator_fn: Callable) -> tf.Tensor:
     with tf.device(a.device):
         return tf.identity(operator_fn(a, b))
 
 
-@numeric._binary_reverse_op_nowarn.register(tf.Tensor)
+@numeric._binary_reverse_op_nowarn.register
 def _(a: tf.Tensor, b: Union[tf.Tensor, float], operator_fn: Callable) -> tf.Tensor:
     with tf.device(a.device):
         return tf.identity(operator_fn(b, a))
 
 
-@numeric.clip.register(tf.Tensor)
+@numeric.clip.register
 def _(a: tf.Tensor, a_min: Union[tf.Tensor, float], a_max: Union[tf.Tensor, float]) -> tf.Tensor:
     with tf.device(a.device):
         return tf.clip_by_value(a, a_min, a_max)
 
 
-@numeric.finfo.register(tf.Tensor)
+@numeric.finfo.register
 def _(a: tf.Tensor) -> TypeInfo:
     ti = tf.experimental.numpy.finfo(a.dtype)
     return TypeInfo(ti.eps, ti.max, ti.min)
 
 
-@numeric.as_tensor_like.register(tf.Tensor)
+@numeric.as_tensor_like.register
 def _(a: tf.Tensor, data: Any) -> tf.Tensor:
     with tf.device(a.device):
         return tf.convert_to_tensor(data)
 
 
-@numeric.item.register(tf.Tensor)
+@numeric.item.register
 def _(a: tf.Tensor) -> Union[int, float, bool]:
     return a.numpy().item()
 
 
-@numeric.sum.register(tf.Tensor)
+@numeric.sum.register
 def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> tf.Tensor:
     with tf.device(a.device):
         return tf.reduce_sum(a, axis=axis, keepdims=keepdims)
 
 
-@numeric.multiply.register(tf.Tensor)
+@numeric.multiply.register
 def _(x1: tf.Tensor, x2: Union[tf.Tensor, float]) -> tf.Tensor:
     with tf.device(x1.device):
         return tf.multiply(x1, x2)
 
 
-@numeric.var.register(tf.Tensor)
+@numeric.var.register
 def _(
     a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False, ddof: int = 0
 ) -> tf.Tensor:
@@ -349,37 +349,37 @@ def _(
         return tf_var
 
 
-@numeric.size.register(tf.Tensor)
+@numeric.size.register
 def _(a: tf.Tensor) -> int:
     return tf.size(a)
 
 
-@numeric.matmul.register(tf.Tensor)
+@numeric.matmul.register
 def _(x1: tf.Tensor, x2: tf.Tensor) -> tf.Tensor:
     with tf.device(x1.device):
         return tf.matmul(x1, x2)
 
 
-@numeric.unsqueeze.register(tf.Tensor)
+@numeric.unsqueeze.register
 def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Tensor:
     with tf.device(a.device):
         return tf.expand_dims(a, axis=axis)
 
 
-@numeric.transpose.register(tf.Tensor)
+@numeric.transpose.register
 def _(a: tf.Tensor, axes: Optional[Tuple[int, ...]] = None) -> tf.Tensor:
     with tf.device(a.device):
         return tf.transpose(a, perm=axes)
 
 
-@numeric.argsort.register(tf.Tensor)
+@numeric.argsort.register
 def _(a: tf.Tensor, axis: int = -1, descending=False, stable=False) -> tf.Tensor:
     with tf.device(a.device):
         direction = "DESCENDING" if descending else "ASCENDING"
         return tf.argsort(a, axis=axis, direction=direction, stable=stable)
 
 
-@numeric.diag.register(tf.Tensor)
+@numeric.diag.register
 def _(a: tf.Tensor, k: int = 0) -> tf.Tensor:
     with tf.device(a.device):
         rank = tf.rank(a)
@@ -392,13 +392,13 @@ def _(a: tf.Tensor, k: int = 0) -> tf.Tensor:
             raise ValueError(error_msg)
 
 
-@numeric.logical_or.register(tf.Tensor)
+@numeric.logical_or.register
 def _(x1: tf.Tensor, x2: tf.Tensor) -> tf.Tensor:
     with tf.device(x1.device):
         return tf.logical_or(x1, x2)
 
 
-@numeric.masked_mean.register(tf.Tensor)
+@numeric.masked_mean.register
 def _(
     x: tf.Tensor, mask: Optional[tf.Tensor], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
 ) -> tf.Tensor:
@@ -416,7 +416,7 @@ def _(
         return ret
 
 
-@numeric.masked_median.register(tf.Tensor)
+@numeric.masked_median.register
 def _(
     x: tf.Tensor, mask: Optional[tf.Tensor], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
 ) -> tf.Tensor:
@@ -434,7 +434,7 @@ def _(
         return ret
 
 
-@numeric.expand_dims.register(tf.Tensor)
+@numeric.expand_dims.register
 def _(a: tf.Tensor, axis: Union[int, Tuple[int, ...], List[int]]) -> np.ndarray:
     if type(axis) not in (tuple, list):
         axis = (axis,)
@@ -457,13 +457,13 @@ def _(a: tf.Tensor, axis: Union[int, Tuple[int, ...], List[int]]) -> np.ndarray:
     return tf.reshape(a, shape)
 
 
-@numeric.clone.register(tf.Tensor)
+@numeric.clone.register
 def _(a: tf.Tensor) -> tf.Tensor:
     with tf.device(a.device):
         return tf.identity(a)
 
 
-@numeric.searchsorted.register(tf.Tensor)
+@numeric.searchsorted.register
 def _(a: tf.Tensor, v: tf.Tensor, side: str = "left", sorter: Optional[tf.Tensor] = None) -> tf.Tensor:
     if side not in ["right", "left"]:
         error_msg = f"Invalid value for 'side': {side}. Expected 'right' or 'left'."
@@ -526,13 +526,13 @@ def from_numpy(ndarray: np.ndarray) -> tf.Tensor:
         return tf.constant(ndarray)
 
 
-@numeric.log2.register(tf.Tensor)
+@numeric.log2.register
 def _(a: tf.Tensor) -> tf.Tensor:
     with tf.device(a.device):
         return tf.math.log(a) / tf.math.log(2.0)
 
 
-@numeric.ceil.register(tf.Tensor)
+@numeric.ceil.register
 def _(a: tf.Tensor) -> tf.Tensor:
     with tf.device(a.device):
         return tf.math.ceil(a)
