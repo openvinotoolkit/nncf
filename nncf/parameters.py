@@ -96,6 +96,29 @@ class CompressWeightsMode(StrEnum):
     E2M1 = "e2m1"
 
 
+@api(canonical_alias="nncf.CompressionFormat")
+class CompressionFormat(StrEnum):
+    """
+    Describes the format in which the model is saved after weight compression.
+
+    :param DQ: Represents the 'dequantize' format, where weights are stored in low-bit precision,
+        and a dequantization subgraph is added to the model. This is the default format for post-training weight
+        compression methods.
+    :param FQ: Represents the 'fake_quantize' format, where quantization is simulated by applying
+        quantization and dequantization operations. Weights remain in the same precision. This format is
+        suitable for quantization-aware training (QAT).
+    :param FQ_LORA: Represents the 'fake_quantize_with_lora' format, which combines fake quantization
+        with absorbable low-rank adapters (LoRA). Quantization is applied to the sum of weights and
+        the multiplication of adapters. This makes quantization-aware training (QAT) more efficient in terms of
+        accuracy, as adapters can also be tuned and remain computationally affordable during training due to their
+        small dimensions.
+    """
+
+    DQ = "dequantize"
+    FQ = "fake_quantize"
+    FQ_LORA = "fake_quantize_with_lora"
+
+
 @api(canonical_alias="nncf.BackupMode")
 class BackupMode(StrEnum):
     """

@@ -30,6 +30,7 @@ from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.parameters import BackupMode
+from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
@@ -656,6 +657,8 @@ def test_raise_error_channel_size_is_not_divisible_by_group_size():
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
+        {"compression_format": CompressionFormat.FQ},
+        {"compression_format": CompressionFormat.FQ_LORA},
         {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},
     ),
 )
@@ -667,10 +670,14 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 @pytest.mark.parametrize(
     "params",
-    ({"dataset": "anything", "lora_correction": True, "gptq": True},),
+    (
+        {"dataset": "anything", "lora_correction": True, "gptq": True},
+        {"compression_format": CompressionFormat.FQ},
+        {"compression_format": CompressionFormat.FQ_LORA},
+    ),
 )
 def test_raise_error_with_unsupported_params_for_int4(mode, params):
-    with pytest.raises(nncf.ValidationError):
+    with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(ov.Model([], []), mode=mode, **params)
 
 
