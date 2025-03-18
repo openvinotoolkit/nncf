@@ -17,7 +17,7 @@ import tensorflow as tf
 from nncf.tensor.functions import linalg
 
 
-@linalg.norm.register(tf.Tensor)
+@linalg.norm.register
 def _(
     a: tf.Tensor,
     ord: Optional[Union[str, float, int]] = None,
@@ -86,7 +86,7 @@ def _(
         return tf.linalg.norm(a, ord=ord, axis=axis, keepdims=keepdims)
 
 
-@linalg.cholesky.register(tf.Tensor)
+@linalg.cholesky.register
 def _(a: tf.Tensor, upper: bool = False) -> tf.Tensor:
     with tf.device(a.device):
         cholesky = tf.linalg.cholesky(a)
@@ -97,7 +97,7 @@ def _(a: tf.Tensor, upper: bool = False) -> tf.Tensor:
         return cholesky
 
 
-@linalg.cholesky_inverse.register(tf.Tensor)
+@linalg.cholesky_inverse.register
 def _(a: tf.Tensor, upper: bool = False) -> tf.Tensor:
     with tf.device(a.device):
         if upper:
@@ -109,19 +109,19 @@ def _(a: tf.Tensor, upper: bool = False) -> tf.Tensor:
         return tf.linalg.cholesky_solve(a, eye)
 
 
-@linalg.inv.register(tf.Tensor)
+@linalg.inv.register
 def _(a: tf.Tensor) -> tf.Tensor:
     with tf.device(a.device):
         return tf.linalg.inv(a)
 
 
-@linalg.pinv.register(tf.Tensor)
+@linalg.pinv.register
 def _(a: tf.Tensor) -> tf.Tensor:
     with tf.device(a.device):
         return tf.linalg.pinv(a)
 
 
-@linalg.lstsq.register(tf.Tensor)
+@linalg.lstsq.register
 def _(a: tf.Tensor, b: tf.Tensor, driver: Optional[str] = None) -> tf.Tensor:
     with tf.device(a.device):
         if driver is not None:
@@ -132,7 +132,7 @@ def _(a: tf.Tensor, b: tf.Tensor, driver: Optional[str] = None) -> tf.Tensor:
         return tf.linalg.lstsq(a, b)
 
 
-@linalg.svd.register(tf.Tensor)
+@linalg.svd.register
 def _(a: tf.Tensor, full_matrices: Optional[bool] = True) -> tf.Tensor:
     with tf.device(a.device):
         s, u, v = tf.linalg.svd(a, full_matrices=full_matrices)
