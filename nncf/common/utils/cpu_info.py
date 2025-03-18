@@ -9,15 +9,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import platform
 import re
 
 import cpuinfo  # type: ignore
 
+_IS_ARM_CPU = None
 _IS_LNL_CPU = None
+
+
+def is_arm_cpu() -> bool:
+    global _IS_ARM_CPU
+    if _IS_ARM_CPU is None:
+        _IS_ARM_CPU = platform.processor().lower() == "arm"
+    return _IS_ARM_CPU
 
 
 def is_lnl_cpu() -> bool:
     global _IS_LNL_CPU
     if _IS_LNL_CPU is None:
-        _IS_LNL_CPU = re.search(r"Ultra \d 2\d{2}", cpuinfo.get_cpu_info()["brand_raw"]) is not None
+        _IS_LNL_CPU = (
+            not is_arm_cpu() and re.search(r"Ultra \d 2\d{2}", cpuinfo.get_cpu_info()["brand_raw"]) is not None
+        )
     return _IS_LNL_CPU
