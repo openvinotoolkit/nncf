@@ -53,7 +53,15 @@ class TensorDataType(Enum):
         """
         :return: True if the tensor data type is a floating-point type, else False.
         """
-        return self in [TensorDataType.float16, TensorDataType.bfloat16, TensorDataType.float32, TensorDataType.float64]
+        return self in [
+            TensorDataType.float16,
+            TensorDataType.bfloat16,
+            TensorDataType.float32,
+            TensorDataType.float64,
+            TensorDataType.f8e4m3,
+            TensorDataType.f8e5m2,
+            TensorDataType.nf4,
+        ]
 
 
 class TensorDeviceType(Enum):
