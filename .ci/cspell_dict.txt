@@ -220,6 +220,7 @@ logit
 loglikelihoods
 lstmsequence
 lstsq
+lspec
 lyalyushkin
 mapillary
 maskrcnn

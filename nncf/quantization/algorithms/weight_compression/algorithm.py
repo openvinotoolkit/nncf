@@ -31,6 +31,7 @@ from nncf.common.utils.backend import get_backend
 from nncf.common.utils.helpers import create_table
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import BackupMode
+from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
@@ -45,6 +46,7 @@ from nncf.quantization.algorithms.weight_compression.scale_estimation import Sca
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
+from nncf.tensor.definitions import TensorDataType
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -55,6 +57,12 @@ NON_INT8_MODES = [
     CompressWeightsMode.INT4_ASYM,
     CompressWeightsMode.NF4,
     CompressWeightsMode.E2M1,
+]
+SUPPORTED_DATA_TYPES = [
+    TensorDataType.float16,
+    TensorDataType.bfloat16,
+    TensorDataType.float32,
+    TensorDataType.float64,
 ]
 
 
@@ -122,6 +130,7 @@ def check_user_compression_configuration(
     ignored_scope: Optional[IgnoredScope],
     sensitivity_metric: Optional[SensitivityMetric],
     backup_mode: Optional[BackupMode],
+    compression_format: Optional[CompressionFormat],
     advanced_parameters: Optional[AdvancedCompressionParameters],
 ) -> None:
     """
@@ -172,6 +181,10 @@ def check_user_compression_configuration(
             requires a dataset, but it's not provided."
         raise nncf.ValidationError(msg)
 
+    if lora_correction and compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA]:
+        msg = "LoRA Correction algorithm is not compatible with FQ and FQ_LORA compression formats."
+        raise nncf.ValidationError(msg)
+
 
 class WeightCompression(Algorithm):
     """
@@ -195,6 +208,7 @@ class WeightCompression(Algorithm):
         gptq: bool,
         lora_correction: bool,
         backup_mode: BackupMode = BackupMode.INT8_ASYM,
+        compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ):
         """
@@ -233,6 +247,7 @@ class WeightCompression(Algorithm):
                 In this mode, weights are retained in their original precision without any quantization.
             INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
             INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
+        :param compression_format: Describes the format in which the model is saved after weight compression.
         :param advanced_parameters: advanced parameters for algorithms in compression pipeline.
         """
         super().__init__()
@@ -251,6 +266,7 @@ class WeightCompression(Algorithm):
         self._gptq = gptq
         self._lora_correction = lora_correction
         self._backup_mode = backup_mode
+        self._compression_format = compression_format
         self._advanced_parameters = (
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
@@ -489,7 +505,7 @@ class WeightCompression(Algorithm):
                 continue
             for _, weight_port_id in self._backend_entity.get_weight_names_and_port_ids(node, graph):
                 weight_dtype = self._backend_entity.get_weight_dtype(node, weight_port_id, model, graph)
-                if weight_dtype.is_float():
+                if weight_dtype in SUPPORTED_DATA_TYPES:
                     continue
                 weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
                 weight_size = reduce(operator.mul, weight_shape, 1)
@@ -535,7 +551,7 @@ class WeightCompression(Algorithm):
                     continue
 
                 weight_dtype = self._backend_entity.get_weight_dtype(node, weight_port_id, model, graph)
-                if not weight_dtype.is_float():
+                if weight_dtype not in SUPPORTED_DATA_TYPES:
                     continue
                 weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
                 weight_size = reduce(operator.mul, weight_shape, 1)
@@ -646,6 +662,7 @@ class WeightCompression(Algorithm):
             scales,
             zero_points,
             lora_correction_algo,
+            self._compression_format,
         )
 
         self._backend_entity.dump_parameters(
@@ -662,6 +679,7 @@ class WeightCompression(Algorithm):
                 "gptq": self._gptq,
                 "lora_correction": self._lora_correction,
                 "backup_mode": self._backup_mode.value,
+                "compression_format": self._compression_format.value,
                 "advanced_parameters": convert_to_dict_recursively(self._advanced_parameters),
             },
             algo_name="weight_compression",

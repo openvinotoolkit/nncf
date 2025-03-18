@@ -1575,6 +1575,9 @@ class TemplateTestNNCFTensorOperators:
                 in [
                     TensorDataType.int4,
                     TensorDataType.uint4,
+                    TensorDataType.nf4,
+                    TensorDataType.f8e4m3,
+                    TensorDataType.f8e5m2,
                 ]
             ):
                 continue
@@ -1604,6 +1607,9 @@ class TemplateTestNNCFTensorOperators:
                 in [
                     TensorDataType.int4,
                     TensorDataType.uint4,
+                    TensorDataType.nf4,
+                    TensorDataType.f8e4m3,
+                    TensorDataType.f8e5m2,
                 ]
             ):
                 continue

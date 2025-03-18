@@ -14,13 +14,17 @@ import torch
 
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
+from nncf.torch.quantization.layers import PTLoraSpec
 from nncf.torch.quantization.layers import PTQuantizerSpec
 
 
-@pytest.mark.parametrize("quantizer_cls", QUANTIZATION_MODULES.values())
-def test_quantizer_layers_accepts_return_type(quantizer_cls):
+@pytest.mark.parametrize("registred", list(QUANTIZATION_MODULES.registry_dict.items()))
+def test_quantizer_layers_accepts_return_type(registred):
+    mode, quantizer_cls = registred
+
     actual_input = torch.range(0, 10)
     input_ = torch.return_types.max((actual_input, actual_input))
+
     quantizer_spec = PTQuantizerSpec(
         num_bits=8,
         mode=QuantizationMode.SYMMETRIC,
@@ -30,7 +34,12 @@ def test_quantizer_layers_accepts_return_type(quantizer_cls):
         scale_shape=(1,),
         logarithm_scale=False,
     )
-    quantizer = quantizer_cls(quantizer_spec)
+    if mode in [QuantizationMode.ASYMMETRIC_LORA, QuantizationMode.SYMMETRIC_LORA]:
+        shape = actual_input.unsqueeze(dim=0).shape
+        lora_spec = PTLoraSpec(2, shape, shape)
+        quantizer = quantizer_cls(quantizer_spec, lora_spec)
+    else:
+        quantizer = quantizer_cls(quantizer_spec)
 
     visited = False
 
