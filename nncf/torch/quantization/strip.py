@@ -10,14 +10,11 @@
 # limitations under the License.
 
 
-from typing import List
-
 import numpy as np
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
-from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.parameters import StripFormat
@@ -191,10 +188,8 @@ def strip_quantized_model(model: NNCFNetwork, strip_format: StripFormat = StripF
     :param strip format: Describes the format in which model is saved after strip.
     :return: The modified NNCF network.
     """
-    model_layout = model.nncf.transformation_layout()
-    transformations = model_layout.transformations
     if strip_format == StripFormat.DQ:
-        model = replace_with_decompressors(model, transformations)
+        model = replace_with_decompressors(model)
     elif strip_format == StripFormat.NATIVE:
         model = replace_quantizer_to_torch_native_module(model)
         model = remove_disabled_quantizers(model)
@@ -204,7 +199,7 @@ def strip_quantized_model(model: NNCFNetwork, strip_format: StripFormat = StripF
     return model
 
 
-def replace_with_decompressors(model: NNCFNetwork, transformations: List[Command]) -> NNCFNetwork:
+def replace_with_decompressors(model: NNCFNetwork) -> NNCFNetwork:
     """
     Performs transformation from fake quantize format (FQ) to dequantization one (DQ).
     The former takes floating-point input, quantizes and dequantizes, and returns a floating-point value,
@@ -222,21 +217,21 @@ def replace_with_decompressors(model: NNCFNetwork, transformations: List[Command
     :return: The modified NNCF network.
     """
     transformation_layout = TransformationLayout()
+    transformations = model.nncf.transformation_layout().transformations
     model = model.nncf.get_clean_shallow_copy()
     graph = model.nncf.get_graph()
-
     for command in transformations:
         quantizer = command.fn
 
-        msg = None
+        msg = ""
         if not isinstance(quantizer, (SymmetricQuantizer, AsymmetricQuantizer)):
-            msg = f"Unexpected compression module on strip: {quantizer.__class__}"
-        elif quantizer._qspec.half_range or quantizer._qspec.narrow_range:
-            msg = "Unexpected parameters of quantizers on strip: half_range and narrow_range should be False."
-        elif quantizer.num_bits not in [4, 8]:
-            msg = f"Unsupported number of bits {quantizer.num_bits} for the quantizer {quantizer}"
-        elif len(command.target_points) > 1:
-            msg = "Command contains more than one target point!"
+            msg = f"Unexpected compression module on strip: {quantizer.__class__}.\n"
+        if quantizer._qspec.half_range or quantizer._qspec.narrow_range:
+            msg += "Unexpected parameters of quantizers on strip: half_range and narrow_range should be False.\n"
+        if quantizer.num_bits not in [4, 8]:
+            msg += f"Unsupported number of bits {quantizer.num_bits} for the quantizer {quantizer}.\n"
+        if len(command.target_points) > 1:
+            msg += "Command contains more than one target point."
         if msg:
             raise nncf.ValidationError(msg)
 

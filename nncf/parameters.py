@@ -126,7 +126,7 @@ class StripFormat(StrEnum):
     operations added during the compression process, resulting in a clean model ready for deployment.
     The functionality of the model object is still preserved as a compressed model.
 
-    :param NATIVE: Returns the model with as much custom NNCF additions as possible,
+    :param NATIVE: Returns the model with as much custom NNCF additions as possible.
     :param DQ: Replaces FakeQuantize operations with dequantization subgraph and compressed weights in low-bit
         precision using fake quantize parameters. This is the default format for deployment of models with compressed
         weights.
