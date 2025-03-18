@@ -668,19 +668,22 @@ class WeightCompression(Algorithm):
         )
         return transformed_model
 
-    def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[NNCFNode, int]:
+    def _get_activation_node_port_and_channel(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[NNCFNode, int]:
         """
-        This method returns the activation layer and corresponding port id for the node.
+        This method returns the activation layer, corresponding port id and channel axis for the given node.
 
         :param node: NNCFGraph node for which the activation is sought.
         :param nncf_graph: NNCFGraph instance with the node.
-        :return: Tuple with the activation node and port id.
+        :return: Tuple with the activation node, port id and channel axis.
         """
         activation_port = self._backend_entity.get_activation_port_id(node, nncf_graph)
         activation_edge = nncf_graph.get_input_edge_by_port_id(node, activation_port)
         activation_node = activation_edge.from_node
         port_id = activation_edge.output_port_id
-        return activation_node, port_id
+        activation_channel_axis = self._backend_entity.get_activation_channel_axis(
+            node, port_id, activation_edge.tensor_shape
+        )
+        return activation_node, port_id, activation_channel_axis
 
     def get_matmul_input_to_output_nodes_map(
         self, matmul_nodes: List[NNCFNode], graph: NNCFGraph
@@ -701,8 +704,8 @@ class WeightCompression(Algorithm):
         """
         matmul_input_to_output_nodes_map = defaultdict(list)
         for node in matmul_nodes:
-            act_node, output_port_id = self._get_activation_node_and_port(node, graph)
-            matmul_input_to_output_nodes_map[(act_node, output_port_id)].append(node)
+            act_node, output_port_id, act_channel_axis = self._get_activation_node_port_and_channel(node, graph)
+            matmul_input_to_output_nodes_map[(act_node, output_port_id, act_channel_axis)].append(node)
         return matmul_input_to_output_nodes_map
 
     def get_compression_nodes_info(
@@ -768,19 +771,13 @@ class WeightCompression(Algorithm):
         statistic_container = StatisticPointsContainer()
         # Statistics for data aware algorithms
         if self._data_aware_compression:
-            for node, output_port_id in nodes_and_port_ids:
+            for node, output_port_id, channel_axis in nodes_and_port_ids:
                 statistic_point = self._backend_entity.target_point(
                     TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
                 )
                 # Reduce activations across all but the hidden dimension.
-                output_edge = graph.get_output_edges_by_port_id(node, output_port_id)[0]
-                node = output_edge.to_node
-                input_shape = output_edge.tensor_shape
-                input_channel_axis = self._backend_entity.get_activation_channel_axis(
-                    node, self._backend_entity.get_activation_port_id(node, graph), input_shape
-                )
-                n_dims = len(input_shape)
-                reduction_axes = tuple(set(range(n_dims)) - {input_channel_axis % n_dims})
+                n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
+                reduction_axes = tuple(set(range(n_dims)) - {channel_axis % n_dims})
                 stat_collector = self._backend_entity.mean_statistic_collector(
                     reduction_axes=reduction_axes, subset_size=self._subset_size
                 )
@@ -819,7 +816,7 @@ class WeightCompression(Algorithm):
         # Where mean_value is a 1D tensor representing an activation reduced over batch and sequence length dimensions,
         # shape is an original shape of an activation before reduction, n is the size of the dataset (or subset_size).
         statistics = {}
-        for (act_node, output_port_id), matmul_nodes in matmul_input_to_output_nodes_map.items():
+        for (act_node, output_port_id, _), matmul_nodes in matmul_input_to_output_nodes_map.items():
             tensor_collectors = list(
                 statistic_points.get_algo_statistics_for_node(
                     act_node.node_name,
