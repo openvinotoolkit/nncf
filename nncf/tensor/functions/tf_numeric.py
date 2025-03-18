@@ -12,6 +12,7 @@
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
+import numpy.typing as npt
 import tensorflow as tf
 
 from nncf.tensor import TensorDataType
@@ -38,11 +39,11 @@ DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 DEVICE_MAP_REV = {v: k for k, v in DEVICE_MAP.items()}
 
 
-def convert_to_tf_device(device: TensorDeviceType) -> str:
+def convert_to_tf_device(device: Optional[TensorDeviceType]) -> Optional[str]:
     return DEVICE_MAP[device] if device is not None else None
 
 
-def convert_to_tf_dtype(dtype: TensorDataType) -> tf.DType:
+def convert_to_tf_dtype(dtype: Optional[TensorDataType]) -> Optional[tf.DType]:
     return DTYPE_MAP[dtype] if dtype is not None else None
 
 
@@ -52,6 +53,7 @@ def _(a: tf.Tensor) -> TensorDeviceType:
         return DEVICE_MAP_REV["CPU"]
     if "GPU" in a.device:
         return DEVICE_MAP_REV["GPU"]
+    return TensorDeviceType.CPU
 
 
 @numeric.backend.register
@@ -243,7 +245,7 @@ def _(
         else:
             median = tf.gather(top_k, indices=[k - 1], axis=-1)
         median = tf.squeeze(median, axis=-1)
-        if keepdims:
+        if keepdims and axis is not None:
             for axe in sorted(axis, key=lambda x: abs(x)):
                 median = tf.expand_dims(median, axe)
 
@@ -282,22 +284,24 @@ def quantile(
 def _(
     a: tf.Tensor,
     q: Union[float, List[float]],
-    axis: Union[int, Tuple[int, ...], List[int]],
+    axis: Optional[Union[int, Tuple[int, ...]]] = None,
     keepdims: bool = False,
-) -> List[Union[tf.Tensor, np.generic]]:
+) -> tf.Tensor:
     with tf.device(a.device):
         q = [x / 100 for x in q] if isinstance(q, (list, tuple)) else q / 100
+        if isinstance(axis, list):
+            axis = tuple(axis)
         return numeric.quantile(a, q=q, axis=axis, keepdims=keepdims)
 
 
 @numeric._binary_op_nowarn.register
-def _(a: tf.Tensor, b: Union[tf.Tensor, float], operator_fn: Callable) -> tf.Tensor:
+def _(a: tf.Tensor, b: Union[tf.Tensor, float], operator_fn: Callable[[tf.Tensor, Union[tf.Tensor, float]], tf.Tensor]) -> tf.Tensor:
     with tf.device(a.device):
         return tf.identity(operator_fn(a, b))
 
 
 @numeric._binary_reverse_op_nowarn.register
-def _(a: tf.Tensor, b: Union[tf.Tensor, float], operator_fn: Callable) -> tf.Tensor:
+def _(a: tf.Tensor, b: Union[tf.Tensor, float], operator_fn: Callable[[Union[tf.Tensor, float], tf.Tensor], tf.Tensor]) -> tf.Tensor:
     with tf.device(a.device):
         return tf.identity(operator_fn(b, a))
 
@@ -435,18 +439,24 @@ def _(
 
 
 @numeric.expand_dims.register
-def _(a: tf.Tensor, axis: Union[int, Tuple[int, ...], List[int]]) -> np.ndarray:
-    if type(axis) not in (tuple, list):
-        axis = (axis,)
-
-    if len(set(axis)) != len(axis):
+def _(a: tf.Tensor, axis: Union[int, Tuple[int, ...], List[int]]) -> tf.Tensor:
+    if isinstance(axis, int):
+        axes_tuple: Tuple[int, ...] = (axis,)
+    elif isinstance(axis, list):
+        axes_tuple: Tuple[int, ...] = tuple(axis)
+    elif isinstance(axis, tuple):
+        axes_tuple: Tuple[int, ...] = axis
+    else:
+        raise TypeError(f"axis must be int, tuple, or list, got {type(axis)}")
+    
+    if len(set(axes_tuple)) != len(axes_tuple):
         error_msg = "repeated axis"
         raise ValueError(error_msg)
 
-    out_ndim = len(axis) + a.ndim
+    out_ndim = len(axes_tuple) + a.ndim
 
     norm_axis = []
-    for ax in axis:
+    for ax in axes_tuple:
         if ax < -out_ndim or ax >= out_ndim:
             error_msg = f"axis {ax} is out of bounds for array of dimension {out_ndim}"
             raise ValueError(error_msg)
@@ -481,12 +491,10 @@ def zeros(
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> tf.Tensor:
-    if dtype is not None:
-        dtype = DTYPE_MAP[dtype]
-    if device is not None:
-        device = DEVICE_MAP[device]
-    with tf.device(device):
-        return tf.zeros(shape, dtype=dtype)
+    tf_dtype = DTYPE_MAP[dtype] if dtype is not None else None
+    tf_device = DEVICE_MAP[device] if device is not None else None
+    with tf.device(tf_device):
+        return tf.zeros(shape, dtype=tf_dtype)
 
 
 def eye(
@@ -496,13 +504,11 @@ def eye(
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> tf.Tensor:
-    if dtype is not None:
-        dtype = DTYPE_MAP[dtype]
-    if device is not None:
-        device = DEVICE_MAP[device]
+    tf_dtype = DTYPE_MAP[dtype] if dtype is not None else None
+    tf_device = DEVICE_MAP[device] if device is not None else None
     p_args = (n,) if m is None else (n, m)
-    with tf.device(device):
-        return tf.eye(*p_args, dtype=dtype)
+    with tf.device(tf_device):
+        return tf.eye(*p_args, dtype=tf_dtype)
 
 
 def arange(
@@ -513,15 +519,13 @@ def arange(
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> tf.Tensor:
-    if dtype is not None:
-        dtype = DTYPE_MAP[dtype]
-    if device is not None:
-        device = DEVICE_MAP[device]
-    with tf.device(device):
-        return tf.range(start, end, step, dtype=dtype)
+    tf_dtype = DTYPE_MAP[dtype] if dtype is not None else None
+    tf_device = DEVICE_MAP[device] if device is not None else None
+    with tf.device(tf_device):
+        return tf.range(start, end, step, dtype=tf_dtype)
 
 
-def from_numpy(ndarray: np.ndarray) -> tf.Tensor:
+def from_numpy(ndarray: npt.NDArray[Any]) -> tf.Tensor:
     with tf.device("CPU"):
         return tf.constant(ndarray)
 
@@ -544,7 +548,7 @@ def tensor(
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
 ) -> tf.Tensor:
-    device = convert_to_tf_device(device)
-    dtype = convert_to_tf_dtype(dtype)
-    with tf.device(device):
-        return tf.constant(data, dtype=dtype)
+    tf_device = convert_to_tf_device(device)
+    tf_dtype = convert_to_tf_dtype(dtype)
+    with tf.device(tf_device):
+        return tf.constant(data, dtype=tf_dtype)

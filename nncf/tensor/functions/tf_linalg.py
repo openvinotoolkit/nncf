@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import warnings
-from typing import Optional, Tuple, Union
+from typing import Literal, Optional, Tuple, Union
 
 import tensorflow as tf
 
@@ -20,7 +20,7 @@ from nncf.tensor.functions import linalg
 @linalg.norm.register
 def _(
     a: tf.Tensor,
-    ord: Optional[Union[str, float, int]] = None,
+    ord: Union[Literal["fro", "nuc"], float, None] = None,
     axis: Optional[Union[int, Tuple[int, ...]]] = None,
     keepdims: bool = False,
 ) -> tf.Tensor:
