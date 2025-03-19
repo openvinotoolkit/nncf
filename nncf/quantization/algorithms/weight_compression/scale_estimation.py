@@ -117,6 +117,13 @@ class ScaleEstimation:
         scales, zero_points = dict(), dict()
 
         for wp in track(all_weight_params, description="Applying Scale Estimation"):
+            if (
+                wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
+                and not wp.node_with_weight.layer_attributes.constant_attributes[wp.weight_port_id]["transpose"]
+            ):
+                msg = "Transpose is not supported"
+                raise nncf.UnsupportedModelError(msg)
+
             weight_name = wp.weight_name
             node_name = wp.node_with_weight.node_name
             config = wp.compression_config
