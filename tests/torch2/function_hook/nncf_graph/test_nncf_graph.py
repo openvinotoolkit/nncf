@@ -11,11 +11,12 @@
 
 from dataclasses import dataclass
 from functools import partial
-from typing import List, Tuple, Union
+from typing import Callable, List, Tuple, Union
 
 import networkx as nx
 import pytest
 import torch
+import torch.nn.functional as F
 import torchvision.models as models
 
 from nncf.common.graph.layer_attributes import Dtype
@@ -24,6 +25,8 @@ from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
 from nncf.experimental.torch2.function_hook.graph.graph_utils import FunctionMeta
 from nncf.experimental.torch2.function_hook.graph.graph_utils import InOutMeta
 from nncf.experimental.torch2.function_hook.graph.graph_utils import NodeType
+from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorMeta
+from nncf.experimental.torch2.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import convert_to_nncf_graph
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import get_dtype
@@ -31,6 +34,9 @@ from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import get_node_type
 from nncf.experimental.torch2.function_hook.wrapper import register_post_function_hook
 from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.operator_metatypes import PTCatMetatype
+from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch2.function_hook import helpers
 from tests.torch2.utils import compare_with_reference_file
@@ -155,3 +161,81 @@ def test_model_graph_with_shared_parameters(regen_ref_data):
     nx_nncf_graph = nx.nx_pydot.to_pydot(graph)
     ref_file = REF_DIR / "model_graph_with_shared_parameters.dot"
     compare_with_reference_file(str(nx_nncf_graph), ref_file, regen_ref_data)
+
+
+def _missed_input_edge_for_conv() -> PTNNCFGraph:
+    graph = PTNNCFGraph()
+    graph.add_nncf_node(
+        node_name="conv",
+        node_type="conv",
+        node_metatype=PTConv2dMetatype,
+        layer_attributes=PT2OpLayerAttributes(
+            func=F.conv2d,
+            op_args=(
+                TensorMeta(shape=(1,), dtype=torch.float),
+                TensorMeta(shape=(1,), dtype=torch.float),
+            ),
+            op_kwargs={},
+            constant_port_ids=set([1]),
+        ),
+    )
+    return graph
+
+
+def _missed_input_edge_for_concat() -> PTNNCFGraph:
+    graph = PTNNCFGraph()
+    graph.add_nncf_node(
+        node_name="concat",
+        node_type="concat",
+        node_metatype=PTCatMetatype,
+        layer_attributes=PT2OpLayerAttributes(
+            func=torch.concat,
+            op_args=(
+                [
+                    TensorMeta(shape=(1,), dtype=torch.float),
+                    TensorMeta(shape=(1,), dtype=torch.float),
+                ]
+            ),
+            op_kwargs={},
+            constant_port_ids=set(),
+        ),
+    )
+    return graph
+
+
+def _no_missed_input_edge_for_conv() -> PTNNCFGraph:
+    graph = PTNNCFGraph()
+    node_input = graph.add_nncf_node("input", "input", None, None)
+    node_weight = graph.add_nncf_node("weight", "weight", None, None)
+    node_conv = graph.add_nncf_node(
+        node_name="conv",
+        node_type="conv",
+        node_metatype=PTConv2dMetatype,
+        layer_attributes=PT2OpLayerAttributes(
+            func=F.conv2d,
+            op_args=(
+                TensorMeta(shape=(1, 1, 1, 1), dtype=torch.float),
+                TensorMeta(shape=(1, 1, 1, 1), dtype=torch.float),
+            ),
+            op_kwargs={},
+            constant_port_ids=set([1]),
+        ),
+    )
+    graph.add_edge_between_nncf_nodes(node_input.node_id, node_conv.node_id, (1,), 0, 0, Dtype.FLOAT)
+    graph.add_edge_between_nncf_nodes(node_weight.node_id, node_conv.node_id, (1,), 1, 0, Dtype.FLOAT)
+    return graph
+
+
+@pytest.mark.parametrize(
+    "graph_builder, ref",
+    (
+        (_missed_input_edge_for_conv, ["conv"]),
+        (_missed_input_edge_for_concat, ["concat"]),
+        (_no_missed_input_edge_for_conv, []),
+    ),
+)
+def test_get_nodes_with_missed_input_edges(graph_builder: Callable[[], PTNNCFGraph], ref: List[str]):
+    graph = graph_builder()
+    ret = graph.get_nodes_with_missed_input_edges()
+    ret_names = [node.node_name for node in ret]
+    assert ret_names == ref
