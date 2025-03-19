@@ -11,7 +11,7 @@
 import random
 from collections import OrderedDict
 from contextlib import contextmanager
-from typing import Any, Dict, Generator, List
+from typing import Any, Dict, Generator, List, Type
 
 import numpy as np
 import torch
@@ -472,7 +472,7 @@ def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
     return dtype
 
 
-def get_weight_nodes_in_inference_grpah(
+def get_weight_nodes_in_inference_graph(
     inference_nncf_graph: NNCFGraph, mat_mul_metatypes: List[Type[om.PTOperatorMetatype]]
 ) -> List[NNCFNode]:
     """
@@ -510,6 +510,7 @@ def is_matmul_with_constant_in_inference_graph(node: NNCFNode, inference_nncf_gr
 
     # Inference graph does not contain constants, so
     # any missed input edge means it is a constant branch.
-    return node.metatype in [om.PTMatMulMetatype, om.PTAddmmMetatype] and len(
-        inference_nncf_graph.get_input_edges(node)
-    ) < len(node.metatype.weight_port_ids)
+    is_matmul_metatype = node.metatype in [om.PTMatMulMetatype, om.PTAddmmMetatype]
+    inputs_missed = 1 <= len(inference_nncf_graph.get_input_edges(node)) < len(node.metatype.weight_port_ids)
+
+    return is_matmul_metatype and inputs_missed

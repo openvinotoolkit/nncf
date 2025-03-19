@@ -51,7 +51,7 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
-from nncf.torch.utils import get_weight_nodes_in_inference_grpah
+from nncf.torch.utils import get_weight_nodes_in_inference_graph
 
 
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -342,7 +342,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return set()
 
     def get_weight_nodes(self, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        return get_weight_nodes_in_inference_grpah(inference_nncf_graph, self.mat_mul_metatypes)
+        return get_weight_nodes_in_inference_graph(inference_nncf_graph, self.mat_mul_metatypes)
 
     def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return node.metatype in self.mat_mul_metatypes and len(get_weight_tensor_port_ids(node, nncf_graph)) > 0
