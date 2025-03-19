@@ -75,7 +75,7 @@ ov_quantized_model = ov.convert_model(stripped_model)
 
 The complete information about compression is defined by a compressed model and a NNCF config.
 The model characterizes the weights and topology of the network. The NNCF config - how to restore additional modules introduced by NNCF.
-The NNCF config can be obtained by `quantized_model.nncf.get_config()` on saving and passed to the
+The NNCF config can be obtained by `nncf.torch.get_config(quantized_model)` on saving and passed to the
 `nncf.torch.load_from_config` helper function to load additional modules from the given NNCF config.
 The quantized model saving allows to load quantized modules to the target model in a new python process and
 requires only example input for the target module, corresponding NNCF config and the quantized model state dict.
@@ -84,8 +84,8 @@ requires only example input for the target module, corresponding NNCF config and
 # save part
 quantized_model = nncf.quantize(model, calibration_dataset)
 checkpoint = {
-    'state_dict':quantized_model.state_dict(),
-    'nncf_config': quantized_model.nncf.get_config(),
+    'state_dict': quantized_model.state_dict(),
+    'nncf_config': nncf.torch.get_config(quantized_model),
     ...
 }
 torch.save(checkpoint, path)

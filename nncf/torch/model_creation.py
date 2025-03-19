@@ -28,6 +28,8 @@ from nncf.config.extractors import extract_algorithm_names
 from nncf.config.extractors import has_input_info_field
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
+from nncf.experimental.torch2.function_hook.serialization import get_config as pt2_get_config
+from nncf.experimental.torch2.function_hook.serialization import load_from_config as p2_load_from_config
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
@@ -397,18 +399,43 @@ def is_wrapped_model(model: Any) -> bool:
         FunctionCallTelemetryExtractor("nncf.torch.load_from_config"),
     ],
 )
-def load_from_config(model: torch.nn.Module, config: Dict[str, Any], example_input: Any) -> NNCFNetwork:
+def load_from_config(model: Module, config: Dict[str, Any], example_input: Optional[Any] = None) -> Module:
     """
-    Wraps given model to a NNCFNetwork and recovers additional modules from given NNCFNetwork config.
+    Wraps given model and recovers additional modules from given config.
     Does not recover additional modules weights as they are located in a corresponded state_dict.
 
     :param model: PyTorch model.
     :param config: NNCNetwork config.
     :param example_input: An example input that will be used for model tracing. A tuple is interpreted
         as an example input of a set of non keyword arguments, and a dict as an example input of a set
-        of keywords arguments.
-    :return: NNCFNetwork builded from given model with additional modules recovered from given NNCFNetwork config.
+        of keywords arguments. Required with enabled legacy tracing mode.
+    :return: Wrapped model with additional modules recovered from given config.
     """
+    if is_experimental_torch_tracing_enabled():
+        return p2_load_from_config(model, config)
+
+    if example_input is None:
+        msg = "The 'example_input' parameter must be specified."
+        raise nncf.InternalError(msg)
+
     nncf_network = wrap_model(model, example_input, trace_parameters=config[NNCFNetwork.TRACE_PARAMETERS_KEY])
     transformation_layout = deserialize_transformations(config)
     return PTModelTransformer(nncf_network).transform(transformation_layout)
+
+
+@tracked_function(
+    NNCF_PT_CATEGORY,
+    [
+        FunctionCallTelemetryExtractor("nncf.torch.get_config"),
+    ],
+)
+def get_config(model: Module) -> Dict[str, Any]:
+    """
+    Returns the configuration object of the compressed model.
+
+    :param model: The compressed model.
+    :return: The configuration object of the compressed model.
+    """
+    if is_experimental_torch_tracing_enabled():
+        return pt2_get_config(model)
+    return model.nncf.get_config()
