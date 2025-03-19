@@ -325,6 +325,7 @@ def replace_with_decompressors(model: NNCFNetwork) -> NNCFNetwork:
         quantizer = command.fn
         if not isinstance(quantizer, (SymmetricQuantizer, AsymmetricQuantizer)):
             # strip is only applied to Fake Quantizers, skip all other modules, e.g. SQMultiply for AWQ
+            transformation_layout.register(command)
             continue
 
         msg = ""
@@ -340,6 +341,9 @@ def replace_with_decompressors(model: NNCFNetwork) -> NNCFNetwork:
         tp = command.target_points[0]
         node_with_weight = graph.get_node_by_name(tp.target_node_name)
         weight_node = get_const_node(node_with_weight, tp.input_port_id, graph)
+        if weight_node is None:
+            msg = "FQ is not assigned to weight. Strip to DQ format is not supported for FQ on activation."
+            raise nncf.UnsupportedModelError(msg)
         weight_name = weight_node.layer_attributes.name
         weight = get_const_data(weight_node, model)
 
