@@ -215,7 +215,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 ignored_names.add(node.node_name)
         return ignored_names
 
-    def get_weight_nodes(self, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_weight_nodes(self, nncf_grpah: NNCFGraph, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
         return [
             node
             for node in inference_nncf_graph.get_all_nodes()

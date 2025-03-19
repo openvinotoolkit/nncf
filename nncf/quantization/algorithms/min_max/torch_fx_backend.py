@@ -38,6 +38,7 @@ from nncf.quantization.range_estimator import StatisticsType
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.operator_metatypes import ELEMENTWISE_OPERATIONS
+from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
@@ -49,7 +50,8 @@ from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
-from nncf.torch.utils import get_weight_nodes_in_inference_graph
+from nncf.torch.utils import get_weight_nodes
+from nncf.torch.utils import is_matmul_with_constant
 
 
 class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -59,7 +61,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
-        return [om.PTLinearMetatype, om.PTMatMulMetatype]
+        return MATMUL_METATYPES
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -305,8 +307,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
         return set()
 
-    def get_weight_nodes(self, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        return get_weight_nodes_in_inference_graph(inference_nncf_graph, self.mat_mul_metatypes)
+    def get_weight_nodes(self, nncf_grpah: NNCFGraph, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        return get_weight_nodes(inference_nncf_graph, self.mat_mul_metatypes)
 
     def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        return node.metatype in self.mat_mul_metatypes and len(get_weight_tensor_port_ids(node, nncf_graph)) > 0
+        return is_matmul_with_constant(node, nncf_graph)
