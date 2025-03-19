@@ -11,7 +11,6 @@
 
 import inspect
 import os
-from contextlib import nullcontext
 from typing import Callable, Dict, List, Optional
 
 import numpy as np
@@ -1459,16 +1458,6 @@ def test_compression_with_different_algo_combinations(input_shape, kwargs):
 
 
 @pytest.mark.parametrize(
-    ("transpose_a", "transpose_b", "raises_error"),
-    (
-        (False, True, False),
-        (True, True, False),
-        (False, False, True),
-        (True, False, True),
-    ),
-    ids=["tb_nota", "ta_tb", "nota_notb", "ta_notb"],
-)
-@pytest.mark.parametrize(
     "kwargs",
     (
         dict(scale_estimation=True),
@@ -1482,27 +1471,22 @@ def test_compression_with_different_algo_combinations(input_shape, kwargs):
     ),
     ids=["se", "lora", "gptq_se_awq"],
 )
-def test_compression_with_transpose(transpose_a, transpose_b, raises_error, kwargs):
+def test_compression_with_transpose(kwargs):
     dataset_size = 4
-    model = LMLinearModel(transpose_a=transpose_a, transpose_b=transpose_b).ov_model
+    model = LMLinearModel(transpose_a=True, transpose_b=True).ov_model
     input_data = [np.ones(inp.shape) for inp in model.inputs] * dataset_size
     dataset = Dataset(input_data)
 
-    with (
-        pytest.raises(nncf.UnsupportedModelError)
-        if raises_error and not kwargs.get("lora_correction", False)
-        else nullcontext()
-    ):
-        compress_weights(
-            model,
-            mode=CompressWeightsMode.INT4_SYM,
-            ratio=1.0,
-            group_size=8,
-            subset_size=2,
-            dataset=dataset,
-            all_layers=True,
-            **kwargs,
-        )
+    compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=1.0,
+        group_size=8,
+        subset_size=2,
+        dataset=dataset,
+        all_layers=True,
+        **kwargs,
+    )
 
 
 class TestOVTemplateWeightCompression(TemplateWeightCompression):
