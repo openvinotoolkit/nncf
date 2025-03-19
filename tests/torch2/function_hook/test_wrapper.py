@@ -27,12 +27,11 @@ from tests.torch2.function_hook import helpers
 ADD_VALUE = 2.0
 
 
-@pytest.mark.parametrize("forward_type", ["origin", "partial", "bound"])
+@pytest.mark.parametrize("forward_type", ["origin", "partial", "bound", "fn"])
 def test_wrapper(forward_type: str):
     example_input = helpers.ConvModel.get_example_inputs()
     model = helpers.ConvModel()
     model.eval()
-    ret = model(example_input)
 
     model._old_forward = model.forward
 
@@ -49,9 +48,19 @@ def test_wrapper(forward_type: str):
             return model._old_forward(x)
 
         model.forward = types.MethodType(new_forward, model)
+    elif forward_type == "fn":
+        old_forward = model.forward
 
-    wrapped = wrap_model(model)
-    wrapped_ret = wrapped(example_input)
+        def new_forward(x):
+            return old_forward(x)
+
+        model.forward = new_forward
+
+    with torch.no_grad():
+        ret = model(example_input)
+        wrapped = wrap_model(model)
+        wrapped_ret = wrapped(example_input)
+
     torch.testing.assert_close(ret, wrapped_ret)
 
 
