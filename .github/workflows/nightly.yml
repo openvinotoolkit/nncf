@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: AlexanderDokuchaev/md-dead-link-check@c7210ef8a38c194a119834e39d212387d19b512c # v1.1.0
+      - uses: AlexanderDokuchaev/md-dead-link-check@d5a37e0b14e5918605d22b34562532762ccb2e47 # v1.2.0
 
   tensorflow:
     runs-on: ubuntu-latest-8-cores
