@@ -17,6 +17,10 @@ _IS_LNL_CPU = None
 
 
 def is_lnl_cpu() -> bool:
+    """
+    Checks whether current CPU is an Intel Lunar Lake generation or not.
+    :return: True if current CPU is an Intel Lunar Lake generation, False othwerwise.
+    """
     global _IS_LNL_CPU
     if _IS_LNL_CPU is None:
         cpu_name = ov.Core().get_property("CPU", ov.properties.device.full_name)
