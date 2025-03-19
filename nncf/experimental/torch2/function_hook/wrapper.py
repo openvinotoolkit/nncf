@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import inspect
 import types
+from functools import partial
 from types import MethodType
 from typing import Any, Callable, Dict, Tuple, TypeVar, cast
 
@@ -49,7 +50,16 @@ class ForwardWithHooks:
         return self
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        model = cast(nn.Module, self._func.__self__)  # type: ignore[attr-defined]
+        if hasattr(self._func, "__self__"):
+            # For bound method module is stored in the __self__
+            model = cast(nn.Module, self._func.__self__)  # type: ignore[attr-defined]
+        elif isinstance(self._func, partial):
+            # For using partial to override the forward method, module is stored in the args[0] and mapped to self arg.
+            model = cast(nn.Module, self._func.args[0])  # type: ignore[attr-defined]
+        else:
+            msg = "Forward function should be a bound function or partial with first argument as model."
+            raise nncf.InternalError(msg)
+
         with FunctionHookMode(model=model, hook_storage=get_hook_storage(model)) as ctx:
             args, kwargs = ctx.process_model_inputs(args, kwargs)
             outputs = self._func(*args, **kwargs)

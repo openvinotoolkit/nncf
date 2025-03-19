@@ -9,7 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import types
 from copy import deepcopy
+from functools import partial
 from pathlib import Path
 
 import onnxruntime as ort
@@ -25,11 +27,29 @@ from tests.torch2.function_hook import helpers
 ADD_VALUE = 2.0
 
 
-def test_wrapper():
+@pytest.mark.parametrize("forward_type", ["origin", "partial", "bound"])
+def test_wrapper(forward_type: str):
     example_input = helpers.ConvModel.get_example_inputs()
     model = helpers.ConvModel()
     model.eval()
     ret = model(example_input)
+
+    model._old_forward = model.forward
+
+    if forward_type == "partial":
+        # Like in accelerate module
+        def new_forward(self, x):
+            return self._old_forward(x)
+
+        model.forward = partial(new_forward, model)
+
+    elif forward_type == "methodtype":
+
+        def new_forward(self, x):
+            return model._old_forward(x)
+
+        model.forward = types.MethodType(new_forward, model)
+
     wrapped = wrap_model(model)
     wrapped_ret = wrapped(example_input)
     torch.testing.assert_close(ret, wrapped_ret)
