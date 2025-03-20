@@ -101,7 +101,7 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
 
 
-@torch.inference_mode()
+@torch.no_grad()
 def save_wwb_ref(model: torch.nn.Module, tokenizer: Any, wwb_ref_file: Path, device: torch.device) -> None:
     """
     Save the reference answers for the WWB (WhoWhatBenchmark) evaluation.
@@ -121,7 +121,7 @@ def save_wwb_ref(model: torch.nn.Module, tokenizer: Any, wwb_ref_file: Path, dev
         torch.cuda.empty_cache()
 
 
-@torch.inference_mode()
+@torch.no_grad()
 def measure_similarity(model: nn.Module, tokenizer: Any, wwb_ref_file: Path, ir_dir: Path) -> float:
     """
     Measures the similarity of a model's output to a reference outputs from a given file using WWB evaluation.
@@ -153,7 +153,7 @@ def measure_similarity(model: nn.Module, tokenizer: Any, wwb_ref_file: Path, ir_
     return float(all_metrics["similarity"].iloc[0])
 
 
-@torch.inference_mode()
+@torch.no_grad()
 def calc_hiddens(model: nn.Module, dataloader: List[Tensor]):
     """
     Calculate the hidden states for each input in the dataloader using the given model.
@@ -357,7 +357,7 @@ def main(argv):
     opt = torch.optim.AdamW(param_to_train, weight_decay=weight_decay)
     model.train()
 
-    best_similarity = 0  # measure_similarity(model, tokenizer, wwb_ref_file, last_dir)
+    best_similarity = measure_similarity(model, tokenizer, wwb_ref_file, last_dir)
     print(f"Initial WWB similarity= {best_similarity:.4f}")
 
     # Run tuning with distillation loss and validation on WWB after each epoch.
