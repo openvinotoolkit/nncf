@@ -16,7 +16,7 @@ both the quantization scales and the LoRA adapters.
 - Tuning pipeline with distillation loss. The teacher model is the original bfloat16 model, while the student model
 includes FQ operations. The training dataset is based on the training portion of the `wikitext-2-raw-v1` dataset,
 consisting of 1024 samples of length 1024. Validation is performed at the end of each epoch using
-[WhoWhatBench](https://github.com/openvinotoolkit/openvino.genai/tree/master/llm_bench/python/who_what_benchmark).
+[WhoWhatBench](https://github.com/openvinotoolkit/openvino.genai/tree/master/tools/who_what_benchmark).
 Tuning for 32 epochs on a single A100 card takes around 4 hours for 1.7B models, approximately 6 hours for 3B models,
 and about 12 hours for 8B models. The most significant accuracy improvement is typically achieved within the first
 1-2 epochs.
@@ -31,7 +31,10 @@ To use this example:
 ```bash
 pip install -U pip
 pip install -r requirements.txt
-pip install ../../../../
+pip install -e ../../../../
+pip uninstall --yes openvino-genai openvino_tokenizers openvino
+pip install openvino --pre --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release
+pip install --pre --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release whowhatbench@git+https://github.com/openvinotoolkit/openvino.genai.git#subdirectory=tools/who_what_benchmark
 ```
 
 ## Run Example

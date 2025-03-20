@@ -150,6 +150,7 @@ fxsq
 gacts
 gelsy
 gelu
+genai
 gflop
 gflops
 giga
@@ -470,6 +471,7 @@ vshampor
 vtype
 weakrefs
 weightable
+whowhatbench
 xlabel
 xnli
 xticklabels

@@ -235,12 +235,14 @@ def main(argv):
         mode=CompressWeightsMode.INT4_ASYM, group_size=64, compression_format=CompressionFormat.FQ_LORA
     )
 
-    # Initialize directories.
+    # Configure output and log files.
     output_dir = Path(args.output_dir)
     tensorboard_dir = output_dir / "tb"
     last_dir = output_dir / "last"
     best_dir = output_dir / "best"
     for path in [output_dir, tensorboard_dir, last_dir, best_dir]:
+        if not args.resume:
+            shutil.rmtree(path, ignore_errors=True)
         path.mkdir(exist_ok=True, parents=True)
     wwb_ref_file = output_dir / "wwb_ref.csv"
     ckpt_file = last_dir / "nncf_checkpoint.pth"
@@ -277,11 +279,10 @@ def main(argv):
     best_similarity = get_similarity(model, wwb_eval, last_dir)
     print(f"Initial WWB similarity= {best_similarity:.4f}")
 
-    # TODO: can avoid it?
     lm_head = deepcopy(model.lm_head)
     lm_head.requires_grad_(False)
 
-    # Training Loop
+    # Run tuning with distillation loss and validation on WWB after each epoch.
     grad_accumulation_steps = args.batch_size // args.microbatch_size
     num_samples = len(train_loader)
     epoch_samples = num_samples - num_samples % args.microbatch_size
@@ -301,7 +302,7 @@ def main(argv):
                     batch = torch.cat([inputs[i] for i in indices], dim=0).to(device=device, dtype=torch_dtype)
                 return batch
 
-            # Calculate distillation loss from teacher and student logits.
+            # Compute distillation loss between logits of the original model and the model with FQ + LoRA.
             inputs = form_batch(train_loader)
             with torch.no_grad():
                 targets = lm_head(form_batch(orig_hiddens))
@@ -311,10 +312,10 @@ def main(argv):
                         targets = targets / fls
                         targets = torch.tanh(targets)
                         targets = targets * fls
-
             outputs = model(**inputs).logits
             loss = kl_div(outputs, targets.to(dtype=torch_dtype))
 
+            # Perform an optimization step after accumulating gradients over multiple minibatches.
             loss_numerator += loss.item()
             grad_steps += 1
             if not torch.isfinite(loss).item():
@@ -328,6 +329,8 @@ def main(argv):
                 loss_numerator = grad_steps = 0
             tb.add_scalar("loss", aggregated_loss, total_microbatches)
 
+        # Export tuned model to OpenVINO and evaluate it using WWB.
+        # Save the best checkpoint and OpenVINO IR for the highest similarity score obtained from WWB.
         save_checkpoint(model, ckpt_file)
         smlr = get_similarity(model, wwb_eval, last_dir)
         print(f"[Epoch {epoch}], WWB similarity = {smlr:.4f}")
