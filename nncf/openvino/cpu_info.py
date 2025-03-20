@@ -11,13 +11,18 @@
 
 import re
 
-import cpuinfo  # type: ignore
+import openvino as ov
 
 _IS_LNL_CPU = None
 
 
 def is_lnl_cpu() -> bool:
+    """
+    Checks whether current CPU is an Intel Lunar Lake generation or not.
+    :return: True if current CPU is an Intel Lunar Lake generation, False otherwise.
+    """
     global _IS_LNL_CPU
     if _IS_LNL_CPU is None:
-        _IS_LNL_CPU = re.search(r"Ultra \d 2\d{2}", cpuinfo.get_cpu_info()["brand_raw"]) is not None
+        cpu_name = ov.Core().get_property("CPU", ov.properties.device.full_name)
+        _IS_LNL_CPU = re.search(r"Ultra \d 2\d{2}", cpu_name) is not None
     return _IS_LNL_CPU
