@@ -46,6 +46,7 @@ from nncf.quantization.algorithms.weight_compression.scale_estimation import Sca
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
+from nncf.tensor.definitions import TensorDataType
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -56,6 +57,12 @@ NON_INT8_MODES = [
     CompressWeightsMode.INT4_ASYM,
     CompressWeightsMode.NF4,
     CompressWeightsMode.E2M1,
+]
+SUPPORTED_DATA_TYPES = [
+    TensorDataType.float16,
+    TensorDataType.bfloat16,
+    TensorDataType.float32,
+    TensorDataType.float64,
 ]
 
 
@@ -160,9 +167,27 @@ def check_user_compression_configuration(
         msg = f"The ratio should be between 0 and 1, but ratio={ratio} is specified."
         raise nncf.ValidationError(msg)
 
-    if subset_size <= 0:
-        msg = f"The subset_size value should be positive, but subset_size={subset_size} is given."
-        raise nncf.ValidationError(msg)
+    values_to_check = [subset_size]
+    ranks = []
+    if advanced_parameters:
+        values_to_check.extend(
+            [
+                advanced_parameters.awq_params.subset_size,
+                advanced_parameters.scale_estimation_params.subset_size,
+                advanced_parameters.gptq_params.subset_size,
+                advanced_parameters.lora_correction_params.subset_size,
+            ]
+        )
+        ranks = [advanced_parameters.lora_adapter_rank, advanced_parameters.lora_correction_params.adapter_rank]
+    for size in values_to_check:
+        if size <= 0:
+            msg = f"The subset_size value should be positive, but subset_size={size} is given."
+            raise nncf.ValidationError(msg)
+
+    for rank in ranks:
+        if rank <= 0:
+            msg = f"The lora adapter rank should be positive, but rank={rank} is given."
+            raise nncf.ValidationError(msg)
 
     if (
         ratio
@@ -498,7 +523,7 @@ class WeightCompression(Algorithm):
                 continue
             for _, weight_port_id in self._backend_entity.get_weight_names_and_port_ids(node, graph):
                 weight_dtype = self._backend_entity.get_weight_dtype(node, weight_port_id, model, graph)
-                if weight_dtype.is_float():
+                if weight_dtype in SUPPORTED_DATA_TYPES:
                     continue
                 weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
                 weight_size = reduce(operator.mul, weight_shape, 1)
@@ -544,7 +569,7 @@ class WeightCompression(Algorithm):
                     continue
 
                 weight_dtype = self._backend_entity.get_weight_dtype(node, weight_port_id, model, graph)
-                if not weight_dtype.is_float():
+                if weight_dtype not in SUPPORTED_DATA_TYPES:
                     continue
                 weight_shape = self._backend_entity.get_weight_shape(node, weight_port_id, graph)
                 weight_size = reduce(operator.mul, weight_shape, 1)
@@ -656,6 +681,7 @@ class WeightCompression(Algorithm):
             zero_points,
             lora_correction_algo,
             self._compression_format,
+            self._advanced_parameters,
         )
 
         self._backend_entity.dump_parameters(
