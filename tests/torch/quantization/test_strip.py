@@ -9,11 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Tuple
+from typing import Any, Tuple
 
 import numpy as np
 import pytest
 import torch
+from torch import nn
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
@@ -26,6 +27,11 @@ from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.quantization.layers import AsymmetricQuantizer
+from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor as INT4AsymDQ
+from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor as INT4SymDQ
+from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor as INT8AsymDQ
+from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor as INT8SymDQ
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
@@ -330,26 +336,46 @@ def test_nncf_strip_api(strip_type, do_copy):
     assert isinstance(strip_model.nncf.external_quantizers["/nncf_model_input_0|OUTPUT"], FakeQuantize)
 
 
+def check_compression_modules(
+    model_: nn.Module,
+    expected_module_type: ExtraCompressionModuleType,
+    not_expected_module_type: ExtraCompressionModuleType,
+    expected_class: Any,
+) -> None:
+    """
+    Checks if the given model has the expected compression module registered and not the unexpected one.
+    Also verifies that the compression module is of the expected class type.
+
+    :param model_: The model to be checked, which should have an 'nncf' attribute with compression module methods.
+    :param expected_module_type: The type of the compression module that is expected to be registered.
+    :param not_expected_module_type: The type of the compression module that is not expected to be registered.
+    :param expected_class: The class type that the expected compression module should be an instance of.
+    """
+    assert model_.nncf.is_compression_module_registered(expected_module_type)
+    assert not model_.nncf.is_compression_module_registered(not_expected_module_type)
+    compression_modules_dict = model_.nncf.get_compression_modules_by_type(expected_module_type)
+    assert len(compression_modules_dict) == 1
+    compression_module = next(iter(compression_modules_dict.values()))
+    assert isinstance(compression_module, expected_class)
+
+
 @pytest.mark.parametrize(
-    ("mode", "torch_dtype", "atol"),
+    ("mode", "decompressor_class", "torch_dtype", "atol"),
     (
-        (CompressWeightsMode.INT4_ASYM, torch.float32, 5e-4),
-        (CompressWeightsMode.INT4_ASYM, torch.float16, 5e-4),
-        (CompressWeightsMode.INT4_ASYM, torch.bfloat16, 1e-2),
-        (CompressWeightsMode.INT4_SYM, torch.float32, 5e-4),
-        (CompressWeightsMode.INT4_SYM, torch.float16, 1e-3),  # torch.compile introduces bigger diff for sym
-        (CompressWeightsMode.INT4_SYM, torch.bfloat16, 1e-2),
-        (CompressWeightsMode.INT8_SYM, torch.bfloat16, 5e-2),  # int8 uses per-channel vs int4 group-wise
-        (CompressWeightsMode.INT8_ASYM, torch.bfloat16, 5e-2),  # int8 uses per-channel vs int4 group-wise
+        (CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.float32, 5e-4),
+        (CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.float16, 5e-4),
+        (CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.bfloat16, 1e-2),
+        (CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float32, 5e-4),
+        (CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float16, 1e-3),  # torch.compile introduces bigger diff for sym
+        (CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.bfloat16, 1e-2),
+        (CompressWeightsMode.INT8_SYM, INT8SymDQ, torch.bfloat16, 5e-2),  # int8 uses per-channel vs int4 group-wise
+        (CompressWeightsMode.INT8_ASYM, INT8AsymDQ, torch.bfloat16, 5e-2),  # int8 uses per-channel vs int4 group-wise
     ),
 )
-def test_nncf_strip_lora_model(mode, torch_dtype, atol):
+def test_nncf_strip_lora_model(mode, decompressor_class, torch_dtype, atol, mocker):
     input_shape = [1, 16]
-    model = LinearModel(input_shape=input_shape)
-    model = model.to(torch_dtype)
-    example = torch.ones(input_shape).to(torch_dtype)
-    dataset = [example]
-
+    model = LinearModel(input_shape=input_shape).to(torch_dtype)
+    dataset = [torch.ones(input_shape).to(torch_dtype)]
     compression_kwargs = dict(
         mode=mode,
         dataset=nncf.Dataset(dataset),
@@ -358,11 +384,26 @@ def test_nncf_strip_lora_model(mode, torch_dtype, atol):
     if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
         compression_kwargs.update(dict(ratio=1, group_size=4, all_layers=True))
     compressed_model = nncf.compress_weights(model, **compression_kwargs)
+    check_compression_modules(
+        compressed_model,
+        expected_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,
+        not_expected_module_type=ExtraCompressionModuleType.EXTERNAL_OP,
+        expected_class=BaseQuantizer,
+    )
+    assert compressed_model.linear.weight.dtype == torch_dtype
 
+    pack_weight_spy = mocker.spy(decompressor_class, "pack_weight")
     with torch.no_grad():
-        compressed_output = compressed_model(example)
-
+        compressed_output = compressed_model(dataset[0])
         strip_compressed_model = nncf.strip(compressed_model, do_copy=True, strip_format=StripFormat.DQ)
-        stripped_output = strip_compressed_model(example)
+        stripped_output = strip_compressed_model(dataset[0])
 
+        assert pack_weight_spy.call_count in [1, 2]  # pack_weight for asym is called twice: for ZP and weight
+        assert strip_compressed_model.linear.weight.dtype in [torch.uint8, torch.int8]
+        check_compression_modules(
+            strip_compressed_model,
+            expected_module_type=ExtraCompressionModuleType.EXTERNAL_OP,
+            not_expected_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,
+            expected_class=decompressor_class,
+        )
         assert torch.allclose(compressed_output, stripped_output, atol=atol)
