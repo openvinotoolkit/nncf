@@ -29,7 +29,7 @@ from nncf.config.extractors import has_input_info_field
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.experimental.torch2.function_hook.serialization import get_config as pt2_get_config
-from nncf.experimental.torch2.function_hook.serialization import load_from_config as p2_load_from_config
+from nncf.experimental.torch2.function_hook.serialization import load_from_config as pt2_load_from_config
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
@@ -412,7 +412,7 @@ def load_from_config(model: Module, config: Dict[str, Any], example_input: Optio
     :return: Wrapped model with additional modules recovered from given config.
     """
     if is_experimental_torch_tracing_enabled():
-        return p2_load_from_config(model, config)
+        return pt2_load_from_config(model, config)
 
     if example_input is None:
         msg = "The 'example_input' parameter must be specified."
