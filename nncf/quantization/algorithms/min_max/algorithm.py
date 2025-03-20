@@ -461,11 +461,11 @@ class MinMaxQuantization(Algorithm):
         
         channel_axes = ()
         if qconfig.per_channel:
-            if is_weight:
-                channel_axes = self._backend_entity.get_weight_quantization_axes(node, target_point, len(shape))
-            else:
-                channel_axes = (1,)
+            channel_axes = (
+                self._backend_entity.get_weight_quantization_axes(node, target_point, len(shape)) if is_weight else (1,)
+            )
 
+        # Weight statistics is constant, so only one collection is enough.
         range_estimator_params = self._get_range_estimator_parameters(target_point, qconfig)
         num_samples = self._subset_size if not is_weight else 1
         batchwise_statistics = batchwise_statistics and not is_weight
