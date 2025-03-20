@@ -245,9 +245,9 @@ Here is an example of Accuracy Aware Quantization pipeline where model weights a
 
 ```python
 import nncf
+import nncf.torch
 import torch
 from torchvision import datasets, models
-from nncf.torch import get_config, load_from_config
 
 # Instantiate your uncompressed model
 model = models.mobilenet_v2()
@@ -272,7 +272,7 @@ quantized_model = nncf.quantize(model, calibration_dataset)
 # Save quantization modules and the quantized model parameters
 checkpoint = {
     'state_dict': model.state_dict(),
-    'nncf_config': get_config(model),
+    'nncf_config': nncf.torch.get_config(model),
     ... # the rest of the user-defined objects to save
 }
 torch.save(checkpoint, path_to_checkpoint)
@@ -284,7 +284,7 @@ resuming_checkpoint = torch.load(path_to_checkpoint)
 nncf_config = resuming_checkpoint['nncf_config']
 state_dict = resuming_checkpoint['state_dict']
 
-quantized_model = load_from_config(model, nncf_config, example_input)
+quantized_model = nncf.torch.load_from_config(model, nncf_config, example_input)
 model.load_state_dict(state_dict)
 # ... the rest of the usual PyTorch-powered training pipeline
 ```
