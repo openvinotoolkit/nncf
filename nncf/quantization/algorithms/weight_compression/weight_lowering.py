@@ -18,7 +18,6 @@ import nncf
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.utils.backend import is_openvino_at_least
 from nncf.common.utils.backend import is_openvino_available
-from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
@@ -545,12 +544,12 @@ def quantize_dequantize_weight(
 
 
 def _can_run_optimized(input_backend: TensorBackend) -> bool:
-    # Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.
-    if input_backend in [TensorBackend.ov, TensorBackend.numpy] and (
-        not is_arm_cpu() or is_openvino_at_least("2025.2")
-    ):
+    if input_backend in [TensorBackend.ov, TensorBackend.numpy]:
         if is_openvino_available():
-            return True
+            from nncf.openvino.cpu_info import is_arm_cpu
+
+            # Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.
+            return not is_arm_cpu() or is_openvino_at_least("2025.2")
         else:
             nncf_logger.info_once(
                 "OpenVINO optimizations are disabled. Install OpenVINO to enable them and improve the performance."
