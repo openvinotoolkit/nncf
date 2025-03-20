@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.common.utils.cpu_info`
-====================================
-
-.. py:module:: nncf.common.utils.cpu_info
-
-
