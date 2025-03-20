@@ -20,20 +20,15 @@ from torch import nn
 from torch.nn import Module
 
 import nncf
-import nncf.torch.graph.operator_metatypes as om
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNodeName
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
 from nncf.common.logging import nncf_logger
 from nncf.common.scopes import matches_any
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
-from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.layer_utils import _NNCFModuleMixin
-from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.structures import ExecutionParameters
 
 
@@ -472,41 +467,3 @@ def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
         # The model had no parameters at all, assume FP32
         dtype = torch.float32
     return dtype
-
-
-def get_weight_nodes(
-    nncf_graph: NNCFGraph,
-    inference_nncf_graph: NNCFGraph,
-) -> List[NNCFNode]:
-    """
-    Returns nodes that have weights.
-
-    :param nncf_graph: Instance of inference NNCFGraph,
-        which contains shape of and constant subgraphs.
-    :param inference_nncf_graph: Instance of inference NNCFGraph,
-        which does not contain shape of and constant subgraphs.
-
-    :return: All nodes with weights.
-    """
-    weight_nodes_candidates = [
-        node
-        for node in inference_nncf_graph.get_all_nodes()
-        if issubclass(node.metatype, om.PTOperatorMetatype) and node.metatype.weight_port_ids
-    ]
-    weight_nodes = []
-    for node in weight_nodes_candidates:
-        if is_matmul_with_constant(node, nncf_graph):
-            weight_nodes.append(node)
-    return weight_nodes
-
-
-def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-    """
-    Determines whether the given node in the NNCF graph represents a matmul with a constant input.
-
-    :param node: A NNCFNode instance.
-    :param nncf_graph: Instance of inference NNCFGraph,
-        which contains shape of and constant subgraphs.
-    :return: True if given node is a matmul with a constant input, False otherwise.
-    """
-    return node.metatype in MATMUL_METATYPES and len(get_weight_tensor_port_ids(node, nncf_graph)) > 0

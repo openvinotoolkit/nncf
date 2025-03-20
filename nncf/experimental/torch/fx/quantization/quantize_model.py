@@ -87,6 +87,7 @@ def quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
+    # To make it easier for bias correction algorithms.
     apply_quantization_transformations(copied_model)
 
     nncf_graph = NNCFGraphFactory.create(copied_model)
