@@ -28,10 +28,9 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_integer_quantization_params
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_scale
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_weight
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import quantize_dequantize_weight
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorDataType
@@ -290,10 +289,14 @@ class GPTQ:
                     )
                     quantized_col = do_nf4_dequantization(compressed_weights, scales[-1], reduction_axis=-1)
                 else:
-                    compressed_weights = calculate_quantized_weight(
-                        fns.unsqueeze(weight_col, 1), block_compression_config, scales[-1], zero_points[-1]
+                    quantized_col, compressed_weights, _, _ = quantize_dequantize_weight(
+                        fns.unsqueeze(weight_col, 1),
+                        block_compression_config,
+                        reduction_axes=None,
+                        precomputed_scale=scales[-1],
+                        precomputed_zero_point=zero_points[-1],
+                        return_compressed_weight=True,
                     )
-                    quantized_col = do_int_dequantization(compressed_weights, scales[-1], zero_points[-1])
                 quantized_col = fns.flatten(quantized_col)
                 quantized_block[:, i] = quantized_col
                 loss_block[:, i] = (weight_col - quantized_col) ** 2 / hessian_diag_val**2

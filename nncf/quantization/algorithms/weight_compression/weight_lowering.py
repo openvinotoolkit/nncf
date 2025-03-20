@@ -286,41 +286,6 @@ def calculate_integer_quantization_params(
     return scale, None
 
 
-def calculate_quantized_weight(
-    weight: Tensor,
-    config: WeightCompressionConfig,
-    scale: Tensor,
-    zero_point: Optional[Tensor] = None,
-) -> Tensor:
-    """
-    Quantizes the weight tensor using the provided scale and zero point.
-
-    :param weight: Weight tensor to quantize.
-    :param config: Weight compression configuration.
-    :param scale: Scale tensor used for quantization.
-    :param zero_point: Zero point tensor used for quantization.
-    :return: Quantized weight tensor of uint8 or int8 type.
-    """
-    if weight.dtype != TensorDataType.float32:
-        weight = weight.astype(TensorDataType.float32)
-    if scale.dtype != TensorDataType.float32:
-        scale = scale.astype(TensorDataType.float32)
-
-    num_bits = config.num_bits
-    asym_quant = config.is_asym_mode
-    dtype = TensorDataType.uint8 if asym_quant else TensorDataType.int8
-    level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
-    level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
-
-    compressed_weights = weight / scale
-    if zero_point is not None:
-        compressed_weights += zero_point.astype(weight.dtype)
-    compressed_weights = fns.round(compressed_weights)
-    compressed_weights = fns.clip(compressed_weights, level_low, level_high).astype(dtype)
-
-    return compressed_weights
-
-
 def get_integer_quantization_error(
     weight: Tensor,
     reduction_axes: ReductionAxes,
@@ -493,7 +458,7 @@ def do_int_quantization(
     if precomputed_zero_point is not None:
         zero_point = precomputed_zero_point
 
-    compressed_weights = calculate_quantized_weight(weight, config, scale, zero_point)
+    compressed_weights = _calculate_quantized_weight(weight, config, scale, zero_point)
     return compressed_weights, scale, zero_point
 
 
@@ -540,6 +505,41 @@ def quantize_dequantize_weight(
         return decompressed_weight, compressed_weight, scale, zero_point
     else:
         return decompressed_weight
+
+
+def _calculate_quantized_weight(
+    weight: Tensor,
+    config: WeightCompressionConfig,
+    scale: Tensor,
+    zero_point: Optional[Tensor] = None,
+) -> Tensor:
+    """
+    Quantizes the weight tensor using the provided scale and zero point.
+
+    :param weight: Weight tensor to quantize.
+    :param config: Weight compression configuration.
+    :param scale: Scale tensor used for quantization.
+    :param zero_point: Zero point tensor used for quantization.
+    :return: Quantized weight tensor of uint8 or int8 type.
+    """
+    if weight.dtype != TensorDataType.float32:
+        weight = weight.astype(TensorDataType.float32)
+    if scale.dtype != TensorDataType.float32:
+        scale = scale.astype(TensorDataType.float32)
+
+    num_bits = config.num_bits
+    asym_quant = config.is_asym_mode
+    dtype = TensorDataType.uint8 if asym_quant else TensorDataType.int8
+    level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
+    level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
+
+    compressed_weights = weight / scale
+    if zero_point is not None:
+        compressed_weights += zero_point.astype(weight.dtype)
+    compressed_weights = fns.round(compressed_weights)
+    compressed_weights = fns.clip(compressed_weights, level_low, level_high).astype(dtype)
+
+    return compressed_weights
 
 
 def _can_run_optimized(input_backend: TensorBackend) -> bool:
