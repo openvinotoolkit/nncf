@@ -130,6 +130,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return result
 
     def get_weight(self, node_with_weight: NNCFNode, weight_port_id: int, model: ov.Model, graph: NNCFGraph) -> Tensor:
+        if not node_with_weight.layer_attributes.constant_attributes[weight_port_id]["transpose"]:
+            msg = "Only transposed weights are supported"
+            raise nncf.UnsupportedModelError(msg)
         weight_name = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["name"]
         weight_node = self.name_to_node_mapping[weight_name]
         weight_tensor = get_const_value_as_numpy_tensor(weight_node)

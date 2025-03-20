@@ -215,10 +215,7 @@ class GPTQ:
         """
         if wc_params.node_with_weight.metatype in self._backend_entity.convolution_metatypes:
             msg = "Convolution metatypes are not supported"
-            raise RuntimeError(msg)
-        if not wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]["transpose"]:
-            msg = "Transpose is not supported"
-            raise RuntimeError(msg)
+            raise nncf.UnsupportedModelError(msg)
 
         weight_tensor = self._backend_entity.get_weight(
             wc_params.node_with_weight, wc_params.weight_port_id, model, graph
