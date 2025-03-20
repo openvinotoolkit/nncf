@@ -517,3 +517,17 @@ class FunctionHookMode(TorchFunctionMode):
         self.enabled = False
         yield
         self.enabled = ret
+
+
+@contextmanager
+def disable_function_hook_mode() -> Iterator[None]:
+    """
+    Temporarily disables the function tracing and execution hooks within a context.
+    """
+    enabled_modes = torch.overrides._get_current_function_mode_stack()  # type: ignore[no-untyped-call]
+    state = {(mode, mode.enabled) for mode in enabled_modes if isinstance(mode, FunctionHookMode)}
+    for mode, _ in state:
+        mode.enabled = False
+    yield
+    for mode, enabled in state:
+        mode.enabled = enabled
