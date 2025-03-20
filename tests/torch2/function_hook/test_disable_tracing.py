@@ -16,6 +16,8 @@ from torch.overrides import _get_current_function_mode_stack
 from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
 from nncf.experimental.torch2.function_hook.graph.graph_visualization import to_pydot
 from nncf.experimental.torch2.function_hook.hook_executor_mode import FunctionHookMode
+from nncf.experimental.torch2.function_hook.hook_executor_mode import disable_function_hook_mode
+from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from nncf.torch import disable_tracing
 from tests.cross_fw.shared.paths import TEST_ROOT
@@ -24,13 +26,24 @@ from tests.torch2.utils import compare_with_reference_file
 REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "disable_tracing"
 
 
+def test_disable_function_hook_mode():
+    model = wrap_model(nn.Conv2d(1, 1, 1))
+    with FunctionHookMode(model=model, hook_storage=get_hook_storage(model)) as ctx:
+        assert ctx.enabled
+        with disable_function_hook_mode():
+            assert not ctx.enabled
+        assert ctx.enabled
+
+
 class ModelNoTrace(nn.Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, x):
         x = x + 1
-        return self.foo(x)
+        x = self.foo(x)
+        x = x - 1
+        return x
 
     def foo(self, x):
         mode = _get_current_function_mode_stack()
