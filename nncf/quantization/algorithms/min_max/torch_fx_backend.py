@@ -187,7 +187,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         channel_idx = channel_axes[0] if channel_axes else 0
 
-        if is_weights and not channel_axes:
+        if not len(channel_axes):
             scale_shape = (1,)
         else:
             scale_shape = tuple(get_scale_shape(
