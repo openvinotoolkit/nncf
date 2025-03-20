@@ -373,6 +373,6 @@ def build_graph(model: nn.Module, *args: Any, **kwargs: Any) -> nx.MultiDiGraph:
             with GraphBuilderMode(model=model, hook_storage=get_hook_storage(model)) as ctx:
                 args, kwargs = ctx.process_model_inputs(args, kwargs)
                 wrapped_forward = cast(ForwardWithHooks, model.forward)
-                outputs = wrapped_forward._func(*args, **kwargs)
+                outputs = wrapped_forward.orig_forward(*args, **kwargs)
                 outputs = ctx.process_model_outputs(outputs)
     return ctx.graph

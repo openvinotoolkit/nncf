@@ -41,6 +41,8 @@ IGNORED_FN_NAMES = [
     "size",
     "is_floating_point",
     "_set_grad_enabled",
+    "_parse_to",
+    "_has_compatible_shallow_copy_type",
 ]
 
 

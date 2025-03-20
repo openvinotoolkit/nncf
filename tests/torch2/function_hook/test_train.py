@@ -87,7 +87,7 @@ def test_train_data_parallel_with_overridden_forward_after_wrap_model():
     wrapped_model.forward = patched_forward
     optimizer = torch.optim.Adam(wrapped_model.parameters(), lr=0.1)
     parallel_model = torch.nn.DataParallel(wrapped_model)
-    with pytest.raises(nncf.InternalError, match="Not supported overridden forward method"):
+    with pytest.raises(nncf.InternalError, match="Not supported overridden forward"):
         run_one_epoch(parallel_model, optimizer, use_cuda=True)
 
 
