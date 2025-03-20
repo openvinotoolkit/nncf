@@ -44,7 +44,9 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.model_graph_manager import get_weight_channel_axes
+from nncf.torch.model_graph_manager import get_weight_nodes
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
+from nncf.torch.model_graph_manager import is_matmul_with_constant
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
@@ -52,8 +54,6 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
-from nncf.torch.utils import get_weight_nodes
-from nncf.torch.utils import is_matmul_with_constant
 
 
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -343,8 +343,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
         return set()
 
-    def get_weight_nodes(self, nncf_grpah: NNCFGraph, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        return get_weight_nodes(inference_nncf_graph, self.mat_mul_metatypes)
+    def get_weight_nodes(self, nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        return get_weight_nodes(nncf_graph, inference_nncf_graph)
 
     def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_matmul_with_constant(node, nncf_graph)

@@ -660,7 +660,7 @@ class MinMaxQuantization(Algorithm):
         hw_config = self._backend_entity.hw_config.from_json(hw_config_path)
 
         ignored_names = self._get_ignored_names(nncf_graph, inference_nncf_graph, ignored_patterns)
-        weight_nodes = self._backend_entity.get_weight_nodes(inference_nncf_graph)
+        weight_nodes = self._backend_entity.get_weight_nodes(nncf_graph, inference_nncf_graph)
 
         default_weight_qconfig = self._get_default_qconfig(self._global_quantizer_constraints[QuantizerGroup.WEIGHTS])
         weighted_node_and_qconf_lists = assign_qconfig_lists_to_modules(
