@@ -768,6 +768,10 @@ class SymmetricQuantizer(BaseQuantizer):
         self.set_levels()
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
+        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        with DisableTorchFunction():
+            # in multi-device case after loading nncf checkpoint, quantizers have a different device.
+            self.to(x.device)
         return symmetric_quantize(
             x, self.levels, self.level_low, self.level_high, self.scale, self.eps, skip=execute_traced_op_as_identity
         )
@@ -955,6 +959,10 @@ class AsymmetricQuantizer(BaseQuantizer):
         self.level_low, self.level_high = calculate_asymmetric_level_ranges(self.num_bits - scaled_num_bits)
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
+        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        with DisableTorchFunction():
+            # in multi-device case after loading nncf checkpoint, quantizers have a different device.
+            self.to(x.device)
         return asymmetric_quantize(
             x,
             self.levels,
@@ -1067,9 +1075,14 @@ class LoraMixin:
 
     def init_lora(self, lspec: PTLoraSpec):
         self._lspec = lspec
+        default_lora_dtype = torch.bfloat16
         out_features, in_features = lspec.orig_weight_shape
-        self.lora_A = torch.nn.Parameter(torch.ones((lspec.lora_rank, in_features), dtype=torch.bfloat16))
-        self.lora_B = torch.nn.Parameter(torch.zeros((out_features, lspec.lora_rank), dtype=torch.bfloat16))
+        rank = lspec.lora_rank
+        if rank > out_features or rank > in_features:
+            msg = f"Specified LoRA rank={rank} cannot exceed any dimension of the weight tensor"
+            raise nncf.ValidationError(msg)
+        self.lora_A = torch.nn.Parameter(torch.ones((rank, in_features), dtype=default_lora_dtype))
+        self.lora_B = torch.nn.Parameter(torch.zeros((out_features, rank), dtype=default_lora_dtype))
 
     def enable_gradients(self):
         self.lora_A.requires_grad = True
@@ -1097,6 +1110,10 @@ class AsymmetricLoraQuantizer(AsymmetricQuantizer, LoraMixin):
         self.init_lora(lspec)
 
     def quantize(self, x: torch.Tensor, execute_traced_op_as_identity: bool = False):
+        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        with DisableTorchFunction():
+            # in multi-device case after loading nncf checkpoint, quantizers have a different device.
+            self.to(x.device)
         return asymmetric_quantize_lora(
             x,
             self._lspec.weight_shape,
@@ -1142,6 +1159,10 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
         self.init_lora(lspec)
 
     def quantize(self, x, execute_traced_op_as_identity: bool = False):
+        # TODO: (dokuchaev) remove within new tracing (ticket-163869)
+        with DisableTorchFunction():
+            # in multi-device case after loading nncf checkpoint, quantizers have a different device.
+            self.to(x.device)
         return symmetric_quantize_lora(
             x,
             self._lspec.weight_shape,

@@ -10,16 +10,18 @@
 # limitations under the License.
 
 
+from nncf.parameters import StripFormat
 from nncf.torch.nncf_network import NNCFNetwork
 
 
-def strip(model: NNCFNetwork, do_copy: bool = True) -> NNCFNetwork:
+def strip(model: NNCFNetwork, do_copy: bool = True, strip_format: StripFormat = StripFormat.NATIVE) -> NNCFNetwork:
     """
-    Returns the model object with as much custom NNCF additions as possible removed
-    while still preserving the functioning of the model object as a compressed model.
+    Removes auxiliary layers and operations added during the compression process, resulting in a clean
+    model ready for deployment. The functionality of the model object is still preserved as a compressed model.
 
     :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
-      will return the currently associated model object "stripped" in-place.
+        will return the currently associated model object "stripped" in-place.
+    :param strip format: Describes the format in which model is saved after strip.
     :return: The stripped model.
     """
-    return model.nncf.strip(do_copy)
+    return model.nncf.strip(do_copy, strip_format)
