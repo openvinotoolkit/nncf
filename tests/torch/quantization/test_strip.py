@@ -25,6 +25,7 @@ from nncf.common.quantization.structs import QuantizationScheme as QuantizationM
 from nncf.config import NNCFConfig
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
@@ -380,6 +381,7 @@ def test_nncf_strip_lora_model(mode, decompressor_class, torch_dtype, atol, mock
         mode=mode,
         dataset=nncf.Dataset(dataset),
         compression_format=nncf.CompressionFormat.FQ_LORA,
+        advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=1),
     )
     if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
         compression_kwargs.update(dict(ratio=1, group_size=4, all_layers=True))
