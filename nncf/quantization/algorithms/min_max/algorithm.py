@@ -458,6 +458,7 @@ class MinMaxQuantization(Algorithm):
         is_weight = target_point.is_weight_target_point()
         node = graph.get_node_by_name(target_point.target_node_name)
         shape = self._backend_entity.get_target_point_shape(graph, node, target_point)
+        range_estimator_params = self._get_range_estimator_parameters(target_point, qconfig)
         
         channel_axes = ()
         if qconfig.per_channel:
@@ -466,8 +467,8 @@ class MinMaxQuantization(Algorithm):
             )
 
         # Weight statistics is constant, so only one collection is enough.
-        range_estimator_params = self._get_range_estimator_parameters(target_point, qconfig)
         num_samples = self._subset_size if not is_weight else 1
+
         batchwise_statistics = batchwise_statistics and not is_weight
 
         collector_params = RangeInitCollectorParams(
