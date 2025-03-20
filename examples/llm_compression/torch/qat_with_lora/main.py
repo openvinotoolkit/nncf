@@ -8,12 +8,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import argparse
+import datetime
 import random
 import shutil
+import sys
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 from weakref import WeakKeyDictionary
 
 import torch
@@ -35,24 +38,12 @@ import nncf
 from nncf.data.dataset import Dataset
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
+from nncf.parameters import StripFormat
 from nncf.quantization.quantize_model import compress_weights
+from nncf.torch.model_creation import load_from_config
 from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
 from nncf.torch.quantization.layers import BaseWeightsDecompressor
 from nncf.torch.quantization.layers import SymmetricLoraQuantizer
-
-MODEL_ID = "HuggingFaceTB/SmolLM-1.7B-Instruct"
-DEVICE = "cuda"
-TORCH_DTYPE = torch.bfloat16
-
-
-ROOT = Path(__file__).parent.resolve()
-OUTPUT_DIR = ROOT / "output"
-TENSORBOARD_DIR = OUTPUT_DIR / "tb"
-LAST_DIR = OUTPUT_DIR / "last"
-BEST_DIR = LAST_DIR / "best"
-for path in [OUTPUT_DIR, TENSORBOARD_DIR, LAST_DIR, BEST_DIR]:
-    path.mkdir(exist_ok=True, parents=True)
-WWB_REF_FILE = OUTPUT_DIR / "wwb_ref.csv"
 
 
 # TODO: (nlyalyus) move to Optimum-Intel (ticket 164159)
@@ -75,22 +66,20 @@ class PatchDecompressorDtype:
                 decompressor.result_dtype = torch.float32
 
     def __exit__(self, *args):
-        print("exit args=", args)
         for decompressor, dtype in self.modules_map.items():
             decompressor.result_dtype = dtype
 
 
-def get_wikitext2(nsamples, seqlen, tokenizer):
+def get_wikitext2(nsamples, seqlen, tokenizer, device):
     traindata = load_dataset("wikitext", "wikitext-2-raw-v1", split="train")
     limit = nsamples * seqlen // 4  # ~1k for 128 samples with seqlen=32 to be aligned with optimum
     text = "".join([" \n" if s == "" else s for s in traindata["text"][:limit]])
     trainenc = tokenizer(text, return_tensors="pt")
     trainloader = []
     for _ in range(nsamples):
-        i = random.randint(0, trainenc.input_ids.shape[1] - seqlen - 1)
+        i = torch.randint(0, trainenc.input_ids.shape[1] - seqlen - 1, (1,)).item()
         j = i + seqlen
-        inp = trainenc.input_ids[:, i:j].to(DEVICE)
-        # TODO: or recompute attention_mask/position_ids on tuning?
+        inp = trainenc.input_ids[:, i:j].to(device)
         attention_mask = torch.ones_like(inp)
         position_ids = torch.cumsum(attention_mask, axis=1) - 1
         trainloader.append({"input_ids": inp, "attention_mask": attention_mask, "position_ids": position_ids})
@@ -106,15 +95,18 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
 
 
-def save_wwb_ref(model, tokenizer):
-    if not WWB_REF_FILE.exists():
+def save_wwb_ref(model, tokenizer, wwb_ref_file, device):
+    print("#" * 50 + " Collect reference answers for WWB " + "#" * 50)
+    if not wwb_ref_file.exists():
+        model = model.to("cpu")  # TODO: (nlyalyus) remove when WWB will be fixed for cuda.
         wwb_eval = TextEvaluator(base_model=model, tokenizer=tokenizer, use_chat_template=True)
-        wwb_eval.dump_gt(str(WWB_REF_FILE))
+        wwb_eval.dump_gt(str(wwb_ref_file))
+        model = model.to(device)
 
 
 def get_similarity(model, wwb_eval, ir_dir):
-    print("#" * 50 + " Evaluate via WWB" + "#" * 50)
-    model = nncf.strip(model)
+    print("#" * 50 + " Evaluate via WWB " + "#" * 50)
+    model = nncf.strip(model, strip_format=StripFormat.DQ)
     with PatchDecompressorDtype(model), warnings.catch_warnings():
         warnings.simplefilter("ignore", category=TracerWarning)
         export_from_model(model.cpu(), ir_dir, patch_16bit_model=True, device="cpu")
@@ -127,17 +119,6 @@ def get_similarity(model, wwb_eval, ir_dir):
         )
     _, all_metrics = wwb_eval.score(ov_model)
     return float(all_metrics["similarity"].iloc[0])
-
-
-def print_trainable_parameters(module):
-    params = list(module.parameters())
-    trainable_params = sum(p.numel() for p in params if p.requires_grad)
-    all_param = sum(p.numel() for p in params)
-    print(
-        f"trainable params: {trainable_params:,d} || "
-        f"all params: {all_param:,d} || "
-        f"trainable%: {100 * trainable_params / all_param:.4f}"
-    )
 
 
 @torch.inference_mode()
@@ -171,71 +152,160 @@ def set_trainable(model, lora_lr, fq_lr):
             adapters = quantizer.get_adapters()
             adapters_to_train.extend(adapters.values())
             scales_to_train.extend(param for name, param in params.items() if name not in adapters)
-    print_trainable_parameters(model)
+    params = list(model.parameters())
+    trainable_params = sum(p.numel() for p in params if p.requires_grad)
+    all_param = sum(p.numel() for p in params)
+    print(
+        f"trainable params: {trainable_params:,d} || "
+        f"all params: {all_param:,d} || "
+        f"trainable%: {100 * trainable_params / all_param:.4f}"
+    )
     return [{"params": adapters_to_train, "lr": lora_lr}, {"params": scales_to_train, "lr": fq_lr}]
 
 
-def main():
+def save_checkpoint(model: nn.Module, ckpt_file: Path):
+    ckpt = {"nncf_state_dict": model.nncf.state_dict(), "nncf_config": model.nncf.get_config()}
+    torch.save(ckpt, ckpt_file)
+
+
+def load_checkpoint(model: nn.Module, example_input: Any, ckpt_file: Path):
+    """
+    Load the state of a tuned model from a checkpoint. This function restores the placement of Fake Quantizers (FQs)
+    with absorbable LoRA adapters and loads their parameters.
+
+    :param model: The model to load the checkpoint into.
+    :param example_input: An example input that will be used for model tracing. It's required to insert and run FQs.
+    :param ckpt_file: Path to the checkpoint file.
+    :returns: The model with the loaded NNCF state from checkpoint.
+    """
+    ckpt = torch.load(ckpt_file, weights_only=False)
+    model = load_from_config(model, ckpt["nncf_config"], example_input=example_input)
+    model.nncf.load_state_dict(ckpt["nncf_state_dict"])
+    return model
+
+
+def get_argument_parser():
+    parser = argparse.ArgumentParser(add_help=True)
+
+    # Model params
+    parser.add_argument(
+        "--pretrained_model",
+        type=str,
+        default="HuggingFaceTB/SmolLM-1.7B-Instruct",
+        help="The model id or path of a pretrained HF model configuration.",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="output",
+        help="Path to the directory for storing logs, tuning checkpoint, compressed model, validation references.",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Whether to start from previously saved checkpoint. If not specified or checkpoint does not exist, "
+        "start from scratch by post-training weight compression initializion.",
+    )
+
+    # Data params
+    parser.add_argument("--nsamples", type=int, default=1024, help="Number of training samples")
+    parser.add_argument("--seqlen", type=int, default=1024, help="Calibration data context length.")
+
+    # Training params
+    parser.add_argument("--lr", type=float, default=1e-4, help="Finetuning learning rate.")
+    parser.add_argument("--epochs", type=int, default=32, help="Number of epochs.")
+    parser.add_argument("--batch_size", type=int, default=32, help="Size of training batch.")
+    parser.add_argument(
+        "--microbatch_size",
+        type=int,
+        default=2,
+        help="Size of each training microbatch. Gradients will be accumulated until the batch size is reached.",
+    )
+    return parser
+
+
+def main(argv):
+    parser = get_argument_parser()
+    args = parser.parse_args(argv)
     assert torch.cuda.is_available()
     set_seed(42)
+    device = "cuda"
+    torch_dtype = torch.bfloat16
+    compression_config = dict(
+        mode=CompressWeightsMode.INT4_ASYM, group_size=64, compression_format=CompressionFormat.FQ_LORA
+    )
 
-    model = AutoModelForCausalLM.from_pretrained(MODEL_ID, torch_dtype=TORCH_DTYPE, device_map=DEVICE)
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+    # Initialize directories.
+    output_dir = Path(args.output_dir)
+    tensorboard_dir = output_dir / "tb"
+    last_dir = output_dir / "last"
+    best_dir = output_dir / "best"
+    for path in [output_dir, tensorboard_dir, last_dir, best_dir]:
+        path.mkdir(exist_ok=True, parents=True)
+    wwb_ref_file = output_dir / "wwb_ref.csv"
+    ckpt_file = last_dir / "nncf_checkpoint.pth"
+    tb = SummaryWriter(tensorboard_dir / datetime.now().strftime("%D-%T"), "QAT with absorbable LoRA")
 
-    save_wwb_ref(model, tokenizer)
+    # Load original model and tokenizer.
+    model = AutoModelForCausalLM.from_pretrained(args.model_id, torch_dtype=torch_dtype, device_map=device)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_id)
 
-    train_loader = get_wikitext2(nsamples=1024, seqlen=1024, tokenizer=tokenizer)
+    # Use WhoWhatBench tool is for validation during tuning. It estimates the similarity score between embedding
+    # computed by for data generated by two models, original floating-point one and optimized.
+    save_wwb_ref(model, tokenizer, wwb_ref_file, device)
+    wwb_eval = TextEvaluator(
+        tokenizer=tokenizer, gt_data=wwb_ref_file, test_data=str(wwb_ref_file), use_chat_template=True
+    )
+
+    # Prepare training data and pre-compute hiddens of teacher model for distillation loss.
+    train_loader = get_wikitext2(nsamples=args.nsamples, seqlen=args.seqlen, tokenizer=tokenizer, device=device)
     orig_hiddens = calc_hiddens(model, train_loader)
 
+    # Create or load model to tune with Fake Quantizers and absorbable LoRA adapters.
     example_input = train_loader[0]
-    model = compress_weights(
-        model,
-        mode=CompressWeightsMode.INT4_ASYM,
-        group_size=64,
-        dataset=Dataset([example_input]),
-        compression_format=CompressionFormat.FQ_LORA,
-    )
+    if args.resume and ckpt_file.exists():
+        model = load_checkpoint(model, example_input, ckpt_file)
+    else:
+        model = compress_weights(model, dataset=Dataset([example_input]), **compression_config)
+        save_checkpoint(model, ckpt_file)
+    fq_lr = args.lr / 10
+    weight_decay = args.lr
+    param_to_train = set_trainable(model, lora_lr=args.lr, fq_lr=fq_lr)
+    opt = torch.optim.AdamW(param_to_train, weight_decay=weight_decay)
+    model.train()
 
-    microbatch_size = 2
-    batch_size = 32
-    grad_accumulation_steps = batch_size // microbatch_size
-    num_samples = len(train_loader)
-    epoch_samples = num_samples - num_samples % microbatch_size
-    microbatches_per_epoch = epoch_samples // microbatch_size
+    best_similarity = get_similarity(model, wwb_eval, last_dir)
+    print(f"Initial WWB similarity= {best_similarity:.4f}")
 
-    tb = SummaryWriter(TENSORBOARD_DIR, "QAT with absorbable LoRA")
-
-    wwb_eval = TextEvaluator(
-        tokenizer=tokenizer, gt_data=WWB_REF_FILE, test_data=str(WWB_REF_FILE), use_chat_template=True
-    )
-    best_similarity = get_similarity(model, wwb_eval, LAST_DIR)
-    print(f"WWB similarity for initial 4bit model= {best_similarity:.4f}")
+    # TODO: can avoid it?
     lm_head = deepcopy(model.lm_head)
     lm_head.requires_grad_(False)
 
-    param_to_train = set_trainable(model, lora_lr=5e-4, fq_lr=5e-5)
-    opt = torch.optim.AdamW(param_to_train, weight_decay=5e-4)
-    model.train()
-
+    # Training Loop
+    grad_accumulation_steps = args.batch_size // args.microbatch_size
+    num_samples = len(train_loader)
+    epoch_samples = num_samples - num_samples % args.microbatch_size
+    microbatches_per_epoch = epoch_samples // args.microbatch_size
     aggregated_loss = float("nan")
     loss_numerator = grad_steps = total_microbatches = 0
-    for epoch in range(32):
+    for epoch in range(args.epochs):
         batch_indices_epoch = torch.randperm(num_samples)[:epoch_samples].chunk(microbatches_per_epoch)
-        for batch_indices in tqdm(batch_indices_epoch, desc=f"Train epoch {epoch}", leave=[False]):
-            batch_indices = batch_indices.tolist()
+        for indices in tqdm(batch_indices_epoch, desc=f"Train epoch {epoch}", leave=[False]):
+            indices = indices.tolist()
             total_microbatches += 1
 
-            def form_batch(inputs: List[Union[Dict[str, Tensor], Tensor]], indices: List[int]):
+            def form_batch(inputs: List[Union[Dict[str, Tensor], Tensor]]):
                 if isinstance(inputs[0], dict):
                     batch = {name: torch.cat([inputs[i][name] for i in indices], dim=0) for name in inputs[0]}
                 else:
-                    batch = torch.cat([inputs[i] for i in indices], dim=0).to(device=DEVICE, dtype=TORCH_DTYPE)
+                    batch = torch.cat([inputs[i] for i in indices], dim=0).to(device=device, dtype=torch_dtype)
                 return batch
 
-            inputs = form_batch(train_loader, batch_indices)
+            # Calculate distillation loss from teacher and student logits.
+            inputs = form_batch(train_loader)
             with torch.no_grad():
-                targets = lm_head(form_batch(orig_hiddens, batch_indices))
-                if hasattr(model.config, "final_logit_softcapping"):  # Gemma
+                targets = lm_head(form_batch(orig_hiddens))
+                if hasattr(model.config, "final_logit_softcapping"):  # Gemma has post-processing after lm_head
                     fls = model.config.final_logit_softcapping
                     if fls is not None:
                         targets = targets / fls
@@ -243,35 +313,32 @@ def main():
                         targets = targets * fls
 
             outputs = model(**inputs).logits
-            loss = kl_div(outputs, targets.to(dtype=TORCH_DTYPE))
+            loss = kl_div(outputs, targets.to(dtype=torch_dtype))
 
             loss_numerator += loss.item()
             grad_steps += 1
-
             if not torch.isfinite(loss).item():
                 err = f"Fine-tuning loss is {loss}"
                 raise ValueError(err)
-
             (loss / grad_accumulation_steps).backward()
-
             if grad_steps == grad_accumulation_steps:
                 opt.step()
                 opt.zero_grad()
                 aggregated_loss = loss_numerator / grad_steps
                 loss_numerator = grad_steps = 0
-
             tb.add_scalar("loss", aggregated_loss, total_microbatches)
 
-        smlr = get_similarity(model, wwb_eval, LAST_DIR)
-        print(f"WWB similarity = {smlr:.4f}")
+        save_checkpoint(model, ckpt_file)
+        smlr = get_similarity(model, wwb_eval, last_dir)
+        print(f"[Epoch {epoch}], WWB similarity = {smlr:.4f}")
         tb.add_scalar("similarity", smlr, total_microbatches)
         if smlr > best_similarity:
             print(f"New best WWB similarity = {smlr:.4f}")
             best_similarity = smlr
-            shutil.copytree(LAST_DIR, BEST_DIR, dirs_exist_ok=True)
+            shutil.copytree(last_dir, best_dir, dirs_exist_ok=True)
 
-    print(f"Finetuned OV model has similarity={best_similarity} and is located here: {BEST_DIR}")
+    print(f"The finetuned OV model with the best similarity={best_similarity} saved to: {best_dir}")
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
