@@ -423,7 +423,7 @@ need to keep track of statistics on each training batch/step/iteration.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="nncf.torch.quantization.algo.QuantizationController.strip_model">
-<span class="sig-name descname"><span class="pre">strip_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/quantization/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.quantization.algo.QuantizationController.strip_model" title="Permalink to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">strip_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">StripFormat.NATIVE</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/quantization/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.quantization.algo.QuantizationController.strip_model" title="Permalink to this definition">#</a></dt>
 <dd><p>Strips auxiliary layers that were used for the model compression, as it’s
 only needed for training. The method is used before exporting the model
 in the target format.</p>
@@ -432,6 +432,8 @@ in the target format.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>model</strong> (<em>nncf.torch.nncf_network.NNCFNetwork</em>) – The compressed model.</p></li>
 <li><p><strong>do_copy</strong> (<em>bool</em>) – Modify copy of the model, defaults to False.</p></li>
+<li><p><strong>format</strong> (<em>strip</em>) – Describes the format in which model is saved after strip.</p></li>
+<li><p><strong>strip_format</strong> (<em>nncf.parameters.StripFormat</em>) – </p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>

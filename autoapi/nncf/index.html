@@ -400,19 +400,22 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.SensitivityMetric" title="nncf.SensitivityMetric"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SensitivityMetric</span></code></a></p></td>
 <td><p>Defines a sensitivity metric for assigning quantization precision to layers. In order to</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.TargetDevice" title="nncf.TargetDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.StripFormat" title="nncf.StripFormat"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StripFormat</span></code></a></p></td>
+<td><p>Describes the format in which model is saved after strip: operation that removes auxiliary layers and</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.TargetDevice" title="nncf.TargetDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></p></td>
 <td><p>Target device architecture for compression.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.QuantizationPreset" title="nncf.QuantizationPreset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.QuantizationPreset" title="nncf.QuantizationPreset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></p></td>
 <td><p>An enum with values corresponding to the available quantization presets.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.OverflowFix" title="nncf.OverflowFix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OverflowFix</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.OverflowFix" title="nncf.OverflowFix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OverflowFix</span></code></a></p></td>
 <td><p>This option controls whether to apply the overflow issue fix for the 8-bit</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
 <td><p>Provides an option to specify portions of model to be excluded from compression.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.Subgraph" title="nncf.Subgraph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Subgraph</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.Subgraph" title="nncf.Subgraph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Subgraph</span></code></a></p></td>
 <td><p>Defines the ignored subgraph as follows: A subgraph comprises all nodes along</p></td>
 </tr>
 </tbody>
@@ -424,8 +427,8 @@
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.strip" title="nncf.strip"><code class="xref py py-obj docutils literal notranslate"><span class="pre">strip</span></code></a>(model[, do_copy])</p></td>
-<td><p>Returns the model object with as much custom NNCF additions as possible removed</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.strip" title="nncf.strip"><code class="xref py py-obj docutils literal notranslate"><span class="pre">strip</span></code></a>(model[, do_copy, strip_format])</p></td>
+<td><p>Removes auxiliary layers and operations added during the compression process, resulting in a clean</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#nncf.compress_weights" title="nncf.compress_weights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compress_weights</span></code></a>(model[, mode, ratio, group_size, ...])</p></td>
 <td><p>Compress model weights.</p></td>
@@ -441,15 +444,17 @@
 </div>
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.strip">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">strip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/strip.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.strip" title="Permalink to this definition">#</a></dt>
-<dd><p>Returns the model object with as much custom NNCF additions as possible removed
-while still preserving the functioning of the model object as a compressed model.</p>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">strip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_copy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">StripFormat.NATIVE</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/strip.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.strip" title="Permalink to this definition">#</a></dt>
+<dd><p>Removes auxiliary layers and operations added during the compression process, resulting in a clean
+model ready for deployment. The functionality of the model object is still preserved as a compressed model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>model</strong> (<em>TModel</em>) – The compressed model.</p></li>
 <li><p><strong>do_copy</strong> (<em>bool</em>) – If True (default), will return a copy of the currently associated model object. If False,
 will return the currently associated model object “stripped” in-place.</p></li>
+<li><p><strong>format</strong> (<em>strip</em>) – Describes the format in which model is saved after strip.</p></li>
+<li><p><strong>strip_format</strong> (<em>nncf.parameters.StripFormat</em>) – </p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -799,6 +804,25 @@ multiplied by inverted 8-bit quantization noise.</p></li>
 multiplied by inverted 8-bit quantization noise.</p></li>
 <li><p><strong>MEAN_ACTIVATION_MAGNITUDE</strong> – The mean magnitude of the layers’ inputs
 multiplied by inverted 8-bit quantization noise.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="nncf.StripFormat">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">StripFormat</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.StripFormat" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">StrEnum</span></code></p>
+<p>Describes the format in which model is saved after strip: operation that removes auxiliary layers and
+operations added during the compression process, resulting in a clean model ready for deployment.
+The functionality of the model object is still preserved as a compressed model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>NATIVE</strong> – Returns the model with as much custom NNCF additions as possible.</p></li>
+<li><p><strong>DQ</strong> – Replaces FakeQuantize operations with dequantization subgraph and compressed weights in low-bit
+precision using fake quantize parameters. This is the default format for deployment of models with compressed
+weights.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1155,6 +1179,7 @@ all simple paths in the graph from input to output nodes.</p>
 <li><a class="reference internal" href="#nncf.ModelType"><code class="docutils literal notranslate"><span class="pre">ModelType</span></code></a></li>
 <li><a class="reference internal" href="#nncf.QuantizationMode"><code class="docutils literal notranslate"><span class="pre">QuantizationMode</span></code></a></li>
 <li><a class="reference internal" href="#nncf.SensitivityMetric"><code class="docutils literal notranslate"><span class="pre">SensitivityMetric</span></code></a></li>
+<li><a class="reference internal" href="#nncf.StripFormat"><code class="docutils literal notranslate"><span class="pre">StripFormat</span></code></a></li>
 <li><a class="reference internal" href="#nncf.TargetDevice"><code class="docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></li>
 <li><a class="reference internal" href="#nncf.QuantizationPreset"><code class="docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></li>
 <li><a class="reference internal" href="#nncf.compress_weights"><code class="docutils literal notranslate"><span class="pre">compress_weights()</span></code></a></li>

@@ -235,7 +235,7 @@ Classes
           need to keep track of statistics on each training batch/step/iteration.
 
 
-   .. py:method:: strip_model(model, do_copy = False)
+   .. py:method:: strip_model(model, do_copy = False, strip_format = StripFormat.NATIVE)
 
       Strips auxiliary layers that were used for the model compression, as it's
       only needed for training. The method is used before exporting the model
@@ -243,6 +243,7 @@ Classes
 
       :param model: The compressed model.
       :param do_copy: Modify copy of the model, defaults to False.
+      :param strip format: Describes the format in which model is saved after strip.
       :return: The stripped model.
 
 
@@ -251,13 +252,14 @@ Classes
       Prepare the compressed model for exporting to a backend-specific model serialization format.
 
 
-   .. py:method:: strip(do_copy = True)
+   .. py:method:: strip(do_copy = True, strip_format = StripFormat.NATIVE)
 
-      Returns the model object with as much custom NNCF additions as possible removed
-      while still preserving the functioning of the model object as a compressed model.
+      Removes auxiliary layers and operations added during the compression process, resulting in a clean
+      model ready for deployment. The functionality of the model object is still preserved as a compressed model.
 
       :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
         will return the currently associated model object "stripped" in-place.
+      :param strip format: Describes the format in which model is saved after strip.
       :return: The stripped model.
 
 

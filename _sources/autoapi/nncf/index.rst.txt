@@ -39,6 +39,7 @@ Classes
    nncf.ModelType
    nncf.QuantizationMode
    nncf.SensitivityMetric
+   nncf.StripFormat
    nncf.TargetDevice
    nncf.QuantizationPreset
    nncf.OverflowFix
@@ -59,14 +60,15 @@ Functions
 
 
 
-.. py:function:: strip(model, do_copy = True)
+.. py:function:: strip(model, do_copy = True, strip_format = StripFormat.NATIVE)
 
-   Returns the model object with as much custom NNCF additions as possible removed
-   while still preserving the functioning of the model object as a compressed model.
+   Removes auxiliary layers and operations added during the compression process, resulting in a clean
+   model ready for deployment. The functionality of the model object is still preserved as a compressed model.
 
    :param model: The compressed model.
    :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
      will return the currently associated model object "stripped" in-place.
+   :param strip format: Describes the format in which model is saved after strip.
    :return: The stripped model.
 
 
@@ -294,6 +296,20 @@ Functions
        multiplied by inverted 8-bit quantization noise.
    :param MEAN_ACTIVATION_MAGNITUDE: The mean magnitude of the layers' inputs
        multiplied by inverted 8-bit quantization noise.
+
+
+.. py:class:: StripFormat
+
+   Bases: :py:obj:`StrEnum`
+
+   Describes the format in which model is saved after strip: operation that removes auxiliary layers and
+   operations added during the compression process, resulting in a clean model ready for deployment.
+   The functionality of the model object is still preserved as a compressed model.
+
+   :param NATIVE: Returns the model with as much custom NNCF additions as possible.
+   :param DQ: Replaces FakeQuantize operations with dequantization subgraph and compressed weights in low-bit
+       precision using fake quantize parameters. This is the default format for deployment of models with compressed
+       weights.
 
 
 .. py:class:: TargetDevice
