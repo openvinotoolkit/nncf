@@ -15,9 +15,9 @@ from nncf.common.utils.caching import disable_results_caching
 from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.optimized_functions.models import OVModelParameters
 from nncf.openvino.optimized_functions.models import get_astype_model
-from nncf.openvino.optimized_functions.models import get_compress_decompress_weight_model
-from nncf.openvino.optimized_functions.models import get_compress_weight_model
-from nncf.openvino.optimized_functions.models import get_quantization_error_model
+from nncf.openvino.optimized_functions.models import get_integer_quantization_error_model
+from nncf.openvino.optimized_functions.models import get_integer_quantization_model
+from nncf.openvino.optimized_functions.models import get_integer_quantize_dequantize_weight_model
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.tensor import Tensor
@@ -27,7 +27,7 @@ from nncf.tensor import TensorDataType
 ReductionAxes = Union[int, Tuple[int, ...]]
 
 
-def do_int_quantization(
+def do_integer_quantization(
     weight: Tensor,
     config: WeightCompressionConfig,
     reduction_axes: Optional[ReductionAxes] = None,
@@ -63,7 +63,7 @@ def do_int_quantization(
             {"compressed_weight": compressed_weight_dtype, "zero_point": compressed_weight_dtype}
         )
 
-    model = get_compress_weight_model(
+    model = get_integer_quantization_model(
         ov_model_params,
         config,
         weight_shape,
@@ -97,7 +97,7 @@ def do_int_quantization(
     return compressed_weight, scale, zero_point
 
 
-def quantize_dequantize_weight(
+def integer_quantize_dequantize_weight(
     weight: Tensor,
     config: WeightCompressionConfig,
     reduction_axes: Optional[ReductionAxes] = None,
@@ -135,7 +135,7 @@ def quantize_dequantize_weight(
     if precomputed_zero_point is not None:
         ov_model_params.input_dtypes["zero_point"] = precomputed_zero_point.dtype
 
-    model = get_compress_decompress_weight_model(
+    model = get_integer_quantize_dequantize_weight_model(
         ov_model_params, config, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_compressed_weight
     )
 
@@ -188,7 +188,7 @@ def get_integer_quantization_error(
 
     ov_model_params = OVModelParameters()
     ov_model_params.input_dtypes["weight"] = weight.dtype
-    model = get_quantization_error_model(
+    model = get_integer_quantization_error_model(
         ov_model_params, config, original_weight_shape, weight.shape, original_reduction_axes, reduction_axes
     )
 

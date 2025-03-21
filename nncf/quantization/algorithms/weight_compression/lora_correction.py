@@ -25,9 +25,9 @@ from nncf.quantization.algorithms.weight_compression.activation_stats import pro
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import CompressedWeight
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_quantized_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_dequantization
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorDataType
@@ -170,15 +170,17 @@ class LoraCorrectionAlgorithm:
         assert len(reduction_axes) == 1, "Assumed a single reduction axis"
         reduction_axis = reduction_axes[0] if compression_config.group_size != -1 else -1
         if mode in (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM):
-            fq_weights = do_int_dequantization(
+            fq_weights = do_integer_dequantization(
                 compressed_weight.tensor,
                 compressed_weight.scale,
                 compressed_weight.zero_point,
                 reduction_axis,
             )
         elif mode == CompressWeightsMode.NF4:
-            indexes = do_nf4_quantization(compressed_weight.tensor, compressed_weight.scale, is_normalized_weight=True)
-            fq_weights = do_nf4_dequantization(indexes, compressed_weight.scale, reduction_axis)
+            indexes = calculate_nf4_quantized_weight(
+                compressed_weight.tensor, compressed_weight.scale, is_normalized_weight=True
+            )
+            fq_weights = do_float_dequantization(indexes, compressed_weight.scale, reduction_axis)
         else:
             msg = (
                 f"{mode.value} mode is invalid for Lora Correction algorithm. Supported modes: INT4_SYM, INT4_ASYM, NF4"

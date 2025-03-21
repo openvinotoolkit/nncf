@@ -27,10 +27,10 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_integer_quantization_params
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_quantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_scale
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import quantize_dequantize_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorDataType
@@ -284,12 +284,12 @@ class GPTQ:
                         zero_points.append(zero_point)
 
                 if block_compression_config.mode == CompressWeightsMode.NF4:
-                    compressed_weights = do_nf4_quantization(
+                    compressed_weights = calculate_nf4_quantized_weight(
                         fns.unsqueeze(weight_col, 1), scales[-1], is_normalized_weight=False
                     )
-                    quantized_col = do_nf4_dequantization(compressed_weights, scales[-1], reduction_axis=-1)
+                    quantized_col = do_float_dequantization(compressed_weights, scales[-1], reduction_axis=-1)
                 else:
-                    quantized_col, compressed_weights, _, _ = quantize_dequantize_weight(
+                    quantized_col, compressed_weights, _, _ = integer_quantize_dequantize_weight(
                         fns.unsqueeze(weight_col, 1),
                         block_compression_config,
                         reduction_axes=None,

@@ -179,7 +179,7 @@ def calculate_normalized_weight(weight: Tensor, scale: Tensor) -> Tensor:
     return weight / scale
 
 
-def do_nf4_quantization(weight: Tensor, scale: Tensor, is_normalized_weight: bool = False) -> Tensor:
+def calculate_nf4_quantized_weight(weight: Tensor, scale: Tensor, is_normalized_weight: bool = False) -> Tensor:
     """
     Performs NF4 quantization. The floating point values are represented by floating point scale and look-up with
     16 floating-point values on [-1, 1]. Scale normalizes original values to [-1, 1] interval and look-up table
@@ -198,24 +198,24 @@ def do_nf4_quantization(weight: Tensor, scale: Tensor, is_normalized_weight: boo
     return nf4_weight
 
 
-def do_nf4_dequantization(nf4_weight: Tensor, scale: Tensor, reduction_axis: int = -1) -> Tensor:
+def do_float_dequantization(compressed_weight: Tensor, scale: Tensor, reduction_axis: int = -1) -> Tensor:
     """
-    Decompresses the NF4 quantized weight tensor.
+    Decompresses the float-quantized weight tensor.
 
-    :param nf4_weight: Tensor with floating-point values,
+    :param compressed_weight: Tensor with floating-point values,
         where each of them corresponds to 1 out of 16 quants on [-1, 1].
     :param scale: Scale tensor used for decompression.
     :param reduction_axis: axis along which weights were reshaped for group quantization and will be reshaped back to
         original shapes. If equals to -1, weights are not reshaped, assumed not a group quantization. Defaults to -1.
     :return: Decompressed weight tensor.
     """
-    decompressed_weight = nf4_weight * scale
+    decompressed_weight = compressed_weight * scale
     if reduction_axis != -1:
         decompressed_weight = ungroup_weights(decompressed_weight, reduction_axis)
     return decompressed_weight
 
 
-def calculate_normalized_weight_and_fp4_scale(
+def do_float_quantization(
     weight: Tensor,
     reduction_axes: ReductionAxes,
     group_size: int = -1,
@@ -318,7 +318,7 @@ def get_integer_quantization_error(
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
-    decompressed_weight = quantize_dequantize_weight(weight, config, reduction_axes)
+    decompressed_weight = integer_quantize_dequantize_weight(weight, config, reduction_axes)
 
     decompressed_weight = decompressed_weight.reshape(orig_shape)
     diff = (decompressed_weight - weight) ** 2
@@ -348,11 +348,11 @@ def compress_weight(
         if weight.backend == TensorBackend.ov:
             weight = weight.as_numpy_tensor()
 
-        compressed_weight, scale = calculate_normalized_weight_and_fp4_scale(
+        compressed_weight, scale = do_float_quantization(
             weight, reduction_axes, config.group_size, precomputed_scale, config.mode
         )
         return CompressedWeight(compressed_weight, scale)
-    compressed_weight, scale, zero_point = do_int_quantization(
+    compressed_weight, scale, zero_point = do_integer_quantization(
         weight, config, reduction_axes, precomputed_scale, precomputed_zero_point
     )
 
@@ -377,7 +377,7 @@ def ungroup_weights(weights: Tensor, reduction_axis: int) -> Tensor:
     return weights
 
 
-def do_int_dequantization(
+def do_integer_dequantization(
     compressed_weights: Tensor, scale: Tensor, zero_point: Optional[Tensor] = None, reduction_axis: int = -1
 ) -> Tensor:
     """
@@ -402,7 +402,7 @@ def do_int_dequantization(
     return decompressed_weight
 
 
-def do_int_quantization(
+def do_integer_quantization(
     weight: Tensor,
     config: WeightCompressionConfig,
     reduction_axes: Optional[ReductionAxes] = None,
@@ -437,7 +437,7 @@ def do_int_quantization(
 
     # Optimized implementation
     if _can_run_optimized(weight.backend):
-        from nncf.openvino.optimized_functions import do_int_quantization as do_int_quantization_ov
+        from nncf.openvino.optimized_functions import do_integer_quantization as do_int_quantization_ov
 
         return do_int_quantization_ov(weight, config, reduction_axes, precomputed_scale, precomputed_zero_point)
 
@@ -458,11 +458,11 @@ def do_int_quantization(
     if precomputed_zero_point is not None:
         zero_point = precomputed_zero_point
 
-    compressed_weights = _calculate_quantized_weight(weight, config, scale, zero_point)
+    compressed_weights = _calculate_integer_quantized_weight(weight, config, scale, zero_point)
     return compressed_weights, scale, zero_point
 
 
-def quantize_dequantize_weight(
+def integer_quantize_dequantize_weight(
     weight: Tensor,
     config: WeightCompressionConfig,
     reduction_axes: Optional[ReductionAxes] = None,
@@ -485,7 +485,9 @@ def quantize_dequantize_weight(
     """
     # Optimized implementation
     if _can_run_optimized(weight.backend):
-        from nncf.openvino.optimized_functions import quantize_dequantize_weight as quantize_dequantize_weight_ov
+        from nncf.openvino.optimized_functions import (
+            integer_quantize_dequantize_weight as quantize_dequantize_weight_ov,
+        )
 
         return quantize_dequantize_weight_ov(
             weight,
@@ -497,17 +499,17 @@ def quantize_dequantize_weight(
         )
 
     # Reference implementation
-    compressed_weight, scale, zero_point = do_int_quantization(
+    compressed_weight, scale, zero_point = do_integer_quantization(
         weight, config, reduction_axes, precomputed_scale, precomputed_zero_point
     )
-    decompressed_weight = do_int_dequantization(compressed_weight, scale, zero_point)
+    decompressed_weight = do_integer_dequantization(compressed_weight, scale, zero_point)
     if return_compressed_weight:
         return decompressed_weight, compressed_weight, scale, zero_point
     else:
         return decompressed_weight
 
 
-def _calculate_quantized_weight(
+def _calculate_integer_quantized_weight(
     weight: Tensor,
     config: WeightCompressionConfig,
     scale: Tensor,

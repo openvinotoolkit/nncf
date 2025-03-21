@@ -168,7 +168,7 @@ def _infer_ov_model(
     return outputs
 
 
-def _prepare_compression_model_inputs(
+def _prepare_quantization_model_inputs(
     ov_model_params,
     weight_shape: Tuple,
     scale_shape: Optional[Tuple],
@@ -196,7 +196,7 @@ def _prepare_compression_model_inputs(
     return weight_shape, scale_shape, zero_point_shape
 
 
-def get_compress_weight_model(
+def get_integer_quantization_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
     weight_shape: Tuple,
@@ -219,11 +219,11 @@ def get_compress_weight_model(
     :return: A model callable that compresses weights using the given configuration. Or a model as nodes, if
         `return_nodes` is True.
     """
-    weight_shape, scale_shape, zero_point_shape = _prepare_compression_model_inputs(
+    weight_shape, scale_shape, zero_point_shape = _prepare_quantization_model_inputs(
         ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes
     )
 
-    return _build_compress_model(
+    return _build_integer_quantization_model(
         config,
         ov_model_params,
         weight_shape,
@@ -233,7 +233,7 @@ def get_compress_weight_model(
     )
 
 
-def get_compress_decompress_weight_model(
+def get_integer_quantize_dequantize_weight_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
     weight_shape: Tuple,
@@ -259,11 +259,11 @@ def get_compress_decompress_weight_model(
     :return: A model callable that returns a decompressed weight, and optionally compressed weight, scale,
         (and zero point) if `return_compressed_weight` is True.
     """
-    weight_shape, scale_shape, zero_point_shape = _prepare_compression_model_inputs(
+    weight_shape, scale_shape, zero_point_shape = _prepare_quantization_model_inputs(
         ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes
     )
 
-    return _build_compress_decompress_model(
+    return _build_integer_quantize_dequantize_weight_model(
         config,
         ov_model_params,
         weight_shape,
@@ -274,7 +274,7 @@ def get_compress_decompress_weight_model(
     )
 
 
-def get_quantization_error_model(
+def get_integer_quantization_error_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
     original_weight_shape: Tuple,
@@ -296,15 +296,15 @@ def get_quantization_error_model(
     :param reduction_axes: Axes to reduce the weight tensor.
     :return: A model callable that returns the quantization error.
     """
-    weight_shape, _, _ = _prepare_compression_model_inputs(ov_model_params, weight_shape, None, None, reduction_axes)
+    weight_shape, _, _ = _prepare_quantization_model_inputs(ov_model_params, weight_shape, None, None, reduction_axes)
 
-    return _build_quantization_error_model(
+    return _build_integer_quantization_error_model(
         config, ov_model_params, original_weight_shape, weight_shape, original_reduction_axes, reduction_axes
     )
 
 
 @cache_results(OV_MODEL_CACHE)
-def _build_compress_model(
+def _build_integer_quantization_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
     weight_shape: Tuple,
@@ -454,7 +454,7 @@ def _build_compress_model(
 
 
 @cache_results(OV_MODEL_CACHE)
-def _build_compress_decompress_model(
+def _build_integer_quantize_dequantize_weight_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
     weight_shape: Tuple,
@@ -477,7 +477,7 @@ def _build_compress_decompress_model(
         raise ValueError(msg)
 
     # Get compression model as input/result nodes and potentially modified ov model parameters
-    ov_parameters, ov_results, ov_model_params = _build_compress_model(
+    ov_parameters, ov_results, ov_model_params = _build_integer_quantization_model(
         config, ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_nodes=True
     )
 
@@ -514,7 +514,7 @@ def _build_compress_decompress_model(
 
 
 @cache_results(OV_MODEL_CACHE)
-def _build_quantization_error_model(
+def _build_integer_quantization_error_model(
     config: WeightCompressionConfig,
     ov_model_params: OVModelParameters,
     original_weight_shape: Tuple,
@@ -522,7 +522,7 @@ def _build_quantization_error_model(
     original_reduction_axes: ReductionAxes,
     reduction_axes: ReductionAxes,
 ) -> ModelCallable:
-    ov_parameters, ov_results, ov_model_params = _build_compress_decompress_model(
+    ov_parameters, ov_results, ov_model_params = _build_integer_quantize_dequantize_weight_model(
         config,
         ov_model_params,
         weight_shape,
