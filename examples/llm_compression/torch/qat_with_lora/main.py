@@ -65,7 +65,7 @@ def get_wikitext2(nsamples: int, seqlen: int, tokenizer: Any, device: torch.devi
     return trainloader
 
 
-def set_seed(seed):
+def set_seed(seed) -> None:
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)  # if you are using multi-GPU.
@@ -75,22 +75,18 @@ def set_seed(seed):
 
 
 @torch.no_grad()
-def save_wwb_ref(model: nn.Module, tokenizer: Any, wwb_ref_file: Path, device: torch.device) -> None:
+def save_wwb_ref(model: str, tokenizer: Any, wwb_ref_file: Path) -> None:
     """
     Save the reference answers for the WWB (WhoWhatBenchmark) evaluation.
 
     :param model: The model to be evaluated.
     :param tokenizer: The tokenizer used for processing text inputs.
     :param wwb_ref_file: The file path where the reference answers will be saved.
-    :param device: The device to which the model should be moved after evaluation.
     """
-
     if not wwb_ref_file.exists():
         print("#" * 50 + " Collect reference answers for WWB " + "#" * 50)
-        model.to("cpu")  # TODO: (nlyalyus) remove when WWB will be fixed for cuda.
         wwb_eval = TextEvaluator(base_model=model, tokenizer=tokenizer, use_chat_template=True)
         wwb_eval.dump_gt(str(wwb_ref_file))
-        model.to(device)
         torch.cuda.empty_cache()
 
 
@@ -112,7 +108,7 @@ def measure_similarity(model_for_eval: OVModelForCausalLM, tokenizer: Any, wwb_r
 
 
 @torch.no_grad()
-def calc_hiddens(model: nn.Module, dataloader: List[Tensor]):
+def calc_hiddens(model: nn.Module, dataloader: List[Tensor]) -> List[Tensor]:
     """
     Calculate the hidden states for each input in the dataloader using the given model.
 
@@ -141,7 +137,7 @@ def get_model_input(input_ids: Tensor) -> Dict[str, Tensor]:
     return {"input_ids": input_ids, "attention_mask": attention_mask, "position_ids": position_ids}
 
 
-def kl_div(student_hiddens: torch.Tensor, teacher_hiddens: torch.Tensor):
+def kl_div(student_hiddens: torch.Tensor, teacher_hiddens: torch.Tensor) -> torch.Tensor:
     """
     Computes the Kullback-Leibler divergence loss between the student and teacher hidden states.
     The input tensors are expected to have the same shape, and the last dimension represents the number of classes.
@@ -208,7 +204,7 @@ def save_checkpoint(model: nn.Module, ckpt_file: Path) -> None:
     torch.save(ckpt, ckpt_file)
 
 
-def load_checkpoint(model: nn.Module, example_input: Any, ckpt_file: Path):
+def load_checkpoint(model: nn.Module, example_input: Any, ckpt_file: Path) -> nn.Module:
     """
     Loads the state of a tuned model from a checkpoint. This function restores the placement of Fake Quantizers (FQs)
     with absorbable LoRA adapters and loads their parameters.
@@ -247,11 +243,10 @@ def get_ov_model_for_eval(
         trust_remote_code=True,
         load_in_8bit=False,
         compile=True,
-        ov_config={"KV_CACHE_PRECISION": "f16", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
     )
 
 
-def get_argument_parser():
+def get_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(add_help=True)
 
     # Model params
@@ -279,19 +274,28 @@ def get_argument_parser():
     parser.add_argument("--seqlen", type=int, default=1024, help="Calibration data context length.")
 
     # Training params
-    parser.add_argument("--lr", type=float, default=1e-4, help="Finetuning learning rate.")
-    parser.add_argument("--epochs", type=int, default=32, help="Number of epochs.")
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=1e-4,
+        help="Learning rate for fine-tuning. "
+        "For larger models (over 2 billion parameters), a learning rate of 5e-4 is recommended.",
+    )
+    parser.add_argument("--epochs", type=int, default=10, help="Number of epochs.")
     parser.add_argument("--batch_size", type=int, default=32, help="Size of training batch.")
     parser.add_argument(
         "--microbatch_size",
         type=int,
-        default=2,
+        default=8,
         help="Size of each training microbatch. Gradients will be accumulated until the batch size is reached.",
     )
     return parser
 
 
-def main(argv):
+def main(argv) -> float:
+    """
+    Fine-tunes the specified model and returns the best validation similarity score.
+    """
     parser = get_argument_parser()
     args = parser.parse_args(argv)
     assert torch.cuda.is_available()
@@ -317,12 +321,15 @@ def main(argv):
     tb = SummaryWriter(tensorboard_dir, "QAT with absorbable LoRA")
 
     # Load original model and tokenizer.
-    model = AutoModelForCausalLM.from_pretrained(args.pretrained, torch_dtype=torch_dtype, device_map=device)
+    model = AutoModelForCausalLM.from_pretrained(args.pretrained, torch_dtype=torch_dtype, device_map="auto")
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained)
 
     # Use WhoWhatBench tool (WWB) is for validation during tuning. It estimates the similarity score between embedding
     # computed by for data generated by two models, original floating-point one and optimized.
-    save_wwb_ref(model, tokenizer, wwb_ref_file, device)
+    # TODO: (nlyalyus) Use original model for collecting reference, once the bug in WWB resolved.
+    wwb_ref_model = AutoModelForCausalLM.from_pretrained(args.pretrained, torch_dtype=torch_dtype, device_map="cpu")
+    save_wwb_ref(wwb_ref_model, tokenizer, wwb_ref_file)
+    del wwb_ref_model
 
     # Prepare training data and pre-compute hiddens of teacher model for distillation loss.
     train_loader = get_wikitext2(nsamples=args.nsamples, seqlen=args.seqlen, tokenizer=tokenizer, device=device)
@@ -342,7 +349,7 @@ def main(argv):
     model.train()
 
     # Convert torch checkpoint to an OpenVINO model and evaluate it via WWB.
-    model_for_eval = get_ov_model_for_eval(args.pretrained_model, train_loader[0], ckpt_file, last_dir)
+    model_for_eval = get_ov_model_for_eval(args.pretrained, train_loader[0], ckpt_file, last_dir)
     best_similarity = measure_similarity(model_for_eval, tokenizer, wwb_ref_file)
     tb.add_scalar("similarity", best_similarity, 0)
     print(f"Initial WWB similarity= {best_similarity:.4f}")
@@ -394,7 +401,7 @@ def main(argv):
         # Export tuned model to OpenVINO and evaluate it using WWB.
         # Save the best checkpoint and OpenVINO IR for the highest similarity score obtained from WWB.
         save_checkpoint(model, ckpt_file)
-        model_for_eval = get_ov_model_for_eval(args.pretrained_model, train_loader[0], ckpt_file, last_dir)
+        model_for_eval = get_ov_model_for_eval(args.pretrained, train_loader[0], ckpt_file, last_dir)
         similarity = measure_similarity(model_for_eval, tokenizer, wwb_ref_file)
         print(f"[Epoch {epoch}], WWB similarity = {similarity:.4f}")
         tb.add_scalar("similarity", similarity, total_microbatches)
@@ -404,6 +411,7 @@ def main(argv):
             shutil.copytree(last_dir, best_dir, dirs_exist_ok=True)
 
     print(f"The finetuned OV model with the best similarity={best_similarity} saved to: {best_dir}")
+    return best_similarity
 
 
 if __name__ == "__main__":
