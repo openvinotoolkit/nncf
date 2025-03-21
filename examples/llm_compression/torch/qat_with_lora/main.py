@@ -51,7 +51,7 @@ class PatchDecompressorDtype:
     Patching of compression modules in order to export bfloat16 models to OV.
     """
 
-    def __init__(self, model):
+    def __init__(self, model: nn.Module):
         self.model = model
         self.modules_map: WeakKeyDictionary[nn.Module, List[str]] = WeakKeyDictionary()
 
@@ -85,6 +85,7 @@ def get_wikitext2(nsamples: int, seqlen: int, tokenizer: Any, device: torch.devi
     trainenc = tokenizer(text, return_tensors="pt")
     trainloader = []
     for _ in range(nsamples):
+        # Crop a sequence of tokens of length seqlen starting at a random position
         i = torch.randint(0, trainenc.input_ids.shape[1] - seqlen - 1, (1,)).item()
         j = i + seqlen
         inp = trainenc.input_ids[:, i:j].to(device)
@@ -102,7 +103,7 @@ def set_seed(seed):
 
 
 @torch.inference_mode()
-def save_wwb_ref(model: torch.nn.Module, tokenizer: Any, wwb_ref_file: Path, device: torch.device) -> None:
+def save_wwb_ref(model: nn.Module, tokenizer: Any, wwb_ref_file: Path, device: torch.device) -> None:
     """
     Save the reference answers for the WWB (WhoWhatBenchmark) evaluation.
 
@@ -114,10 +115,10 @@ def save_wwb_ref(model: torch.nn.Module, tokenizer: Any, wwb_ref_file: Path, dev
 
     if not wwb_ref_file.exists():
         print("#" * 50 + " Collect reference answers for WWB " + "#" * 50)
-        model = model.to("cpu")  # TODO: (nlyalyus) remove when WWB will be fixed for cuda.
+        model.to("cpu")  # TODO: (nlyalyus) remove when WWB will be fixed for cuda.
         wwb_eval = TextEvaluator(base_model=model, tokenizer=tokenizer, use_chat_template=True)
         wwb_eval.dump_gt(str(wwb_ref_file))
-        model = model.to(device)
+        model.to(device)
         torch.cuda.empty_cache()
 
 
@@ -243,7 +244,6 @@ def save_checkpoint(model: nn.Module, ckpt_file: Path) -> None:
     Saves the state of a tuned model from a checkpoint.
 
     :param model: The model to load the checkpoint into.
-    :param example_input: An example input that will be used for model tracing. It's required to insert and run FQs.
     :param ckpt_file: Path to the checkpoint file.
     """
 
@@ -357,7 +357,7 @@ def main(argv):
     opt = torch.optim.AdamW(param_to_train, weight_decay=weight_decay)
     model.train()
 
-    best_similarity = 0  # measure_similarity(model, tokenizer, wwb_ref_file, last_dir)
+    best_similarity = measure_similarity(model, tokenizer, wwb_ref_file, last_dir)
     print(f"Initial WWB similarity= {best_similarity:.4f}")
 
     # Run tuning with distillation loss and validation on WWB after each epoch.
