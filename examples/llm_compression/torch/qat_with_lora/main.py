@@ -102,7 +102,7 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
 
 
-@torch.inference_mode()
+@torch.no_grad()
 def save_wwb_ref(model: nn.Module, tokenizer: Any, wwb_ref_file: Path, device: torch.device) -> None:
     """
     Save the reference answers for the WWB (WhoWhatBenchmark) evaluation.
@@ -122,7 +122,7 @@ def save_wwb_ref(model: nn.Module, tokenizer: Any, wwb_ref_file: Path, device: t
         torch.cuda.empty_cache()
 
 
-@torch.inference_mode()
+@torch.no_grad()
 def measure_similarity(model: nn.Module, tokenizer: Any, wwb_ref_file: Path, ir_dir: Path) -> float:
     """
     Measures the similarity of a model's output to a reference outputs from a given file using WWB evaluation.
@@ -154,7 +154,7 @@ def measure_similarity(model: nn.Module, tokenizer: Any, wwb_ref_file: Path, ir_
     return float(all_metrics["similarity"].iloc[0])
 
 
-@torch.inference_mode()
+@torch.no_grad()
 def calc_hiddens(model: nn.Module, dataloader: List[Tensor]):
     """
     Calculate the hidden states for each input in the dataloader using the given model.
