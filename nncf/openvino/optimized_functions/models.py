@@ -22,7 +22,6 @@ from openvino._pyopenvino.properties.hint import inference_precision
 from openvino.runtime import Node
 from openvino.runtime import opset13 as opset
 
-from nncf import CompressWeightsMode
 from nncf.common.utils.backend import is_openvino_at_least
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
@@ -560,15 +559,6 @@ def _build_float_quantization_model(
         # NOTE: adding machine epsilon to avoid division by zero
         eps = np.finfo(np.float32).eps
         scale = opset.select(opset.less(opset.abs(scale), eps), eps, scale)
-
-        if config.mode == CompressWeightsMode.E2M1:
-            max_val = opset.constant(6, ov.Type.f32)  # Maximal value of e2m1 type.
-            constant_2 = opset.constant(2, ov.Type.f32)
-            scale = divide_op(scale, max_val)
-            scale = opset.log(scale) / opset.log(constant_2)
-            scale = opset.ceil(scale)
-            scale = opset.clamp(scale, -127, 127)
-            scale = opset.power(constant_2, scale)
 
     compressed_weight = divide_op(weight, scale)
     compressed_weight = convert_op(compressed_weight, ov.Type.nf4)

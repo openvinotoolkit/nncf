@@ -1,4 +1,3 @@
--i https://storage.openvinotoolkit.org/simple/wheels/pre-release
 -c ../../constraints.txt
 fastdownload==0.0.7
 onnx
