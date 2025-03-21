@@ -13,7 +13,7 @@ tuning and evaluation. It is expected that the initial accuracy of such a model 
 a data-free Round-To-Nearest quantization scheme. In the next step, accuracy will be significantly improved by tuning
 both the quantization scales and the LoRA adapters.
 
-![alt text](<pics/absorbable lora adapters.png>)
+![alt text](/examples/llm_compression/torch/qat_with_lora/pics/absorbable_lora_adapters.png)
 
 - Tuning pipeline with distillation loss. The teacher model is the original bfloat16 model, while the student model
 includes FQ operations. The training dataset is based on the training portion of the `wikitext-2-raw-v1` dataset,
@@ -23,7 +23,7 @@ Training for 10 epochs on a single A100 GPU takes approximately 40 minutes for m
 Alternatively, using three RTX 3090 GPUs, the process takes about 70 minutes.
 The most significant accuracy improvements are usually observed within the first two epochs.
 
-![alt text](pics/training_pipeline.png)
+![alt text](/examples/llm_compression/torch/qat_with_lora/pics/training_pipeline.png)
 
 ## Install requirements
 
