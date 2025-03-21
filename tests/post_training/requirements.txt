@@ -1,3 +1,4 @@
+-i https://storage.openvinotoolkit.org/simple/wheels/pre-release
 -c ../../constraints.txt
 torch
 torchvision

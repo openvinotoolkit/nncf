@@ -17,6 +17,7 @@ from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.optimized_functions.models import OVModelParameters
 from nncf.openvino.optimized_functions.models import get_astype_model
 from nncf.openvino.optimized_functions.models import get_float_quantization_model
+from nncf.openvino.optimized_functions.models import get_float_quantize_dequantize_weight_model
 from nncf.openvino.optimized_functions.models import get_integer_quantization_error_model
 from nncf.openvino.optimized_functions.models import get_integer_quantization_model
 from nncf.openvino.optimized_functions.models import get_integer_quantize_dequantize_weight_model
@@ -201,6 +202,48 @@ def integer_quantize_dequantize_weight(
         decompressed_weight, compressed_weight, scale, zero_point = results
     if return_compressed_weight:
         return decompressed_weight, compressed_weight, scale, zero_point
+    else:
+        return decompressed_weight
+
+
+def float_quantize_dequantize_weight(
+    weight: Tensor,
+    config: WeightCompressionConfig,
+    reduction_axes: Optional[ReductionAxes] = None,
+    precomputed_scale: Optional[Tensor] = None,
+    return_compressed_weight: Optional[bool] = False,
+) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor]]:
+    # When reduction axes are not provided, assuming that the weights are already reshaped
+    if config.group_size != -1 and reduction_axes is not None:
+        # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
+        weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
+
+    weight_shape = weight.shape
+    scale_shape = precomputed_scale.shape if precomputed_scale is not None else None
+
+    ov_model_params = OVModelParameters()
+    ov_model_params.input_dtypes["weight"] = weight.dtype
+    if precomputed_scale is not None:
+        ov_model_params.input_dtypes["scale"] = precomputed_scale.dtype
+
+    model = get_float_quantize_dequantize_weight_model(
+        ov_model_params, config, weight_shape, scale_shape, reduction_axes, return_compressed_weight
+    )
+
+    inputs = [weight]
+    if precomputed_scale is not None:
+        inputs.append(precomputed_scale)
+
+    compressed_weight, scale = None, precomputed_scale
+    results = model(inputs)
+    if len(results) == 1:
+        decompressed_weight = results[0]
+    elif len(results) == 2:
+        decompressed_weight, compressed_weight = results
+    else:
+        decompressed_weight, compressed_weight, scale = results
+    if return_compressed_weight:
+        return decompressed_weight, compressed_weight, scale
     else:
         return decompressed_weight
 

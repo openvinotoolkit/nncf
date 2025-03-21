@@ -28,8 +28,7 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_float_quantization_params
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_integer_quantization_params
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -286,18 +285,17 @@ class GPTQ:
                         zero_points.append(zero_point)
 
                 if block_compression_config.mode == CompressWeightsMode.NF4:
-                    compressed_weights, _ = do_float_quantization(
-                        fns.unsqueeze(weight_col, 1), block_compression_config, precomputed_scale=scales[-1]
-                    )
-                    quantized_col = do_float_dequantization(compressed_weights, scales[-1], reduction_axis=-1)
-                else:
-                    quantized_col, compressed_weights, _, _ = integer_quantize_dequantize_weight(
+                    quantized_col = float_quantize_dequantize_weight(
                         fns.unsqueeze(weight_col, 1),
                         block_compression_config,
-                        reduction_axes=None,
+                        precomputed_scale=scales[-1],
+                    )
+                else:
+                    quantized_col = integer_quantize_dequantize_weight(
+                        fns.unsqueeze(weight_col, 1),
+                        block_compression_config,
                         precomputed_scale=scales[-1],
                         precomputed_zero_point=zero_points[-1],
-                        return_compressed_weight=True,
                     )
                 quantized_col = fns.flatten(quantized_col)
                 quantized_block[:, i] = quantized_col

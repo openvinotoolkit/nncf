@@ -30,8 +30,7 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_dequantization
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.tensor import TensorDataType
@@ -254,10 +253,9 @@ class AWQ(Algorithm):
                     cur_scale = gscale**alpha
                     weights_to_fake_quantize = gweight * cur_scale
                     if config.mode == CompressWeightsMode.NF4:
-                        g_compressed_weighs, g_c_scale = do_float_quantization(
+                        g_decompressed_weighs = float_quantize_dequantize_weight(
                             weights_to_fake_quantize, config, reduction_axis
                         )
-                        g_decompressed_weighs = do_float_dequantization(g_compressed_weighs, g_c_scale)
                     else:
                         g_decompressed_weighs = integer_quantize_dequantize_weight(
                             weights_to_fake_quantize, awq_config, reduction_axis

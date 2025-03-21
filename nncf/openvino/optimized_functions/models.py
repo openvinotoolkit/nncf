@@ -254,6 +254,28 @@ def get_float_quantization_model(
     )
 
 
+def get_float_quantize_dequantize_weight_model(
+    ov_model_params: OVModelParameters,
+    config: WeightCompressionConfig,
+    weight_shape: Tuple,
+    scale_shape: Optional[Tuple] = None,
+    reduction_axes: Optional[ReductionAxes] = None,
+    return_compressed_weight: Optional[bool] = False,
+) -> ModelCallable:
+    weight_shape, scale_shape, _ = _prepare_quantization_model_inputs(
+        ov_model_params, weight_shape, scale_shape, zero_point_shape=None, reduction_axes=reduction_axes
+    )
+
+    return _build_float_quantize_dequantize_weight_model(
+        config,
+        ov_model_params,
+        weight_shape,
+        scale_shape,
+        reduction_axes,
+        return_compressed_weight,
+    )
+
+
 def get_integer_quantize_dequantize_weight_model(
     ov_model_params: OVModelParameters,
     config: WeightCompressionConfig,
@@ -611,6 +633,54 @@ def _build_integer_quantize_dequantize_weight_model(
             # weight, scale -> compressed_weight
             compressed_weight = ov_results[0]
             scale = ov_parameters[1]
+
+    decompressed_weight = opset.multiply(scale, convert_op(compressed_weight, ov.Type.f32))
+
+    ov_results = [decompressed_weight] + ov_results if return_compressed_weight else [decompressed_weight]
+
+    if return_nodes:
+        return ov_parameters, ov_results, ov_model_params
+
+    model = ov.Model(ov_results, ov_parameters)
+    compiled_model = _compile_ov_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})
+
+    return partial(_infer_ov_model, ov_model_params, compiled_model)
+
+
+@cache_results(OV_MODEL_CACHE)
+def _build_float_quantize_dequantize_weight_model(
+    config: WeightCompressionConfig,
+    ov_model_params: OVModelParameters,
+    weight_shape: Tuple,
+    scale_shape: Optional[Tuple] = None,
+    reduction_axes: Optional[ReductionAxes] = None,
+    return_compressed_weight: Optional[bool] = False,
+    return_nodes: Optional[bool] = False,
+) -> Union[ModelCallable, ModelAsNodes]:
+    default_output_dtypes = {"decompressed_weight": TensorDataType.float32}
+    if not return_compressed_weight:
+        # If compressed weight is not returned to a user, we can keep it in float32 to avoid additional conversion
+        default_output_dtypes["compressed_weight"] = TensorDataType.float32
+    ov_model_params = copy.deepcopy(ov_model_params)
+    ov_model_params.output_dtypes = {**default_output_dtypes, **ov_model_params.output_dtypes}
+
+    decompressed_weight_dtype = ov_model_params.output_dtypes["decompressed_weight"]
+    if decompressed_weight_dtype != TensorDataType.float32:
+        msg = f"Decompressed weight must be of float32 data type. But found: {decompressed_weight_dtype}."
+        raise ValueError(msg)
+
+    # Get compression model as input/result nodes and potentially modified ov model parameters
+    ov_parameters, ov_results, ov_model_params = _build_float_quantization_model(
+        config, ov_model_params, weight_shape, scale_shape, reduction_axes, return_nodes=True
+    )
+
+    if len(ov_parameters) == 1:
+        # weight -> compressed_weight, scale
+        compressed_weight, scale = ov_results
+    else:
+        # weight, scale -> compressed_weight
+        compressed_weight = ov_results[0]
+        scale = ov_parameters[1]
 
     decompressed_weight = opset.multiply(scale, convert_op(compressed_weight, ov.Type.f32))
 

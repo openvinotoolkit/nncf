@@ -149,6 +149,36 @@ def do_float_dequantization(compressed_weight: Tensor, scale: Tensor, reduction_
     return decompressed_weight
 
 
+def float_quantize_dequantize_weight(
+    weight: Tensor,
+    config: WeightCompressionConfig,
+    reduction_axes: Optional[ReductionAxes] = None,
+    precomputed_scale: Optional[Tensor] = None,
+    return_compressed_weight: Optional[bool] = False,
+) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor]]:
+    # Optimized implementation
+    if _can_run_optimized(weight.backend):
+        from nncf.openvino.optimized_functions import (
+            float_quantize_dequantize_weight as float_quantize_dequantize_weight_ov,
+        )
+
+        return float_quantize_dequantize_weight_ov(
+            weight,
+            config,
+            reduction_axes,
+            precomputed_scale,
+            return_compressed_weight,
+        )
+
+    # Reference implementation
+    compressed_weight, scale = do_float_quantization(weight, config, reduction_axes, precomputed_scale)
+    decompressed_weight = do_float_dequantization(compressed_weight, scale)
+    if return_compressed_weight:
+        return decompressed_weight, compressed_weight, scale
+    else:
+        return decompressed_weight
+
+
 def do_float_quantization(
     weight: Tensor,
     config: WeightCompressionConfig,

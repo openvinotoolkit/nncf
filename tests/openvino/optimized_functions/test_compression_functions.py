@@ -25,6 +25,7 @@ from nncf.common.utils.caching import cache_results
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
@@ -65,7 +66,6 @@ FP4_COMPRESSION_CONFIGS = [
 ]
 
 COMPRESSION_CONFIGS = INT8_COMPRESSION_CONFIGS + INT4_COMPRESSION_CONFIGS + FP4_COMPRESSION_CONFIGS
-# COMPRESSION_CONFIGS = FP4_COMPRESSION_CONFIGS
 
 WEIGHT_SHAPE = (10000, 4)
 
@@ -166,10 +166,12 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
                     fn_to_call = do_float_quantization
                     fn_to_patch = opt_fns.do_float_quantization
             else:
-                if config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]:
-                    pytest.skip("Quantize-dequantize is not supported for NF4 and E2M1 modes")
-                fn_to_call = integer_quantize_dequantize_weight
-                fn_to_patch = opt_fns.integer_quantize_dequantize_weight
+                if config.is_integer:
+                    fn_to_call = integer_quantize_dequantize_weight
+                    fn_to_patch = opt_fns.integer_quantize_dequantize_weight
+                else:
+                    fn_to_call = float_quantize_dequantize_weight
+                    fn_to_patch = opt_fns.float_quantize_dequantize_weight
             patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
             with patch(patch_path, side_effect=fn_to_patch) as mock:
                 # When scale (and z.p) are precomputed, all inputs are assumed to be already reshaped and reduction
@@ -194,7 +196,10 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
                 elif quantization_task == QuantizationTask.Q_DQ:
                     decompressed_weight = outputs
                 else:
-                    decompressed_weight, compressed_weight, scale, zero_point = outputs
+                    if config.is_integer:
+                        decompressed_weight, compressed_weight, scale, zero_point = outputs
+                    else:
+                        decompressed_weight, compressed_weight, scale = outputs
 
                 if cb == ComputationBackend.NumPy:
                     mock.assert_not_called()
