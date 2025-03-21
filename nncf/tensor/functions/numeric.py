@@ -106,6 +106,16 @@ def abs(a: Tensor) -> Tensor:
 
 
 @tensor_dispatcher
+def neg(a: Tensor) -> Tensor:
+    """
+    Numerical negative, element-wise.
+
+    :param a: The input tensor.
+    :return: A tensor containing the negative value of each element in a.
+    """
+
+
+@tensor_dispatcher
 def astype(a: Tensor, dtype: TensorDataType) -> Tensor:
     """
     Copy of the tensor, cast to a specified type.
@@ -490,6 +500,28 @@ def sum(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims:
     :param keepdims: If this is set to True, the axes which are reduced are left in the result as dimensions
         with size one.
     :return: Returns the sum of all elements in the input tensor in the given axis.
+    """
+
+
+@tensor_dispatcher
+def add(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
+    """
+    Add two tensors element-wise.
+
+    :param x1: The first input tensor.
+    :param x2: The second input tensor or number.
+    :return: The sum of x1 and x2, element-wise.
+    """
+
+
+@tensor_dispatcher
+def subtract(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
+    """
+    Subtract two tensors element-wise.
+
+    :param x1: The first input tensor.
+    :param x2: The second input tensor or number.
+    :return: The result of x1 - x2, element-wise.
     """
 
 

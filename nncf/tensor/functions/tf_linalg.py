@@ -24,9 +24,14 @@ def _(
     axis: Optional[Union[int, Tuple[int, ...]]] = None,
     keepdims: bool = False,
 ) -> tf.Tensor:
-    if ord is None:
-        ord = "euclidean"
     rank = tf.rank(a)
+
+    if ord is None:
+        if axis is None and rank == 2:
+            ord = "fro"
+        else:
+            ord = 2
+
     if rank == 2 and axis is None:
         axis = (0, 1)
 
@@ -49,41 +54,75 @@ def _(
             if rank != 2:
                 error_msg = "ord=-1 is only supported for 2D tensors"
                 raise ValueError(error_msg)
-            return tf.reduce_min(tf.reduce_sum(tf.abs(a), axis=axis[0]), keepdims=keepdims)
+            result = tf.reduce_min(tf.reduce_sum(tf.abs(a), axis=axis[0]), keepdims=keepdims)
+            if keepdims:
+                result = tf.reshape(result, [1, 1])
+            return result
 
         if ord == 1 and isinstance(axis, tuple) and len(axis) != 1:
             if rank != 2:
                 error_msg = "ord=1 is only supported for 2D tensors"
                 raise ValueError(error_msg)
-            return tf.reduce_max(tf.reduce_sum(tf.abs(a), axis=axis[0]), keepdims=keepdims)
+            result = tf.reduce_max(tf.reduce_sum(tf.abs(a), axis=axis[0]), keepdims=keepdims)
+            if keepdims:
+                result = tf.reshape(result, [1, 1])
+            return result
 
         if ord == -2 and isinstance(axis, tuple) and len(axis) != 1:
             if rank != 2:
                 error_msg = "ord=-2 is only supported for 2D tensors"
                 raise ValueError(error_msg)
             s = tf.linalg.svd(a, compute_uv=False)
-            return tf.reduce_min(s, axis=-1)
+            result = tf.reduce_min(s, axis=-1)
+            if keepdims:
+                result = tf.reshape(result, [1, 1])
+            return result
 
         if ord == 2 and isinstance(axis, tuple) and len(axis) != 1:
             if rank != 2:
                 error_msg = "ord=2 is only supported for 2D tensors"
                 raise ValueError(error_msg)
             s = tf.linalg.svd(a, compute_uv=False)
-            return tf.reduce_max(s, axis=-1)
+            result = tf.reduce_max(s, axis=-1)
+            if keepdims:
+                result = tf.reshape(result, [1, 1])
+            return result
 
         if ord == float("inf") and isinstance(axis, tuple) and len(axis) != 1:
             if rank != 2:
                 error_msg = "ord=inf is only supported for 2D tensors"
                 raise ValueError(error_msg)
-            return tf.reduce_max(tf.reduce_sum(tf.abs(a), axis=axis[1]), keepdims=keepdims)
+            result = tf.reduce_max(tf.reduce_sum(tf.abs(a), axis=axis[1]), keepdims=keepdims)
+            if keepdims:
+                result = tf.reshape(result, [1, 1])
+            return result
 
         if ord == -float("inf") and isinstance(axis, tuple) and len(axis) != 1:
             if rank != 2:
                 error_msg = "ord=-inf is only supported for 2D tensors"
                 raise ValueError(error_msg)
-            return tf.reduce_min(tf.reduce_sum(tf.abs(a), axis=axis[1]), keepdims=keepdims)
+            result = tf.reduce_min(tf.reduce_sum(tf.abs(a), axis=axis[1]), keepdims=keepdims)
+            if keepdims:
+                result = tf.reshape(result, [1, 1])
+            return result
 
-        return tf.linalg.norm(a, ord=ord, axis=axis, keepdims=keepdims)
+        try:
+            return tf.linalg.norm(a, ord=ord, axis=axis, keepdims=keepdims)
+        except (TypeError, ValueError):
+            if axis is not None:
+                if ord == 2:
+                    squared = tf.square(a)
+                    sum_squares = tf.reduce_sum(squared, axis=axis, keepdims=keepdims)
+                    return tf.sqrt(sum_squares)
+                elif ord == 1:
+                    return tf.reduce_sum(tf.abs(a), axis=axis, keepdims=keepdims)
+                elif ord == float("inf"):
+                    return tf.reduce_max(tf.abs(a), axis=axis, keepdims=keepdims)
+                elif ord == -float("inf"):
+                    return tf.reduce_min(tf.abs(a), axis=axis, keepdims=keepdims)
+
+            error_msg = f"Unsupported combination of ord={ord} and axis={axis}"
+            raise ValueError(error_msg)
 
 
 @linalg.cholesky.register

@@ -18,12 +18,26 @@ from safetensors.tensorflow import save_file as tf_save_file
 
 from nncf.tensor import TensorDeviceType
 from nncf.tensor.functions import io as io
+from nncf.tensor.functions.tf_numeric import DEVICE_MAP
 
 
 def load_file(file_path: Path, *, device: Optional[TensorDeviceType] = None) -> Dict[str, tf.Tensor]:
-    return tf_load_file(file_path)
+    loaded_tensors = tf_load_file(file_path)
+
+    if device is not None:
+        device_str = DEVICE_MAP[device]
+        with tf.device(device_str):
+            loaded_tensors = {k: tf.identity(v) for k, v in loaded_tensors.items()}
+
+    return loaded_tensors
 
 
 @io.save_file.register
 def _(data: Dict[str, tf.Tensor], file_path: Path) -> None:
+    if file_path.is_symlink():
+        from nncf.errors import ValidationError
+
+        error_msg = "Cannot save tensor to a symbolic link"
+        raise ValidationError(error_msg)
+
     return tf_save_file(data, file_path)

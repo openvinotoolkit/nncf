@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, List, Literal, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -103,7 +103,7 @@ def _(a: tf.Tensor) -> TensorDataType:
 
 
 @numeric.reshape.register
-def _(a: tf.Tensor, shape: Tuple[int, ...]) -> tf.Tensor:
+def reshape(a: tf.Tensor, shape: Union[int, Tuple[int, ...]]) -> tf.Tensor:
     with tf.device(a.device):
         return tf.reshape(a, shape)
 
@@ -210,7 +210,7 @@ def _(a: tf.Tensor, source: Union[int, Tuple[int, ...]], destination: Union[int,
 @numeric.mean.register
 def _(
     a: tf.Tensor,
-    axis: Union[int, Tuple[int, ...]] = None,
+    axis: Optional[Union[Tuple[int, ...], int]] = None,
     keepdims: bool = False,
     dtype: Optional[TensorDataType] = None,
 ) -> tf.Tensor:
@@ -222,7 +222,7 @@ def _(
 @numeric.median.register
 def _(
     a: tf.Tensor,
-    axis: Union[int, Tuple[int, ...]] = None,
+    axis: Optional[Union[Tuple[int, ...], int]] = None,
     keepdims: bool = False,
 ) -> tf.Tensor:
     with tf.device(a.device):
@@ -264,14 +264,21 @@ def _(a: tf.Tensor, decimals: int = 0) -> tf.Tensor:
 @numeric.power.register
 def _(a: tf.Tensor, exponent: Union[tf.Tensor, float]) -> tf.Tensor:
     with tf.device(a.device):
-        return tf.pow(a, exponent)
+        if not isinstance(exponent, tf.Tensor):
+            exponent_tensor = tf.convert_to_tensor(exponent, dtype=a.dtype)
+        else:
+            with tf.device(a.device):
+                exponent_tensor = tf.identity(exponent)
+
+        result = tf.pow(a, exponent_tensor)
+        return tf.identity(result)
 
 
 @numeric.quantile.register
 def quantile(
     a: tf.Tensor,
     q: Union[float, List[float]],
-    axis: Optional[Union[int, Tuple[int]]] = None,
+    axis: Optional[Union[int, Tuple[int, ...]]] = None,
     keepdims: bool = False,
 ) -> tf.Tensor:
     a_np = a.numpy()
@@ -281,29 +288,69 @@ def quantile(
 
 
 @numeric.percentile.register
-def _(
+def percentile(
     a: tf.Tensor,
     q: Union[float, List[float]],
-    axis: Optional[Union[int, Tuple[int, ...]]] = None,
+    axis: Optional[Union[Tuple[int, ...], int]],
     keepdims: bool = False,
 ) -> tf.Tensor:
     with tf.device(a.device):
         q = [x / 100 for x in q] if isinstance(q, (list, tuple)) else q / 100
         if isinstance(axis, list):
             axis = tuple(axis)
-        return numeric.quantile(a, q=q, axis=axis, keepdims=keepdims)
+        return quantile(a, q=q, axis=axis, keepdims=keepdims)
 
 
 @numeric._binary_op_nowarn.register
-def _(a: tf.Tensor, b: Union[tf.Tensor, float], operator_fn: Callable[[tf.Tensor, Union[tf.Tensor, float]], tf.Tensor]) -> tf.Tensor:
+def _(a: tf.Tensor, b: Union[tf.Tensor, float], operator_fn: Callable[..., Any]) -> tf.Tensor:
     with tf.device(a.device):
-        return tf.identity(operator_fn(a, b))
+        if not isinstance(b, tf.Tensor) and isinstance(b, (int, float)):
+            b = tf.convert_to_tensor(b, dtype=a.dtype)
+        result = operator_fn(a, b)
+        return tf.identity(result)
 
 
 @numeric._binary_reverse_op_nowarn.register
-def _(a: tf.Tensor, b: Union[tf.Tensor, float], operator_fn: Callable[[Union[tf.Tensor, float], tf.Tensor], tf.Tensor]) -> tf.Tensor:
+def _(a: tf.Tensor, b: Union[tf.Tensor, float], operator_fn: Callable[..., Any]) -> tf.Tensor:
     with tf.device(a.device):
-        return tf.identity(operator_fn(b, a))
+        if not isinstance(b, tf.Tensor) and isinstance(b, (int, float)):
+            b = tf.convert_to_tensor(b, dtype=a.dtype)
+        result = operator_fn(b, a)
+        return tf.identity(result)
+
+
+@numeric.add.register
+def _(x1: tf.Tensor, x2: Union[tf.Tensor, float]) -> tf.Tensor:
+    with tf.device(x1.device):
+        if not isinstance(x2, tf.Tensor):
+            x2 = tf.convert_to_tensor(x2, dtype=x1.dtype)
+        result = tf.add(x1, x2)
+        return tf.identity(result)
+
+
+@numeric.subtract.register
+def _(x1: tf.Tensor, x2: Union[tf.Tensor, float]) -> tf.Tensor:
+    with tf.device(x1.device):
+        if not isinstance(x2, tf.Tensor):
+            x2 = tf.convert_to_tensor(x2, dtype=x1.dtype)
+        result = tf.subtract(x1, x2)
+        return tf.identity(result)
+
+
+@numeric.multiply.register
+def _(x1: tf.Tensor, x2: Union[tf.Tensor, float]) -> tf.Tensor:
+    with tf.device(x1.device):
+        if not isinstance(x2, tf.Tensor):
+            x2 = tf.convert_to_tensor(x2, dtype=x1.dtype)
+        result = tf.multiply(x1, x2)
+        return tf.identity(result)
+
+
+@numeric.neg.register
+def _(a: tf.Tensor) -> tf.Tensor:
+    with tf.device(a.device):
+        result = tf.negative(a)
+        return tf.identity(result)
 
 
 @numeric.clip.register
@@ -365,7 +412,7 @@ def _(x1: tf.Tensor, x2: tf.Tensor) -> tf.Tensor:
 
 
 @numeric.unsqueeze.register
-def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Tensor:
+def unsqueeze(a: tf.Tensor, axis: int) -> tf.Tensor:
     with tf.device(a.device):
         return tf.expand_dims(a, axis=axis)
 
@@ -377,7 +424,7 @@ def _(a: tf.Tensor, axes: Optional[Tuple[int, ...]] = None) -> tf.Tensor:
 
 
 @numeric.argsort.register
-def _(a: tf.Tensor, axis: int = -1, descending=False, stable=False) -> tf.Tensor:
+def argsort(a: tf.Tensor, axis: int = -1, descending: bool = False, stable: bool = False) -> tf.Tensor:
     with tf.device(a.device):
         direction = "DESCENDING" if descending else "ASCENDING"
         return tf.argsort(a, axis=axis, direction=direction, stable=stable)
@@ -403,9 +450,12 @@ def _(x1: tf.Tensor, x2: tf.Tensor) -> tf.Tensor:
 
 
 @numeric.masked_mean.register
-def _(
-    x: tf.Tensor, mask: Optional[tf.Tensor], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
+def masked_mean(
+    x: tf.Tensor, mask: Optional[tf.Tensor], axis: Optional[Union[int, Tuple[int, ...]]], keepdims: bool = False
 ) -> tf.Tensor:
+    if isinstance(axis, list):
+        axis = tuple(axis)
+
     with tf.device(x.device):
         if mask is None:
             return tf.reduce_mean(x, axis=axis, keepdims=keepdims)
@@ -421,11 +471,14 @@ def _(
 
 
 @numeric.masked_median.register
-def _(
-    x: tf.Tensor, mask: Optional[tf.Tensor], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
+def masked_median(
+    x: tf.Tensor, mask: Optional[tf.Tensor], axis: Optional[Union[int, Tuple[int, ...]]], keepdims: bool = False
 ) -> tf.Tensor:
     if mask is None:
         return numeric.median(x, axis=axis, keepdims=keepdims)
+
+    if isinstance(axis, list):
+        axis = tuple(axis)
 
     masked_x = tf.where(mask, np.nan, x)
     np_masked_x = masked_x.numpy()
@@ -439,16 +492,16 @@ def _(
 
 
 @numeric.expand_dims.register
-def _(a: tf.Tensor, axis: Union[int, Tuple[int, ...], List[int]]) -> tf.Tensor:
+def expand_dims(a: tf.Tensor, axis: Union[int, Tuple[int, ...]]) -> tf.Tensor:
+    axes_tuple: Tuple[int, ...]
     if isinstance(axis, int):
-        axes_tuple: Tuple[int, ...] = (axis,)
-    elif isinstance(axis, list):
-        axes_tuple: Tuple[int, ...] = tuple(axis)
+        axes_tuple = (axis,)
     elif isinstance(axis, tuple):
-        axes_tuple: Tuple[int, ...] = axis
+        axes_tuple = axis
     else:
-        raise TypeError(f"axis must be int, tuple, or list, got {type(axis)}")
-    
+        error_msg = f"axis must be int or tuple, got {type(axis)}"
+        raise TypeError(error_msg)
+
     if len(set(axes_tuple)) != len(axes_tuple):
         error_msg = "repeated axis"
         raise ValueError(error_msg)
@@ -474,7 +527,9 @@ def _(a: tf.Tensor) -> tf.Tensor:
 
 
 @numeric.searchsorted.register
-def _(a: tf.Tensor, v: tf.Tensor, side: str = "left", sorter: Optional[tf.Tensor] = None) -> tf.Tensor:
+def searchsorted(
+    a: tf.Tensor, v: tf.Tensor, side: Literal["left", "right"] = "left", sorter: Optional[tf.Tensor] = None
+) -> tf.Tensor:
     if side not in ["right", "left"]:
         error_msg = f"Invalid value for 'side': {side}. Expected 'right' or 'left'."
         raise ValueError(error_msg)
@@ -528,6 +583,11 @@ def arange(
 def from_numpy(ndarray: npt.NDArray[Any]) -> tf.Tensor:
     with tf.device("CPU"):
         return tf.constant(ndarray)
+
+
+@numeric.as_numpy_tensor.register
+def as_numpy_tensor(a: tf.Tensor) -> npt.NDArray[Any]:
+    return a.numpy()
 
 
 @numeric.log2.register
