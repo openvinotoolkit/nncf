@@ -84,7 +84,7 @@ requires only example input for the target module, corresponding NNCF config and
 import nncf.torch
 
 # save part
-
+quantized_model = nncf.quantize(model, calibration_dataset)
 checkpoint = {
     'state_dict': quantized_model.state_dict(),
     'nncf_config': nncf.torch.get_config(quantized_model),
