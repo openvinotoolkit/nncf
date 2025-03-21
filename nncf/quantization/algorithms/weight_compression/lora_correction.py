@@ -25,7 +25,6 @@ from nncf.quantization.algorithms.weight_compression.activation_stats import pro
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import CompressedWeight
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_quantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_dequantization
 from nncf.tensor import Tensor
@@ -177,10 +176,7 @@ class LoraCorrectionAlgorithm:
                 reduction_axis,
             )
         elif mode == CompressWeightsMode.NF4:
-            indexes = calculate_nf4_quantized_weight(
-                compressed_weight.tensor, compressed_weight.scale, is_normalized_weight=True
-            )
-            fq_weights = do_float_dequantization(indexes, compressed_weight.scale, reduction_axis)
+            fq_weights = do_float_dequantization(compressed_weight.tensor, compressed_weight.scale, reduction_axis)
         else:
             msg = (
                 f"{mode.value} mode is invalid for Lora Correction algorithm. Supported modes: INT4_SYM, INT4_ASYM, NF4"

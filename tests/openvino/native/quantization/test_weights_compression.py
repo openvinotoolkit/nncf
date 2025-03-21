@@ -40,7 +40,7 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
-from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
@@ -1041,7 +1041,7 @@ def test_compressed_weighs_range(mode, data):
     w = Tensor(data)
 
     config = WeightCompressionConfig(mode=mode)
-    compressed_weighs, _, _ = do_int_quantization(w, config, -1)
+    compressed_weighs, _, _ = do_integer_quantization(w, config, -1)
 
     assert np.allclose(np.abs(compressed_weighs.data), np.abs(w.data))
 
@@ -1073,14 +1073,16 @@ def test_int_quantization_with_precomputed_parameters(config, precompute_scale, 
 
     if raises:
         with pytest.raises(ValueError) as exc_info:
-            _, scale, zero_point = do_int_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
+            _, scale, zero_point = do_integer_quantization(
+                weight, config, -1, precomputed_scale, precomputed_zero_point
+            )
             assert exc_info.value == (
                 "If precomputed quantization parameters are provided, both scale and zero point "
                 "are required for asymmetric quantization."
             )
         return
     else:
-        _, scale, zero_point = do_int_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
+        _, scale, zero_point = do_integer_quantization(weight, config, -1, precomputed_scale, precomputed_zero_point)
 
     if precompute_scale:
         assert np.allclose(scale.data, precomputed_scale.data)

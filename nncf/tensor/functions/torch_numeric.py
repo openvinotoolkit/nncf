@@ -98,6 +98,11 @@ def _(a: torch.Tensor) -> torch.Tensor:
     return torch.absolute(a)
 
 
+@numeric.abs.register
+def _(a: torch.Tensor) -> torch.Tensor:
+    return torch.sign(a)
+
+
 @numeric.astype.register
 def _(a: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
     return a.type(DTYPE_MAP[dtype])

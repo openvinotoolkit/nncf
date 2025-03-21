@@ -22,6 +22,7 @@ from openvino._pyopenvino.properties.hint import inference_precision
 from openvino.runtime import Node
 from openvino.runtime import opset13 as opset
 
+from nncf import CompressWeightsMode
 from nncf.common.utils.backend import is_openvino_at_least
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
@@ -229,6 +230,26 @@ def get_integer_quantization_model(
         weight_shape,
         scale_shape,
         zero_point_shape,
+        reduction_axes,
+    )
+
+
+def get_float_quantization_model(
+    ov_model_params: OVModelParameters,
+    config: WeightCompressionConfig,
+    weight_shape: Tuple,
+    scale_shape: Optional[Tuple] = None,
+    reduction_axes: Optional[ReductionAxes] = None,
+) -> Union[ModelCallable, ModelAsNodes]:
+    weight_shape, scale_shape, _ = _prepare_quantization_model_inputs(
+        ov_model_params, weight_shape, scale_shape, zero_point_shape=None, reduction_axes=reduction_axes
+    )
+
+    return _build_float_quantization_model(
+        config,
+        ov_model_params,
+        weight_shape,
+        scale_shape,
         reduction_axes,
     )
 
@@ -443,6 +464,97 @@ def _build_integer_quantization_model(
         if zero_point is not None:
             zero_point = convert_op(zero_point, DTYPE_MAP_OV[output_zero_point_dtype])
             ov_results.append(zero_point)
+
+    if return_nodes:
+        return ov_parameters, ov_results, ov_model_params
+
+    model = ov.Model(ov_results, ov_parameters)
+    compiled_model = _compile_ov_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})
+
+    return partial(_infer_ov_model, ov_model_params, compiled_model)
+
+
+@cache_results(OV_MODEL_CACHE)
+def _build_float_quantization_model(
+    config: WeightCompressionConfig,
+    ov_model_params: OVModelParameters,
+    weight_shape: Tuple,
+    scale_shape: Optional[Tuple] = None,
+    reduction_axes: Optional[ReductionAxes] = None,
+    return_nodes: bool = False,
+) -> Union[ModelCallable, ModelAsNodes]:
+    default_input_dtypes = {"scale": TensorDataType.float32}
+    default_output_dtypes = {"compressed_weight": TensorDataType.float32, "scale": TensorDataType.float32}
+
+    # Update input and output dtypes with the default values
+    ov_model_params = copy.deepcopy(ov_model_params)
+    ov_model_params.input_dtypes = {**default_input_dtypes, **ov_model_params.input_dtypes}
+    ov_model_params.output_dtypes = {**default_output_dtypes, **ov_model_params.output_dtypes}
+
+    if "weight" not in ov_model_params.input_dtypes:
+        msg = "Input weight dtype is required!"
+        raise ValueError(msg)
+
+    weight_dtype = ov_model_params.input_dtypes["weight"]
+    input_scale_dtype = ov_model_params.input_dtypes["scale"]
+    compressed_weight_dtype = ov_model_params.output_dtypes["compressed_weight"]
+    output_scale_dtype = ov_model_params.output_dtypes["scale"]
+
+    # Validate input dtypes
+    valid_weight_dtypes = [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16]
+    if weight_dtype not in valid_weight_dtypes:
+        msg = f"Weight must be one of the following data types: {valid_weight_dtypes}. But found: {weight_dtype}."
+        raise ValueError(msg)
+    if scale_shape is not None and input_scale_dtype != TensorDataType.float32:
+        msg = f"Input scale must be of float32 data type. But found: {input_scale_dtype}."
+        raise ValueError(msg)
+
+    # Validate output dtypes
+    # TODO: Enable f4e2m1
+    valid_compressed_weight_dtypes = [TensorDataType.float32, TensorDataType.nf4]
+    if compressed_weight_dtype not in valid_compressed_weight_dtypes:
+        msg = (
+            f"Compressed weight must be one of the following data types: {valid_compressed_weight_dtypes}. "
+            f"But found: {compressed_weight_dtype}."
+        )
+        raise ValueError(msg)
+    if scale_shape is None and output_scale_dtype != TensorDataType.float32:
+        msg = f"Output scale must be of float32 data type. But found: {output_scale_dtype}."
+        raise ValueError(msg)
+
+    # Build OV model
+    weight = opset.parameter(weight_shape, name="weight", dtype=DTYPE_MAP_OV[weight_dtype])
+    ov_parameters = [weight]
+    weight = convert_op(weight, ov.Type.f32)
+
+    divide_op = opset.divide if ov_model_params.convertable_division else non_convertable_divide_op
+    if scale_shape is not None:
+        # Scale is given as an input
+        scale = opset.parameter(scale_shape, name="scale", dtype=DTYPE_MAP_OV[input_scale_dtype])
+        ov_parameters.append(scale)
+    else:
+        # Compute scale
+        scale = opset.reduce_max(opset.abs(weight), reduction_axes=reduction_axes, keep_dims=True)
+        # NOTE: adding machine epsilon to avoid division by zero
+        eps = np.finfo(np.float32).eps
+        scale = opset.select(opset.less(opset.abs(scale), eps), eps, scale)
+
+        if config.mode == CompressWeightsMode.E2M1:
+            max_val = opset.constant(6, ov.Type.f32)  # Maximal value of e2m1 type.
+            constant_2 = opset.constant(2, ov.Type.f32)
+            scale = divide_op(scale, max_val)
+            scale = opset.log(scale) / opset.log(constant_2)
+            scale = opset.ceil(scale)
+            scale = opset.clamp(scale, -127, 127)
+            scale = opset.power(constant_2, scale)
+
+    compressed_weight = divide_op(weight, scale)
+    compressed_weight = convert_op(compressed_weight, ov.Type.nf4)
+    compressed_weight = convert_op(compressed_weight, DTYPE_MAP_OV[compressed_weight_dtype])
+
+    ov_results = [compressed_weight]
+    if len(ov_parameters) == 1:
+        ov_results.append(scale)
 
     if return_nodes:
         return ov_parameters, ov_results, ov_model_params

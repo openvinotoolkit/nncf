@@ -23,7 +23,6 @@ from nncf.quantization.algorithms.weight_compression.activation_stats import pro
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_quantized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
@@ -199,8 +198,7 @@ class ScaleEstimation:
 
         original_weight = fns.zeros_like(weight) + weight
         if config.mode == CompressWeightsMode.NF4:
-            norm_weight, scale = do_float_quantization(original_weight, reduction_axis, cur_config.group_size)
-            compressed_weights = calculate_nf4_quantized_weight(norm_weight, scale, is_normalized_weight=True)
+            compressed_weights, scale = do_float_quantization(original_weight, cur_config, reduction_axis)
             q_weights = do_float_dequantization(compressed_weights, scale, reduction_axis)
             q_weights, _ = reshape_weight_for_grouped_quantization(q_weights, reduction_axis, group_size)
             zp = None
@@ -249,7 +247,9 @@ class ScaleEstimation:
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
 
             if config.mode == CompressWeightsMode.NF4:
-                g_compressed_weighs = calculate_nf4_quantized_weight(original_weight, near_to_ideal_scale)
+                g_compressed_weighs, _ = do_float_quantization(
+                    original_weight, config, precomputed_scale=near_to_ideal_scale
+                )
                 out = do_float_dequantization(g_compressed_weighs, near_to_ideal_scale)
             else:
                 out = integer_quantize_dequantize_weight(
@@ -284,7 +284,7 @@ class ScaleEstimation:
 
             if i < initial_steps - 1:
                 if config.mode == CompressWeightsMode.NF4:
-                    out = calculate_nf4_quantized_weight(original_weight, near_to_ideal_scale)
+                    out, _ = do_float_quantization(original_weight, config, precomputed_scale=near_to_ideal_scale)
                 else:
                     out, _, _ = do_integer_quantization(
                         original_weight,
@@ -302,7 +302,7 @@ class ScaleEstimation:
             scaled_scale = factor * scale
 
             if config.mode == CompressWeightsMode.NF4:
-                out = calculate_nf4_quantized_weight(original_weight, scaled_scale)
+                out, _ = do_float_quantization(original_weight, config, precomputed_scale=scaled_scale)
             else:
                 out, _, _ = do_integer_quantization(
                     original_weight,
@@ -318,7 +318,9 @@ class ScaleEstimation:
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
 
             if config.mode == CompressWeightsMode.NF4:
-                g_compressed_weighs = calculate_nf4_quantized_weight(original_weight, near_to_ideal_scale)
+                g_compressed_weighs, _ = do_float_quantization(
+                    original_weight, config, precomputed_scale=near_to_ideal_scale
+                )
                 out = do_float_dequantization(g_compressed_weighs, near_to_ideal_scale)
             else:
                 out = integer_quantize_dequantize_weight(

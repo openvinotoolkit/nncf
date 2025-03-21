@@ -87,6 +87,11 @@ def _(a: T_NUMPY) -> T_NUMPY:
     return np.absolute(a)
 
 
+@numeric.sign.register
+def _(a: T_NUMPY) -> T_NUMPY:
+    return np.sign(a)
+
+
 @numeric.astype.register
 def _(a: T_NUMPY, dtype: TensorDataType) -> T_NUMPY:
     return a.astype(DTYPE_MAP[dtype])

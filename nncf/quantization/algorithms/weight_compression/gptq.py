@@ -26,10 +26,10 @@ from nncf.quantization.algorithms.weight_compression.backend import WeightCompre
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_float_quantization_params
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_integer_quantization_params
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_quantized_weight
-from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_scale
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -262,7 +262,9 @@ class GPTQ:
 
                 if (i1 + i) % group_size == 0:
                     if block_compression_config.mode == CompressWeightsMode.NF4:
-                        scale = calculate_nf4_scale(weight_tensor[:, (i1 + i) : (i1 + i + group_size)], reduction_axes)
+                        scale = calculate_float_quantization_params(
+                            weight_tensor[:, (i1 + i) : (i1 + i + group_size)], reduction_axes, block_compression_config
+                        )
                         scales.append(scale)
                     else:
                         if self._scale_estimation and block_compression_config.num_bits == 4:
@@ -284,8 +286,8 @@ class GPTQ:
                         zero_points.append(zero_point)
 
                 if block_compression_config.mode == CompressWeightsMode.NF4:
-                    compressed_weights = calculate_nf4_quantized_weight(
-                        fns.unsqueeze(weight_col, 1), scales[-1], is_normalized_weight=False
+                    compressed_weights, _ = do_float_quantization(
+                        fns.unsqueeze(weight_col, 1), block_compression_config, precomputed_scale=scales[-1]
                     )
                     quantized_col = do_float_dequantization(compressed_weights, scales[-1], reduction_axis=-1)
                 else:

@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from nncf.openvino.optimized_functions.functions import astype as astype
+from nncf.openvino.optimized_functions.functions import do_float_quantization as do_float_quantization
 from nncf.openvino.optimized_functions.functions import do_integer_quantization as do_integer_quantization
 from nncf.openvino.optimized_functions.functions import get_integer_quantization_error as get_integer_quantization_error
 from nncf.openvino.optimized_functions.functions import (

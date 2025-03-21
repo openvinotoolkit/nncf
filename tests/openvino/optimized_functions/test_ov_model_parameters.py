@@ -17,9 +17,9 @@ from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.optimized_functions.models import OVModelParameters
 from nncf.openvino.optimized_functions.models import _infer_ov_model
 from nncf.openvino.optimized_functions.models import get_astype_model
-from nncf.openvino.optimized_functions.models import get_compress_decompress_weight_model
-from nncf.openvino.optimized_functions.models import get_compress_weight_model
-from nncf.openvino.optimized_functions.models import get_quantization_error_model
+from nncf.openvino.optimized_functions.models import get_integer_quantization_error_model
+from nncf.openvino.optimized_functions.models import get_integer_quantization_model
+from nncf.openvino.optimized_functions.models import get_integer_quantize_dequantize_weight_model
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
@@ -44,7 +44,7 @@ class ModelGetter:
 
 MODEL_GETTERS = [
     ModelGetter(
-        get_model_fn=get_compress_weight_model,
+        get_model_fn=get_integer_quantization_model,
         ov_model_params_kwargs=dict(
             input_dtypes={
                 "weight": TensorDataType.float32,
@@ -61,7 +61,7 @@ MODEL_GETTERS = [
         ),
     ),
     ModelGetter(
-        get_model_fn=get_compress_weight_model,
+        get_model_fn=get_integer_quantization_model,
         ov_model_params_kwargs=dict(
             input_dtypes={"weight": TensorDataType.float32},
             output_dtypes={
@@ -77,7 +77,7 @@ MODEL_GETTERS = [
         ),
     ),
     ModelGetter(
-        get_model_fn=get_compress_decompress_weight_model,
+        get_model_fn=get_integer_quantize_dequantize_weight_model,
         ov_model_params_kwargs=dict(
             input_dtypes={
                 "weight": TensorDataType.float32,
@@ -96,7 +96,7 @@ MODEL_GETTERS = [
         ),
     ),
     ModelGetter(
-        get_model_fn=get_compress_decompress_weight_model,
+        get_model_fn=get_integer_quantize_dequantize_weight_model,
         ov_model_params_kwargs=dict(
             input_dtypes={
                 "weight": TensorDataType.float32,
@@ -130,7 +130,7 @@ MODEL_GETTERS = [
         ),
     ),
     ModelGetter(
-        get_model_fn=get_quantization_error_model,
+        get_model_fn=get_integer_quantization_error_model,
         ov_model_params_kwargs=dict(
             input_dtypes={
                 "weight": TensorDataType.float32,
@@ -228,9 +228,9 @@ def test_recompile(model_getter, recompile):
         model_getter.get()
     if recompile:
         ref_size = 0
-    elif model_getter._get_model_fn == get_compress_decompress_weight_model:
+    elif model_getter._get_model_fn == get_integer_quantize_dequantize_weight_model:
         ref_size = 2
-    elif model_getter._get_model_fn == get_quantization_error_model:
+    elif model_getter._get_model_fn == get_integer_quantization_error_model:
         ref_size = 3
     else:
         ref_size = 1
@@ -335,6 +335,6 @@ def test_convertable_divison(weight, convertable_division, ref_compressed_weight
 
     weight = np.array(weight, np.float32)
     ref_compressed_weight = np.array(ref_compressed_weight, np.uint8)
-    model_run_fn = get_compress_weight_model(ov_model_params, config, weight.shape, reduction_axes=(1,))
+    model_run_fn = get_integer_quantization_model(ov_model_params, config, weight.shape, reduction_axes=(1,))
     compressed_weight = model_run_fn([Tensor(weight)])[0]
     np.testing.assert_allclose(compressed_weight.data, ref_compressed_weight, atol=0, rtol=0)

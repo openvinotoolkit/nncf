@@ -11,10 +11,12 @@
 
 from typing import Optional, Tuple, Union
 
+from nncf import CompressWeightsMode
 from nncf.common.utils.caching import disable_results_caching
 from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.optimized_functions.models import OVModelParameters
 from nncf.openvino.optimized_functions.models import get_astype_model
+from nncf.openvino.optimized_functions.models import get_float_quantization_model
 from nncf.openvino.optimized_functions.models import get_integer_quantization_error_model
 from nncf.openvino.optimized_functions.models import get_integer_quantization_model
 from nncf.openvino.optimized_functions.models import get_integer_quantize_dequantize_weight_model
@@ -95,6 +97,48 @@ def do_integer_quantization(
         scale, zero_point = precomputed_scale, precomputed_zero_point
 
     return compressed_weight, scale, zero_point
+
+
+def do_float_quantization(
+    weight: Tensor,
+    config: WeightCompressionConfig,
+    reduction_axes: Optional[ReductionAxes] = None,
+    precomputed_scale: Tensor = None,
+) -> Tuple[Tensor, Tensor]:
+    weight_shape = weight.shape
+    scale_shape = None if precomputed_scale is None else precomputed_scale.shape
+
+    ov_model_params = OVModelParameters()
+    ov_model_params.input_dtypes["weight"] = weight.dtype
+    if precomputed_scale is not None:
+        ov_model_params.input_dtypes["scale"] = precomputed_scale.dtype
+    if config.num_bits == 4 and weight.backend == TensorBackend.ov:
+        # Return ov tensors in target precision to seamlessly insert them into openvino model later
+        ov_model_params.return_ov_tensors = True
+        dtype = TensorDataType.nf4 if config.mode == CompressWeightsMode.NF4 else TensorDataType.f4e2m1
+        ov_model_params.output_dtypes.update({"compressed_weight": dtype})
+
+    model = get_float_quantization_model(
+        ov_model_params,
+        config,
+        weight_shape,
+        scale_shape,
+        reduction_axes,
+    )
+
+    if precomputed_scale is None:
+        # weight -> compressed_weight, scale
+        compressed_weight, scale = model([weight])
+
+        # Scale is always in fp32 so there is no need to store it in ov.Tensor
+        if scale.backend == TensorBackend.ov:
+            scale = scale.as_numpy_tensor()
+    else:
+        # weight, scale -> compressed_weight
+        compressed_weight = model([weight, precomputed_scale])[0]
+        scale = precomputed_scale
+
+    return compressed_weight, scale
 
 
 def integer_quantize_dequantize_weight(
