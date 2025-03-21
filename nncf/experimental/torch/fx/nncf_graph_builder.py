@@ -198,9 +198,7 @@ class GraphConverter:
             else:
                 tensor = source_node.meta["val"]
             if isinstance(tensor, torch.Tensor):
-                tensor_shape = tuple(
-                    -1 if isinstance(i, GraphConverter.TORCH_SYMBOLIC_TYPES) else i for i in tensor.shape
-                )
+                tensor_shape = tuple(-1 if isinstance(i, torch.SymInt) else i for i in tensor.shape)
             elif isinstance(tensor, GraphConverter.TORCH_SYMBOLIC_TYPES):
                 tensor_shape = (-1,)
 
