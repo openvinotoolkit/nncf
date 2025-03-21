@@ -89,9 +89,9 @@ def get_meta_type(node_type: str, meta: Union[ConstMeta, FunctionMeta, InOutMeta
     :param meta: The metadata associated with the node.
     :return: The PTOperatorMetatype object.
     """
-    node_metatype = cast(
-        type[om.PTOperatorMetatype], om.PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
-    )
+    metatype = om.PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
+
+    node_metatype = cast(type[om.PTOperatorMetatype], metatype)
     node_sub_meta_type: Optional[type[om.PTOperatorMetatype]] = None
     if node_metatype.get_subtypes() and isinstance(meta, FunctionMeta):
         node_sub_meta_type = node_metatype.determine_subtype(function_args=meta.args, functions_kwargs=meta.kwargs)
@@ -187,7 +187,7 @@ def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> PTNNCFGraph:
             layer_name=node_name,
             node_metatype=meta_type,
             node_name=node_name,
-            node_type=node_type,
+            node_type=node_type.split(".")[-1],
         )
         map_nx_node_to_nncf_node[node] = nncf_node
 

@@ -34,6 +34,7 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: Dict[QuantizationTrait, List[PTOperatorMetaty
         operator_metatypes.PTLinearMetatype,
         operator_metatypes.PTModuleLinearMetatype,
         operator_metatypes.PTLayerNormMetatype,
+        operator_metatypes.PTAtenLayerNormMetatype,
         operator_metatypes.PTModuleLayerNormMetatype,
         operator_metatypes.PTAddMetatype,
         operator_metatypes.PTMulMetatype,
@@ -43,6 +44,7 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: Dict[QuantizationTrait, List[PTOperatorMetaty
         operator_metatypes.PTRoundMetatype,
         operator_metatypes.PTPixelShuffleMetatype,
         operator_metatypes.PTBatchNormMetatype,
+        operator_metatypes.PT2BatchNormMetatype,
         operator_metatypes.PTModuleBatchNormMetatype,
         operator_metatypes.PTAvgPool2dMetatype,
         operator_metatypes.PTAvgPool3dMetatype,
@@ -98,6 +100,7 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: Dict[QuantizationTrait, List[PTOperatorMetaty
     QuantizationTrait.CONCAT: [operator_metatypes.PTCatMetatype],
     QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [
         operator_metatypes.PTEmbeddingMetatype,
+        operator_metatypes.PTAtenEmbeddingMetatype,
         operator_metatypes.PTModuleEmbeddingMetatype,
         operator_metatypes.PTEmbeddingBagMetatype,
         operator_metatypes.PTModuleEmbeddingBagMetatype,

@@ -65,22 +65,6 @@ class GraphConverter:
             )
         return None
 
-    def _map_fx_unique_metatypes(node: torch.fx.Node, metatype: om.OperatorMetatype) -> om.OperatorMetatype:
-        """
-        Attempts to retrieve correct subtype for the given node.
-
-        :param node: Given node.
-        :param metatype: Given node metatype.
-        :param model: Target GraphModule instance.
-        :return: Correct FX metatype of the given node if it is exist or the original node metatype otherwise.
-        """
-        if metatype in [om.PTEmbeddingMetatype]:
-            weight_node = node.args[0]
-            if weight_node.op == "get_attr":
-                return om.PTAtenEmbeddingMetatype
-
-        return metatype
-
     @staticmethod
     def get_node_type_and_metatype(node: torch.fx.Node, model: torch.fx.GraphModule) -> Tuple[str, om.OperatorMetatype]:
         """
@@ -90,6 +74,7 @@ class GraphConverter:
         :param model: Given GraphModule.
         :return: Node's type and metatype.
         """
+        node_type_name = None
         if node.op == "placeholder":
             node_type = "input"
             node_metatype = om.PTInputNoopMetatype
@@ -101,9 +86,11 @@ class GraphConverter:
             node_metatype = om.PTConstNoopMetatype
         elif node.op in ("call_function",):
             if hasattr(node.target, "overloadpacket"):
-                node_type = str(node.target.overloadpacket).split(".")[1]
+                node_type = str(node.target.overloadpacket)
+                node_type_name = node_type.split(".")[1]
             elif node.target.__name__ == "getitem":
-                node_type = "__getitem__"
+                node_type = "aten.__getitem__"
+                node_type_name = "__getitem__"
             else:
                 # TODO(dlyakhov): get correct nodes types from this nodes as well
                 node_type = str(node.target)
@@ -118,7 +105,8 @@ class GraphConverter:
             layer_attrs = GraphConverter._get_layer_attributes(node, node_metatype, model)
             node_subtype = node_metatype.determine_subtype(layer_attrs)
             node_metatype = node_subtype or node_metatype
-        return node_type, node_metatype
+        node_type_name = node_type_name or node_type
+        return node_type_name, node_metatype
 
     @staticmethod
     def create_nncf_graph(model: torch.fx.GraphModule) -> PTNNCFGraph:
@@ -135,7 +123,6 @@ class GraphConverter:
         const_targets_counter = Counter([node.target for node in model.graph.nodes if node.op == "get_attr"])
         for source_node in model.graph.nodes:
             node_type, node_metatype = GraphConverter.get_node_type_and_metatype(source_node, model)
-            node_metatype = GraphConverter._map_fx_unique_metatypes(source_node, node_metatype)
             is_shared_node = source_node.op in ("get_attr",) and (
                 const_targets_counter[source_node.target] > 1 or len(source_node.users) > 1
             )
@@ -148,7 +135,7 @@ class GraphConverter:
             source_nncf_node = nncf_graph.get_node_by_name(source_node.name)
             for idx, dist_node in enumerate(source_node.users):
                 dist_node_id = nncf_graph.get_node_by_name(dist_node.name).node_id
-                input_port_id, output_port_id, tensor_shape = GraphConverter.get_edge_params(
+                input_port_id, output_port_id, tensor_shape, tensor_dtype = GraphConverter.get_edge_params(
                     model, source_node, source_nncf_node, dist_node, idx
                 )
                 nncf_graph.add_edge_between_nncf_nodes(
@@ -157,7 +144,7 @@ class GraphConverter:
                     tensor_shape=tensor_shape,
                     input_port_id=input_port_id,
                     output_port_id=output_port_id,
-                    dtype=Dtype.FLOAT,
+                    dtype=tensor_dtype,
                 )
         return nncf_graph
 
@@ -168,7 +155,7 @@ class GraphConverter:
         source_nncf_node: NNCFNode,
         dist_node: torch.fx.Node,
         output_idx: int,
-    ) -> Tuple[int, int, Tuple[int, ...]]:
+    ) -> Tuple[int, int, Tuple[int, ...], Dtype]:
         """
         Retrieves edge params from the given source_node and dist_node pair.
 
@@ -182,8 +169,11 @@ class GraphConverter:
         """
         output_port_id = 0
         tensor_shape = None
+        tensor_dtype = Dtype.FLOAT
         if source_node.op in ("get_attr",):
-            tensor_shape = tuple(get_tensor_constant_from_node(source_node, model).shape)
+            tensor = get_tensor_constant_from_node(source_node, model)
+            tensor_shape = tuple(tensor.shape)
+            tensor_dtype = Dtype.INTEGER if tensor.dtype == torch.int else tensor_dtype
         elif "val" in source_node.meta:
             if source_nncf_node.metatype is om.PTBatchNormMetatype and isinstance(
                 source_node.meta["val"], (tuple, list)
@@ -197,6 +187,7 @@ class GraphConverter:
                 tensor = source_node.meta["val"]
             if isinstance(tensor, torch.Tensor):
                 tensor_shape = tuple(-1 if isinstance(i, torch.SymInt) else i for i in tensor.shape)
+                tensor_dtype = Dtype.INTEGER if tensor.dtype == torch.int else tensor_dtype
             elif isinstance(tensor, torch.SymInt):
                 tensor_shape = (-1,)
 
@@ -205,4 +196,4 @@ class GraphConverter:
             nncf_logger.debug(f"Edge shape between {source_node.name} and {dist_node.name} is unknown.")
 
         input_port_id = dist_node.all_input_nodes.index(source_node)
-        return input_port_id, output_port_id, tensor_shape
+        return input_port_id, output_port_id, tensor_shape, tensor_dtype

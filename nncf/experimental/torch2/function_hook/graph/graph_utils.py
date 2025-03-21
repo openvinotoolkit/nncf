@@ -80,7 +80,11 @@ class FunctionMeta:
 
     @property
     def func_name(self) -> str:
-        return self.func.__name__
+        if self.func.__qualname__.split(".")[0] == "TensorBase":
+            return f"torch.tensor.{self.func.__name__}"
+        elif self.func.__qualname__ == self.func.__name__:
+            return f"torch.nn.functional.{self.func.__name__}"
+        return f"{self.func.__module__}.{self.func.__name__}"
 
 
 @dataclass

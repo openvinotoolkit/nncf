@@ -1,7 +1,7 @@
 strict digraph {
 x [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
 "/unsqueeze/0" [id=1, type=unsqueeze, metatype=PTReshapeMetatype];
-"/reshape/0" [id=2, type=reshape, metatype=PTReshapeMetatype];
+"/reshape/0" [id=2, type=reshape, metatype=UnknownMetatype];
 "/matmul/0" [id=3, type=matmul, metatype=PTMatMulMetatype];
 "/transpose/0" [id=4, type=transpose, metatype=PTTransposeMetatype];
 "/cat/0" [id=5, type=cat, metatype=PTCatMetatype];

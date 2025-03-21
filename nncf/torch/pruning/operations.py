@@ -41,6 +41,7 @@ from nncf.common.pruning.utils import is_prunable_depthwise_conv
 from nncf.torch.graph.operator_metatypes import PTAdaptiveMaxPool2dMetatype
 from nncf.torch.graph.operator_metatypes import PTAdaptiveMaxPool3dMetatype
 from nncf.torch.graph.operator_metatypes import PTAddMetatype
+from nncf.torch.graph.operator_metatypes import PTAtenLayerNormMetatype
 from nncf.torch.graph.operator_metatypes import PTAvgPool2dMetatype
 from nncf.torch.graph.operator_metatypes import PTAvgPool3dMetatype
 from nncf.torch.graph.operator_metatypes import PTBatchNormMetatype
@@ -543,7 +544,7 @@ class PTGroupNormPruningOp(GroupNormPruningOp, PTPruner):
 
 @PT_PRUNING_OPERATOR_METATYPES.register("layer_norm")
 class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
-    subtypes = [PTLayerNormMetatype]
+    subtypes = [PTLayerNormMetatype, PTAtenLayerNormMetatype]
 
     @classmethod
     def input_reorder(cls, model: NNCFNetwork, node: NNCFNode, graph: NNCFGraph):

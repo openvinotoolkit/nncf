@@ -39,7 +39,7 @@ CONV_TRANSPOSE_OP_NAMES = get_all_aliases(
     om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype
 )
 LINEAR_OP_NAMES = get_all_aliases(om.PTLinearMetatype)
-BATCHNORM_OP_NAMES = get_all_aliases(om.PTBatchNormMetatype)
+BATCHNORM_OP_NAMES = get_all_aliases(om.PTBatchNormMetatype, om.PT2BatchNormMetatype)
 EMBEDDING_OP_NAMES = get_all_aliases(om.PTEmbeddingMetatype, om.PTEmbeddingBagMetatype)
 GROUP_NORM_OP_NAMES = get_all_aliases(om.PTGroupNormMetatype)
 LAYER_NORM_OP_NAMES = get_all_aliases(om.PTLayerNormMetatype)

@@ -36,7 +36,7 @@ strict digraph  {
 "4 scale_updated_constant0" -> "6 mul_tensor"  [label="(12, 1)", style=solid];
 "5 compressed_weight_updated_constant0" -> "6 mul_tensor"  [label="(12, 4)", style=solid];
 "6 mul_tensor" -> "8 sub_tensor"  [label="(12, 4)", style=solid];
-"7 zero_point_updated_constant0" -> "8 sub_tensor"  [label="(12, 1)", style=solid];
+"7 zero_point_updated_constant0" -> "8 sub_tensor"  [label="(12, 1)", style=dashed];
 "8 sub_tensor" -> "9 linear"  [label="(12, 4)", style=solid];
 "9 linear" -> "10 quantize_per_tensor_default_1"  [label="(1, 2, 12)", style=solid];
 "9 linear" -> "15 quantize_per_tensor_default_2"  [label="(1, 2, 12)", style=solid];

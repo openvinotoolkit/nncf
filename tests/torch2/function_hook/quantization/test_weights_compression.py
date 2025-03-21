@@ -176,7 +176,6 @@ def test_compress_weights_functional_model(mode):
     input_ids = torch.randint(0, 10, [1, 3, 256, 256])
     wrapped_model = GraphModelWrapper(model, example_input=input_ids)
     compressed_model = compress_weights(wrapped_model, mode=mode)
-
     n_compressed_weights = 0
     for layer in compressed_model.modules():
         if isinstance(layer, decompressor_type):

@@ -311,11 +311,13 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.PTMaxMetatype,
                 om.PTSqueezeMetatype,
                 om.PTLayerNormMetatype,
+                om.PTAtenLayerNormMetatype,
                 om.PTModuleLayerNormMetatype,
                 om.PTGroupNormMetatype,
                 om.PTModuleGroupNormMetatype,
                 # Batchnorm
                 om.PTBatchNormMetatype,
+                om.PT2BatchNormMetatype,
                 om.PTModuleBatchNormMetatype,
                 # Comparison operations
                 om.PTGreaterEqualMetatype,
