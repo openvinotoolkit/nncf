@@ -106,16 +106,6 @@ def abs(a: Tensor) -> Tensor:
 
 
 @tensor_dispatcher
-def sign(a: Tensor) -> Tensor:
-    """
-    Calculate the sign value element-wise.
-
-    :param a: The input tensor.
-    :return: A tensor containing the sign value of each element in x.
-    """
-
-
-@tensor_dispatcher
 def astype(a: Tensor, dtype: TensorDataType) -> Tensor:
     """
     Copy of the tensor, cast to a specified type.

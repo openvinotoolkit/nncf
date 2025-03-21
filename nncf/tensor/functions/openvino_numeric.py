@@ -83,7 +83,7 @@ def _(a: ov.Tensor, shape: Union[int, Tuple[int, ...]]) -> ov.Tensor:
 
 @numeric.as_numpy_tensor.register
 def _(a: ov.Tensor) -> NDArray[Any]:
-    # Cannot convert bfloat16, uint4, int4, nf4, f4e2m1, f8e4m3, f8e5m2 to numpy directly
+    # Cannot convert bfloat16, uint4, int4, nf4, f8e4m3, f8e5m2 to numpy directly
     a_dtype = DTYPE_MAP_REV[a.get_element_type()]
     if a_dtype in [
         TensorDataType.bfloat16,
