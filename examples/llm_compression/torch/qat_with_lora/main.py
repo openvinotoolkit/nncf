@@ -12,11 +12,9 @@ import argparse
 import random
 import shutil
 import sys
-import warnings
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List
-from weakref import WeakKeyDictionary
 
 import torch
 import torch.nn.functional as F
@@ -25,7 +23,6 @@ from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
 from torch import Tensor
 from torch import nn
-from torch.jit import TracerWarning
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from tqdm import trange
@@ -41,32 +38,7 @@ from nncf.parameters import StripFormat
 from nncf.quantization.quantize_model import compress_weights
 from nncf.torch.model_creation import load_from_config
 from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
-from nncf.torch.quantization.layers import BaseWeightsDecompressor
 from nncf.torch.quantization.layers import SymmetricLoraQuantizer
-
-
-# TODO: (nlyalyus) move to Optimum-Intel (ticket 164159)
-class PatchDecompressorDtype:
-    """
-    Patching of compression modules in order to export bfloat16 models to OV.
-    """
-
-    def __init__(self, model: nn.Module):
-        self.model = model
-        self.modules_map: WeakKeyDictionary[nn.Module, List[str]] = WeakKeyDictionary()
-
-    def __enter__(self):
-        model_layout = self.model.nncf.transformation_layout()
-        transformations = model_layout.transformations
-        for command in transformations:
-            decompressor = command.fn
-            if isinstance(decompressor, BaseWeightsDecompressor):
-                self.modules_map[decompressor] = decompressor.result_dtype
-                decompressor.result_dtype = torch.float32
-
-    def __exit__(self, *args):
-        for decompressor, dtype in self.modules_map.items():
-            decompressor.result_dtype = dtype
 
 
 def get_wikitext2(nsamples: int, seqlen: int, tokenizer: Any, device: torch.device) -> List[Tensor]:
@@ -355,18 +327,17 @@ def main(argv):
         cpu_example_input = get_model_input(train_loader[0].to("cpu"))
         model_to_eval = load_checkpoint(model_to_eval, cpu_example_input, ckpt_file)
         model_to_eval = nncf.strip(model_to_eval, strip_format=StripFormat.DQ)
-        with PatchDecompressorDtype(model), warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=TracerWarning)
-            export_from_model(model_to_eval, last_dir, patch_16bit_model=True, device="cpu")
-            return OVModelForCausalLM.from_pretrained(
-                model_id=last_dir,
-                trust_remote_code=True,
-                load_in_8bit=False,
-                compile=True,
-                ov_config={"KV_CACHE_PRECISION": "f16", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
-            )
+        export_from_model(model_to_eval, last_dir, device="cpu")
+        return OVModelForCausalLM.from_pretrained(
+            model_id=last_dir,
+            trust_remote_code=True,
+            load_in_8bit=False,
+            compile=True,
+            ov_config={"KV_CACHE_PRECISION": "f16", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
+        )
 
     best_similarity = measure_similarity(get_ov_model_for_eval_fn, tokenizer, wwb_ref_file)
+    tb.add_scalar("similarity", best_similarity, 0)
     print(f"Initial WWB similarity= {best_similarity:.4f}")
 
     # Run tuning with distillation loss and validation on WWB after each epoch.
@@ -416,12 +387,12 @@ def main(argv):
         # Export tuned model to OpenVINO and evaluate it using WWB.
         # Save the best checkpoint and OpenVINO IR for the highest similarity score obtained from WWB.
         save_checkpoint(model, ckpt_file)
-        smlr = measure_similarity(get_ov_model_for_eval_fn, tokenizer, wwb_ref_file)
-        print(f"[Epoch {epoch}], WWB similarity = {smlr:.4f}")
-        tb.add_scalar("similarity", smlr, total_microbatches)
-        if smlr > best_similarity:
-            print(f"New best WWB similarity = {smlr:.4f}")
-            best_similarity = smlr
+        similarity = measure_similarity(get_ov_model_for_eval_fn, tokenizer, wwb_ref_file)
+        print(f"[Epoch {epoch}], WWB similarity = {similarity:.4f}")
+        tb.add_scalar("similarity", similarity, total_microbatches)
+        if similarity > best_similarity:
+            print(f"New best WWB similarity = {similarity:.4f}")
+            best_similarity = similarity
             shutil.copytree(last_dir, best_dir, dirs_exist_ok=True)
 
     print(f"The finetuned OV model with the best similarity={best_similarity} saved to: {best_dir}")
