@@ -25,8 +25,8 @@ from openvino.runtime import opset13 as opset
 from nncf.common.utils.backend import is_openvino_at_least
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
-from nncf.common.utils.cpu_info import is_lnl_cpu
 from nncf.common.utils.helpers import set_env_variable
+from nncf.openvino.cpu_info import is_lnl_cpu
 from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import non_convertable_divide_op
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig

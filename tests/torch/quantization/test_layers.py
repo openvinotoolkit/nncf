@@ -36,7 +36,7 @@ def test_quantizer_layers_accepts_return_type(registred):
     )
     if mode in [QuantizationMode.ASYMMETRIC_LORA, QuantizationMode.SYMMETRIC_LORA]:
         shape = actual_input.unsqueeze(dim=0).shape
-        lora_spec = PTLoraSpec(2, shape, shape)
+        lora_spec = PTLoraSpec(0, shape, shape)
         quantizer = quantizer_cls(quantizer_spec, lora_spec)
     else:
         quantizer = quantizer_cls(quantizer_spec)

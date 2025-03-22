@@ -19,8 +19,8 @@ from nncf.experimental.torch2.function_hook import get_hook_storage
 from nncf.experimental.torch2.function_hook import register_post_function_hook
 from nncf.experimental.torch2.function_hook import register_pre_function_hook
 from nncf.experimental.torch2.function_hook import wrap_model
-from nncf.experimental.torch2.function_hook.serialization import get_config
-from nncf.experimental.torch2.function_hook.serialization import load_from_config
+from nncf.torch import get_config
+from nncf.torch import load_from_config
 from tests.torch2.function_hook.helpers import HookWithState
 from tests.torch2.function_hook.helpers import SimpleModel
 
