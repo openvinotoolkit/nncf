@@ -43,7 +43,156 @@ MAX_BASELINE_SCORE = 1 / 1.1920928955078125e-07
 
 INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
 
+class TemplateTestFBCAlgorithm:
+    @pytest.mark.parametrize("mode", SUPPORTED_MODES)
+    def test_compress_weights(mode):
+    model = ShortTransformer(8, 16)
+    dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
 
+    input_ids = torch.randint(0, 10, (8,))
+    wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
+
+    kwargs = {}
+    if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
+        kwargs["group_size"] = 4
+    compressed_model = compress_weights(wrapped_model, mode=mode, **kwargs)
+
+    n_compressed_weights = 0
+    n_target_modules = 0
+
+    for _, module in compressed_model.named_children():
+        if isinstance(module, (torch.nn.Linear, torch.nn.Embedding)):
+            n_target_modules += 1
+            if module.weight.dtype == dtype:
+                n_compressed_weights += 1
+
+    assert n_compressed_weights == n_target_modules
+    
+    @pytest.mark.parametrize("mode", SUPPORTED_MODES)
+    def test_compress_shared_weights(mocker, mode):
+        model = ShortTransformer(8, 16, share_weights=True)
+        dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
+    
+        input_ids = torch.randint(0, 10, (8,))
+        wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
+    
+        kwargs = {}
+        if mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]:
+            kwargs["group_size"] = 4
+        compressed_model = compress_weights(wrapped_model, mode=mode, **kwargs)
+    
+        n_compressed_weights = 0
+        n_target_modules = 0
+    
+        for _, module in compressed_model.named_children():
+            if isinstance(module, (torch.nn.Linear, torch.nn.Embedding)):
+                n_target_modules += 1
+                if module.weight.dtype == dtype:
+                    n_compressed_weights += 1
+    
+        assert n_compressed_weights == n_target_modules
+        assert len(compressed_model.nncf.external_op) == 2
+    
+        # check that the weight decompressors are called only once
+        for val in compressed_model.nncf.external_op.values():
+            mocker.spy(val, "forward")
+    
+        compressed_model(input_ids)
+    
+        for val in compressed_model.nncf.external_op.values():
+            assert val.forward.call_count == 1
+
+    @pytest.mark.parametrize("mode", INT8_MODES)
+    @pytest.mark.parametrize(
+        "params",
+        (
+            {"ratio": 0.5},
+            {"group_size": 64},
+            {"all_layers": True},
+            {"all_layers": False},
+            *({"sensitivity_metric": metric} for metric in ALL_SENSITIVITY_METRICS),
+            {"gptq": True},
+            {"scale_estimation": True},
+            {"lora_correction": True},
+            {"backup_mode": BackupMode.NONE},
+            {"backup_mode": BackupMode.INT8_ASYM},
+            {"backup_mode": BackupMode.INT8_SYM},
+            {"compression_format": CompressionFormat.FQ, "group_size": 64},
+            {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},
+        ),
+    )
+    def test_raise_error_with_unsupported_params_for_int8(mode, params):
+        dummy_torch_model = EmptyModel()
+        dummy_input = torch.Tensor()
+        wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
+        with pytest.raises(nncf.ParameterNotSupportedError):
+            compress_weights(wrapped_model, mode=mode, **params)
+    
+    
+    @pytest.mark.parametrize("mode", INT4_MODES)
+    @pytest.mark.parametrize(
+        "params",
+        (
+            {"gptq": True},
+            {"lora_correction": True},
+            {"compression_format": CompressionFormat.FQ, "group_size": 64},
+        ),
+    )
+    def test_raise_error_with_unsupported_params_for_int4(mode, params):
+        dummy_torch_model = EmptyModel()
+        dummy_input = torch.Tensor()
+        wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
+        with pytest.raises(nncf.ParameterNotSupportedError):
+            compress_weights(wrapped_model, mode=mode, **params)
+
+    @pytest.mark.parametrize("mode", UNSUPPORTED_MODES)
+    def test_raise_error_with_not_int8(mode):
+        dummy_torch_model = EmptyModel()
+        dummy_input = torch.Tensor()
+        wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
+        with pytest.raises(nncf.ParameterNotSupportedError):
+            compress_weights(wrapped_model, mode=mode)
+
+    def test_raise_error_for_statistics_caching():
+    dummy_torch_model = EmptyModel()
+    dummy_input = torch.Tensor()
+    wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
+    with pytest.raises(nncf.ParameterNotSupportedError):
+        compress_weights(wrapped_model, advanced_parameters=AdvancedCompressionParameters(statistics_path="anything"))
+
+    def test_get_dtype_attribute_of_parameter():
+    model = DTypeModel()
+    dummy_input = torch.randint(0, 10, [3, 3])
+    wrapped_model = wrap_model(model, example_input=dummy_input, trace_parameters=True)
+    compressed_model = compress_weights(wrapped_model)
+    assert compressed_model.weight.dtype == torch.uint8
+    compressed_model(dummy_input)
+    assert compressed_model.weight.dtype == torch.uint8
+
+
+    @pytest.mark.parametrize("dtype", ("float16", "float32"))
+    def test_model_devices_and_precisions(use_cuda, dtype):
+        if use_cuda and not torch.cuda.is_available():
+            pytest.skip("Skipping for CPU-only setups")
+        device = torch.device("cuda" if use_cuda else "cpu")
+        dtype = torch.float16 if dtype == "float16" else torch.float32
+    
+        model = MatMulModel().to(device)
+        if dtype == torch.float16:
+            model.half()
+    
+        dummy_input = torch.rand((1, 256), dtype=dtype, device=device)
+        wrapped_model = wrap_model(model, example_input=dummy_input, trace_parameters=True)
+        compressed_model = compress_weights(wrapped_model)
+        result = compressed_model(dummy_input)
+    
+        # Scale should always be in float16
+        assert compressed_model.state_dict()["_nncf.external_op.weights_decompressor_w._scale"].dtype == torch.float16
+        # Result should be in the precision of the model
+        assert result.dtype == dtype
+
+
+    
 def get_relative_error(weight_1: Tensor, weight_2: Tensor, axis: int = 0) -> Tensor:
     diff = (weight_1 - weight_2) ** 2
     return fns.mean(diff, axis=axis) / fns.mean(weight_1**2, axis=axis)
