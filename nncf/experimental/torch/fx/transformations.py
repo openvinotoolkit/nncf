@@ -733,7 +733,6 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     # to make it easier for algorithms to work
     # with the target graph BatchNorm operations
     # are being fused
-    fold_constant_except_qdq(model)
     _fuse_conv_bn_(model)
 
 
