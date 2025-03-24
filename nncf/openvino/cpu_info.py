@@ -13,7 +13,26 @@ import re
 
 import openvino as ov
 
+_IS_ARM_CPU = None
 _IS_LNL_CPU = None
+
+
+def _get_cpu_name() -> str:
+    """
+    :return: The name of the CPU.
+    """
+    return ov.Core().get_property("CPU", ov.properties.device.full_name)
+
+
+def is_arm_cpu() -> bool:
+    """
+    Checks whether current CPU is an ARM CPU or not.
+    :return: True if current CPU is an ARM CPU, False otherwise.
+    """
+    global _IS_ARM_CPU
+    if _IS_ARM_CPU is None:
+        _IS_ARM_CPU = "arm" in _get_cpu_name().lower()
+    return _IS_ARM_CPU
 
 
 def is_lnl_cpu() -> bool:
@@ -23,6 +42,5 @@ def is_lnl_cpu() -> bool:
     """
     global _IS_LNL_CPU
     if _IS_LNL_CPU is None:
-        cpu_name = ov.Core().get_property("CPU", ov.properties.device.full_name)
-        _IS_LNL_CPU = re.search(r"Ultra \d 2\d{2}", cpu_name) is not None
+        _IS_LNL_CPU = re.search(r"Ultra \d 2\d{2}", _get_cpu_name()) is not None
     return _IS_LNL_CPU
