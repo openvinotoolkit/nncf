@@ -41,7 +41,9 @@ jobs:
       - name: cpuinfo
         run: cat /proc/cpuinfo
       - name: Install NNCF and test requirements
-        run: pip install -e . -r tests/post_training/requirements.txt --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release
+        run: pip install -e . -r tests/post_training/requirements.txt
+      - name: Install OV RC
+        run: pip install -U --pre openvino --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly
       - name: Print installed modules
         run: pip list
       - name: Run examples test scope
