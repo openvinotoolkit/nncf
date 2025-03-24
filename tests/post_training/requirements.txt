@@ -1,6 +1,4 @@
 -c ../../constraints.txt
-openvino-genai
-openvino
 torch
 torchvision
 onnx
