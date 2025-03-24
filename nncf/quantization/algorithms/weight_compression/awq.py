@@ -254,7 +254,7 @@ class AWQ(Algorithm):
                     weights_to_fake_quantize = gweight * cur_scale
                     if config.mode == CompressWeightsMode.NF4:
                         g_decompressed_weighs = float_quantize_dequantize_weight(
-                            weights_to_fake_quantize, config, reduction_axis
+                            weights_to_fake_quantize, awq_config, reduction_axis
                         )
                     else:
                         g_decompressed_weighs = integer_quantize_dequantize_weight(

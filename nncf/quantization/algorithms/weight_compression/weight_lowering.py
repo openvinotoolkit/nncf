@@ -185,7 +185,9 @@ def do_float_quantization(
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
-    scale = precomputed_scale or calculate_float_quantization_params(weight, reduction_axes, config)
+    scale = precomputed_scale
+    if scale is None:
+        scale = calculate_float_quantization_params(weight, reduction_axes, config)
     norm_weight = _calculate_normalized_weight(weight, scale)
     if config.mode == CompressWeightsMode.NF4:
         compressed_weight = _calculate_nf4_quantized_weight(norm_weight, scale, config.mode, is_normalized_weight=True)
