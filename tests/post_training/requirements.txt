@@ -1,4 +1,8 @@
 -c ../../constraints.txt
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release
+--pre
+openvino-genai
+openvino
 torch
 torchvision
 onnx
