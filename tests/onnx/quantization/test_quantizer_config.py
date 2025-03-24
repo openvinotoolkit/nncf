@@ -16,12 +16,17 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConstantMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXEmbeddingMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMulLayerMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXTransposeMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
+from tests.cross_fw.test_templates.models import NNCFGraphConstantBranchWithWeightedNode
+from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsConstantPath
+from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsShapeOf
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
@@ -80,5 +85,40 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             transpose_metatype=ONNXTransposeMetatype,
             matmul_layer_weighted_attrs=ONNXLayerAttributes({"name": "edge_name", "shape": (1, 1, 1, 1)}),
             matmul_layer_non_weighted_attrs=ONNXLayerAttributes(),
+            default_layer_attrs=ONNXLayerAttributes(),
+        )
+
+    @pytest.fixture
+    def embedding_nncf_graph_shape_of(self) -> NNCFGraphToTest:
+        return NNCFGraphModelWithEmbeddingsShapeOf(
+            const_metatype=ONNXConstantMetatype,
+            embedding_metatype=ONNXEmbeddingMetatype,
+            conv_metatype=ONNXConvolutionMetatype,
+            add_metatype=ONNXAddLayerMetatype,
+            shape_of_metatype=ONNXShapeMetatype,
+            conv_layer_attrs=ONNXLayerAttributes(weight_attrs={1: {"shape": [1, 1, 1, 1]}}, bias_attrs={}),
+            embedding_layer_attrs=ONNXLayerAttributes(weight_attrs={1: {"shape": [1, 1, 1, 1]}}, bias_attrs={}),
+            default_layer_attrs=ONNXLayerAttributes(),
+        )
+
+    @pytest.fixture
+    def embedding_nncf_graph_constant_path(self) -> NNCFGraphToTest:
+        return NNCFGraphModelWithEmbeddingsConstantPath(
+            const_metatype=ONNXConstantMetatype,
+            embedding_metatype=ONNXEmbeddingMetatype,
+            conv_metatype=ONNXConvolutionMetatype,
+            add_metatype=ONNXAddLayerMetatype,
+            conv_layer_attrs=ONNXLayerAttributes(weight_attrs={1: {"shape": [1, 1, 1, 1]}}, bias_attrs={}),
+            embedding_layer_attrs=ONNXLayerAttributes(weight_attrs={1: {"shape": [1, 1, 1, 1]}}, bias_attrs={}),
+            default_layer_attrs=ONNXLayerAttributes(),
+        )
+
+    @pytest.fixture
+    def constant_branch_nncf_graph(self) -> NNCFGraphToTest:
+        return NNCFGraphConstantBranchWithWeightedNode(
+            const_metatype=ONNXConstantMetatype,
+            conv_metatype=ONNXConvolutionMetatype,
+            add_metatype=ONNXAddLayerMetatype,
+            conv_layer_attrs=ONNXLayerAttributes(weight_attrs={1: {"shape": [1, 1, 1, 1]}}, bias_attrs={}),
             default_layer_attrs=ONNXLayerAttributes(),
         )

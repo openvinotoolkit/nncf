@@ -13,15 +13,21 @@ import pytest
 
 from nncf.common.utils.backend import BackendType
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVShapeOfMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSumMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVTransposeMetatype
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
+from tests.cross_fw.test_templates.models import NNCFGraphConstantBranchWithWeightedNode
+from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsConstantPath
+from tests.cross_fw.test_templates.models import NNCFGraphModelWithEmbeddingsShapeOf
 from tests.cross_fw.test_templates.models import NNCFGraphToTest
 from tests.cross_fw.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.cross_fw.test_templates.models import NNCFGraphToTestSumAggregation
@@ -59,4 +65,36 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             const_metatype=OVConstantMetatype,
             transpose_metatype=OVTransposeMetatype,
             matmul_layer_weighted_attrs=OVLayerAttributes({}),
+        )
+
+    @pytest.fixture
+    def embedding_nncf_graph_shape_of(self) -> NNCFGraphToTest:
+        return NNCFGraphModelWithEmbeddingsShapeOf(
+            const_metatype=OVConstantMetatype,
+            embedding_metatype=OVEmbeddingMetatype,
+            conv_metatype=OVConvolutionMetatype,
+            add_metatype=OVAddMetatype,
+            shape_of_metatype=OVShapeOfMetatype,
+            conv_layer_attrs=OVLayerAttributes({}),
+            embedding_layer_attrs=OVLayerAttributes({}),
+        )
+
+    @pytest.fixture
+    def embedding_nncf_graph_constant_path(self):
+        return NNCFGraphModelWithEmbeddingsConstantPath(
+            const_metatype=OVConstantMetatype,
+            embedding_metatype=OVEmbeddingMetatype,
+            conv_metatype=OVConvolutionMetatype,
+            add_metatype=OVAddMetatype,
+            conv_layer_attrs=OVLayerAttributes({}),
+            embedding_layer_attrs=OVLayerAttributes({}),
+        )
+
+    @pytest.fixture
+    def constant_branch_nncf_graph(self) -> NNCFGraphToTest:
+        return NNCFGraphConstantBranchWithWeightedNode(
+            const_metatype=OVConstantMetatype,
+            conv_metatype=OVConvolutionMetatype,
+            add_metatype=OVAddMetatype,
+            conv_layer_attrs=OVLayerAttributes({}),
         )
