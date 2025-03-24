@@ -23,7 +23,7 @@
             "nesterov": true
         }
     },
-   "compression": [
+    "compression": [
        {
             "algorithm": "filter_pruning",
             "pruning_init": 0.1,

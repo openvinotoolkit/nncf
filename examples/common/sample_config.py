@@ -10,14 +10,12 @@
 # limitations under the License.
 import argparse
 import os
-from pathlib import Path
 
-import jstyleson as json
 from addict import Dict
 
 import nncf
 from nncf import NNCFConfig
-from nncf.common.utils.os import safe_open
+from nncf.config.reader import read_config
 
 _DEFAULT_KEY_TO_ENV = {
     "world_size": "WORLD_SIZE",
@@ -76,10 +74,7 @@ class CustomArgumentParser(CustomActionContainer, argparse.ArgumentParser):
 class SampleConfig(Dict):
     @classmethod
     def from_json(cls, path) -> "SampleConfig":
-        file_path = Path(path).resolve()
-        with safe_open(file_path) as f:
-            loaded_json = json.load(f)
-        return cls(loaded_json)
+        return cls(read_config(path))
 
     def update_from_args(self, args, argparser=None):
         if argparser is not None:
@@ -119,10 +114,7 @@ def _parse_sample_config(args, parser) -> SampleConfig:
 
 
 def _embed_nncf_config(args, sample_config: SampleConfig) -> SampleConfig:
-    file_path = Path(args.config).resolve()
-    with safe_open(file_path) as f:
-        loaded_json = json.load(f)
-
+    loaded_json = read_config(args.config)
     if sample_config.get("target_device") is not None:
         target_device = sample_config.pop("target_device")
         loaded_json["target_device"] = target_device

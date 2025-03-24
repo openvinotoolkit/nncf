@@ -8,18 +8,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 import os
 import sys
 from copy import deepcopy
 from pathlib import Path
 from typing import Dict, Union
 
-import jstyleson as json
 import pytest
 import torch.cuda
 from packaging import version
 from pytest import approx
 
+from nncf.config.reader import JSONWithComments
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import BaseSampleTestCaseDescriptor
@@ -47,7 +48,7 @@ class MovementGlueHandler:
         checkpoint_path = self.get_checkpoint_path(checkpoint_save_dir)
         result_path = checkpoint_path / "all_results.json"
         with open(result_path, encoding="utf-8") as f:
-            result = json.load(f)
+            result = json.load(f, cls=JSONWithComments)
         return result
 
 

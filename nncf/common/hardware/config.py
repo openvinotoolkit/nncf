@@ -8,14 +8,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 from abc import ABC
 from abc import abstractmethod
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Type
-
-import jstyleson as json  # type: ignore[import-untyped]
 
 import nncf
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -24,6 +23,7 @@ from nncf.common.quantization.structs import QuantizationScheme as QuantizationM
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.helpers import product_dict
 from nncf.common.utils.os import safe_open
+from nncf.config.reader import JSONWithComments
 from nncf.definitions import HW_CONFIG_RELATIVE_DIR
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
 
@@ -131,7 +131,7 @@ class HWConfig(list[Dict[str, Any]], ABC):
     def from_json(cls: type["HWConfig"], path: str) -> List[Dict[str, Any]]:
         file_path = Path(path).resolve()
         with safe_open(file_path) as f:
-            json_config = json.load(f, object_pairs_hook=OrderedDict)
+            json_config = json.load(f, object_pairs_hook=OrderedDict, cls=JSONWithComments)
             return cls.from_dict(json_config)
 
     @staticmethod
