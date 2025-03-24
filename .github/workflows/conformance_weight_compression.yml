@@ -43,7 +43,7 @@ jobs:
       - name: Install NNCF and test requirements
         run: pip install -e . -r tests/post_training/requirements.txt
       - name: Install OV RC
-        run: pip install -U --pre openvino --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release
+        run: pip install -U --pre openvino openvino-tokenizers openvino-genai --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release
       - name: Print installed modules
         run: pip list
       - name: Run examples test scope
