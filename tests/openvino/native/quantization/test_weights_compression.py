@@ -12,6 +12,7 @@
 import inspect
 import os
 from typing import Callable, Dict, List
+from unittest.mock import patch
 
 import numpy as np
 import openvino.runtime as ov
@@ -21,10 +22,12 @@ from attr import dataclass
 from openvino.runtime import opset13 as opset
 
 import nncf
+import nncf.openvino.optimized_functions as opt_fns
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.utils.debug import nncf_debug
+from nncf.common.utils.helpers import set_env_variable
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.graph.model_transformer import OVModelTransformer
@@ -1485,6 +1488,25 @@ def test_compression_with_transposed_activations(kwargs):
             all_layers=True,
             **kwargs,
         )
+
+
+@pytest.mark.parametrize("disabled", [False, True])
+def test_disabled_optimized_compression(disabled):
+    model = LMLinearModel().ov_model
+
+    def run_compression():
+        compress_weights(model, mode=CompressWeightsMode.INT8)
+
+    fn_to_patch = opt_fns.do_int_quantization
+    patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
+    with patch(patch_path, side_effect=fn_to_patch) as mock:
+        if disabled:
+            with set_env_variable("NNCF_DISABLE_OPTIMIZED_COMPRESSION", "1"):
+                run_compression()
+            mock.assert_not_called()
+        else:
+            run_compression()
+            mock.assert_called_once()
 
 
 class TestOVTemplateWeightCompression(TemplateWeightCompression):

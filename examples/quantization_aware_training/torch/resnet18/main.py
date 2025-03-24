@@ -278,11 +278,11 @@ def main():
         print(f"Train epoch: {epoch}")
         train_epoch(train_loader, quantized_model, criterion, optimizer, device=device)
         acc1_int8 = validate(val_loader, quantized_model, device)
-        print(f"Accyracy@1 of INT8 model after {epoch} epoch finetuning: {acc1_int8:.3f}")
+        print(f"Accuracy@1 of INT8 model after {epoch} epoch finetuning: {acc1_int8:.3f}")
         # Save the compression checkpoint for model with the best accuracy metric.
         if acc1_int8 > acc1_int8_best:
             state_dict = quantized_model.state_dict()
-            compression_config = quantized_model.nncf.get_config()
+            compression_config = nncf.torch.get_config(quantized_model)
             torch.save(
                 {
                     "model_state_dict": state_dict,
