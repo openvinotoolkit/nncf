@@ -39,6 +39,7 @@ from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
+from tests.torch.test_models.synthetic import LinearModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
 
@@ -80,16 +81,6 @@ class MatMulModel(torch.nn.Module):
 
     def forward(self, input):
         return input @ self.w
-
-
-class LinearModel(torch.nn.Module):
-    def __init__(self, weight: torch.Tensor = torch.ones(size=(256, 256), dtype=torch.float32)):
-        super().__init__()
-        self.linear = torch.nn.Linear(weight.shape[0], weight.shape[1], False)
-        self.linear.weight = torch.nn.Parameter(weight)
-
-    def forward(self, input):
-        return self.linear(input)
 
 
 class AWQActLinearModel(nn.Module):

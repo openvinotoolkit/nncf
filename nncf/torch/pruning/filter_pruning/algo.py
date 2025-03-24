@@ -45,6 +45,7 @@ from nncf.common.utils.backend import copy_model
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.os import safe_open
 from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.parameters import StripFormat
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.graph.operator_metatypes import PTModuleConv1dMetatype
@@ -693,7 +694,9 @@ class FilterPruningController(BasePruningAlgoController):
             )
         self._bn_adaptation.run(self.model)
 
-    def strip_model(self, model: NNCFNetwork, do_copy: bool = False) -> NNCFNetwork:
+    def strip_model(
+        self, model: NNCFNetwork, do_copy: bool = False, strip_format: StripFormat = StripFormat.NATIVE
+    ) -> NNCFNetwork:
         if do_copy:
             model = copy_model(model)
 

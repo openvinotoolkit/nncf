@@ -11,13 +11,65 @@
 
 import pytest
 import torch
+from optimum.exporters.openvino.convert import export_from_model
+from optimum.intel.openvino import OVModelForCausalLM
+from sentence_transformers import SentenceTransformer
+from sentence_transformers import util
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 
 import nncf
+from nncf.data.dataset import Dataset
+from nncf.errors import ValidationError
+from nncf.parameters import CompressionFormat
+from nncf.parameters import CompressWeightsMode
+from nncf.parameters import StripFormat
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.quantize_model import compress_weights
+from nncf.scopes import IgnoredScope
+from nncf.torch import load_from_config
 from nncf.torch.quantization.layers import AsymmetricQuantizer as AQ
 from nncf.torch.quantization.layers import LoraMixin
 from nncf.torch.quantization.layers import SymmetricQuantizer as SQ
+from tests.torch.test_models.synthetic import LinearModel
+
+
+class ValidationMock:
+    def __init__(self) -> None:
+        model_id = "sentence-transformers/all-mpnet-base-v2"
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+        self.model = SentenceTransformer(
+            model_id, tokenizer_kwargs={"pad_token": self.tokenizer.pad_token}, trust_remote_code=True
+        )
+
+    def calculate_similarity(self, gold: str, prediction: str) -> torch.Tensor:
+        embeddings = self.model.encode([gold, prediction])
+        cos_sim = util.cos_sim(embeddings, embeddings)
+        return torch.mean(cos_sim)
+
+    @property
+    def validation_ref(self) -> torch.Tensor:
+        return torch.tensor(1.0)
+
+
+def generate_control_output(model: AutoModelForCausalLM, tokenizer: AutoTokenizer) -> torch.Tensor:
+    control_input = tokenizer("What is Pytorch?", return_tensors="pt")
+    control_input = control_input.to(model.device)
+    control_output = model.generate(**control_input, do_sample=False)
+    return tokenizer.batch_decode(control_output, skip_special_tokens=True)[0]
+
+
+def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausalLM:
+    model = model.cpu()
+    export_from_model(model, tmp_path)
+
+    return OVModelForCausalLM.from_pretrained(
+        model_id=tmp_path,
+        trust_remote_code=True,
+        load_in_8bit=False,
+        compile=True,
+        ov_config={"KV_CACHE_PRECISION": "f16", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"},
+    )
 
 
 @pytest.mark.parametrize(
@@ -33,7 +85,7 @@ from nncf.torch.quantization.layers import SymmetricQuantizer as SQ
     ),
     ids=["asym", "sym"],
 )
-def test_fq_lora_tuning(mode, backup_mode, compression_kwargs, ref_num_trainable, _seed):
+def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num_trainable, _seed):
     model_id = "facebook/opt-125m"
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device)
@@ -80,3 +132,90 @@ def test_fq_lora_tuning(mode, backup_mode, compression_kwargs, ref_num_trainable
 
     assert first_loss > 8
     assert float(loss) < 1
+
+    if "awq" in compression_kwargs:
+        return  # Skip test for strip for awq + se initialization. Cases with data-free methods are enough.
+
+    with torch.no_grad():
+        tuned_output = generate_control_output(model, tokenizer)
+
+        # Workaround till export from the optimum would be fixed - CVS-164159
+        model = model.to(torch.float32)
+
+        model = nncf.strip(model, strip_format=StripFormat.DQ)
+        stripped_output = generate_control_output(model, tokenizer)
+
+        model = get_ov_model(model, tmp_path)
+        stripped_ov_output = generate_control_output(model, tokenizer)
+
+        vm = ValidationMock()
+        tuned_vs_stripped = vm.calculate_similarity(tuned_output, stripped_output)
+        tuned_vs_stripped_ov = vm.calculate_similarity(tuned_output, stripped_ov_output)
+
+        atol = 0.03 if mode == nncf.CompressWeightsMode.INT4_SYM else 0.01  # torch.compile introduces bigger diff
+        assert torch.allclose(tuned_vs_stripped, vm.validation_ref, atol=atol)
+        assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=atol)
+
+
+def test_checkpoint_loading(tmp_path):
+    model_id = "hf-internal-testing/tiny-random-GPTNeoXForCausalLM"
+    if not torch.cuda.is_available():
+        pytest.skip("Skipping CUDA test case for CPU only setups.")
+    device = "cuda"
+    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map="auto")
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    example_input = tokenizer("dummy", return_tensors="pt").to(device)
+    except_lm_head_and_5th_vproj = (
+        r"^(?!.*(GPTNeoXLayer\[2\]/GPTNeoXSdpaAttention\[attention\]/Linear\[query_key_value\]/l|embed_out).*$).*$"
+    )
+    model = compress_weights(
+        model,
+        group_size=32,
+        mode=CompressWeightsMode.INT4_ASYM,
+        backup_mode=CompressWeightsMode.INT8_ASYM,
+        dataset=Dataset([dict(example_input)]),
+        compression_format=CompressionFormat.FQ_LORA,
+        ignored_scope=IgnoredScope(patterns=[except_lm_head_and_5th_vproj]),
+        advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=2),
+    )
+    ref_output = tokenizer.decode(
+        model.generate(**example_input, do_sample=False, max_new_tokens=20)[0], skip_special_tokens=True
+    )
+
+    # save checkpoint
+    ckpt_path = tmp_path / "nncf_ckpt.pth"
+    torch.save(
+        {
+            "nncf_state_dict": model.nncf.state_dict(),
+            "nncf_config": model.nncf.get_config(),
+        },
+        ckpt_path,
+    )
+    del model
+
+    # load checkpoint
+    nncf_ckpt = torch.load(ckpt_path, weights_only=False)
+    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map="auto")
+    model = load_from_config(model, nncf_ckpt["nncf_config"], example_input=dict(example_input))
+    model.nncf.load_state_dict(nncf_ckpt["nncf_state_dict"])
+
+    actual_output = tokenizer.decode(
+        model.generate(**example_input, do_sample=False, max_new_tokens=20)[0],
+        skip_special_tokens=True,
+    )
+    assert actual_output == ref_output
+
+
+def test_invalid_lora_rank():
+    too_big_rank = 4
+    model = LinearModel(torch.ones(2, 2))
+    with pytest.raises(ValidationError):
+        compress_weights(
+            model,
+            mode=CompressWeightsMode.INT4_ASYM,
+            group_size=2,
+            all_layers=True,
+            dataset=Dataset([torch.ones(2, 2)]),
+            compression_format=CompressionFormat.FQ_LORA,
+            advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=too_big_rank),
+        )
