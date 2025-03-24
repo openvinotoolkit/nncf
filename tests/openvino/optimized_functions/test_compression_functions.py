@@ -285,7 +285,7 @@ def _check_backends_and_dtypes(
         quantization_task == QuantizationTask.Q
         and cb == ComputationBackend.OV
         and weight_tensor_backend == TensorBackend.ov
-        and config.mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM, CompressWeightsMode.NF4]
+        and config.num_bits == 4
     ):
         # For 4 bit compression in case of ov implementation and ov backend the compressed weight and the computed
         # zero point must be in ov backend and have (u)int4 or nf4 dtypes in order to be able to insert them into OV
