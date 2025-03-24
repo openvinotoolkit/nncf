@@ -297,11 +297,14 @@ class MinMaxAlgoBackend(ABC):
         """
 
     @abstractmethod
-    def get_weight_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_weight_nodes(self, nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
         """
         Returns nodes that have weights.
 
-        :param nncf_graph: Instance of NNCFGraph.
+        :param nncf_graph: Instance of original NNCFGraph,
+            which contains shape of and constant subgraphs.
+        :param inference_nncf_graph: Instance of inference NNCFGraph,
+            which does not contain shape of and constant subgraphs.
         :return: All nodes with weights.
         """
 
