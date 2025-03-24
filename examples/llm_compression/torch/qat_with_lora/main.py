@@ -137,10 +137,10 @@ def kl_div(student_hiddens: torch.Tensor, teacher_hiddens: torch.Tensor) -> torc
     :param teacher_hiddens: The hidden states from the teacher model.
     :returns: The computed KL divergence loss.
     """
-    C = student_hiddens.shape[-1]  # num classes
+    num_classes = student_hiddens.shape[-1]
     return F.kl_div(
-        input=F.log_softmax(student_hiddens.view(-1, C), dim=-1),
-        target=F.log_softmax(teacher_hiddens.view(-1, C), dim=-1),
+        input=F.log_softmax(student_hiddens.view(-1, num_classes), dim=-1),
+        target=F.log_softmax(teacher_hiddens.view(-1, num_classes), dim=-1),
         log_target=True,
         reduction="batchmean",
     )
@@ -156,9 +156,9 @@ def set_trainable(model: nn.Module, lora_lr: float, fq_lr: float) -> List[Dict[s
     suitable for an optimizer.
 
     :param model: The model to be trained.
-    :param lora_lr:  Learning rate for the LoRA adapters.
-    :param fq_lr:  Learning rate for the quantizer scales.
-    :returns : A list of dictionaries containing the parameters to be optimized and their corresponding learning rates.
+    :param lora_lr: Learning rate for the LoRA adapters.
+    :param fq_lr: Learning rate for the quantizer scales.
+    :return: A list of dictionaries containing the parameters to be optimized and their corresponding learning rates.
     """
     model.requires_grad_(False)
     scales_to_train = []
@@ -250,7 +250,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--output_dir",
-        type=str,
+        type=Path,
         default="output",
         help="Path to the directory for storing logs, tuning checkpoint, compressed model, validation references.",
     )
@@ -258,7 +258,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
         "--resume",
         action="store_true",
         help="Whether to start from previously saved checkpoint. If not specified or checkpoint does not exist, "
-        "start from scratch by post-training weight compression initializion.",
+        "start from scratch by post-training weight compression initialization.",
     )
 
     # Data params
@@ -300,12 +300,12 @@ def main(argv) -> float:
 
     # Configure output and log files.
     output_dir = Path(args.output_dir)
-    tensorboard_dir = output_dir / "tb" / datetime.now().strftime("%D-%T")
+    tensorboard_dir = output_dir / "tb" / datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
     last_dir = output_dir / "last"
     best_dir = output_dir / "best"
+    if not args.resume:
+        shutil.rmtree(output_dir, ignore_errors=True)
     for path in [output_dir, tensorboard_dir, last_dir, best_dir]:
-        if not args.resume:
-            shutil.rmtree(path, ignore_errors=True)
         path.mkdir(exist_ok=True, parents=True)
     wwb_ref_file = output_dir / "wwb_ref.csv"
     ckpt_file = last_dir / "nncf_checkpoint.pth"
