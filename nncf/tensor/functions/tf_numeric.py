@@ -61,6 +61,11 @@ def _(a: tf.Tensor) -> TensorBackend:
     return TensorBackend.tf
 
 
+@numeric.backend.register
+def _(a: float) -> TensorBackend:
+    return TensorBackend.numpy
+
+
 @numeric.squeeze.register
 def _(a: tf.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> tf.Tensor:
     with tf.device(a.device):
