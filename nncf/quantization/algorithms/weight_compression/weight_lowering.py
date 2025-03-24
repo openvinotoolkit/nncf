@@ -104,12 +104,13 @@ def calculate_float_quantization_params(
     weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig, max_val=6.0
 ) -> Tensor:
     """
-    Calculates the scale for nf4 quantization.
+    Calculates the scale for nf4 or e2m1 quantization.
 
     :param weight: Weight array to compress.
     :param reduction_axes: Axes along which to reduce (collect) different statistics (e.g., min, max).
+    :param config: Weight compression configuration.
     :param max_val: Maximal value of e2m1 type.
-    :return: Scale tensor of float32 type for nf4 quantization.
+    :return: Scale tensor of float32 type for float quantization.
     """
     assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
 
@@ -134,10 +135,9 @@ def calculate_float_quantization_params(
 
 def do_float_dequantization(compressed_weight: Tensor, scale: Tensor, reduction_axis: int = -1) -> Tensor:
     """
-    Decompresses the float-quantized weight tensor.
+    Dequantize the float-quantized weight tensor.
 
-    :param compressed_weight: Tensor with floating-point values,
-        where each of them corresponds to 1 out of 16 quants on [-1, 1].
+    :param compressed_weight: Tensor with floating-point values, where each of them corresponds to 1 out of 16 quants.
     :param scale: Scale tensor used for decompression.
     :param reduction_axis: axis along which weights were reshaped for group quantization and will be reshaped back to
         original shapes. If equals to -1, weights are not reshaped, assumed not a group quantization. Defaults to -1.
@@ -149,6 +149,51 @@ def do_float_dequantization(compressed_weight: Tensor, scale: Tensor, reduction_
     return decompressed_weight
 
 
+def do_float_quantization(
+    weight: Tensor,
+    config: WeightCompressionConfig,
+    reduction_axes: Optional[ReductionAxes] = None,
+    precomputed_scale: Optional[Tensor] = None,
+) -> Tuple[Tensor, Tensor]:
+    """
+    Computes quantization scale if not provided, and performs corresponding (nf4, e2m1) weight quantization.
+    For NF4 quantization quantizes the weights to 16 levels on [-1, 1] interval.
+    For E2M1 currently returns normalized weight without quantization.
+    TODO: add support for E2M1 once ticket 164717 is resolved
+
+    :param weight: Weight array to compress.
+    :param config: Weight compression configuration.
+    :param reduction_axes: Axes, along which to reduce (collect) different statistics.
+    :param precomputed_scale: Optional precomputed scale.
+    :return: Returns quantized (for e2m1 normalized) weight tensor and corresponding scale tensor.
+    """
+    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
+
+    if config.group_size != -1 and reduction_axes is not None:
+        # weights are reshaped: [a1, r, a2] -> [a1, r//gs, gs, a2]
+        weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
+
+    # Optimized implementation
+    if config.mode == CompressWeightsMode.NF4 and _can_run_optimized(weight.backend):
+        from nncf.openvino.optimized_functions import do_float_quantization as do_float_quantization_ov
+
+        return do_float_quantization_ov(weight, config, reduction_axes, precomputed_scale)
+
+    if weight.backend == TensorBackend.ov:
+        weight = weight.as_numpy_tensor()
+    if weight.dtype != TensorDataType.float32:
+        weight = weight.astype(TensorDataType.float32)
+
+    scale = precomputed_scale or calculate_float_quantization_params(weight, reduction_axes, config)
+    norm_weight = _calculate_normalized_weight(weight, scale)
+    if config.mode == CompressWeightsMode.NF4:
+        compressed_weight = _calculate_nf4_quantized_weight(norm_weight, scale, config.mode, is_normalized_weight=True)
+    else:
+        # TODO: add support for E2M1 once ticket 164717 is resolved
+        compressed_weight = norm_weight
+    return compressed_weight, scale
+
+
 def float_quantize_dequantize_weight(
     weight: Tensor,
     config: WeightCompressionConfig,
@@ -156,6 +201,20 @@ def float_quantize_dequantize_weight(
     precomputed_scale: Optional[Tensor] = None,
     return_compressed_weight: Optional[bool] = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor]]:
+    """
+    First quantizes the given weight tensor to float (nf4) dtype and then dequantizes it back to obtain float32 values.
+    E2M1 mode is currently not supported.
+
+    :param weight: The weight tensor to quantize-dequantize.
+    :param config: Compression configuration.
+    :param reduction_axes: Axes along which to reduce statistics. Not required if precomputed scale are provided.
+    :param precomputed_scale: Optional precomputed scale tensor.
+    :param return_compressed_weight: If True, besides decompressed weight will also return compressed weight and scale.
+    :return: Dequantized weight tensor or a tuple containing the decompressed weight, compressed weight and scale.
+    """
+    assert config.mode == CompressWeightsMode.E2M1
+    # TODO: add support for f4e2m1 once ticket 164717 is resolved
+
     # Optimized implementation
     if _can_run_optimized(weight.backend):
         from nncf.openvino.optimized_functions import (
@@ -177,54 +236,6 @@ def float_quantize_dequantize_weight(
         return decompressed_weight, compressed_weight, scale
     else:
         return decompressed_weight
-
-
-def do_float_quantization(
-    weight: Tensor,
-    config: WeightCompressionConfig,
-    reduction_axes: Optional[ReductionAxes] = None,
-    precomputed_scale: Tensor = None,
-) -> Tuple[Tensor, Tensor]:
-    """
-    Calculates scale for fp4 (nf4, e2m1) quantization and normalizes weights by the scale.
-    Weights are reshaped in case of positive value of group size.
-
-    :param weight: Weight array to compress.
-    :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
-    :param group_size: Number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
-        The value -1 means no grouping. Defaults to -1.
-    :param precomputed_scale: Precomputed scale.
-    :return: Normalized weight tensor of float32 type and nf4 scale tensor of float32 type.
-    """
-    assert config.mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
-
-    if config.group_size != -1 and reduction_axes is not None:
-        # weights are reshaped: [a1, r, a2] -> [a1, r//gs, gs, a2]
-        weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
-
-    # Optimized implementation
-    if config.mode == CompressWeightsMode.NF4 and _can_run_optimized(weight.backend):
-        from nncf.openvino.optimized_functions import do_float_quantization as do_float_quantization_ov
-
-        return do_float_quantization_ov(weight, config, reduction_axes, precomputed_scale)
-
-    if weight.backend == TensorBackend.ov:
-        weight = weight.as_numpy_tensor()
-    if weight.dtype != TensorDataType.float32:
-        weight = weight.astype(TensorDataType.float32)
-
-    scale = (
-        calculate_float_quantization_params(weight, reduction_axes, config)
-        if precomputed_scale is None
-        else precomputed_scale
-    )
-    norm_weight = _calculate_normalized_weight(weight, scale)
-    if config.mode == CompressWeightsMode.NF4:
-        compressed_weight = _calculate_nf4_quantized_weight(norm_weight, scale, config.mode, is_normalized_weight=True)
-    else:
-        # TODO: Implement proper quantization for E2M1
-        compressed_weight = norm_weight
-    return compressed_weight, scale
 
 
 def calculate_integer_quantization_params(
@@ -353,7 +364,7 @@ def do_integer_dequantization(
     compressed_weights: Tensor, scale: Tensor, zero_point: Optional[Tensor] = None, reduction_axis: int = -1
 ) -> Tensor:
     """
-    The method dequantizes the given weights to float point data type in accordance with the scale and
+    The method dequantizes the given integer weights to float point data type in accordance with the scale and
     zero_point data type.
 
     :param compressed_weights: compressed weights.
@@ -409,9 +420,9 @@ def do_integer_quantization(
 
     # Optimized implementation
     if _can_run_optimized(weight.backend):
-        from nncf.openvino.optimized_functions import do_integer_quantization as do_int_quantization_ov
+        from nncf.openvino.optimized_functions import do_integer_quantization as do_integer_quantization_ov
 
-        return do_int_quantization_ov(weight, config, reduction_axes, precomputed_scale, precomputed_zero_point)
+        return do_integer_quantization_ov(weight, config, reduction_axes, precomputed_scale, precomputed_zero_point)
 
     # Reference implementation
     if weight.backend == TensorBackend.ov:
@@ -443,7 +454,7 @@ def integer_quantize_dequantize_weight(
     return_compressed_weight: Optional[bool] = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor, Tensor, Tensor]]:
     """
-    First quantizes the given weight tensor and then dequantizes it back to obtain float32 values.
+    First quantizes the given weight tensor to integer dtype and then dequantizes it back to obtain float32 values.
     :param weight: The weight tensor to quantize-dequantize.
     :param config: Compression configuration.
     :param reduction_axes: Axes along which to reduce (collect) statistics (e.g., min, max). Not required if
@@ -458,10 +469,10 @@ def integer_quantize_dequantize_weight(
     # Optimized implementation
     if _can_run_optimized(weight.backend):
         from nncf.openvino.optimized_functions import (
-            integer_quantize_dequantize_weight as quantize_dequantize_weight_ov,
+            integer_quantize_dequantize_weight as integer_quantize_dequantize_weight_ov,
         )
 
-        return quantize_dequantize_weight_ov(
+        return integer_quantize_dequantize_weight_ov(
             weight,
             config,
             reduction_axes,

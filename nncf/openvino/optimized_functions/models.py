@@ -22,6 +22,7 @@ from openvino._pyopenvino.properties.hint import inference_precision
 from openvino.runtime import Node
 from openvino.runtime import opset13 as opset
 
+from nncf import CompressWeightsMode
 from nncf.common.utils.backend import is_openvino_at_least
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
@@ -240,6 +241,16 @@ def get_float_quantization_model(
     scale_shape: Optional[Tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
 ) -> Union[ModelCallable, ModelAsNodes]:
+    """
+    Get a model that compresses weights to float (currently only nf4) destination type using the given configuration.
+    :param ov_model_params: OV model parameters.
+    :param config: Compression configuration.
+    :param weight_shape: Shape of the weight to compress. Weight is assumed to be already reshaped as needed.
+    :param scale_shape: Optional shape of the scale. If not provided, scale will be computed by the OV model.
+        Otherwise, it is expected that the scale tensor is given as an input to the model.
+    :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale is provided as input.
+    :return: A model callable that compresses weights using the given configuration.
+    """
     weight_shape, scale_shape, _ = _prepare_quantization_model_inputs(
         ov_model_params, weight_shape, scale_shape, zero_point_shape=None, reduction_axes=reduction_axes
     )
@@ -261,6 +272,19 @@ def get_float_quantize_dequantize_weight_model(
     reduction_axes: Optional[ReductionAxes] = None,
     return_compressed_weight: Optional[bool] = False,
 ) -> ModelCallable:
+    """
+    Get a model that performs float (currently only nf4) compression and decompression of the given weight.
+    :param ov_model_params: OV model parameters.
+    :param config: Compression configuration.
+    :param weight_shape: Shape of the weight. Weight is assumed to be already reshaped as needed.
+    :param scale_shape: Optional shape of the scale. If not provided, scale will be computed by the OV model.
+        Otherwise, it is expected that the scale tensor is given as an input to the model.
+    :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale is provided as input.
+    :param return_compressed_weight: Whether to also return compressed weight and scale besides the
+        decompressed weight.
+    :return: A model callable that returns a decompressed weight, and optionally compressed weight and scale
+        if `return_compressed_weight` is True.
+    """
     weight_shape, scale_shape, _ = _prepare_quantization_model_inputs(
         ov_model_params, weight_shape, scale_shape, zero_point_shape=None, reduction_axes=reduction_axes
     )
@@ -504,6 +528,8 @@ def _build_float_quantization_model(
     reduction_axes: Optional[ReductionAxes] = None,
     return_nodes: bool = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
+    assert config.mode == CompressWeightsMode.NF4
+
     default_input_dtypes = {"scale": TensorDataType.float32}
     default_output_dtypes = {"compressed_weight": TensorDataType.float32, "scale": TensorDataType.float32}
 
@@ -531,7 +557,7 @@ def _build_float_quantization_model(
         raise ValueError(msg)
 
     # Validate output dtypes
-    # TODO: Enable f4e2m1
+    # TODO: add support for f4e2m1 once ticket 164717 is resolved
     valid_compressed_weight_dtypes = [TensorDataType.float32, TensorDataType.nf4]
     if compressed_weight_dtype not in valid_compressed_weight_dtypes:
         msg = (
