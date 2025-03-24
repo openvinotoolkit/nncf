@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
@@ -544,7 +544,10 @@ def quantize_dequantize_weight(
 
 
 def _can_run_optimized(input_backend: TensorBackend) -> bool:
-    if input_backend in [TensorBackend.ov, TensorBackend.numpy]:
+    if (
+        input_backend in [TensorBackend.ov, TensorBackend.numpy]
+        and os.environ.get("NNCF_DISABLE_OPTIMIZED_COMPRESSION") is None
+    ):
         if is_openvino_available():
             from nncf.openvino.cpu_info import is_arm_cpu
 
