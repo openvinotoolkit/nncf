@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
-import random
 import shutil
 import sys
 from datetime import datetime
@@ -18,6 +17,7 @@ from typing import Any, Dict, List
 
 import torch
 import torch.nn.functional as F
+import transformers
 from datasets import load_dataset
 from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
@@ -63,15 +63,6 @@ def get_wikitext2(nsamples: int, seqlen: int, tokenizer: Any, device: torch.devi
         inp = trainenc.input_ids[:, i:j].to(device)
         trainloader.append(inp)
     return trainloader
-
-
-def set_seed(seed) -> None:
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)  # if you are using multi-GPU.
-    random.seed(seed)  # Python random module.
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
 
 
 @torch.no_grad()
@@ -189,6 +180,7 @@ def set_trainable(model: nn.Module, lora_lr: float, fq_lr: float) -> List[Dict[s
         f"all params: {all_param:,d} || "
         f"trainable%: {100 * trainable_params / all_param:.4f}"
     )
+    model.train()
     return [{"params": adapters_to_train, "lr": lora_lr}, {"params": scales_to_train, "lr": fq_lr}]
 
 
@@ -221,7 +213,7 @@ def load_checkpoint(model: nn.Module, example_input: Any, ckpt_file: Path) -> nn
 
 
 @torch.no_grad()
-def get_ov_model_for_eval(
+def export_to_openvino(
     pretrained: str, example_input: torch.Tensor, ckpt_file: Path, ir_dir: Path
 ) -> OVModelForCausalLM:
     """
@@ -299,7 +291,7 @@ def main(argv) -> float:
     parser = get_argument_parser()
     args = parser.parse_args(argv)
     assert torch.cuda.is_available()
-    set_seed(42)
+    transformers.set_seed(42)
     device = "cuda"
     torch_dtype = torch.bfloat16
     compression_config = dict(
@@ -346,10 +338,9 @@ def main(argv) -> float:
     weight_decay = args.lr
     param_to_train = set_trainable(model, lora_lr=args.lr, fq_lr=fq_lr)
     opt = torch.optim.AdamW(param_to_train, weight_decay=weight_decay)
-    model.train()
 
     # Convert torch checkpoint to an OpenVINO model and evaluate it via WWB.
-    model_for_eval = get_ov_model_for_eval(args.pretrained, train_loader[0], ckpt_file, last_dir)
+    model_for_eval = export_to_openvino(args.pretrained, train_loader[0], ckpt_file, last_dir)
     best_similarity = measure_similarity(model_for_eval, tokenizer, wwb_ref_file)
     tb.add_scalar("similarity", best_similarity, 0)
     print(f"Initial WWB similarity= {best_similarity:.4f}")
@@ -401,7 +392,7 @@ def main(argv) -> float:
         # Export tuned model to OpenVINO and evaluate it using WWB.
         # Save the best checkpoint and OpenVINO IR for the highest similarity score obtained from WWB.
         save_checkpoint(model, ckpt_file)
-        model_for_eval = get_ov_model_for_eval(args.pretrained, train_loader[0], ckpt_file, last_dir)
+        model_for_eval = export_to_openvino(args.pretrained, train_loader[0], ckpt_file, last_dir)
         similarity = measure_similarity(model_for_eval, tokenizer, wwb_ref_file)
         print(f"[Epoch {epoch}], WWB similarity = {similarity:.4f}")
         tb.add_scalar("similarity", similarity, total_microbatches)
