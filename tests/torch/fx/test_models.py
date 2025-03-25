@@ -71,7 +71,7 @@ TEST_MODELS = (
     torchvision_model_case("resnet18", (1, 3, 224, 224)),
     torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)),
     torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
-    torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
+    torchvision_model_case("swin_v2_t", (1, 3, 224, 224)),
     ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
     ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
     ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
@@ -159,11 +159,11 @@ TEST_MODELS_QUANIZED = (
         [Dim.AUTO, Dim.STATIC, Dim.STATIC, Dim.STATIC],  # This ViT Model is not eligible for dynamic shape capability
     ),
     (
-        torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
+        torchvision_model_case("swin_v2_t", (1, 3, 224, 224)),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [
-            (250, 250),
-            (149, 149),
+            (130, 130),
+            (77, 77),
         ],
         [Dim.AUTO, Dim.STATIC, Dim.AUTO, Dim.AUTO],
     ),
