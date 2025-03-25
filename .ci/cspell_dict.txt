@@ -41,6 +41,7 @@ baddbmm
 batchnorm
 batchnorms
 batchwise
+bfloat16
 biasadd
 bibsource
 bibtex
@@ -149,6 +150,7 @@ fxsq
 gacts
 gelsy
 gelu
+genai
 gflop
 gflops
 giga
@@ -407,6 +409,7 @@ shufflenet
 signedness
 silu
 smol
+smolm
 softmax
 sota
 sparsifiable
@@ -468,6 +471,7 @@ vshampor
 vtype
 weakrefs
 weightable
+whowhatbench
 xlabel
 xnli
 xticklabels
