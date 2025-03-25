@@ -20,7 +20,6 @@ import torch.cuda
 from packaging import version
 from pytest import approx
 
-from nncf.config.reader import JSONWithComments
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 from tests.torch.helpers import Command
 from tests.torch.sample_test_validator import BaseSampleTestCaseDescriptor
@@ -48,7 +47,7 @@ class MovementGlueHandler:
         checkpoint_path = self.get_checkpoint_path(checkpoint_save_dir)
         result_path = checkpoint_path / "all_results.json"
         with open(result_path, encoding="utf-8") as f:
-            result = json.load(f, cls=JSONWithComments)
+            result = json.load(f)
         return result
 
 
