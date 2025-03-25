@@ -217,9 +217,9 @@ logicalor
 logicalxor
 logit
 loglikelihoods
+lspec
 lstmsequence
 lstsq
-lspec
 lyalyushkin
 mapillary
 maskrcnn
@@ -317,6 +317,7 @@ ovlstm
 ovmvn
 ovroi
 pbar
+perchannel
 pertensor
 pinv
 popleft
