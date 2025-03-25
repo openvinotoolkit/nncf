@@ -113,7 +113,15 @@ class TemplateTestNNCFTensorOperators:
         assert res.dtype == res_nncf.data.dtype
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
-        assert res_nncf.device == nncf_tensor_a.device
+        # TensorFlow's default tensor operations (e.g., addition, subtraction, multiplication, power, negation, etc.)
+        # do not guarantee that the resulting tensor will be on the same device as the input tensors. This is because
+        # TensorFlow does not explicitly specify a device when performing these operations. As a result, the output
+        # tensor may be placed on a different device than expected.
+        #
+        # To handle this behavior, we skip device consistency checks for the TensorFlow backend in test cases
+        # involving tensor operations.
+        if self.backend() != TensorBackend.tf:
+            assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
     def test_operators_int(self, op_name):

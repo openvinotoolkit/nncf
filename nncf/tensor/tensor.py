@@ -85,10 +85,6 @@ class Tensor:
     # built-in operations
 
     def __add__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
-        if self.backend == TensorBackend.tf:
-            from nncf.tensor.functions import numeric
-
-            return numeric.add(self, other)
         return Tensor(self.data + unwrap_tensor_data(other))
 
     def __radd__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
@@ -99,10 +95,6 @@ class Tensor:
         return self
 
     def __sub__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
-        if self.backend == TensorBackend.tf:
-            from nncf.tensor.functions import numeric
-
-            return numeric.subtract(self, other)
         return Tensor(self.data - unwrap_tensor_data(other))
 
     def __rsub__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
@@ -113,10 +105,6 @@ class Tensor:
         return self
 
     def __mul__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
-        if self.backend == TensorBackend.tf:
-            from nncf.tensor.functions import numeric
-
-            return numeric.multiply(self, other)
         return Tensor(self.data * unwrap_tensor_data(other))
 
     def __rmul__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
@@ -127,10 +115,6 @@ class Tensor:
         return self
 
     def __pow__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
-        if self.backend == TensorBackend.tf:
-            from nncf.tensor.functions import numeric
-
-            return numeric.power(self, other)
         return Tensor(self.data ** unwrap_tensor_data(other))
 
     def __rpow__(self, other: Union[Tensor, T_NUMBER]) -> Tensor:
@@ -164,10 +148,6 @@ class Tensor:
         return Tensor(self.data @ unwrap_tensor_data(other))
 
     def __neg__(self) -> Tensor:
-        if self.backend == TensorBackend.tf:
-            from nncf.tensor.functions import numeric
-
-            return numeric.neg(self)
         return Tensor(-self.data)
 
     # Comparison operators
