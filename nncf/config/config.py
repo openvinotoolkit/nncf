@@ -9,7 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
 import jsonschema
@@ -17,8 +19,8 @@ import jsonschema
 import nncf
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
+from nncf.common.utils.os import safe_open
 from nncf.config.definitions import SCHEMA_VISUALIZATION_URL
-from nncf.config.reader import read_config
 from nncf.config.schema import NNCF_CONFIG_SCHEMA
 from nncf.config.schema import REF_VS_ALGO_SCHEMA
 from nncf.config.schema import validate_single_compression_algo_schema
@@ -57,7 +59,9 @@ class NNCFConfig(dict[str, Any]):
 
         :param path: Path to the .json file containing the NNCF configuration.
         """
-        loaded_json = read_config(path)
+        file_path = Path(path)
+        with safe_open(file_path) as f:
+            loaded_json = json.load(f)
         return cls.from_dict(loaded_json)
 
     def register_extra_structs(self, struct_list: List[NNCFExtraConfigStruct]) -> None:

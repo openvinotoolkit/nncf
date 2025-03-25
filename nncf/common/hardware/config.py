@@ -23,7 +23,6 @@ from nncf.common.quantization.structs import QuantizationScheme as QuantizationM
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.helpers import product_dict
 from nncf.common.utils.os import safe_open
-from nncf.config.reader import JSONWithComments
 from nncf.definitions import HW_CONFIG_RELATIVE_DIR
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
 
@@ -131,7 +130,7 @@ class HWConfig(list[Dict[str, Any]], ABC):
     def from_json(cls: type["HWConfig"], path: str) -> List[Dict[str, Any]]:
         file_path = Path(path).resolve()
         with safe_open(file_path) as f:
-            json_config = json.load(f, object_pairs_hook=OrderedDict, cls=JSONWithComments)
+            json_config = json.load(f, object_pairs_hook=OrderedDict)
             return cls.from_dict(json_config)
 
     @staticmethod
