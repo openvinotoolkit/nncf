@@ -7,8 +7,13 @@ torchvision==0.22.0
 
 # ONNX
 onnx==1.17.0
+<<<<<<< HEAD
 onnxruntime==1.19.2; python_version <= '3.9'
 onnxruntime==1.21.1; python_version > '3.9'
+=======
+onnxruntime==1.19.2
+onnxoptimizer==0.3.13
+>>>>>>> Add eliminate_nop_cast pass
 
 # TensorFlow
 tensorflow==2.15.1

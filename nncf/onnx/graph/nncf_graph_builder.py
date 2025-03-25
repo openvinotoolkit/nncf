@@ -12,6 +12,7 @@ from collections import Counter
 from typing import Any, Optional
 
 import onnx
+import onnxoptimizer
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -348,6 +349,7 @@ class GraphConverter:
         """
         onnx_model = GraphConverter._replace_empty_node_name(onnx_model)
         onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
+        onnx_model = onnxoptimizer.optimize(onnx_model, ["eliminate_nop_cast"])
         edge_info_mapping = get_edge_info_mapping(onnx_model)
         children_node_mapping = get_children_node_mapping(onnx_model)
         parents_node_mapping = get_parents_node_mapping(onnx_model)
