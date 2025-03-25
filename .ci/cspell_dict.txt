@@ -26,6 +26,7 @@ argprovider
 argspec
 argvalue
 ascale
+ascontiguousarray
 asym
 asymm
 atol
@@ -48,6 +49,7 @@ biburl
 bitwidth
 bitwidths
 bkup
+blockwise
 bnas
 booktitle
 bootstrapnas
@@ -138,8 +140,6 @@ finetuning
 finfo
 flalign
 floatfmt
-floormod
-fontcolor
 forgetgate
 frobenius
 fsolve
