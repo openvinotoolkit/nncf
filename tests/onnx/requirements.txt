@@ -1,6 +1,7 @@
 -c ../../constraints.txt
 onnx
 onnxruntime
+onnxoptimizer
 openvino
 pytest-cov
 pytest-dependency
