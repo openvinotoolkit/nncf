@@ -15,6 +15,7 @@ import onnx
 from onnx import helper
 from onnx import numpy_helper
 
+import nncf
 import nncf.onnx.graph.metatypes.onnx_metatypes as metatypes
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -145,11 +146,13 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         precomputed_zero_points: Dict[str, Tensor] = None,
         lora_correction_algo: LoraCorrectionAlgorithm = None,
     ) -> onnx.ModelProto:
+        if lora_correction_algo is not None:
+            msg = "LORA correction is not supported for the ONNX backend"
+            raise nncf.ValidationError(msg)
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
             node = wc_params.node_with_weight
             weight = self.get_weight(node, wc_params.weight_port_id, model, graph)
-            # calculates compressed weights and decompression parameters
             compressed_weight = compress_weight(
                 Tensor(weight),
                 wc_params.reduction_axes,
@@ -157,29 +160,20 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 None if precomputed_scales is None else precomputed_scales.get(wc_params.weight_name),
                 None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name),
             )
-            if compression_config.mode == CompressWeightsMode.INT8_SYM:
-                dtype = onnx.TensorProto.INT8
-            elif compression_config.mode == CompressWeightsMode.INT8_ASYM:
-                dtype = onnx.TensorProto.UINT8
-            elif compression_config.mode == CompressWeightsMode.INT4_SYM:
-                dtype = onnx.TensorProto.INT4
-            elif compression_config.mode == CompressWeightsMode.INT4_ASYM:
-                dtype = onnx.TensorProto.UINT4
-            block_size = compression_config.group_size
-            channel_axes = get_weight_quantization_axis(node, wc_params.weight_port_id)
-            c_w = compressed_weight.tensor.reshape(weight.shape)
-            scale = compressed_weight.scale.squeeze()
-            if compressed_weight.zero_point is not None:
-                z_p = compressed_weight.zero_point.squeeze()
+            compressed_weight, scale, zero_point = _preprocess_tensor_shapes(compressed_weight, weight.shape)
+            dequantize_block_size = max(compression_config.group_size, 0)  # 0 - is no block wise quantization
+            dequantize_axis = (
+                get_weight_quantization_axis(node, wc_params.weight_port_id) if dequantize_block_size > 0 else 0
+            )  # axis = 0 when blockwise
             add_dequantize_linear_layer(
                 model,
-                c_w,
+                compressed_weight,
                 scale,
-                z_p if compressed_weight.zero_point is not None else None,
+                zero_point,
+                dequantize_axis,
+                dequantize_block_size,
                 wc_params.weight_name,
-                channel_axes,
-                dtype,
-                block_size,
+                _get_dtype(compression_config.mode),
             )
         return model
 
@@ -200,63 +194,130 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         raise NotImplementedError()
 
 
+def pack_uint4(tensor):
+    # TODO: add verification of correctness
+    if tensor.dtype != np.uint8:
+        msg = f"Invalid tensor dtype {tensor.type}. torch.uint8 type is supported."
+        raise nncf.ValidationError(msg)
+    packed_tensor = np.ascontiguousarray(tensor)
+    packed_tensor = packed_tensor.reshape(-1, 2)
+    packed_tensor = np.bitwise_and(packed_tensor[..., ::2], 15) | packed_tensor[..., 1::2] << 4
+    return packed_tensor
+
+
+def pack_int4(tensor):
+    # TODO: add verification of correctness
+    if tensor.dtype != np.int8:
+        msg = f"Invalid tensor dtype {tensor.type}. torch.int8 type is supported."
+        raise nncf.ValidationError(msg)
+    packed_tensor = np.ascontiguousarray(tensor)
+    packed_tensor = packed_tensor.reshape(-1, 2)
+    packed_tensor = np.bitwise_and(packed_tensor[..., ::2], 15) | packed_tensor[..., 1::2] << 4
+    return packed_tensor
+
+
 def add_dequantize_linear_layer(
-    model, quantized_weights, scale, zero_point, weight_name, channel_axes, dtype, block_size
+    model: onnx.ModelProto,
+    quantized_weights: np.ndarray,
+    scale: np.ndarray,
+    zero_point: Optional[np.ndarray],
+    axis: int,
+    block_size: int,
+    weight_name: str,
+    dtype: onnx.TensorProto.DataType,
 ):
-    quantized_weights = quantized_weights.data
-    scale = scale.data
+    orig_shape = quantized_weights.shape
+
+    if dtype == onnx.TensorProto.INT4:
+        quantized_weights = pack_int4(quantized_weights)
+        if zero_point is not None:
+            zero_point = pack_int4(zero_point)
+    elif dtype == onnx.TensorProto.UINT4:
+        quantized_weights = pack_uint4(quantized_weights)
+        if zero_point is not None:
+            zero_point = pack_uint4(zero_point)
+    quantized_weight_name = weight_name + "_quantized"
+    scale_name = weight_name + "_scale"
+    dequantized_weight_output = weight_name + "_dequantized"
+    deq_inputs = [quantized_weight_name, scale_name]
+
+    # Create initializers for the quantized weights, scale, and zero point
+    quantized_weights_initializer = onnx.helper.make_tensor(
+        quantized_weight_name,
+        dtype,
+        orig_shape,
+        quantized_weights.tobytes(),  # Ensure raw data is used
+        raw=True,
+    )
+    scale_initializer = numpy_helper.from_array(np.array(scale, dtype=np.float32), name=scale_name)
+
+    initials = [quantized_weights_initializer, scale_initializer]
 
     if zero_point is not None:
-        zero_point = zero_point.data
-    # Create a DequantizeLinear node
-    axis = 0
-    if block_size == -1:
-        block_size = None
-        print(channel_axes)
-        axis = channel_axes
-        scale = scale.squeeze()
-        zero_point = zero_point.squeeze()
-    deq_inputs = [weight_name + "_quantized", weight_name + "_scale"]
-    if zero_point is not None:
         deq_inputs.append(weight_name + "_zero_point")
+        # zero_point_shape = (len(zero_point) + 1) // 2 if dtype == onnx.TensorProto.UINT8 else zero_point.shape
+        zero_point_initializer = onnx.helper.make_tensor(
+            weight_name + "_zero_point",
+            dtype,
+            zero_point.shape,
+            zero_point.tobytes(),  # Ensure raw data is used
+            raw=True,
+        )
+        initials.append(zero_point_initializer)
+
     dequantize_node = helper.make_node(
         "DequantizeLinear",
         inputs=deq_inputs,
-        outputs=[weight_name + "_dequantized"],
+        outputs=[dequantized_weight_output],
         block_size=block_size,
         axis=axis,
     )
 
-    # Create initializers for the quantized weights, scale, and zero point
-    quantized_weights_initializer = onnx.helper.make_tensor(
-        weight_name + "_quantized",
-        dtype,
-        quantized_weights.shape,
-        quantized_weights,
-    )
-    scale_initializer = numpy_helper.from_array(np.array(scale, dtype=np.float32), name=weight_name + "_scale")
-    initials = [quantized_weights_initializer, scale_initializer]
-    if zero_point is not None:
-        zero_point_initializer = onnx.helper.make_tensor(
-            weight_name + "_zero_point",
-            dtype,
-            scale.shape,
-            zero_point,
-        )
-        initials.append(zero_point_initializer)
     # Add the node and initializers to the model
-    model.graph.node.append(dequantize_node)
     model.graph.initializer.extend(initials)
 
-    # Update the consumer nodes to use the dequantized weights
-    for node in model.graph.node:
-        for i, input_name in enumerate(node.input):
+    # Insert the DequantizeLinear node before the consumer nodes
+    consumer_indices = []
+    for i, node in enumerate(model.graph.node):
+        for j, input_name in enumerate(node.input):
             if input_name == weight_name:
-                node.input[i] = weight_name + "_dequantized"
+                consumer_indices.append(i)
+                node.input[j] = dequantized_weight_output
 
-    # Find the index of the original weight initializer and remove it
-    initializer_index = next((i for i, init in enumerate(model.graph.initializer) if init.name == weight_name), None)
-    if initializer_index is not None:
-        del model.graph.initializer[initializer_index]
+    # Insert the DequantizeLinear node before the first consumer node
+    if consumer_indices:
+        model.graph.node.insert(consumer_indices[0], dequantize_node)
+    else:
+        model.graph.node.append(dequantize_node)
 
+    # Remove original initializer
+    original_initializer = next((init for init in model.graph.initializer if init.name == weight_name), None)
+    if original_initializer is not None:
+        model.graph.initializer.remove(original_initializer)
     return model
+
+
+def _get_dtype(mode):
+    if mode == CompressWeightsMode.INT8_SYM:
+        return onnx.TensorProto.INT8
+    elif mode == CompressWeightsMode.INT8_ASYM:
+        return onnx.TensorProto.UINT8
+    elif mode == CompressWeightsMode.INT4_SYM:
+        return onnx.TensorProto.INT4
+    elif mode == CompressWeightsMode.INT4_ASYM:
+        return onnx.TensorProto.UINT4
+    else:
+        msg = f"{mode.value} is not supported."
+        raise nncf.ParameterNotSupportedError(msg)
+
+
+def _preprocess_tensor_shapes(compressed_weight, weight_shape):
+    weight_tensor = compressed_weight.tensor
+    weight_tensor = weight_tensor.reshape(weight_shape)
+    scale = compressed_weight.scale
+    scale = scale.squeeze()
+    zero_point = compressed_weight.zero_point
+    if zero_point is not None:
+        zero_point = zero_point.squeeze()
+        zero_point = zero_point.astype(weight_tensor.dtype)
+    return weight_tensor.data, scale.data, zero_point.data if zero_point is not None else None

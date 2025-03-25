@@ -478,3 +478,6 @@ yscale
 yujie
 yury
 zfnet
+tobytes
+ascontiguousarray
+blockwise
