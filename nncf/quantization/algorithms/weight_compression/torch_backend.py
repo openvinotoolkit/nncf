@@ -283,6 +283,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         orig_weight_shape: Tuple[int, ...],
         compression_format: CompressionFormat,
         lora_adapter_rank: int,
+        is_all_8bit: bool,
     ) -> PTTransformationCommand:
         """
         Creates a fake quantization insertion command for the given compressed weight.
@@ -291,9 +292,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         :param wc_params: Parameters for weight compression.
         :param orig_weight_shape: The original shape of the weight tensor.
         :param compression_format: The format of compression.
+        :param is_all_8bit: Flag indicating if all weights should be compressed to 8-bit.
         :return: A PTTransformationCommand for inserting fake quantization to the model.
         """
         compression_config = wc_params.compression_config
+        # default mapping for 4bit weight compression and FQ_LORA format, no need to add lora adapters for 8bit weight
         mode_vs_schema_map = {
             CompressWeightsMode.INT4_ASYM: QuantizationScheme.ASYMMETRIC_LORA,
             CompressWeightsMode.INT4_SYM: QuantizationScheme.SYMMETRIC_LORA,
@@ -303,6 +306,9 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         if compression_format == CompressionFormat.FQ:
             mode_vs_schema_map[CompressWeightsMode.INT4_ASYM] = QuantizationScheme.ASYMMETRIC
             mode_vs_schema_map[CompressWeightsMode.INT4_SYM] = QuantizationScheme.SYMMETRIC
+        if is_all_8bit and compression_format == CompressionFormat.FQ_LORA:
+            mode_vs_schema_map[CompressWeightsMode.INT8_ASYM] = QuantizationScheme.ASYMMETRIC_LORA
+            mode_vs_schema_map[CompressWeightsMode.INT8_SYM] = QuantizationScheme.SYMMETRIC_LORA
 
         schema = mode_vs_schema_map[compression_config.mode]
 
@@ -469,6 +475,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             model_transformer = PTModelTransformer(model)
 
         transformation_layout = TransformationLayout()
+        is_all_8bit = all(wc_params.compression_config.num_bits == 8 for wc_params in weight_compression_parameters)
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
             if compression_config.mode in [
@@ -499,7 +506,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             else:
                 rank = advanced_parameters.lora_adapter_rank
                 command = self.get_fq_insertion_command(
-                    compressed_weight, wc_params, weight.shape, compression_format, rank
+                    compressed_weight, wc_params, weight.shape, compression_format, rank, is_all_8bit
                 )
             transformation_layout.register(command)
 

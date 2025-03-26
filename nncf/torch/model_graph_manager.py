@@ -22,6 +22,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.graph import operator_metatypes as om
+from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
@@ -368,3 +369,42 @@ def get_weight_channel_axes(metatype: Type[OperatorMetatype], ndims: int, input_
     if metatype in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]:
         return (1,)
     return (0,)
+
+
+def is_matmul_with_constant(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    """
+    Determines whether the given node in the NNCF graph represents a matmul with a constant input.
+
+    :param node: A NNCFNode instance.
+    :param nncf_graph: Instance of inference NNCFGraph,
+        which contains shape of and constant subgraphs.
+    :return: True if given node is a matmul with a constant input, False otherwise.
+    """
+    return node.metatype in MATMUL_METATYPES and len(get_weight_tensor_port_ids(node, nncf_graph)) > 0
+
+
+def get_weight_nodes(
+    nncf_graph: NNCFGraph,
+    inference_nncf_graph: NNCFGraph,
+) -> List[NNCFNode]:
+    """
+    Returns nodes that have weights.
+
+    :param nncf_graph: Instance of inference NNCFGraph,
+        which contains shape of and constant subgraphs.
+    :param inference_nncf_graph: Instance of inference NNCFGraph,
+        which does not contain shape of and constant subgraphs.
+
+    :return: All nodes with weights.
+    """
+    weight_nodes_candidates = [
+        node
+        for node in inference_nncf_graph.get_all_nodes()
+        if issubclass(node.metatype, om.PTOperatorMetatype) and node.metatype.weight_port_ids
+    ]
+    weight_nodes = []
+    for node in weight_nodes_candidates:
+        if node.metatype in MATMUL_METATYPES and not is_matmul_with_constant(node, nncf_graph):
+            continue
+        weight_nodes.append(node)
+    return weight_nodes

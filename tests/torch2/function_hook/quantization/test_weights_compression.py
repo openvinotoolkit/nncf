@@ -23,6 +23,7 @@ from nncf import SensitivityMetric
 from nncf.experimental.torch2.function_hook import get_hook_storage
 from nncf.experimental.torch2.function_hook import wrap_model
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
@@ -231,14 +232,12 @@ def test_compress_shared_weights(mocker, mode):
     decompressed_modules = list(x for x in hook_storage.post_hooks.modules() if not isinstance(x, nn.ModuleDict))
     assert len(decompressed_modules) == 2
 
-    # TODO(AlexanderDokuchaev): cache for shared weights
-    # check that the weight decompressors are called only once
     for val in decompressed_modules:
         mocker.spy(val, "forward")
     compressed_model(input_ids)
 
     for val in decompressed_modules:
-        assert val.forward.call_count in [1, 2]  # TODO(AlexanderDokuchaev): cache for shared weights
+        assert val.forward.call_count == 1
 
 
 class EmptyModel(torch.nn.Module):
@@ -262,6 +261,7 @@ class EmptyModel(torch.nn.Module):
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
+        {"compression_format": CompressionFormat.FQ, "group_size": 64},
         {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},
     ),
 )
@@ -276,7 +276,11 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 @pytest.mark.parametrize("mode", INT4_MODES)
 @pytest.mark.parametrize(
     "params",
-    ({"gptq": True}, {"lora_correction": True}),
+    (
+        {"gptq": True},
+        {"lora_correction": True},
+        {"compression_format": CompressionFormat.FQ, "group_size": 64},
+    ),
 )
 def test_raise_error_with_unsupported_params_for_int4(mode, params):
     dummy_torch_model = EmptyModel()
@@ -430,11 +434,11 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_orig_weight(model: torch.nn.Module) -> Tensor:
-        return Tensor(model.linear.weight.data)
+        return Tensor(model.linear.weight.data.detach())
 
     @staticmethod
     def get_decompressed_weight(compressed_model: torch.nn.Module, input: torch.Tensor) -> Tensor:
-        weight = compressed_model.linear.weight
+        weight = compressed_model.linear.weight.data.detach()
         unpacked_w = compressed_model.get_submodule("__nncf_hooks.post_hooks.linear:weight__0.0")(weight)
         return Tensor(unpacked_w)
 

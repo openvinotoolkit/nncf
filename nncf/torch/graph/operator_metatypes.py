@@ -1219,3 +1219,5 @@ OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     PTModuleEmbeddingBagMetatype,
     PTModuleEmbeddingMetatype,
 ]
+
+MATMUL_METATYPES = [PTLinearMetatype, PTMatMulMetatype, PTAddmmMetatype]
