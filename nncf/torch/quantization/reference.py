@@ -120,32 +120,36 @@ class ReferenceQuantize:
         return new_input_low, new_input_range
 
 
+ref_q_torch = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
+try:
+
+    def sample():
+        return torch.tensor([1, 1]).to(torch.float32)
+
+    ref_forward = torch.compile(ref_q_torch.forward)
+    ref_backward = torch.compile(ref_q_torch.backward)
+
+    _ = ref_forward(input_=sample(), input_low=sample(), input_range=sample(), levels=2)
+
+    _ = ref_backward(
+        grad_output=sample(),
+        input_=sample(),
+        input_low=sample(),
+        input_range=sample(),
+        output=sample(),
+        level_low=0,
+        level_high=1,
+    )
+except Exception as e:
+    nncf_logger.warning(
+        f"Could not use torch.compile with reference functions. "
+        f"Falling back on not compiled versions - "
+        f"Reason: {str(e)}"
+    )
+    ref_forward = ref_q_torch.forward
+    ref_backward = ref_q_torch.backward
+
+
 class ReferenceQuantizedFunctions:
-    _executor = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
-    try:
-
-        def sample():
-            return torch.tensor([1, 1]).to(torch.float32)
-
-        Quantize_forward = torch.compile(_executor.forward)
-        Quantize_backward = torch.compile(_executor.backward)
-
-        _ = Quantize_forward(input_=sample(), input_low=sample(), input_range=sample(), levels=2)
-
-        _ = Quantize_backward(
-            grad_output=sample(),
-            input_=sample(),
-            input_low=sample(),
-            input_range=sample(),
-            output=sample(),
-            level_low=0,
-            level_high=1,
-        )
-    except Exception as e:
-        nncf_logger.warning(
-            f"Could not use torch.compile with reference functions. "
-            f"Falling back on not compiled versions - "
-            f"Reason: {str(e)}"
-        )
-        Quantize_forward = _executor.forward
-        Quantize_backward = _executor.backward
+    Quantize_forward = ref_forward
+    Quantize_backward = ref_backward
