@@ -106,16 +106,6 @@ def abs(a: Tensor) -> Tensor:
 
 
 @tensor_dispatcher
-def neg(a: Tensor) -> Tensor:
-    """
-    Numerical negative, element-wise.
-
-    :param a: The input tensor.
-    :return: A tensor containing the negative value of each element in a.
-    """
-
-
-@tensor_dispatcher
 def astype(a: Tensor, dtype: TensorDataType) -> Tensor:
     """
     Copy of the tensor, cast to a specified type.

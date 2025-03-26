@@ -15,6 +15,7 @@ import numpy as np
 import numpy.typing as npt
 import tensorflow as tf
 
+from nncf import InternalError
 from nncf.tensor import TensorDataType
 from nncf.tensor import TensorDeviceType
 from nncf.tensor.definitions import TensorBackend
@@ -50,20 +51,16 @@ def convert_to_tf_dtype(dtype: Optional[TensorDataType]) -> Optional[tf.DType]:
 @numeric.device.register
 def _(a: tf.Tensor) -> TensorDeviceType:
     if "CPU" in a.device:
-        return DEVICE_MAP_REV["CPU"]
+        return TensorDeviceType.CPU
     if "GPU" in a.device:
-        return DEVICE_MAP_REV["GPU"]
-    return TensorDeviceType.CPU
+        return TensorDeviceType.GPU
+    msg = "Unknown device type"
+    raise InternalError(msg)
 
 
 @numeric.backend.register
 def _(a: tf.Tensor) -> TensorBackend:
     return TensorBackend.tf
-
-
-@numeric.backend.register
-def _(a: float) -> TensorBackend:
-    return TensorBackend.numpy
 
 
 @numeric.squeeze.register
@@ -351,13 +348,6 @@ def _(x1: tf.Tensor, x2: Union[tf.Tensor, float]) -> tf.Tensor:
         return tf.identity(result)
 
 
-@numeric.neg.register
-def _(a: tf.Tensor) -> tf.Tensor:
-    with tf.device(a.device):
-        result = tf.negative(a)
-        return tf.identity(result)
-
-
 @numeric.clip.register
 def _(a: tf.Tensor, a_min: Union[tf.Tensor, float], a_max: Union[tf.Tensor, float]) -> tf.Tensor:
     with tf.device(a.device):
@@ -568,7 +558,8 @@ def eye(
     tf_device = DEVICE_MAP[device] if device is not None else None
     p_args = (n,) if m is None else (n, m)
     with tf.device(tf_device):
-        return tf.eye(*p_args, dtype=tf_dtype)
+        eye = tf.eye(*p_args, dtype=tf_dtype)
+        return tf.identity(eye)
 
 
 def arange(
