@@ -16,6 +16,7 @@ import numpy as np
 import torch
 
 import nncf
+from nncf import nncf_logger
 from nncf.torch.utils import sum_like
 
 GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)
@@ -121,5 +122,30 @@ class ReferenceQuantize:
 
 class ReferenceQuantizedFunctions:
     _executor = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
-    Quantize_forward = _executor.forward
-    Quantize_backward = _executor.backward
+    try:
+
+        def sample():
+            return torch.tensor([1, 1]).to(torch.float32)
+
+        Quantize_forward = torch.compile(_executor.forward)
+        Quantize_backward = torch.compile(_executor.backward)
+
+        _ = Quantize_forward(input_=sample(), input_low=sample(), input_range=sample(), levels=2)
+
+        _ = Quantize_backward(
+            grad_output=sample(),
+            input_=sample(),
+            input_low=sample(),
+            input_range=sample(),
+            output=sample(),
+            level_low=0,
+            level_high=1,
+        )
+    except Exception as e:
+        nncf_logger.warning(
+            f"Could not use torch.compile with reference functions. "
+            f"Falling back on not compiled versions - "
+            f"Reason: {str(e)}"
+        )
+        Quantize_forward = _executor.forward
+        Quantize_backward = _executor.backward
