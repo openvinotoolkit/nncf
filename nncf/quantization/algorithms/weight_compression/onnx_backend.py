@@ -163,7 +163,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             compressed_weight, scale, zero_point = _preprocess_tensor_shapes(compressed_weight, weight.shape)
             dequantize_block_size = max(compression_config.group_size, 0)  # 0 - is no block wise quantization
             dequantize_axis = (
-                get_weight_quantization_axis(node, wc_params.weight_port_id) if dequantize_block_size > 0 else 0
+                get_weight_quantization_axis(node, wc_params.weight_port_id) if dequantize_block_size <= 0 else 0
             )  # axis = 0 when blockwise
             add_dequantize_linear_layer(
                 model,
@@ -194,22 +194,16 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         raise NotImplementedError()
 
 
-def pack_uint4(tensor):
-    # TODO: add verification of correctness
-    if tensor.dtype != np.uint8:
-        msg = f"Invalid tensor dtype {tensor.type}. torch.uint8 type is supported."
-        raise nncf.ValidationError(msg)
-    packed_tensor = np.ascontiguousarray(tensor)
-    packed_tensor = packed_tensor.reshape(-1, 2)
-    packed_tensor = np.bitwise_and(packed_tensor[..., ::2], 15) | packed_tensor[..., 1::2] << 4
-    return packed_tensor
-
-
-def pack_int4(tensor):
-    # TODO: add verification of correctness
-    if tensor.dtype != np.int8:
-        msg = f"Invalid tensor dtype {tensor.type}. torch.int8 type is supported."
-        raise nncf.ValidationError(msg)
+def pack_4_bits(tensor):
+    """See https://onnx.ai/onnx/technical/int4.html#packing-and-unpacking"""
+    if tensor.dtype == np.uint8:
+        if np.max(tensor) > 15 or np.min(tensor) < 0:
+            raise RuntimeError
+    elif tensor.dtype == np.int8:
+        if np.max(tensor) > 7 or np.min(tensor) < -8:
+            raise RuntimeError
+    else:
+        raise RuntimeError()
     packed_tensor = np.ascontiguousarray(tensor)
     packed_tensor = packed_tensor.reshape(-1, 2)
     packed_tensor = np.bitwise_and(packed_tensor[..., ::2], 15) | packed_tensor[..., 1::2] << 4
@@ -227,15 +221,14 @@ def add_dequantize_linear_layer(
     dtype: onnx.TensorProto.DataType,
 ):
     orig_shape = quantized_weights.shape
+    if zero_point is not None:
+        orig_zero_point_shape = zero_point.shape
 
-    if dtype == onnx.TensorProto.INT4:
-        quantized_weights = pack_int4(quantized_weights)
+    if dtype in [onnx.TensorProto.INT4, onnx.TensorProto.UINT4]:
+        quantized_weights = pack_4_bits(quantized_weights)
         if zero_point is not None:
-            zero_point = pack_int4(zero_point)
-    elif dtype == onnx.TensorProto.UINT4:
-        quantized_weights = pack_uint4(quantized_weights)
-        if zero_point is not None:
-            zero_point = pack_uint4(zero_point)
+            zero_point = pack_4_bits(zero_point)
+
     quantized_weight_name = weight_name + "_quantized"
     scale_name = weight_name + "_scale"
     dequantized_weight_output = weight_name + "_dequantized"
@@ -243,11 +236,7 @@ def add_dequantize_linear_layer(
 
     # Create initializers for the quantized weights, scale, and zero point
     quantized_weights_initializer = onnx.helper.make_tensor(
-        quantized_weight_name,
-        dtype,
-        orig_shape,
-        quantized_weights.tobytes(),  # Ensure raw data is used
-        raw=True,
+        quantized_weight_name, dtype, orig_shape, quantized_weights.tobytes(), raw=True
     )
     scale_initializer = numpy_helper.from_array(np.array(scale, dtype=np.float32), name=scale_name)
 
@@ -255,13 +244,8 @@ def add_dequantize_linear_layer(
 
     if zero_point is not None:
         deq_inputs.append(weight_name + "_zero_point")
-        # zero_point_shape = (len(zero_point) + 1) // 2 if dtype == onnx.TensorProto.UINT8 else zero_point.shape
         zero_point_initializer = onnx.helper.make_tensor(
-            weight_name + "_zero_point",
-            dtype,
-            zero_point.shape,
-            zero_point.tobytes(),  # Ensure raw data is used
-            raw=True,
+            weight_name + "_zero_point", dtype, orig_zero_point_shape, zero_point.tobytes(), raw=True
         )
         initials.append(zero_point_initializer)
 
