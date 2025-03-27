@@ -218,7 +218,7 @@ def build_nncf_graph(model: nn.Module, example_input: Any) -> PTNNCFGraph:
     Builds an NNCF graph from the given PyTorch model.
 
     :param model: The PyTorch model to build the graph from.
-    :param example_input: .
+    :param example_input: An example input that will be used for model tracing.
     :return: The NNCF graph representation of the model.
     """
     if isinstance(example_input, dict):

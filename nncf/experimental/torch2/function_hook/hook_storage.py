@@ -74,6 +74,7 @@ class HookStorage(nn.Module):
         :param port_id: The port ID the hook is associated with.
         :return: Generate key for module dict.
         """
+        op_name = op_name.replace(".", ":")
         return f"{op_name}__{port_id}"
 
     @staticmethod
@@ -171,7 +172,7 @@ class HookStorage(nn.Module):
         :param value: The input value to be passed through the pre-function hooks.
         :return: The value after all post-function hooks have been executed.
         """
-        return self._execute_hooks(self.post_hooks, op_name, port_id, value)
+        return self._execute_hooks(self.post_hooks, op_name.replace(".", ":"), port_id, value)
 
     def named_hooks(self, prefix: str = "", remove_duplicate: bool = True) -> Iterator[Tuple[str, nn.Module]]:
         """
@@ -182,5 +183,31 @@ class HookStorage(nn.Module):
         :return: Name and module pairs.
         """
         for name, module in self.named_modules(remove_duplicate=remove_duplicate):
+            # Expected depths of target hook module is 2
+            # <2 - ModuleDicts in HookStorage, >2 - submodules of hooks
             if name.count(".") == 2:
                 yield f"{prefix}.{name}" if prefix else name, cast(nn.Module, module)
+
+
+def unwrap_hook_name(hook_name: str) -> Tuple[str, str, int]:
+    """
+    Unwraps the name of the hook to extract the operation name and port ID.
+
+    :param hook_name: The name of the hook that returns from HookStorage().named_hooks().
+    :return: Hook type, operation name and port id.
+    """
+    splitted = hook_name.split(".")
+    if len(splitted) < 3:
+        msg = f"Invalid hook name, name should contain at least 3 parts, got {hook_name}"
+        raise ValueError(msg)
+    hook_type = splitted[-3]
+    if hook_type not in ["pre_hooks", "post_hooks"]:
+        msg = f"Invalid hook name, name should contain 'pre_hooks' or 'post_hooks', got {hook_name}"
+        raise ValueError(msg)
+    hook_key = splitted[-2]
+    try:
+        op_name, port_id = hook_key.rsplit("__", 1)
+    except ValueError:
+        msg = f"Invalid hook name, hook_key expect op_name and port_id, got {hook_key}"
+        raise ValueError(msg)
+    return hook_type, op_name.replace(":", "."), int(port_id)
