@@ -213,16 +213,20 @@ def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> PTNNCFGraph:
     return nncf_graph
 
 
-def build_nncf_graph(model: nn.Module, *args: Any, **kwargs: Any) -> PTNNCFGraph:
+def build_nncf_graph(model: nn.Module, example_input: Any) -> PTNNCFGraph:
     """
     Builds an NNCF graph from the given PyTorch model.
 
     :param model: The PyTorch model to build the graph from.
-    :param *args: Positional arguments to model inference.
-    :param **kwargs: Keyword arguments to model inference.
+    :param example_input: .
     :return: The NNCF graph representation of the model.
     """
-    graph = build_graph(model, *args, **kwargs)
+    if isinstance(example_input, dict):
+        graph = build_graph(model, **example_input)
+    elif isinstance(example_input, tuple):
+        graph = build_graph(model, *example_input)
+    else:
+        graph = build_graph(model, example_input)
     return convert_to_nncf_graph(graph)
 
 
@@ -250,10 +254,6 @@ class GraphModelWrapper:
 
         :return: A PTNNCFGraph where nodes represent operations of model.
         """
-        if isinstance(self.example_input, dict):
-            return build_nncf_graph(self.model, **self.example_input)
-        if isinstance(self.example_input, tuple):
-            return build_nncf_graph(self.model, *self.example_input)
         return build_nncf_graph(self.model, self.example_input)
 
     def get_graph(self) -> PTNNCFGraph:
