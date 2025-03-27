@@ -4,5 +4,6 @@ scikit-learn
 fastdownload
 onnx==1.17.0
 onnxruntime==1.19.2
-openvino==2025.0
+openvino==2025.1
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release/
 numpy<2

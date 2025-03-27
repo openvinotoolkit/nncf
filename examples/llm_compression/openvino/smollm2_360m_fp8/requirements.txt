@@ -1,5 +1,6 @@
 datasets
-openvino==2024.6
+openvino==2025.1
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release/
 optimum-intel[openvino]>=1.22.0
 transformers>=4.48.0
 onnx==1.17.0
