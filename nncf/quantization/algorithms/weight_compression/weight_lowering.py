@@ -71,6 +71,8 @@ CENTER_OF_NF4_QUANTILES = np.array(
     dtype=np.float32,
 )
 
+MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = int(1e5)
+
 
 @dataclass
 class CompressedWeight:
@@ -194,7 +196,7 @@ def do_float_quantization(
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
 
     # Optimized implementation
-    if config.mode == CompressWeightsMode.NF4 and _can_run_optimized(weight.backend):
+    if config.mode == CompressWeightsMode.NF4 and _can_run_optimized(weight):
         from nncf.openvino.optimized_functions import do_float_quantization as do_float_quantization_ov
 
         return do_float_quantization_ov(weight, config, reduction_axes, precomputed_scale)
@@ -238,7 +240,7 @@ def float_quantize_dequantize_weight(
     # TODO: add support for f4e2m1 once ticket 164717 is resolved
 
     # Optimized implementation
-    if _can_run_optimized(weight.backend):
+    if _can_run_optimized(weight):
         from nncf.openvino.optimized_functions import (
             float_quantize_dequantize_weight as float_quantize_dequantize_weight_ov,
         )
@@ -315,7 +317,7 @@ def get_integer_quantization_error(
     :return: The quantity characterizing the error of integer quantization.
     """
     # Optimized implementation
-    if _can_run_optimized(weight.backend):
+    if _can_run_optimized(weight):
         from nncf.openvino.optimized_functions import (
             get_integer_quantization_error as get_integer_quantization_error_ov,
         )
@@ -441,7 +443,7 @@ def do_integer_quantization(
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, config.group_size)
 
     # Optimized implementation
-    if _can_run_optimized(weight.backend):
+    if _can_run_optimized(weight):
         from nncf.openvino.optimized_functions import do_integer_quantization as do_integer_quantization_ov
 
         return do_integer_quantization_ov(weight, config, reduction_axes, precomputed_scale, precomputed_zero_point)
@@ -489,7 +491,7 @@ def integer_quantize_dequantize_weight(
         (and zero point).
     """
     # Optimized implementation
-    if _can_run_optimized(weight.backend):
+    if _can_run_optimized(weight):
         from nncf.openvino.optimized_functions import (
             integer_quantize_dequantize_weight as integer_quantize_dequantize_weight_ov,
         )
@@ -602,9 +604,10 @@ def _calculate_integer_quantized_weight(
     return compressed_weights
 
 
-def _can_run_optimized(input_backend: TensorBackend) -> bool:
+def _can_run_optimized(inp: Tensor) -> bool:
     if (
-        input_backend in [TensorBackend.ov, TensorBackend.numpy]
+        inp.size > MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
+        and inp.backend in [TensorBackend.ov, TensorBackend.numpy]
         and os.environ.get("NNCF_DISABLE_OPTIMIZED_COMPRESSION") is None
     ):
         if is_openvino_available():

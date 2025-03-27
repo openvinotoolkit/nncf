@@ -107,10 +107,44 @@ def get_random_integer_tensor(shape, low, high, dtype, backend, seed=0):
 def openvino_available(available: bool):
     import nncf.common.utils.backend
 
-    original_value = nncf.common.utils.backend._OPENVINO_AVAILABLE
+    original_openvino_available_value = nncf.common.utils.backend._OPENVINO_AVAILABLE
     nncf.common.utils.backend._OPENVINO_AVAILABLE = available
+    original_min_size_value = (
+        nncf.quantization.algorithms.weight_compression.weight_lowering.MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION
+    )
+    nncf.quantization.algorithms.weight_compression.weight_lowering.MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = 0
     yield
-    nncf.common.utils.backend._OPENVINO_AVAILABLE = original_value
+    nncf.common.utils.backend._OPENVINO_AVAILABLE = original_openvino_available_value
+    nncf.quantization.algorithms.weight_compression.weight_lowering.MIN_INPUT_SIZE_FOR_OPTIMIZED_COMPRESSION = (
+        original_min_size_value
+    )
+
+
+@pytest.mark.parametrize(
+    "weight_shape,is_disabled",
+    [
+        ((25000, 4), True),
+        ((25001, 4), False),
+    ],
+)
+@pytest.mark.parametrize("quantization_task", [QuantizationTask.Q, QuantizationTask.Q_DQ, QuantizationTask.Q_DQ_RQ])
+def test_optimized_compression_is_disabled(weight_shape, is_disabled, quantization_task):
+    weight = get_random_float_tensor(weight_shape, TensorDataType.float32, TensorBackend.numpy)
+    config = WeightCompressionConfig(CompressWeightsMode.INT8_ASYM)
+
+    fn_to_call, fn_to_patch = _get_compression_fn_from_quantization_task(quantization_task, config)
+    patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
+    with patch(patch_path, side_effect=fn_to_patch) as mock:
+        kwargs = {}
+        if quantization_task == QuantizationTask.Q_DQ_RQ:
+            kwargs["return_compressed_weight"] = True
+
+        fn_to_call(weight, config, reduction_axes=1)
+
+        if is_disabled:
+            mock.assert_not_called()
+        else:
+            mock.assert_called_once()
 
 
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
@@ -163,20 +197,7 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
                         zero_point_shape, level_low, level_high, TensorDataType.int32, TensorBackend.numpy
                     )
 
-            if quantization_task == QuantizationTask.Q:
-                if config.is_integer:
-                    fn_to_call = do_integer_quantization
-                    fn_to_patch = opt_fns.do_integer_quantization
-                else:
-                    fn_to_call = do_float_quantization
-                    fn_to_patch = opt_fns.do_float_quantization
-            else:
-                if config.is_integer:
-                    fn_to_call = integer_quantize_dequantize_weight
-                    fn_to_patch = opt_fns.integer_quantize_dequantize_weight
-                else:
-                    fn_to_call = float_quantize_dequantize_weight
-                    fn_to_patch = opt_fns.float_quantize_dequantize_weight
+            fn_to_call, fn_to_patch = _get_compression_fn_from_quantization_task(quantization_task, config)
             patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
             with patch(patch_path, side_effect=fn_to_patch) as mock:
                 # When scale (and z.p) are precomputed, all inputs are assumed to be already reshaped and reduction
@@ -382,6 +403,24 @@ def test_end_to_end_alignment(weight_shape, weight_dtype, config, compression_kw
                         results[cb][f"{node_name_prefix}weight"] = get_input_node_data(weight_node, 0)
 
     _check_values(results)
+
+
+def _get_compression_fn_from_quantization_task(quantization_task, config):
+    if quantization_task == QuantizationTask.Q:
+        if config.is_integer:
+            fn_to_call = do_integer_quantization
+            fn_to_patch = opt_fns.do_integer_quantization
+        else:
+            fn_to_call = do_float_quantization
+            fn_to_patch = opt_fns.do_float_quantization
+    else:
+        if config.is_integer:
+            fn_to_call = integer_quantize_dequantize_weight
+            fn_to_patch = opt_fns.integer_quantize_dequantize_weight
+        else:
+            fn_to_call = float_quantize_dequantize_weight
+            fn_to_patch = opt_fns.float_quantize_dequantize_weight
+    return fn_to_call, fn_to_patch
 
 
 def _check_backends_and_dtypes(
