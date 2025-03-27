@@ -10,13 +10,14 @@
 # limitations under the License.
 
 
-from typing import Any
+from typing import Any, TypeVar
 
 import torch
 from torch import nn
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.layer_attributes import ConstantLayerAttributes
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
 from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.parameters import StripFormat
@@ -28,7 +29,7 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
 
-SUPPORTED_NUM_BITS_FOR_STRIP_MODEL = [8]
+TModel = TypeVar("TModel", bound=nn.Module)
 
 
 def strip_quantized_model(
@@ -57,7 +58,7 @@ def strip_quantized_model(
     return model
 
 
-def replace_quantizer_to_torch_native_module(model: nn.Module, graph: NNCFGraph) -> NNCFNetwork:
+def replace_quantizer_to_torch_native_module(model: TModel, graph: NNCFGraph) -> TModel:
     """
     Replace NNCF quantizer modules to PyTorch FakeQuantizer module and remove unused quantizer operators.
 
@@ -68,6 +69,8 @@ def replace_quantizer_to_torch_native_module(model: nn.Module, graph: NNCFGraph)
     for name, module in hook_storage.named_hooks():
         if isinstance(module, BaseQuantizer):
             new_fq = convert_to_torch_fakequantizer(module)
+            hook_storage.set_submodule(name, new_fq)
+
             if name.startswith("pre_hooks") and (module.is_half_range or module.narrow_range):
                 key = name.split(".")[1]
                 node_name = "__".join(key.split("__")[:-1])
@@ -80,16 +83,17 @@ def replace_quantizer_to_torch_native_module(model: nn.Module, graph: NNCFGraph)
                 with torch.no_grad():
                     # Half range and narrow_range require to clamp weights of module
                     # Note: Half range and narrow_range used only for weight.
-                    input_low, input_high = module.get_input_low_input_high()
+                    input_low, input_high = module.get_input_low_input_high()  # type: ignore
 
                     data = torch.min(torch.max(data, input_low), input_high)
                     data = module.quantize(data, execute_traced_op_as_identity=False)
+
+                if not isinstance(const_node.layer_attributes, ConstantLayerAttributes):
+                    msg = f"Unexpected layer attributes type {type(const_node.layer_attributes)}"
+                    raise nncf.InternalError(msg)
 
                 module_name, weight_attr_name = split_const_name(const_node.layer_attributes.name)
                 module = get_module_by_name(module_name, model)
                 weight_param = getattr(module, weight_attr_name)
                 weight_param.data = data
-
-            hook_storage.set_submodule(name, new_fq)
-
     return model
