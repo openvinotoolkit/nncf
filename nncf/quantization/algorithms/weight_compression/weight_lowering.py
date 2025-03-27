@@ -50,7 +50,26 @@ NF4_QUANTILES = np.array(
     dtype=np.float32,
 )
 
-CENTER_OF_NF4_QUANTILES = (NF4_QUANTILES[1:] + NF4_QUANTILES[:-1]) / 2
+CENTER_OF_NF4_QUANTILES = np.array(
+    [
+        -0.84809643,
+        -0.6106329,
+        -0.45999527,
+        -0.33967942,
+        -0.2346074,
+        -0.13791174,
+        -0.045525018,
+        0.03979015,
+        0.120255254,
+        0.20352125,
+        0.29201376,
+        0.38931254,
+        0.5016634,
+        0.6427869,
+        0.8614784,
+    ],
+    dtype=np.float32,
+)
 
 
 @dataclass
@@ -190,7 +209,7 @@ def do_float_quantization(
         scale = calculate_float_quantization_params(weight, reduction_axes, config)
     norm_weight = _calculate_normalized_weight(weight, scale)
     if config.mode == CompressWeightsMode.NF4:
-        compressed_weight = _calculate_nf4_quantized_weight(norm_weight, scale, config.mode, is_normalized_weight=True)
+        compressed_weight = _calculate_nf4_quantized_weight(norm_weight)
     else:
         # TODO: add support for E2M1 once ticket 164717 is resolved
         compressed_weight = norm_weight
@@ -495,22 +514,13 @@ def integer_quantize_dequantize_weight(
         return decompressed_weight
 
 
-def _calculate_nf4_quantized_weight(
-    weight: Tensor, scale: Tensor, mode: CompressWeightsMode, is_normalized_weight: bool = False
-) -> Tensor:
+def _calculate_nf4_quantized_weight(norm_weight: Tensor) -> Tensor:
     """
-    Performs NF4 quantization. The floating point values are represented by floating point scale and look-up with
-    16 floating-point values on [-1, 1]. Scale normalizes original values to [-1, 1] interval and look-up table
-    "rounds" or "quantize" to the closest quant.
+    Performs NF4 quantization. Look-up table is used to "round" or "quantize" to the closest quant.
 
-    :param weight: Weight tensor to quantize.
-    :param scale: Scale tensor used for normalization.
-    :param is_normalized_weight: Whether weight was scaled to [-1, 1] interval. Defaults to False.
+    :param norm_weight: Weight tensor to quantize already normalized to [-1, 1] range.
     :return: Tensor with floating-point values, where each of them corresponds to 1 out of 16 quants on [-1, 1].
     """
-    assert mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
-
-    norm_weight = weight if is_normalized_weight else _calculate_normalized_weight(weight, scale)
     center_nf4_quantiles = fns.from_numpy(CENTER_OF_NF4_QUANTILES, backend=norm_weight.backend)
     indexes = fns.searchsorted(center_nf4_quantiles, norm_weight)
     nf4_quantiles = fns.from_numpy(NF4_QUANTILES, backend=indexes.backend)
