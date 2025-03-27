@@ -12,6 +12,7 @@
 import inspect
 import os
 from typing import Callable, Dict, List
+from unittest.mock import patch
 
 import numpy as np
 import openvino.runtime as ov
@@ -21,14 +22,18 @@ from attr import dataclass
 from openvino.runtime import opset13 as opset
 
 import nncf
+import nncf.openvino.optimized_functions as opt_fns
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.utils.debug import nncf_debug
+from nncf.common.utils.helpers import set_env_variable
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.parameters import BackupMode
+from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
@@ -37,6 +42,7 @@ from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParamete
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
+from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
@@ -654,6 +660,8 @@ def test_raise_error_channel_size_is_not_divisible_by_group_size():
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
+        {"compression_format": CompressionFormat.FQ},
+        {"compression_format": CompressionFormat.FQ_LORA},
         {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},
     ),
 )
@@ -665,10 +673,14 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 @pytest.mark.parametrize(
     "params",
-    ({"dataset": "anything", "lora_correction": True, "gptq": True},),
+    (
+        {"dataset": "anything", "lora_correction": True, "gptq": True},
+        {"compression_format": CompressionFormat.FQ},
+        {"compression_format": CompressionFormat.FQ_LORA},
+    ),
 )
 def test_raise_error_with_unsupported_params_for_int4(mode, params):
-    with pytest.raises(nncf.ValidationError):
+    with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(ov.Model([], []), mode=mode, **params)
 
 
@@ -774,25 +786,46 @@ def check_compressed_matmul_subgraph(start_node, activation_dtype, weight_dtype,
 
 
 @pytest.mark.parametrize(
-    "activation_dtype, weight_dtype",
+    "weight_dtype, activation_dtype",
     [
         (ov.Type.f32, ov.Type.f32),
-        (ov.Type.f32, ov.Type.f16),
-        (ov.Type.f32, ov.Type.bf16),
+        (ov.Type.f16, ov.Type.f32),
+        (ov.Type.bf16, ov.Type.f32),
         (ov.Type.f16, ov.Type.f16),
         (ov.Type.bf16, ov.Type.bf16),
     ],
+    ids=[
+        "w32a32",
+        "w16a32",
+        "wb16a32",
+        "w16a16",
+        "wb16a16",
+    ],
 )
-def test_compression_for_different_dtypes(activation_dtype, weight_dtype):
-    model = IdentityMatmul(weights_dtype=weight_dtype, activation_dtype=activation_dtype).ov_model
+class TestActivationWeightDtype:
+    @staticmethod
+    def test_compression_for_different_dtypes(weight_dtype, activation_dtype):
+        model = IdentityMatmul(weights_dtype=weight_dtype, activation_dtype=activation_dtype).ov_model
 
-    compressed_model = compress_weights(
-        model, mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=1, all_layers=True
-    )
+        compressed_model = compress_weights(
+            model, mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=1, all_layers=True
+        )
+        name_to_node_map = {op.get_friendly_name(): op for op in compressed_model.get_ops()}
+        scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
+        check_compressed_matmul_subgraph(scale_multiply_node, activation_dtype, weight_dtype)
 
-    name_to_node_map = {op.get_friendly_name(): op for op in compressed_model.get_ops()}
-    scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
-    check_compressed_matmul_subgraph(scale_multiply_node, activation_dtype, weight_dtype)
+    @staticmethod
+    def test_set_weight(weight_dtype, activation_dtype, tmp_path):
+        model = GatherAndMatmulShareData(weights_dtype=weight_dtype, activation_dtype=activation_dtype).ov_model
+        ov_backend = OVWeightCompressionAlgoBackend(model)
+        graph = NNCFGraphFactory.create(model)
+        node_key = "5 MatMul_2"
+        weight_node = graph.get_node_by_key(node_key)
+        weight_port_id = 1
+        weight = ov_backend.get_weight(weight_node, weight_port_id, model, graph)
+        scaled_weight = weight * 2
+        ov_backend.set_weight(weight_node, weight_port_id, model, graph, scaled_weight)
+        ov.save_model(model, tmp_path / "model.xml", compress_to_fp16=True)
 
 
 DATASET_SIZE = 5
@@ -1455,6 +1488,25 @@ def test_compression_with_transposed_activations(kwargs):
             all_layers=True,
             **kwargs,
         )
+
+
+@pytest.mark.parametrize("disabled", [False, True])
+def test_disabled_optimized_compression(disabled):
+    model = LMLinearModel().ov_model
+
+    def run_compression():
+        compress_weights(model, mode=CompressWeightsMode.INT8)
+
+    fn_to_patch = opt_fns.do_int_quantization
+    patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
+    with patch(patch_path, side_effect=fn_to_patch) as mock:
+        if disabled:
+            with set_env_variable("NNCF_DISABLE_OPTIMIZED_COMPRESSION", "1"):
+                run_compression()
+            mock.assert_not_called()
+        else:
+            run_compression()
+            mock.assert_called_once()
 
 
 class TestOVTemplateWeightCompression(TemplateWeightCompression):

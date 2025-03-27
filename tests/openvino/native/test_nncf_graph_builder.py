@@ -39,6 +39,8 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
     "model,precision",
     [
         (FPModel(const_dtype=ov.Type.nf4), "nf4"),
+        (FPModel(const_dtype=ov.Type.f8e4m3), "f8e4m3"),
+        (FPModel(const_dtype=ov.Type.f8e5m2), "f8e5m2"),
     ],
 )
 def test_compare_nncf_graph_precision_synthetic_models(model, precision):
@@ -112,10 +114,12 @@ def test_parallel_edges():
 @pytest.mark.parametrize(
     "ov_type,expected_nncf_dtype",
     [
+        (ov.Type.nf4, Dtype.FLOAT),
+        (ov.Type.f8e4m3, Dtype.FLOAT),
+        (ov.Type.f8e5m2, Dtype.FLOAT),
         (ov.Type.f16, Dtype.FLOAT),
         (ov.Type.f32, Dtype.FLOAT),
         (ov.Type.f64, Dtype.FLOAT),
-        (ov.Type.nf4, Dtype.FLOAT),
         (ov.Type.i4, Dtype.INTEGER),
         (ov.Type.i8, Dtype.INTEGER),
         (ov.Type.i16, Dtype.INTEGER),
@@ -140,8 +144,6 @@ def test_convert_to_nncf_dtype_supported_types(ov_type: ov.Type, expected_nncf_d
     "ov_type",
     [
         ov.Type.undefined,
-        ov.Type.f8e4m3,
-        ov.Type.f8e5m2,
     ],
 )
 def test_convert_to_nncf_dtype_unsupported_types(ov_type: ov.Type):

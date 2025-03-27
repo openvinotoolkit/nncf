@@ -46,7 +46,9 @@ from nncf.openvino.statistics.collectors import OVMeanAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVMeanReducer
 from nncf.openvino.statistics.collectors import OVMeanVarianceReducer
 from nncf.openvino.statistics.collectors import OVShapeReducer
+from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
 from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
@@ -149,28 +151,19 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: ov.Model, graph: NNCFGraph, weight: Tensor
     ):
-        node_with_const = self.name_to_node_mapping[node_with_weight.node_name]
+        const_op_friendly_name = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["name"]
+        const_op = self.name_to_node_mapping[const_op_friendly_name]
 
-        const_port = node_with_const.input(weight_port_id)
-        const_node = node_with_const.input_value(weight_port_id).get_node()
+        dtype = const_op.get_element_type()
+        name = const_op.get_friendly_name()
+        new_const_op = create_ov_const_from_tensor(weight, dtype, name)
+        self.name_to_node_mapping[const_op_friendly_name] = new_const_op
 
-        shared_memory = True
-        if const_node.get_element_type() == ov.Type.bf16:
-            # Shared memory does not work for BF16 precision
-            shared_memory = False
-
-        new_const_node = ov.runtime.op.Constant(weight.data, shared_memory=shared_memory)
-        new_const_node.set_friendly_name(const_node.get_friendly_name())
-        const_port.replace_source_output(new_const_node.output(0))
-
-        const_name = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["name"]
-        self.name_to_node_mapping[const_name] = new_const_node
-
-        new_output = new_const_node.output(0)
-        for target_input in const_node.output(0).get_target_inputs():
+        new_output = new_const_op.output(0)
+        for target_input in const_op.output(0).get_target_inputs():
             target_input.replace_source_output(new_output)
 
-        del const_node
+        del const_op
 
     def insert_adapters(
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
@@ -292,6 +285,8 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         precomputed_scales: Dict[str, Tensor] = None,
         precomputed_zero_points: Dict[str, Tensor] = None,
         lora_correction_algo: LoraCorrectionAlgorithm = None,
+        compression_format: CompressionFormat = CompressionFormat.DQ,
+        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
     ) -> ov.Model:
         for wc_params in weight_compression_parameters:
             const_attributes = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]

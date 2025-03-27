@@ -19,6 +19,7 @@ from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.backend import copy_model
 from nncf.common.utils.registry import Registry
+from nncf.parameters import StripFormat
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.compression_method_api import PTCompressionLoss
@@ -81,7 +82,7 @@ class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
     def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         return NNCFStatistics()
 
-    def strip(self, do_copy: bool = True) -> NNCFNetwork:
+    def strip(self, do_copy: bool = True, strip_format: StripFormat = StripFormat.NATIVE) -> NNCFNetwork:
         model = self.model
         if do_copy:
             model = copy_model(self.model)

@@ -34,11 +34,13 @@ from nncf.errors import UnsupportedModelError as UnsupportedModelError
 from nncf.errors import UnsupportedVersionError as UnsupportedVersionError
 from nncf.errors import ValidationError as ValidationError
 from nncf.parameters import BackupMode as BackupMode
+from nncf.parameters import CompressionFormat as CompressionFormat
 from nncf.parameters import CompressWeightsMode as CompressWeightsMode
 from nncf.parameters import DropType as DropType
 from nncf.parameters import ModelType as ModelType
 from nncf.parameters import QuantizationMode as QuantizationMode
 from nncf.parameters import SensitivityMetric as SensitivityMetric
+from nncf.parameters import StripFormat as StripFormat
 from nncf.parameters import TargetDevice as TargetDevice
 from nncf.quantization import QuantizationPreset as QuantizationPreset
 from nncf.quantization import compress_weights as compress_weights

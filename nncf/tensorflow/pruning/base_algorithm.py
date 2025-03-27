@@ -35,6 +35,7 @@ from nncf.config.schemata.defaults import PRUNE_BATCH_NORMS
 from nncf.config.schemata.defaults import PRUNE_DOWNSAMPLE_CONVS
 from nncf.config.schemata.defaults import PRUNE_FIRST_CONV
 from nncf.config.schemata.defaults import PRUNING_INIT
+from nncf.parameters import StripFormat
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
@@ -359,6 +360,8 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController, ABC):
 
         return pruned_layers_summary
 
-    def strip_model(self, model: tf.keras.Model, do_copy: bool = False) -> tf.keras.Model:
+    def strip_model(
+        self, model: tf.keras.Model, do_copy: bool = False, strip_format: StripFormat = StripFormat.NATIVE
+    ) -> tf.keras.Model:
         # Transform model for pruning creates copy of the model.
         return strip_model_from_masks(model, self._op_names)

@@ -22,6 +22,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
+from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
@@ -36,13 +37,16 @@ from nncf.quantization.range_estimator import StatisticsType
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.operator_metatypes import ELEMENTWISE_OPERATIONS
+from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.graph.transformations.command_creation import create_quantizer_insertion_command
 from nncf.torch.graph.transformations.command_creation import create_shared_quantizer_insertion_command
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.model_graph_manager import get_weight_channel_axes
+from nncf.torch.model_graph_manager import get_weight_nodes
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
+from nncf.torch.model_graph_manager import is_matmul_with_constant
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
@@ -64,7 +68,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
-        return [om.PTLinearMetatype, om.PTMatMulMetatype, om.PTAddmmMetatype]
+        return MATMUL_METATYPES
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -136,7 +140,13 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_start_nodes_for_activation_path_tracing(nncf_graph: PTNNCFGraph) -> List[NNCFNode]:
-        return nncf_graph.get_nodes_with_missed_input_edges() + nncf_graph.get_input_nodes()
+        return (
+            nncf_graph.get_nodes_with_missed_input_edges()
+            + nncf_graph.get_input_nodes()
+            + nncf_graph.get_nodes_by_metatypes(
+                DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS]
+            )
+        )
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
@@ -333,18 +343,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
         return set()
 
-    def get_weight_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        weight_nodes_candidates = [
-            node
-            for node in nncf_graph.get_all_nodes()
-            if issubclass(node.metatype, om.PTOperatorMetatype) and node.metatype.weight_port_ids
-        ]
-        weight_nodes = []
-        for node in weight_nodes_candidates:
-            if node.metatype in self.mat_mul_metatypes and not self.is_matmul_with_constant(node, nncf_graph):
-                continue
-            weight_nodes.append(node)
-        return weight_nodes
+    def get_weight_nodes(self, nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        return get_weight_nodes(nncf_graph, inference_nncf_graph)
 
     def is_matmul_with_constant(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        return node.metatype in self.mat_mul_metatypes and len(get_weight_tensor_port_ids(node, nncf_graph)) > 0
+        return is_matmul_with_constant(node, nncf_graph)

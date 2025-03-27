@@ -660,6 +660,16 @@ class ShortTransformer(torch.nn.Module):
         return res
 
 
+class LinearModel(torch.nn.Module):
+    def __init__(self, weight: torch.Tensor = torch.ones(size=(256, 256), dtype=torch.float32)):
+        super().__init__()
+        self.linear = torch.nn.Linear(weight.shape[0], weight.shape[1], False)
+        self.linear.weight = torch.nn.Parameter(weight)
+
+    def forward(self, input):
+        return self.linear(input)
+
+
 class YOLO11N_SDPABlock(torch.nn.Module):
     INPUT_SIZE = (1, 2, 4)
 
