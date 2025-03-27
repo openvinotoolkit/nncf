@@ -8,13 +8,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from dataclasses import dataclass
+
 import numpy as np
 import onnx
+import pytest
 from onnx import TensorProto
 from onnx import helper
 from onnx import numpy_helper
 
 from nncf import CompressWeightsMode
+from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.quantization import compress_weights
 
 
@@ -59,7 +63,48 @@ def create_model():
     return model_def
 
 
-def test_wc():
+@dataclass
+class WeightTypeCounter:
+    int4: int = 0
+    uint4: int = 0
+    int8: int = 0
+    uint8: int = 0
+
+    def sum(self) -> int:
+        return self.int4 + self.uint4 + self.int8 + self.uint8
+
+
+def calculate_numbers_of_quantized_weights(model: onnx.ModelProto) -> WeightTypeCounter:
+    counter = WeightTypeCounter()
+    for node in model.graph.node:
+        if node.op_type == "DequantizeLinear":
+            x = get_tensor(model, node.input[0])
+            if x.data_type == TensorProto.INT8:
+                counter.int8 += 1
+            elif x.data_type == TensorProto.UINT8:
+                counter.uint8 += 1
+            elif x.data_type == TensorProto.INT4:
+                counter.int4 += 1
+            elif x.data_type == TensorProto.UINT4:
+                counter.uint4 += 1
+            else:
+                msg = f"Unexpected data type: {x.data_type}"
+                raise RuntimeError(msg)
+    return counter
+
+
+@pytest.mark.parametrize(
+    "mode, reference_counter",
+    [
+        [CompressWeightsMode.INT8_ASYM, WeightTypeCounter(int4=0, uint4=0, int8=0, uint8=10)],
+        [CompressWeightsMode.INT8_SYM, WeightTypeCounter(int4=0, uint4=0, int8=10, uint8=0)],
+        [CompressWeightsMode.INT4_ASYM, WeightTypeCounter(int4=0, uint4=9, int8=0, uint8=1)],
+        [CompressWeightsMode.INT4_SYM, WeightTypeCounter(int4=9, uint4=0, int8=0, uint8=1)],
+    ],
+)
+def test_wc(mode, reference_counter):
     model = create_model()
-    model = compress_weights(model, CompressWeightsMode.INT4_SYM)
-    onnx.save_model(model, "compressed_model.onnx")
+    model = compress_weights(model, mode)
+    counter = calculate_numbers_of_quantized_weights(model)
+    assert counter.sum() == reference_counter.sum()
+    assert counter == reference_counter
