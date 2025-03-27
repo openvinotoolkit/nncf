@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import re
 from collections import defaultdict
 from contextlib import contextmanager
 from enum import Enum
@@ -16,12 +16,17 @@ from unittest.mock import patch
 
 import numpy as np
 import openvino as ov
+import openvino.opset13 as opset
 import pytest
 
+import nncf
 import nncf.openvino.optimized_functions as opt_fns
 from nncf import CompressWeightsMode
+from nncf import Dataset
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
+from nncf.openvino.graph.node_utils import get_const_value_as_ov_tensor
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
@@ -261,6 +266,120 @@ def test_integer_quantization_error_alignment(weight_shape, config, tensor_backe
                 mock.assert_not_called()
             else:
                 mock.assert_called_once()
+
+    _check_values(results)
+
+
+@pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
+@pytest.mark.parametrize("weight_dtype", [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16])
+@pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
+@pytest.mark.parametrize(
+    "compression_kwargs",
+    [
+        {},
+        {"awq": True},
+        {"scale_estimation": True},
+        {"gptq": True},
+        {"gptq": True, "scale_estimation": True},
+        {"lora_correction": True},
+    ],
+    ids=["data-free", "awq", "se", "gptq", "gptq_se", "lora"],
+)
+@pytest.mark.parametrize("dataset_size", [3])
+def test_end_to_end_alignment(weight_shape, weight_dtype, config, compression_kwargs, dataset_size):
+    def create_ov_model():
+        inp = opset.parameter([1, 24, weight_shape[1]])
+        weight_const = opset.constant(get_random_float_tensor(weight_shape, weight_dtype, TensorBackend.ov).data)
+        weight_const = opset.convert(weight_const, ov.Type.f32)
+        matmul = opset.matmul(inp, weight_const, transpose_a=False, transpose_b=True)
+        result = opset.result(matmul)
+        return ov.Model([result], [inp])
+
+    def create_dataset(model):
+        input_data = []
+        for i in range(dataset_size):
+            input_sample = []
+            for j, inp in enumerate(model.inputs):
+                partial_shape = inp.get_partial_shape()
+                if partial_shape.is_static:
+                    input_shape = tuple(inp.shape)
+                else:
+                    # Batch dimension
+                    input_shape = (1 if partial_shape[0].is_dynamic else partial_shape[0].get_length(),)
+                    if len(partial_shape) == 2:
+                        # Assuming this is sequence length dimension
+                        input_shape += (10 if partial_shape[1].is_dynamic else partial_shape[1].get_length(),)
+                random_data = get_random_float_tensor(
+                    input_shape, TensorDataType.float32, TensorBackend.numpy, seed=hash((i, j)) % (1 << 32)
+                ).data
+                input_sample.append(random_data)
+            input_data.append(input_sample)
+        return Dataset(input_data)
+
+    def get_input_node_data(node: ov.Node, input_id: int) -> Tensor:
+        # Get the constant node data which is the input to the given node
+        child_node = node.input(input_id).get_source_output().get_node()
+        if child_node.get_type_name() == "Convert":
+            child_node = child_node.input(0).get_source_output().get_node()
+        assert child_node.get_type_name() == "Constant"
+        return Tensor(get_const_value_as_ov_tensor(child_node)).as_numpy_tensor()
+
+    is_data_aware = (
+        compression_kwargs.get("awq")
+        or compression_kwargs.get("scale_estimation")
+        or compression_kwargs.get("gptq")
+        or compression_kwargs.get("lora_correction")
+    )
+
+    if config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
+        if is_data_aware:
+            pytest.skip("Data-aware compression is not supported for INT8 modes.")
+    else:
+        compression_kwargs["all_layers"] = True
+
+    results = defaultdict(dict)
+
+    # Iterate over two implementations
+    for cb in [ComputationBackend.NumPy, ComputationBackend.OV]:
+        # A context manager to enable/disable ov implementation
+        with openvino_available(cb == ComputationBackend.OV):
+            fn_to_patch = opt_fns.do_integer_quantization if config.is_integer else opt_fns.do_float_quantization
+            patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
+            with patch(patch_path, side_effect=fn_to_patch) as mock:
+                model = create_ov_model()
+
+                if is_data_aware:
+                    compression_kwargs["dataset"] = create_dataset(model)
+
+                nncf.compress_weights(model, config.mode, group_size=config.group_size, **compression_kwargs)
+
+                if cb == ComputationBackend.NumPy:
+                    mock.assert_not_called()
+                else:
+                    mock.assert_called()
+
+                ov_nodes = {node.get_friendly_name(): node for node in model.get_ops()}
+                nncf_graph = NNCFGraphFactory.create(model)
+                for i, nncf_node in enumerate(nncf_graph.topological_sort()):
+                    node_name = nncf_node.node_name
+                    node = ov_nodes[node_name]
+                    if re.search(r"/fq_weights_\d+$", node_name):
+                        # Extract compression-related constants from compression subgraph
+                        node_name_prefix = f"{i}_"
+                        if "lora" in node_name:
+                            node_name_prefix += "lora_A_" if "lora_A" in node_name else "lora_B_"
+
+                        assert node.get_type_name() == "Multiply"
+                        mul_node = node
+                        results[cb][f"{node_name_prefix}scale"] = get_input_node_data(mul_node, 1)
+                        weight_node = node.input(0).get_source_output().get_node()
+
+                        if config.is_asym_mode:
+                            assert weight_node.get_type_name() == "Subtract"
+                            results[cb][f"{node_name_prefix}zero_point"] = get_input_node_data(weight_node, 1)
+                            weight_node = weight_node.input(0).get_source_output().get_node()
+
+                        results[cb][f"{node_name_prefix}weight"] = get_input_node_data(weight_node, 0)
 
     _check_values(results)
 
