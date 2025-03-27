@@ -142,7 +142,11 @@ class ReferenceQuantize:
         return new_input_low, new_input_range
 
 
+torch_executor = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
+torch_forward = compilation_wrapper(torch_executor.forward)
+torch_backward = compilation_wrapper(torch_executor.backward)
+
+
 class ReferenceQuantizedFunctions:
-    _executor = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
-    Quantize_forward = compilation_wrapper(_executor.forward)
-    Quantize_backward = compilation_wrapper(_executor.backward)
+    Quantize_forward = torch_forward
+    Quantize_backward = torch_backward
