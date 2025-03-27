@@ -14,12 +14,34 @@ from typing import List, Tuple, TypeVar
 
 import numpy as np
 import torch
+import torch.compiler
 
 import nncf
 from nncf import nncf_logger
 from nncf.torch.utils import sum_like
 
 GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)
+
+
+class compilation_wrapper:
+    def __init__(self, func):
+        self._func = func
+        self._compiled_func = None
+
+    def __call__(self, *args, **kwargs):
+        if self._compiled_func is None:
+            try:
+                nncf_logger.info(f"Using function {self._func.__name__} with torch.compile.")
+                self._compiled_func = torch.compile(self._func)
+                return self._compiled_func(*args, **kwargs)
+            except Exception as e:
+                nncf_logger.info(
+                    f"Could not use torch.compile with {self._func.__name__} function. "
+                    f"Falling back on not compiled version. "
+                    f"Reason: {str(e)}"
+                )
+                self._compiled_func = self._func
+        return self._compiled_func(*args, **kwargs)
 
 
 class ReferenceBackendType(Enum):
@@ -120,36 +142,7 @@ class ReferenceQuantize:
         return new_input_low, new_input_range
 
 
-ref_q_torch = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
-try:
-
-    def sample():
-        return torch.tensor([1, 1]).to(torch.float32)
-
-    ref_forward = torch.compile(ref_q_torch.forward)
-    ref_backward = torch.compile(ref_q_torch.backward)
-
-    _ = ref_forward(input_=sample(), input_low=sample(), input_range=sample(), levels=2)
-
-    _ = ref_backward(
-        grad_output=sample(),
-        input_=sample(),
-        input_low=sample(),
-        input_range=sample(),
-        output=sample(),
-        level_low=0,
-        level_high=1,
-    )
-except Exception as e:
-    nncf_logger.warning(
-        f"Could not use torch.compile with reference functions. "
-        f"Falling back on not compiled versions - "
-        f"Reason: {str(e)}"
-    )
-    ref_forward = ref_q_torch.forward
-    ref_backward = ref_q_torch.backward
-
-
 class ReferenceQuantizedFunctions:
-    Quantize_forward = ref_forward
-    Quantize_backward = ref_backward
+    _executor = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
+    Quantize_forward = compilation_wrapper(_executor.forward)
+    Quantize_backward = compilation_wrapper(_executor.backward)
