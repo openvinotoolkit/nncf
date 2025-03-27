@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 import weakref
-from typing import Any, Optional
+from typing import Any, Iterator, Optional, Tuple, cast
 
 from torch import nn
 
@@ -172,3 +172,15 @@ class HookStorage(nn.Module):
         :return: The value after all post-function hooks have been executed.
         """
         return self._execute_hooks(self.post_hooks, op_name, port_id, value)
+
+    def named_hooks(self, prefix: str = "", remove_duplicate: bool = True) -> Iterator[Tuple[str, nn.Module]]:
+        """
+        Retrieve named hook modules from the model.
+
+        :param prefix: Prefix to filter named modules. Default is "".
+        :param remove_duplicate: Whether to remove duplicate modules. Default is False.
+        :return: Name and module pairs.
+        """
+        for name, module in self.named_modules(remove_duplicate=remove_duplicate):
+            if name.count(".") == 2:
+                yield f"{prefix}.{name}" if prefix else name, cast(nn.Module, module)

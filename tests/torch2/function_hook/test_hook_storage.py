@@ -95,3 +95,26 @@ def test_excitation_priority():
     hook_storage.register_pre_function_hook("foo", 0, CheckPriority(call_stack, "4"))
     hook_storage.execute_pre_function_hooks("foo", 0, None)
     assert call_stack == ["1", "3", "4"]
+
+
+def test_named_hooks():
+    hook_storage = HookStorage()
+    hook1 = nn.Identity()
+    hook2 = nn.Sequential(nn.Identity(), nn.Identity())
+
+    hook_storage.register_pre_function_hook("foo", 0, hook1)
+    hook_storage.register_pre_function_hook("foo", 0, hook1)
+
+    hook_storage.register_post_function_hook("foo", 0, hook2)
+
+    ret = list(hook_storage.named_hooks())
+    ref = [("pre_hooks.foo__0.0", hook1), ("post_hooks.foo__0.0", hook2)]
+    assert ret == ref
+
+    ret = list(hook_storage.named_hooks(remove_duplicate=False))
+    ref = [("pre_hooks.foo__0.0", hook1), ("pre_hooks.foo__0.1", hook1), ("post_hooks.foo__0.0", hook2)]
+    assert ret == ref
+
+    ret = list(hook_storage.named_hooks("pr", remove_duplicate=False))
+    ref = [("pr.pre_hooks.foo__0.0", hook1), ("pr.pre_hooks.foo__0.1", hook1), ("pr.post_hooks.foo__0.0", hook2)]
+    assert ret == ref
