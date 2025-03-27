@@ -16,7 +16,7 @@ import torch
 from torch import nn
 
 from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
-from nncf.experimental.torch2.function_hook.hook_storage import unwrap_hook_name
+from nncf.experimental.torch2.function_hook.hook_storage import decode_hook_name
 from tests.torch2.function_hook.helpers import CallCount
 
 
@@ -132,8 +132,8 @@ def test_named_hooks():
         ("__nncf_hooks.post_hooks.conv:weight__0.0", ("post_hooks", "conv.weight", 0)),
     ),
 )
-def test_unwrap_hook_name(hook_name: str, ref: tuple[str, str, int]):
-    assert unwrap_hook_name(hook_name) == ref
+def test_decode_hook_name(hook_name: str, ref: tuple[str, str, int]):
+    assert decode_hook_name(hook_name) == ref
 
 
 @pytest.mark.parametrize(
@@ -145,6 +145,6 @@ def test_unwrap_hook_name(hook_name: str, ref: tuple[str, str, int]):
         "pre.foo__0.0",
     ),
 )
-def test_unwrap_hook_name_raise_error(hook_name: str):
+def test_decode_hook_name_raise_error(hook_name: str):
     with pytest.raises(ValueError, match="Invalid hook name"):
-        unwrap_hook_name(hook_name)
+        decode_hook_name(hook_name)

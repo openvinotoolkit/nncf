@@ -18,7 +18,7 @@ from torch import nn
 import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import ConstantLayerAttributes
-from nncf.experimental.torch2.function_hook.hook_storage import unwrap_hook_name
+from nncf.experimental.torch2.function_hook.hook_storage import decode_hook_name
 from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
 from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.parameters import StripFormat
@@ -74,7 +74,7 @@ def replace_quantizer_to_torch_native_module(model: TModel, graph: NNCFGraph) ->
         hook_storage.set_submodule(name, new_fq)
 
         # Update the weights of the module
-        hook_type, op_name, port_id = unwrap_hook_name(name)
+        hook_type, op_name, port_id = decode_hook_name(name)
         if hook_type == "pre_hooks" and (module.is_half_range or module.narrow_range):
             op_node = graph.get_node_by_name(op_name)
             const_node = get_const_node(op_node, port_id, graph)

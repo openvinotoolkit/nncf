@@ -189,9 +189,9 @@ class HookStorage(nn.Module):
                 yield f"{prefix}.{name}" if prefix else name, cast(nn.Module, module)
 
 
-def unwrap_hook_name(hook_name: str) -> Tuple[str, str, int]:
+def decode_hook_name(hook_name: str) -> Tuple[str, str, int]:
     """
-    Unwraps the name of the hook to extract the operation name and port ID.
+    Decodes a name of the hook to extract the operation name and port ID.
 
     :param hook_name: The name of the hook that returns from HookStorage().named_hooks().
     :return: Hook type, operation name and port id.
