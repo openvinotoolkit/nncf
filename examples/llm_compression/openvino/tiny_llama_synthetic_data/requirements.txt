@@ -1,8 +1,8 @@
 torch==2.6.0
 datasets==3.0.1
 numpy>=1.23.5,<2
-openvino==2025.1
---extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release/
+openvino==2025.1.0.*
+--extra-index-url https://storage.openvinotoolkit.org/simple/wheels/pre-release --pre
 optimum-intel>=1.22.0
 transformers>=4.48.0
 onnx==1.17.0
