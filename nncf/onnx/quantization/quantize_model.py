@@ -21,6 +21,7 @@ from nncf.data import Dataset
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.parameters import BackupMode
+from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -224,6 +225,7 @@ def compress_weights_impl(
     gptq: bool,
     lora_correction: bool,
     backup_mode: BackupMode,
+    compression_format: CompressionFormat,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> onnx.ModelProto:
     compression_algorithm = WeightCompression(
@@ -239,6 +241,7 @@ def compress_weights_impl(
         gptq,
         lora_correction,
         backup_mode,
+        compression_format,
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)

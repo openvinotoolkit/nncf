@@ -141,6 +141,8 @@ finetuning
 finfo
 flalign
 floatfmt
+floormod
+fontcolor
 forgetgate
 frobenius
 fsolve
@@ -450,6 +452,7 @@ thresholded
 thresholding
 timestep
 tinyyolov
+tobytes
 togethercomputer
 torchdynamo
 truncnorm
@@ -483,6 +486,3 @@ yscale
 yujie
 yury
 zfnet
-tobytes
-ascontiguousarray
-blockwise

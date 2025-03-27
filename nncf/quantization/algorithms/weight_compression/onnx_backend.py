@@ -34,7 +34,9 @@ from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
@@ -145,6 +147,8 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         precomputed_scales: Dict[str, Tensor] = None,
         precomputed_zero_points: Dict[str, Tensor] = None,
         lora_correction_algo: LoraCorrectionAlgorithm = None,
+        compression_format: CompressionFormat = CompressionFormat.DQ,
+        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
     ) -> onnx.ModelProto:
         if lora_correction_algo is not None:
             msg = "LORA correction is not supported for the ONNX backend"
