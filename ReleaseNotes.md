@@ -9,7 +9,7 @@ Post-training Quantization:
 - General:
   - ...
 - Features:
-  - ...
+  - (Torch) Introduced a novel weight compression method for Large Language Models (LLMs) that significantly improves accuracy with int4 weights. Leveraging Quantization-Aware Training (QAT) and absorbable LoRA adapters, this approach can achieve a 2x reduction in accuracy loss during compression compared to the best post-training weight compression technique in NNCF (Scale Estimation + AWQ + GPTQ). The `nncf.compress_weight` API now includes a new `compression_format` option, `CompressionFormat.FQ_LORA`, for this QAT method, and a sample compression pipeline with preview support is available [here](examples/llm_compression/torch/qat_with_lora).
 - Fixes:
   - Fixed occasional failures of weight compression algorithm on ARM CPUs.
 - Improvements:
