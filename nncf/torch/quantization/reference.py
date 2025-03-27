@@ -14,7 +14,6 @@ from typing import List, Tuple, TypeVar
 
 import numpy as np
 import torch
-import torch.compiler
 
 import nncf
 from nncf import nncf_logger
@@ -35,7 +34,7 @@ class compilation_wrapper:
                 self._compiled_func = torch.compile(self._func)
                 return self._compiled_func(*args, **kwargs)
             except Exception as e:
-                nncf_logger.info(
+                nncf_logger.warning(
                     f"Could not use torch.compile with {self._func.__name__} function. "
                     f"Falling back on not compiled version. "
                     f"Reason: {str(e)}"
