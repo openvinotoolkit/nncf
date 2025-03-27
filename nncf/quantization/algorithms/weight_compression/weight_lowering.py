@@ -50,7 +50,26 @@ NF4_QUANTILES = np.array(
     dtype=np.float32,
 )
 
-CENTER_OF_NF4_QUANTILES = (NF4_QUANTILES[1:] + NF4_QUANTILES[:-1]) / 2
+CENTER_OF_NF4_QUANTILES = np.array(
+    [
+        -0.84809643,
+        -0.6106329,
+        -0.45999527,
+        -0.33967942,
+        -0.2346074,
+        -0.13791174,
+        -0.045525018,
+        0.03979015,
+        0.120255254,
+        0.20352125,
+        0.29201376,
+        0.38931254,
+        0.5016634,
+        0.6427869,
+        0.8614784,
+    ],
+    dtype=np.float32,
+)
 
 
 @dataclass
