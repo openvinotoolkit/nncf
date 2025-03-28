@@ -286,7 +286,8 @@ def quantile(
     a_np = a.numpy()
     quantile_np = np.quantile(a_np, q=q, axis=axis, keepdims=keepdims)
     with tf.device(a.device):
-        return tf.constant(quantile_np)
+        result = tf.constant(quantile_np)
+        return tf.identity(result)
 
 
 @numeric.percentile.register
@@ -300,7 +301,8 @@ def _(
         q = [x / 100 for x in q] if isinstance(q, (list, tuple)) else q / 100
         if isinstance(axis, list):
             axis = tuple(axis)
-        return quantile(a, q=q, axis=axis, keepdims=keepdims)
+        result = quantile(a, q=q, axis=axis, keepdims=keepdims)
+        return tf.identity(result)
 
 
 @numeric._binary_op_nowarn.register
@@ -426,16 +428,17 @@ def _(
 
     with tf.device(x.device):
         if mask is None:
-            return tf.reduce_mean(x, axis=axis, keepdims=keepdims)
+            result = tf.reduce_mean(x, axis=axis, keepdims=keepdims)
+            return tf.identity(result)
+
+        masked_x = tf.where(mask, tf.zeros_like(x), x)
         flipped_mask = ~mask
         valid_counts = tf.reduce_sum(tf.cast(flipped_mask, x.dtype), axis=axis, keepdims=keepdims)
-        masked_x = tf.where(mask, tf.zeros_like(x), x)
         valid_sum = tf.reduce_sum(masked_x, axis=axis, keepdims=keepdims)
 
-        ret = valid_sum / valid_counts
-        ret = tf.where(tf.math.is_nan(ret), tf.zeros_like(ret), ret)
-
-        return ret
+        result = valid_sum / valid_counts
+        result = tf.where(tf.math.is_nan(result), tf.zeros_like(result), result)
+        return tf.identity(result)
 
 
 @numeric.masked_median.register
@@ -453,31 +456,24 @@ def _(
     np_masked_median = np.nanquantile(np_masked_x, 0.5, axis=axis, keepdims=keepdims)
 
     with tf.device(x.device):
-        ret = tf.constant(np_masked_median)
-        ret = tf.where(tf.math.is_nan(ret), tf.zeros_like(ret), ret)
-
-        return ret
+        result = tf.constant(np_masked_median)
+        result = tf.where(tf.math.is_nan(result), tf.zeros_like(result), result)
+        return tf.identity(result)
 
 
 @numeric.expand_dims.register
 def _(a: tf.Tensor, axis: Union[int, Tuple[int, ...]]) -> tf.Tensor:
-    axes_tuple: Tuple[int, ...]
-    if isinstance(axis, int):
-        axes_tuple = (axis,)
-    elif isinstance(axis, tuple):
-        axes_tuple = axis
-    else:
-        msg = f"axis must be int or tuple, got {type(axis)}"
-        raise TypeError(msg)
+    if not isinstance(axis, (tuple, list)):
+        axis = (axis,)
 
-    if len(set(axes_tuple)) != len(axes_tuple):
+    if len(set(axis)) != len(axis):
         msg = "repeated axis"
         raise ValueError(msg)
 
-    out_ndim = len(axes_tuple) + a.ndim
+    out_ndim = len(axis) + a.ndim
 
     norm_axis = []
-    for ax in axes_tuple:
+    for ax in axis:
         if ax < -out_ndim or ax >= out_ndim:
             msg = f"axis {ax} is out of bounds for array of dimension {out_ndim}"
             raise ValueError(msg)
@@ -485,7 +481,10 @@ def _(a: tf.Tensor, axis: Union[int, Tuple[int, ...]]) -> tf.Tensor:
 
     shape_it = iter(a.shape)
     shape = [1 if ax in norm_axis else next(shape_it) for ax in range(out_ndim)]
-    return tf.reshape(a, shape)
+
+    with tf.device(a.device):
+        result = tf.reshape(a, shape)
+        return tf.identity(result)
 
 
 @numeric.clone.register
@@ -517,7 +516,8 @@ def zeros(
     tf_dtype = DTYPE_MAP[dtype] if dtype is not None else None
     tf_device = DEVICE_MAP[device] if device is not None else None
     with tf.device(tf_device):
-        return tf.zeros(shape, dtype=tf_dtype)
+        result = tf.zeros(shape, dtype=tf_dtype)
+        return tf.identity(result)
 
 
 def eye(
@@ -531,8 +531,8 @@ def eye(
     tf_device = DEVICE_MAP[device] if device is not None else None
     p_args = (n,) if m is None else (n, m)
     with tf.device(tf_device):
-        eye = tf.eye(*p_args, dtype=tf_dtype)
-        return tf.identity(eye)
+        result = tf.eye(*p_args, dtype=tf_dtype)
+        return tf.identity(result)
 
 
 def arange(
@@ -546,7 +546,8 @@ def arange(
     tf_dtype = DTYPE_MAP[dtype] if dtype is not None else None
     tf_device = DEVICE_MAP[device] if device is not None else None
     with tf.device(tf_device):
-        return tf.range(start, end, step, dtype=tf_dtype)
+        result = tf.range(start, end, step, dtype=tf_dtype)
+        return tf.identity(result)
 
 
 def from_numpy(ndarray: npt.NDArray[Any]) -> tf.Tensor:
@@ -575,7 +576,8 @@ def tensor(
     tf_device = convert_to_tf_device(device)
     tf_dtype = convert_to_tf_dtype(dtype)
     with tf.device(tf_device):
-        return tf.constant(data, dtype=tf_dtype)
+        result = tf.constant(data, dtype=tf_dtype)
+        return tf.identity(result)
 
 
 @numeric.as_numpy_tensor.register

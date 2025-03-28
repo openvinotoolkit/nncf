@@ -37,7 +37,7 @@ def _(data: Dict[str, tf.Tensor], file_path: Path) -> None:
     if file_path.is_symlink():
         from nncf.errors import ValidationError
 
-        error_msg = "Cannot save tensor to a symbolic link"
-        raise ValidationError(error_msg)
+        msg = "Cannot save tensor to a symbolic link"
+        raise ValidationError(msg)
 
     return tf_save_file(data, file_path)
