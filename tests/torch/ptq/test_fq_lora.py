@@ -72,6 +72,7 @@ def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausal
     )
 
 
+@pytest.mark.cuda
 @pytest.mark.parametrize(
     "compression_kwargs",
     (dict(scale_estimation=True, awq=True), dict(scale_estimation=False, awq=False)),
@@ -85,10 +86,8 @@ def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausal
     ),
     ids=["asym", "sym"],
 )
-def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num_trainable, _seed, use_cuda):
+def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num_trainable, _seed):
     model_id = "facebook/opt-125m"
-    if not use_cuda:
-        pytest.skip("Skipping for CPU-only setups")
     device = "cuda"
     model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device)
     tokenizer = AutoTokenizer.from_pretrained(model_id)
@@ -159,9 +158,8 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
         assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=atol)
 
 
-def test_checkpoint_loading(tmp_path, use_cuda):
-    if not use_cuda:
-        pytest.skip("Skipping for CPU-only setups")
+@pytest.mark.cuda
+def test_checkpoint_loading(tmp_path):
     device = "cuda"
     device_map = "auto"
     model_id = "hf-internal-testing/tiny-random-GPTNeoXForCausalLM"
