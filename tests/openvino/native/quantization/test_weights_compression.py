@@ -1549,6 +1549,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         assert low_precision_nodes == names
 
     @staticmethod
+    def get_not_supported_algorithms() -> List[str]:
+        return []
+
+    @staticmethod
     def get_scale_estimation_ref():
         return np.array(
             [

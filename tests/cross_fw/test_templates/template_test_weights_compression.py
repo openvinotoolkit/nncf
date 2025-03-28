@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
+import re
 from abc import ABC
 from abc import abstractmethod
 from typing import Dict, List, TypeVar
@@ -20,6 +21,7 @@ import nncf.tensor.functions as fns
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.data.dataset import Dataset
+from nncf.errors import InvalidGroupSizeError
 from nncf.quantization import compress_weights
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -114,6 +116,13 @@ class TemplateWeightCompression(ABC):
     @abstractmethod
     def check_weights(model: TModel, ref_ids: List[int]) -> None:
         """Checks that only weights with specified ids are compressed in int4 format."""
+
+    @staticmethod
+    @abstractmethod
+    def get_not_supported_algorithms() -> List[str]:
+        """
+        Returns a list of not supported weight compression algorithms.
+        """
 
     @pytest.mark.parametrize(
         ("mode", "all_layers", "ratio", "ref_ids"),
@@ -316,3 +325,37 @@ class TemplateWeightCompression(ABC):
         assert spy_instance is not None
         for node_name, scales in spy_instance._scale_per_target_node.items():
             assert fns.allclose(scales, self.get_reference_for_test_awq_scale_reference()[node_name])
+
+    @pytest.mark.parametrize("algorithm", (None, "awq", "scale_estimation", "gptq", "lora_correction"))
+    def test_error_message_for_invalid_group_size(self, algorithm):
+        """
+        Verifies that an exception is raised for an invalid group size
+        and the error message suggests either adding the node to the ignored scope or adjusting the group size.
+        """
+        if algorithm in self.get_not_supported_algorithms():
+            pytest.skip("Skipping test for not supported algorithms")
+
+        model = self.get_awq_model()
+        hidden_dim = 8
+        invalid_group_size = hidden_dim + 1
+        input_example = self.to_tensor(np.ones([1, 4, hidden_dim], dtype=np.float32))
+        dataset = Dataset([input_example])
+        algorithm_dict = {algorithm: True} if algorithm else {}
+        kwargs = dict(
+            model=model,
+            mode=CompressWeightsMode.INT4_ASYM,
+            ratio=1.0,
+            group_size=invalid_group_size,
+            all_layers=True,
+            **algorithm_dict,
+            dataset=dataset,
+        )
+
+        with pytest.raises(InvalidGroupSizeError) as exc_info:
+            compress_weights(**kwargs)
+
+        names = re.findall(r"IgnoredScope\(names=\[(.*?)\]\)", re.sub(r"[\n\t]", "", str(exc_info.value)))
+        assert len(names) == 1, f"Error message should contain ignored scope to avoid issue: {str(exc_info.value)}"
+        name_list = [name.strip('"') for name in names[0].split(",")]
+
+        compress_weights(**kwargs, ignored_scope=IgnoredScope(names=name_list))
