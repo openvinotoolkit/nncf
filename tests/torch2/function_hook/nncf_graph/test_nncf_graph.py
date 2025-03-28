@@ -144,9 +144,8 @@ TEST_MODELS_DESC = [
 def test_model_graph(desc: ModelDesc, regen_ref_data: bool):
     model: torch.nn.Module = desc.model_builder(weights=None)
     model = model.eval()
-    inputs = [torch.randn(desc.inputs_info)]
     model = wrap_model(model)
-    nncf_graph = build_nncf_graph(model, *inputs)
+    nncf_graph = build_nncf_graph(model, torch.randn(desc.inputs_info))
     graph = to_comparable_nx_graph(nncf_graph)
     nx_nncf_graph = nx.nx_pydot.to_pydot(graph)
     ref_file = REF_DIR / f"model_graph_{desc}.dot"
