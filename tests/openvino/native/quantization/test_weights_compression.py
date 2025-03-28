@@ -1494,12 +1494,12 @@ def test_compression_with_transposed_activations(kwargs):
 
 @pytest.mark.parametrize("disabled", [False, True])
 def test_disabled_optimized_compression(disabled):
-    model = LMLinearModel().ov_model
+    model = LMLinearModel(input_shape=[1, 24, 5000]).ov_model
 
     def run_compression():
         compress_weights(model, mode=CompressWeightsMode.INT8)
 
-    fn_to_patch = opt_fns.do_int_quantization
+    fn_to_patch = opt_fns.do_integer_quantization
     patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
     with patch(patch_path, side_effect=fn_to_patch) as mock:
         if disabled:
