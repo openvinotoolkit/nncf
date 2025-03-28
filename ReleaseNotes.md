@@ -20,7 +20,18 @@ Post-training Quantization:
 - Deprecations/Removals:
   - ...
 - Tutorials:
-  - ...
+  - [Post-Training Optimization of Gemma3 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/gemma3/gemma3.ipynb)
+  - [Post-Training Optimization of GLM4-V Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/glm4-v/glm4-v.ipynb)
+  - [Post-Training Optimization of Llasa Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/llasa-speech-synthesis/llasa-speech-synthesis.ipynb)
+  - [Post-Training Optimization of YOLOv12 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/yolov12-optimization/yolov12-object-detection.ipynb)
+  - [Post-Training Optimization of Phi-4-multimodal Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/phi-4-multimodal/phi-4-multimodal.ipynb)
+  - [Post-Training Optimization of Qwen2.5VL Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/qwen2.5-vl/qwen2.5-vl.ipynb)
+  - [Post-Training Optimization of DeepSeek-VL2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/deepseek-vl2/deepseek-vl2.ipynb)
+  - [Post-Training Optimization of FLUX.1 Fill Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/flux-fill/flux-fill.ipynb)
+  - [Post-Training Optimization of olmOCR Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/olmocr-pdf-vlm/olmocr-pdf-vlm.ipynb)
+  - [Post-Training Optimization of SmolDocling Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/smoldocling/smoldocling.ipynb)
+  - [Post-Training Optimization of SmolVLM2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/smolvlm2/smolvlm2.ipynb)
+  - [Post-Training Optimization of GOT-OCR 2.0 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/got-ocr2/got-ocr2.ipynb)
 - Known issues:
   - ...
 
