@@ -494,28 +494,6 @@ def sum(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims:
 
 
 @tensor_dispatcher
-def add(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
-    """
-    Add two tensors element-wise.
-
-    :param x1: The first input tensor.
-    :param x2: The second input tensor or number.
-    :return: The sum of x1 and x2, element-wise.
-    """
-
-
-@tensor_dispatcher
-def subtract(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
-    """
-    Subtract two tensors element-wise.
-
-    :param x1: The first input tensor.
-    :param x2: The second input tensor or number.
-    :return: The result of x1 - x2, element-wise.
-    """
-
-
-@tensor_dispatcher
 def multiply(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
     """
     Multiply arguments element-wise.

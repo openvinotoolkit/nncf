@@ -105,7 +105,7 @@ def _(a: tf.Tensor) -> TensorDataType:
 
 
 @numeric.reshape.register
-def reshape(a: tf.Tensor, shape: Union[int, Tuple[int, ...]]) -> tf.Tensor:
+def _(a: tf.Tensor, shape: Union[int, Tuple[int, ...]]) -> tf.Tensor:
     with tf.device(a.device):
         return tf.reshape(a, shape)
 
@@ -290,7 +290,7 @@ def quantile(
 
 
 @numeric.percentile.register
-def percentile(
+def _(
     a: tf.Tensor,
     q: Union[float, List[float]],
     axis: Optional[Union[Tuple[int, ...], int]],
@@ -318,33 +318,6 @@ def _(a: tf.Tensor, b: Union[tf.Tensor, float], operator_fn: Callable[..., Any])
         if not isinstance(b, tf.Tensor) and isinstance(b, (int, float)):
             b = tf.convert_to_tensor(b, dtype=a.dtype)
         result = operator_fn(b, a)
-        return tf.identity(result)
-
-
-@numeric.add.register
-def _(x1: tf.Tensor, x2: Union[tf.Tensor, float]) -> tf.Tensor:
-    with tf.device(x1.device):
-        if not isinstance(x2, tf.Tensor):
-            x2 = tf.convert_to_tensor(x2, dtype=x1.dtype)
-        result = tf.add(x1, x2)
-        return tf.identity(result)
-
-
-@numeric.subtract.register
-def _(x1: tf.Tensor, x2: Union[tf.Tensor, float]) -> tf.Tensor:
-    with tf.device(x1.device):
-        if not isinstance(x2, tf.Tensor):
-            x2 = tf.convert_to_tensor(x2, dtype=x1.dtype)
-        result = tf.subtract(x1, x2)
-        return tf.identity(result)
-
-
-@numeric.multiply.register
-def _(x1: tf.Tensor, x2: Union[tf.Tensor, float]) -> tf.Tensor:
-    with tf.device(x1.device):
-        if not isinstance(x2, tf.Tensor):
-            x2 = tf.convert_to_tensor(x2, dtype=x1.dtype)
-        result = tf.multiply(x1, x2)
         return tf.identity(result)
 
 
@@ -407,7 +380,7 @@ def _(x1: tf.Tensor, x2: tf.Tensor) -> tf.Tensor:
 
 
 @numeric.unsqueeze.register
-def unsqueeze(a: tf.Tensor, axis: int) -> tf.Tensor:
+def _(a: tf.Tensor, axis: int) -> tf.Tensor:
     with tf.device(a.device):
         return tf.expand_dims(a, axis=axis)
 
@@ -419,7 +392,7 @@ def _(a: tf.Tensor, axes: Optional[Tuple[int, ...]] = None) -> tf.Tensor:
 
 
 @numeric.argsort.register
-def argsort(a: tf.Tensor, axis: int = -1, descending: bool = False, stable: bool = False) -> tf.Tensor:
+def _(a: tf.Tensor, axis: int = -1, descending: bool = False, stable: bool = False) -> tf.Tensor:
     with tf.device(a.device):
         direction = "DESCENDING" if descending else "ASCENDING"
         return tf.argsort(a, axis=axis, direction=direction, stable=stable)
@@ -434,8 +407,8 @@ def _(a: tf.Tensor, k: int = 0) -> tf.Tensor:
         elif rank == 2:
             return tf.linalg.diag_part(a, k=k)
         else:
-            error_msg = "Input tensor must be 1D or 2D."
-            raise ValueError(error_msg)
+            msg = "Input tensor must be 1D or 2D."
+            raise ValueError(msg)
 
 
 @numeric.logical_or.register
@@ -445,7 +418,7 @@ def _(x1: tf.Tensor, x2: tf.Tensor) -> tf.Tensor:
 
 
 @numeric.masked_mean.register
-def masked_mean(
+def _(
     x: tf.Tensor, mask: Optional[tf.Tensor], axis: Optional[Union[int, Tuple[int, ...]]], keepdims: bool = False
 ) -> tf.Tensor:
     if isinstance(axis, list):
@@ -466,7 +439,7 @@ def masked_mean(
 
 
 @numeric.masked_median.register
-def masked_median(
+def _(
     x: tf.Tensor, mask: Optional[tf.Tensor], axis: Optional[Union[int, Tuple[int, ...]]], keepdims: bool = False
 ) -> tf.Tensor:
     if mask is None:
@@ -487,27 +460,27 @@ def masked_median(
 
 
 @numeric.expand_dims.register
-def expand_dims(a: tf.Tensor, axis: Union[int, Tuple[int, ...]]) -> tf.Tensor:
+def _(a: tf.Tensor, axis: Union[int, Tuple[int, ...]]) -> tf.Tensor:
     axes_tuple: Tuple[int, ...]
     if isinstance(axis, int):
         axes_tuple = (axis,)
     elif isinstance(axis, tuple):
         axes_tuple = axis
     else:
-        error_msg = f"axis must be int or tuple, got {type(axis)}"
-        raise TypeError(error_msg)
+        msg = f"axis must be int or tuple, got {type(axis)}"
+        raise TypeError(msg)
 
     if len(set(axes_tuple)) != len(axes_tuple):
-        error_msg = "repeated axis"
-        raise ValueError(error_msg)
+        msg = "repeated axis"
+        raise ValueError(msg)
 
     out_ndim = len(axes_tuple) + a.ndim
 
     norm_axis = []
     for ax in axes_tuple:
         if ax < -out_ndim or ax >= out_ndim:
-            error_msg = f"axis {ax} is out of bounds for array of dimension {out_ndim}"
-            raise ValueError(error_msg)
+            msg = f"axis {ax} is out of bounds for array of dimension {out_ndim}"
+            raise ValueError(msg)
         norm_axis.append(ax + out_ndim if ax < 0 else ax)
 
     shape_it = iter(a.shape)
@@ -522,15 +495,15 @@ def _(a: tf.Tensor) -> tf.Tensor:
 
 
 @numeric.searchsorted.register
-def searchsorted(
+def _(
     a: tf.Tensor, v: tf.Tensor, side: Literal["left", "right"] = "left", sorter: Optional[tf.Tensor] = None
 ) -> tf.Tensor:
     if side not in ["right", "left"]:
-        error_msg = f"Invalid value for 'side': {side}. Expected 'right' or 'left'."
-        raise ValueError(error_msg)
+        msg = f"Invalid value for 'side': {side}. Expected 'right' or 'left'."
+        raise ValueError(msg)
     if a.ndim != 1:
-        error_msg = f"Input tensor 'a' must be 1-D. Received {a.ndim}-D tensor."
-        raise ValueError(error_msg)
+        msg = f"Input tensor 'a' must be 1-D. Received {a.ndim}-D tensor."
+        raise ValueError(msg)
     sorted_a = tf.sort(a)
     return tf.searchsorted(sorted_sequence=sorted_a, values=v, side=side)
 
@@ -581,11 +554,6 @@ def from_numpy(ndarray: npt.NDArray[Any]) -> tf.Tensor:
         return tf.constant(ndarray)
 
 
-@numeric.as_numpy_tensor.register
-def as_numpy_tensor(a: tf.Tensor) -> npt.NDArray[Any]:
-    return a.numpy()
-
-
 @numeric.log2.register
 def _(a: tf.Tensor) -> tf.Tensor:
     with tf.device(a.device):
@@ -608,3 +576,8 @@ def tensor(
     tf_dtype = convert_to_tf_dtype(dtype)
     with tf.device(tf_device):
         return tf.constant(data, dtype=tf_dtype)
+
+
+@numeric.as_numpy_tensor.register
+def _(a: tf.Tensor) -> npt.NDArray[Any]:
+    return a.numpy()

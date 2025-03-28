@@ -132,7 +132,9 @@ class TemplateTestNNCFTensorOperators:
         assert res.dtype == res_nncf.data.dtype
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
-        if not (self.backend() == TensorBackend.tf and self.device() == TensorDeviceType.CPU):
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operaors do not guarantee to return a tensor on an initial device.
             assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", BINARY_OPERATORS)
@@ -149,10 +151,9 @@ class TemplateTestNNCFTensorOperators:
         assert res.dtype == res_nncf.data.dtype
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
-        if not (
-            (self.backend() == TensorBackend.tf and self.device() == TensorDeviceType.CPU)
-            or (self.backend() == TensorBackend.tf and self.device() == TensorDeviceType.GPU and op_name == "pow")
-        ):
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operaors do not guarantee to return a tensor on an initial device.
             assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", COMPARISON_OPERATOR_MAP.keys())
@@ -169,6 +170,10 @@ class TemplateTestNNCFTensorOperators:
 
         assert Tensor(res) == res_nncf
         assert isinstance(res_nncf, Tensor)
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
+            assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", COMPARISON_OPERATOR_MAP.keys())
     def test_comparison_int(self, op_name):
@@ -183,6 +188,10 @@ class TemplateTestNNCFTensorOperators:
 
         assert Tensor(res) == res_nncf
         assert isinstance(res_nncf, Tensor)
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
+            assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", COMPARISON_OPERATOR_MAP.keys())
     def test_comparison_int_rev(self, op_name):
@@ -197,6 +206,10 @@ class TemplateTestNNCFTensorOperators:
 
         assert Tensor(res) == res_nncf
         assert isinstance(res_nncf, Tensor)
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
+            assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -398,7 +411,9 @@ class TemplateTestNNCFTensorOperators:
         res = nncf_tensor[1]
         assert res == 1
         assert isinstance(res, Tensor)
-        if not (self.backend() == TensorBackend.tf and self.device() == TensorDeviceType.CPU):
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
             assert res.device == nncf_tensor.device
 
     @pytest.mark.parametrize("is_tensor_indecies", (False, True))
@@ -536,7 +551,9 @@ class TemplateTestNNCFTensorOperators:
         res = fns.where(tensor > 0, 1, 0)
         assert all(res.data == tensor_ref)
         assert isinstance(res, Tensor)
-        if not (self.backend() == TensorBackend.tf and self.device() == TensorDeviceType.CPU):
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
             assert res.device == tensor.device
 
     @pytest.mark.parametrize(
@@ -1166,7 +1183,9 @@ class TemplateTestNNCFTensorOperators:
 
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, ref_tensor)
-        if not (self.backend() == TensorBackend.tf and self.device() == TensorDeviceType.CPU):
+        if (
+            self.backend() != TensorBackend.tf
+        ):  # native Tensorflow operators do not guarantee to return a tensor on an initial device.
             assert res.device == tensor1.device
 
     @pytest.mark.parametrize(
@@ -1586,7 +1605,10 @@ class TemplateTestNNCFTensorOperators:
                 continue
             tensor_a = fns.zeros(shape, backend=self.backend(), dtype=dtype, device=self.device())
             assert isinstance(tensor_a, Tensor)
-            assert tensor_a.device == self.device()
+            if (
+                self.backend() != TensorBackend.tf
+            ):  # native Tensorflow operations can return tensor on a different device.
+                assert tensor_a.device == self.device()
             assert tensor_a.backend == self.backend()
             assert tensor_a.dtype == dtype
             assert tensor_a.shape == shape
@@ -1616,11 +1638,12 @@ class TemplateTestNNCFTensorOperators:
                 ]
             ):
                 continue
-            if (not dtype.is_float()) and self.backend() == TensorBackend.tf and self.device() == TensorDeviceType.GPU:
-                continue
             tensor_a = fns.eye(n, m, backend=self.backend(), dtype=dtype, device=self.device())
             assert isinstance(tensor_a, Tensor)
-            assert tensor_a.device == self.device()
+            if (
+                self.backend() != TensorBackend.tf
+            ):  # native Tensorflow operations can return tensor on a different device.
+                assert tensor_a.device == self.device()
             assert tensor_a.backend == self.backend()
             assert tensor_a.dtype == dtype
             ref_shape = (n, n) if m is None else (n, m)
@@ -1642,7 +1665,10 @@ class TemplateTestNNCFTensorOperators:
             tensor_ref = Tensor(fns.astype(self.to_tensor(ref), dtype))
             tensor_a = fns.arange(*tuple(args), backend=self.backend(), dtype=dtype, device=self.device())
             assert isinstance(tensor_a, Tensor)
-            assert tensor_a.device == self.device()
+            if (
+                self.backend() != TensorBackend.tf
+            ):  # native Tensorflow operations can return tensor on a different device.
+                assert tensor_a.device == self.device()
             assert tensor_a.backend == self.backend()
             assert tensor_a.dtype == dtype
             assert fns.all(tensor_a == tensor_ref)
