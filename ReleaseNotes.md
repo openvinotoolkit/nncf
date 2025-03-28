@@ -15,6 +15,7 @@ Post-training Quantization:
   - (Torch) Fixed weight compression for float16/bfloat16 models.
 - Improvements:
   - Reduced the run time and peak memory of mixed precision assignment procedure during weight compression in the OpenVINO backend. Overall compression time reduction in mixed precision case is about 20-40%; peak memory reduction is about 20%.
+  - (TorchFX, Experimental) Added quantization support for (TorchFX)[https://pytorch.org/docs/stable/fx.html] models exported with dynamic shapes.
 - Deprecations/Removals:
   - ...
 - Tutorials:
@@ -47,7 +48,7 @@ Deprecations/Removals:
 
 Requirements:
 
-- ...
+- pdated PyTorch (2.6.0) and Torchvision (0.21.0) versions.
 
 ## New in Release 2.15.0
 
