@@ -48,7 +48,7 @@ Deprecations/Removals:
 
 Requirements:
 
-- pdated PyTorch (2.6.0) and Torchvision (0.21.0) versions.
+- Updated PyTorch (2.6.0) and Torchvision (0.21.0) versions.
 
 ## New in Release 2.15.0
 
