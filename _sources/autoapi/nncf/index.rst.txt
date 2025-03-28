@@ -60,7 +60,7 @@ Functions
 
 
 
-.. py:function:: strip(model, do_copy = True, strip_format = StripFormat.NATIVE)
+.. py:function:: strip(model, do_copy = True, strip_format = StripFormat.NATIVE, example_input = None)
 
    Removes auxiliary layers and operations added during the compression process, resulting in a clean
    model ready for deployment. The functionality of the model object is still preserved as a compressed model.
@@ -69,6 +69,7 @@ Functions
    :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
      will return the currently associated model object "stripped" in-place.
    :param strip format: Describes the format in which model is saved after strip.
+   :param example_input: An example input tensor to be used for tracing the model.
    :return: The stripped model.
 
 
