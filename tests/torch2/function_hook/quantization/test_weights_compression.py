@@ -330,8 +330,6 @@ def test_get_dtype_attribute_of_parameter():
 
 @pytest.mark.parametrize("dtype", ("float16", "float32"))
 def test_model_devices_and_precisions(use_cuda, dtype):
-    if use_cuda and not torch.cuda.is_available():
-        pytest.skip("Skipping for CPU-only setups")
     device = torch.device("cuda" if use_cuda else "cpu")
     dtype = torch.float16 if dtype == "float16" else torch.float32
 
