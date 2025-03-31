@@ -133,7 +133,7 @@ class QuantizeSymmetricTorch(torch.autograd.Function):
 
         original_shape = input_.shape
         input_ = input_.reshape(input_shape)
-
+        # TODO:(nlyalyus) should be implemented via torch extensions, but some optimizations are required: ticket-161670
         output = RQ.Quantize_forward(input_, input_low, input_range, levels)
 
         ctx.save_for_backward(input_, input_low, input_range)
@@ -196,7 +196,7 @@ class QuantizeAsymmetricTorch(torch.autograd.Function):
         input_shape = input_.shape
         orig_shape = grad_output.shape
         grad_output = grad_output.reshape(input_shape)
-
+        # TODO:(nlyalyus) should be implemented via torch extensions, but some optimizations are required: ticket-161670
         output = RQ.Quantize_forward(input_, input_low, input_range, levels)
         grad_input, grad_low, grad_range = RQ.Quantize_backward(
             grad_output, input_, input_low, input_range, output, level_low, level_high
