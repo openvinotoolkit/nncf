@@ -140,7 +140,7 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
     assert first_loss > 8
     assert float(loss) < 1
 
-    if "awq" in compression_kwargs:
+    if compression_kwargs["awq"]:
         return  # Skip test for strip for awq + se initialization. Cases with data-free methods are enough.
 
     with torch.no_grad():
