@@ -24,6 +24,7 @@ jobs:
   examples-cpu:
     name: Test examples CPU [${{ matrix.group }}/4]
     runs-on: ubuntu-latest-16-cores
+    timeout-minutes: 80
     strategy:
       fail-fast: false
       matrix:
@@ -72,6 +73,7 @@ jobs:
           python .github/scripts/pytest_md_summary.py pytest-results.xml >> $GITHUB_STEP_SUMMARY
 
   examples-win-cpu:
+    timeout-minutes: 80
     name: Test examples CPU Windows [${{ matrix.group }}/4]
     runs-on: windows-2019-16-core
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_windows == 'false' }}
