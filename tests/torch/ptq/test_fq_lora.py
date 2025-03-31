@@ -244,7 +244,7 @@ def test_compress_shared_weights(mocker, all_layers):
         advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=4),
     )
     nncf_graph = compressed_model.nncf.get_graph()
-    filename = f"{model.__class__.__name__}_all_layers_{str(all_layers)}.dot"
+    filename = f"shared_weights_all_layers_{all_layers}.dot"
     check_graph(nncf_graph, filename, REFERENCE_GRAPH_DIR, extended=True)
 
     assert len(compressed_model.nncf.external_quantizers) == 2

@@ -25,7 +25,7 @@ from nncf.common.utils.dot_file_rw import write_dot_graph
 def sort_dot(path):
     with open(path, encoding="utf8") as f:
         content = f.readlines()
-    start_line_flavors = ["strict digraph  {\n", "strict digraph {\n"]  # due to different versions of networkx
+    start_line_flavors = ["strict digraph  {\n", "strict digraph {\n"]  # pydot 3.4.0 has one space instead of two.
     for start_line in start_line_flavors:
         if start_line in content:
             content.remove(start_line)
