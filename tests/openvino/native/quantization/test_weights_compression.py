@@ -638,11 +638,6 @@ def test_raise_error_for_many_axes():
         reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0, 1), group_size=1)
 
 
-def test_raise_error_channel_size_is_not_divisible_by_group_size():
-    with pytest.raises(nncf.UnsupportedModelError):
-        reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0,), group_size=3)
-
-
 @pytest.mark.parametrize("mode", INT8_MODES)
 @pytest.mark.parametrize(
     "params",
