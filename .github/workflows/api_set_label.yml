@@ -11,6 +11,7 @@ jobs:
   update_labels:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.repository_owner == 'openvinotoolkit' }}
     permissions:
       pull-requests: write
 
