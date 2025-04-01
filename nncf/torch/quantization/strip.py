@@ -24,7 +24,6 @@ from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_data
-from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_transformer import PTModelTransformer
@@ -339,8 +338,7 @@ def replace_with_decompressors(model: NNCFNetwork) -> NNCFNetwork:
             raise nncf.ValidationError(msg)
 
         tp = command.target_points[0]
-        node_with_weight = graph.get_node_by_name(tp.target_node_name)
-        weight_node = get_const_node(node_with_weight, tp.input_port_id, graph)
+        weight_node = graph.get_node_by_name(tp.target_node_name)
         if weight_node is None:
             msg = "FQ is not assigned to weight. Strip to DQ format is not supported for FQ on activation."
             raise nncf.UnsupportedModelError(msg)
