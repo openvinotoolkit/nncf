@@ -58,3 +58,8 @@ def data(request):
 @pytest.fixture(scope="module")
 def reuse_venv(request) -> bool:
     return request.config.getoption("--reuse-venv")
+
+
+@pytest.fixture(params=[pytest.param(True, marks=pytest.mark.cuda), False], ids=["cuda", "cpu"])
+def use_cuda(request: pytest.FixtureRequest):
+    return request.param

@@ -73,6 +73,7 @@ def test_examples(
     ov_version_override: str,
     data: str,
     reuse_venv: bool,
+    use_cuda,
 ):
     print("\n" + "-" * 64)
     print(f"Example name: {example_name}")
@@ -80,6 +81,9 @@ def test_examples(
     example_python_version = tuple(example_params.get("python_version", python_version))
     if python_version < example_python_version:
         pytest.skip(f"The test is skipped because python >= {example_python_version} is required.")
+    device = example_params.get("device", "cpu")
+    if (use_cuda and device != "cuda") or (not use_cuda and device != "cpu"):
+        pytest.skip(f"Skipping test: Device mismatch with CUDA marker. device={device}, use_cuda={use_cuda}")
 
     backend = example_params["backend"]
     skip_if_backend_not_selected(backend, backends_list)
@@ -108,7 +112,8 @@ def test_examples(
     env = os.environ.copy()
     env["PYTHONPATH"] = str(PROJECT_ROOT)  # need this to be able to import from tests.* in run_example.py
     env["ONEDNN_MAX_CPU_ISA"] = "AVX2"  # Set ISA to AVX2 to get CPU independent results
-    env["CUDA_VISIBLE_DEVICES"] = ""  # Disable GPU
+    if device == "cpu":
+        env["CUDA_VISIBLE_DEVICES"] = ""  # Disable GPU
     env["YOLO_VERBOSE"] = "False"  # Set ultralytics to quiet mode
 
     metrics_file_path = tmp_path / "metrics.json"
