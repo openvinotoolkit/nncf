@@ -41,12 +41,7 @@ def get_config(model: nn.Module) -> Dict[str, Any]:
 
     # Find shared modules
     modules_map: WeakKeyDictionary[nn.Module, List[str]] = WeakKeyDictionary()
-    for name, module in hook_storage.named_modules(remove_duplicate=False):
-        splitted_name = name.split(".")
-        if len(splitted_name) != 3:
-            # Expected depths of target hook module is 3
-            # <3 - ModuleDicts in HookStorage, >3 - submodules of hooks
-            continue
+    for name, module in hook_storage.named_hooks(remove_duplicate=False):
         if module not in modules_map:
             modules_map[module] = []
         modules_map[module].append(name)

@@ -23,6 +23,7 @@ from nncf.quantization.algorithms.weight_compression.activation_stats import pro
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.handle_errors import handle_invalid_group_size_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight_and_fp4_scale
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
@@ -116,6 +117,8 @@ class ScaleEstimation:
             self._set_backend_entity(model)
         scales, zero_points = dict(), dict()
 
+        invalid_node_names = []
+        first_caught_error = None
         for wp in track(all_weight_params, description="Applying Scale Estimation"):
             weight_name = wp.weight_name
             node_name = wp.node_with_weight.node_name
@@ -134,16 +137,23 @@ class ScaleEstimation:
 
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
-            scales[weight_name], zero_points[weight_name] = self.calculate_quantization_params(
-                stats,
-                weight,
-                wp.reduction_axes,
-                config,
-                self._subset_size,
-                self._initial_steps,
-                self._scale_steps,
-                self._weight_penalty,
-            )
+            try:
+                scales[weight_name], zero_points[weight_name] = self.calculate_quantization_params(
+                    stats,
+                    weight,
+                    wp.reduction_axes,
+                    config,
+                    self._subset_size,
+                    self._initial_steps,
+                    self._scale_steps,
+                    self._weight_penalty,
+                )
+            except nncf.InvalidGroupSizeError as error:
+                first_caught_error = error
+                invalid_node_names.append(wp.node_with_weight.node_name)
+
+        if first_caught_error:
+            handle_invalid_group_size_error(first_caught_error, invalid_node_names)
 
         return scales, zero_points
 
@@ -232,7 +242,6 @@ class ScaleEstimation:
         X, _ = reshape_weight_for_grouped_quantization(X, 0, group_size)
         best_diffs = None
         result_scale = None
-
         fp_outs = fns.matmul(fns.transpose(original_weight, (1, 0, 2)), X)
         q_outs = fns.matmul(fns.transpose(q_weights, (1, 0, 2)), X)
 

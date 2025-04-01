@@ -46,13 +46,16 @@ from nncf.openvino.statistics.collectors import OVMeanAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVMeanReducer
 from nncf.openvino.statistics.collectors import OVMeanVarianceReducer
 from nncf.openvino.statistics.collectors import OVShapeReducer
+from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
 from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.handle_errors import handle_invalid_group_size_error
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
@@ -244,7 +247,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 layer_scales,
                 layer_zero_points,
             )
-
         compressed_const = create_ov_const_from_tensor(
             compressed_weight.tensor, compression_dtype, name=const_node_name
         )
@@ -283,7 +285,11 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         precomputed_scales: Dict[str, Tensor] = None,
         precomputed_zero_points: Dict[str, Tensor] = None,
         lora_correction_algo: LoraCorrectionAlgorithm = None,
+        compression_format: CompressionFormat = CompressionFormat.DQ,
+        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
     ) -> ov.Model:
+        invalid_node_names = []
+        first_caught_error = None
         for wc_params in weight_compression_parameters:
             const_attributes = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]
             const_node_name = const_attributes["name"]
@@ -306,17 +312,22 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             layer_zero_points = (
                 None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name)
             )
-            mul, compressed_weight = self._create_compression_subgraph(
-                weight=weight,
-                compression_config=wc_params.compression_config,
-                reduction_axes=wc_params.reduction_axes,
-                const_node_name=const_node_name,
-                weight_port_id=wc_params.weight_port_id,
-                const_dtype=const_dtype,
-                should_add_convert_node=should_add_convert_node,
-                layer_scales=layer_scales,
-                layer_zero_points=layer_zero_points,
-            )
+            try:
+                mul, compressed_weight = self._create_compression_subgraph(
+                    weight=weight,
+                    compression_config=wc_params.compression_config,
+                    reduction_axes=wc_params.reduction_axes,
+                    const_node_name=const_node_name,
+                    weight_port_id=wc_params.weight_port_id,
+                    const_dtype=const_dtype,
+                    should_add_convert_node=should_add_convert_node,
+                    layer_scales=layer_scales,
+                    layer_zero_points=layer_zero_points,
+                )
+            except nncf.InvalidGroupSizeError as error:
+                first_caught_error = error
+                invalid_node_names.append(wc_params.node_with_weight.node_name)
+                continue
 
             mul_output = mul.output(0)
             for target_input in const_node.output(0).get_target_inputs():
@@ -330,6 +341,8 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 adapters = lora_correction_algo.calculate_adapters(weight, compressed_weight, wc_params)
                 self.insert_adapters(wc_params, *adapters, int8_lora=lora_correction_algo.use_int8_adapters)
 
+        if first_caught_error:
+            handle_invalid_group_size_error(first_caught_error, invalid_node_names)
         # reset name_to_node_mapping
         self.name_to_node_mapping = None
 

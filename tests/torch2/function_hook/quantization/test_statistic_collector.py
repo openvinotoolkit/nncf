@@ -9,15 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
 
-import cpuinfo  # type: ignore
+import numpy as np
+import torch
 
-_IS_LNL_CPU = None
+from nncf.tensor import Tensor
+from tests.common.experimental.test_statistic_collector import TemplateTestStatisticCollector
 
 
-def is_lnl_cpu() -> bool:
-    global _IS_LNL_CPU
-    if _IS_LNL_CPU is None:
-        _IS_LNL_CPU = re.search(r"Ultra \d 2\d{2}", cpuinfo.get_cpu_info()["brand_raw"]) is not None
-    return _IS_LNL_CPU
+class TestPTStatisticCollector(TemplateTestStatisticCollector):
+    def get_nncf_tensor(self, value: np.ndarray) -> Tensor:
+        return Tensor(torch.tensor(value))

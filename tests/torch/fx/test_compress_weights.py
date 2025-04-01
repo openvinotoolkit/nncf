@@ -21,6 +21,7 @@ from nncf import SensitivityMetric
 from nncf.common.factory import NNCFGraphFactory
 from nncf.data.dataset import Dataset
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
@@ -228,6 +229,8 @@ def test_compress_weights_functional_model(mode):
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
+        {"compression_format": CompressionFormat.FQ},
+        {"compression_format": CompressionFormat.FQ_LORA},
         {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},
     ),
 )
@@ -249,6 +252,8 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
         {"scale_estimation": True},
         {"lora_correction": True},
         {"dataset": Dataset([1])},
+        {"compression_format": CompressionFormat.FQ},
+        {"compression_format": CompressionFormat.FQ_LORA},
     ),
 )
 def test_raise_error_with_unsupported_params_for_int4(mode, params):
@@ -288,8 +293,6 @@ def test_get_dtype_attribute_of_parameter():
 
 @pytest.mark.parametrize("dtype", ("float16", "float32"))
 def test_model_devices_and_precisions(use_cuda, dtype):
-    if use_cuda and not torch.cuda.is_available():
-        pytest.skip("Skipping for CPU-only setups")
     device = torch.device("cuda" if use_cuda else "cpu")
     dtype = torch.float16 if dtype == "float16" else torch.float32
 

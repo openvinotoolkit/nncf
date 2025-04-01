@@ -22,6 +22,7 @@ import nncf
 from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
+from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
@@ -38,6 +39,7 @@ from nncf.torch.quantization.quantize_functions import pack_uint4
 from nncf.torch.quantization.quantize_functions import unpack_int4
 from nncf.torch.quantization.quantize_functions import unpack_uint4
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
+from tests.torch.test_models.synthetic import LinearModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
 
@@ -79,16 +81,6 @@ class MatMulModel(torch.nn.Module):
 
     def forward(self, input):
         return input @ self.w
-
-
-class LinearModel(torch.nn.Module):
-    def __init__(self, weight: torch.Tensor = torch.ones(size=(256, 256), dtype=torch.float32)):
-        super().__init__()
-        self.linear = torch.nn.Linear(weight.shape[0], weight.shape[1], False)
-        self.linear.weight = torch.nn.Parameter(weight)
-
-    def forward(self, input):
-        return self.linear(input)
 
 
 class AWQActLinearModel(nn.Module):
@@ -336,6 +328,7 @@ class EmptyModel(torch.nn.Module):
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
+        {"compression_format": CompressionFormat.FQ, "group_size": 64},
         {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},
     ),
 )
@@ -350,7 +343,11 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 @pytest.mark.parametrize("mode", INT4_MODES)
 @pytest.mark.parametrize(
     "params",
-    ({"gptq": True}, {"lora_correction": True}),
+    (
+        {"gptq": True},
+        {"lora_correction": True},
+        {"compression_format": CompressionFormat.FQ, "group_size": 64},
+    ),
 )
 def test_raise_error_with_unsupported_params_for_int4(mode, params):
     dummy_torch_model = EmptyModel()
@@ -400,8 +397,6 @@ def test_get_dtype_attribute_of_parameter():
 
 @pytest.mark.parametrize("dtype", ("float16", "float32"))
 def test_model_devices_and_precisions(use_cuda, dtype):
-    if use_cuda and not torch.cuda.is_available():
-        pytest.skip("Skipping for CPU-only setups")
     device = torch.device("cuda" if use_cuda else "cpu")
     dtype = torch.float16 if dtype == "float16" else torch.float32
 
@@ -491,6 +486,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
             for name in low_precision_nodes:
                 if name in op_name:
                     assert isinstance(op, INT4SymmetricWeightsDecompressor)
+
+    @staticmethod
+    def get_not_supported_algorithms() -> List[str]:
+        return ["lora_correction", "gptq"]
 
     @staticmethod
     def get_scale_estimation_ref():

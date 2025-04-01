@@ -12,6 +12,7 @@ import tensorflow as tf
 
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.sparsity.controller import SparsityController
+from nncf.parameters import StripFormat
 from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
 from nncf.tensorflow.sparsity.utils import strip_model_from_masks
 
@@ -47,6 +48,8 @@ class BaseSparsityController(BaseCompressionAlgorithmController, SparsityControl
         super().__init__(target_model)
         self._op_names = op_names
 
-    def strip_model(self, model: tf.keras.Model, do_copy: bool = False) -> tf.keras.Model:
+    def strip_model(
+        self, model: tf.keras.Model, do_copy: bool = False, strip_format: StripFormat = StripFormat.NATIVE
+    ) -> tf.keras.Model:
         # Transform model for sparsity creates copy of the model.
         return strip_model_from_masks(model, self._op_names)

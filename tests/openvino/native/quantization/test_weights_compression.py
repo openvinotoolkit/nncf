@@ -12,6 +12,7 @@
 import inspect
 import os
 from typing import Callable, Dict, List
+from unittest.mock import patch
 
 import numpy as np
 import openvino.runtime as ov
@@ -21,15 +22,18 @@ from attr import dataclass
 from openvino.runtime import opset13 as opset
 
 import nncf
+import nncf.openvino.optimized_functions as opt_fns
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.utils.debug import nncf_debug
+from nncf.common.utils.helpers import set_env_variable
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.parameters import BackupMode
+from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
@@ -634,11 +638,6 @@ def test_raise_error_for_many_axes():
         reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0, 1), group_size=1)
 
 
-def test_raise_error_channel_size_is_not_divisible_by_group_size():
-    with pytest.raises(nncf.UnsupportedModelError):
-        reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0,), group_size=3)
-
-
 @pytest.mark.parametrize("mode", INT8_MODES)
 @pytest.mark.parametrize(
     "params",
@@ -656,6 +655,8 @@ def test_raise_error_channel_size_is_not_divisible_by_group_size():
         {"backup_mode": BackupMode.NONE},
         {"backup_mode": BackupMode.INT8_ASYM},
         {"backup_mode": BackupMode.INT8_SYM},
+        {"compression_format": CompressionFormat.FQ},
+        {"compression_format": CompressionFormat.FQ_LORA},
         {"advanced_parameters": AdvancedCompressionParameters(statistics_path="anything")},
     ),
 )
@@ -667,10 +668,14 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
 @pytest.mark.parametrize(
     "params",
-    ({"dataset": "anything", "lora_correction": True, "gptq": True},),
+    (
+        {"dataset": "anything", "lora_correction": True, "gptq": True},
+        {"compression_format": CompressionFormat.FQ},
+        {"compression_format": CompressionFormat.FQ_LORA},
+    ),
 )
 def test_raise_error_with_unsupported_params_for_int4(mode, params):
-    with pytest.raises(nncf.ValidationError):
+    with pytest.raises(nncf.ParameterNotSupportedError):
         compress_weights(ov.Model([], []), mode=mode, **params)
 
 
@@ -1480,6 +1485,25 @@ def test_compression_with_transposed_activations(kwargs):
         )
 
 
+@pytest.mark.parametrize("disabled", [False, True])
+def test_disabled_optimized_compression(disabled):
+    model = LMLinearModel().ov_model
+
+    def run_compression():
+        compress_weights(model, mode=CompressWeightsMode.INT8)
+
+    fn_to_patch = opt_fns.do_int_quantization
+    patch_path = f"nncf.openvino.optimized_functions.{fn_to_patch.__name__}"
+    with patch(patch_path, side_effect=fn_to_patch) as mock:
+        if disabled:
+            with set_env_variable("NNCF_DISABLE_OPTIMIZED_COMPRESSION", "1"):
+                run_compression()
+            mock.assert_not_called()
+        else:
+            run_compression()
+            mock.assert_called_once()
+
+
 class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_matmul_model() -> ov.Model:
@@ -1518,6 +1542,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         names = {op.get_friendly_name() for op in model.get_ordered_ops() if op.get_element_type() == ov.Type.i4}
         low_precision_nodes = {f"weights_{i}" for i in ref_ids}
         assert low_precision_nodes == names
+
+    @staticmethod
+    def get_not_supported_algorithms() -> List[str]:
+        return []
 
     @staticmethod
     def get_scale_estimation_ref():

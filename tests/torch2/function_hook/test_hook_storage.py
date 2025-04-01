@@ -16,6 +16,7 @@ import torch
 from torch import nn
 
 from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
+from nncf.experimental.torch2.function_hook.hook_storage import decode_hook_name
 from tests.torch2.function_hook.helpers import CallCount
 
 
@@ -95,3 +96,55 @@ def test_excitation_priority():
     hook_storage.register_pre_function_hook("foo", 0, CheckPriority(call_stack, "4"))
     hook_storage.execute_pre_function_hooks("foo", 0, None)
     assert call_stack == ["1", "3", "4"]
+
+
+def test_named_hooks():
+    hook_storage = HookStorage()
+    hook1 = nn.Identity()
+    hook2 = nn.Sequential(nn.Identity(), nn.Identity())
+
+    hook_storage.register_pre_function_hook("foo", 0, hook1)
+    hook_storage.register_pre_function_hook("foo", 0, hook1)
+
+    hook_storage.register_post_function_hook("foo", 0, hook2)
+
+    ret = list(hook_storage.named_hooks())
+    ref = [("pre_hooks.foo__0.0", hook1), ("post_hooks.foo__0.0", hook2)]
+    assert ret == ref
+
+    ret = list(hook_storage.named_hooks(remove_duplicate=False))
+    ref = [("pre_hooks.foo__0.0", hook1), ("pre_hooks.foo__0.1", hook1), ("post_hooks.foo__0.0", hook2)]
+    assert ret == ref
+
+    ret = list(hook_storage.named_hooks("pr", remove_duplicate=False))
+    ref = [("pr.pre_hooks.foo__0.0", hook1), ("pr.pre_hooks.foo__0.1", hook1), ("pr.post_hooks.foo__0.0", hook2)]
+    assert ret == ref
+
+
+@pytest.mark.parametrize(
+    "hook_name, ref",
+    (
+        ("pre_hooks.foo__0.0", ("pre_hooks", "foo", 0)),
+        ("post_hooks.foo__1.0", ("post_hooks", "foo", 1)),
+        ("__nncf_hooks.pre_hooks.foo__0.0", ("pre_hooks", "foo", 0)),
+        ("__nncf_hooks.post_hooks.foo__1.0", ("post_hooks", "foo", 1)),
+        ("post_hooks.conv:weight__0.0", ("post_hooks", "conv.weight", 0)),
+        ("__nncf_hooks.post_hooks.conv:weight__0.0", ("post_hooks", "conv.weight", 0)),
+    ),
+)
+def test_decode_hook_name(hook_name: str, ref: tuple[str, str, int]):
+    assert decode_hook_name(hook_name) == ref
+
+
+@pytest.mark.parametrize(
+    "hook_name",
+    (
+        "foo__0.0",
+        "pre_hooks.foo__0",
+        "pre_hooks.foo.0",
+        "pre.foo__0.0",
+    ),
+)
+def test_decode_hook_name_raise_error(hook_name: str):
+    with pytest.raises(ValueError, match="Invalid hook name"):
+        decode_hook_name(hook_name)
