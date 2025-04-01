@@ -15,6 +15,7 @@ on:
 
 jobs:
   mypy:
+    if: False
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

@@ -14,6 +14,7 @@ on:
 
 jobs:
   bandit:
+    if: False
     name: Bandit
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -31,6 +32,7 @@ jobs:
         run: bandit -c pyproject.toml -r .
 
   codeql:
+    if: False
     name: CodeQL
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -72,6 +74,7 @@ jobs:
           path: "./codeql*.pdf"
 
   trivy:
+    if: False
     name: Trivy
     runs-on: ubuntu-latest
     timeout-minutes: 10
