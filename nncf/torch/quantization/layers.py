@@ -1198,6 +1198,12 @@ class SymmetricLoraQuantizer(SymmetricQuantizer, LoraMixin):
         lspec = PTLoraSpec.from_state(state["lspec"])
         return cls(qspec, lspec)
 
+    def _get_input_low_input_high(self, scale, level_low, level_high, eps):
+        input_low = torch.where(scale > 0, -scale, -scale / level_low * level_high)
+        input_range = torch.abs((2 + 1 / level_low) * scale)
+        input_high = input_range + input_low
+        return input_low, input_high
+
 
 def get_per_channel_scale_shape(input_shape, is_weights, channel_idx: Optional[int] = None) -> List[int]:
     scale_shape = [1 for _ in input_shape]

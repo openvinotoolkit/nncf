@@ -20,6 +20,8 @@ import nncf
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.parameters import StripFormat
+from nncf.quantization.fake_quantize import calculate_scale_zero_point
+from nncf.tensor import Tensor
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
@@ -215,7 +217,6 @@ def asym_fq_to_decompressor(
     assert isinstance(quantizer, AsymmetricQuantizer)
     weight_dtype = weight.dtype
     weight_shape = weight.shape
-    eps = torch.finfo(weight_dtype).eps
     qdq_weight = quantizer.quantize(weight)
     if hasattr(quantizer, "_lspec"):
         # Reshape for group-wise quantization, implemented for classes with lora spec only
@@ -230,13 +231,16 @@ def asym_fq_to_decompressor(
     input_low = input_low.to(weight_dtype)
     input_range = input_range.to(weight_dtype)
 
-    scale = input_range / quantizer.level_high
-    scale = torch.where(torch.abs(scale) < eps, eps, scale)
-    scale = scale.to(weight_dtype)
-
-    zero_point = quantizer.level_low - torch.round(input_low / scale)
-    zero_point = torch.clip(zero_point, quantizer.level_low, quantizer.level_high)
-    zero_point = zero_point.to(integer_dtype)
+    input_high = input_range - input_low
+    scale, zero_point = calculate_scale_zero_point(
+        input_low=Tensor(input_low),
+        input_high=Tensor(input_high),
+        level_low=quantizer.level_low,
+        level_high=quantizer.level_high,
+        narrow_range=False,
+    )
+    scale = scale.data.to(weight_dtype)
+    zero_point = zero_point.data.to(integer_dtype)
 
     q_weight = qdq_weight / scale
     q_weight = q_weight + zero_point
@@ -270,7 +274,6 @@ def sym_fq_to_decompressor(
     assert isinstance(quantizer, SymmetricQuantizer)
     weight_dtype = weight.dtype
     weight_shape = weight.shape
-    eps = torch.finfo(weight_dtype).eps
     qdq_weight = quantizer.quantize(weight)
     if hasattr(quantizer, "_lspec"):
         # Reshape for group-wise quantization, implemented for classes with lora spec only
@@ -279,9 +282,15 @@ def sym_fq_to_decompressor(
 
     integer_dtype = torch.int8
 
-    scale = quantizer.scale / abs(quantizer.level_low)
-    scale = torch.where(torch.abs(scale) < eps, eps, scale)
-    scale = scale.to(weight_dtype)
+    input_low, input_high = quantizer.get_input_low_input_high()
+    scale, _ = calculate_scale_zero_point(
+        input_low=Tensor(input_low),
+        input_high=Tensor(input_high),
+        level_low=quantizer.level_low,
+        level_high=quantizer.level_high,
+        narrow_range=False,
+    )
+    scale = scale.data.to(weight_dtype)
 
     q_weight = qdq_weight / scale
     q_weight = torch.round(q_weight)
