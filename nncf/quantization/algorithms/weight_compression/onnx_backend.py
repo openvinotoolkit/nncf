@@ -11,12 +11,10 @@
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
-import onnx
-from onnx import helper
-from onnx import numpy_helper
 
 import nncf
 import nncf.onnx.graph.metatypes.onnx_metatypes as metatypes
+import onnx
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -43,6 +41,8 @@ from nncf.quantization.algorithms.weight_compression.lora_correction import Lora
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
+from onnx import helper
+from onnx import numpy_helper
 
 DTYPE_MAP = {
     TensorDataType.float16: onnx.TensorProto.FLOAT16,
@@ -164,8 +164,11 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 None if precomputed_scales is None else precomputed_scales.get(wc_params.weight_name),
                 None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name),
             )
-            compressed_weight, scale, zero_point = _preprocess_tensor_shapes(compressed_weight, weight.shape)
             dequantize_block_size = max(compression_config.group_size, 0)  # 0 - is no block wise quantization
+            compressed_weight, scale, zero_point = _preprocess_tensor_shapes(
+                compressed_weight, weight.shape, dequantize_block_size
+            )
+
             dequantize_axis = (
                 get_weight_quantization_axis(node, wc_params.weight_port_id) if dequantize_block_size <= 0 else 0
             )  # axis = 0 when blockwise
@@ -299,13 +302,19 @@ def _get_dtype(mode):
         raise nncf.ParameterNotSupportedError(msg)
 
 
-def _preprocess_tensor_shapes(compressed_weight, weight_shape):
+def _preprocess_tensor_shapes(compressed_weight, weight_shape, dequantize_block_size):
     weight_tensor = compressed_weight.tensor
     weight_tensor = weight_tensor.reshape(weight_shape)
     scale = compressed_weight.scale
-    scale = scale.squeeze()
     zero_point = compressed_weight.zero_point
     if zero_point is not None:
-        zero_point = zero_point.squeeze()
         zero_point = zero_point.astype(weight_tensor.dtype)
+    if dequantize_block_size:
+        scale = scale.squeeze(axis=1)
+        if zero_point is not None:
+            zero_point = zero_point.squeeze(axis=1)
+    else:
+        scale = scale.squeeze()
+        if zero_point is not None:
+            zero_point = zero_point.squeeze()
     return weight_tensor.data, scale.data, zero_point.data if zero_point is not None else None

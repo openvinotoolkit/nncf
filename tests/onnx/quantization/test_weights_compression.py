@@ -11,15 +11,17 @@
 from dataclasses import dataclass
 
 import numpy as np
-import onnx
 import pytest
+from onnxruntime import InferenceSession
+
+import onnx
+from nncf import CompressWeightsMode
+from nncf.onnx.graph.onnx_helper import get_edge_shape
+from nncf.onnx.graph.onnx_helper import get_tensor
+from nncf.quantization import compress_weights
 from onnx import TensorProto
 from onnx import helper
 from onnx import numpy_helper
-
-from nncf import CompressWeightsMode
-from nncf.onnx.graph.onnx_helper import get_tensor
-from nncf.quantization import compress_weights
 
 
 def create_model():
@@ -70,9 +72,6 @@ class WeightTypeCounter:
     int8: int = 0
     uint8: int = 0
 
-    def sum(self) -> int:
-        return self.int4 + self.uint4 + self.int8 + self.uint8
-
 
 def calculate_numbers_of_quantized_weights(model: onnx.ModelProto) -> WeightTypeCounter:
     counter = WeightTypeCounter()
@@ -102,9 +101,166 @@ def calculate_numbers_of_quantized_weights(model: onnx.ModelProto) -> WeightType
         [CompressWeightsMode.INT4_SYM, WeightTypeCounter(int4=9, uint4=0, int8=0, uint8=1)],
     ],
 )
-def test_wc(mode, reference_counter):
+def test_numbers_of_quantized_weights(mode, reference_counter):
     model = create_model()
     model = compress_weights(model, mode)
     counter = calculate_numbers_of_quantized_weights(model)
-    assert counter.sum() == reference_counter.sum()
     assert counter == reference_counter
+
+
+@pytest.mark.parametrize(
+    "mode_weight_type",
+    [(CompressWeightsMode.INT8_SYM, TensorProto.INT8)],
+)
+def test_correct_dequantizelinear_int8(mode_weight_type):
+    mode, expected_weight_type = mode_weight_type
+    model = create_model()
+    model = compress_weights(model, mode)
+
+    dq_cnt = 0
+    for node in model.graph.node:
+        if node.op_type == "DequantizeLinear":
+            assert node.input[0] == f"weight_{dq_cnt}_quantized"
+            for attr in node.attribute:
+                if attr.name == "axis":
+                    assert attr.i == -1
+                if attr.name == "block_size":
+                    assert attr.i == 0
+
+            weight_tensor = get_tensor(model, node.input[0])
+            assert weight_tensor.data_type == expected_weight_type
+            assert get_edge_shape(weight_tensor) == [1280, 1280]
+
+            weight_tensor = get_tensor(model, node.input[1])
+            assert weight_tensor.data_type == TensorProto.FLOAT
+            assert get_edge_shape(weight_tensor) == [1280]
+
+            assert len(node.input) == 2
+            dq_cnt += 1
+
+
+@pytest.mark.parametrize(
+    "mode_weight_type",
+    [(CompressWeightsMode.INT8_ASYM, TensorProto.UINT8)],
+)
+def test_correct_dequantizelinear_uint8(mode_weight_type):
+    mode, expected_weight_type = mode_weight_type
+    model = create_model()
+    model = compress_weights(model, mode)
+
+    dq_cnt = 0
+    for node in model.graph.node:
+        if node.op_type == "DequantizeLinear":
+            assert node.input[0] == f"weight_{dq_cnt}_quantized"
+            for attr in node.attribute:
+                if attr.name == "axis":
+                    assert attr.i == -1
+                if attr.name == "block_size":
+                    assert attr.i == 0
+
+            weight_tensor = get_tensor(model, node.input[0])
+            assert weight_tensor.data_type == expected_weight_type
+            assert get_edge_shape(weight_tensor) == [1280, 1280]
+
+            weight_tensor = get_tensor(model, node.input[1])
+            assert weight_tensor.data_type == TensorProto.FLOAT
+            assert get_edge_shape(weight_tensor) == [1280]
+
+            zero_point_tensor = get_tensor(model, node.input[2])
+            assert zero_point_tensor.data_type == expected_weight_type
+            assert get_edge_shape(zero_point_tensor) == [1280]
+
+            dq_cnt += 1
+
+
+@pytest.mark.parametrize(
+    "mode_weight_type",
+    [
+        (CompressWeightsMode.INT4_SYM, TensorProto.INT4),
+    ],
+)
+@pytest.mark.parametrize(
+    "group_size",
+    [1, 4, 8, 128, 1280],
+)
+def test_correct_dequantizelinear_int4(mode_weight_type, group_size):
+    mode, expected_weight_type = mode_weight_type
+    model = create_model()
+    model = compress_weights(model, mode, group_size=group_size, all_layers=True)
+
+    dq_cnt = 0
+    for node in model.graph.node:
+        if node.op_type == "DequantizeLinear":
+            assert node.input[0] == f"weight_{dq_cnt}_quantized"
+            for attr in node.attribute:
+                if attr.name == "axis":
+                    assert attr.i == 0
+                if attr.name == "block_size":
+                    assert attr.i == group_size
+
+            weight_tensor = get_tensor(model, node.input[0])
+            assert weight_tensor.data_type == expected_weight_type
+            assert get_edge_shape(weight_tensor) == [1280, 1280]
+
+            weight_tensor = get_tensor(model, node.input[1])
+            assert weight_tensor.data_type == TensorProto.FLOAT
+            assert get_edge_shape(weight_tensor) == [1280 // group_size, 1280]
+            assert len(node.input) == 2
+            dq_cnt += 1
+
+
+@pytest.mark.parametrize(
+    "mode_weight_type",
+    [
+        (CompressWeightsMode.INT4_ASYM, TensorProto.UINT4),
+    ],
+)
+@pytest.mark.parametrize(
+    "group_size",
+    [1, 4, 8, 128, 1280],
+)
+def test_correct_dequantizelinear_uint4(mode_weight_type, group_size):
+    mode, expected_weight_type = mode_weight_type
+    model = create_model()
+    model = compress_weights(model, mode, group_size=group_size, all_layers=True)
+
+    dq_cnt = 0
+    for node in model.graph.node:
+        if node.op_type == "DequantizeLinear":
+            assert node.input[0] == f"weight_{dq_cnt}_quantized"
+            for attr in node.attribute:
+                if attr.name == "axis":
+                    assert attr.i == 0
+                if attr.name == "block_size":
+                    assert attr.i == group_size
+
+            weight_tensor = get_tensor(model, node.input[0])
+            assert weight_tensor.data_type == expected_weight_type
+            assert get_edge_shape(weight_tensor) == [1280, 1280]
+
+            scale_tensor = get_tensor(model, node.input[1])
+            assert scale_tensor.data_type == TensorProto.FLOAT
+            assert get_edge_shape(scale_tensor) == [1280 // group_size, 1280]
+
+            zero_point_tensor = get_tensor(model, node.input[2])
+            assert zero_point_tensor.data_type == expected_weight_type
+            assert get_edge_shape(zero_point_tensor) == [1280 // group_size, 1280]
+            dq_cnt += 1
+
+
+@pytest.mark.parametrize(
+    "mode",
+    [
+        CompressWeightsMode.INT8_ASYM,
+        CompressWeightsMode.INT8_SYM,
+        CompressWeightsMode.INT4_ASYM,
+        CompressWeightsMode.INT4_SYM,
+    ],
+)
+def test_compression_with_inference(mode):
+    model = create_model()
+    model = compress_weights(model, mode)
+    onnx.checker.check_model(model)
+    input_data = np.random.rand(100, 1280).astype(np.float32)
+    session = InferenceSession(model.SerializeToString())
+    session.run(None, {"input": input_data})
