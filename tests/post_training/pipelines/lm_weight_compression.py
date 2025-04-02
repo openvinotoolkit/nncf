@@ -37,7 +37,6 @@ from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import NumCompressNodes
 from tests.post_training.pipelines.base import RunInfo
 from tests.post_training.pipelines.base import StatsFromOutput
-from tests.post_training.pipelines.base import get_num_fq_int4_int8
 from tools.memory_monitor import MemoryType
 from tools.memory_monitor import MemoryUnit
 from tools.memory_monitor import memory_monitor_context
@@ -91,6 +90,7 @@ class LMWeightCompression(BaseTestPipeline):
     """Pipeline for casual language models from Hugging Face repository"""
 
     OV_MODEL_NAME = "openvino_model.xml"
+    ONNX_MODEL_NAME = "model.onnx"
 
     def __init__(
         self,
@@ -154,6 +154,32 @@ class LMWeightCompression(BaseTestPipeline):
                     self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
                 )
             self.model = self.model_hf.model
+        elif self.backend == BackendType.ONNX:
+            import onnx
+
+            # main_export(self.model_id, "test_model.onnx", opset=21)
+            # model = AutoModelForCausalLM.from_pretrained(
+            #     self.model_id,
+            #     torch_dtype=torch.float32,
+            #     device_map="cpu",  # TODO (kshpv): add support of 'cuda', when supported
+            # )
+            # torch.onnx.export(model, )
+            # self.model_hf = ORTModelForCausalLM.from_pretrained(
+            #     "/home/akash/intel/NNCF/ONNX/real_model/example-models/tinyllama-1.1b-step-50k-105b/",
+            # )
+            self.model_hf = onnx.load(
+                "/home/akash/intel/NNCF/ONNX/real_model/example-models/tinyllama-1.1b-step-50k-105b/model.onnx",
+                load_external_data=False,
+            )
+            # self.model_hf = OVModelForCausalLM.from_pretrained(
+            #     "/home/akash/intel/NNCF/ONNX/real_model/example-models/tinyllama-1.1b-step-50k-105b",
+            #     export=False,
+            #     load_in_8bit=False,
+            #     compile=False,
+            #     stateful=is_stateful,
+            #     from_onnx=True,
+            # )
+            self.model = self.model_hf
         else:
             msg = f"backend={self.backend.value} is not supported."
             raise RuntimeError(msg)
@@ -272,6 +298,22 @@ class LMWeightCompression(BaseTestPipeline):
                 compression_option="fp32",
                 device=self.model_hf.device,
             )
+        elif self.backend == BackendType.ONNX:
+            import onnx
+            from onnx.external_data_helper import load_external_data_for_model
+
+            self.path_compressed_ir = self.output_model_dir / self.ONNX_MODEL_NAME
+            load_external_data_for_model(
+                self.compressed_model,
+                "/home/akash/intel/NNCF/ONNX/real_model/example-models/tinyllama-1.1b-step-50k-105b/",
+            )
+            onnx.save(
+                self.compressed_model,
+                self.path_compressed_ir,
+                save_as_external_data=True,
+                all_tensors_to_one_file=True,
+                location=self.ONNX_MODEL_NAME + ".data",
+            )
 
     def run_bench(self) -> None:
         pass
@@ -332,7 +374,7 @@ class LMWeightCompression(BaseTestPipeline):
             )
 
         compressed_model_hf = self.model_hf
-        if self.backend != BackendType.FP32:
+        if self.backend != BackendType.FP32 and self.backend != BackendType.ONNX:
             compressed_model_hf = OVModelForCausalLM.from_pretrained(
                 self.output_model_dir,
                 trust_remote_code=True,
@@ -341,6 +383,17 @@ class LMWeightCompression(BaseTestPipeline):
                 stateful=is_stateful,
                 ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
             )
+        if self.backend == BackendType.ONNX:
+            compressed_model_hf = OVModelForCausalLM.from_pretrained(
+                self.output_model_dir,
+                trust_remote_code=True,
+                load_in_8bit=False,
+                compile=False,
+                stateful=is_stateful,
+                ov_config={"DYNAMIC_QUANTIZATION_GROUP_SIZE": "0", "KV_CACHE_PRECISION": "f16"},
+                export=False,
+                from_onnx=True,
+            )
         print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)
         similarity = all_metrics["similarity"][0]
@@ -348,12 +401,13 @@ class LMWeightCompression(BaseTestPipeline):
         self.run_info.metric_value = round(similarity, 5)
 
     def get_num_compressed(self) -> None:
-        ie = ov.Core()
-        model = ie.read_model(model=self.path_compressed_ir)
-        _, num_int4, num_int8 = get_num_fq_int4_int8(model)
+        return
+        # ie = ov.Core()
+        # model = ie.read_model(model=self.path_compressed_ir)
+        # _, num_int4, num_int8 = get_num_fq_int4_int8(model)
 
-        self.run_info.num_compress_nodes.num_int8 = num_int8
-        self.run_info.num_compress_nodes.num_int4 = num_int4
+        # self.run_info.num_compress_nodes.num_int8 = num_int8
+        # self.run_info.num_compress_nodes.num_int4 = num_int4
 
     def collect_errors(self) -> List[ErrorReport]:
         errors = super().collect_errors()
