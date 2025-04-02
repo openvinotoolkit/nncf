@@ -33,9 +33,12 @@ from nncf.torch.quantization.layers import INT4AsymmetricWeightsDecompressor as 
 from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor as INT4SymDQ
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor as INT8AsymDQ
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor as INT8SymDQ
+from nncf.torch.quantization.layers import PTLoraSpec
 from nncf.torch.quantization.layers import PTQuantizerSpec
+from nncf.torch.quantization.layers import SymmetricLoraQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
+from nncf.torch.quantization.strip import sym_fq_to_decompressor
 from tests.common.quantization.data_generators import check_outputs
 from tests.common.quantization.data_generators import generate_lazy_sweep_data
 from tests.common.quantization.data_generators import generate_random_low_and_range_by_input_size
@@ -409,3 +412,68 @@ def test_nncf_strip_lora_model(mode, decompressor_class, torch_dtype, atol, mock
             expected_class=decompressor_class,
         )
         assert torch.allclose(compressed_output, stripped_output, atol=atol)
+
+
+SIGNED_WEIGHT_SAMPLE = [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75]
+
+
+@pytest.mark.parametrize(
+    ("num_bits", "scale", "torch_dtype"),
+    (
+        (4, 0.1250, torch.float32),
+        (8, 0.007812, torch.float32),
+        (4, 0.1250, torch.float16),
+        (8, 0.007812, torch.float16),
+        (4, 0.1250, torch.bfloat16),
+        (8, 0.007812, torch.bfloat16),
+    ),
+)
+def test_sym_fq_to_decompressor(num_bits, scale, torch_dtype):
+    weights_shape = (1, len(SIGNED_WEIGHT_SAMPLE))
+    weight = torch.tensor(SIGNED_WEIGHT_SAMPLE)
+    weight = weight.expand(weights_shape).to(torch_dtype)
+
+    scale = torch.tensor(scale)
+    scale = scale.expand((1, 1)).to(torch.float16)
+
+    if num_bits == 4:
+        ref_decompressor = INT4SymDQ(
+            scale=scale,
+            compressed_weight_shape=weight.shape,
+            result_shape=weight.shape,
+            result_dtype=weight.dtype,
+        )
+    else:
+        ref_decompressor = INT8SymDQ(
+            scale=scale,
+            result_dtype=weight.dtype,
+        )
+
+    qspec = PTQuantizerSpec(
+        num_bits=num_bits,
+        mode=QuantizationMode.SYMMETRIC,
+        signedness_to_force=True,
+        narrow_range=False,
+        scale_shape=scale.shape,
+        logarithm_scale=False,
+        half_range=False,
+        is_quantized_on_export=True,
+    )
+    lspec = PTLoraSpec(
+        lora_rank=1,
+        orig_weight_shape=weight.shape,
+        weight_shape=weight.shape,
+    )
+
+    quantizer = SymmetricLoraQuantizer(qspec, lspec)
+
+    with torch.no_grad():
+        decompressor, q_weight = sym_fq_to_decompressor(
+            quantizer,
+            weight,
+        )
+
+    qdq_weight = (q_weight * scale).to(torch_dtype)
+
+    assert torch.allclose(qdq_weight, weight)
+    assert decompressor == ref_decompressor
