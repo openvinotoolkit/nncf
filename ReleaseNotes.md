@@ -4,10 +4,6 @@
 
 Post-training Quantization:
 
-- Breaking changes:
-  - ...
-- General:
-  - ...
 - Features:
   - (PyTorch) Introduced a novel weight compression method to significantly improve the accuracy of Large Language Models (LLMs) with int4 weights. Leveraging Quantization-Aware Training (QAT) and absorbable LoRA adapters, this approach can achieve a 2x reduction in accuracy loss during compression compared to the best post-training weight compression technique in NNCF (Scale Estimation + AWQ + GPTQ). The `nncf.compress_weights` API now includes a new `compression_format` option, `nncf.CompressionFormat.FQ_LORA`, for this QAT method, a sample compression pipeline with preview support is available [here](examples/llm_compression/torch/qat_with_lora).
   - (PyTorch) Added support for 4-bit weight compression with AWQ and Scale Estimation data-aware methods to reduce quality loss.
@@ -24,8 +20,6 @@ Post-training Quantization:
   - (TorchFX, Experimental) The constant folding step is removed from the `quantize_pt2e` function and the `transform_for_annotation` method of the `OpenVINOQuantizer` to align with the `torch.ao` quantization implementation.
   - Optimized GPTQ algorithm behavior to decrease memory & time consumption by 2.71x and 1.16x, respectively.
   - Added general support for optimization of models with FP8 and NF4 weights.
-- Deprecations/Removals:
-  - ...
 - Tutorials:
   - [Post-Training Optimization of Gemma3 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/gemma3/gemma3.ipynb)
   - [Post-Training Optimization of GLM4-V Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/glm4-v/glm4-v.ipynb)
@@ -39,31 +33,11 @@ Post-training Quantization:
   - [Post-Training Optimization of SmolDocling Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/smoldocling/smoldocling.ipynb)
   - [Post-Training Optimization of SmolVLM2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/smolvlm2/smolvlm2.ipynb)
   - [Post-Training Optimization of GOT-OCR 2.0 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/got-ocr2/got-ocr2.ipynb)
-- Known issues:
-  - ...
 
 Compression-aware training:
 
-- Breaking changes:
-  - ...
-- General:
-  - ...
 - Features:
   - (PyTorch) Changed compression modules serialization API: `compressed_model.nncf.get_config` was changed to `nncf.torch.get_config`. The [documentation](/docs/usage/training_time_compression/quantization_aware_training/Usage.md#saving-and-loading-compressed-models) was updated to use the new API.
-- Fixes:
-  - ...
-- Improvements:
-  - ...
-- Deprecations/Removals:
-  - ...
-- Tutorials:
-  - ...
-- Known issues:
-  - ...
-
-Deprecations/Removals:
-
-- ...
 
 Requirements:
 
