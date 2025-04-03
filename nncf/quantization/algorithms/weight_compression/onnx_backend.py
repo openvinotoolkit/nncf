@@ -36,7 +36,8 @@ from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.onnx_helper import get_node_index
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.onnx_helper import get_tensor_value
-from nncf.onnx.graph.onnx_helper import pack_4_bits
+from nncf.onnx.graph.onnx_helper import pack_int4
+from nncf.onnx.graph.onnx_helper import pack_uint4
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -276,10 +277,14 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         dequantized_weight_output = weight_name + "_dequantized"
         deq_inputs = [quantized_weight_name, scale_name]
 
-        if weight_dtype in [onnx.TensorProto.INT4, onnx.TensorProto.UINT4]:
-            quantized_weights = pack_4_bits(quantized_weights)
+        if weight_dtype == onnx.TensorProto.INT4:
+            quantized_weights = pack_int4(quantized_weights)
             if zero_point is not None:
-                zero_point = pack_4_bits(zero_point)
+                zero_point = pack_int4(zero_point)
+        elif weight_dtype == onnx.TensorProto.UINT4:
+            quantized_weights = pack_uint4(quantized_weights)
+            if zero_point is not None:
+                zero_point = pack_uint4(zero_point)
 
         # Create initializers for the quantized weights, scale, and zero point
         quantized_weights_initializer = onnx.helper.make_tensor(
