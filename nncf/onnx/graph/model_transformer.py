@@ -465,3 +465,14 @@ def set_initializer(initializer_name: str, model: onnx.ModelProto, new_value: np
     initializer = get_tensor(model, initializer_name)
     new_tensor = onnx.numpy_helper.from_array(new_value, initializer_name)
     initializer.CopyFrom(new_tensor)
+
+
+def remove_initializer(initializer_name: str, model: onnx.ModelProto) -> None:
+    """
+    Removes the initializer tensor from the ONNX model.
+    :param initializer_name: Name of the initializer tensor to remove.
+    :param model: ONNX model.
+    """
+    original_initializer = next((init for init in model.graph.initializer if init.name == initializer_name), None)
+    if original_initializer is not None:
+        model.graph.initializer.remove(original_initializer)

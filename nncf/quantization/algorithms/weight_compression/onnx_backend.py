@@ -28,10 +28,12 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.onnx.graph.metatypes.groups import CONVOLUTION_METATYPES
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
+from nncf.onnx.graph.model_transformer import remove_initializer
 from nncf.onnx.graph.model_transformer import set_initializer
 from nncf.onnx.graph.node_utils import get_weight_quantization_axis
 from nncf.onnx.graph.onnx_helper import ONNX_DTYPE_TO_NNCF_DTYPE
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
+from nncf.onnx.graph.onnx_helper import get_node_index
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.onnx_helper import pack_4_bits
@@ -68,7 +70,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             raise nncf.ParameterNotSupportedError(msg)
         return dtype
 
-    def _preprocess_tensor_shapes(
+    def _preprocess_compressed_weight_shapes(
         self, compressed_weight: Tensor, weight_shape: Tuple[int], dequantize_block_size: int
     ) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
         """
@@ -205,14 +207,14 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name),
             )
             dequantize_block_size = max(compression_config.group_size, 0)  # 0 - is no block wise quantization
-            compressed_weight, scale, zero_point = self._preprocess_tensor_shapes(
+            compressed_weight, scale, zero_point = self._preprocess_compressed_weight_shapes(
                 compressed_weight, weight.shape, dequantize_block_size
             )
 
             dequantize_axis = (
                 get_weight_quantization_axis(node, wc_params.weight_port_id) if dequantize_block_size <= 0 else 0
             )  # axis = 0 when blockwise
-            add_dequantize_linear_layer(
+            self._add_dequantize_linear_layer(
                 model,
                 compressed_weight,
                 scale,
@@ -240,73 +242,86 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     ) -> None:
         raise NotImplementedError()
 
-
-def add_dequantize_linear_layer(
-    model: onnx.ModelProto,
-    quantized_weights: np.ndarray,
-    scale: np.ndarray,
-    zero_point: Optional[np.ndarray],
-    axis: int,
-    block_size: int,
-    weight_name: str,
-    dtype: onnx.TensorProto.DataType,
-):
-    orig_shape = quantized_weights.shape
-    if zero_point is not None:
-        orig_zero_point_shape = zero_point.shape
-
-    if dtype in [onnx.TensorProto.INT4, onnx.TensorProto.UINT4]:
-        quantized_weights = pack_4_bits(quantized_weights)
+    def _add_dequantize_linear_layer(
+        self,
+        model: onnx.ModelProto,
+        quantized_weights: np.ndarray,
+        scale: np.ndarray,
+        zero_point: Optional[np.ndarray],
+        axis: int,
+        block_size: int,
+        weight_name: str,
+        weight_dtype: onnx.TensorProto.DataType,
+        scale_dtype: onnx.TensorProto.DataType = onnx.TensorProto.FLOAT,
+    ) -> None:
+        """
+        Add a DequantizeLinear node to the ONNX model to dequantize the weights.
+        :param model: The ONNX model.
+        :param quantized_weights: The quantized weights to be dequantized.
+        :param scale: The scale tensor for dequantization.
+        :param zero_point: The zero point tensor for dequantization (optional).
+        :param axis: The axis along which to dequantize.
+        :param block_size: The block size for dequantization.
+        :param weight_name: The name of the weight tensor.
+        :param weight_dtype: The data type of the weight tensor.
+        :param scale_dtype: The data type of the scale tensor (default is FLOAT).
+        :return: The modified ONNX model with the DequantizeLinear node added.
+        """
+        orig_shape = quantized_weights.shape
         if zero_point is not None:
-            zero_point = pack_4_bits(zero_point)
+            orig_zero_point_shape = zero_point.shape
 
-    quantized_weight_name = weight_name + "_quantized"
-    scale_name = weight_name + "_scale"
-    dequantized_weight_output = weight_name + "_dequantized"
-    deq_inputs = [quantized_weight_name, scale_name]
+        quantized_weight_name = weight_name + "_quantized"
+        scale_name = weight_name + "_scale"
+        dequantized_weight_output = weight_name + "_dequantized"
+        deq_inputs = [quantized_weight_name, scale_name]
 
-    # Create initializers for the quantized weights, scale, and zero point
-    quantized_weights_initializer = onnx.helper.make_tensor(
-        quantized_weight_name, dtype, orig_shape, quantized_weights.tobytes(), raw=True
-    )
-    scale_initializer = numpy_helper.from_array(np.array(scale, dtype=np.float32), name=scale_name)
+        if weight_dtype in [onnx.TensorProto.INT4, onnx.TensorProto.UINT4]:
+            quantized_weights = pack_4_bits(quantized_weights)
+            if zero_point is not None:
+                zero_point = pack_4_bits(zero_point)
 
-    initials = [quantized_weights_initializer, scale_initializer]
-
-    if zero_point is not None:
-        deq_inputs.append(weight_name + "_zero_point")
-        zero_point_initializer = onnx.helper.make_tensor(
-            weight_name + "_zero_point", dtype, orig_zero_point_shape, zero_point.tobytes(), raw=True
+        # Create initializers for the quantized weights, scale, and zero point
+        quantized_weights_initializer = onnx.helper.make_tensor(
+            quantized_weight_name, weight_dtype, orig_shape, quantized_weights.tobytes(), raw=True
         )
-        initials.append(zero_point_initializer)
+        scale_initializer = numpy_helper.from_array(
+            np.array(scale, dtype=helper.tensor_dtype_to_np_dtype(scale_dtype)), name=scale_name
+        )
 
-    dequantize_node = helper.make_node(
-        "DequantizeLinear",
-        inputs=deq_inputs,
-        outputs=[dequantized_weight_output],
-        block_size=block_size,
-        axis=axis,
-    )
+        new_initializers = [quantized_weights_initializer, scale_initializer]
 
-    # Add the node and initializers to the model
-    model.graph.initializer.extend(initials)
+        if zero_point is not None:
+            deq_inputs.append(weight_name + "_zero_point")
+            zero_point_initializer = onnx.helper.make_tensor(
+                weight_name + "_zero_point", weight_dtype, orig_zero_point_shape, zero_point.tobytes(), raw=True
+            )
+            new_initializers.append(zero_point_initializer)
 
-    # Insert the DequantizeLinear node before the consumer nodes
-    consumer_indices = []
-    for i, node in enumerate(model.graph.node):
-        for j, input_name in enumerate(node.input):
-            if input_name == weight_name:
-                consumer_indices.append(i)
-                node.input[j] = dequantized_weight_output
+        dequantize_node = helper.make_node(
+            "DequantizeLinear",
+            inputs=deq_inputs,
+            outputs=[dequantized_weight_output],
+            block_size=block_size,
+            axis=axis,
+        )
 
-    # Insert the DequantizeLinear node before the first consumer node
-    if consumer_indices:
-        model.graph.node.insert(consumer_indices[0], dequantize_node)
-    else:
-        model.graph.node.append(dequantize_node)
+        # Add the node and initializers to the model
+        model.graph.initializer.extend(new_initializers)
 
-    # Remove original initializer
-    original_initializer = next((init for init in model.graph.initializer if init.name == weight_name), None)
-    if original_initializer is not None:
-        model.graph.initializer.remove(original_initializer)
-    return model
+        # Insert the DequantizeLinear node before the consumer nodes
+        insert_index = len(model.graph.node)
+
+        for i, node in enumerate(model.graph.node):
+            for j, input_name in enumerate(node.input):
+                if input_name == weight_name:
+                    insert_index = min(insert_index, get_node_index(model, node.name))
+                    node.input[j] = dequantized_weight_output
+
+        # Insert the DequantizeLinear node before the first consumer node
+        model.graph.node.insert(insert_index, dequantize_node)
+        # Remove original weight initializer
+        remove_initializer(weight_name, model)
+        # Update the node mapping
+        self.name_to_node_map[dequantize_node.name] = dequantize_node
+        return model
