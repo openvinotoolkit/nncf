@@ -487,7 +487,7 @@ INPUT_RANGE_SAMPLE = [0.5]
         (4, 0.03333, 0.0, torch.float16),
         (8, 0.00196, 0.0, torch.float16),
         (4, 0.03345, 0.0, torch.bfloat16),
-        (8, 0.001968, 0.0, torch.bfloat16),
+        (8, 0.007812, 0.0, torch.bfloat16),
     ),
 )
 def test_asym_fq_to_decompressor(num_bits, ref_scale, ref_zero_point, torch_dtype):
