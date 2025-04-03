@@ -11,9 +11,8 @@
 
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
-import onnx
-
 import nncf
+import onnx
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
@@ -228,6 +227,12 @@ def compress_weights_impl(
     compression_format: CompressionFormat,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> onnx.ModelProto:
+    if model.opset_import[0].version < 13:
+        msg = "ONNX models with opset version < 13 do not support per-channel quantization."
+        raise nncf.ValidationError(msg)
+    if model.opset_import[0].version < 21 and group_size > 0:
+        msg = "ONNX models with opset version < 21 do not support block-wise quantization."
+        raise nncf.ValidationError(msg)
     compression_algorithm = WeightCompression(
         mode,
         ratio,

@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 from onnxruntime import InferenceSession
 
+import nncf
 import onnx
 from nncf import CompressWeightsMode
 from nncf.onnx.graph.onnx_helper import get_edge_shape
@@ -24,7 +25,7 @@ from onnx import helper
 from onnx import numpy_helper
 
 
-def create_model():
+def create_model(opset_version=21):
     # Define the model's input and output tensors.
     input_tensor = helper.make_tensor_value_info("input", TensorProto.FLOAT, [100, 1280])
     output_tensor = helper.make_tensor_value_info("output", TensorProto.FLOAT, [100, 1280])
@@ -60,7 +61,7 @@ def create_model():
 
     # Create the model and set the opset version to 21.
     model_def = helper.make_model(graph_def, producer_name="synthetic-onnx-model")
-    model_def.opset_import[0].version = 21
+    model_def.opset_import[0].version = opset_version
 
     return model_def
 
@@ -264,3 +265,25 @@ def test_compression_with_inference(mode):
     input_data = np.random.rand(100, 1280).astype(np.float32)
     session = InferenceSession(model.SerializeToString())
     session.run(None, {"input": input_data})
+
+
+@pytest.mark.parametrize(
+    "opset, mode, should_raise",
+    (
+        (13, CompressWeightsMode.INT8_ASYM, False),
+        (13, CompressWeightsMode.INT8_SYM, False),
+        (13, CompressWeightsMode.INT4_SYM, True),
+        (13, CompressWeightsMode.INT4_ASYM, True),
+        (21, CompressWeightsMode.INT8_ASYM, False),
+        (21, CompressWeightsMode.INT8_SYM, False),
+        (21, CompressWeightsMode.INT4_SYM, False),
+        (21, CompressWeightsMode.INT4_ASYM, False),
+    ),
+)
+def test_raises_error_model_opset_versions(opset, mode, should_raise):
+    model = create_model(opset)
+    if should_raise:
+        with pytest.raises(nncf.ValidationError):
+            compress_weights(model, mode)
+    else:
+        compress_weights(model, mode)
