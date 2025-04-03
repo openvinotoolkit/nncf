@@ -9,13 +9,13 @@ Post-training Quantization:
 - General:
   - ...
 - Features:
-  - (Torch) Introduced a novel weight compression method to significantly improve the accuracy of Large Language Models (LLMs) with int4 weights. Leveraging Quantization-Aware Training (QAT) and absorbable LoRA adapters, this approach can achieve a 2x reduction in accuracy loss during compression compared to the best post-training weight compression technique in NNCF (Scale Estimation + AWQ + GPTQ). The `nncf.compress_weight` API now includes a new `compression_format` option, `CompressionFormat.FQ_LORA`, for this QAT method, and a sample compression pipeline with preview support is available [here](examples/llm_compression/torch/qat_with_lora).
-  - (Torch) Add support for 4-bit weight compression, along with AWQ and Scale Estimation data-aware methods to reduce quality loss after compression.
+  - (PyTorch) Introduced a novel weight compression method to significantly improve the accuracy of Large Language Models (LLMs) with int4 weights. Leveraging Quantization-Aware Training (QAT) and absorbable LoRA adapters, this approach can achieve a 2x reduction in accuracy loss during compression compared to the best post-training weight compression technique in NNCF (Scale Estimation + AWQ + GPTQ). The `nncf.compress_weights` API now includes a new `compression_format` option, `nncf.CompressionFormat.FQ_LORA`, for this QAT method, a sample compression pipeline with preview support is available [here](examples/llm_compression/torch/qat_with_lora).
+  - (PyTorch) Added support for 4-bit weight compression with AWQ and Scale Estimation data-aware methods to reduce quality loss.
 - Fixes:
-  - Fixed occasional failures of weight compression algorithm on ARM CPUs.
-  - (Torch) Fixed weight compression for float16/bfloat16 models.
+  - Fixed occasional failures of the weights compression algorithm on ARM CPUs.
+  - (PyTorch) Fixed weights compression for float16/bfloat16 models.
 - Improvements:
-  - Reduced the run time and peak memory of mixed precision assignment procedure during weight compression in the OpenVINO backend. Overall compression time reduction in mixed precision case is about 20-40%; peak memory reduction is about 20%.
+  - Reduced the run time and peak memory of the mixed precision assignment procedure during weight compression in the OpenVINO backend. Overall compression time reduction in the mixed precision case is about 20-40%; peak memory reduction is about 20%.
   - The NNCF hardware config has been extended with the `narrow_range` parameter, enabling more combinations of quantization configurations in the MinMax quantization algorithm.
   - (TorchFX, Experimental) Added quantization support for [TorchFX](https://pytorch.org/docs/stable/fx.html) models exported with dynamic shapes.
   - (TorchFX, Experimental) The constant folding step is removed from the `quantize_pt2e` function and the `transform_for_annotation` method of the `OpenVINOQuantizer` to align with the `torch.ao` quantization implementation.
