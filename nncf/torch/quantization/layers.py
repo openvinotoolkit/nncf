@@ -1260,9 +1260,6 @@ class BaseWeightsDecompressor(nn.Module, ABC):
         :return: The packed tensor.
         """
 
-    def __eq__(self, other: object) -> bool:
-        return self.__dict__ == other.__dict__
-
 
 class INT8AsymmetricWeightsDecompressor(BaseWeightsDecompressor):
     """
