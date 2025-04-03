@@ -338,7 +338,23 @@ class GraphConverter:
         return Dtype.FLOAT if onnx_dtype == int(onnx.TensorProto.FLOAT) else Dtype.INTEGER
 
     @staticmethod
-    def create_nncf_graph(onnx_model: onnx.ModelProto) -> NNCFGraph:
+    def preprocess_model(model: onnx.ModelProto) -> onnx.ModelProto:
+        """
+        Applies the following transformations to the input model:
+            - Replace empty node names
+            - Infer shapes
+            - Eliminate nop casts
+
+        :param model: Input model.
+        :return: Preprocessed model.
+        """
+        preprocessed_model = GraphConverter._replace_empty_node_name(model)
+        preprocessed_model = onnx.shape_inference.infer_shapes(preprocessed_model)
+        preprocessed_model = onnxoptimizer.optimize(preprocessed_model, ["eliminate_nop_cast"])
+        return preprocessed_model
+
+    @staticmethod
+    def create_nncf_graph(onnx_model: onnx.ModelProto, preprocess_model: bool = True) -> NNCFGraph:
         """
         Creates NNCFGraph from 'onnx_model'.
         Initially, ONNXGraph is built. All nodes from onnx_model which have valid metatype are added to NNCFGraph.
@@ -347,9 +363,9 @@ class GraphConverter:
         :param onnx_model: ONNX model.
         :return: NNCFGraph.
         """
-        onnx_model = GraphConverter._replace_empty_node_name(onnx_model)
-        onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
-        onnx_model = onnxoptimizer.optimize(onnx_model, ["eliminate_nop_cast"])
+        if preprocess_model:
+            onnx_model = GraphConverter.preprocess_model(onnx_model)
+
         edge_info_mapping = get_edge_info_mapping(onnx_model)
         children_node_mapping = get_children_node_mapping(onnx_model)
         parents_node_mapping = get_parents_node_mapping(onnx_model)
