@@ -12,10 +12,26 @@ from collections import defaultdict
 from typing import Dict, Iterator, List, Optional, Union
 
 import numpy as np
-import onnx
-from onnx import numpy_helper
 
 import nncf
+import onnx
+from nncf.tensor.definitions import TensorDataType
+from onnx import numpy_helper
+
+NNCF_DTYPE_TO_ONNX_DTYPE = {
+    TensorDataType.float16: onnx.TensorProto.FLOAT16,
+    TensorDataType.bfloat16: onnx.TensorProto.BFLOAT16,
+    TensorDataType.float32: onnx.TensorProto.FLOAT,
+    TensorDataType.float64: onnx.TensorProto.DOUBLE,
+    TensorDataType.int32: onnx.TensorProto.INT32,
+    TensorDataType.int64: onnx.TensorProto.INT64,
+    TensorDataType.int8: onnx.TensorProto.INT8,
+    TensorDataType.uint8: onnx.TensorProto.UINT8,
+    TensorDataType.int4: onnx.TensorProto.INT4,
+    TensorDataType.uint4: onnx.TensorProto.UINT4,
+}
+
+ONNX_DTYPE_TO_NNCF_DTYPE = {v: k for k, v in NNCF_DTYPE_TO_ONNX_DTYPE.items()}
 
 
 def get_name_to_node_map(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:

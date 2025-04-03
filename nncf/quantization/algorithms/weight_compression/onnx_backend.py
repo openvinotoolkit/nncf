@@ -30,6 +30,7 @@ from nncf.onnx.graph.metatypes.groups import CONVOLUTION_METATYPES
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.model_transformer import set_initializer
 from nncf.onnx.graph.node_utils import get_weight_quantization_axis
+from nncf.onnx.graph.onnx_helper import ONNX_DTYPE_TO_NNCF_DTYPE
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.onnx_helper import get_tensor_value
@@ -46,26 +47,53 @@ from nncf.tensor.definitions import TensorDataType
 from onnx import helper
 from onnx import numpy_helper
 
-DTYPE_MAP = {
-    TensorDataType.float16: onnx.TensorProto.FLOAT16,
-    TensorDataType.bfloat16: onnx.TensorProto.BFLOAT16,
-    TensorDataType.float32: onnx.TensorProto.FLOAT,
-    TensorDataType.float64: onnx.TensorProto.DOUBLE,
-    TensorDataType.int8: onnx.TensorProto.INT8,
-    TensorDataType.int32: onnx.TensorProto.INT32,
-    TensorDataType.int64: onnx.TensorProto.INT64,
-    TensorDataType.uint8: onnx.TensorProto.UINT8,
-    TensorDataType.uint4: onnx.TensorProto.UINT4,
-    TensorDataType.int4: onnx.TensorProto.INT4,
-}
-
-DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
-
 
 class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
+    MODE_TO_WEIGHT_DTYPE = {
+        CompressWeightsMode.INT8_SYM: onnx.TensorProto.INT8,
+        CompressWeightsMode.INT8_ASYM: onnx.TensorProto.UINT8,
+        CompressWeightsMode.INT4_SYM: onnx.TensorProto.INT4,
+        CompressWeightsMode.INT4_ASYM: onnx.TensorProto.UINT4,
+    }
+
     def __init__(self, model: onnx.ModelProto):
         super().__init__()
         self.name_to_node_map = get_name_to_node_map(model)
+
+    def _get_weight_dtype(self, mode: CompressWeightsMode) -> onnx.TensorProto.DataType:
+        dtype = self.MODE_TO_WEIGHT_DTYPE.get(mode)
+        if dtype is None:
+            msg = f"{mode.value} is not supported."
+            raise nncf.ParameterNotSupportedError(msg)
+        return dtype
+
+    def _preprocess_tensor_shapes(
+        self, compressed_weight: Tensor, weight_shape: Tuple[int], dequantize_block_size: int
+    ) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
+        """
+        Helper function to preprocess the tensor shapes for the compressed weight tensors to ONNX shapes expectations.
+        The function reshapes the weight tensor and squeezes the scale and zero point tensors based on the
+        dequantize_block_size parameter.
+        :param compressed_weight: The compressed weight tensor.
+        :param weight_shape: The original shape of the weight tensor.
+        :param dequantize_block_size: The block size for dequantization.
+        :return: A tuple containing the reshaped weight tensor, scale tensor, and zero point tensor (if applicable).
+        """
+        weight_tensor = compressed_weight.tensor
+        weight_tensor = weight_tensor.reshape(weight_shape)
+        scale = compressed_weight.scale
+        zero_point = compressed_weight.zero_point
+        if zero_point is not None:
+            zero_point = zero_point.astype(weight_tensor.dtype)
+        if dequantize_block_size:
+            scale = scale.squeeze(axis=1)
+            if zero_point is not None:
+                zero_point = zero_point.squeeze(axis=1)
+        else:
+            scale = scale.squeeze()
+            if zero_point is not None:
+                zero_point = zero_point.squeeze()
+        return weight_tensor.data, scale.data, zero_point.data if zero_point is not None else None
 
     @property
     def matmul_metatypes(self) -> List[OperatorMetatype]:
@@ -123,7 +151,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     ) -> TensorDataType:
         weight_name = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["name"]
         weight_tensor = get_tensor(model, weight_name)
-        return DTYPE_MAP_REV[weight_tensor.data_type]
+        return ONNX_DTYPE_TO_NNCF_DTYPE[weight_tensor.data_type]
 
     @staticmethod
     def get_weight_shape(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Tuple:
@@ -136,6 +164,22 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         initializer_name = node.input[weight_port_id]
         set_initializer(initializer_name, model, weight.data)
 
+    @staticmethod
+    def _check_arguments_for_transform_model(
+        lora_correction_algo: Optional[LoraCorrectionAlgorithm],
+        compression_format: CompressionFormat,
+        advanced_parameters: AdvancedCompressionParameters,
+    ):
+        if lora_correction_algo is not None:
+            msg = "LORA correction is not supported for the ONNX backend"
+            raise nncf.ValidationError(msg)
+        if compression_format != CompressionFormat.DQ:
+            msg = "Compression format is not supported for the ONNX backend"
+            raise nncf.ValidationError(msg)
+        if advanced_parameters != AdvancedCompressionParameters():
+            msg = "Advanced parameters are not supported for the ONNX backend"
+            raise nncf.ValidationError(msg)
+
     def transform_model(
         self,
         model: onnx.ModelProto,
@@ -143,13 +187,11 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_compression_parameters: Iterable[WeightCompressionParameters],
         precomputed_scales: Dict[str, Tensor] = None,
         precomputed_zero_points: Dict[str, Tensor] = None,
-        lora_correction_algo: LoraCorrectionAlgorithm = None,
+        lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
         compression_format: CompressionFormat = CompressionFormat.DQ,
         advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
     ) -> onnx.ModelProto:
-        if lora_correction_algo is not None:
-            msg = "LORA correction is not supported for the ONNX backend"
-            raise nncf.ValidationError(msg)
+        self._check_arguments_for_transform_model(lora_correction_algo, compression_format, advanced_parameters)
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
             node = wc_params.node_with_weight
@@ -162,7 +204,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name),
             )
             dequantize_block_size = max(compression_config.group_size, 0)  # 0 - is no block wise quantization
-            compressed_weight, scale, zero_point = _preprocess_tensor_shapes(
+            compressed_weight, scale, zero_point = self._preprocess_tensor_shapes(
                 compressed_weight, weight.shape, dequantize_block_size
             )
 
@@ -177,7 +219,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 dequantize_axis,
                 dequantize_block_size,
                 wc_params.weight_name,
-                _get_dtype(compression_config.mode),
+                self._get_weight_dtype(compression_config.mode),
             )
         return model
 
@@ -283,35 +325,3 @@ def add_dequantize_linear_layer(
     if original_initializer is not None:
         model.graph.initializer.remove(original_initializer)
     return model
-
-
-def _get_dtype(mode):
-    if mode == CompressWeightsMode.INT8_SYM:
-        return onnx.TensorProto.INT8
-    elif mode == CompressWeightsMode.INT8_ASYM:
-        return onnx.TensorProto.UINT8
-    elif mode == CompressWeightsMode.INT4_SYM:
-        return onnx.TensorProto.INT4
-    elif mode == CompressWeightsMode.INT4_ASYM:
-        return onnx.TensorProto.UINT4
-    else:
-        msg = f"{mode.value} is not supported."
-        raise nncf.ParameterNotSupportedError(msg)
-
-
-def _preprocess_tensor_shapes(compressed_weight, weight_shape, dequantize_block_size):
-    weight_tensor = compressed_weight.tensor
-    weight_tensor = weight_tensor.reshape(weight_shape)
-    scale = compressed_weight.scale
-    zero_point = compressed_weight.zero_point
-    if zero_point is not None:
-        zero_point = zero_point.astype(weight_tensor.dtype)
-    if dequantize_block_size:
-        scale = scale.squeeze(axis=1)
-        if zero_point is not None:
-            zero_point = zero_point.squeeze(axis=1)
-    else:
-        scale = scale.squeeze()
-        if zero_point is not None:
-            zero_point = zero_point.squeeze()
-    return weight_tensor.data, scale.data, zero_point.data if zero_point is not None else None
