@@ -288,3 +288,26 @@ def is_node_has_shared_weight(
     weight_tensor_edge = node.input[weight_port_id]
     nodes = children_node_mapping[weight_tensor_edge]
     return len(nodes) > 1
+
+
+def pack_4_bits(tensor: np.ndarray) -> np.ndarray:
+    """
+    Apply packing based on the rule - https://onnx.ai/onnx/technical/int4.html#packing-and-unpacking
+    :param tensor: Tensor to pack.
+    :return: Packed tensor.
+    """
+    if tensor.dtype == np.uint8:
+        if np.max(tensor) > 15 or np.min(tensor) < 0:
+            msg = "Tensor values are not in [0, 15]."
+            raise nncf.InternalError(msg)
+    elif tensor.dtype == np.int8:
+        if np.max(tensor) > 7 or np.min(tensor) < -8:
+            msg = "Tensor values are not in [-8, 7]."
+            raise nncf.InternalError(msg)
+    else:
+        msg = f"Invalid weight dtype {tensor.dtype}."
+        raise nncf.InternalError(msg)
+    packed_tensor = np.ascontiguousarray(tensor)
+    packed_tensor = packed_tensor.reshape(-1, 2)
+    packed_tensor = np.bitwise_and(packed_tensor[..., ::2], 15) | packed_tensor[..., 1::2] << 4
+    return packed_tensor

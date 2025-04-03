@@ -34,6 +34,7 @@ from nncf.onnx.graph.onnx_helper import ONNX_DTYPE_TO_NNCF_DTYPE
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.onnx_helper import get_tensor_value
+from nncf.onnx.graph.onnx_helper import pack_4_bits
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -238,22 +239,6 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
     ) -> None:
         raise NotImplementedError()
-
-
-def pack_4_bits(tensor):
-    """See https://onnx.ai/onnx/technical/int4.html#packing-and-unpacking"""
-    if tensor.dtype == np.uint8:
-        if np.max(tensor) > 15 or np.min(tensor) < 0:
-            raise RuntimeError
-    elif tensor.dtype == np.int8:
-        if np.max(tensor) > 7 or np.min(tensor) < -8:
-            raise RuntimeError
-    else:
-        raise RuntimeError()
-    packed_tensor = np.ascontiguousarray(tensor)
-    packed_tensor = packed_tensor.reshape(-1, 2)
-    packed_tensor = np.bitwise_and(packed_tensor[..., ::2], 15) | packed_tensor[..., 1::2] << 4
-    return packed_tensor
 
 
 def add_dequantize_linear_layer(
