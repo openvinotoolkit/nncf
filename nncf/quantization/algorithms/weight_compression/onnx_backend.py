@@ -26,7 +26,9 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.onnx.graph.metatypes.groups import CONVOLUTION_METATYPES
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
+from nncf.onnx.graph.model_transformer import set_initializer
 from nncf.onnx.graph.node_utils import get_weight_quantization_axis
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.onnx_helper import get_tensor
@@ -61,18 +63,17 @@ DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
 
 class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
+    def __init__(self, model: onnx.ModelProto):
+        super().__init__()
+        self.name_to_node_map = get_name_to_node_map(model)
+
     @property
     def matmul_metatypes(self) -> List[OperatorMetatype]:
         return MATMUL_METATYPES
 
     @property
     def convolution_metatypes(self) -> List[OperatorMetatype]:
-        return [
-            metatypes.ONNXConvolutionMetatype,
-            metatypes.ONNXDepthwiseConvolutionMetatype,
-            metatypes.ONNXConvolutionTransposeMetatype,
-            metatypes.ONNXDeformableConvolutionMetatype,
-        ]
+        return CONVOLUTION_METATYPES
 
     @property
     def embedding_metatypes(self) -> List[OperatorMetatype]:
@@ -131,13 +132,9 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: onnx.ModelProto, graph: NNCFGraph, weight: Tensor
     ):
-        name_to_node_map = get_name_to_node_map(model)
-        node = name_to_node_map[node_with_weight.target_node_name]
+        node = self.name_to_node_map[node_with_weight.target_node_name]
         initializer_name = node.input[weight_port_id]
-        initializer = get_tensor(model, initializer_name)
-
-        new_tensor = onnx.numpy_helper.from_array(weight.data, initializer_name)
-        initializer.CopyFrom(new_tensor)
+        set_initializer(initializer_name, model, weight.data)
 
     def transform_model(
         self,

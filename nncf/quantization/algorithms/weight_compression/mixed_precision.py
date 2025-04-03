@@ -155,7 +155,7 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         elif model_backend == BackendType.ONNX:
             from nncf.quantization.algorithms.weight_compression.onnx_backend import ONNXWeightCompressionAlgoBackend
 
-            self._backend_entity = ONNXWeightCompressionAlgoBackend()
+            self._backend_entity = ONNXWeightCompressionAlgoBackend(model)
         else:
             msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)

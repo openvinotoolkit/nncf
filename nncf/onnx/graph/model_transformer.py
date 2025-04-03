@@ -13,9 +13,9 @@ from copy import deepcopy
 from typing import Dict, List, Set, Tuple, Union
 
 import numpy as np
-import onnx
 
 import nncf
+import onnx
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -370,10 +370,7 @@ class ONNXModelTransformer(ModelTransformer):
         for transformation in transformations:
             node = name_to_node_map[transformation.target_point.target_node_name]
             initializer_name = node.input[transformation.target_point.port_id]
-            initializer = get_tensor(model, initializer_name)
-
-            new_tensor = onnx.numpy_helper.from_array(transformation.new_value, initializer_name)
-            initializer.CopyFrom(new_tensor)
+            set_initializer(initializer_name, model, transformation.new_value)
         return model
 
     def _apply_model_extraction_transformation(self, transformation: ONNXModelExtractionCommand) -> onnx.ModelProto:
@@ -456,3 +453,15 @@ class ONNXModelTransformer(ModelTransformer):
             model.graph.node.remove(dequantize_node_proto)
 
         return model
+
+
+def set_initializer(initializer_name: str, model: onnx.ModelProto, new_value: np.ndarray) -> None:
+    """
+    Updates the initializer tensor in the ONNX model.
+    :param initializer_name: Name of the initializer tensor to update.
+    :param model: ONNX model.
+    :param new_value: New value for the initializer tensor.
+    """
+    initializer = get_tensor(model, initializer_name)
+    new_tensor = onnx.numpy_helper.from_array(new_value, initializer_name)
+    initializer.CopyFrom(new_tensor)
