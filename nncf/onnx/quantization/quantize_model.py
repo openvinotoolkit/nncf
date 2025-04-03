@@ -166,7 +166,8 @@ def quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
-    graph = GraphConverter.create_nncf_graph(model)
+    model = GraphConverter.preprocess_model(model)
+    graph = GraphConverter.create_nncf_graph(model, preprocess_model=False)
     warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
     quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
 
