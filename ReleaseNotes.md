@@ -11,14 +11,19 @@ Post-training Quantization:
 - Features:
   - (PyTorch) Introduced a novel weight compression method to significantly improve the accuracy of Large Language Models (LLMs) with int4 weights. Leveraging Quantization-Aware Training (QAT) and absorbable LoRA adapters, this approach can achieve a 2x reduction in accuracy loss during compression compared to the best post-training weight compression technique in NNCF (Scale Estimation + AWQ + GPTQ). The `nncf.compress_weights` API now includes a new `compression_format` option, `nncf.CompressionFormat.FQ_LORA`, for this QAT method, a sample compression pipeline with preview support is available [here](examples/llm_compression/torch/qat_with_lora).
   - (PyTorch) Added support for 4-bit weight compression with AWQ and Scale Estimation data-aware methods to reduce quality loss.
+  - (PyTorch, Experimental) Introduced TorchFunctionMode support for MinMax, FastBiasCorrection, SmoothQuant, WeightCompression algorithms.
 - Fixes:
   - Fixed occasional failures of the weights compression algorithm on ARM CPUs.
-  - (PyTorch) Fixed weights compression for float16/bfloat16 models.
+  - Fixed GPTQ fails with per-channel int4 weights compression.
+  - (PyTorch, Experimental) Fixed weights compression for float16/bfloat16 models.
+  - (PyTorch, Experimental) Fixed several memory leak issues: non-detached tensors, extracted modules & graph building with gradients.
 - Improvements:
   - Reduced the run time and peak memory of the mixed precision assignment procedure during weight compression in the OpenVINO backend. Overall compression time reduction in the mixed precision case is about 20-40%; peak memory reduction is about 20%.
   - The NNCF hardware config has been extended with the `narrow_range` parameter, enabling more combinations of quantization configurations in the MinMax quantization algorithm.
   - (TorchFX, Experimental) Added quantization support for [TorchFX](https://pytorch.org/docs/stable/fx.html) models exported with dynamic shapes.
   - (TorchFX, Experimental) The constant folding step is removed from the `quantize_pt2e` function and the `transform_for_annotation` method of the `OpenVINOQuantizer` to align with the `torch.ao` quantization implementation.
+  - Optimized GPTQ algorithm behavior to decrease memory & time consumption by 2.71x and 1.16x, respectively.
+  - Added general support for optimization of models with FP8 and NF4 weights.
 - Deprecations/Removals:
   - ...
 - Tutorials:
@@ -44,7 +49,7 @@ Compression-aware training:
 - General:
   - ...
 - Features:
-  - ...
+  - (PyTorch) Changed compression modules serialization API: `compressed_model.nncf.get_config` was changed to `nncf.torch.get_config`. The [documentation](/docs/usage/training_time_compression/quantization_aware_training/Usage.md#saving-and-loading-compressed-models) was updated to use the new API.
 - Fixes:
   - ...
 - Improvements:
@@ -63,6 +68,9 @@ Deprecations/Removals:
 Requirements:
 
 - Updated PyTorch (2.6.0) and Torchvision (0.21.0) versions.
+- Updated Transformers (>=4.48.0) version.
+- Updated NumPy (<2.3.0) version support.
+- Updated NetworkX (<3.5.0) version support.
 
 ## New in Release 2.15.0
 
