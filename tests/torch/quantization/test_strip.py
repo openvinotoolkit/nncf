@@ -440,6 +440,10 @@ def test_sym_fq_to_decompressor(num_bits, ref_scale, torch_dtype):
     scale = torch.tensor(SCALE_SAMPLE)
     scale = scale.expand(scale_shape).to(torch.float16)
 
+    # reference scale calculates with this formula:
+    # levels = (2 ** num_bits)
+    # level_low = -(levels // 2)
+    # ref_scale = SCALE_SAMPLE / abs(level_low)
     ref_scale = torch.tensor(ref_scale)
     ref_scale = ref_scale.expand(scale_shape).to(torch.float16)
 
@@ -474,7 +478,7 @@ def test_sym_fq_to_decompressor(num_bits, ref_scale, torch_dtype):
     assert torch.allclose(decompressor._scale, ref_scale)
 
 
-UNSIGNED_WEIGHT_SAMPLE = [0.0, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.5]
+UNSIGNED_WEIGHT_SAMPLE = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
 INPUT_LOW_SAMPLE = [0.0]
 INPUT_RANGE_SAMPLE = [0.5]
 
@@ -496,9 +500,16 @@ def test_asym_fq_to_decompressor(num_bits, ref_scale, ref_zero_point, torch_dtyp
     weight = weight.expand(weights_shape).to(torch_dtype)
 
     scale_shape = weights_shape
+    # reference scale calculates with this formula:
+    # levels = (2 ** num_bits)
+    # level_high = levels - 1
+    # ref_scale = INPUT_RANGE_SAMPLE / level_high
     ref_scale = torch.tensor(ref_scale)
     ref_scale = ref_scale.expand(scale_shape).to(torch.float16)
 
+    # reference zero point calculates with this formula:
+    # level_low = 0
+    # ref_scale = level_low - round(INPUT_LOW_SAMPLE / ref_scale)
     ref_zero_point = torch.tensor(ref_zero_point)
     ref_zero_point = ref_zero_point.expand(scale_shape).to(torch.uint8)
 
