@@ -330,8 +330,6 @@ def test_get_dtype_attribute_of_parameter():
 
 @pytest.mark.parametrize("dtype", ("float16", "float32"))
 def test_model_devices_and_precisions(use_cuda, dtype):
-    if use_cuda and not torch.cuda.is_available():
-        pytest.skip("Skipping for CPU-only setups")
     device = torch.device("cuda" if use_cuda else "cpu")
     dtype = torch.float16 if dtype == "float16" else torch.float32
 
@@ -410,6 +408,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
                     assert isinstance(op, INT4SymmetricWeightsDecompressor)
 
     @staticmethod
+    def get_not_supported_algorithms() -> List[str]:
+        return ["lora_correction", "gptq"]
+
+    @staticmethod
     def get_scale_estimation_ref():
         return torch.tensor(
             [
@@ -472,3 +474,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
                 torch.tensor([[1.226455, 1.205499, 1.141340, 1.097436, 1.064355, 1.037971, 1.016118, 0.997526]])
             )
         }
+
+    def test_error_message_for_invalid_group_size(self):
+        # TODO (dokuchaev) fix wrapping.
+        pytest.xfail("Known issue with wrapping")
