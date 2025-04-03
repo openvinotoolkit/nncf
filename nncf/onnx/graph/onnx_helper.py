@@ -290,76 +290,24 @@ def is_node_has_shared_weight(
     return len(nodes) > 1
 
 
-def pack_int4(tensor: np.ndarray) -> np.ndarray:
+def pack_4_bits(tensor: np.ndarray) -> np.ndarray:
     """
-    Packs a tensor containing int4 values (in the range [-8, 7]) into a tensor with uint8 values,
-    where each element stores two int4 values.
-
-    :param tensor: A tensor of dtype `np.int8` where each element represents an int4 value.
-        The tensor should contain values in the range [-8, 7].
-    :return: A packed tensor of dtype `np.uint8` where each element packs two int4 values.
-    :raises nncf.errors.ValidationError: If the input tensor is not of type `np.int8`.
+    Apply packing based on the rule - https://onnx.ai/onnx/technical/int4.html#packing-and-unpacking
+    :param tensor: Tensor to pack.
+    :return: Packed tensor.
     """
-    if tensor.dtype != np.int8:
+    if tensor.dtype == np.uint8:
+        if np.max(tensor) > 15 or np.min(tensor) < 0:
+            msg = "Tensor values are not in [0, 15]."
+            raise nncf.InternalError(msg)
+    elif tensor.dtype == np.int8:
+        if np.max(tensor) > 7 or np.min(tensor) < -8:
+            msg = "Tensor values are not in [-8, 7]."
+            raise nncf.InternalError(msg)
+    else:
         msg = f"Invalid weight dtype {tensor.dtype}."
-        raise nncf.ValidationError(msg)
-    if np.max(tensor) > 7 or np.min(tensor) < -8:
-        msg = "Tensor values are not in [-8, 7]."
-        raise nncf.ValidationError(msg)
-    packed_tensor = tensor + 8
-    packed_tensor = packed_tensor.astype(np.uint8)
-    return pack_uint4(packed_tensor)
-
-
-def unpack_int4(tensor: np.ndarray) -> np.ndarray:
-    """
-    Unpacks a tensor, where each uint8 element stores two int4 values, back into a tensor with
-    individual int4 values.
-
-    :param packed_tensor: A tensor of dtype `torch.uint8` where each element packs two int4 values.
-    :return: A tensor of dtype `torch.int8` where each element represents an int4 value.
-    :raises nncf.errors.ValidationError: If the input tensor is not of type `np.uint8`.
-    """
-    if tensor.dtype != np.uint8:
-        msg = f"Invalid weight dtype {tensor.dtype}."
-        raise nncf.ValidationError(msg)
-    unpacked = unpack_uint4(tensor)
-    unpacked = unpacked.astype(np.int8)
-    return unpacked - 8
-
-
-def pack_uint4(tensor: np.ndarray) -> np.ndarray:
-    """
-    Packs a tensor containing uint4 values (in the range [0, 15]) into a tensor with uint8 values,
-    where each element stores two uint4 values.
-
-    :param tensor: A tensor of dtype `np.uint8` where each element represents a uint4 value.
-        The tensor should contain values in the range [0, 15].
-    :return: A packed tensor of dtype `np.uint8` where each element packs two uint4 values.
-    :raises nncf.errors.ValidationError: If the input tensor is not of type `torch.uint8`.
-    """
-    if tensor.dtype != np.uint8:
-        msg = f"Invalid weight dtype {tensor.dtype}."
-        raise nncf.ValidationError(msg)
-    if np.max(tensor) > 15 or np.min(tensor) < 0:
-        msg = "Tensor values are not in [0, 15]."
-        raise nncf.ValidationError(msg)
+        raise nncf.InternalError(msg)
     packed_tensor = np.ascontiguousarray(tensor)
     packed_tensor = packed_tensor.reshape(-1, 2)
     packed_tensor = np.bitwise_and(packed_tensor[..., ::2], 15) | packed_tensor[..., 1::2] << 4
     return packed_tensor
-
-
-def unpack_uint4(tensor: np.ndarray) -> np.ndarray:
-    """
-    Unpacks a tensor, where each uint8 element stores two uint4 values, back into a tensor with
-    individual uint4 values.
-
-    :param packed_tensor: A tensor of dtype `torch.uint8` where each element packs two uint4 values.
-    :return: A tensor of dtype `torch.uint8` where each element represents a uint4 value.
-    :raises nncf.errors.ValidationError: If the input tensor is not of type `np.uint8`.
-    """
-    if tensor.dtype != np.uint8:
-        msg = f"Invalid weight dtype {tensor.dtype}."
-        raise nncf.ValidationError(msg)
-    return np.stack((np.bitwise_and(tensor, 15), np.bitwise_right_shift(tensor, 4)), axis=-1)
