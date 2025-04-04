@@ -509,7 +509,7 @@ def test_asym_fq_to_decompressor(num_bits, ref_scale, ref_zero_point, torch_dtyp
 
     # reference zero point calculates with this formula:
     # level_low = 0
-    # ref_scale = level_low - round(INPUT_LOW_SAMPLE / ref_scale)
+    # ref_zero_point = level_low - round(INPUT_LOW_SAMPLE / ref_scale)
     ref_zero_point = torch.tensor(ref_zero_point)
     ref_zero_point = ref_zero_point.expand(scale_shape).to(torch.uint8)
 
