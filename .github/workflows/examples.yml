@@ -15,6 +15,11 @@ on:
         description: 'Skip tests on Windows'
         type: boolean
         default: false
+      skip_gpu:
+        description: 'Skip tests on gpu'
+        type: boolean
+        default: false
+
 
 concurrency:
   group: test-examples-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.pytest_args || '' }}-${{github.event.inputs.pull_request_number || ''}}
@@ -77,7 +82,7 @@ jobs:
     name: Test examples CUDA [${{ matrix.group }}/1]
     runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4
     timeout-minutes: 40
-    if: ${{ inputs.gpu_enabled == true }}
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_gpu == 'false' }}
     strategy:
       fail-fast: false
       matrix:
