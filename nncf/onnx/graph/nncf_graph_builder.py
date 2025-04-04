@@ -8,6 +8,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+import tempfile
 from collections import Counter
 from typing import Any, Optional
 
@@ -349,7 +351,22 @@ class GraphConverter:
         :return: Preprocessed model.
         """
         preprocessed_model = GraphConverter._replace_empty_node_name(model)
-        preprocessed_model = onnx.shape_inference.infer_shapes(preprocessed_model)
+        with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as tmp_dir:
+            model_path = os.path.join(tmp_dir, "model.onnx")
+            onnx.save_model(
+                preprocessed_model,
+                model_path,
+                save_as_external_data=True,
+                all_tensors_to_one_file=True,
+                location="model.onxx_data",
+                size_threshold=1024,
+                convert_attribute=False,
+            )
+            onnx.shape_inference.infer_shapes_path(model_path)
+            preprocessed_model = onnx.load(model_path)
+
+        # preprocessed_model = onnx.shape_inference.infer_shapes(preprocessed_model)
+
         preprocessed_model = onnxoptimizer.optimize(preprocessed_model, ["eliminate_nop_cast"])
         return preprocessed_model
 
