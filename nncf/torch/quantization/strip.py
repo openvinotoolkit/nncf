@@ -282,7 +282,7 @@ def sym_fq_to_decompressor(
         qdq_weight = qdq_weight.reshape(quantizer._lspec.weight_shape)
     qdq_weight = qdq_weight.to(float_dtype)
 
-    scale = quantizer.scale / abs(quantizer.level_low)
+    scale = quantizer.scale.to(float_dtype) / abs(quantizer.level_low)
     scale = torch.where(torch.abs(scale) < eps, eps, scale)
     scale = scale.to(float_dtype)
 
