@@ -430,6 +430,14 @@ SCALE_SAMPLE = [2.0]
         (4, [0.25], torch.bfloat16),
         (8, [0.01563], torch.bfloat16),
     ),
+    ids=[
+        "4bit_float32",
+        "8bit_float32",
+        "4bit_float16",
+        "8bit_float16",
+        "4bit_bfloat16",
+        "8bit_bfloat16",
+    ],
 )
 def test_sym_fq_to_decompressor(num_bits, ref_scale, torch_dtype):
     weights_shape = (1, len(SIGNED_WEIGHT_SAMPLE))
@@ -486,17 +494,25 @@ INPUT_RANGE_SAMPLE = [0.5]
 
 
 @pytest.mark.parametrize(
-    ("num_bits", "ref_scale", "ref_zero_point", "torch_dtype"),
+    ("num_bits", "ref_scale", "ref_zero_point", "torch_dtype", "atol"),
     (
-        (4, 0.03333, 0.0, torch.float32),
-        (8, 0.00196, 0.0, torch.float32),
-        (4, 0.03333, 0.0, torch.float16),
-        (8, 0.00196, 0.0, torch.float16),
-        (4, 0.03345, 0.0, torch.bfloat16),
-        (8, 0.007812, 0.0, torch.bfloat16),
+        (4, 0.03333, 0.0, torch.float32, 1e-3),
+        (8, 0.00196, 0.0, torch.float32, 1e-4),
+        (4, 0.03333, 0.0, torch.float16, 1e-3),
+        (8, 0.00196, 0.0, torch.float16, 1e-8),
+        (4, 0.03333, 0.0, torch.bfloat16, 1e-8),
+        (8, 0.00196, 0.0, torch.bfloat16, 1e-8),
     ),
+    ids=[
+        "4bit_float32",
+        "8bit_float32",
+        "4bit_float16",
+        "8bit_float16",
+        "4bit_bfloat16",
+        "8bit_bfloat16",
+    ],
 )
-def test_asym_fq_to_decompressor(num_bits, ref_scale, ref_zero_point, torch_dtype):
+def test_asym_fq_to_decompressor(num_bits, ref_scale, ref_zero_point, torch_dtype, atol):
     weights_shape = (1, len(UNSIGNED_WEIGHT_SAMPLE))
     weight = torch.tensor(UNSIGNED_WEIGHT_SAMPLE)
     weight = weight.expand(weights_shape).to(torch_dtype)
@@ -551,7 +567,7 @@ def test_asym_fq_to_decompressor(num_bits, ref_scale, ref_zero_point, torch_dtyp
     ref_zero_point = decompressor.pack_weight(ref_zero_point)
     qdq_weight = decompressor(packed_tensor)
 
-    assert torch.allclose(fq_weight, qdq_weight, atol=5e-3)
-    assert torch.allclose(qdq_weight, weight, atol=5e-3)
+    assert torch.allclose(fq_weight, qdq_weight, atol=atol)
+    assert torch.allclose(qdq_weight, weight, atol=atol)
     assert torch.allclose(decompressor._zero_point, ref_zero_point)
     assert torch.allclose(decompressor._scale, ref_scale)
