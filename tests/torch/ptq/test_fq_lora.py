@@ -78,6 +78,7 @@ def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausal
     )
 
 
+@pytest.mark.cuda
 @pytest.mark.parametrize(
     "compression_kwargs",
     (dict(scale_estimation=True, awq=True), dict(scale_estimation=False, awq=False)),
@@ -93,7 +94,7 @@ def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausal
 )
 def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num_trainable, _seed):
     model_id = "facebook/opt-125m"
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda"
     model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device)
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     inputs = tokenizer("overfit " * 10, return_tensors="pt").to(device)
@@ -163,12 +164,12 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
         assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=atol)
 
 
+@pytest.mark.cuda
 def test_checkpoint_loading(tmp_path):
-    model_id = "hf-internal-testing/tiny-random-GPTNeoXForCausalLM"
-    if not torch.cuda.is_available():
-        pytest.skip("Skipping CUDA test case for CPU only setups.")
     device = "cuda"
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map="auto")
+    device_map = "auto"
+    model_id = "hf-internal-testing/tiny-random-GPTNeoXForCausalLM"
+    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device_map)
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     example_input = tokenizer("dummy", return_tensors="pt").to(device)
     except_lm_head_and_5th_vproj = (
@@ -201,7 +202,7 @@ def test_checkpoint_loading(tmp_path):
 
     # load checkpoint
     nncf_ckpt = torch.load(ckpt_path, weights_only=False)
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map="auto")
+    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device_map)
     model = load_from_config(model, nncf_ckpt["nncf_config"], example_input=dict(example_input))
     model.nncf.load_state_dict(nncf_ckpt["nncf_state_dict"])
 
