@@ -1079,7 +1079,10 @@ class LoraMixin:
         out_features, in_features = lspec.orig_weight_shape
         rank = lspec.lora_rank
         if rank > out_features or rank > in_features:
-            msg = f"Specified LoRA rank={rank} cannot exceed any dimension of the weight tensor"
+            msg = (
+                f"Specified LoRA rank={rank} cannot exceed any dimension of the weight tensor: "
+                f"[{out_features}, {in_features}]"
+            )
             raise nncf.ValidationError(msg)
         self.lora_A = torch.nn.Parameter(torch.ones((rank, in_features), dtype=default_lora_dtype))
         self.lora_B = torch.nn.Parameter(torch.zeros((out_features, rank), dtype=default_lora_dtype))

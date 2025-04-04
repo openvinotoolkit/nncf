@@ -46,7 +46,8 @@ RETRY_TIMEOUT = 60
 def example_test_cases():
     example_scope = load_json(EXAMPLE_SCOPE_PATH)
     for example_name, example_params in example_scope.items():
-        yield pytest.param(example_name, example_params, id=example_name)
+        marks = pytest.mark.cuda if example_params.get("device") == "cuda" else ()
+        yield pytest.param(example_name, example_params, id=example_name, marks=marks)
 
 
 def _is_connection_error(txt: str) -> bool:
@@ -80,8 +81,8 @@ def test_examples(
     example_python_version = tuple(example_params.get("python_version", python_version))
     if python_version < example_python_version:
         pytest.skip(f"The test is skipped because python >= {example_python_version} is required.")
-
     backend = example_params["backend"]
+    device = example_params.get("device")
     skip_if_backend_not_selected(backend, backends_list)
     if reuse_venv:
         # Use example directory as tmp_path
@@ -108,7 +109,8 @@ def test_examples(
     env = os.environ.copy()
     env["PYTHONPATH"] = str(PROJECT_ROOT)  # need this to be able to import from tests.* in run_example.py
     env["ONEDNN_MAX_CPU_ISA"] = "AVX2"  # Set ISA to AVX2 to get CPU independent results
-    env["CUDA_VISIBLE_DEVICES"] = ""  # Disable GPU
+    if device != "cuda":
+        env["CUDA_VISIBLE_DEVICES"] = ""  # Disable GPU
     env["YOLO_VERBOSE"] = "False"  # Set ultralytics to quiet mode
 
     metrics_file_path = tmp_path / "metrics.json"
