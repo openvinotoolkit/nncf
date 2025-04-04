@@ -471,9 +471,11 @@ def test_sym_fq_to_decompressor(num_bits, ref_scale, torch_dtype):
             quantizer,
             weight,
         )
+        fq_weight = quantizer(weight)
+    packed_tensor = decompressor.pack_weight(q_weight)
+    qdq_weight = decompressor(packed_tensor)
 
-    qdq_weight = (q_weight * ref_scale).to(torch_dtype)
-
+    assert torch.allclose(fq_weight, qdq_weight)
     assert torch.allclose(qdq_weight, weight)
     assert torch.allclose(decompressor._scale, ref_scale)
 
@@ -544,10 +546,12 @@ def test_asym_fq_to_decompressor(num_bits, ref_scale, ref_zero_point, torch_dtyp
             quantizer,
             weight,
         )
+        fq_weight = quantizer(weight)
+    packed_tensor = decompressor.pack_weight(q_weight)
+    ref_zero_point = decompressor.pack_weight(ref_zero_point)
+    qdq_weight = decompressor(packed_tensor)
 
-    qdq_weight = (q_weight - ref_zero_point) * ref_scale
-    qdq_weight = qdq_weight.to(torch_dtype)
-
+    assert torch.allclose(fq_weight, qdq_weight, atol=5e-3)
     assert torch.allclose(qdq_weight, weight, atol=5e-3)
     assert torch.allclose(decompressor._zero_point, ref_zero_point)
     assert torch.allclose(decompressor._scale, ref_scale)
