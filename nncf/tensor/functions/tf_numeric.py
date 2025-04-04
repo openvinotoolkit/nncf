@@ -267,13 +267,8 @@ def _(a: tf.Tensor, decimals: int = 0) -> tf.Tensor:
 def _(a: tf.Tensor, exponent: Union[tf.Tensor, float]) -> tf.Tensor:
     with tf.device(a.device):
         if not isinstance(exponent, tf.Tensor):
-            exponent_tensor = tf.convert_to_tensor(exponent, dtype=a.dtype)
-        else:
-            with tf.device(a.device):
-                exponent_tensor = tf.identity(exponent)
-
-        result = tf.pow(a, exponent_tensor)
-        return tf.identity(result)
+            exponent = tf.convert_to_tensor(exponent, dtype=a.dtype)
+        return tf.pow(a, exponent)
 
 
 @numeric.quantile.register
@@ -286,8 +281,7 @@ def quantile(
     a_np = a.numpy()
     quantile_np = np.quantile(a_np, q=q, axis=axis, keepdims=keepdims)
     with tf.device(a.device):
-        result = tf.constant(quantile_np)
-        return tf.identity(result)
+        return tf.constant(quantile_np)
 
 
 @numeric.percentile.register
@@ -301,8 +295,7 @@ def _(
         q = [x / 100 for x in q] if isinstance(q, (list, tuple)) else q / 100
         if isinstance(axis, list):
             axis = tuple(axis)
-        result = quantile(a, q=q, axis=axis, keepdims=keepdims)
-        return tf.identity(result)
+        return quantile(a, q=q, axis=axis, keepdims=keepdims)
 
 
 @numeric._binary_op_nowarn.register
@@ -428,8 +421,7 @@ def _(
 
     with tf.device(x.device):
         if mask is None:
-            result = tf.reduce_mean(x, axis=axis, keepdims=keepdims)
-            return tf.identity(result)
+            return tf.reduce_mean(x, axis=axis, keepdims=keepdims)
 
         masked_x = tf.where(mask, tf.zeros_like(x), x)
         flipped_mask = ~mask
@@ -437,8 +429,7 @@ def _(
         valid_sum = tf.reduce_sum(masked_x, axis=axis, keepdims=keepdims)
 
         result = valid_sum / valid_counts
-        result = tf.where(tf.math.is_nan(result), tf.zeros_like(result), result)
-        return tf.identity(result)
+        return tf.where(tf.math.is_nan(result), tf.zeros_like(result), result)
 
 
 @numeric.masked_median.register
@@ -457,8 +448,7 @@ def _(
 
     with tf.device(x.device):
         result = tf.constant(np_masked_median)
-        result = tf.where(tf.math.is_nan(result), tf.zeros_like(result), result)
-        return tf.identity(result)
+        return tf.where(tf.math.is_nan(result), tf.zeros_like(result), result)
 
 
 @numeric.expand_dims.register
@@ -483,8 +473,7 @@ def _(a: tf.Tensor, axis: Union[int, Tuple[int, ...]]) -> tf.Tensor:
     shape = [1 if ax in norm_axis else next(shape_it) for ax in range(out_ndim)]
 
     with tf.device(a.device):
-        result = tf.reshape(a, shape)
-        return tf.identity(result)
+        return tf.reshape(a, shape)
 
 
 @numeric.clone.register
@@ -516,8 +505,7 @@ def zeros(
     tf_dtype = DTYPE_MAP[dtype] if dtype is not None else None
     tf_device = DEVICE_MAP[device] if device is not None else None
     with tf.device(tf_device):
-        result = tf.zeros(shape, dtype=tf_dtype)
-        return tf.identity(result)
+        return tf.zeros(shape, dtype=tf_dtype)
 
 
 def eye(
@@ -531,8 +519,7 @@ def eye(
     tf_device = DEVICE_MAP[device] if device is not None else None
     p_args = (n,) if m is None else (n, m)
     with tf.device(tf_device):
-        result = tf.eye(*p_args, dtype=tf_dtype)
-        return tf.identity(result)
+        return tf.eye(*p_args, dtype=tf_dtype)
 
 
 def arange(
@@ -546,8 +533,7 @@ def arange(
     tf_dtype = DTYPE_MAP[dtype] if dtype is not None else None
     tf_device = DEVICE_MAP[device] if device is not None else None
     with tf.device(tf_device):
-        result = tf.range(start, end, step, dtype=tf_dtype)
-        return tf.identity(result)
+        return tf.range(start, end, step, dtype=tf_dtype)
 
 
 def from_numpy(ndarray: npt.NDArray[Any]) -> tf.Tensor:
@@ -576,8 +562,7 @@ def tensor(
     tf_device = convert_to_tf_device(device)
     tf_dtype = convert_to_tf_dtype(dtype)
     with tf.device(tf_device):
-        result = tf.constant(data, dtype=tf_dtype)
-        return tf.identity(result)
+        return tf.constant(data, dtype=tf_dtype)
 
 
 @numeric.as_numpy_tensor.register

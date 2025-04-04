@@ -1605,10 +1605,7 @@ class TemplateTestNNCFTensorOperators:
                 continue
             tensor_a = fns.zeros(shape, backend=self.backend(), dtype=dtype, device=self.device())
             assert isinstance(tensor_a, Tensor)
-            if (
-                self.backend() != TensorBackend.tf
-            ):  # native Tensorflow operations can return tensor on a different device.
-                assert tensor_a.device == self.device()
+            assert tensor_a.device == self.device()
             assert tensor_a.backend == self.backend()
             assert tensor_a.dtype == dtype
             assert tensor_a.shape == shape
@@ -1640,10 +1637,7 @@ class TemplateTestNNCFTensorOperators:
                 continue
             tensor_a = fns.eye(n, m, backend=self.backend(), dtype=dtype, device=self.device())
             assert isinstance(tensor_a, Tensor)
-            if (
-                self.backend() != TensorBackend.tf
-            ):  # native Tensorflow operations can return tensor on a different device.
-                assert tensor_a.device == self.device()
+            assert tensor_a.device == self.device()
             assert tensor_a.backend == self.backend()
             assert tensor_a.dtype == dtype
             ref_shape = (n, n) if m is None else (n, m)
@@ -1665,10 +1659,7 @@ class TemplateTestNNCFTensorOperators:
             tensor_ref = Tensor(fns.astype(self.to_tensor(ref), dtype))
             tensor_a = fns.arange(*tuple(args), backend=self.backend(), dtype=dtype, device=self.device())
             assert isinstance(tensor_a, Tensor)
-            if (
-                self.backend() != TensorBackend.tf
-            ):  # native Tensorflow operations can return tensor on a different device.
-                assert tensor_a.device == self.device()
+            assert tensor_a.device == self.device()
             assert tensor_a.backend == self.backend()
             assert tensor_a.dtype == dtype
             assert fns.all(tensor_a == tensor_ref)
