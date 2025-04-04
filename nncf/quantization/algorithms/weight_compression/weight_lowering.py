@@ -201,6 +201,7 @@ def do_float_quantization(
 
         return do_float_quantization_ov(weight, config, reduction_axes, precomputed_scale)
 
+    original_weight_backend = weight.backend
     if weight.backend == TensorBackend.ov:
         weight = weight.as_numpy_tensor()
     if weight.dtype != TensorDataType.float32:
@@ -211,7 +212,11 @@ def do_float_quantization(
         scale = calculate_float_quantization_params(weight, reduction_axes, config)
     norm_weight = _calculate_normalized_weight(weight, scale)
     if config.mode == CompressWeightsMode.NF4:
-        compressed_weight = _calculate_nf4_quantized_weight(norm_weight)
+        if original_weight_backend == TensorBackend.ov:
+            # Can convert through OpenVINO and return OpenVINO-native NF4 tensor
+            compressed_weight = norm_weight.as_openvino_tensor().astype(TensorDataType.nf4)
+        else:
+            compressed_weight = _calculate_nf4_quantized_weight(norm_weight)
     else:
         # TODO: add support for E2M1 once ticket 164851 is resolved
         compressed_weight = norm_weight

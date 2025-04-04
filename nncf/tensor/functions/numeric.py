@@ -806,9 +806,19 @@ def as_numpy_tensor(a: Tensor) -> Tensor:
     Convert tensor to numpy.
     In certain cases, this conversion may involve data copying, depending on the
     data type or device. Specifically:
-      - OV: if tensors data type is bf16, u4 or i4.
+      - OV: if tensors data type is bf16, fp8, u4, i4, nf4 or f4_e2m1.
       - PT: if tensors on the GPU or data type is not supported on Numpy.
 
     :param a: Tensor to change backend for.
     :return: Tensor in numpy backend.
+    """
+
+
+@tensor_dispatcher
+def as_openvino_tensor(a: Tensor) -> Tensor:
+    """
+    Convert tensor to openvino backend.
+
+    :param a: Tensor to change backend for.
+    :return: Tensor in openvino backend.
     """

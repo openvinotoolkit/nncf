@@ -459,13 +459,16 @@ def _check_backends_and_dtypes(
             assert zero_point.dtype == TensorDataType.uint4
     else:
         if quantization_task != QuantizationTask.Q_DQ:
-            # Otherwise compressed weight and zero point must be returned in numpy backend, compressed weight must
-            # be of (u)int8 or float32 data type, zero point -- in int32
+            # Otherwise, for integer compression, compressed weight and zero point must be returned in numpy backend,
+            # compressed weight must be of (u)int8, zero point -- in int32; for nf4 compression, the resulting
+            # data type and backend depends on the input tensor backend.
             if config.is_integer:
+                ref_backend = TensorBackend.numpy
                 ref_dtype = TensorDataType.uint8 if config.is_asym_mode else TensorDataType.int8
             else:
-                ref_dtype = TensorDataType.float32
-            assert compressed_weight.backend == TensorBackend.numpy
+                ref_backend = weight_tensor_backend
+                ref_dtype = TensorDataType.nf4 if weight_tensor_backend == TensorBackend.ov else TensorDataType.float32
+            assert compressed_weight.backend == ref_backend
             assert compressed_weight.dtype == ref_dtype
             if config.is_asym_mode and not precompute_s_zp:
                 assert zero_point.backend == TensorBackend.numpy

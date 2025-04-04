@@ -205,6 +205,9 @@ class Tensor:
     def as_numpy_tensor(self) -> Tensor:
         return cast(Tensor, _call_function("as_numpy_tensor", self))
 
+    def as_openvino_tensor(self) -> Tensor:
+        return cast(Tensor, _call_function("as_openvino_tensor", self))
+
 
 def _call_function(func_name: str, *args: Any) -> Any:
     """
