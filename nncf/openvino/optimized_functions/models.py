@@ -557,7 +557,7 @@ def _build_float_quantization_model(
         raise ValueError(msg)
 
     # Validate output dtypes
-    # TODO: add support for f4e2m1 once ticket 164717 is resolved
+    # TODO: add support for f4e2m1 once ticket 164851 is resolved
     valid_compressed_weight_dtypes = [TensorDataType.float32, TensorDataType.nf4]
     if compressed_weight_dtype not in valid_compressed_weight_dtypes:
         msg = (
