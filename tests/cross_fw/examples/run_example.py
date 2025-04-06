@@ -192,6 +192,25 @@ def fp8_llm_quantization() -> Dict[str, float]:
     return {"answers": list(result.values())}
 
 
+def llm_compression_qat_with_lora() -> float:
+    from examples.llm_compression.torch.qat_with_lora.main import main as qat_with_lora_main
+
+    args = [
+        "--epochs=1",
+        "--pretrained=HuggingFaceTB/SmolLM2-135M-Instruct",
+        "--num_train_samples=128",
+        "--seqlen=128",
+        "--lora_rank=8",
+        "--batch_size=16",
+        "--microbatch_size=4",
+        "--lr=5e-4",
+    ]
+
+    similarity_diff = qat_with_lora_main(args)
+
+    return {"similarity_diff": similarity_diff}
+
+
 def post_training_quantization_torch_fx_resnet18():
     from examples.post_training_quantization.torch_fx.resnet18.main import main as resnet18_main
 
