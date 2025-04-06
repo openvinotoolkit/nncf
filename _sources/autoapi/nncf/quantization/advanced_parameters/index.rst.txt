@@ -228,8 +228,14 @@ Classes
    :type statistics_path: str
    :param awq_params: Advanced parameters for AWQ algorithm.
    :type awq_params: AdvancedAWQParameters
-   :param scale_estimation_params: Advanced parameters for scale estimation algorithm.
+   :param scale_estimation_params: Advanced parameters for Scale Estimation algorithm.
    :type scale_estimation_params: AdvancedScaleEstimationParameters
+   :param gptq_params: Advanced parameters for GPTQ algorithm.
+   :type gptq_params: AdvancedGPTQParameters
+   :param lora_correction_params: Advanced parameters for Lora Correction algorithm.
+   :type lora_correction_params: AdvancedLoraCorrectionParameters
+   :param lora_adapter_rank: Rank of lora adapters for FQ_LORA format. Defaults to 256.
+   :type lora_adapter_rank: int
 
 
 .. py:class:: AdvancedAccuracyRestorerParameters
