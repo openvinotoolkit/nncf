@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from typing import Any, TypeVar
 
 import torch
@@ -27,8 +26,12 @@ from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.layers import SymmetricQuantizer
+from nncf.torch.quantization.strip import asym_fq_to_decompressor
 from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
+from nncf.torch.quantization.strip import sym_fq_to_decompressor
 
 TModel = TypeVar("TModel", bound=nn.Module)
 
@@ -50,6 +53,8 @@ def strip_quantized_model(
 
     if strip_format == StripFormat.NATIVE:
         model = replace_quantizer_to_torch_native_module(model, graph)
+    elif strip_format == StripFormat.DQ:
+        model = replace_quantizer_to_compressed_weight_with_decompressor(model, graph)
     else:
         msg = f"Unsupported strip format: {strip_format}"
         raise nncf.ParameterNotSupportedError(msg)
@@ -97,4 +102,55 @@ def replace_quantizer_to_torch_native_module(model: TModel, graph: NNCFGraph) ->
             module = get_module_by_name(module_name, model)
             weight_param = getattr(module, weight_attr_name)
             weight_param.data = data
+    return model
+
+
+def replace_quantizer_to_compressed_weight_with_decompressor(model: TModel, graph: NNCFGraph) -> TModel:
+    """
+    Performs transformation from fake quantize format (FQ) to dequantization (DQ):
+        (wights + FQ) -> (compressed_weights + DQ)
+
+    :param model: Compressed model
+    :param graph: The model graph.
+    :return: The modified NNCF network.
+    """
+    hook_storage = get_hook_storage(model)
+    graph.dump_graph("sample.dot")
+
+    for name, module in hook_storage.named_hooks():
+        if not isinstance(module, (SymmetricQuantizer, AsymmetricQuantizer)):
+            continue
+        msg = ""
+        if module._qspec.half_range or module._qspec.narrow_range:
+            msg += "Unexpected parameters of quantizers on strip: half_range and narrow_range should be False.\n"
+        if module.num_bits not in [4, 8]:
+            msg += f"Unsupported number of bits {module.num_bits} for the quantizer {module}.\n"
+        if msg:
+            raise nncf.ValidationError(msg)
+
+        _, op_name, _ = decode_hook_name(name)
+        weight_node = graph.get_node_by_name(op_name)
+
+        if weight_node is None:
+            msg = "FQ is not assigned to weight. Strip to DQ format is not supported for FQ on activation."
+            raise nncf.UnsupportedModelError(msg)
+
+        if not isinstance(weight_node.layer_attributes, ConstantLayerAttributes):
+            msg = f"Unexpected layer attributes type {type(weight_node.layer_attributes)}"
+            raise nncf.InternalError(msg)
+
+        weight = get_const_data(weight_node, model)
+
+        convert_fn = asym_fq_to_decompressor if isinstance(module, AsymmetricQuantizer) else sym_fq_to_decompressor
+        decompressor, q_weight = convert_fn(module, weight)  # type: ignore[operator]
+        packed_tensor = decompressor.pack_weight(q_weight)
+
+        module_name, weight_attr_name = split_const_name(weight_node.layer_attributes.name)
+        module = get_module_by_name(module_name, model)
+        weight_param = getattr(module, weight_attr_name)
+
+        weight_param.requires_grad = False
+        weight_param.data = packed_tensor
+
+        hook_storage.set_submodule(name, decompressor)
     return model
