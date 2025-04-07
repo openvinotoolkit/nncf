@@ -13,6 +13,7 @@ jobs:
   install-cpu:
     name: Test install [${{ matrix.backend }} - ${{ matrix.runner }}]
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -48,6 +49,7 @@ jobs:
       run:
         shell: bash
     runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4
+    timeout-minutes: 20
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:

@@ -24,7 +24,6 @@ from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_data
-from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_transformer import PTModelTransformer
@@ -215,34 +214,37 @@ def asym_fq_to_decompressor(
     assert isinstance(quantizer, AsymmetricQuantizer)
     weight_dtype = weight.dtype
     weight_shape = weight.shape
-    eps = torch.finfo(weight_dtype).eps
+    float_dtype = torch.float32
+    integer_dtype = torch.uint8
+
+    eps = torch.finfo(float_dtype).eps
     qdq_weight = quantizer.quantize(weight)
     if hasattr(quantizer, "_lspec"):
         # Reshape for group-wise quantization, implemented for classes with lora spec only
         qdq_weight = qdq_weight.reshape(quantizer._lspec.weight_shape)
-    qdq_weight = qdq_weight.to(weight_dtype)
+    qdq_weight = qdq_weight.to(float_dtype)
 
     input_range_safe = abs(quantizer.input_range) + quantizer.eps
     input_low, input_range = TuneRange.apply(quantizer.input_low, input_range_safe, quantizer.levels)
 
-    integer_dtype = torch.uint8
-
-    input_low = input_low.to(weight_dtype)
-    input_range = input_range.to(weight_dtype)
+    input_low = input_low.to(float_dtype)
+    input_range = input_range.to(float_dtype)
 
     scale = input_range / quantizer.level_high
     scale = torch.where(torch.abs(scale) < eps, eps, scale)
-    scale = scale.to(weight_dtype)
+    scale = scale.to(float_dtype)
 
     zero_point = quantizer.level_low - torch.round(input_low / scale)
     zero_point = torch.clip(zero_point, quantizer.level_low, quantizer.level_high)
-    zero_point = zero_point.to(integer_dtype)
+    zero_point = zero_point.to(float_dtype)
 
     q_weight = qdq_weight / scale
     q_weight = q_weight + zero_point
     q_weight = torch.round(q_weight)
     q_weight = torch.clip(q_weight, quantizer.level_low, quantizer.level_high)
+
     q_weight = q_weight.to(integer_dtype)
+    zero_point = zero_point.data.to(integer_dtype)
 
     if quantizer.num_bits == 8:
         decompressor = INT8AsymmetricWeightsDecompressor(scale=scale, zero_point=zero_point, result_dtype=weight_dtype)
@@ -270,22 +272,24 @@ def sym_fq_to_decompressor(
     assert isinstance(quantizer, SymmetricQuantizer)
     weight_dtype = weight.dtype
     weight_shape = weight.shape
-    eps = torch.finfo(weight_dtype).eps
+    float_dtype = torch.float32
+    integer_dtype = torch.int8
+
+    eps = torch.finfo(float_dtype).eps
     qdq_weight = quantizer.quantize(weight)
     if hasattr(quantizer, "_lspec"):
         # Reshape for group-wise quantization, implemented for classes with lora spec only
         qdq_weight = qdq_weight.reshape(quantizer._lspec.weight_shape)
-    qdq_weight = qdq_weight.to(weight_dtype)
+    qdq_weight = qdq_weight.to(float_dtype)
 
-    integer_dtype = torch.int8
-
-    scale = quantizer.scale / abs(quantizer.level_low)
+    scale = quantizer.scale.to(float_dtype) / abs(quantizer.level_low)
     scale = torch.where(torch.abs(scale) < eps, eps, scale)
-    scale = scale.to(weight_dtype)
+    scale = scale.to(float_dtype)
 
     q_weight = qdq_weight / scale
     q_weight = torch.round(q_weight)
     q_weight = torch.clip(q_weight, quantizer.level_low, quantizer.level_high)
+
     q_weight = q_weight.to(integer_dtype)
 
     if quantizer.num_bits == 8:
@@ -339,8 +343,7 @@ def replace_with_decompressors(model: NNCFNetwork) -> NNCFNetwork:
             raise nncf.ValidationError(msg)
 
         tp = command.target_points[0]
-        node_with_weight = graph.get_node_by_name(tp.target_node_name)
-        weight_node = get_const_node(node_with_weight, tp.input_port_id, graph)
+        weight_node = graph.get_node_by_name(tp.target_node_name)
         if weight_node is None:
             msg = "FQ is not assigned to weight. Strip to DQ format is not supported for FQ on activation."
             raise nncf.UnsupportedModelError(msg)
