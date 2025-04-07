@@ -648,9 +648,9 @@ class OfflineAggregatorBase(AggregatorBase, ABC):
 
         # Case when some registered tensors have different shapes and
         # 0 is not present in the aggregation axes
-        ret_val = []
-        for tensor in self._container:
-            ret_val.append(self._aggregation_fn(tensor, axis=online_axes, keepdims=self._keepdims))
+        ret_val = [
+            self._aggregation_fn(tensor, axis=online_axes, keepdims=self._keepdims) for tensor in self._container
+        ]
         return fns.stack(ret_val, axis=0)
 
     @abstractmethod

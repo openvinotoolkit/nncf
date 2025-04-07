@@ -48,8 +48,7 @@ class TFRangeInitParams(RangeInitParams):
         steps = []
         if self.global_init_config is not None:
             steps.append(self.global_init_config.num_init_samples)
-        for pl_config in self.per_layer_range_init_configs:
-            steps.append(pl_config.num_init_samples)
+        steps.extend(pl_config.num_init_samples for pl_config in self.per_layer_range_init_configs)
         batch_size = self.init_range_data_loader.batch_size
         return math.ceil(max(steps) / batch_size)
 

@@ -76,14 +76,10 @@ def get_model_inputs(model: onnx.ModelProto) -> List[onnx.ValueInfoProto]:
     :param model: ONNX model.
     :return: Model Inputs.
     """
-    inputs = []
     input_all = [node.name for node in model.graph.input]
     input_initializer = [node.name for node in model.graph.initializer]
     net_feed_input = list(set(input_all) - set(input_initializer))
-    for node in model.graph.input:
-        if node.name in net_feed_input:
-            inputs.append(node)
-    return inputs
+    return [node for node in model.graph.input if node.name in net_feed_input]
 
 
 def get_input_port_id_for_node_after_input(input_name: str, to_node: onnx.NodeProto) -> int:

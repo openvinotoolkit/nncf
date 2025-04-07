@@ -45,13 +45,12 @@ class PTStatisticsAggregator(StatisticsAggregator):
         self, statistic_points: StatisticPointsContainer
     ) -> TransformationLayout:
         transformation_layout = TransformationLayout()
-        transformation_commands = []
 
         for _statistic_points in statistic_points.values():
             for _statistic_point in _statistic_points:
                 for collectors in _statistic_point.algorithm_to_tensor_collectors.values():
                     for collector in collectors:
-                        transformation_commands.append(
+                        transformation_layout.register(
                             PTInsertionCommand(
                                 _statistic_point.target_point,
                                 create_register_input_hook(collector=collector),
@@ -59,9 +58,6 @@ class PTStatisticsAggregator(StatisticsAggregator):
                                 hooks_group_name=self.HOOKS_GROUP_NAME,
                             )
                         )
-
-        for transformation_command in transformation_commands:
-            transformation_layout.register(transformation_command)
 
         return transformation_layout
 

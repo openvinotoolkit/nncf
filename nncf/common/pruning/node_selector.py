@@ -162,9 +162,9 @@ class PruningNodeSelector:
                 )
                 # Check if previous node isn't multiforward,
                 # in case of multiforward nodes cycle
-                for previous_conv in previous_convs:
-                    if previous_conv not in list_of_nodes:
-                        all_previous_convs.append(previous_conv)
+                all_previous_convs.extend(
+                    previous_conv for previous_conv in previous_convs if previous_conv not in list_of_nodes
+                )
 
             previous_clusters = [
                 pruned_nodes_clusterization.get_cluster_containing_element(node.node_id).id

@@ -150,9 +150,9 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         scale_node_name: str,
     ) -> PTSharedFnInsertionCommand:
         input_port_id = 0
-        target_points = []
-        for node in nodes:
-            target_points.append(PTTargetPoint(PT_PRE_LAYER_TARGET_TYPE, node.node_name, input_port_id=input_port_id))
+        target_points = [
+            PTTargetPoint(PT_PRE_LAYER_TARGET_TYPE, node.node_name, input_port_id=input_port_id) for node in nodes
+        ]
 
         sq_multiply = SQMultiply(scale_value.shape)
         sq_multiply.scale = scale_value

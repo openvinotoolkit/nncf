@@ -147,10 +147,9 @@ class BiasCorrection(Algorithm):
         model_copy = self._backend_entity.remove_fq_from_inputs(model_copy, graph_copy)
         nncf_graph = NNCFGraphFactory.create(model_copy)
 
-        nodes_with_bias = []
-        for node in nncf_graph.topological_sort():
-            if self._is_node_correctable(node, nncf_graph):
-                nodes_with_bias.append(node)
+        nodes_with_bias = [
+            node for node in nncf_graph.topological_sort() if self._is_node_correctable(node, nncf_graph)
+        ]
 
         # We pre-collect information about the subgraph we need in order
         # to collect statistics for the change in the bias of each layer.

@@ -558,10 +558,7 @@ class QuantizationEnv:
     def select_config_for_actions(self, actions) -> Dict[QuantizationPointId, QuantizerConfig]:
         retval: Dict[QuantizationPointId, QuantizerConfig] = OrderedDict()
         for action, qp_id_set, qconf_space in zip(actions, self.master_df["qp_id_set"], self.master_df["qconf_space"]):
-            matches = []
-            for qconf in qconf_space:
-                if qconf.num_bits == action:
-                    matches.append(qconf)
+            matches = [qconf for qconf in qconf_space if qconf.num_bits == action]
             assert len(matches) == 1
             for qp_id in qp_id_set:
                 retval[qp_id] = matches[0]

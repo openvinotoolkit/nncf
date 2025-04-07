@@ -667,11 +667,11 @@ def get_all_modules_in_blocks(
     :param op_addresses_in_blocks: Set of operation addresses for building block.
     :return: List of module for building block.
     """
-    modules = []
-    for op_address in op_addresses_in_blocks:
-        if op_address.operator_name in NNCF_MODULES_OP_NAMES:
-            modules.append(compressed_model.nncf.get_module_by_scope(op_address.scope_in_model))
-    return modules
+    return [
+        compressed_model.nncf.get_module_by_scope(op_address.scope_in_model)
+        for op_address in op_addresses_in_blocks
+        if op_address.operator_name in NNCF_MODULES_OP_NAMES
+    ]
 
 
 def get_type_building_block(op_addresses_in_block: Set[OperationAddress]) -> BuildingBlockType:

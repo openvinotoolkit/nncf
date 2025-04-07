@@ -125,10 +125,11 @@ class ElasticDepthHandler(SingleElasticityHandler):
         # TODO(nlyalyus): can be a huge search space. no need to iterate and filter all of them. (ticket 69746)
         possible_depth_configs = [list(combinations(range_block_ids, i + 1)) for i in range_block_ids]
         possible_depth_configs = [y for x in possible_depth_configs for y in x]
-        valid_depth_configs = []
-        for d_sample in possible_depth_configs:
-            if list(d_sample) == self._remove_inconsistent_blocks(list(d_sample)):
-                valid_depth_configs.append(list(d_sample))
+        valid_depth_configs = [
+            list(d_sample)
+            for d_sample in possible_depth_configs
+            if list(d_sample) == self._remove_inconsistent_blocks(list(d_sample))
+        ]
         self._cached_search_space = valid_depth_configs
         self._is_search_space_obsolete = False
         if [] not in valid_depth_configs:

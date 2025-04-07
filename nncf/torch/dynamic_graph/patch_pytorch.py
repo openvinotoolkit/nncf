@@ -343,16 +343,15 @@ def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool
         return filtered_names
 
     patched_namespace = get_namespace_to_extract_functions_from(namespace)
-    all_torch_function_names = []
     members = inspect.getmembers(patched_namespace)
-    for member in members:
-        if (
-            inspect.isfunction(member[1])
-            or inspect.isbuiltin(member[1])
-            or inspect.ismethod(member[1])
-            or inspect.ismethoddescriptor(member[1])
-        ):
-            all_torch_function_names.append(member[0])
+    all_torch_function_names = [
+        member[0]
+        for member in members
+        if inspect.isfunction(member[1])
+        or inspect.isbuiltin(member[1])
+        or inspect.ismethod(member[1])
+        or inspect.ismethoddescriptor(member[1])
+    ]
     if do_filter:
         filtered_function_names = remove_private_functions(all_torch_function_names)
         return filtered_function_names

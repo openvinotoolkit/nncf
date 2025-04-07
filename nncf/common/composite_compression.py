@@ -64,10 +64,7 @@ class CompositeCompressionLoss(CompressionLoss):
 
         :return: The composite compression loss state.
         """
-        composite_state = []
-        for child_loss in self.child_losses:
-            composite_state.append(child_loss.get_state())
-        return composite_state
+        return [child_loss.get_state() for child_loss in self.child_losses]
 
     def calculate(self, *args: Any, **kwargs: Any) -> Any:
         """
@@ -147,10 +144,7 @@ class CompositeCompressionScheduler(CompressionScheduler):
 
         :return: The composite compression scheduler state.
         """
-        composite_state = []
-        for child_scheduler in self._child_schedulers:
-            composite_state.append(child_scheduler.get_state())
-        return composite_state
+        return [child_scheduler.get_state() for child_scheduler in self._child_schedulers]
 
 
 class CompositeCompressionAlgorithmController(CompressionAlgorithmController):

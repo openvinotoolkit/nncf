@@ -60,9 +60,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
             else:
                 RuntimeError(f"Unsupported target point type for statistic aggregator: {target_point.type}")
 
-            input_info = []
-            for reducer in tensor_collector.reducers:
-                input_info.append((hash(reducer), [edge_name]))
+            input_info = [(hash(reducer), [edge_name]) for reducer in tensor_collector.reducers]
 
             target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, input_info)
             tensor_collector.register_inputs(target_inputs)
@@ -71,15 +69,11 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
         self, statistic_points: StatisticPointsContainer
     ) -> TransformationLayout:
         transformation_layout = TransformationLayout()
-        transformation_commands = []
         for _statistic_points in statistic_points.values():
             for _statistic_point in _statistic_points:
-                transformation_commands.append(
+                transformation_layout.register(
                     ONNXOutputInsertionCommand(_statistic_point.target_point, self.input_edges_mapping)
                 )
-        for transformation_command in transformation_commands:
-            transformation_layout.register(transformation_command)
-
         return transformation_layout
 
     @staticmethod

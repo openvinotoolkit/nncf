@@ -1040,8 +1040,7 @@ class QuantizerPropagationSolver:
             main_ip_idx = intra_group_indices[0]
             main_ip = target_insertion_points[main_ip_idx]
             grouped_list = [main_ip]
-            for linked_ip_idx in intra_group_indices[1:]:
-                grouped_list.append(target_insertion_points[linked_ip_idx])
+            grouped_list.extend(target_insertion_points[linked_ip_idx] for linked_ip_idx in intra_group_indices[1:])
             retval.append(grouped_list)
 
         for insertion_point_idx, group_idx in insertion_point_indices_vs_group_id.items():  # type: ignore[assignment]
@@ -1405,7 +1404,6 @@ class QuantizerPropagationSolver:
         for branch_qconfig_list in potential_qconfigs_for_each_branch:
             assert branch_qconfig_list is not None
             qconfigs_union.update(set(branch_qconfig_list))
-        merged_qconfig_list: List[QuantizerConfig] = []
 
         nncf_logger.debug(f"Union of configs: {';'.join([str(qc) for qc in qconfigs_union])}")
 
@@ -1430,9 +1428,11 @@ class QuantizerPropagationSolver:
             msg = f"Unknown propagation strategy: {self._propagation_strategy}"
             raise nncf.ValidationError(msg)
 
-        for qconf in qconfigs_union:
-            if all(compatible_fn(qconf, qconf_list) for qconf_list in potential_qconfigs_for_each_branch):
-                merged_qconfig_list.append(qconf)
+        merged_qconfig_list: List[QuantizerConfig] = [
+            qconf
+            for qconf in qconfigs_union
+            if all(compatible_fn(qconf, qconf_list) for qconf_list in potential_qconfigs_for_each_branch)
+        ]
 
         nncf_logger.debug(f"Merged list before sorting: {';'.join([str(qc) for qc in merged_qconfig_list])}")
 
