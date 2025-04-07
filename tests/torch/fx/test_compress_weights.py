@@ -233,7 +233,6 @@ def test_compress_weights_functional_model(mode):
         {"all_layers": False},
         *({"sensitivity_metric": metric} for metric in ALL_SENSITIVITY_METRICS),
         {"gptq": True},
-        {"awq": True},
         {"scale_estimation": True},
         {"lora_correction": True},
         {"dataset": Dataset([1])},
@@ -257,12 +256,8 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 @pytest.mark.parametrize(
     "params",
     (
-        *({"sensitivity_metric": metric} for metric in DATA_BASED_SENSITIVITY_METRICS),
         {"gptq": True},
-        {"awq": True},
-        {"scale_estimation": True},
         {"lora_correction": True},
-        {"dataset": Dataset([1])},
         {"compression_format": CompressionFormat.FQ},
         {"compression_format": CompressionFormat.FQ_LORA},
     ),
