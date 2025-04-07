@@ -123,7 +123,7 @@ def get_path_after_broadcast(tmp_path, rank):
 
 def save_params(model, out_file_path):
     gpu_scale_signed_params = []
-    for _, layer in utils.get_all_modules_by_type(model, "SymmetricQuantizer").items():
+    for layer in utils.get_all_modules_by_type(model, "SymmetricQuantizer").values():
         gpu_scale_signed_params.append(
             (layer.scale.to(torch.device("cpu")), layer.signed_tensor.to(torch.device("cpu")))
         )

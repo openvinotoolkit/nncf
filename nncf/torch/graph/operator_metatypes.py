@@ -76,7 +76,7 @@ class PTOperatorMetatype(OperatorMetatype):
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         output = set()
-        for _, function_names in cls.module_to_function_names.items():
+        for function_names in cls.module_to_function_names.values():
             output = output.union(function_names)
         if cls.external_op_names is not None:
             output = output.union(cls.external_op_names)

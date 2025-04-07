@@ -409,7 +409,7 @@ class TracingContext:
             self._threading.thread_local.node_call_tracker[node.node_id] = 1
 
     def reset_node_call_counters(self):
-        for k, _ in self._threading.thread_local.node_call_tracker.items():
+        for k in self._threading.thread_local.node_call_tracker:
             self._threading.thread_local.node_call_tracker[k] = 0
 
     def get_node_call_counter_dict(self):
