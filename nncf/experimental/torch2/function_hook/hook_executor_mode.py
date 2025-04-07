@@ -340,7 +340,7 @@ class FunctionHookMode(TorchFunctionMode):
         name_in_model = self.const_name_map.get(value, None)
         if name_in_model is not None and not self.in_process_const:
             self.in_process_const = True
-            ret_value = self.hook_storage.execute_post_function_hooks(name_in_model.replace(".", ":"), 0, value)
+            ret_value = self.hook_storage.execute_post_function_hooks(name_in_model, 0, value)
             self.in_process_const = False
 
             if self.counter_reusing_shared_weights.get(id_param):

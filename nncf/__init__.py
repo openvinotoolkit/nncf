@@ -22,6 +22,7 @@ from nncf.errors import BufferFullError as BufferFullError
 from nncf.errors import InstallationError as InstallationError
 from nncf.errors import InternalError as InternalError
 from nncf.errors import InvalidCollectorTypeError as InvalidCollectorTypeError
+from nncf.errors import InvalidGroupSizeError as InvalidGroupSizeError
 from nncf.errors import InvalidPathError as InvalidPathError
 from nncf.errors import InvalidQuantizerGroupError as InvalidQuantizerGroupError
 from nncf.errors import ModuleNotFoundError as ModuleNotFoundError
