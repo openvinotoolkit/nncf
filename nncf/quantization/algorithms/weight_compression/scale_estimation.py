@@ -80,6 +80,10 @@ class ScaleEstimation:
             from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
 
             self._backend_entity = PTWeightCompressionAlgoBackend()
+        elif model_backend == BackendType.TORCH_FX:
+            from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXWeightCompressionAlgoBackend
+
+            self._backend_entity = FXWeightCompressionAlgoBackend()
         else:
             msg = (
                 "Cannot return backend-specific Scale Estimation entity because"

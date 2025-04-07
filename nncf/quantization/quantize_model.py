@@ -568,7 +568,6 @@ def compress_weights(
             raise nncf.ParameterNotSupportedError(msg)
 
         options = {
-            "scale_estimation": scale_estimation,
             "gptq": gptq,
             "lora_correction": lora_correction,
         }

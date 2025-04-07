@@ -47,6 +47,7 @@ from tests.torch.ptq.test_weights_compression import MatMulModel
 from tests.torch.ptq.test_weights_compression import SequentialMatmulModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
+from nncf.experimental.torch.fx.transformations import get_graph_node_by_name
 
 DATA_BASED_SENSITIVITY_METRICS = (
     SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
@@ -322,16 +323,16 @@ def test_model_devices_and_precisions(use_cuda, dtype):
     assert result.dtype == dtype
 
 
-class TestPTTemplateWeightCompression(TemplateWeightCompression):
+class TestFXTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
-    def get_matmul_model() -> torch.nn.Module:
+    def get_matmul_model() -> torch.fx.GraphModule:
         model = MatMulModel(255 * torch.eye(3, dtype=torch.float32))
         ex_input = torch.ones([1, 3, 3], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
         return exported_model
 
     @staticmethod
-    def get_sequential_matmul_model() -> torch.nn.Module:
+    def get_sequential_matmul_model() -> torch.fx.GraphModule:
         model = SequentialMatmulModel()
         ex_input = torch.ones([1, 4, 4], dtype=torch.float32)
         exported_model = get_torch_fx_model(model, ex_input)
@@ -345,7 +346,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return exported_model
 
     @staticmethod
-    def get_awq_model() -> torch.nn.Module:
+    def get_awq_model() -> torch.fx.GraphModule:
         model = AWQLinearModel()
         dynamic_shapes = [[None, torch.export.Dim("dynamic_shape"), None]]
         ex_input = torch.ones([1, 4, 8], dtype=torch.float32)
@@ -368,7 +369,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return cast_to(x, dtype)
 
     @staticmethod
-    def check_weights(model: torch.nn.Module, ref_ids: List[int]) -> None:
+    def check_weights(model: torch.fx.GraphModule, ref_ids: List[int]) -> None:
         all_names = list(model.graph.nodes)
         low_precision_nodes = list(map(lambda i: all_names[i].name, ref_ids))
         for node in model.graph.nodes:
@@ -400,13 +401,18 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         )
 
     @staticmethod
-    def get_orig_weight(model: torch.nn.Module) -> Tensor:
+    def get_orig_weight(model: torch.fx.GraphModule) -> Tensor:
         return Tensor(model.linear.weight.data.detach())
-
     @staticmethod
-    def get_decompressed_weight(compressed_model: torch.nn.Module, input: torch.Tensor) -> Tensor:
-        weight = compressed_model.linear.weight.data.detach()
-        unpacked_w = compressed_model.nncf.external_op.weights_decompressor_linear_weight(weight)
+    def get_decompressed_weight(compressed_model: torch.fx.GraphModule, input: torch.Tensor) -> Tensor:
+        for node in compressed_model.graph.nodes:
+            print(node.name)
+        model_graph = compressed_model.graph
+        weight_node = get_graph_node_by_name(model_graph, "linear_weight_updated_constant0")
+        decompression_node = get_graph_node_by_name(model_graph, "asymmetric_weights_decompressor_linear_weight_0")
+        weight = get_tensor_constant_from_node(weight_node, compressed_model)
+        decompress_module = getattr(compressed_model, decompression_node.target) 
+        unpacked_w = decompress_module(weight)
         return Tensor(unpacked_w)
 
     @staticmethod
@@ -414,7 +420,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return "linear_5"
 
     @staticmethod
-    def get_num_int4_nodes(model: torch.nn.Module) -> int:
+    def get_num_int4_nodes(model: torch.fx.GraphModule) -> int:
         num = 0
         for node in model.graph.nodes:
             if node.op != "call_module":
