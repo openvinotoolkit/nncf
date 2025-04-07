@@ -11,8 +11,9 @@
 
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
-import nncf
 import onnx
+
+import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset

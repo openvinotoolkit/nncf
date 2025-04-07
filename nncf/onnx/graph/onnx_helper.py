@@ -12,11 +12,11 @@ from collections import defaultdict
 from typing import Dict, Iterator, List, Optional, Union
 
 import numpy as np
+import onnx
+from onnx import numpy_helper
 
 import nncf
-import onnx
 from nncf.tensor.definitions import TensorDataType
-from onnx import numpy_helper
 
 NNCF_DTYPE_TO_ONNX_DTYPE = {
     TensorDataType.float16: onnx.TensorProto.FLOAT16,
@@ -309,5 +309,5 @@ def pack_4_bits(tensor: np.ndarray) -> np.ndarray:
         raise nncf.InternalError(msg)
     packed_tensor = np.ascontiguousarray(tensor)
     packed_tensor = packed_tensor.reshape(-1, 2)
-    packed_tensor = np.bitwise_and(packed_tensor[..., ::2], 15) | packed_tensor[..., 1::2] << 4
+    packed_tensor = packed_tensor[..., 1::2] << 4 | packed_tensor[..., ::2] & 15
     return packed_tensor

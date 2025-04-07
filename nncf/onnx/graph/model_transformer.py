@@ -13,9 +13,9 @@ from copy import deepcopy
 from typing import Dict, List, Set, Tuple, Union
 
 import numpy as np
+import onnx
 
 import nncf
-import onnx
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout

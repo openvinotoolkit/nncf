@@ -11,18 +11,18 @@
 from dataclasses import dataclass
 
 import numpy as np
+import onnx
 import pytest
+from onnx import TensorProto
+from onnx import helper
+from onnx import numpy_helper
 from onnxruntime import InferenceSession
 
 import nncf
-import onnx
 from nncf import CompressWeightsMode
 from nncf.onnx.graph.onnx_helper import get_edge_shape
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.quantization import compress_weights
-from onnx import TensorProto
-from onnx import helper
-from onnx import numpy_helper
 
 
 def create_model(opset_version=21):

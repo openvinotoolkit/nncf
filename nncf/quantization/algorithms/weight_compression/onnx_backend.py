@@ -11,10 +11,12 @@
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
+import onnx
+from onnx import helper
+from onnx import numpy_helper
 
 import nncf
 import nncf.onnx.graph.metatypes.onnx_metatypes as metatypes
-import onnx
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -47,8 +49,6 @@ from nncf.quantization.algorithms.weight_compression.lora_correction import Lora
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
-from onnx import helper
-from onnx import numpy_helper
 
 
 class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
