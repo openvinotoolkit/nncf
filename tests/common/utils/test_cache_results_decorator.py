@@ -144,9 +144,9 @@ def test_caching_results():
 def test_disable_caching_with_exception():
     assert TEST_CACHE_CONTAINER.enabled()
 
-    with pytest.raises(Exception):
+    with pytest.raises(RuntimeError):
         with disable_results_caching(TEST_CACHE_CONTAINER):
             assert not TEST_CACHE_CONTAINER.enabled()
-            raise Exception
+            raise RuntimeError
 
     assert TEST_CACHE_CONTAINER.enabled()
