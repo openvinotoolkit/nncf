@@ -23,17 +23,10 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
-from nncf.experimental.common.tensor_statistics.collectors import MeanVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import MaxVarianceTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MeanMagnitudeTensorStatistic
-from nncf.experimental.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
@@ -50,6 +43,7 @@ from nncf.quantization.algorithms.weight_compression.backend import WeightCompre
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.torch_backend import PTAWQAlgoAlgoBackend
+from nncf.quantization.algorithms.weight_compression.torch_backend import PTMixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
@@ -286,31 +280,25 @@ class FXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, FXWeightCompression
     def mean_variance_statistic_collector(
         reduction_axes: Tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
-        reducer = MeanVarianceReducer(reduction_axes)
-        aggregator = MeanAggregator(num_samples=subset_size)
-        collector = TensorCollector(MeanVarianceTensorStatistic)
-        collector.register_statistic_branch(MeanVarianceTensorStatistic.MEAN_VARIANCE_STAT, reducer, aggregator)
-        return collector
+        return PTMixedPrecisionAlgoBackend.mean_variance_statistic_collector(
+            reduction_axes=reduction_axes, subset_size=subset_size
+        )
 
     @staticmethod
     def max_variance_statistic_collector(
         reduction_axes: Tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
-        reducer = MaxVarianceReducer(reduction_axes)
-        aggregator = MeanAggregator(num_samples=subset_size)
-        collector = TensorCollector(MaxVarianceTensorStatistic)
-        collector.register_statistic_branch(MaxVarianceTensorStatistic.MAX_VARIANCE_STAT, reducer, aggregator)
-        return collector
+        return PTMixedPrecisionAlgoBackend.max_variance_statistic_collector(
+            reduction_axes=reduction_axes, subset_size=subset_size
+        )
 
     @staticmethod
     def mean_abs_max_statistic_collector(
         reduction_axes: Tuple[int], subset_size: Optional[int] = None
     ) -> TensorCollector:
-        reducer = MeanAbsMaxReducer(reduction_axes)
-        aggregator = MeanAggregator(num_samples=subset_size)
-        collector = TensorCollector(MeanMagnitudeTensorStatistic)
-        collector.register_statistic_branch(MeanMagnitudeTensorStatistic.MEAN_MAGNITUDE_STAT, reducer, aggregator)
-        return collector
+        return PTMixedPrecisionAlgoBackend.mean_abs_max_statistic_collector(
+            reduction_axes=reduction_axes, subset_size=subset_size
+        )
 
 
 class FXAWQMultiply(torch.nn.Module):
