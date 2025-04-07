@@ -283,11 +283,11 @@ class DefaultScopeNodeMatcher:
     def _find_nodes_with_matching_context_among_inputless(
         self, op_exec_context: OperationExecutionContext
     ) -> Dict[str, DynamicGraphNode]:
-        node_candidates = {}
-        for nx_node_key, node in self._inputless_nodes.items():
-            if op_exec_context.matches_saved_inputs_from(node.op_exec_context):
-                node_candidates[nx_node_key] = node
-        return node_candidates
+        return {
+            nx_node_key: node
+            for nx_node_key, node in self._inputless_nodes.items()
+            if op_exec_context.matches_saved_inputs_from(node.op_exec_context)
+        }
 
     def _find_nodes_with_matching_context_and_inputs(
         self, op_exec_context: OperationExecutionContext
