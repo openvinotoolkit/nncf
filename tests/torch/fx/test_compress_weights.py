@@ -371,6 +371,10 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
                     assert isinstance(getattr(model, node.target), INT4SymmetricWeightsDecompressor)
 
     @staticmethod
+    def get_not_supported_algorithms() -> List[str]:
+        return ["lora_correction", "gptq"]
+
+    @staticmethod
     def get_scale_estimation_ref():
         return torch.tensor(
             [
