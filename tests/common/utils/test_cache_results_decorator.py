@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import threading
+import pytest
 
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
@@ -142,15 +142,11 @@ def test_caching_results():
 
 
 def test_disable_caching_with_exception():
-    def thread_fn():
+    assert TEST_CACHE_CONTAINER.enabled()
+
+    with pytest.raises(Exception):
         with disable_results_caching(TEST_CACHE_CONTAINER):
             assert not TEST_CACHE_CONTAINER.enabled()
             raise Exception
-
-    assert TEST_CACHE_CONTAINER.enabled()
-
-    thread = threading.Thread(target=thread_fn)
-    thread.start()
-    thread.join()
 
     assert TEST_CACHE_CONTAINER.enabled()
