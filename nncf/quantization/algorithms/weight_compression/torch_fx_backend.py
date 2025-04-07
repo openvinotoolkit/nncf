@@ -44,10 +44,12 @@ from nncf.experimental.torch.fx.transformations import module_insertion_transfor
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
+from nncf.quantization.algorithms.weight_compression.torch_backend import PTAWQAlgoAlgoBackend
 from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.tensor import Tensor
@@ -141,12 +143,11 @@ class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.fx.GraphModule, graph: NNCFGraph
     ) -> Tensor:
-        weight_edge = graph.get_input_edge_by_port_id(node_with_weight, weight_port_id)
-        weight_node = weight_edge.from_node
-        graph_weight_node = get_graph_node_by_name(model.graph, weight_node.node_name)
+        graph_node_with_weight = get_graph_node_by_name(model.graph, node_with_weight.node_name)
+        graph_weight_node = graph_node_with_weight.all_input_nodes[weight_port_id]
         weight = get_tensor_constant_from_node(graph_weight_node, model).data
         if weight is None:
-            msg = f"Could not find a node in the model by name {weight_node}."
+            msg = f"Could not find a node in the model by name {graph_weight_node}."
             raise nncf.InternalError(msg)
 
         return Tensor(weight)
@@ -310,3 +311,41 @@ class FXMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, FXWeightCompression
         collector = TensorCollector(MeanMagnitudeTensorStatistic)
         collector.register_statistic_branch(MeanMagnitudeTensorStatistic.MEAN_MAGNITUDE_STAT, reducer, aggregator)
         return collector
+
+
+class FXAWQMultiply(torch.nn.Module):
+    def __init__(self, scale: torch.Tensor):
+        super().__init__()
+        self.register_buffer("_scale_value", scale)
+        self._scale_value: torch.Tensor
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return torch.mul(x, self._scale_value)
+
+
+class FXAWQAlgoAlgoBackend(AWQAlgoBackend, FXWeightCompressionAlgoBackend):
+    @staticmethod
+    def get_awq_patterns():
+        return PTAWQAlgoAlgoBackend.get_awq_patterns()
+
+    @staticmethod
+    def scale_insertion_command(source_node, next_nodes, source_node_output_port, scale):
+        input_port_id = 0
+        target_points = []
+        for node in next_nodes:
+            target_points.append(
+                PTTargetPoint(
+                    PTWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[TargetType.PRE_LAYER_OPERATION],
+                    node.node_name,
+                    input_port_id=input_port_id,
+                )
+            )
+        awq_multiply = FXAWQMultiply(scale)
+        awq_node_name = f"{source_node.node_name}/awq_mul"
+        return FXApplyTransformationCommand(
+            module_insertion_transformation_builder(
+                awq_multiply,
+                target_points,
+                awq_node_name,
+            )
+        )

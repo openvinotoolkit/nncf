@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict
+from typing import Dict, List
 
 import pytest
 import torch
@@ -24,19 +24,29 @@ from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
 from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQMultiply
+from nncf.tensor import Tensor
+from nncf.tensor import TensorDataType
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
+from nncf.torch.quantization.layers import INT4SymmetricWeightsDecompressor
+from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
 from tests.torch.fx.helpers import get_torch_fx_model
 from tests.torch.ptq.test_weights_compression import ALL_SENSITIVITY_METRICS
 from tests.torch.ptq.test_weights_compression import INT4_MODES
 from tests.torch.ptq.test_weights_compression import INT8_MODES
 from tests.torch.ptq.test_weights_compression import SUPPORTED_MODES
 from tests.torch.ptq.test_weights_compression import UNSUPPORTED_MODES
+from tests.torch.ptq.test_weights_compression import AWQActLinearModel
+from tests.torch.ptq.test_weights_compression import AWQLinearModel
 from tests.torch.ptq.test_weights_compression import ConvolutionModel
 from tests.torch.ptq.test_weights_compression import DTypeModel
 from tests.torch.ptq.test_weights_compression import EmptyModel
 from tests.torch.ptq.test_weights_compression import FunctionalModel
+from tests.torch.ptq.test_weights_compression import LinearModel
 from tests.torch.ptq.test_weights_compression import MatMulModel
+from tests.torch.ptq.test_weights_compression import SequentialMatmulModel
 from tests.torch.test_models.synthetic import ShortTransformer
+from tests.torch.test_tensor import cast_to
 
 DATA_BASED_SENSITIVITY_METRICS = (
     SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
@@ -310,3 +320,124 @@ def test_model_devices_and_precisions(use_cuda, dtype):
     assert compressed_model.state_dict()["asymmetric_weights_decompressor_w._scale"].dtype == torch.float16
     # Result should be in the precision of the model
     assert result.dtype == dtype
+
+
+class TestPTTemplateWeightCompression(TemplateWeightCompression):
+    @staticmethod
+    def get_matmul_model() -> torch.nn.Module:
+        model = MatMulModel(255 * torch.eye(3, dtype=torch.float32))
+        ex_input = torch.ones([1, 3, 3], dtype=torch.float32)
+        exported_model = get_torch_fx_model(model, ex_input)
+        return exported_model
+
+    @staticmethod
+    def get_sequential_matmul_model() -> torch.nn.Module:
+        model = SequentialMatmulModel()
+        ex_input = torch.ones([1, 4, 4], dtype=torch.float32)
+        exported_model = get_torch_fx_model(model, ex_input)
+        return exported_model
+
+    @staticmethod
+    def get_model_for_test_scale_estimation():
+        model = LinearModel(torch.arange(0, 8 * 16, dtype=torch.float32).reshape(16, 8))
+        ex_input = torch.ones([1, 4, 8], dtype=torch.float32)
+        exported_model = get_torch_fx_model(model, ex_input)
+        return exported_model
+
+    @staticmethod
+    def get_awq_model() -> torch.nn.Module:
+        model = AWQLinearModel()
+        dynamic_shapes = [[None, torch.export.Dim("dynamic_shape"), None]]
+        ex_input = torch.ones([1, 4, 8], dtype=torch.float32)
+        exported_model = get_torch_fx_model(model, ex_input, dynamic_shapes=dynamic_shapes)
+        return exported_model
+
+    @staticmethod
+    def get_awq_act_model(with_multiply, n_layers):
+        model = AWQActLinearModel(with_multiply=with_multiply, n_layers=n_layers)
+        ex_input = torch.ones([1, 8, 8], dtype=torch.float32)
+        exported_model = get_torch_fx_model(model, ex_input)
+        return exported_model
+
+    @staticmethod
+    def to_tensor(t) -> torch.Tensor:
+        return torch.tensor(t)
+
+    @staticmethod
+    def cast_to(x: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
+        return cast_to(x, dtype)
+
+    @staticmethod
+    def check_weights(model: torch.nn.Module, ref_ids: List[int]) -> None:
+        all_names = list(model.graph.nodes)
+        low_precision_nodes = list(map(lambda i: all_names[i].name, ref_ids))
+        for node in model.graph.nodes:
+            for name in low_precision_nodes:
+                if name in node.name and node.op == "call_module":
+                    assert isinstance(getattr(model, node.target), INT4SymmetricWeightsDecompressor)
+
+    @staticmethod
+    def get_scale_estimation_ref():
+        return torch.tensor(
+            [
+                [[0.473328]],
+                [[0.929023]],
+                [[1.446527]],
+                [[1.920595]],
+                [[2.517054]],
+                [[3.030102]],
+                [[3.584279]],
+                [[4.043509]],
+                [[4.620008]],
+                [[5.165322]],
+                [[5.710637]],
+                [[6.122581]],
+                [[6.655914]],
+                [[7.237174]],
+                [[7.722580]],
+                [[8.255914]],
+            ]
+        )
+
+    @staticmethod
+    def get_orig_weight(model: torch.nn.Module) -> Tensor:
+        return Tensor(model.linear.weight.data.detach())
+
+    @staticmethod
+    def get_decompressed_weight(compressed_model: torch.nn.Module, input: torch.Tensor) -> Tensor:
+        weight = compressed_model.linear.weight.data.detach()
+        unpacked_w = compressed_model.nncf.external_op.weights_decompressor_linear_weight(weight)
+        return Tensor(unpacked_w)
+
+    @staticmethod
+    def get_ignored_scope_name() -> str:
+        return "linear_5"
+
+    @staticmethod
+    def get_num_int4_nodes(model: torch.nn.Module) -> int:
+        num = 0
+        for node in model.graph.nodes:
+            if node.op != "call_module":
+                continue
+            num += isinstance(getattr(model, node.target), INT4SymmetricWeightsDecompressor)
+        return num
+
+    @pytest.fixture(params=INT4_MODES)
+    def int4_mode(self, request):
+        return request.param
+
+    @staticmethod
+    def get_num_multiply_from_awq(model):
+        awq_num = 0
+        for node in model.graph.nodes:
+            if "awq" in node.name and isinstance(getattr(model, node.target), FXAWQMultiply):
+                awq_num += 1
+        return awq_num
+
+    @staticmethod
+    def get_reference_for_test_awq_scale_reference() -> Dict[str, Tensor]:
+        return {
+            "linear_2": Tensor(
+                torch.tensor([[1.226455, 1.205499, 1.141340, 1.097436, 1.064355, 1.037971, 1.016118, 0.997526]])
+            )
+        }
