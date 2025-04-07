@@ -19,6 +19,8 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
+from nncf.onnx.graph.onnx_helper import get_children
+from nncf.onnx.graph.onnx_helper import get_children_node_mapping
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 
@@ -52,3 +54,49 @@ def remove_fq_from_inputs(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx
         nodes_queue.extend(nncf_graph.get_next_nodes(current_node))
 
     return model_transformer.transform(transformation_layout)
+
+
+def eliminate_nop_cast(model: onnx.ModelProto) -> onnx.ModelProto:
+    """
+    Inspects the provided ONNX model to identify and remove any 'No-op' (no-operation)
+    cast nodes, which are operations that do not change the data type of their input.
+
+    :param model: The ONNX model to be processed.
+    :return: The ONNX model with the redundant cast nodes removed.
+    """
+    tensor_name_to_info = {
+        tensor.name: tensor
+        for tensor in (*model.graph.value_info, *model.graph.input, *model.graph.output, *model.graph.initializer)
+    }
+    redundant_cast_nodes = []
+    for node in model.graph.node:
+        if node.op_type == "Cast":
+            to_attr = None
+            for attr in node.attribute:
+                if attr.name == "to":
+                    to_attr = onnx.helper.get_attribute_value(attr)
+
+            if to_attr is None:
+                continue
+
+            inp = node.input[0]
+            info = tensor_name_to_info[inp]
+            if info.type.tensor_type.elem_type == to_attr:
+                redundant_cast_nodes.append(node)
+
+    value_infos = {i.name: i for i in model.graph.value_info}
+    input_name_to_nodes_map = get_children_node_mapping(model)
+
+    for cast_node in redundant_cast_nodes:
+        # Unlink Cast node from the graph
+        children = get_children(cast_node, input_name_to_nodes_map)
+        for child in children:
+            for i, input_name in enumerate(child.input):
+                if input_name == cast_node.output[0]:
+                    child.input[i] = cast_node.input[0]
+
+        # Remove Cast node from the graph
+        model.graph.value_info.remove(value_infos[cast_node.output[0]])
+        model.graph.node.remove(cast_node)
+
+    return model

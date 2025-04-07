@@ -14,7 +14,6 @@ from collections import Counter
 from typing import Any, Optional
 
 import onnx
-import onnxoptimizer
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -340,38 +339,7 @@ class GraphConverter:
         return Dtype.FLOAT if onnx_dtype == int(onnx.TensorProto.FLOAT) else Dtype.INTEGER
 
     @staticmethod
-    def preprocess_model(model: onnx.ModelProto) -> onnx.ModelProto:
-        """
-        Applies the following transformations to the input model:
-            - Replace empty node names
-            - Infer shapes
-            - Eliminate nop casts
-
-        :param model: Input model.
-        :return: Preprocessed model.
-        """
-        preprocessed_model = GraphConverter._replace_empty_node_name(model)
-        with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as tmp_dir:
-            model_path = os.path.join(tmp_dir, "model.onnx")
-            onnx.save_model(
-                preprocessed_model,
-                model_path,
-                save_as_external_data=True,
-                all_tensors_to_one_file=True,
-                location="model.onxx_data",
-                size_threshold=1024,
-                convert_attribute=False,
-            )
-            onnx.shape_inference.infer_shapes_path(model_path)
-            preprocessed_model = onnx.load(model_path)
-
-        # preprocessed_model = onnx.shape_inference.infer_shapes(preprocessed_model)
-
-        preprocessed_model = onnxoptimizer.optimize(preprocessed_model, ["eliminate_nop_cast"])
-        return preprocessed_model
-
-    @staticmethod
-    def create_nncf_graph(onnx_model: onnx.ModelProto, preprocess_model: bool = True) -> NNCFGraph:
+    def create_nncf_graph(onnx_model: onnx.ModelProto) -> NNCFGraph:
         """
         Creates NNCFGraph from 'onnx_model'.
         Initially, ONNXGraph is built. All nodes from onnx_model which have valid metatype are added to NNCFGraph.
@@ -380,9 +348,7 @@ class GraphConverter:
         :param onnx_model: ONNX model.
         :return: NNCFGraph.
         """
-        if preprocess_model:
-            onnx_model = GraphConverter.preprocess_model(onnx_model)
-
+        onnx_model = GraphConverter._replace_empty_node_name(onnx_model)
         edge_info_mapping = get_edge_info_mapping(onnx_model)
         children_node_mapping = get_children_node_mapping(onnx_model)
         parents_node_mapping = get_parents_node_mapping(onnx_model)

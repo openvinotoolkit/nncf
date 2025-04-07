@@ -303,7 +303,6 @@ objwalk
 odict
 oimp
 onnxhw
-onnxoptimizer
 onnxp
 onnxqdq
 onnxroi
