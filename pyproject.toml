@@ -146,6 +146,7 @@ ignore = [
     "D413", # missing-blank-line-after-last-section
     "D415", # missing-terminal-punctuation
     "D417", # undocumented-param
+    "PERF203", # try-except-in-loop
 ]
 select = [
     "CPY001", # copyright check
@@ -158,6 +159,7 @@ select = [
     "ISC", # flake8-implicit-str-concat
     "NPY", # numpy rules
     "UP", # pyupgrade
+    "PERF", # perflint
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
@@ -169,7 +171,7 @@ extend-select = [
 "tests/**/*.py" = ["F403"]
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
-"!nncf/**.py" = ["INP", "D"]
+"!nncf/**.py" = ["INP", "D", "PERF"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = """\
