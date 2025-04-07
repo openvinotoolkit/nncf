@@ -21,6 +21,7 @@ from nncf import SensitivityMetric
 from nncf.common.factory import NNCFGraphFactory
 from nncf.data.dataset import Dataset
 from nncf.experimental.torch.fx.node_utils import get_tensor_constant_from_node
+from nncf.experimental.torch.fx.transformations import get_graph_node_by_name
 from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
@@ -47,7 +48,6 @@ from tests.torch.ptq.test_weights_compression import MatMulModel
 from tests.torch.ptq.test_weights_compression import SequentialMatmulModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
-from nncf.experimental.torch.fx.transformations import get_graph_node_by_name
 
 DATA_BASED_SENSITIVITY_METRICS = (
     SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
@@ -403,6 +403,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_orig_weight(model: torch.fx.GraphModule) -> Tensor:
         return Tensor(model.linear.weight.data.detach())
+
     @staticmethod
     def get_decompressed_weight(compressed_model: torch.fx.GraphModule, input: torch.Tensor) -> Tensor:
         for node in compressed_model.graph.nodes:
@@ -411,7 +412,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         weight_node = get_graph_node_by_name(model_graph, "linear_weight_updated_constant0")
         decompression_node = get_graph_node_by_name(model_graph, "asymmetric_weights_decompressor_linear_weight_0")
         weight = get_tensor_constant_from_node(weight_node, compressed_model)
-        decompress_module = getattr(compressed_model, decompression_node.target) 
+        decompress_module = getattr(compressed_model, decompression_node.target)
         unpacked_w = decompress_module(weight)
         return Tensor(unpacked_w)
 
