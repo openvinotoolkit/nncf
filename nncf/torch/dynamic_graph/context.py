@@ -442,8 +442,7 @@ class TracingContext:
         stack_copy = self.relative_scopes_stack.copy()
         scope_el_list = []
         for relative_scope in stack_copy:
-            for scope_element in relative_scope.scope_elements:
-                scope_el_list.append(scope_element)
+            scope_el_list.extend(relative_scope.scope_elements)
         return Scope(scope_el_list)
 
     def reset_graph(self):
