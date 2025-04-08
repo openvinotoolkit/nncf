@@ -21,6 +21,7 @@ Post-training Quantization:
   - (TorchFX, Experimental) The constant folding step is removed from the `quantize_pt2e` function and the `transform_for_annotation` method of the `OpenVINOQuantizer` to align with the `torch.ao` quantization implementation.
   - Optimized GPTQ algorithm behavior to decrease memory & time consumption by 2.71x and 1.16x, respectively.
   - Added general support for optimization of models with FP8 and NF4 weights.
+  - Disable applying overflow fix for non 8-bit quantization.
 - Tutorials:
   - [Post-Training Optimization of Gemma3 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/gemma3/gemma3.ipynb)
   - [Post-Training Optimization of GLM4-V Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/glm4-v/glm4-v.ipynb)
