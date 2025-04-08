@@ -11,6 +11,7 @@ Post-training Quantization:
 - Fixes:
   - Fixed occasional failures of the weights compression algorithm on ARM CPUs.
   - Fixed GPTQ fails with per-channel int4 weights compression.
+  - Fixed weight compression fails for models with fp8 weights.
   - (PyTorch, Experimental) Fixed weights compression for float16/bfloat16 models.
   - (PyTorch, Experimental) Fixed several memory leak issues: non-detached tensors, extracted modules & graph building with gradients.
 - Improvements:
