@@ -33,6 +33,8 @@ Post-training Quantization:
   - [Post-Training Optimization of SmolDocling Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/smoldocling/smoldocling.ipynb)
   - [Post-Training Optimization of SmolVLM2 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/smolvlm2/smolvlm2.ipynb)
   - [Post-Training Optimization of GOT-OCR 2.0 Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/got-ocr2/got-ocr2.ipynb)
+  - [Post-Training Optimization of LTX-Video Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/ltx-video/ltx-video.ipynb)
+  - [Post-Training Optimization of OuteTTS Model](https://github.com/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/outetts-text-to-speech/outetts-text-to-speech.ipynb)
 
 Compression-aware training:
 
