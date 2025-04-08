@@ -301,6 +301,7 @@ def asymmetric_quantize_lora(
         return handle_torch_function(
             asymmetric_quantize_lora,
             (input_,),
+            input_,
             input_shape,
             A,
             B,
@@ -334,6 +335,7 @@ def symmetric_quantize_lora(input_, input_shape, A, B, scale, level_low, level_h
         return handle_torch_function(
             symmetric_quantize_lora,
             (input_,),
+            input_,
             input_shape,
             A,
             B,
