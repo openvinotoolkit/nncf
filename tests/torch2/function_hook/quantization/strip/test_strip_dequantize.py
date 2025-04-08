@@ -76,17 +76,17 @@ class ParamStripLora:
 @pytest.mark.parametrize(
     ("param"),
     (
-        ParamStripLora(CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.float32, 5e-4, torch.uint8),
-        ParamStripLora(CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.float16, 5e-4, torch.uint8),
+        ParamStripLora(CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.float32, 1e-3, torch.uint8),
+        ParamStripLora(CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.float16, 1e-8, torch.uint8),
         ParamStripLora(CompressWeightsMode.INT4_ASYM, INT4AsymDQ, torch.bfloat16, 1e-2, torch.uint8),
-        ParamStripLora(CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float32, 5e-4, torch.uint8),
+        ParamStripLora(CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float32, 1e-3, torch.uint8),
         # torch.compile introduces bigger diff for sym
-        ParamStripLora(CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float16, 1e-3, torch.uint8),
+        ParamStripLora(CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.float16, 1e-8, torch.uint8),
         ParamStripLora(CompressWeightsMode.INT4_SYM, INT4SymDQ, torch.bfloat16, 1e-2, torch.uint8),
         # int8 uses per-channel vs int4 group-wise
-        ParamStripLora(CompressWeightsMode.INT8_SYM, INT8SymDQ, torch.bfloat16, 5e-2, torch.int8),
+        ParamStripLora(CompressWeightsMode.INT8_SYM, INT8SymDQ, torch.bfloat16, 1e-8, torch.int8),
         # int8 uses per-channel vs int4 group-wise
-        ParamStripLora(CompressWeightsMode.INT8_ASYM, INT8AsymDQ, torch.bfloat16, 5e-2, torch.uint8),
+        ParamStripLora(CompressWeightsMode.INT8_ASYM, INT8AsymDQ, torch.bfloat16, 1e-8, torch.uint8),
     ),
     ids=str,
 )

@@ -107,15 +107,14 @@ def replace_quantizer_to_torch_native_module(model: TModel, graph: NNCFGraph) ->
 
 def replace_quantizer_to_compressed_weight_with_decompressor(model: TModel, graph: NNCFGraph) -> TModel:
     """
-    Performs transformation from fake quantize format (FQ) to dequantization (DQ):
-        (wights + FQ) -> (compressed_weights + DQ)
+    Performs transformation from fake quantize format (FQ) to dequantization one (DQ):
+        (weights + FQ) -> (compressed_weights + DQ)
 
     :param model: Compressed model
     :param graph: The model graph.
     :return: The modified NNCF network.
     """
     hook_storage = get_hook_storage(model)
-    graph.dump_graph("sample.dot")
 
     for name, module in hook_storage.named_hooks():
         if not isinstance(module, (SymmetricQuantizer, AsymmetricQuantizer)):
