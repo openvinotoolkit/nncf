@@ -5,7 +5,6 @@
 Post-training Quantization:
 
 - Features:
-  - (PyTorch) Introduced a novel weight compression method to significantly improve the accuracy of Large Language Models (LLMs) with int4 weights. Leveraging Quantization-Aware Training (QAT) and absorbable LoRA adapters, this approach can achieve a 2x reduction in accuracy loss during compression compared to the best post-training weight compression technique in NNCF (Scale Estimation + AWQ + GPTQ). The `nncf.compress_weights` API now includes a new `compression_format` option, `nncf.CompressionFormat.FQ_LORA`, for this QAT method, a sample compression pipeline with preview support is available [here](examples/llm_compression/torch/qat_with_lora).
   - (PyTorch) Added support for 4-bit weight compression with AWQ and Scale Estimation data-aware methods to reduce quality loss.
   - (PyTorch, Experimental) Introduced TorchFunctionMode support for MinMax, FastBiasCorrection, SmoothQuant, WeightCompression algorithms.
 - Fixes:
@@ -43,6 +42,7 @@ Post-training Quantization:
 Compression-aware training:
 
 - Features:
+  - (PyTorch) Introduced a novel weight compression method to significantly improve the accuracy of Large Language Models (LLMs) with int4 weights. Leveraging Quantization-Aware Training (QAT) and absorbable LoRA adapters, this approach can achieve a 2x reduction in accuracy loss during compression compared to the best post-training weight compression technique in NNCF (Scale Estimation + AWQ + GPTQ). The `nncf.compress_weights` API now includes a new `compression_format` option, `nncf.CompressionFormat.FQ_LORA`, for this QAT method, a sample compression pipeline with preview support is available [here](examples/llm_compression/torch/qat_with_lora).
   - (PyTorch) Changed compression modules serialization API: `compressed_model.nncf.get_config` was changed to `nncf.torch.get_config`. The [documentation](/docs/usage/training_time_compression/quantization_aware_training/Usage.md#saving-and-loading-compressed-models) was updated to use the new API.
 
 Requirements:
