@@ -397,8 +397,6 @@ def test_get_dtype_attribute_of_parameter():
 
 @pytest.mark.parametrize("dtype", ("float16", "float32"))
 def test_model_devices_and_precisions(use_cuda, dtype):
-    if use_cuda and not torch.cuda.is_available():
-        pytest.skip("Skipping for CPU-only setups")
     device = torch.device("cuda" if use_cuda else "cpu")
     dtype = torch.float16 if dtype == "float16" else torch.float32
 
@@ -488,6 +486,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
             for name in low_precision_nodes:
                 if name in op_name:
                     assert isinstance(op, INT4SymmetricWeightsDecompressor)
+
+    @staticmethod
+    def get_not_supported_algorithms() -> List[str]:
+        return ["lora_correction", "gptq"]
 
     @staticmethod
     def get_scale_estimation_ref():

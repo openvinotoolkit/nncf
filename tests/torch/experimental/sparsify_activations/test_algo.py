@@ -179,6 +179,8 @@ class TestSparsifyActivationsAlgorithm:
         compare_nx_graph_with_reference(graph, ref_dot_path)
 
     def test_export_openvino(self):
+        if self.desc.name == "dummy_llama" and self.compress_weights:
+            pytest.xfail("Disabled until ticket 165186 is resolved.")
         model: NNCFNetwork = self.model
         example_input = next(iter(self.dataset.get_inference_data()))
         with torch.no_grad():

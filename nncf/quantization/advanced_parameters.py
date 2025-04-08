@@ -365,26 +365,23 @@ class AdvancedCompressionParameters:
     :type statistics_path: str
     :param awq_params: Advanced parameters for AWQ algorithm.
     :type awq_params: AdvancedAWQParameters
-    :param scale_estimation_params: Advanced parameters for scale estimation algorithm.
+    :param scale_estimation_params: Advanced parameters for Scale Estimation algorithm.
     :type scale_estimation_params: AdvancedScaleEstimationParameters
+    :param gptq_params: Advanced parameters for GPTQ algorithm.
+    :type gptq_params: AdvancedGPTQParameters
+    :param lora_correction_params: Advanced parameters for Lora Correction algorithm.
+    :type lora_correction_params: AdvancedLoraCorrectionParameters
+    :param lora_adapter_rank: Rank of lora adapters for FQ_LORA format. Defaults to 256.
+    :type lora_adapter_rank: int
     """
 
     statistics_path: Optional[str] = None
-    # Advanced AWQ algorithm parameters
     awq_params: AdvancedAWQParameters = field(default_factory=AdvancedAWQParameters)
-
-    # Advanced scale estimation algorithm parameters
     scale_estimation_params: AdvancedScaleEstimationParameters = field(
         default_factory=AdvancedScaleEstimationParameters
     )
-
-    # Advanced GPTQ algorithm parameters
     gptq_params: AdvancedGPTQParameters = field(default_factory=AdvancedGPTQParameters)
-
-    # Advanced Lora Correction algorithm parameters
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
-
-    # rank of lora adapters for FQ_LORA format. Defaults to 256.
     lora_adapter_rank: int = 256
 
 
