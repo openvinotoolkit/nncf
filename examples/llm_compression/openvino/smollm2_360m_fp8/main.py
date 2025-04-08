@@ -91,7 +91,7 @@ def main():
 
     questions = [
         "What is the capital of France?",
-        "What is the highest mountain in the Alps?",
+        "What is the highest peak in the Alps?",
         "What is the largest city in Canada?",
         "What is the most visited city in Japan?",
     ]
