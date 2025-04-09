@@ -9,8 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import deque
+from typing import Dict
 
+import numpy as np
 import onnx
+from onnx.external_data_helper import _get_initializer_tensors
 
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -51,3 +54,47 @@ def remove_fq_from_inputs(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx
         nodes_queue.extend(nncf_graph.get_next_nodes(current_node))
 
     return model_transformer.transform(transformation_layout)
+
+
+def extract_raw_data_from_model(model: onnx.ModelProto) -> Dict[str, np.ndarray]:
+    """
+    Extracts raw data from the initializer tensors of an ONNX model.
+
+    This method iterates through all the initializer tensor protos in the given ONNX model,
+    converting the content of the `raw_data` field into NumPy array. It then clears the `raw_data`
+    field in each tensor.
+
+    :param model: The ONNX model to extract raw data from.
+    :return: A dictionary with tensor names as keys and NumPy arrays of raw data as values.
+    """
+    tensors = _get_initializer_tensors(model)
+    data = {}
+    for tensor in tensors:
+        if not tensor.HasField("raw_data"):
+            continue
+        # TODO(andrey-churkin): Handle the case when the model is loaded without data
+        # `onnx.load("model.onnx", load_external_data=False)`.
+
+        # TODO(andrey-churkin): Probably, we should convert the NumPy array into an `ort.OrtValue`
+        # here as follows: `OrtValue.ortvalue_from_numpy(numpy_tensor)`.
+        data[tensor.name] = onnx.numpy_helper.to_array(tensor)
+        tensor.ClearField("raw_data")
+
+    return data
+
+
+def insert_raw_data_into_model(model: onnx.ModelProto, data: Dict[str, np.ndarray]) -> None:
+    """
+    Updates the `raw_data` field of the initializer tensors in the given ONNX model using the
+    NumPy arrays from the provided dictionary.
+
+    :param model: The ONNX model to insert raw data into.
+    :param data: A dictionary where the keys are the names of the initializer tensors and the values
+        are NumPy arrays to be assigned to the `raw_data` field of the corresponding tensors.
+    """
+    tensors = _get_initializer_tensors(model)
+    for tensor in tensors:
+        numpy_array = data.get(tensor.name, None)
+        if numpy_array is not None:
+            tensor_proto = onnx.numpy_helper.from_array(numpy_array, tensor.name)
+            tensor.CopyFrom(tensor_proto)
