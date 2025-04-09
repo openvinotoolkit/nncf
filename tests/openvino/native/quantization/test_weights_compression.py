@@ -28,6 +28,7 @@ from nncf import SensitivityMetric
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.utils.debug import nncf_debug
 from nncf.common.utils.helpers import set_env_variable
+from nncf.common.utils.os import is_macos
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.openvino.graph.model_transformer import OVModelTransformer
@@ -1000,7 +1001,7 @@ def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
 )
 def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
     model = SequentialMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 4, 4]), np.arange(16).reshape(4, 4)])
+    dataset = Dataset([np.ones([1, 4, 4]), np.arange(16).reshape(1, 4, 4)])
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.E2M1,
@@ -1485,6 +1486,7 @@ def test_compression_with_transposed_activations(kwargs):
         )
 
 
+@pytest.mark.skipif(is_macos(), reason="Not relevant for MacOS")
 @pytest.mark.parametrize("disabled", [False, True])
 def test_disabled_optimized_compression(disabled):
     model = LMLinearModel().ov_model

@@ -22,6 +22,7 @@ import nncf.openvino.optimized_functions as opt_fns
 from nncf import CompressWeightsMode
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
+from nncf.common.utils.os import is_macos
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
@@ -101,6 +102,7 @@ def openvino_available(available: bool):
     nncf.common.utils.backend._OPENVINO_AVAILABLE = original_value
 
 
+@pytest.mark.skipif(is_macos(), reason="Not relevant for MacOS")
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
 @pytest.mark.parametrize("config", COMPRESSION_CONFIGS, ids=[str(c) for c in COMPRESSION_CONFIGS])
 @pytest.mark.parametrize(
@@ -214,6 +216,7 @@ def test_quantization_alignment(weight_shape, config, quantization_task, tensor_
     _check_values(results)
 
 
+@pytest.mark.skipif(is_macos(), reason="Not relevant for MacOS")
 @pytest.mark.parametrize("weight_shape", [WEIGHT_SHAPE], ids=[""])
 @pytest.mark.parametrize("config", INT4_COMPRESSION_CONFIGS, ids=[str(c) for c in INT4_COMPRESSION_CONFIGS])
 @pytest.mark.parametrize("tensor_backend", [TensorBackend.numpy, "auto"])
