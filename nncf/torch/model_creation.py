@@ -44,6 +44,7 @@ from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.io_handling import LoaderInputInfo
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
+from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
 from nncf.torch.graph.transformations.serialization import deserialize_transformations
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
@@ -115,6 +116,13 @@ def create_compressed_model(
         " - https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/torch\n"
         " - https://github.com/openvinotoolkit/nncf/tree/develop/examples/quantization_aware_training/torch"
     )
+
+    if not PATCHING_STATE.operators_are_wrapped:
+        msg = (
+            "The PyTorch operators are not wrapped. "
+            "To run create_compressed_model set NNCF_TORCH_LEGACY_TRACING=1 environment variable."
+        )
+        raise nncf.InternalError(msg)
 
     if isinstance(model, NNCFNetwork):
         msg = (
