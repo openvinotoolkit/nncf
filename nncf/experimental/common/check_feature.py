@@ -18,4 +18,4 @@ def is_experimental_torch_tracing_enabled() -> bool:
 
     :return: True if experimental torch tracing is enabled, False otherwise.
     """
-    return os.getenv("NNCF_EXPERIMENTAL_TORCH_TRACING") is not None
+    return os.getenv("NNCF_TORCH_LEGACY_TRACING", "").lower() not in ["1", "on", "true"]
