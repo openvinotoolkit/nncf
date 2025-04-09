@@ -140,7 +140,7 @@ class AWQ(Algorithm):
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(model, inplace=True)
 
-        is_data_free = True  # statistics is None
+        is_data_free = statistics is None
         description = "Applying data-free AWQ" if is_data_free else "Applying data-aware AWQ"
 
         for k, awq_data_item in track(awq_data.items(), description=description):
