@@ -52,5 +52,5 @@ def run_pytest_case_function_in_separate_process(fn: Callable) -> Tuple[int, str
             f"{stdout}\n"
             f"STDERR:\n"
             f"{stderr}\n"
-        )
+        )  # fmt: skip
     return p.returncode, stdout, stderr

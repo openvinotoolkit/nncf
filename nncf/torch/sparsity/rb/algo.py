@@ -18,6 +18,7 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import RBSparsityStatistics
@@ -44,7 +45,7 @@ from nncf.torch.utils import get_world_size
 class RBSparsityBuilder(BaseSparsityAlgoBuilder):
     def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
         return RBSparsifyingWeight(
-            target_module_node.layer_attributes.get_weight_shape(),
+            get_weight_shape_legacy(target_module_node.layer_attributes),
             frozen=False,
             compression_lr_multiplier=compression_lr_multiplier,
         )
@@ -131,7 +132,7 @@ class RBSparsityController(BaseSparsityAlgoController):
         if not self._distributed or get_world_size() == 1:
             return 1
 
-        nvalues = 0
+        num_values = 0
         ncor_values = 0
         eps = 1e-4
         for minfo in self.sparsified_module_info:
@@ -144,9 +145,9 @@ class RBSparsityController(BaseSparsityAlgoController):
             for i in range(1, len(mask_list)):
                 rel_error = (mask_list[0] - mask_list[i]) / mask_list[0]
                 ncor_values = ncor_values + (rel_error.abs() < eps).sum(dtype=mask.dtype)
-                nvalues = nvalues + mask_list[i].numel()
+                num_values = num_values + mask_list[i].numel()
 
-        return ncor_values / nvalues
+        return ncor_values / num_values
 
     def statistics(self, quickly_collected_only=False) -> NNCFStatistics:
         collector = PTSparseModelStatisticsCollector(self.model, self.sparsified_module_info)

@@ -110,19 +110,28 @@ def get_number_if_op(model: ov.Model) -> int:
     return cnt_if_op(model, 0)
 
 
-def get_const_value(const_node: ov.Node, cast_bf16_to_fp32: bool = True) -> np.ndarray:
+def get_const_value_as_numpy_tensor(const_node: ov.Node) -> np.ndarray:
     """
-    Returns the constant tensor for the node.
+    Returns the constant tensor for the node as an instance of np.ndarray. BF16 constants will be converted to FP32.
     This method is applicable only for the floating-point constant data.
 
     :param const_node: OpenVINO node.
-    :param cast_bf16_to_fp32: Whether to cast bf16 node data to fp32 or not. If False and the node contains bf16 data,
-        the resulting bf16 value will be returned encoded inside a numpy.float16 array.
     :return: The constant value.
     """
-    if const_node.get_element_type() == ov.Type.bf16 and cast_bf16_to_fp32:
+    if const_node.get_element_type() == ov.Type.bf16:
         return const_node.get_data(dtype=np.float32)
     return const_node.data
+
+
+def get_const_value_as_ov_tensor(const_node: ov.Node) -> ov.Tensor:
+    """
+    Returns the constant tensor for the node as an instance of openvino.Tensor which is useful when BF16 constant
+    needs to be retrieved as is.
+
+    :param const_node: OpenVINO node.
+    :return: The constant value as openvino.Tensor.
+    """
+    return ov.Tensor(const_node.data, const_node.get_output_shape(0), const_node.get_element_type())
 
 
 def get_bias_value(
@@ -141,7 +150,7 @@ def get_bias_value(
         node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
     bias_constant = get_node_with_bias_value(get_add_bias_node(node_with_bias, nncf_graph), nncf_graph)
     ov_bias_constant = node_mapping[bias_constant.node_name]
-    return get_const_value(ov_bias_constant)
+    return get_const_value_as_numpy_tensor(ov_bias_constant)
 
 
 def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
@@ -157,7 +166,7 @@ def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) 
     const_op_friendly_name = node_with_weight.layer_attributes.constant_attributes[port_id]["name"]
     friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
     const_op = friendly_name_to_op_map[const_op_friendly_name]
-    weight_tensor = get_const_value(const_op)
+    weight_tensor = get_const_value_as_numpy_tensor(const_op)
     return weight_tensor
 
 
@@ -463,12 +472,12 @@ def get_inplace_mean_per_ch(axis: int) -> InplaceInsertionFnType:
             reshape_input_node = node
             transposed_shape = input_shape
 
-        keeped_dims = transposed_shape[:2]
-        keeped_dims = [0 if dim < 0 else dim for dim in keeped_dims]
-        squized_dims = -1 if -1 in transposed_shape[2:] else np.prod(transposed_shape[2:])
+        kept_dims = transposed_shape[:2]
+        kept_dims = [0 if dim < 0 else dim for dim in kept_dims]
+        squeezed_dims = -1 if -1 in transposed_shape[2:] else np.prod(transposed_shape[2:])
         reshape_op = opset.reshape(
             reshape_input_node.output(output_port_id),
-            output_shape=np.array((keeped_dims[0], keeped_dims[1], squized_dims)),
+            output_shape=np.array((kept_dims[0], kept_dims[1], squeezed_dims)),
             special_zero=True,
         )
         return opset.reduce_mean(
@@ -500,7 +509,7 @@ def get_reducer_output_node_names(
         used for reduction.
     :param port_id: Target port id of the target node.
     :param fn_output_port_id: Port id of the reducer subgraph.
-    :param inplace: Wheather reducer calculated inplace or not.
+    :param inplace: Whether reducer calculated inplace or not.
     :return: Output names to feed to a reducer node.
     """
     if inplace:

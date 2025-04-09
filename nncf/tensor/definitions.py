@@ -12,6 +12,12 @@
 from dataclasses import dataclass
 from enum import Enum
 from enum import auto
+from typing import Optional, Tuple, Union
+
+T_SHAPE_ARRAY = Tuple[int, ...]
+T_SHAPE = Union[int, T_SHAPE_ARRAY]
+T_AXIS = Optional[T_SHAPE]
+T_NUMBER = Union[int, float, bool]
 
 
 class TensorBackend(Enum):
@@ -33,6 +39,9 @@ class TensorDataType(Enum):
     bfloat16 = auto()
     float32 = auto()
     float64 = auto()
+    f8e4m3 = auto()
+    f8e5m2 = auto()
+    nf4 = auto()
     int8 = auto()
     int32 = auto()
     int64 = auto()
@@ -40,11 +49,19 @@ class TensorDataType(Enum):
     uint4 = auto()
     int4 = auto()
 
-    def is_float(self):
+    def is_float(self) -> bool:
         """
         :return: True if the tensor data type is a floating-point type, else False.
         """
-        return self in [TensorDataType.float16, TensorDataType.bfloat16, TensorDataType.float32, TensorDataType.float64]
+        return self in [
+            TensorDataType.float16,
+            TensorDataType.bfloat16,
+            TensorDataType.float32,
+            TensorDataType.float64,
+            TensorDataType.f8e4m3,
+            TensorDataType.f8e5m2,
+            TensorDataType.nf4,
+        ]
 
 
 class TensorDeviceType(Enum):

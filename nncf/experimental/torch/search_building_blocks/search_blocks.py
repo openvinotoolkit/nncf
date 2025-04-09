@@ -164,15 +164,15 @@ class ExtendedBuildingBlock:
 
         :param state: Output of `get_state()` method.
         """
-        bbtype = BuildingBlockType(state[cls._state_names.BLOCK_TYPE])
-        bblock = BuildingBlock.from_state(state[cls._state_names.BASIC_BLOCK])
+        bb_type = BuildingBlockType(state[cls._state_names.BLOCK_TYPE])
+        bb_lock = BuildingBlock.from_state(state[cls._state_names.BASIC_BLOCK])
         op_addresses = {
             OperationAddress.from_str(op_address_state) for op_address_state in state[cls._state_names.OP_ADDRESSES]
         }
         ordinal_ids = state[cls._state_names.ORDINAL_IDS]
         kwargs = {
-            cls._state_names.BLOCK_TYPE: bbtype,
-            cls._state_names.BASIC_BLOCK: bblock,
+            cls._state_names.BLOCK_TYPE: bb_type,
+            cls._state_names.BASIC_BLOCK: bb_lock,
             cls._state_names.OP_ADDRESSES: op_addresses,
             cls._state_names.ORDINAL_IDS: ordinal_ids,
         }
@@ -658,17 +658,17 @@ def get_all_node_op_addresses_in_block(graph: NNCFGraph, block: BuildingBlock) -
 
 
 def get_all_modules_in_blocks(
-    compressed_model: NNCFNetwork, op_adresses_in_blocks: Set[OperationAddress]
+    compressed_model: NNCFNetwork, op_addresses_in_blocks: Set[OperationAddress]
 ) -> List[torch.nn.Module]:
     """
     Returns set of all modules included in the block.
 
     :param compressed_model: Target model.
-    :param op_adresses_in_blocks: Set of operation addresses for building block.
+    :param op_addresses_in_blocks: Set of operation addresses for building block.
     :return: List of module for building block.
     """
     modules = []
-    for op_address in op_adresses_in_blocks:
+    for op_address in op_addresses_in_blocks:
         if op_address.operator_name in NNCF_MODULES_OP_NAMES:
             modules.append(compressed_model.nncf.get_module_by_scope(op_address.scope_in_model))
     return modules

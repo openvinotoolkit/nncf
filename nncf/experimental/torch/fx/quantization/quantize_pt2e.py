@@ -123,8 +123,7 @@ def quantize_pt2e(
     nncf_graph = NNCFGraphFactory.create(transformed_model)
     quantized_model = quantization_algorithm.apply(transformed_model, nncf_graph, dataset=calibration_dataset)
 
-    # Magic. Without this call compiled model
-    # is not preformant
+    # Magic. Without this call compiled model is not performant
     quantized_model = GraphModule(quantized_model, quantized_model.graph)
 
     if fold_quantize:

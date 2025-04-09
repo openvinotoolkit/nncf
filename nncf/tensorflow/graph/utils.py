@@ -192,8 +192,8 @@ def get_list_level(lst: List) -> int:
 
 
 def check_oplambda_input_data(x: List) -> bool:
-    input_stracture = [type(item) for item in x]
-    return input_stracture in ([str, int, int], [str, int, int, dict])
+    input_structure = [type(item) for item in x]
+    return input_structure in ([str, int, int], [str, int, int, dict])
 
 
 def reformat_inbound_nodes_for_oplambda(inbound_nodes: List) -> List[List[List]]:

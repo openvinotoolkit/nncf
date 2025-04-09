@@ -35,7 +35,7 @@ class StatisticsCallback(tf.keras.callbacks.Callback):
         :param statistics_fn: A callable object that provides NNCF statistics.
         :param log_tensorboard: Whether to log statistics to tensorboard or not.
         :param log_text: Whether to log statistics to stdout.
-        :param log_dir: The directory for tensorbard logging.
+        :param log_dir: The directory for tensorboard logging.
         """
         super().__init__()
         self._statistics_fn = statistics_fn

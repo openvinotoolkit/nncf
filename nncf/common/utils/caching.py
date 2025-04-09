@@ -95,9 +95,11 @@ def disable_results_caching(cache: ResultsCache) -> Iterator[None]:
 
     :param cache: A cache container where results are stored.
     """
-    if cache.enabled():
+    should_reenable = cache.enabled()
+    if should_reenable:
         cache.disable()
+    try:
         yield
-        cache.enable()
-    else:
-        yield
+    finally:
+        if should_reenable:
+            cache.enable()

@@ -20,7 +20,7 @@ $$
 
 `sparsify_activations` automates the process of identifying the pruning thresholds based on user-specified layers, target sparsities and input dataset.
 
-> Note: This feature is **experimental** and intended solely for evaluation of sparsity-task performance. While activation sparsity can improve inference efficiency of decoding phase for Large Language Models (LLMs) ([Liu et al., 2023](https://arxiv.org/abs/2310.17157)), it neccessitates optimized runtime kernels, which are in development.
+> Note: This feature is **experimental** and intended solely for evaluation of sparsity-task performance. While activation sparsity can improve inference efficiency of decoding phase for Large Language Models (LLMs) ([Liu et al., 2023](https://arxiv.org/abs/2310.17157)), it necessitates optimized runtime kernels, which are in development.
 
 #### Example Usage
 

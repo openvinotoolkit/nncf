@@ -38,7 +38,6 @@ from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.utils.api_marker import api
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
-from nncf.experimental.torch.fx.transformations import fold_constant_except_qdq
 from nncf.quantization.advanced_parameters import FP8QuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
@@ -161,7 +160,6 @@ class OpenVINOQuantizer(TorchAOQuantizer):
             self._fill_torch_ao_annotation(edge_or_node, qspec, annotation)
 
         for quantizer_ids in quantization_setup.unified_scale_groups.values():
-
             root_quantizer_id = self._get_unified_scales_root_quantizer_id(
                 nncf_graph, quantizer_ids, quantization_setup
             )
@@ -355,12 +353,11 @@ class OpenVINOQuantizer(TorchAOQuantizer):
         For example quantizer can
         a) decompose a compound operator like scaled dot product attention,
         into bmm and softmax if quantizer knows how to quantize bmm/softmax but not sdpa
-        or b) transform scalars to tensor to allow quantizing scalares.
+        or b) transform scalars to tensor to allow quantizing scalars.
 
         Note: this is an optional method
 
         :param model: Given torch.fx.GraphModule to transform before the annotation.
         :return: The transformed torch.fx.GraphModule ready for the annotation.
         """
-        fold_constant_except_qdq(model)
         return model

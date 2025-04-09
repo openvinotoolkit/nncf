@@ -1,0 +1,72 @@
+{
+    "__nncf_hooks.pre_hooks.features/0/0/conv2d/0__1.0": {
+        "input_low": [
+            [
+                [
+                    [
+                        -2.0
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        -2.0
+                    ]
+                ]
+            ]
+        ],
+        "input_high": [
+            [
+                [
+                    [
+                        2.0
+                    ]
+                ]
+            ],
+            [
+                [
+                    [
+                        2.0
+                    ]
+                ]
+            ]
+        ]
+    },
+    "__nncf_hooks.pre_hooks.features/1/0/conv2d/0__1.0": {
+        "input_low": [
+            [
+                [
+                    [
+                        -1.0
+                    ]
+                ]
+            ]
+        ],
+        "input_high": [
+            [
+                [
+                    [
+                        1.0
+                    ]
+                ]
+            ]
+        ]
+    },
+    "__nncf_hooks.post_hooks.x__0.0": {
+        "input_low": [
+            0.0
+        ],
+        "input_high": [
+            0.9970665574073792
+        ]
+    },
+    "__nncf_hooks.post_hooks.features/0/0/conv2d/0__0.0": {
+        "input_low": [
+            -3.8243322372436523
+        ],
+        "input_high": [
+            3.794454574584961
+        ]
+    }
+}

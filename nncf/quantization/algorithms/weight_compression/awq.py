@@ -140,8 +140,8 @@ class AWQ(Algorithm):
         transformation_layout = TransformationLayout()
         model_transformer = ModelTransformerFactory.create(model, inplace=True)
 
-        is_data_free = True #statistics is None
-        description = "Applying data-free AWQ" if is_data_free else "Applying AWQ"
+        is_data_free = True  # statistics is None
+        description = "Applying data-free AWQ" if is_data_free else "Applying data-aware AWQ"
 
         for k, awq_data_item in track(awq_data.items(), description=description):
             wp = awq_data_item.weight_params
@@ -156,6 +156,8 @@ class AWQ(Algorithm):
             weight = self._backend_entity.get_weight(
                 wp.node_with_weight, weight_port_id, model, graph
             )  # get_const_value(wp.weight_node)
+            weight_dtype = weight.dtype
+            weight = weight.astype(TensorDataType.float32)
 
             if is_data_free:
                 scale = self._data_free_step(weight)
@@ -165,7 +167,7 @@ class AWQ(Algorithm):
             w_scale = fns.unsqueeze(scale, 1 - wp.reduction_axes[0])
             a_scale = fns.unsqueeze(1.0 / scale, wp.reduction_axes[0])
 
-            scaled_weight = weight * w_scale
+            scaled_weight = (weight * w_scale).astype(weight_dtype)
             self._backend_entity.set_weight(wp.node_with_weight, weight_port_id, model, graph, scaled_weight)
 
             if self._backend_entity.is_node_with_weights(
@@ -173,11 +175,11 @@ class AWQ(Algorithm):
             ):  # for MatMul->Multiply->MatMul pattern scale merged to first MatMul
                 for _, port_id in self._backend_entity.get_weight_names_and_port_ids(merge_node, graph):
                     merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
-                    merge_weight = merge_weight * a_scale
+                    merge_weight = (merge_weight * a_scale).astype(weight_dtype)
                     self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
                 a_scale = fns.transpose(a_scale)
             else:  # for Act->Multiply->MatMul and Act->MatMul patterns scale inserted after Act as extra node
-                a_scale = fns.transpose(a_scale)
+                a_scale = fns.transpose(a_scale).astype(weight_dtype)
                 next_nodes = graph.get_next_nodes(merge_node)
                 source_node_output_port = graph.get_output_edges(merge_node)[0].output_port_id
                 scale_insertion_command = self._backend_entity.scale_insertion_command(
@@ -195,6 +197,8 @@ class AWQ(Algorithm):
         alpha_step = (self._alpha_max - self._alpha_min) / self._steps
         config = wp.compression_config
         s, X = process_stats(statistics, self._subset_size)
+        s = s.astype(TensorDataType.float32)
+        X = X.astype(TensorDataType.float32)
 
         top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
         topk_idxs = fns.argsort(-s)[:top_k]

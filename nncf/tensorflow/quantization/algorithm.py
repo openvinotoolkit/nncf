@@ -56,6 +56,7 @@ from nncf.config.schemata.defaults import QUANTIZATION_OVERFLOW_FIX
 from nncf.config.schemata.defaults import QUANTIZE_INPUTS
 from nncf.config.schemata.defaults import QUANTIZE_OUTPUTS
 from nncf.config.schemata.defaults import TARGET_DEVICE
+from nncf.parameters import StripFormat
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverter
@@ -317,9 +318,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         if self._target_device in ["ANY", "CPU", "GPU"] or self._target_device == "TRIAL" and preset is not None:
             preset = QuantizationPreset(quant_config.get("preset", "performance"))
             params_dict = preset.get_params_configured_by_preset(quantizer_group)
-            overriden_params = params_dict.keys() & params_dict_from_config.keys()
-            if overriden_params:
-                nncf_logger.info(f"Preset quantizer parameters {overriden_params} explicitly overridden by config.")
+            overridden_params = params_dict.keys() & params_dict_from_config.keys()
+            if overridden_params:
+                nncf_logger.info(f"Preset quantizer parameters {overridden_params} explicitly overridden by config.")
         params_dict.update(params_dict_from_config)
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
         self.ignored_scopes_per_group[quantizer_group] = params_dict_from_config.get("ignored_scopes", [])
@@ -753,7 +754,9 @@ class QuantizationController(BaseCompressionAlgorithmController):
         """
         return self._loss
 
-    def strip_model(self, model: tf.keras.Model, do_copy: bool = False) -> tf.keras.Model:
+    def strip_model(
+        self, model: tf.keras.Model, do_copy: bool = False, strip_format: StripFormat = StripFormat.NATIVE
+    ) -> tf.keras.Model:
         if do_copy:
             model = copy_model(model)
         apply_overflow_fix(model, self._op_names)

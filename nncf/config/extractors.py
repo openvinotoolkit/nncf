@@ -67,10 +67,7 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
             matches.append(compression_algo_dict)
 
     if len(matches) > 1:
-        msg = (
-            f"Multiple algorithm configurations specified for the same "
-            f"algo {algo_name_to_match} in the NNCF config!"
-        )
+        msg = f"Multiple algorithm configurations specified for the same algo {algo_name_to_match} in the NNCF config!"
         raise nncf.ValidationError(msg)
     if not matches:
         msg = f"Did not find an algorithm configuration for algo {algo_name_to_match} in the NNCF config!"

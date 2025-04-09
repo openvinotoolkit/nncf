@@ -191,7 +191,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.OVDivideMetatype,
                 om.OVSqrtMetatype,
                 om.OVMaximumMetatype,
-                # Сomparison operations
+                # Comparison operations
                 om.OVGreaterEqualMetatype,
                 om.OVGreaterMetatype,
                 om.OVLessEqualMetatype,
@@ -215,10 +215,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 ignored_names.add(node.node_name)
         return ignored_names
 
-    def get_weight_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_weight_nodes(self, nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
         return [
             node
-            for node in nncf_graph.get_all_nodes()
+            for node in inference_nncf_graph.get_all_nodes()
             if isinstance(node.layer_attributes, OVLayerAttributes) and node.metatype in OPERATIONS_WITH_WEIGHTS
         ]
 

@@ -41,6 +41,8 @@ IGNORED_FN_NAMES = [
     "size",
     "is_floating_point",
     "_set_grad_enabled",
+    "_parse_to",
+    "_has_compatible_shallow_copy_type",
 ]
 
 
@@ -180,7 +182,7 @@ class FunctionHookMode(TorchFunctionMode):
         super().__enter__()  # type: ignore
         if self.nested_enter_count == 0:
             # Wrap _call_impl function of instance each module.
-            # Note: __call__ can`t not be overrided for instance, the function can be override only in class namespace.
+            # Note: __call__ can`t not be overridden for instance, the function can be override only in class namespace.
             logger.debug("FunctionHookMode.__enter__: wrap _call_impl function")
             for _, module in self.model.named_modules():
                 module._call_impl = types.MethodType(self._get_wrapped_call(module._call_impl), module)
@@ -338,7 +340,7 @@ class FunctionHookMode(TorchFunctionMode):
         name_in_model = self.const_name_map.get(value, None)
         if name_in_model is not None and not self.in_process_const:
             self.in_process_const = True
-            ret_value = self.hook_storage.execute_post_function_hooks(name_in_model.replace(".", ":"), 0, value)
+            ret_value = self.hook_storage.execute_post_function_hooks(name_in_model, 0, value)
             self.in_process_const = False
 
             if self.counter_reusing_shared_weights.get(id_param):
@@ -517,3 +519,17 @@ class FunctionHookMode(TorchFunctionMode):
         self.enabled = False
         yield
         self.enabled = ret
+
+
+@contextmanager
+def disable_function_hook_mode() -> Iterator[None]:
+    """
+    Temporarily disables the function tracing and execution hooks within a context.
+    """
+    enabled_modes = torch.overrides._get_current_function_mode_stack()  # type: ignore[no-untyped-call]
+    state = {(mode, mode.enabled) for mode in enabled_modes if isinstance(mode, FunctionHookMode)}
+    for mode, _ in state:
+        mode.enabled = False
+    yield
+    for mode, enabled in state:
+        mode.enabled = enabled

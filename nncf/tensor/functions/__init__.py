@@ -67,7 +67,7 @@ from nncf.tensor.functions.numeric import zeros as zeros
 from nncf.tensor.functions.numeric import zeros_like as zeros_like
 
 
-def _initialize_backends():
+def _initialize_backends() -> None:
     import contextlib
 
     import nncf.tensor.functions.numpy_io
