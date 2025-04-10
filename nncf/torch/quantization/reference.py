@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import List, Tuple, TypeVar
+from typing import Any, Callable, List, Tuple, TypeVar
 
 import numpy as np
 import torch
@@ -22,12 +22,26 @@ from nncf.torch.utils import sum_like
 GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)
 
 
-class compilation_wrapper:
-    def __init__(self, func):
+class TorchCompileWrapper:
+    """
+    Tries to wrap the provided function with torch.compile at first usage.
+    If it is not possible, it uses the original function without wrapping.
+    """
+
+    def __init__(self, func: Callable) -> None:
+        """
+        :param func: The original function to wrap.
+        """
         self._func = func
         self._compiled_func = None
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        """
+        :param args: Function args.
+        :param args: Function kwargs.
+
+        :return: Result of the function call.
+        """
         if self._compiled_func is None:
             try:
                 nncf_logger.info(f"Using function {self._func.__name__} with torch.compile.")
@@ -142,8 +156,8 @@ class ReferenceQuantize:
 
 
 torch_executor = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
-torch_forward = compilation_wrapper(torch_executor.forward)
-torch_backward = compilation_wrapper(torch_executor.backward)
+torch_forward = TorchCompileWrapper(torch_executor.forward)
+torch_backward = TorchCompileWrapper(torch_executor.backward)
 
 
 class ReferenceQuantizedFunctions:
