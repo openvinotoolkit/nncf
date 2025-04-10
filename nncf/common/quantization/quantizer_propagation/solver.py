@@ -1407,31 +1407,8 @@ class QuantizerPropagationSolver:
 
         nncf_logger.debug(f"Union of configs: {';'.join([str(qc) for qc in qconfigs_union])}")
 
-        def compatible_with_requant(qconf: QuantizerConfig, other_qconf_list: List[QuantizerConfig]) -> bool:
-            if qconf in other_qconf_list:
-                return True
-            for other_qconf in other_qconf_list:
-                if not other_qconf.is_valid_requantization_for(qconf):
-                    return False
-            return True
-
-        def compatible_wo_requant(qconf: QuantizerConfig, other_qconf_list: List[QuantizerConfig]) -> bool:
-            if qconf in other_qconf_list:
-                return True
-            return False
-
-        if self._propagation_strategy == QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION:
-            compatible_fn = compatible_with_requant
-        elif self._propagation_strategy == QuantizerPropagationRule.MERGE_ALL_IN_ONE:
-            compatible_fn = compatible_wo_requant
-        else:
-            msg = f"Unknown propagation strategy: {self._propagation_strategy}"
-            raise nncf.ValidationError(msg)
-
         merged_qconfig_list: List[QuantizerConfig] = [
-            qconf
-            for qconf in qconfigs_union
-            if all(compatible_fn(qconf, qconf_list) for qconf_list in potential_qconfigs_for_each_branch)
+            qconf for qconf in qconfigs_union if self._is_compatible_to_merge(qconf, potential_qconfigs_for_each_branch)
         ]
 
         nncf_logger.debug(f"Merged list before sorting: {';'.join([str(qc) for qc in merged_qconfig_list])}")
@@ -1467,6 +1444,29 @@ class QuantizerPropagationSolver:
                 resulting_branch_qconfig_lists[idx] = branch_qconfig_list
 
         return merged_qconfig_list, resulting_branch_qconfig_lists
+
+    def _is_compatible_to_merge(
+        self,
+        qconf: QuantizerConfig,
+        potential_qconfigs_for_each_branch: List[List[QuantizerConfig]],
+    ) -> bool:
+        """
+        Checks if the given quantizer configuration is compatible to merge with other quantizer
+        configurations based on the specified propagation strategy.
+
+        :param qconf: The quantizer configuration to check compatibility for.
+        :param potential_qconfigs_for_each_branch: List of potential quantizer configurations for each branch.
+        :return: True if the quantizer configuration is compatible to merge, False otherwise.
+        """
+        if self._propagation_strategy == QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION:
+            return all(
+                qconf in qconf_list or all(other.is_valid_requantization_for(qconf) for other in qconf_list)
+                for qconf_list in potential_qconfigs_for_each_branch
+            )
+        elif self._propagation_strategy == QuantizerPropagationRule.MERGE_ALL_IN_ONE:
+            return all(qconf in qconf_list for qconf_list in potential_qconfigs_for_each_branch)
+        msg = "Unexpected propagation strategy {rule}"
+        raise nncf.InternalError(msg)
 
     def __assign_priorities_to_configs_in_merged_list(
         self,
