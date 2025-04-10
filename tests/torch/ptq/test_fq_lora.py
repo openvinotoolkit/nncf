@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 import pytest
 import torch
 from optimum.exporters.openvino.convert import export_from_model
@@ -26,7 +28,6 @@ from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
-from nncf.scopes import IgnoredScope
 from nncf.torch import load_from_config
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.quantization.layers import AsymmetricQuantizer as AQ
@@ -164,37 +165,29 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
         assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=atol)
 
 
-@pytest.mark.cuda
-def test_checkpoint_loading(tmp_path):
-    device = "cuda"
-    device_map = "auto"
-    model_id = "hf-internal-testing/tiny-random-GPTNeoXForCausalLM"
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device_map)
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    example_input = tokenizer("dummy", return_tensors="pt").to(device)
-    except_lm_head_and_5th_vproj = (
-        r"^(?!.*(GPTNeoXLayer\[2\]/GPTNeoXSdpaAttention\[attention\]/Linear\[query_key_value\]/l|embed_out).*$).*$"
-    )
+def test_checkpoint_loading(tmp_path: Path, use_cuda: bool):
+    device = "cuda" if use_cuda else "cpu"
+    model = ShortTransformer(8, 16, share_weights=False).to(device)
+    example_input = torch.randint(0, 10, (8,)).to(device)
+
     model = compress_weights(
         model,
-        group_size=32,
+        group_size=4,
         mode=CompressWeightsMode.INT4_ASYM,
         backup_mode=CompressWeightsMode.INT8_ASYM,
-        dataset=Dataset([dict(example_input)]),
+        dataset=Dataset([example_input]),
         compression_format=CompressionFormat.FQ_LORA,
-        ignored_scope=IgnoredScope(patterns=[except_lm_head_and_5th_vproj]),
         advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=2),
     )
-    ref_output = tokenizer.decode(
-        model.generate(**example_input, do_sample=False, max_new_tokens=20)[0], skip_special_tokens=True
-    )
+    with torch.no_grad():
+        ref_output = model(example_input)
 
     # save checkpoint
     ckpt_path = tmp_path / "nncf_ckpt.pth"
     torch.save(
         {
-            "nncf_state_dict": model.nncf.state_dict(),
             "nncf_config": model.nncf.get_config(),
+            "model_state_dict": model.state_dict(),
         },
         ckpt_path,
     )
@@ -202,15 +195,13 @@ def test_checkpoint_loading(tmp_path):
 
     # load checkpoint
     nncf_ckpt = torch.load(ckpt_path, weights_only=False)
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device_map)
-    model = load_from_config(model, nncf_ckpt["nncf_config"], example_input=dict(example_input))
-    model.nncf.load_state_dict(nncf_ckpt["nncf_state_dict"])
+    model = ShortTransformer(8, 16, share_weights=False).to(device)
+    model = load_from_config(model, nncf_ckpt["nncf_config"], example_input=example_input)
+    model.load_state_dict(nncf_ckpt["model_state_dict"])
 
-    actual_output = tokenizer.decode(
-        model.generate(**example_input, do_sample=False, max_new_tokens=20)[0],
-        skip_special_tokens=True,
-    )
-    assert actual_output == ref_output
+    with torch.no_grad():
+        actual_output = model(example_input)
+    assert torch.all(actual_output == ref_output)
 
 
 def test_invalid_lora_rank():
