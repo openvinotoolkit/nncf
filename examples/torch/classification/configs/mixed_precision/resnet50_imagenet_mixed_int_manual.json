@@ -39,9 +39,6 @@
         "initializer": {
             "precision": {
                 "bitwidth_per_scope": [
-                    // | num_bits | % weights | % activations | % total |
-                    // | 8        | 21.600    | 23.200        | 44.800  |
-                    // | 4        | 21.600    | 33.600        | 55.200  |
                     [8, "ResNet/NNCFConv2d[conv1]/conv2d_0|WEIGHT"],
                     [4, "ResNet/NNCFLinear[fc]/linear_0|WEIGHT"],
                     [8, "ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0|WEIGHT"],

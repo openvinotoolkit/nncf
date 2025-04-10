@@ -295,7 +295,6 @@
         {"type": "Broadcast"},
         {"type": "Pad"},
         {"type": "ConvertLike"},
-        // NNCF-specific extensions are below:
         {
             "type": "Embedding",
             "quantization": {

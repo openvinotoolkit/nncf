@@ -8,13 +8,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 import os
 import sys
 from copy import deepcopy
 from pathlib import Path
 from typing import Dict, Union
 
-import jstyleson as json
 import pytest
 import torch.cuda
 from packaging import version

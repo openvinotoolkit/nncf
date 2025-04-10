@@ -4,7 +4,7 @@
   "input_info": {
     "sample_size":  [2, 3, 300, 300]
   },
-  "basenet": "./vgg16_bn-6c64b313.pth", // Download this from https://download.pytorch.org/models/vgg16_bn-6c64b313.pth if you want to pretrain your own FP32 net
+  "basenet": "./vgg16_bn-6c64b313.pth",
   "num_classes": 21,
   "dataset": "voc",
   "preprocessing": {

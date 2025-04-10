@@ -9,12 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
+import json
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import datasets
 import evaluate
-import jstyleson
 import numpy as np
 from transformers.training_args import ParallelMode
 
@@ -241,7 +241,7 @@ def main():
         if compression_logs:
             trainer.log_metrics("compression", compression_logs[-1])
             trainer.save_metrics("compression", compression_logs[-1])
-            compression_log_str = jstyleson.dumps(compression_logs, indent=2) + "\n"
+            compression_log_str = json.dumps(compression_logs, indent=2) + "\n"
             compression_log_path = Path(training_args.output_dir, "compression_state.json")
             with open(compression_log_path, "w", encoding="utf-8") as f:
                 f.write(compression_log_str)

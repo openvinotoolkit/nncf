@@ -34,7 +34,6 @@ classifiers = [
 ]
 dependencies = [
     "jsonschema>=3.2.0",
-    "jstyleson>=0.0.2",
     "natsort>=7.1.0",
     "networkx>=2.6, <3.5.0",
     "ninja>=1.10.0.post2, <1.12",

@@ -51,7 +51,6 @@
                 "granularity": ["perchannel", "pertensor"],
                 "narrow_range": false
             },
-            // 4-bit configs
             "q4_tn": {
                 "bits": 4,
                 "mode": "symmetric",
@@ -73,7 +72,6 @@
                 ],
                 "narrow_range": false
             },
-            // 2-bit configs
             "q2_ch": {
                 "bits": 2,
                 "mode": "symmetric",
@@ -393,7 +391,6 @@
         {"type": "Broadcast"},
         {"type": "Pad"},
         {"type": "ConvertLike"},
-        // NNCF-specific extensions are below:
         {
             "type": "Embedding",
             "quantization": {
@@ -409,6 +406,6 @@
                     "q8_w_sym_any_nr", "q8_w_asym"
                 ]
             }
-        },
+        }
     ]
 }

@@ -38,9 +38,6 @@
         "initializer": {
             "precision": {
                 "bitwidth_per_scope": [
-                    // | num_bits | % weights | % activations | % total |
-                    // | 8        | 23.077    | 23.932        | 47.009  |
-                    // | 4        | 22.222    | 30.769        | 52.991  |
                     [4, "MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0|WEIGHT"],
                     [8, "MobileNetV2/Sequential[features]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d_0|WEIGHT"],
                     [4, "MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFConv2d[0]/conv2d_0|WEIGHT"],

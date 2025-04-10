@@ -30,11 +30,6 @@
             "precision": {
                 "type": "manual",
                 "bitwidth_per_scope": [
-                    // [8, 8, 8, 8, 8, 8, 4, 8, 8, 8, 8, 8, 4, 8, 8, 4, 8, 8, 4, 8, 8, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 4, 8, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 4]
-                    // Acc@1 70.89%
-                    // | num_bits | % weights | % activations | % total |
-                    // | 8        | 23.077    | 24.786        | 47.863  |
-                    // | 4        | 22.222    | 29.915        | 52.137  |
                     [4, "MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0|WEIGHT"],
                     [8, "MobileNetV2/Sequential[features]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d_0|WEIGHT"],
                     [4, "MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFConv2d[0]/conv2d_0|WEIGHT"],

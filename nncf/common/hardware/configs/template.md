@@ -1,3 +1,4 @@
+```json5
 {
     /* Supported compression algorithm configurations */
     "config": {
@@ -74,3 +75,4 @@
         }
     ]
 }
+```
