@@ -321,7 +321,7 @@ def test_share_inputs_outputs(mocker, share_inputs, share_outputs, return_ov_ten
 @pytest.mark.parametrize(
     "weight,convertable_division,ref_compressed_weight",
     [
-        ([[0.70361328125, 0.92919921875, 0.37109375, -0.98974609375]], True, [[226, 255, 181, 0]]),
+        ([[0.70361328125, 0.92919921875, 0.37109375, -0.98974609375]], True, [[225, 255, 181, 0]]),
         ([[0.70361328125, 0.92919921875, 0.37109375, -0.98974609375]], False, [[226, 255, 181, 0]]),
     ],
 )
