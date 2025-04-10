@@ -28,10 +28,16 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
 from nncf.scopes import IgnoredScope
 from nncf.torch import load_from_config
+from nncf.torch.model_creation import wrap_model
 from nncf.torch.quantization.layers import AsymmetricQuantizer as AQ
 from nncf.torch.quantization.layers import LoraMixin
 from nncf.torch.quantization.layers import SymmetricQuantizer as SQ
+from tests.cross_fw.shared.paths import TEST_ROOT
+from tests.torch.ptq.test_weights_compression import ShortTransformer
+from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import LinearModel
+
+REFERENCE_GRAPH_DIR = TEST_ROOT / "torch" / "data" / "reference_graphs" / "compress_weights" / "fq_lora"
 
 
 class ValidationMock:
@@ -72,6 +78,7 @@ def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausal
     )
 
 
+@pytest.mark.cuda
 @pytest.mark.parametrize(
     "compression_kwargs",
     (dict(scale_estimation=True, awq=True), dict(scale_estimation=False, awq=False)),
@@ -87,7 +94,7 @@ def get_ov_model(model: AutoModelForCausalLM, tmp_path: str) -> OVModelForCausal
 )
 def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num_trainable, _seed):
     model_id = "facebook/opt-125m"
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda"
     model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device)
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     inputs = tokenizer("overfit " * 10, return_tensors="pt").to(device)
@@ -133,7 +140,7 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
     assert first_loss > 8
     assert float(loss) < 1
 
-    if "awq" in compression_kwargs:
+    if compression_kwargs["awq"]:
         return  # Skip test for strip for awq + se initialization. Cases with data-free methods are enough.
 
     with torch.no_grad():
@@ -157,12 +164,12 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
         assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=atol)
 
 
+@pytest.mark.cuda
 def test_checkpoint_loading(tmp_path):
-    model_id = "hf-internal-testing/tiny-random-GPTNeoXForCausalLM"
-    if not torch.cuda.is_available():
-        pytest.skip("Skipping CUDA test case for CPU only setups.")
     device = "cuda"
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map="auto")
+    device_map = "auto"
+    model_id = "hf-internal-testing/tiny-random-GPTNeoXForCausalLM"
+    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device_map)
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     example_input = tokenizer("dummy", return_tensors="pt").to(device)
     except_lm_head_and_5th_vproj = (
@@ -195,7 +202,7 @@ def test_checkpoint_loading(tmp_path):
 
     # load checkpoint
     nncf_ckpt = torch.load(ckpt_path, weights_only=False)
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map="auto")
+    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device_map)
     model = load_from_config(model, nncf_ckpt["nncf_config"], example_input=dict(example_input))
     model.nncf.load_state_dict(nncf_ckpt["nncf_state_dict"])
 
@@ -219,3 +226,32 @@ def test_invalid_lora_rank():
             compression_format=CompressionFormat.FQ_LORA,
             advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=too_big_rank),
         )
+
+
+@pytest.mark.parametrize("all_layers", [True, False])
+def test_compress_shared_weights(mocker, all_layers):
+    model = ShortTransformer(8, 16, share_weights=True)
+
+    input_ids = torch.randint(0, 10, (8,))
+    wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
+
+    compressed_model = compress_weights(
+        wrapped_model,
+        mode=CompressWeightsMode.INT4_SYM,
+        all_layers=all_layers,
+        group_size=4,
+        compression_format=CompressionFormat.FQ_LORA,
+        advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=4),
+    )
+    nncf_graph = compressed_model.nncf.get_graph()
+    filename = f"shared_weights_all_layers_{all_layers}.dot"
+    check_graph(nncf_graph, filename, REFERENCE_GRAPH_DIR, extended=True)
+
+    assert len(compressed_model.nncf.external_quantizers) == 2
+    # check that the weight decompressors are called only once
+    # for val in compressed_model.nncf.external_quantizers.values():
+    for val in compressed_model.nncf.external_quantizers.values():
+        mocker.spy(val, "forward")
+    compressed_model(input_ids)
+    for val in compressed_model.nncf.external_quantizers.values():
+        assert val.forward.call_count == 1

@@ -79,6 +79,14 @@ class UnsupportedModelError(Exception):
     pass
 
 
+class InvalidGroupSizeError(Exception):
+    """
+    Raised in case of group-wise quantization, when number of channels are not divided by the given group size.
+    """
+
+    pass
+
+
 class UnsupportedVersionError(Exception):
     """
     Raised when an unsupported version is encountered.
