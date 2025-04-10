@@ -153,7 +153,7 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
         # Workaround till export from the optimum would be fixed - CVS-164159
         model = model.to(torch.float32)
 
-        model = nncf.strip(model, strip_format=StripFormat.DQ, example_input=example_inputs)
+        model = nncf.strip(model, do_copy=False, strip_format=StripFormat.DQ, example_input=example_inputs)
         stripped_output = generate_control_output(model, tokenizer)
 
         model = get_ov_model(model, tmp_path)
