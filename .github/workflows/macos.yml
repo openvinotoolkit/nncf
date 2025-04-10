@@ -56,6 +56,6 @@ jobs:
       - name: Print installed modules
         run: pip list
       - name: Run pre-commit
-        run: pytest -n 3 -ra tests/openvino --dist loadscope
+        run: pytest -ra tests/openvino
         env:
           ONEDNN_MAX_CPU_ISA: AVX2
