@@ -550,7 +550,10 @@ class BiasCorrection(Algorithm):
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, output_filter_func, self._algorithm_key
         ):
-            output_fp.extend(tensor_collector.get_statistics().mean_values)
+            if not hasattr(tensor_collector.get_statistics().mean_values, "__len__"):
+                output_fp.append(tensor_collector.get_statistics().mean_values)
+            else:
+                output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
