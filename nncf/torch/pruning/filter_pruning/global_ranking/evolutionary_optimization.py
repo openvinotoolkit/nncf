@@ -46,10 +46,10 @@ class EvolutionOptimizer:
 
     def __init__(self, initial_filter_norms: Dict, hparams: Dict, random_seed: int):
         """
-        :param initial_filter_norms: Initial filter norms needed to get std and var of filter norms in each leyer.
+        :param initial_filter_norms: Initial filter norms needed to get std and var of filter norms in each layer.
         :param hparams: hyperparams of the Optimizer, can contain population_size, num_generations, num_samples,
         mutate_percent, sigma_scale
-        :param random_seed: random seed, thet should be set during action generation for reproducibility
+        :param random_seed: random seed, that should be set during action generation for reproducibility
         """
         self.random_seed = random_seed
         # Optimizer hyper-params

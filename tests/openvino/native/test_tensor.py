@@ -26,18 +26,29 @@ from nncf.tensor.functions.openvino_numeric import DTYPE_MAP as DTYPE_MAP_OV
 class TestOVNNCFTensorOperators:
     @staticmethod
     def to_tensor(x, backend=TensorBackend.ov, dtype=TensorDataType.float32):
+        no_numpy_support_dtypes = [
+            TensorDataType.bfloat16,
+            TensorDataType.uint4,
+            TensorDataType.int4,
+            TensorDataType.nf4,
+            TensorDataType.f8e5m2,
+            TensorDataType.f8e4m3,
+        ]
+
         if backend == TensorBackend.ov:
-            if dtype in [TensorDataType.bfloat16, TensorDataType.uint4, TensorDataType.int4]:
+            if dtype in no_numpy_support_dtypes:
                 ov_const = opset.constant(x, dtype=DTYPE_MAP_OV[dtype])
                 return ov.Tensor(ov_const.data, ov_const.data.shape, DTYPE_MAP_OV[dtype])
             else:
                 return ov.Tensor(np.array(x, dtype=DTYPE_MAP_NP[dtype]))
         elif backend == TensorBackend.numpy:
-            if dtype in [TensorDataType.bfloat16, TensorDataType.uint4, TensorDataType.int4]:
-                raise ValueError(f"Can't create NumPY tensor in dtype {dtype}")
+            if dtype in no_numpy_support_dtypes:
+                msg = f"Can't create NumPY tensor in dtype {dtype}"
+                raise ValueError(msg)
             return np.array(x, dtype=DTYPE_MAP_NP[dtype])
         else:
-            raise ValueError("Unsupported backend")
+            msg = "Unsupported backend"
+            raise ValueError(msg)
 
     @staticmethod
     def backend() -> TensorBackend:

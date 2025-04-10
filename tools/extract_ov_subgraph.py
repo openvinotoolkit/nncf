@@ -257,7 +257,8 @@ if __name__ == "__main__":
     output_path = Path(args.output_path) if args.output_path is not None else None
 
     if distance <= 0:
-        raise ValueError("Distance should be positive")
+        msg = "Distance should be positive"
+        raise ValueError(msg)
 
     if output_path is None or output_path.suffix == "":
         output_filename = f"{input_path.stem}_{Path(node_name).stem}_{distance}.xml"
@@ -271,7 +272,8 @@ if __name__ == "__main__":
         output_dir = output_path.parent
 
     if output_path.exists():
-        raise ValueError(f"There is already and IR at {output_path}. Exiting.")
+        msg = f"There is already and IR at {output_path}. Exiting."
+        raise ValueError(msg)
 
     # Read IR xml as dict
     tree = dET.parse(input_path)

@@ -33,12 +33,23 @@ class ReferenceQuantize:
         elif backend_type is ReferenceBackendType.TORCH:
             self.backend = torch
         else:
-            raise nncf.UnsupportedBackendError("Unknown backend for ReferenceQuantize")
+            msg = "Unknown backend for ReferenceQuantize"
+            raise nncf.UnsupportedBackendError(msg)
 
     def _astype(self, tensor: GeneralizedTensor, dtype) -> GeneralizedTensor:
         if self.backend is np:
             return tensor.astype(dtype)
         return tensor.type(dtype)
+
+    def _sign(self, tensor: GeneralizedTensor) -> GeneralizedTensor:
+        if self.backend is np:
+            return np.sign(tensor)
+        return torch.sign(tensor)
+
+    def _reciprocal(self, tensor: GeneralizedTensor) -> GeneralizedTensor:
+        if self.backend is np:
+            return np.reciprocal(tensor)
+        return torch.reciprocal(tensor)
 
     def forward(
         self, input_: GeneralizedTensor, input_low: GeneralizedTensor, input_range: GeneralizedTensor, levels: int
@@ -71,8 +82,8 @@ class ReferenceQuantize:
         mask_lo = self._astype(mask_lo, input_.dtype)
 
         mask_in = 1 - mask_hi - mask_lo
-        range_sign = np.sign(input_range)
-        err = (output - input_) * np.reciprocal(input_range * range_sign)
+        range_sign = self._sign(input_range)
+        err = (output - input_) * self._reciprocal(input_range * range_sign)
         grad_range = grad_output * (err * mask_in + range_sign * (level_low / level_high) * mask_lo + mask_hi)
         grad_range = sum_like(grad_range, input_range)
 

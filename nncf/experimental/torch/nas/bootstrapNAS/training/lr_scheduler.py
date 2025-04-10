@@ -65,7 +65,8 @@ def calc_learning_rate(
     elif lr_schedule_type is None:
         lr = init_lr
     else:
-        raise ValueError("do not support: %s" % lr_schedule_type)
+        msg = f"do not support: {lr_schedule_type}"
+        raise ValueError(msg)
     return lr
 
 
@@ -100,7 +101,7 @@ class LRSchedulerParams:
     @classmethod
     def from_dict(cls, lr_scheduler_config: Dict[str, Any]) -> "LRSchedulerParams":
         """
-        Initialize learning rate scheduler parameters storage clas from Dict.
+        Initialize learning rate scheduler parameters storage class from Dict.
         :param lr_scheduler_config: Dict with parameters of learning rate scheduler.
         :return:
         """

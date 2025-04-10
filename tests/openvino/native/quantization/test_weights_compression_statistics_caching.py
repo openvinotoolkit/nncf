@@ -14,6 +14,7 @@ from itertools import product
 from typing import Tuple
 
 import datasets
+import numpy as np
 import openvino as ov
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
@@ -36,6 +37,11 @@ def create_transform_fn(model: OVModelForCausalLM, tokenizer: AutoTokenizer):
         tokenized_text = tokenizer(data["text"], return_tensors="np")
         input_ids = tokenized_text["input_ids"]
         inputs = {"input_ids": input_ids, "attention_mask": tokenized_text["attention_mask"]}
+
+        if "position_ids" in model.input_names:
+            position_ids = np.cumsum(inputs["attention_mask"], axis=1) - 1
+            position_ids[inputs["attention_mask"] == 0] = 1
+            inputs["position_ids"] = position_ids
 
         batch_size = input_ids.shape[0]
         if hasattr(model, "key_value_input_names"):

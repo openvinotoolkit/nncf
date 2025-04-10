@@ -83,17 +83,18 @@ def load_checkpoint(checkpoint, ckpt_path):
     logger.info("Load from checkpoint is enabled")
     if tf.io.gfile.isdir(ckpt_path):
         path_to_checkpoint = tf.train.latest_checkpoint(ckpt_path)
-        logger.info("Latest checkpoint: {}".format(path_to_checkpoint))
+        logger.info(f"Latest checkpoint: {path_to_checkpoint}")
     else:
         path_to_checkpoint = ckpt_path if tf.io.gfile.exists(ckpt_path + ".index") else None
-        logger.info("Provided checkpoint: {}".format(path_to_checkpoint))
+        logger.info(f"Provided checkpoint: {path_to_checkpoint}")
 
     if not path_to_checkpoint:
         logger.info("No checkpoint detected.")
         if ckpt_path:
-            raise nncf.ValidationError(f"ckpt_path was given, but no checkpoint detected in path: {ckpt_path}")
+            msg = f"ckpt_path was given, but no checkpoint detected in path: {ckpt_path}"
+            raise nncf.ValidationError(msg)
 
-    logger.info("Checkpoint file {} found and restoring from checkpoint".format(path_to_checkpoint))
+    logger.info(f"Checkpoint file {path_to_checkpoint} found and restoring from checkpoint")
     status = checkpoint.restore(path_to_checkpoint)
     status.expect_partial()
     logger.info("Completed loading from checkpoint")
@@ -185,7 +186,7 @@ def train_epoch(
             continue
         if step == steps_per_epoch:
             save_path = checkpoint_manager.save()
-            logger.info("Saved checkpoint for epoch={}: {}".format(epoch, save_path))
+            logger.info(f"Saved checkpoint for epoch={epoch}: {save_path}")
             break
 
         compression_ctrl.scheduler.step()
@@ -193,7 +194,8 @@ def train_epoch(
         train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
 
         if np.isnan(train_metric_result["total_loss"]):
-            raise ValueError("total loss is NaN")
+            msg = "total loss is NaN"
+            raise ValueError(msg)
 
         train_metric_result.update({"learning_rate": get_learning_rate(optimizer, optimizer.iterations)})
 
@@ -201,8 +203,8 @@ def train_epoch(
 
         if step % print_freq == 0:
             time = timer.toc(average=False)
-            logger.info("Step: {}/{} Time: {:.3f} sec".format(step, steps_per_epoch, time))
-            logger.info("Training metric = {}".format(train_metric_result))
+            logger.info(f"Step: {step}/{steps_per_epoch} Time: {time:.3f} sec")
+            logger.info(f"Training metric = {train_metric_result}")
             timer.tic()
 
 
@@ -235,7 +237,7 @@ def train(
 
     logger.info("Training...")
     for epoch in range(initial_epoch, epochs):
-        logger.info("Epoch: {}/{}".format(epoch, epochs))
+        logger.info(f"Epoch: {epoch}/{epochs}")
 
         train_epoch(
             train_step,
@@ -255,7 +257,7 @@ def train(
         test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
         validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
         eval_metric.reset_states()
-        logger.info("Validation metric = {}".format(test_metric_result))
+        logger.info(f"Validation metric = {test_metric_result}")
 
         statistics = compression_ctrl.statistics()
         logger.info(statistics.to_str())
@@ -281,10 +283,10 @@ def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
 
         if batch_idx % print_freq == 0:
             time = timer.toc(average=False)
-            logger.info("Predict for batch: {}/{} Time: {:.3f} sec".format(batch_idx, num_batches, time))
+            logger.info(f"Predict for batch: {batch_idx}/{num_batches} Time: {time:.3f} sec")
             timer.tic()
 
-    logger.info("Total time: {:.3f} sec".format(timer.total_time))
+    logger.info(f"Total time: {timer.total_time:.3f} sec")
 
     timer.reset()
 
@@ -292,7 +294,7 @@ def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
     timer.tic()
     result = metric.result()
     timer.toc(average=False)
-    logger.info("Total time: {:.3f} sec".format(timer.total_time))
+    logger.info(f"Total time: {timer.total_time:.3f} sec")
 
     return result
 
@@ -318,9 +320,8 @@ def run(config):
     # Create dataset
     train_builder, test_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
     train_dataset, test_dataset = train_builder.build(), test_builder.build()
-    train_dist_dataset, test_dist_dataset = strategy.experimental_distribute_dataset(
-        train_dataset
-    ), strategy.experimental_distribute_dataset(test_dataset)
+    train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
+    test_dist_dataset = strategy.experimental_distribute_dataset(test_dataset)
 
     # Training parameters
     epochs = config.epochs
@@ -442,7 +443,7 @@ def run(config):
 
     logger.info(compression_ctrl.statistics().to_str())
     metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
-    logger.info("Validation metric = {}".format(metric_result))
+    logger.info(f"Validation metric = {metric_result}")
 
     if config.metrics_dump is not None:
         write_metrics(metric_result["AP"], config.metrics_dump)
@@ -450,7 +451,7 @@ def run(config):
     if "export" in config.mode:
         save_path, save_format = get_saving_parameters(config)
         export_model(compression_ctrl.strip(), save_path, save_format)
-        logger.info("Saved to {}".format(save_path))
+        logger.info(f"Saved to {save_path}")
 
 
 def export(config):
@@ -469,7 +470,7 @@ def export(config):
 
     save_path, save_format = get_saving_parameters(config)
     export_model(compression_ctrl.strip(), save_path, save_format)
-    logger.info("Saved to {}".format(save_path))
+    logger.info(f"Saved to {save_path}")
 
 
 def main(argv):

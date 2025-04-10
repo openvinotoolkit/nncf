@@ -14,6 +14,8 @@ from torch import nn
 
 from nncf.experimental.torch2.function_hook.wrapper import register_post_function_hook
 from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from nncf.torch.layer_utils import COMPRESSION_MODULES
+from nncf.torch.layer_utils import StatefulModuleInterface
 
 
 class CallCount(torch.nn.Module):
@@ -71,7 +73,6 @@ class ConvJitNormModel(nn.Module):
 
 
 class SimpleModel(nn.Module):
-
     @staticmethod
     def get_example_inputs():
         return torch.ones([1, 1, 3, 3])
@@ -103,3 +104,79 @@ class ModelMultiEdge(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x + x
         return x
+
+
+class MatMulLeft(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.w = torch.nn.Parameter(torch.tensor([1], dtype=torch.float32))
+
+    @staticmethod
+    def get_example_inputs():
+        return torch.ones([1, 1])
+
+    def forward(self, x):
+        return torch.matmul(x, self.w)
+
+
+class MatMulRight(MatMulLeft):
+    def forward(self, x):
+        return torch.matmul(self.w, x)
+
+
+class QuantizedConvModel(nn.Module):
+    @staticmethod
+    def get_example_inputs():
+        return torch.ones([1, 1, 3, 3])
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.conv = nn.Conv2d(1, 1, 1)
+
+    def forward(self, x: torch.Tensor):
+        x = self.conv(x)
+        x = torch.relu(x)
+        return x
+
+
+class SharedParamModel(nn.Module):
+    @staticmethod
+    def get_example_inputs():
+        return torch.ones([1, 3])
+
+    def __init__(self):
+        super().__init__()
+        shared_linear = nn.Linear(3, 1, bias=False)
+        self.module1 = nn.Sequential(shared_linear)
+        self.module2 = nn.Sequential(shared_linear)
+
+    def forward(self, x):
+        return self.module1(x) + self.module2(x)
+
+
+class CounterHook(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.counter = 0
+
+    def forward(self, x):
+        self.counter += 1
+        return x + 1
+
+
+@COMPRESSION_MODULES.register()
+class HookWithState(torch.nn.Module, StatefulModuleInterface):
+    def __init__(self, state: str):
+        super().__init__()
+        self._state = state
+        self._dummy_param = torch.nn.Parameter(torch.tensor(1.0))
+
+    def forward(self, x):
+        return x + self._dummy_param
+
+    def get_config(self):
+        return self._state
+
+    @classmethod
+    def from_config(cls, state: str):
+        return cls(state)

@@ -168,7 +168,7 @@ def _get_activation_tensor_shape(
 
     :param nncf_graph: NNCFGraph.
     :param node: NNCFNode.
-    :param target_point: Determines from input or ouput of a node take a shape info.
+    :param target_point: Determines from input or output of a node take a shape info.
     :return: None, if there is no shape info, otherwise - tensor shape.
     """
     if target_point.type == TargetType.PRE_LAYER_OPERATION:
@@ -180,16 +180,17 @@ def _get_activation_tensor_shape(
         edges = nncf_graph.get_output_edges_by_port_id(node, target_point.port_id)
         shape = edges[0].tensor_shape
     else:
-        raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
+        msg = f"Unsupported target point type {target_point.type}."
+        raise NotImplementedError(msg)
     if not shape:  # ONNX model can not have a shape of a edge, even after shape inference.
         if target_point.type == TargetType.PRE_LAYER_OPERATION:
             nncf_logger.info(
-                f"The shape of input edge of a node {node.node_name} is unkown. \
+                f"The shape of input edge of a node {node.node_name} is unknown. \
                     It could lead to inaccurate statistics collection."
             )
         elif target_point.type == TargetType.POST_LAYER_OPERATION:
             nncf_logger.info(
-                f"The shape of output edge of a node {node.node_name} is unkown. \
+                f"The shape of output edge of a node {node.node_name} is unknown. \
                     It could lead to inaccurate statistics collection."
             )
         nncf_logger.info("Please consider to run pre-processing before quantization.")

@@ -186,9 +186,8 @@ def staged_quantization_main_worker(current_gpu, config):
         load_state(model, model_state_dict, is_resume=True)
 
     if not isinstance(compression_ctrl, QuantizationController):
-        raise nncf.InternalError(
-            "The stage quantization sample worker may only be run with the quantization algorithms!"
-        )
+        msg = "The stage quantization sample worker may only be run with the quantization algorithms!"
+        raise nncf.InternalError(msg)
 
     model, _ = prepare_model_for_execution(model, config)
     original_model.to(config.device)
@@ -219,7 +218,7 @@ def staged_quantization_main_worker(current_gpu, config):
                 )
             )
         else:
-            logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
+            logger.info(f"=> loaded checkpoint '{resuming_checkpoint_path}'")
 
     if is_export_only:
         export_model(compression_ctrl, config)
@@ -340,7 +339,7 @@ def train_staged(
             make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
 
             for key, value in prepare_for_tensorboard(statistics).items():
-                config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
+                config.tb.add_scalar(f"compression/statistics/{key}", value, len(train_loader) * epoch)
 
 
 def train_epoch_staged(
@@ -437,7 +436,7 @@ def train_epoch_staged(
                     loss=losses,
                     top1=top1,
                     top5=top5,
-                    rank="{}:".format(config.rank) if config.multiprocessing_distributed else "",
+                    rank=f"{config.rank}:" if config.multiprocessing_distributed else "",
                 )
             )
 
@@ -452,7 +451,7 @@ def train_epoch_staged(
 
             statistics = compression_ctrl.statistics(quickly_collected_only=True)
             for stat_name, stat_value in prepare_for_tensorboard(statistics).items():
-                config.tb.add_scalar("train/statistics/{}".format(stat_name), stat_value, i + global_step)
+                config.tb.add_scalar(f"train/statistics/{stat_name}", stat_value, i + global_step)
 
 
 def get_wd(optimizer):

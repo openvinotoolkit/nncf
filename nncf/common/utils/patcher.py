@@ -36,11 +36,10 @@ class Patcher:
     ) -> None:
         """
         Apply patching
-        :param obj_cls: Function to be overriden.
+        :param obj_cls: Function to be overridden.
         :param wrapper: Wrapper function to override with.
         :param force: Whether to override previously applied patches or not.
         """
-
         obj_cls, fn_name = self.import_obj(obj_cls)
 
         # wrap only if function does exist

@@ -14,7 +14,7 @@ from __future__ import annotations
 import inspect
 import types
 from types import MethodType
-from typing import Any, Callable, Dict, Tuple, cast
+from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, cast
 
 from torch import nn
 
@@ -25,53 +25,58 @@ from nncf.experimental.torch2.function_hook.hook_storage import RemovableHookHan
 
 ATR_HOOK_STORAGE = "__nncf_hooks"
 
+TModel = TypeVar("TModel", bound=nn.Module)
+
 
 class ForwardWithHooks:
     """Class to wrap forward function of nn.Module, to forward function of the model with enabled FunctionHookMode"""
 
-    __slots__ = "_func", "__dict__", "__weakref__"
-    _func: Callable[..., Any]
+    __slots__ = "_orig_forward", "_model", "__dict__", "__weakref__"
+    _orig_forward: Callable[..., Any]
+    _model: nn.Module
 
-    def __new__(cls, orig_forward: Callable[..., Any]) -> ForwardWithHooks:
-        if not callable(orig_forward):
-            raise TypeError("the first argument must be callable")
+    def __new__(cls, model: nn.Module, orig_forward: Optional[Callable[..., Any]] = None) -> ForwardWithHooks:
+        if isinstance(model.forward, ForwardWithHooks):
+            msg = "Func already wrapped"
+            raise TypeError(msg)
 
-        if isinstance(orig_forward, ForwardWithHooks):
-            raise TypeError("Func already wrapped")
+        self = super().__new__(cls)
 
-        self = super(ForwardWithHooks, cls).__new__(cls)
-
-        self._func = orig_forward
+        self._orig_forward = model.forward if orig_forward is None else orig_forward
+        self._model = model
         return self
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        model = cast(nn.Module, self._func.__self__)  # type: ignore[attr-defined]
-        with FunctionHookMode(model=model, hook_storage=get_hook_storage(model)) as ctx:
+        with FunctionHookMode(model=self.model, hook_storage=get_hook_storage(self.model)) as ctx:
             args, kwargs = ctx.process_model_inputs(args, kwargs)
-            outputs = self._func(*args, **kwargs)
+            outputs = self.orig_forward(*args, **kwargs)
             outputs = ctx.process_model_outputs(outputs)
             return outputs
 
     def __repr__(self) -> str:
-        return f"ForwardWithHooks.{repr(self._func)}"
+        return f"ForwardWithHooks.{repr(self.orig_forward)}"
 
-    def __reduce__(self) -> Tuple[Callable[..., Any], Tuple[Any, ...], Tuple[Any, ...]]:
-        return type(self), (self._func,), (self._func, self.__dict__ or None)
+    def __reduce__(self) -> Any:
+        return type(self), (self.model, self.orig_forward), (self.model, self.orig_forward, self.__dict__ or None)
 
-    def __setstate__(self, state: Tuple[Any, Any]) -> None:
+    def __setstate__(self, state: Any) -> None:
         if not isinstance(state, tuple):
-            raise TypeError("argument to __setstate__ must be a tuple")
-        if len(state) != 2:
-            raise TypeError(f"expected 2 items in state, got {len(state)}")
-        func, namespace = state
-        if not callable(func) or (namespace is not None and not isinstance(namespace, dict)):
-            raise TypeError("invalid partial state")
+            msg = "argument to __setstate__ must be a tuple"
+            raise TypeError(msg)
+        if len(state) != 3:
+            msg = f"expected 3 items in state, got {len(state)}"
+            raise TypeError(msg)
+        model, orig_forward, namespace = state
+        if not callable(orig_forward) or (namespace is not None and not isinstance(namespace, dict)):
+            msg = "invalid partial state"
+            raise TypeError(msg)
 
         if namespace is None:
             namespace = {}
 
+        self._model = model
+        self._orig_forward = orig_forward
         self.__dict__ = namespace
-        self._func = func
 
     @property
     def __code__(self) -> types.CodeType:
@@ -79,15 +84,23 @@ class ForwardWithHooks:
 
     @property
     def __globals__(self) -> Dict[str, Any]:
-        return self._func.__globals__
+        return self.orig_forward.__globals__
 
     @property
     def __name__(self) -> str:
-        return self._func.__name__
+        return self.orig_forward.__name__
 
     @property
     def __signature__(self) -> inspect.Signature:
-        return inspect.signature(self._func)
+        return inspect.signature(self.orig_forward)
+
+    @property
+    def orig_forward(self) -> Callable[..., Any]:
+        return self._orig_forward
+
+    @property
+    def model(self) -> nn.Module:
+        return self._model
 
 
 class ReplicateForDataParallel:
@@ -101,25 +114,44 @@ class ReplicateForDataParallel:
 
     def __new__(cls, func: Callable[..., Any]) -> ReplicateForDataParallel:
         if not callable(func):
-            raise TypeError("the first argument must be callable")
+            msg = "the first argument must be callable"
+            raise TypeError(msg)
 
         if isinstance(func, ReplicateForDataParallel):
-            raise TypeError("Func already wrapped")
+            msg = "Func already wrapped"
+            raise TypeError(msg)
 
-        self = super(ReplicateForDataParallel, cls).__new__(cls)
+        self = super().__new__(cls)
 
         self._func = func
         return self
 
     def __call__(self, *args: Any, **kwargs: Any) -> nn.Module:
         module = cast(nn.Module, self._func.__self__)  # type: ignore[attr-defined]
-        saved_wrapped_forward = module.forward
+        saved_forward_with_hooks = module.forward
+
+        # Ensure that the forwarding method is not overridden. If it is, calling forward()
+        # will raise a RuntimeError due to mismatched device assignments, e.g.:
+        # "Expected all tensors to be on the same device, but found at least two devices, cuda:1 and cuda:0!"
+        # This happens because __self__ still references the original model for all replicas
+        # in an overridden forward method.
+
+        if not isinstance(saved_forward_with_hooks, ForwardWithHooks):
+            msg = "Not supported overridden forward method, expected ForwardWithHooks"
+            raise nncf.InternalError(msg)
+
+        if not (
+            isinstance(saved_forward_with_hooks.orig_forward, types.MethodType)
+            and saved_forward_with_hooks.orig_forward.__func__ is module.__class__.forward
+        ):
+            msg = "Not supported overridden forward method of original module"
+            raise nncf.InternalError(msg)
+
         module.__dict__.pop("forward")
 
-        replica: nn.Module = self._func(*args, **kwargs)
-
-        replica.forward = ForwardWithHooks(replica.forward)
-        module.forward = saved_wrapped_forward
+        replica: nn.Module = self.func(*args, **kwargs)
+        replica.forward = ForwardWithHooks(replica)
+        module.forward = saved_forward_with_hooks
 
         return replica
 
@@ -131,12 +163,15 @@ class ReplicateForDataParallel:
 
     def __setstate__(self, state: Dict[str, Any]) -> None:
         if not isinstance(state, tuple):
-            raise TypeError("argument to __setstate__ must be a tuple")
+            msg = "argument to __setstate__ must be a tuple"
+            raise TypeError(msg)
         if len(state) != 2:
-            raise TypeError(f"expected 2 items in state, got {len(state)}")
+            msg = f"expected 2 items in state, got {len(state)}"
+            raise TypeError(msg)
         func, namespace = state
         if not callable(func) or (namespace is not None and not isinstance(namespace, dict)):
-            raise TypeError("invalid partial state")
+            msg = "invalid partial state"
+            raise TypeError(msg)
 
         if namespace is None:
             namespace = {}
@@ -149,7 +184,7 @@ class ReplicateForDataParallel:
         return cast(MethodType, self._func)
 
 
-def wrap_model(model: nn.Module) -> nn.Module:
+def wrap_model(model: TModel) -> TModel:
     """
     Wraps a nn.Module to inject custom behavior into the forward pass and replication process.
 
@@ -164,10 +199,7 @@ def wrap_model(model: nn.Module) -> nn.Module:
     :param model: The nn.Module to be wrapped.
     :return: The modified model with the custom behavior injected.
     """
-
-    if "forward" in model.__dict__:
-        raise nncf.InternalError("Wrapper does not supported models with overrided forward function")
-    model.forward = ForwardWithHooks(model.forward)
+    model.forward = ForwardWithHooks(model)
     model._replicate_for_data_parallel = ReplicateForDataParallel(model._replicate_for_data_parallel)  # type: ignore
     model.add_module(ATR_HOOK_STORAGE, HookStorage())
     return model
@@ -197,7 +229,8 @@ def get_hook_storage(model: nn.Module) -> HookStorage:
     """
     storage = getattr(model, ATR_HOOK_STORAGE)
     if storage is None:
-        raise nncf.InstallationError("Hook storage is not exist in the model")
+        msg = "Hook storage is not exist in the model"
+        raise nncf.InstallationError(msg)
     return cast(HookStorage, getattr(model, ATR_HOOK_STORAGE))
 
 
@@ -209,7 +242,6 @@ def register_pre_function_hook(model: nn.Module, op_name: str, port_id: int, hoo
     :param op_name: The name of the operation associated with the hook.
     :param port_id: The port ID associated with the hook.
     :param hook: The pre-function hook module to be executed.
-
     :return: A handle that can be used to remove the hook later.
     """
     hook_storage = get_hook_storage(model)

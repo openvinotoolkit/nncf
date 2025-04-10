@@ -94,7 +94,8 @@ class DetectionOutputFunction(torch.autograd.Function):
         """
         with no_jit_trace(), no_nncf_trace():
             if detection_output_params.nms_threshold <= 0:
-                raise ValueError("nms_threshold must be non negative.")
+                msg = "nms_threshold must be non negative."
+                raise ValueError(msg)
             device = loc_data.device
             batch_size = loc_data.size(0)  # batch size
             num_priors = int(loc_data.size(1) / 4)

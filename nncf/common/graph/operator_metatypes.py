@@ -105,10 +105,11 @@ class OperatorMetatypeRegistry(Registry):
                 op_names = obj.get_all_aliases()
                 for name in op_names:
                     if name in self._op_name_to_op_meta_dict:
-                        raise nncf.InternalError(
+                        msg = (
                             "Inconsistent operator metatype registry - single patched "
                             f"op name `{name}` maps to multiple metatypes!"
                         )
+                        raise nncf.InternalError(msg)
                     self._op_name_to_op_meta_dict[name] = obj
             return obj
 

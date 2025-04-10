@@ -53,10 +53,11 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
 
     if algo_name_to_match == NO_COMPRESSION_ALGORITHM_NAME:
         if len(algo_list) > 0:
-            raise nncf.ValidationError(
+            msg = (
                 f"No algorithm configuration should be specified "
                 f"when you try to extract {algo_name_to_match} from the NNCF config!"
             )
+            raise nncf.ValidationError(msg)
         return {}
 
     matches = []
@@ -66,14 +67,11 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
             matches.append(compression_algo_dict)
 
     if len(matches) > 1:
-        raise nncf.ValidationError(
-            f"Multiple algorithm configurations specified for the same "
-            f"algo {algo_name_to_match} in the NNCF config!"
-        )
+        msg = f"Multiple algorithm configurations specified for the same algo {algo_name_to_match} in the NNCF config!"
+        raise nncf.ValidationError(msg)
     if not matches:
-        raise nncf.InternalError(
-            f"Did not find an algorithm configuration for algo {algo_name_to_match} in the NNCF config!"
-        )
+        msg = f"Did not find an algorithm configuration for algo {algo_name_to_match} in the NNCF config!"
+        raise nncf.InternalError(msg)
     return next(iter(matches))
 
 
@@ -120,11 +118,12 @@ def extract_range_init_params(config: NNCFConfig, algorithm_name: str = "quantiz
     if max_num_init_samples == 0:
         return None
     if not isinstance(range_init_args, QuantizationRangeInitArgs):
-        raise ValueError(
+        msg = (
             "Should run range initialization as specified via config,"
             "but the initializing data loader is not provided as an extra struct. "
             "Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class"
         )
+        raise ValueError(msg)
 
     params = {
         "init_range_data_loader": range_init_args.data_loader,
@@ -169,16 +168,16 @@ def get_bn_adapt_algo_kwargs(nncf_config: NNCFConfig, params: Dict[str, Any]) ->
     try:
         args = nncf_config.get_extra_struct(BNAdaptationInitArgs)
     except KeyError:
-        raise BNAdaptDataLoaderNotFoundError(
+        msg = (
             "Unable to create the batch-norm statistics adaptation algorithm "
             "because the data loader is not provided as an extra struct. Refer to the "
             "`NNCFConfig.register_extra_structs` method and the `BNAdaptationInitArgs` class."
-        ) from None
+        )
+        raise BNAdaptDataLoaderNotFoundError(msg) from None
 
     if not isinstance(args, BNAdaptationInitArgs):
-        raise BNAdaptDataLoaderNotFoundError(
-            "The extra struct for batch-norm adaptation must be an instance of the BNAdaptationInitArgs class."
-        )
+        msg = "The extra struct for batch-norm adaptation must be an instance of the BNAdaptationInitArgs class."
+        raise BNAdaptDataLoaderNotFoundError(msg)
     params = {
         "num_bn_adaptation_samples": num_bn_adaptation_samples,
         "data_loader": args.data_loader,
@@ -210,13 +209,15 @@ def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, Any]
             if NNCFAlgorithmNames.FILTER_PRUNING in algorithms and any(
                 algo in NNCFAlgorithmNames.SPARSITY for algo in algorithms
             ):
-                raise nncf.ValidationError(
+                msg = (
                     "adaptive_compression_level mode supports filter_pruning or sparsity algorithms"
                     "separately. Please, choose only one algorithm with adaptive compression level. "
                     "Take a note that you still can use it combined with quantization."
                 )
+                raise nncf.ValidationError(msg)
             if len(algorithms) == 1 and algorithms[0] == NNCFAlgorithmNames.QUANTIZATION:
-                raise nncf.ValidationError("adaptive_compression_level mode doesn't support quantization")
+                msg = "adaptive_compression_level mode doesn't support quantization"
+                raise nncf.ValidationError(msg)
 
     accuracy_aware_training_config = config.get("accuracy_aware_training", None)
 

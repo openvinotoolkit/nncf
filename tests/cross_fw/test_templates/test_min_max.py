@@ -13,12 +13,23 @@ from typing import Tuple
 
 import pytest
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
+
+
+def test_set_ignored_scope():
+    algorithm = MinMaxQuantization()
+    assert algorithm._ignored_scope == nncf.IgnoredScope()
+    ref_ignored_scope = nncf.IgnoredScope(names=["add_1"], patterns=["linear*"], types=["conv"])
+    algorithm.set_ignored_scope(ref_ignored_scope)
+    assert algorithm._ignored_scope is ref_ignored_scope
+
 
 CONV_WEIGHT_SHAPE = (3, 10, 4, 4)
 DEPTHWISECONV_WEIGHT_SHAPE = (5, 10, 20, 7, 7)
@@ -98,6 +109,11 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
     ) -> BaseLayerAttributes:
         "Returns backend specific layer attributes for MatMul."
 
+    @property
+    @abstractmethod
+    def target_point_cls(self):
+        "Backend specific TargetPoint class."
+
     @pytest.mark.parametrize(
         "conv_shape, weight_port_id, ref_axes", ((CONV_WEIGHT_SHAPE, 0, (0,)), (CONV_WEIGHT_SHAPE, 1, (0,)))
     )
@@ -165,9 +181,5 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
         """
         matmul_node = NNCFNode({"metatype": self.matmul_metatype})
 
-        class DummyTargetPoint:
-            input_port_id = 0
-
-        assert (
-            self.backend().get_weight_quantization_axes(matmul_node, DummyTargetPoint(), len(weight_shape)) == ref_axes
-        )
+        target_point = self.create_target_point(TargetType.PRE_LAYER_OPERATION, None, 0)
+        assert self.backend().get_weight_quantization_axes(matmul_node, target_point, len(weight_shape)) == ref_axes

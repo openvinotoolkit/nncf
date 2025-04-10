@@ -219,5 +219,5 @@
     "batch_norm_17": "PTBatchNormMetatype",
     "relu_17": "PTRELUMetatype",
     "conv2d_18": "PTConv2dMetatype",
-    "output_1": "PTOutputNoopMetatype"
+    "output": "PTOutputNoopMetatype"
 }

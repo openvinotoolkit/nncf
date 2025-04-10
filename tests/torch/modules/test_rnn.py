@@ -67,7 +67,7 @@ def replace_lstm(model):
             for d in range(custom_lstm.num_directions):
                 for name in get_param_names(custom_lstm.bias):
                     suffix = "_reverse" if d == 1 else ""
-                    param_name = name + "_l{}{}".format(layer_idx, suffix)
+                    param_name = name + f"_l{layer_idx}{suffix}"
                     param = getattr(module_, param_name)
                     getattr(custom_lstm, param_name).data.copy_(param.data)
         custom_lstm.to(device)
@@ -418,7 +418,7 @@ class TestLSTM:
                 for name in cls.get_param_names(bias):
                     suffix = "_reverse" if d == 1 else ""
                     param = getattr(data, name)
-                    param_name = name + "_l{}{}".format(layer_idx, suffix)
+                    param_name = name + f"_l{layer_idx}{suffix}"
                     getattr(nn_lstm, param_name).data.copy_(param[i].data)
 
     @classmethod

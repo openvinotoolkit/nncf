@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, Iterable, List, Optional, Tuple, TypeVar
+from typing import Callable, Dict, Iterable, List, Optional, Tuple, TypeVar
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -19,11 +19,15 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import HAWQAggregator
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import HessianTensorStatistic
+from nncf.parameters import CompressionFormat
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 
@@ -146,15 +150,23 @@ class WeightCompressionAlgoBackend(ABC):
         weight_compression_parameters: Iterable[WeightCompressionParameters],
         precomputed_scales: Dict[str, Tensor] = None,
         precomputed_zero_points: Dict[str, Tensor] = None,
+        lora_correction_algo: Optional[LoraCorrectionAlgorithm] = None,
+        compression_format: CompressionFormat = CompressionFormat.DQ,
+        advanced_parameters: AdvancedCompressionParameters = AdvancedCompressionParameters(),
     ) -> TModel:
         """
         Applies weight compression transformations to the model.
 
         :param model: Model in which the weights will be compressed according to the weight compression description.
         :param graph: The graph associated with the model.
-        :param weight_compression_parameters: List of weight compression parameters.
-        :param precomputed_scales: Precomputed scales for weights compression.
-        :param precomputed_zero_points: Precomputed zero points for weights compression.
+        :param weight_compression_parameters: An iterable of weight compression parameters.
+        :param precomputed_scales: Precomputed scales for weight compression.
+        :param precomputed_zero_points: Precomputed zero points for weight compression.
+        :param lora_correction_algo: An optional algorithm to reduce quantization noise after weight compression by
+            using low-rank adapters. This algorithm not only overrides weights with their quantized counterparts but
+            also expands the model's execution graph following the Low-Rank Adaptation (LoRA) concept.
+        :param compression_format: The format in which the model is saved after weight compression.
+        :param compression_format_params: Describes advanced parameters of compression formats.
         :return: The transformed model.
         """
 
@@ -232,6 +244,17 @@ class WeightCompressionAlgoBackend(ABC):
         :param algo_name: Name of the algorithm to which the parameters refer.
         :param parameters: Incoming dictionary with parameters to save.
         :param path: Optional list of the paths.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
+        """
+        Returns backend-specific callable to filter statistic containers according to its statistic point.
+
+        :param activation_port_id: Activation port id for the statistic collection target node.
+        :param algorithm_key: Current algorithm key.
+        :return: Backend-specific callable to filter statistic containers according to its statistic point.
         """
 
 

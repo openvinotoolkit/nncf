@@ -10,8 +10,8 @@ and training-time algorithms for optimizing inference of neural networks in
 [OpenVINO&trade;](https://docs.openvino.ai) with a minimal accuracy drop.
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/),
-[TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and
-[OpenVINO&trade;](https://docs.openvino.ai).
+[TorchFX](https://pytorch.org/docs/stable/fx.html), [TensorFlow](https://www.tensorflow.org/),
+[ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai).
 
 The framework is organized as a Python package that can be built and used
 as a standalone tool. Its architecture is unified to make adding different
@@ -41,11 +41,11 @@ For more information about NNCF, see:
 
 ### Post-Training Compression Algorithms
 
-| Compression algorithm                                                                                                                                       | OpenVINO  | PyTorch   | TensorFlow    | ONNX          |
-| :---------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------: | :-------: | :-----------: | :-----------: |
-| [Post-Training Quantization](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/post_training_compression/post_training_quantization/Usage.md) | Supported | Supported | Supported     | Supported     |
-| [Weight Compression](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/post_training_compression/weights_compression/Usage.md)                | Supported | Supported | Not supported | Not supported |
-| [Activation Sparsity](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/sparsify_activations/ActivationSparsity.md)              | Not supported | Experimental |Not supported| Not supported |
+| Compression algorithm                                                                                                                                       | OpenVINO  | PyTorch   | TorchFX   | TensorFlow    | ONNX          |
+| :---------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------: | :-------: | :-----------: | :-----------: | :-----------: |
+| [Post-Training Quantization](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/post_training_compression/post_training_quantization/Usage.md) | Supported | Supported | Experimental | Supported     | Supported     |
+| [Weight Compression](https://github.com/openvinotoolkit/nncf/blob/develop/docs/usage/post_training_compression/weights_compression/Usage.md)                | Supported | Supported | Experimental | Not supported | Not supported |
+| [Activation Sparsity](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/sparsify_activations/ActivationSparsity.md)              | Not supported | Experimental | Not supported| Not supported| Not supported |
 
 ### Training-Time Compression Algorithms
 
@@ -67,10 +67,6 @@ For more information about NNCF, see:
 - Git patch for prominent third-party repository
   ([huggingface-transformers](https://github.com/huggingface/transformers))
   demonstrating the process of integrating NNCF into custom training pipelines.
-- Seamless combination of pruning, sparsity, and quantization algorithms. Refer
-  to [optimum-intel](https://github.com/huggingface/optimum-intel/tree/main/examples/openvino)
-  for examples of joint (movement) pruning, quantization, and distillation
-  (JPQD), end-to-end from NNCF optimization to compressed OpenVINO IR.
 - Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow
   compressed models to SavedModel or Frozen Graph format, ready to use with
   [OpenVINO&trade; toolkit](https://docs.openvino.ai).

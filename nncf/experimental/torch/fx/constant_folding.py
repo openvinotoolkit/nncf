@@ -15,6 +15,8 @@ from typing import Any, Callable, Dict, List, Optional
 import torch.fx
 import torch.utils._pytree as pytree
 
+from nncf.torch.utils import get_model_device
+
 aten = torch.ops.aten
 
 
@@ -67,7 +69,7 @@ def _is_const_source(node: torch.fx.Node) -> bool:
 
 class ConstantFolder(torch.fx.Interpreter):
     """
-    Finds constant subraphs and place it in node_replacement attribute.
+    Finds constant subgraphs and place it in node_replacement attribute.
     """
 
     def __init__(
@@ -195,9 +197,9 @@ class ConstantFolder(torch.fx.Interpreter):
 
             self.add_node_replacement(node, out)
 
-            flattened_node_inps = pytree.arg_tree_leaves(*node.args, **node.kwargs)
+            flattened_node_inputs = pytree.arg_tree_leaves(*node.args, **node.kwargs)
 
-            for n in flattened_node_inps:
+            for n in flattened_node_inputs:
                 if not isinstance(n, torch.fx.Node):
                     continue
 
@@ -214,10 +216,10 @@ class ConstantFolder(torch.fx.Interpreter):
 
     def run(self) -> Any:  # type: ignore[override]
         env: Dict[torch.fx.Node, Any] = {}
-        self.insert_placerholder_values(env)
+        self.insert_placeholder_values(env)
         return super().run(initial_env=env)
 
-    def insert_placerholder_values(self, env: Dict[torch.fx.Node, Any]) -> None:
+    def insert_placeholder_values(self, env: Dict[torch.fx.Node, Any]) -> None:
         for n in self.module.graph.find_nodes(op="placeholder"):
             env[n] = self.unknown_value  # type: ignore[assignment]
 
@@ -240,34 +242,35 @@ def constant_fold(
     constraint_fn: Optional[Callable[[torch.fx.Node], bool]] = None,
 ) -> None:
     """
-    Calcualtes constant subgraphs values and replaces them with a constant node inplace.
+    Calculates constant subgraphs values and replaces them with a constant node inplace.
 
     :param gm: Given graph model.
-    :param constraint_fn: Constraint function which takes a node and returs the constraint:
+    :param constraint_fn: Constraint function which takes a node and returns the constraint:
         should the node be constant folded or not.
     """
-    with torch.no_grad():
-        with torch.utils._python_dispatch._disable_current_modes():
-            cf = ConstantFolder(gm)
-            cf.run()
+    with torch.no_grad(), torch.utils._python_dispatch._disable_current_modes():
+        cf = ConstantFolder(gm)
+        cf.run()
 
-            for node, constant in cf.node_replacements.items():
-                if constraint_fn is not None and not constraint_fn(node):
-                    continue
-                _replace_node_with_constant(gm, node, constant)
+        device = get_model_device(gm)
+        for node, constant in cf.node_replacements.items():
+            if constraint_fn is not None and not constraint_fn(node):
+                continue
+            constant = constant.to(device)
+            _replace_node_with_constant(gm, node, constant)
 
-            erased_params = []
-            for node in gm.graph.find_nodes(op="get_attr"):
-                if len(node.users) == 0:
-                    if hasattr(gm, node.target):
-                        delattr(gm, node.target)
-                    erased_params.append(node)
+        erased_params = []
+        for node in gm.graph.find_nodes(op="get_attr"):
+            if len(node.users) == 0:
+                if hasattr(gm, node.target):
+                    delattr(gm, node.target)
+                erased_params.append(node)
 
-            for node in erased_params:
-                gm.graph.erase_node(node)
+        for node in erased_params:
+            gm.graph.erase_node(node)
 
-            # Custom _is_impure function allows to eliminate all layers with zero
-            # users including inplace ops like relu_ besides output and placeholders.
-            gm.graph.eliminate_dead_code(_is_impure)
-            gm.graph.lint()
-            gm.recompile()
+        # Custom _is_impure function allows to eliminate all layers with zero
+        # users including inplace ops like relu_ besides output and placeholders.
+        gm.graph.eliminate_dead_code(_is_impure)
+        gm.graph.lint()
+        gm.recompile()

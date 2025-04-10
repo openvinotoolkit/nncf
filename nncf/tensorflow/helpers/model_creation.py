@@ -86,7 +86,6 @@ def create_compressed_model(
     :return: A tuple of the compression controller for the requested algorithm(s) and the model object with additional
      modifications necessary to enable algorithm-specific compression during fine-tuning.
     """
-
     warning_deprecated(
         "The 'nncf.tensorflow.create_compressed_model' function is deprecated and will be removed in a "
         "future release.\n"
@@ -109,10 +108,11 @@ def create_compressed_model_impl(
     """
     if is_experimental_quantization(config):
         if is_keras_layer_model(model):
-            raise ValueError(
+            msg = (
                 "Experimental quantization algorithm has not supported models with "
                 "`tensorflow_hub.KerasLayer` layer yet."
             )
+            raise ValueError(msg)
 
         from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 
@@ -145,7 +145,8 @@ def get_input_signature(config: NNCFConfig):
             sample_size = info["sample_size"]
             samples_sizes.append(sample_size)
     else:
-        raise nncf.ValidationError("sample_size must be provided in configuration file")
+        msg = "sample_size must be provided in configuration file"
+        raise nncf.ValidationError(msg)
 
     input_signature = []
     for sample_size in samples_sizes:
@@ -167,7 +168,7 @@ def load_from_config(model: tf.keras.Model, config: Dict[str, Any]) -> tf.keras.
     Does not recover additional modules weights as they are located in a corresponded checkpoint file.
 
     :param model: TensorFlow model.
-    :parem config: Config.
+    :param config: Config.
     :return: tf.keras.Model builded from given model with additional layers recovered from given config.
     """
     quantizer_setup_state = config["quantization"]["quantizer_setup"]

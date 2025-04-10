@@ -44,11 +44,13 @@ class GraphConverter:
         """
         type_name = ov_type.get_type_name()
         conversion_map = {
+            "nf4": "float",
+            "f8e4m3": "float",
+            "f8e5m2": "float",
             "f16": "float",
             "bf16": "float",
             "f32": "float",
             "f64": "float",
-            "nf4": "float",
             "i4": "int",
             "i8": "int",
             "i16": "int",
@@ -64,7 +66,8 @@ class GraphConverter:
             "string": "int",
         }
         if type_name not in conversion_map:
-            raise NotImplementedError(f"NNCF is not yet supported OpenVINO data type: {type_name}.")
+            msg = f"NNCF is not yet supported OpenVINO data type: {type_name}."
+            raise NotImplementedError(msg)
         return Dtype(conversion_map[type_name])
 
     @staticmethod

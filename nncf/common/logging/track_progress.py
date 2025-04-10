@@ -103,7 +103,8 @@ class WeightedProgress(Progress):
         Perform weighted advancement based on an integer step value.
         """
         if advance % 1 != 0:
-            raise Exception(f"Unexpected `advance` value: {advance}.")
+            msg = f"Unexpected `advance` value: {advance}."
+            raise Exception(msg)
         advance = int(advance)
         current_step: int = task.fields["completed_steps"]
         weighted_advance: float = sum(task.fields["weights"][current_step : current_step + advance])
@@ -116,7 +117,8 @@ class WeightedProgress(Progress):
         Get weighted `completed` corresponding to an integer `completed` field.
         """
         if completed % 1 != 0:
-            raise Exception(f"Unexpected `completed` value: {completed}.")
+            msg = f"Unexpected `completed` value: {completed}."
+            raise Exception(msg)
         return float(sum(task.fields["weights"][: int(completed)]))
 
 
@@ -177,7 +179,6 @@ class track(Generic[ProgressType]):
             it takes to process sequence elements. Useful when processing time is strongly non-uniform.
         :return: An iterable of the values in the sequence.
         """
-
         self.sequence = sequence
         self.weights = weights
         self.total = sum(self.weights) if self.weights is not None else total
@@ -227,7 +228,8 @@ class track(Generic[ProgressType]):
 
     def __iter__(self) -> Iterator[ProgressType]:
         if self.sequence is None:
-            raise RuntimeError("__iter__ called without set sequence.")
+            msg = "__iter__ called without set sequence."
+            raise RuntimeError(msg)
         with self:
             yield from self.progress.track(
                 self.sequence,
@@ -254,5 +256,6 @@ class track(Generic[ProgressType]):
 
     def update(self, advance: float, **kwargs: Any) -> None:
         if self.task is None:
-            raise RuntimeError("update is available only inside context manager.")
+            msg = "update is available only inside context manager."
+            raise RuntimeError(msg)
         self.progress.update(self.task, advance=advance, **kwargs)

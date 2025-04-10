@@ -47,9 +47,9 @@ class ONNXModelTransformer(ModelTransformer):
     ZERO_POINT_NAME_PREFIX = "zero_point_"
 
     def __init__(self, model: onnx.ModelProto):
-        infered_model = onnx.shape_inference.infer_shapes(model)
-        super().__init__(infered_model)
-        self.onnx_model_extractor = onnx.utils.Extractor(infered_model)
+        inferred_model = onnx.shape_inference.infer_shapes(model)
+        super().__init__(inferred_model)
+        self.onnx_model_extractor = onnx.utils.Extractor(inferred_model)
 
     def _get_target_edge(
         self,
@@ -273,7 +273,8 @@ class ONNXModelTransformer(ModelTransformer):
         elif tensor_type == np.int8:
             onnx_tensor_type = onnx.TensorProto.INT8
         else:
-            raise nncf.ValidationError(f"Incorrect tensor type - {tensor_type}.")
+            msg = f"Incorrect tensor type - {tensor_type}."
+            raise nncf.ValidationError(msg)
         assert quantizer.input[1] == dequantizer.input[1] and quantizer.input[2] == dequantizer.input[2]
         scale_tensor_name = quantizer.input[1]
         zero_point_tensor_name = quantizer.input[2]
@@ -327,9 +328,8 @@ class ONNXModelTransformer(ModelTransformer):
         input_nodes = []
         input_nodes.extend(children_node_mapping[target_edge_name])
         if not input_nodes:
-            raise nncf.InternalError(
-                f"Can not add the quantizer to the {target_edge_name} edge. This edge does not have end node."
-            )
+            msg = f"Can not add the quantizer to the {target_edge_name} edge. This edge does not have end node."
+            raise nncf.InternalError(msg)
 
         if transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
             # If we need to change only target nodes input
@@ -431,7 +431,8 @@ class ONNXModelTransformer(ModelTransformer):
             was_processed[dequantize_node_proto.name] = True
 
         if not all(was_processed.values()):
-            raise RuntimeError("Invalid transformation commands.")
+            msg = "Invalid transformation commands."
+            raise RuntimeError(msg)
 
         initializers = {i.name: i for i in model.graph.initializer}
         value_infos = {i.name: i for i in model.graph.value_info}

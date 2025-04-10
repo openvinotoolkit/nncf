@@ -23,9 +23,10 @@ from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
 
 import nncf
+from nncf import Dataset
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
-from nncf.data import Dataset
+from nncf.common.utils.api_marker import api
 from nncf.experimental.quantization.algorithms.post_training.algorithm import ExperimentalPostTrainingQuantization
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.quantization.quantizer.openvino_adapter import OpenVINOQuantizerAdapter
@@ -35,9 +36,10 @@ from nncf.experimental.torch.fx.transformations import QUANTIZE_NODE_TARGETS
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
-from nncf.quantization.advanced_parameters import RangeEstimatorParameters
+from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 
+@api(canonical_alias="nncf.experimental.torch.fx.quantize_pt2e")
 def quantize_pt2e(
     model: torch.fx.GraphModule,
     quantizer: Quantizer,
@@ -57,8 +59,11 @@ def quantize_pt2e(
     Applies post-training quantization to the torch.fx.GraphModule provided model
     using provided torch.ao quantizer.
 
+    :param model: A torch.fx.GraphModule instance to be quantized.
     :param quantizer: Torch ao quantizer to annotate nodes in the graph with quantization setups
         to convey the desired way of quantization.
+    :param calibration_dataset: A representative dataset for the
+        calibration process.
     :param subset_size: Size of a subset to calculate activations
         statistics used for quantization.
     :param fast_bias_correction: Setting this option to `False` enables a different
@@ -77,11 +82,13 @@ def quantize_pt2e(
     :param fold_quantize: Boolean flag for whether fold the quantize op or not. The value is True by default.
     :param do_copy: The copy of the given model is being quantized if do_copy == True,
         otherwise the model is quantized inplace. Default value is False.
+    :return: The quantized torch.fx.GraphModule instance.
     """
     nncf_logger.warning("This is an experimental feature and may change in the future without notice.")
 
     if subset_size < 1:
-        raise nncf.ValidationError("Subset size must be positive.")
+        msg = "Subset size must be positive."
+        raise nncf.ValidationError(msg)
 
     batch_size = calibration_dataset.get_batch_size()
     if batchwise_statistics is None:
@@ -93,7 +100,7 @@ def quantize_pt2e(
         model = deepcopy(model)
 
     _fuse_conv_bn_(model)
-    if isinstance(quantizer, OpenVINOQuantizer):
+    if isinstance(quantizer, OpenVINOQuantizer) or hasattr(quantizer, "get_nncf_quantization_setup"):
         quantizer = OpenVINOQuantizerAdapter(quantizer)
     else:
         quantizer = TorchAOQuantizerAdapter(quantizer)
@@ -116,8 +123,7 @@ def quantize_pt2e(
     nncf_graph = NNCFGraphFactory.create(transformed_model)
     quantized_model = quantization_algorithm.apply(transformed_model, nncf_graph, dataset=calibration_dataset)
 
-    # Magic. Without this call compiled model
-    # is not preformant
+    # Magic. Without this call compiled model is not performant
     quantized_model = GraphModule(quantized_model, quantized_model.graph)
 
     if fold_quantize:
@@ -142,7 +148,8 @@ def quantize_pt2e(
 
 
 def _quant_node_constraint(n: torch.fx.Node) -> bool:
-    """If there is any pure ops between get_attr and quantize op they will be const propagated
+    """
+    If there is any pure ops between get_attr and quantize op they will be const propagated
     e.g. get_attr(weight) -> transpose -> quantize -> dequantize*
     (Note: dequantize op is not going to be constant propagated)
 

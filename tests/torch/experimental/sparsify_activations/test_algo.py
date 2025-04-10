@@ -128,7 +128,6 @@ sparsify_activations_algorithm_test_descs = [
 @pytest.mark.parametrize("compress_weights", [False, True], scope="class")
 @pytest.mark.parametrize("use_cuda", [False, True], ids=["cpu", "cuda"], scope="class")
 class TestSparsifyActivationsAlgorithm:
-
     @pytest.fixture(autouse=True, scope="class")
     def setup(self, request, desc: SparsifyActivationsAlgorithmTestDesc, compress_weights: bool, use_cuda: bool):
         if use_cuda and not torch.cuda.is_available():
@@ -180,6 +179,8 @@ class TestSparsifyActivationsAlgorithm:
         compare_nx_graph_with_reference(graph, ref_dot_path)
 
     def test_export_openvino(self):
+        if self.desc.name == "dummy_llama" and self.compress_weights:
+            pytest.xfail("Disabled until ticket 165186 is resolved.")
         model: NNCFNetwork = self.model
         example_input = next(iter(self.dataset.get_inference_data()))
         with torch.no_grad():

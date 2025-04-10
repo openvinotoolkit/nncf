@@ -25,6 +25,8 @@ from nncf.common.hook_handle import add_op_to_registry
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.patcher import PATCHER
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
+from nncf.experimental.torch2.function_hook.hook_executor_mode import disable_function_hook_mode
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import DynamicGraphNode
 from nncf.torch.dynamic_graph.graph import DynamicGraphNodeParameters
@@ -55,7 +57,7 @@ class PreHookId:
         return self.__dict__ == other.__dict__
 
     def __str__(self):
-        return str(self.op_address) + "|INPUT{}".format(self.input_port_id)
+        return str(self.op_address) + f"|INPUT{self.input_port_id}"
 
     def __hash__(self):
         return hash(str(self))
@@ -81,9 +83,11 @@ class TracingThreadLocals(threading.local):
 
 
 class CopySafeThreadingVars:
-    """A class holding variables that are related to threading and
+    """
+    A class holding variables that are related to threading and
     thus impossible to deepcopy. The deepcopy will simply return a
-    new object without copying, but won't fail."""
+    new object without copying, but won't fail.
+    """
 
     def __init__(self):
         self.thread_local = TracingThreadLocals()
@@ -240,7 +244,6 @@ class TracingContext:
         be loaded if the model had changed in the meantime in a way that does not impact the major function call
         order (e.g. if comments were added to the .py file with the model)
         """
-
         call_order = self.get_operator_call_count_in_scope(operator_name, self.scope)
 
         op_address = OperationAddress(operator_name, self.scope, call_order)
@@ -255,7 +258,7 @@ class TracingContext:
 
     @staticmethod
     def _get_operator_counter_key(operator_name: str, scope: Scope):
-        return "{}_{}".format(str(scope), operator_name)
+        return f"{str(scope)}_{operator_name}"
 
     def register_operator_call(self, operator_name: str, scope: Scope):
         key = self._get_operator_counter_key(operator_name, scope)
@@ -504,9 +507,15 @@ def disable_tracing(method):
     Patch a method so that it will be executed within no_nncf_trace context
     :param method: A method to patch.
     """
+    if is_experimental_torch_tracing_enabled():
 
-    def no_nncf_trace_wrapper(self, fn, *args, **kwargs):
-        with no_nncf_trace():
-            return fn(*args, **kwargs)
+        def no_nncf_trace_wrapper(self, fn, *args, **kwargs):
+            with disable_function_hook_mode():
+                return fn(*args, **kwargs)
+    else:
+
+        def no_nncf_trace_wrapper(self, fn, *args, **kwargs):
+            with no_nncf_trace():
+                return fn(*args, **kwargs)
 
     PATCHER.patch(method, no_nncf_trace_wrapper)

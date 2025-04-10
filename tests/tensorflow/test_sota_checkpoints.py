@@ -140,7 +140,8 @@ def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
             model_dict = datasets[dataset_name]
             for model_name, sample_dict in model_dict["topologies"].items():
                 if model_name in model_names:
-                    raise RuntimeError(f"Model name {model_name} is not unique.")
+                    msg = f"Model name {model_name} is not unique."
+                    raise RuntimeError(msg)
                 model_names.append(model_name)
                 batch = sample_dict.get("batch_per_gpu")
                 resume = sample_dict.get("resume")
@@ -246,9 +247,9 @@ def metrics_dump_dir(request: FixtureRequest):
         )
 
     dump_path.mkdir(exist_ok=True, parents=True)
-    assert not dump_path.is_dir() or not next(
-        dump_path.iterdir(), None
-    ), f"metrics_dump_path dir should be empty: {dump_path}"
+    assert not dump_path.is_dir() or not next(dump_path.iterdir(), None), (
+        f"metrics_dump_path dir should be empty: {dump_path}"
+    )
     print(f"metrics_dump_path: {dump_path}")
     return dump_path
 
@@ -359,7 +360,8 @@ class TestSotaCheckpoints:
             return {"weights": sota_checkpoints_dir / eval_test_struct.weights}
         elif PRETRAINED_PARAM_AVAILABILITY[eval_test_struct.sample_type]:
             return {"pretrained": True}
-        raise RuntimeError("Incorrect config")
+        msg = "Incorrect config"
+        raise RuntimeError(msg)
 
     @staticmethod
     def get_env():

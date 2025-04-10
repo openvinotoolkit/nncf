@@ -72,7 +72,6 @@ class PTInitializingDataLoader(NNCFDataLoader):
 
         :param dataloader_output - the (args, kwargs) tuple returned by the __next__ method.
         """
-
         raise NotImplementedError
 
 
@@ -89,7 +88,7 @@ def wrap_dataloader_for_init(data_loader) -> PTInitializingDataLoader:
         loaded_item = next(iter(data_loader))
         if isinstance(loaded_item, (tuple, list)) and len(loaded_item) == 2:
             return DefaultInitializingDataLoader(data_loader)
-        raise NotImplementedError(
+        msg = (
             "Could not deduce the forward arguments from the initializing dataloader output.\n"
             "By default it is assumed that the data loader used for initialize "
             "produces a tuple/list of (*model_input*, *ground_truth*) and that no special "
@@ -100,13 +99,15 @@ def wrap_dataloader_for_init(data_loader) -> PTInitializingDataLoader:
             "See https://github.com/openvinotoolkit/nncf/blob/develop/docs/FAQ.md#pt_init_dataloader for "
             "an example of how to do this this in your code."
         )
+        raise NotImplementedError(msg)
     return data_loader
 
 
 class PartialDataLoader:
     def __init__(self, regular_data_loader: DataLoader, iter_ratio=1.0):
         if iter_ratio < 0.0 or iter_ratio > 1.0:
-            raise ValueError("iter_ratio must be within 0 to 1 range")
+            msg = "iter_ratio must be within 0 to 1 range"
+            raise ValueError(msg)
         self.data_loader = regular_data_loader
         self.batch_size = regular_data_loader.batch_size
         self._stop_id = math.ceil(len(self.data_loader) * iter_ratio)

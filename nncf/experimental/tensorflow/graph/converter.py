@@ -69,7 +69,7 @@ class TensorFlowGraphBuilder:
         # List of output tensors
         output_tensors = frozen_func.outputs
 
-        # Step 2: Run a Grappler pass to oprimize the TensorFlow graph.
+        # Step 2: Run a Grappler pass to optimize the TensorFlow graph.
 
         # Creates a ConfigProto for configuring Grappler
         grappler_config = _get_grappler_config(graph_optimizers)
@@ -286,7 +286,6 @@ class SubclassedConverter(TFModelConverter):
         :param op_names: A list of names for the input operations ()
         :return: A description of nodes and edges which should be included to the NNCF graph.
         """
-
         # Traverse the `graph` and mark all ops reachable from the `input_ops`.
         # The op `u` is reachable from the `input_ops` if a directed path
         # from at least one op in `input_ops` to `u` exists in the `graph.`
@@ -378,7 +377,8 @@ class SubclassedConverter(TFModelConverter):
         elif dtype.is_integer:
             tensor_dtype = Dtype.INTEGER
         else:
-            raise nncf.InternalError(f"Unexpected dtype of tensor: {dtype}")
+            msg = f"Unexpected dtype of tensor: {dtype}"
+            raise nncf.InternalError(msg)
 
         return tensor_dtype
 

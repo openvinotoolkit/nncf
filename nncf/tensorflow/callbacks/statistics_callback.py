@@ -35,7 +35,7 @@ class StatisticsCallback(tf.keras.callbacks.Callback):
         :param statistics_fn: A callable object that provides NNCF statistics.
         :param log_tensorboard: Whether to log statistics to tensorboard or not.
         :param log_text: Whether to log statistics to stdout.
-        :param log_dir: The directory for tensorbard logging.
+        :param log_dir: The directory for tensorboard logging.
         """
         super().__init__()
         self._statistics_fn = statistics_fn
@@ -44,7 +44,8 @@ class StatisticsCallback(tf.keras.callbacks.Callback):
         self._file_writer = None
         if log_tensorboard:
             if log_dir is None:
-                raise ValueError("log_dir must be specified if log_tensorboard is true.")
+                msg = "log_dir must be specified if log_tensorboard is true."
+                raise ValueError(msg)
 
             self._file_writer = tf.summary.create_file_writer(log_dir + "/compression")
 
@@ -76,6 +77,5 @@ class StatisticsCallback(tf.keras.callbacks.Callback):
             self._file_writer.close()
 
     def _prepare_for_tensorboard(self, stats: NNCFStatistics):
-        raise NotImplementedError(
-            "StatisticsCallback class implementation must override the _prepare_for_tensorboard method."
-        )
+        msg = "StatisticsCallback class implementation must override the _prepare_for_tensorboard method."
+        raise NotImplementedError(msg)

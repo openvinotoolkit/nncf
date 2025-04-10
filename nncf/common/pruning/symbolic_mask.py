@@ -18,7 +18,7 @@ from nncf.common.tensor import NNCFTensor
 
 class SymbolicMaskProducer:
     """
-    Container of information about a NNCFNode which is produsing a symbolic mask.
+    Container of information about a NNCFNode which is producing a symbolic mask.
     NNCFNode produced a (symbolic or not) mask means this mask was set as an output
     mask to this NNCFNode during (symbolic or not) mask propagation.
     """
@@ -41,9 +41,9 @@ class SymbolicMaskProducer:
         for mask in masks:
             for mask_producer in mask.mask_producers:
                 if mask_producer.id in merged_producers:
-                    assert (
-                        mask_producer.sparse_multiplier == merged_producers[mask_producer.id].sparse_multiplier
-                    ), f"Inconsistent sparse multiplier for NNCF node with id={mask_producer.id}"
+                    assert mask_producer.sparse_multiplier == merged_producers[mask_producer.id].sparse_multiplier, (
+                        f"Inconsistent sparse multiplier for NNCF node with id={mask_producer.id}"
+                    )
             merged_producers.update({p.id: p for p in mask.mask_producers})
         return list(merged_producers.values())
 
@@ -111,7 +111,8 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
     def ones(cls, shape: Union[int, List[int]], device) -> SymbolicMask:  # type: ignore
         if isinstance(shape, list):
             if len(shape) != 1:
-                raise nncf.ValidationError(f"Unexpected shape = {shape} for 1D symbolic mask")
+                msg = f"Unexpected shape = {shape} for 1D symbolic mask"
+                raise nncf.ValidationError(msg)
             shape = shape[0]
 
         return SymbolicMask(shape)
@@ -149,10 +150,11 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
     @classmethod
     def split(cls, tensor: SymbolicMask, output_shapes: List[int]) -> List[SymbolicMask]:  # type: ignore
         if any(shape <= 0 for shape in output_shapes) or tensor.shape[0] != sum(output_shapes):
-            raise AssertionError(
+            msg = (
                 "Symbolic mask split was called with"
-                f"invalid parammeters: input mask shape: {tensor.shape[0]}, output masks shapes: {output_shapes}"
+                f"invalid parameters: input mask shape: {tensor.shape[0]}, output masks shapes: {output_shapes}"
             )
+            raise AssertionError(msg)
 
         producers = tensor.mask_producers
         return [SymbolicMask(output_shape, producers) for output_shape in output_shapes]

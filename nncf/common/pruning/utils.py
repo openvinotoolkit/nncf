@@ -233,9 +233,9 @@ class PruningOperationsMetatypeRegistry(Registry):
                 if name not in self._op_name_to_op_class:
                     self._op_name_to_op_class[name] = obj
                 else:
-                    assert (
-                        self._op_name_to_op_class[name] == obj
-                    ), "Inconsistent operator type registry - single patched op name maps to multiple metatypes!"
+                    assert self._op_name_to_op_class[name] == obj, (
+                        "Inconsistent operator type registry - single patched op name maps to multiple metatypes!"
+                    )
             return obj
 
         return wrap
@@ -394,7 +394,8 @@ def get_input_channels(node: NNCFNode) -> int:
         return layer_attrs.in_channels
     if isinstance(layer_attrs, LinearLayerAttributes):
         return layer_attrs.in_features
-    raise nncf.InternalError(f"Can't get count of input channels from node {node}")
+    msg = f"Can't get count of input channels from node {node}"
+    raise nncf.InternalError(msg)
 
 
 def get_output_channels(node: NNCFNode) -> int:
@@ -409,7 +410,8 @@ def get_output_channels(node: NNCFNode) -> int:
         return layer_attrs.out_channels
     if isinstance(layer_attrs, LinearLayerAttributes):
         return layer_attrs.out_features
-    raise nncf.InternalError(f"Can't get count of output channels from node {node}")
+    msg = f"Can't get count of output channels from node {node}"
+    raise nncf.InternalError(msg)
 
 
 def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:

@@ -365,24 +365,24 @@ class AdvancedCompressionParameters:
     :type statistics_path: str
     :param awq_params: Advanced parameters for AWQ algorithm.
     :type awq_params: AdvancedAWQParameters
-    :param scale_estimation_params: Advanced parameters for scale estimation algorithm.
+    :param scale_estimation_params: Advanced parameters for Scale Estimation algorithm.
     :type scale_estimation_params: AdvancedScaleEstimationParameters
+    :param gptq_params: Advanced parameters for GPTQ algorithm.
+    :type gptq_params: AdvancedGPTQParameters
+    :param lora_correction_params: Advanced parameters for Lora Correction algorithm.
+    :type lora_correction_params: AdvancedLoraCorrectionParameters
+    :param lora_adapter_rank: Rank of lora adapters for FQ_LORA format. Defaults to 256.
+    :type lora_adapter_rank: int
     """
 
     statistics_path: Optional[str] = None
-    # Advanced AWQ algorithm parameters
     awq_params: AdvancedAWQParameters = field(default_factory=AdvancedAWQParameters)
-
-    # Advanced scale estimation algorithm parameters
     scale_estimation_params: AdvancedScaleEstimationParameters = field(
         default_factory=AdvancedScaleEstimationParameters
     )
-
-    # Advanced GPTQ algorithm parameters
     gptq_params: AdvancedGPTQParameters = field(default_factory=AdvancedGPTQParameters)
-
-    # Advanced Lora Correction algorithm parameters
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
+    lora_adapter_rank: int = 256
 
 
 @api()
@@ -478,7 +478,8 @@ def convert_quantization_parameters_to_dict(params: Optional[QuantizationParamet
         if params.per_channel is not None:
             result["per_channel"] = params.per_channel
         if params.narrow_range is not None:
-            raise nncf.ParameterNotSupportedError("narrow_range parameter is not supported in the legacy format")
+            msg = "narrow_range parameter is not supported in the legacy format"
+            raise nncf.ParameterNotSupportedError(msg)
     return result
 
 
@@ -490,7 +491,8 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
     :return: range estimator parameters as dict in the legacy format
     """
     if params.min.clipping_value is not None or params.max.clipping_value is not None:
-        raise nncf.ParameterNotSupportedError("clipping_value parameter is not supported in the legacy format")
+        msg = "clipping_value parameter is not supported in the legacy format"
+        raise nncf.ParameterNotSupportedError(msg)
 
     result: Dict[str, Any] = {}
     if (
@@ -526,9 +528,8 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
     ):
         return {}
     else:
-        raise nncf.ParameterNotSupportedError(
-            f"The following range estimator parameters are not supported: {str(params)}"
-        )
+        msg = f"The following range estimator parameters are not supported: {str(params)}"
+        raise nncf.ParameterNotSupportedError(msg)
 
     return result
 
@@ -590,13 +591,11 @@ def apply_advanced_parameters_to_config(
         config["initializer"] = initializer
 
     if params.bias_correction_params.apply_for_all_nodes:
-        raise nncf.ParameterNotSupportedError(
-            "apply_for_all_nodes parameter of the BiasCorrection algorithm is not supported in the legacy format"
-        )
+        msg = "apply_for_all_nodes parameter of the BiasCorrection algorithm is not supported in the legacy format"
+        raise nncf.ParameterNotSupportedError(msg)
 
     if params.bias_correction_params.threshold is not None:
-        raise nncf.ParameterNotSupportedError(
-            "threshold parameter of the BiasCorrection algorithm is not supported in the legacy format"
-        )
+        msg = "threshold parameter of the BiasCorrection algorithm is not supported in the legacy format"
+        raise nncf.ParameterNotSupportedError(msg)
 
     return config

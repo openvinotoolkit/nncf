@@ -15,6 +15,7 @@
 This package defines the API for the NNCF compression methods so that the user could
 extend the existing algorithms.
 """
+
 from abc import abstractmethod
 from typing import Any, Dict, List, Tuple, TypeVar
 
@@ -111,9 +112,8 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
 
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         """
-        Arguments:
-          `config` - a dictionary that contains parameters of compression method
-          `should_init` - if False, trainable parameter initialization will be skipped during building
+        :param config: a dictionary that contains parameters of compression method
+        :param should_init: if False, trainable parameter initialization will be skipped during building
         """
         super().__init__(config, should_init)
         self.compressed_nncf_module_names = self._nncf_module_types_to_compress()
@@ -167,10 +167,10 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         """
         ctrl = self._build_controller(model)
         if not isinstance(ctrl, PTCompressionAlgorithmController):
-            raise nncf.InternalError(
-                "Internal error: builder must create controller inherited from "
-                "`PTCompressionAlgorithmController` class"
+            msg = (
+                "Internal error: builder must create controller inherited from `PTCompressionAlgorithmController` class"
             )
+            raise nncf.InternalError(msg)
         ctrl.set_builder_state_with_name(self.name, self.get_state())
         return ctrl
 
@@ -207,12 +207,10 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
                     f"{reason}, compressing them without tuning weights.\nFrozen layers:\n{scopes_to_print}"
                 )
             else:
-                raise nncf.InternalError(
-                    f"{reason}.\n"
-                    f"Please unfreeze them or put into the Ignored Scope.\n"
-                    f"Frozen Layers:\n"
-                    f"{scopes_to_print}"
+                msg = (
+                    f"{reason}.\nPlease unfreeze them or put into the Ignored Scope.\nFrozen Layers:\n{scopes_to_print}"
                 )
+                raise nncf.InternalError(msg)
 
     def _should_consider_scope(self, node_name: NNCFNodeName) -> bool:
         return should_consider_scope(node_name, self.ignored_scopes, self.target_scopes)

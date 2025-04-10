@@ -75,7 +75,7 @@ def MobileNet(input_shape=None, alpha=1.0, depth_multiplier=1, dropout=1e-3):
     x = layers.Activation(activation="softmax", name="predictions")(x)
 
     # Create model.
-    model = tf.keras.Model(img_input, x, name="mobilenet_%0.2f_%s" % (alpha, rows))
+    model = tf.keras.Model(img_input, x, name=f"mobilenet_{alpha:0.2f}_{rows}")
 
     return model
 
@@ -95,20 +95,20 @@ def _depthwise_conv_block(inputs, pointwise_conv_filters, alpha, depth_multiplie
     if strides == (1, 1):
         x = inputs
     else:
-        x = layers.ZeroPadding2D(((0, 1), (0, 1)), name="conv_pad_%d" % block_id)(inputs)
+        x = layers.ZeroPadding2D(((0, 1), (0, 1)), name=f"conv_pad_{block_id}")(inputs)
     x = layers.DepthwiseConv2D(
         (3, 3),
         padding="same" if strides == (1, 1) else "valid",
         depth_multiplier=depth_multiplier,
         strides=strides,
         use_bias=False,
-        name="conv_dw_%d" % block_id,
+        name=f"conv_dw_{block_id}",
     )(x)
-    x = layers.BatchNormalization(axis=channel_axis, name="conv_dw_%d_bn" % block_id)(x)
-    x = layers.ReLU(6.0, name="conv_dw_%d_relu" % block_id)(x)
+    x = layers.BatchNormalization(axis=channel_axis, name=f"conv_dw_{block_id}_bn")(x)
+    x = layers.ReLU(6.0, name=f"conv_dw_{block_id}_relu")(x)
 
     x = layers.Conv2D(
-        pointwise_conv_filters, (1, 1), padding="same", use_bias=False, strides=(1, 1), name="conv_pw_%d" % block_id
+        pointwise_conv_filters, (1, 1), padding="same", use_bias=False, strides=(1, 1), name=f"conv_pw_{block_id}"
     )(x)
-    x = layers.BatchNormalization(axis=channel_axis, name="conv_pw_%d_bn" % block_id)(x)
-    return layers.ReLU(6.0, name="conv_pw_%d_relu" % block_id)(x)
+    x = layers.BatchNormalization(axis=channel_axis, name=f"conv_pw_{block_id}_bn")(x)
+    return layers.ReLU(6.0, name=f"conv_pw_{block_id}_relu")(x)

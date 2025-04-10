@@ -86,7 +86,8 @@ class InvertedResidual(nn.Module):
     ):
         super().__init__()
         if not 1 <= cnf.stride <= 2:
-            raise ValueError("illegal stride value")
+            msg = "illegal stride value"
+            raise ValueError(msg)
 
         self.use_res_connect = cnf.stride == 1 and cnf.input_channels == cnf.out_channels
 
@@ -166,12 +167,14 @@ class MobileNetV3(nn.Module):
         super().__init__()
 
         if not inverted_residual_setting:
-            raise ValueError("The inverted_residual_setting should not be empty")
+            msg = "The inverted_residual_setting should not be empty"
+            raise ValueError(msg)
         if not (
             isinstance(inverted_residual_setting, Sequence)
             and all(isinstance(s, InvertedResidualConfig) for s in inverted_residual_setting)
         ):
-            raise TypeError("The inverted_residual_setting should be List[InvertedResidualConfig]")
+            msg = "The inverted_residual_setting should be List[InvertedResidualConfig]"
+            raise TypeError(msg)
 
         if block is None:
             block = InvertedResidual
@@ -290,7 +293,8 @@ def _mobilenet_v3_conf(arch: str, params: Dict[str, Any]):
         ]
         last_channel = adjust_channels(1024 // reduce_divider)  # C5
     else:
-        raise ValueError("Unsupported model type {}".format(arch))
+        msg = f"Unsupported model type {arch}"
+        raise ValueError(msg)
 
     return inverted_residual_setting, last_channel
 
@@ -306,7 +310,8 @@ def _mobilenet_v3_model(
     model = MobileNetV3(inverted_residual_setting, last_channel, **kwargs)
     if pretrained:
         if model_urls.get(arch) is None:
-            raise ValueError("No checkpoint is available for model type {}".format(arch))
+            msg = f"No checkpoint is available for model type {arch}"
+            raise ValueError(msg)
         state_dict = load_state_dict_from_url(model_urls[arch], progress=progress)
         model.load_state_dict(state_dict)
     return model

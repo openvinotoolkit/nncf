@@ -141,7 +141,8 @@ def force_build_cuda_extensions():
 
 class CudaNotAvailableStub:
     def __getattr__(self, item):
-        raise nncf.InstallationError(
+        msg = (
             f"CUDA is not available on this machine. Check that the machine has a GPU and a proper "
             f"driver supporting CUDA {torch.version.cuda} is installed."
         )
+        raise nncf.InstallationError(msg)

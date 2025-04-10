@@ -39,6 +39,7 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
 from nncf.common.utils.debug import is_debug
+from nncf.parameters import StripFormat
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
@@ -134,7 +135,8 @@ class PTInsertionPoint:
             map_target_types = TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT_FOR_REPLACED_MODULES
 
         if not isinstance(target_type, TargetType) or target_type not in map_target_types:
-            raise nncf.InternalError("Unsupported target type for PyTorch: {}".format(target_type))
+            msg = f"Unsupported target type for PyTorch: {target_type}"
+            raise nncf.InternalError(msg)
         return map_target_types[target_type]
 
     def __eq__(self, other: "PTInsertionPoint"):
@@ -179,7 +181,8 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         The module only serves a storage and namespacing purpose, forward functionality is not implemented.
         """
-        raise NotImplementedError("Calling `forward` on NNCFInterface is prohibited.")
+        msg = "Calling `forward` on NNCFInterface is prohibited."
+        raise NotImplementedError(msg)
 
     def get_original_forward(self) -> Callable:
         """
@@ -280,7 +283,8 @@ class NNCFNetworkInterface(torch.nn.Module):
             )
             self._wrap_inputs_fn = self.__input_info_based_input_wrapper.wrap_inputs
         else:
-            raise ValueError("wrap_inputs_fn or input_infos should be passed.")
+            msg = "wrap_inputs_fn or input_infos should be passed."
+            raise ValueError(msg)
 
         if wrap_outputs_fn is not None:
             self._wrap_outputs_fn = wrap_outputs_fn
@@ -451,7 +455,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         elif point.insertion_type in [PTInsertionType.NNCF_MODULE_PRE_OP, PTInsertionType.NNCF_MODULE_POST_OP]:
             nncf_module = self.get_module_by_scope(point.module_scope)
             if not isinstance(nncf_module, _NNCFModuleMixin):
-                raise nncf.ValidationError(
+                msg = (
                     f"Failed to insert pre/post op for not registered custom module {point.module_scope}. NNCF only "
                     f"supports native PyTorch modules with respect to trainable parameter (weight) compressed, such "
                     f"as `torch.nn.Conv2d`. If your model contains a custom, non-PyTorch standard module with trainable"
@@ -459,6 +463,7 @@ class NNCFNetworkInterface(torch.nn.Module):
                     f"`@nncf.register_module` decorator. Please refer to `Compression of custom modules` section in "
                     f"docs/Usage.md for more details."
                 )
+                raise nncf.ValidationError(msg)
 
             norm_target_scope = self._normalize_variable_recurrent_scope(point.module_scope)
             norm_nncf_scopes = []
@@ -470,7 +475,8 @@ class NNCFNetworkInterface(torch.nn.Module):
             elif point.insertion_type == PTInsertionType.NNCF_MODULE_POST_OP:
                 handle = nncf_module.register_post_forward_operation(fn)
         else:
-            raise nncf.ValidationError("Unsupported insertion type: {}".format(point.insertion_type))
+            msg = f"Unsupported insertion type: {point.insertion_type}"
+            raise nncf.ValidationError(msg)
         self._groups_vs_hooks_handlers[hooks_group_name].append(handle)
         return handle
 
@@ -583,7 +589,8 @@ class NNCFNetworkInterface(torch.nn.Module):
     def register_compression_module_type(self, compression_module_type: ExtraCompressionModuleType):
         attr_name = compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type in self._extra_module_types:
-            raise nncf.ValidationError(f"Module type {compression_module_type} is already registered")
+            msg = f"Module type {compression_module_type} is already registered"
+            raise nncf.ValidationError(msg)
 
         self.__setattr__(attr_name, nn.ModuleDict())
         self._extra_module_types.append(compression_module_type)
@@ -593,16 +600,19 @@ class NNCFNetworkInterface(torch.nn.Module):
     ):
         attr_name = compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
-            raise nncf.InternalError(f"Module type {compression_module_type} was not registered")
+            msg = f"Module type {compression_module_type} was not registered"
+            raise nncf.InternalError(msg)
         storage = self.__getattr__(attr_name)
         if module_key in storage:
-            raise nncf.InternalError(f"Module {module_key} is already registered under {attr_name}")
+            msg = f"Module {module_key} is already registered under {attr_name}"
+            raise nncf.InternalError(msg)
         storage[module_key] = module
 
     def get_compression_modules_by_type(self, compression_module_type: ExtraCompressionModuleType) -> nn.ModuleDict:
         attr_name = compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
-            raise nncf.InternalError(f"Module type {compression_module_type} was not registered")
+            msg = f"Module type {compression_module_type} was not registered"
+            raise nncf.InternalError(msg)
         return self.__getattr__(attr_name)
 
     def is_compression_module_registered(self, compression_module_type: ExtraCompressionModuleType) -> bool:
@@ -617,7 +627,8 @@ class NNCFNetworkInterface(torch.nn.Module):
     def sort_compression_modules(self, compression_module_type: ExtraCompressionModuleType):
         attr_name = compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
-            raise nncf.InternalError("Module type {} was not registered".format(compression_module_type))
+            msg = f"Module type {compression_module_type} was not registered"
+            raise nncf.InternalError(msg)
         module_dict = self.__getattr__(attr_name)
 
         module_dict._modules = OrderedDict(sorted(module_dict._modules.items()))
@@ -773,7 +784,6 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         Returns scopes of the operations in the graph which are executed in evaluation mode.
         """
-
         tracer = GraphTracer(dummy_forward_fn)
         result = []
         eval_graph = tracer.trace_graph(model, as_eval=True)
@@ -820,12 +830,12 @@ class NNCFNetworkInterface(torch.nn.Module):
             :param hook: External op call hook to check correctness.
             :param info: Info to log in case op call hook references are broken.
             """
-            assert hasattr(
-                self, hook._storage_name
-            ), f"Storage name {hook._storage_name} is not registered. Info: {info}"
-            assert hook._storage_key in getattr(
-                self, hook._storage_name
-            ), f"Key {hook._storage_key} is not registered in {hook._storage_name}. Info: {info}"
+            assert hasattr(self, hook._storage_name), (
+                f"Storage name {hook._storage_name} is not registered. Info: {info}"
+            )
+            assert hook._storage_key in getattr(self, hook._storage_name), (
+                f"Key {hook._storage_key} is not registered in {hook._storage_name}. Info: {info}"
+            )
 
         context_hooks = defaultdict(lambda: defaultdict(list))
         transformation_layout = PTTransformationLayout()
@@ -911,7 +921,8 @@ class NNCFNetworkInterface(torch.nn.Module):
                 elif module_type_name == EXTERNAL_OP_STORAGE_NAME:
                     module_type = ExtraCompressionModuleType.EXTERNAL_OP
                 else:
-                    raise RuntimeError(f"Module type {module_type_name} is not supported")
+                    msg = f"Module type {module_type_name} is not supported"
+                    raise RuntimeError(msg)
 
                 command = PTSharedFnInsertionCommand(
                     target_points=target_points,
@@ -956,12 +967,14 @@ class NNCFNetworkInterface(torch.nn.Module):
     def set_compression_controller(self, ctrl: CompressionAlgorithmController):
         self.compression_controller = ctrl
 
-    def strip(self, do_copy: bool = True) -> "NNCFNetwork":
+    def strip(self, do_copy: bool = True, strip_format: StripFormat = StripFormat.NATIVE) -> "NNCFNetwork":
         """
-        Returns the model object with as much custom NNCF additions as possible removed
-        while still preserving the functioning of the model object as a compressed model.
+        Removes auxiliary layers and operations added during the compression process, resulting in a clean
+        model ready for deployment. The functionality of the model object is still preserved as a compressed model.
+
         :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
           will return the currently associated model object "stripped" in-place.
+        :param strip format: Describes the format in which model is saved after strip.
         :return: The stripped model.
         """
         if self.compression_controller is None:
@@ -969,8 +982,8 @@ class NNCFNetworkInterface(torch.nn.Module):
             from nncf.torch.quantization.strip import strip_quantized_model
 
             model = deepcopy(self._model_ref) if do_copy else self._model_ref
-            return strip_quantized_model(model)
-        return self.compression_controller.strip(do_copy)
+            return strip_quantized_model(model, strip_format=strip_format)
+        return self.compression_controller.strip(do_copy, strip_format=strip_format)
 
     def get_reused_parameters(self):
         """
@@ -1153,7 +1166,8 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         achieved by a __call__ method defined in the metaclass `NNCFNetworkMeta`.
         """
         super().__init__()
-        raise nncf.InternalError("Direct instantiation of NNCFNetwork objects using __init__ is prohibited.")
+        msg = "Direct instantiation of NNCFNetwork objects using __init__ is prohibited."
+        raise nncf.InternalError(msg)
 
     def __call__(self, *args, **kwargs):
         """
@@ -1167,7 +1181,6 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         Wraps the original forward call, doing additional actions before and after the call to facilitate model
         graph tracing and calling compression-related hooks.
         """
-
         with self.nncf._compressed_context as ctx:
             ctx.base_module_thread_local_replica = self
 
@@ -1290,4 +1303,5 @@ def compression_module_type_to_attr_name(compression_module_type: ExtraCompressi
         return EXTERNAL_QUANTIZERS_STORAGE_NAME
     if compression_module_type == ExtraCompressionModuleType.EXTERNAL_OP:
         return EXTERNAL_OP_STORAGE_NAME
-    raise nncf.ValidationError("Unknown extra module type")
+    msg = "Unknown extra module type"
+    raise nncf.ValidationError(msg)

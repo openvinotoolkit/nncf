@@ -43,7 +43,7 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.initialization import register_default_init_args
-from nncf.torch.layer_utils import StatefullModuleInterface
+from nncf.torch.layer_utils import StatefulModuleInterface
 from nncf.torch.layers import NNCF_MODULES_MAP
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.module_operations import UpdateWeight
@@ -108,9 +108,8 @@ def create_grouped_conv(
     in_channels, out_channels, kernel_size, groups, weight_init=1, bias_init=0, padding=0, stride=1
 ):
     if in_channels % groups != 0 or out_channels % groups != 0:
-        raise nncf.ValidationError(
-            "Cannot create grouped convolution. Either `in_channels` or `out_channels` are not divisible by `groups`"
-        )
+        msg = "Cannot create grouped convolution. Either `in_channels` or `out_channels` are not divisible by `groups`"
+        raise nncf.ValidationError(msg)
     conv = nn.Conv2d(in_channels, out_channels, kernel_size, groups=groups, padding=padding, stride=stride)
     fill_conv_weight(conv, weight_init)
     fill_bias(conv, bias_init)
@@ -266,7 +265,7 @@ class LeNet(nn.Module):
         return num_features
 
 
-class DummyOpWithState(torch.nn.Module, StatefullModuleInterface):
+class DummyOpWithState(torch.nn.Module, StatefulModuleInterface):
     def __init__(self, state: str):
         super().__init__()
         self._state = state
@@ -398,7 +397,8 @@ class PTTensorListComparator(BaseTensorListComparator):
             return tensor.cpu().detach().numpy()
         if isinstance(tensor, (np.ndarray, numbers.Number)):
             return tensor
-        raise Exception(f"Tensor must be np.ndarray or torch.Tensor, not {type(tensor)}")
+        msg = f"Tensor must be np.ndarray or torch.Tensor, not {type(tensor)}"
+        raise Exception(msg)
 
 
 def create_compressed_model_and_algo_for_test(
@@ -773,3 +773,14 @@ class HookChecker:
             assert len(actual_hooks) == len(ref_hooks)
             for actual_hook, ref_hook in zip(actual_hooks, ref_hooks):
                 assert actual_hook is ref_hook
+
+
+class LinearModel(nn.Module):
+    def __init__(self, input_shape=List[int]):
+        super().__init__()
+        with set_torch_seed():
+            self.linear = nn.Linear(input_shape[1], input_shape[0], bias=False)
+            self.linear.weight.data = torch.randn(input_shape) - 0.5
+
+    def forward(self, x):
+        return self.linear(x)

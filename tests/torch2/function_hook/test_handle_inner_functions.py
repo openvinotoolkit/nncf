@@ -29,7 +29,6 @@ REF_DIR = TEST_ROOT / "torch2" / "data" / "function_hook" / "handle_inner_functi
 
 
 class ReluModel(nn.Module):
-
     @staticmethod
     def example_input() -> Tuple[torch.Tensor, ...]:
         return (torch.rand(1, 1, 1),)
@@ -57,7 +56,6 @@ class BatchNormModel(nn.Module):
 
 
 class MultiHeadAttention(nn.Module):
-
     batch_size = 2
     seq_length = 5
     embed_dim = 16
@@ -165,5 +163,4 @@ def test_compare_torch_function_with_handle_inner_function(torch_func):
             filtered_torch_func_code.append(line)
     filtered_torch_func_code = "\n".join(filtered_torch_func_code)
     func_code = _get_clean_source_code(func)
-
     assert filtered_torch_func_code == func_code

@@ -73,7 +73,8 @@ class SparsityScheduler(BaseCompressionScheduler):
         :return: Sparsity level that should be applied to the weights
             for the `current_epoch` or for step in the `current_epoch`.
         """
-        raise NotImplementedError("SparsityScheduler implementation must override _calculate_sparsity_level method.")
+        msg = "SparsityScheduler implementation must override _calculate_sparsity_level method."
+        raise NotImplementedError(msg)
 
     def _update_sparsity_level(self) -> None:
         """
@@ -187,10 +188,11 @@ class PolynomialSparsityScheduler(SparsityScheduler):
                 and self._steps_in_current_epoch > 0
                 and self._steps_per_epoch != self._steps_in_current_epoch
             ):
-                raise Exception(
+                msg = (
                     "Actual steps per epoch and steps per epoch from the scheduler "
                     "parameters are different. Scheduling may be incorrect."
                 )
+                raise Exception(msg)
 
             if self._steps_per_epoch is None:
                 self._should_skip = True

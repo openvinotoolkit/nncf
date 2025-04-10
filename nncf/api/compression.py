@@ -15,10 +15,11 @@ from abc import abstractmethod
 from enum import IntEnum
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
-from nncf.api.statistics import Statistics
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import copy_model
+from nncf.parameters import StripFormat
 
 TModel = TypeVar("TModel")
 
@@ -227,16 +228,18 @@ class CompressionAlgorithmController(ABC):
         """
 
     @abstractmethod
-    def statistics(self, quickly_collected_only: bool = False) -> Statistics:
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         """
-        Returns a `Statistics` class instance that contains compression algorithm statistics.
+        Returns a `NNCFStatistics` class instance that contains compression algorithm statistics.
 
         :param quickly_collected_only: Enables collection of the statistics that
             don't take too much time to compute. Can be helpful for the case when
             need to keep track of statistics on each training batch/step/iteration.
         """
 
-    def strip_model(self, model: TModel, do_copy: bool = False) -> TModel:
+    def strip_model(
+        self, model: TModel, do_copy: bool = False, strip_format: StripFormat = StripFormat.NATIVE
+    ) -> TModel:
         """
         Strips auxiliary layers that were used for the model compression, as it's
         only needed for training. The method is used before exporting the model
@@ -244,6 +247,7 @@ class CompressionAlgorithmController(ABC):
 
         :param model: The compressed model.
         :param do_copy: Modify copy of the model, defaults to False.
+        :param strip format: Describes the format in which model is saved after strip.
         :return: The stripped model.
         """
         if do_copy:
@@ -256,16 +260,17 @@ class CompressionAlgorithmController(ABC):
         """
         self._model = self.strip_model(self._model)
 
-    def strip(self, do_copy: bool = True) -> TModel:  # type: ignore[type-var]
+    def strip(self, do_copy: bool = True, strip_format: StripFormat = StripFormat.NATIVE) -> TModel:  # type: ignore[type-var]
         """
-        Returns the model object with as much custom NNCF additions as possible removed
-        while still preserving the functioning of the model object as a compressed model.
+        Removes auxiliary layers and operations added during the compression process, resulting in a clean
+        model ready for deployment. The functionality of the model object is still preserved as a compressed model.
 
         :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
           will return the currently associated model object "stripped" in-place.
+        :param strip format: Describes the format in which model is saved after strip.
         :return: The stripped model.
         """
-        return self.strip_model(self.model, do_copy)  # type: ignore
+        return self.strip_model(self.model, do_copy, strip_format)  # type: ignore
 
     @abstractmethod
     def export_model(

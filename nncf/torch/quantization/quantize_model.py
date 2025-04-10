@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 
@@ -18,7 +18,9 @@ import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
+from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.parameters import BackupMode
+from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
@@ -52,11 +54,14 @@ def quantize_impl(
     Implementation of the `quantize()` method for the PyTorch backend.
     """
     if fast_bias_correction is False:
-        raise ValueError(f"fast_bias_correction={fast_bias_correction} is not supported")
+        msg = f"fast_bias_correction={fast_bias_correction} is not supported"
+        raise ValueError(msg)
     if target_device == TargetDevice.CPU_SPR:
-        raise nncf.InternalError("target_device == CPU_SPR is not supported")
+        msg = "target_device == CPU_SPR is not supported"
+        raise nncf.InternalError(msg)
     if mode is not None:
-        raise ValueError(f"mode={mode} is not supported")
+        msg = f"mode={mode} is not supported"
+        raise ValueError(msg)
 
     copied_model = deepcopy(model)
 
@@ -82,7 +87,7 @@ def quantize_impl(
 
 
 def compress_weights_impl(
-    model: torch.nn.Module,
+    model: Union[GraphModelWrapper, torch.nn.Module],
     dataset: Dataset,
     mode: CompressWeightsMode,
     ratio: float,
@@ -96,12 +101,12 @@ def compress_weights_impl(
     gptq: bool,
     lora_correction: bool,
     backup_mode: BackupMode,
+    compression_format: CompressionFormat,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> torch.nn.Module:
     """
     Implementation of the `compress_weights()` method for the PyTorch backend.
     """
-
     compression_algorithm = WeightCompression(
         mode,
         ratio,
@@ -115,7 +120,12 @@ def compress_weights_impl(
         gptq,
         lora_correction,
         backup_mode,
+        compression_format,
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)
-    return compression_algorithm.apply(model, graph, dataset=dataset)
+
+    compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
+    if isinstance(compressed_model, GraphModelWrapper):
+        compressed_model = compressed_model.model
+    return compressed_model

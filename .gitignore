@@ -108,7 +108,7 @@ ENV/
 # snapshots
 *.tar
 
-# pylint config is left at dev's discretion, CI uses ruff/isort/black instead
+# pylint config is left at dev's discretion, CI uses ruff instead
 .pylintrc
 
 # VSCode
@@ -136,3 +136,4 @@ open_model_zoo/
 nncf-tests.xml
 compressed_graph.dot
 original_graph.dot
+tests/post_training/**/*memory_logs

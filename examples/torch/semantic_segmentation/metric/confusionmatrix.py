@@ -63,14 +63,14 @@ class ConfusionMatrix(Metric):
         assert predicted.shape[0] == target.shape[0], "number of targets and predicted outputs do not match"
 
         if np.ndim(predicted) != 1:
-            assert (
-                predicted.shape[1] == self.num_classes
-            ), "number of predictions does not match size of confusion matrix"
+            assert predicted.shape[1] == self.num_classes, (
+                "number of predictions does not match size of confusion matrix"
+            )
             predicted = np.argmax(predicted, 1)
         else:
-            assert (predicted.max() < self.num_classes) and (
-                predicted.min() >= 0
-            ), "predicted values are not between 0 and k-1"
+            assert (predicted.max() < self.num_classes) and (predicted.min() >= 0), (
+                "predicted values are not between 0 and k-1"
+            )
 
         if np.ndim(target) != 1:
             assert target.shape[1] == self.num_classes, "Onehot target does not match size of confusion matrix"

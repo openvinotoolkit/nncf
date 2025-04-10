@@ -44,7 +44,8 @@ def _restore_baseline_weights(keras_model, checkpoint_path):
                 match_names.append(x)
 
         if len(match_names) != 1:
-            raise Exception("More than one matches for {}: {}".format(v, match_names))
+            msg = f"More than one matches for {v}: {match_names}"
+            raise Exception(msg)
 
         assignment_map[match_names[0]] = v
 
@@ -314,7 +315,7 @@ class MaskrcnnModel(base_model.Model):
             init_checkpoint_fn(keras_model)
 
         if weights:
-            logger.info("Loaded pretrained weights from {}".format(weights))
+            logger.info(f"Loaded pretrained weights from {weights}")
             _restore_baseline_weights(keras_model, weights)
 
         return keras_model
@@ -323,9 +324,8 @@ class MaskrcnnModel(base_model.Model):
         required_output_fields = ["class_outputs", "box_outputs"]
         for field in required_output_fields:
             if field not in outputs:
-                raise ValueError(
-                    '"%s" is missing in outputs, requried %s found %s' % (field, required_output_fields, outputs.keys())
-                )
+                msg = f'"{field}" is missing in outputs, required {required_output_fields} found {outputs.keys()}'
+                raise ValueError(msg)
 
         predictions = {
             "image_info": labels["image_info"],

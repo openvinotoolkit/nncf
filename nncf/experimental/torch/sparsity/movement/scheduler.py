@@ -60,19 +60,21 @@ class MovementSchedulerParams:
         :param power: The power value of polynomial decay for threshold update during warmup stage.
         :param steps_per_epoch: Number of training steps in one epoch.
         """
-
         if steps_per_epoch is None and warmup_start_epoch < 1:
-            raise ValueError(
+            msg = (
                 "`warmup_start_epoch` must be >= 1 to enable the auto calculation of "
                 "`steps_per_epoch`. Please either change `warmup_start_epoch` to a larger "
                 "number or specify `steps_per_epoch` in the config."
             )
+            raise ValueError(msg)
 
         if warmup_start_epoch < 0 or warmup_end_epoch <= warmup_start_epoch:
-            raise ValueError("Movement sparsity requires 0 <= warmup_start_epoch < warmup_end_epoch.")
+            msg = "Movement sparsity requires 0 <= warmup_start_epoch < warmup_end_epoch."
+            raise ValueError(msg)
 
         if importance_regularization_factor < 0:
-            raise ValueError("`importance_regularization_factor` should not be a negative number.")
+            msg = "`importance_regularization_factor` should not be a negative number."
+            raise ValueError(msg)
 
         if init_importance_threshold is not None and init_importance_threshold >= final_importance_threshold:
             nncf_logger.warning(
@@ -109,10 +111,11 @@ class MovementSchedulerParams:
         steps_per_epoch: Optional[int] = params.get("steps_per_epoch")
 
         if None in [warmup_start_epoch, warmup_end_epoch, importance_regularization_factor]:
-            raise ValueError(
+            msg = (
                 "`warmup_start_epoch`, `warmup_start_epoch` and `importance_regularization_factor` "
                 "are required in config for Movement Sparsity."
             )
+            raise ValueError(msg)
 
         return cls(
             warmup_start_epoch=warmup_start_epoch,
@@ -320,10 +323,11 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
             and self._steps_in_current_epoch > 0
             and self._steps_per_epoch != self._steps_in_current_epoch
         ):
-            raise Exception(
+            msg = (
                 "Actual steps per epoch and steps per epoch from the scheduler "
                 "parameters are different. Scheduling may be incorrect."
             )
+            raise Exception(msg)
 
         if self._steps_per_epoch is None:
             self._should_skip = True

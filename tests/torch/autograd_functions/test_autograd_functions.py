@@ -86,7 +86,9 @@ class TestAutogradFunction:
                 input_tensor=torch.tensor([2.5]), threshold=-10.0, ref_output_tensor=torch.tensor([1.0])
             ),
             STThresholdTestCase(
-                input_tensor=torch.tensor(4.2), threshold=4.0, ref_output_tensor=torch.tensor(1.0)  # scalar tensor
+                input_tensor=torch.tensor(4.2),
+                threshold=4.0,
+                ref_output_tensor=torch.tensor(1.0),  # scalar tensor
             ),
             STThresholdTestCase(
                 input_tensor=torch.tensor([math.inf, 1.1, -math.inf]),

@@ -21,7 +21,8 @@ from nncf.tensorflow.quantization.layers import FakeQuantize
 
 def apply_overflow_fix(model: tf.keras.Model, op_names: List[str]) -> None:
     if not isinstance(model, tf.keras.Model):
-        raise ValueError(f"Expected model to be a `tf.keras.Model` instance but got: {type(model)}")
+        msg = f"Expected model to be a `tf.keras.Model` instance but got: {type(model)}"
+        raise ValueError(msg)
 
     for wrapped_layer, weight_attr, op in get_nncf_operations(model, op_names):
         if op.half_range:

@@ -154,7 +154,8 @@ class Quantizer(NNCFOperation):
                 input_shape, channel_axes
             )
         except NotImplementedError as e:
-            raise NotImplementedError(f"Additional information: quantizer name {self.name}") from e
+            msg = f"Additional information: quantizer name {self.name}"
+            raise NotImplementedError(msg) from e
 
     @staticmethod
     def _make_transformation_fns(input_shape, channel_axes):
@@ -177,10 +178,11 @@ class Quantizer(NNCFOperation):
                     accumulate = False
                     new_shape.append(val)
             if switch_counter > 1:
-                raise NotImplementedError(
-                    "Quntizer could not transform input to apply per-channel quantization: "
+                msg = (
+                    "Quantizer could not transform input to apply per-channel quantization: "
                     f"input_shape {input_shape}, channel_axes {channel_axes}"
                 )
+                raise NotImplementedError(msg)
             forward_params = {"shape": new_shape}
             backward_params = {"shape": input_shape}
             fns_registry.append((tf.reshape, forward_params, backward_params))
@@ -327,9 +329,8 @@ class SymmetricQuantizer(Quantizer):
 
     def apply_overflow_fix(self, weights):
         if self.num_bits != 8 or not self._half_range:
-            raise nncf.InternalError(
-                "Attempt to apply overflow issue fix to quantizer which is not configured for that."
-            )
+            msg = "Attempt to apply overflow issue fix to quantizer which is not configured for that."
+            raise nncf.InternalError(msg)
 
         # Multiplier to expand scale from 7 bit to 8 bit
         multiplier = 127 / 63 if self.narrow_range else 255 / 127
@@ -453,9 +454,8 @@ class AsymmetricQuantizer(Quantizer):
 
     def apply_overflow_fix(self, weights):
         if self.num_bits != 8 or not self._half_range:
-            raise nncf.InternalError(
-                "Attempt to apply overflow issue fix to quantizer which is not configured for that."
-            )
+            msg = "Attempt to apply overflow issue fix to quantizer which is not configured for that."
+            raise nncf.InternalError(msg)
 
         # Low value shift to expand quantize range from 7 bit to 8 bit properly
         weights["input_low_var"].assign(

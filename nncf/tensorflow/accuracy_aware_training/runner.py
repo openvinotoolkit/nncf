@@ -75,7 +75,7 @@ class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
 
     def _make_checkpoint_path(self, is_best, compression_rate=None):
         extension = ".pt"
-        return osp.join(self._checkpoint_save_dir, f'acc_aware_checkpoint_{"best" if is_best else "last"}{extension}')
+        return osp.join(self._checkpoint_save_dir, f"acc_aware_checkpoint_{'best' if is_best else 'last'}{extension}")
 
     def add_tensorboard_scalar(self, key, data, step):
         if self.verbose and self._tensorboard_writer is not None:
@@ -114,6 +114,7 @@ class TFAdaptiveCompressionLevelTrainingRunner(
         base_path = osp.join(self._checkpoint_save_dir, "acc_aware_checkpoint")
         if is_best:
             if compression_rate is None:
-                raise ValueError("Compression rate cannot be None")
+                msg = "Compression rate cannot be None"
+                raise ValueError(msg)
             return f"{base_path}_best_{compression_rate:.3f}{extension}"
         return f"{base_path}_last{extension}"

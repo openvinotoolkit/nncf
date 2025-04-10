@@ -124,7 +124,8 @@ class TFTensorListComparator(BaseTensorListComparator):
             return tensor.numpy()
         if isinstance(tensor, (np.ndarray, numbers.Number)):
             return tensor
-        raise Exception(f"Tensor must be numbers.Number, np.ndarray, tf.Tensor or tf.Variable, not {type(tensor)}")
+        msg = f"Tensor must be numbers.Number, np.ndarray, tf.Tensor or tf.Variable, not {type(tensor)}"
+        raise Exception(msg)
 
 
 class MockCOCODatasetBuilder(COCODatasetBuilder):

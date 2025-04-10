@@ -73,7 +73,7 @@ class FastBiasCorrection(Algorithm):
             quantized nodes, if the node has no bias then a bias node will be inserted,
             and if False, then the bias correction will only be applied to quantized
             nodes that have a bias.
-        :param inplace_statistics: Defines wheather to calculate quantizers statistics
+        :param inplace_statistics: Defines whether to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
         :param backend_params: Backend specific parameters.
@@ -88,7 +88,8 @@ class FastBiasCorrection(Algorithm):
         self._algorithm_key = f"FBC_{hash(self)}"
 
         if self.apply_for_all_nodes:
-            raise nncf.InternalError("FastBiasCorrection algorithm does not support apply_for_all_nodes=True yet")
+            msg = "FastBiasCorrection algorithm does not support apply_for_all_nodes=True yet"
+            raise nncf.InternalError(msg)
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -122,9 +123,8 @@ class FastBiasCorrection(Algorithm):
 
             self._backend_entity = FXFastBiasCorrectionAlgoBackend()
         else:
-            raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
-            )
+            msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
+            raise nncf.UnsupportedBackendError(msg)
 
     def apply(
         self,

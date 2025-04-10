@@ -11,10 +11,9 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, TypeVar
+from typing import Dict, List, Optional, TypeVar
 
 import nncf
-from nncf import Dataset
 from nncf import nncf_logger
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -29,6 +28,7 @@ from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatis
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
+from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_scale
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
@@ -61,23 +61,13 @@ class AWQ(Algorithm):
 
     def __init__(
         self,
-        model: TModel,
-        name_to_node_mapping: Dict[str, Any],
-        all_weight_params: List[WeightCompressionParameters],
-        nodes_to_compress: List[NNCFNode],
-        statistics: Dict[str, WCTensorStatistic],
         subset_size: int = 32,
-        percent_to_apply=0.002,
-        alpha_min=0.0,
-        alpha_max=1.0,
-        steps=100,
+        percent_to_apply: float = 0.002,
+        alpha_min: float = 0.0,
+        alpha_max: float = 1.0,
+        steps: int = 100,
     ):
         """
-        :param model: Model for applying algorithm.
-        :param name_to_node_mapping: Name to node mapping for updating node weights.
-        :param all_weight_params: List of all weight parameters.
-        :param nodes_to_compress: List of nodes for processing.
-        :param statistics: Input activation statistics for each node.
         :param subset_size: The number of samples for AWQ.
         :param percent_to_apply: The percent of outliers for correction.
         :param alpha_min: Minimum value of smoothness parameter for grid search.
@@ -85,10 +75,6 @@ class AWQ(Algorithm):
         :param steps: The number of the steps in grid search.
         """
         super().__init__()
-        self.name_to_node_mapping = name_to_node_mapping
-        self._all_weight_params = all_weight_params
-        self._nodes_to_compress = nodes_to_compress
-        self._statistics = statistics
         self._subset_size = subset_size
         self._percent_to_apply = percent_to_apply
         self._alpha_min = alpha_min
@@ -98,46 +84,54 @@ class AWQ(Algorithm):
         self._patterns = None
         self._scale_per_target_node = {}
 
-        self._set_backend_entity(model)
-
     @property
     def available_backends(self) -> List[BackendType]:
-        return [BackendType.OPENVINO]
+        return [BackendType.OPENVINO, BackendType.TORCH]
 
-    def _set_backend_entity(self, model: TModel) -> None:
+    def _set_backend_entity(
+        self, model: TModel, wc_backend_entity: Optional[WeightCompressionAlgoBackend] = None
+    ) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm.
 
         :param model: Backend-specific input model.
+        :param wc_backend_entity: Weight compression algorithm backend.
         """
-
         model_backend = get_backend(model)
         if model_backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVAWQAlgoAlgoBackend
 
-            self._backend_entity = OVAWQAlgoAlgoBackend(model, self.name_to_node_mapping)
-            self._patterns = self._backend_entity.get_awq_patterns()
+            self._backend_entity = OVAWQAlgoAlgoBackend(model, wc_backend_entity.name_to_node_mapping)
+        elif model_backend == BackendType.TORCH:
+            from nncf.quantization.algorithms.weight_compression.torch_backend import PTAWQAlgoAlgoBackend
+
+            self._backend_entity = PTAWQAlgoAlgoBackend()
+
         else:
-            raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific AWQ entity because {} is not supported!".format(model_backend.value)
-            )
+            msg = f"Cannot return backend-specific AWQ entity because {model_backend.value} is not supported!"
+            raise nncf.UnsupportedBackendError(msg)
+        self._patterns = self._backend_entity.get_awq_patterns()
 
     def apply(
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+        all_weight_params: List[WeightCompressionParameters],
+        nodes_to_compress: List[NNCFNode],
+        statistics: Dict[str, WCTensorStatistic],
+        wc_backend_entity: Optional[WeightCompressionAlgoBackend] = None,
     ) -> TModel:
         """
         Applies the algorithm to the model.
-
         :param model: Model for applying algorithm.
         :param graph: Model graph.
-        :param statistic_points: Statistic points with collected statistics values.
-        :param dataset: A representative dataset for the calibration process.
+        :param all_weight_params: List of all weight parameters.
+        :param nodes_to_compress: List of nodes for processing.
+        :param statistics: Input activation statistics for each node.
+        :param wc_backend_entity: Weight compression algorithm backend.
         :return: A resulting model.
         """
+        self._set_backend_entity(model, wc_backend_entity)
         matches = []
 
         inference_nncf_graph = transform_to_inference_graph(deepcopy(graph), [], [], [], [])
@@ -153,7 +147,7 @@ class AWQ(Algorithm):
         model_transformer = ModelTransformerFactory.create(model, inplace=True)
 
         awq_data = {}
-        name_mapping = {wp.weight_name: idx for idx, wp in enumerate(self._all_weight_params)}
+        name_mapping = {wp.weight_name: idx for idx, wp in enumerate(all_weight_params)}
 
         for match in matches:
             nncf_node = graph.get_node_by_key(match[-1])
@@ -168,11 +162,11 @@ class AWQ(Algorithm):
             if target_node_names[-1] not in name_mapping:
                 continue
 
-            weight_params = self._all_weight_params[name_mapping[target_node_names[-1]]]
+            weight_params = all_weight_params[name_mapping[target_node_names[-1]]]
 
             if weight_params.compression_config.num_bits != 4:
                 continue
-            target_node = self._nodes_to_compress[name_mapping[target_node_names[-1]]]
+            target_node = nodes_to_compress[name_mapping[target_node_names[-1]]]
 
             # avoid matching different patterns for the same node
             if target_node.node_name in awq_data:
@@ -184,7 +178,7 @@ class AWQ(Algorithm):
                 merge_node_names = []
                 for weight_op_friendly_name, _ in self._backend_entity.get_weight_names_and_port_ids(nncf_node, graph):
                     merge_node_names.append(weight_op_friendly_name)
-                merge_node = self._nodes_to_compress[name_mapping[merge_node_names[-1]]]
+                merge_node = nodes_to_compress[name_mapping[merge_node_names[-1]]]
             else:  # pattern Act->MatMul or Act->Multiply->MatMul
                 merge_node = nncf_node
 
@@ -206,7 +200,9 @@ class AWQ(Algorithm):
 
             config = wp.compression_config
 
-            s, X = process_stats(self._statistics[k], self._subset_size)
+            s, X = process_stats(statistics[k], self._subset_size)
+            s = s.astype(TensorDataType.float32)
+            X = X.astype(TensorDataType.float32)
 
             top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
             topk_idxs = fns.argsort(-s)[:top_k]
@@ -224,6 +220,8 @@ class AWQ(Algorithm):
             weight = self._backend_entity.get_weight(
                 wp.node_with_weight, weight_port_id, model, graph
             )  # get_const_value(wp.weight_node)
+            weight_dtype = weight.dtype
+            weight = weight.astype(TensorDataType.float32)
             assert isinstance(wp.reduction_axes, tuple) and len(wp.reduction_axes) == 1
             reduction_axis = wp.reduction_axes[0]
 
@@ -285,7 +283,7 @@ class AWQ(Algorithm):
                 w_scale = fns.unsqueeze(w_scale, 0)
                 a_scale = fns.unsqueeze(1.0 / a_scale, 1)
 
-            scaled_weight = weight * w_scale
+            scaled_weight = (weight * w_scale).astype(weight_dtype)
             self._backend_entity.set_weight(wp.node_with_weight, weight_port_id, model, graph, scaled_weight)
 
             if self._backend_entity.is_node_with_weights(
@@ -293,11 +291,11 @@ class AWQ(Algorithm):
             ):  # for MatMul->Multiply->MatMul pattern scale merged to first MatMul
                 for _, port_id in self._backend_entity.get_weight_names_and_port_ids(merge_node, graph):
                     merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
-                    merge_weight = merge_weight * a_scale
+                    merge_weight = (merge_weight * a_scale).astype(weight_dtype)
                     self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
                 a_scale = fns.transpose(a_scale)
             else:  # for Act->Multiply->MatMul and Act->MatMul patterns scale inserted after Act as extra node
-                a_scale = fns.transpose(a_scale)
+                a_scale = fns.transpose(a_scale).astype(weight_dtype)
                 next_nodes = graph.get_next_nodes(merge_node)
                 source_node_output_port = graph.get_output_edges(merge_node)[0].output_port_id
                 scale_insertion_command = self._backend_entity.scale_insertion_command(

@@ -45,7 +45,8 @@ class IoU(Metric):
             try:
                 self.ignore_index = tuple(ignore_index)
             except TypeError as e:
-                raise ValueError("'ignore_index' must be an int or iterable") from e
+                msg = "'ignore_index' must be an int or iterable"
+                raise ValueError(msg) from e
 
     def reset(self):
         self.conf_metric.reset()
@@ -64,9 +65,9 @@ class IoU(Metric):
         """
         # Dimensions check
         assert predicted.size(0) == target.size(0), "number of targets and predicted outputs do not match"
-        assert (
-            predicted.dim() == 3 or predicted.dim() == 4
-        ), "predictions must be of dimension (N, H, W) or (N, K, H, W)"
+        assert predicted.dim() == 3 or predicted.dim() == 4, (
+            "predictions must be of dimension (N, H, W) or (N, K, H, W)"
+        )
         assert target.dim() == 3 or target.dim() == 4, "targets must be of dimension (N, H, W) or (N, K, H, W)"
 
         # If the tensor is in categorical format convert it to integer format

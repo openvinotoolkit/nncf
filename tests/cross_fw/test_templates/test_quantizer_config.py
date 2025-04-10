@@ -93,6 +93,21 @@ class TemplateTestQuantizerConfig:
 
     @abstractmethod
     @pytest.fixture
+    def embedding_nncf_graph_shape_of(self) -> NNCFGraphToTest:
+        pass
+
+    @abstractmethod
+    @pytest.fixture
+    def embedding_nncf_graph_constant_path(self) -> NNCFGraphToTest:
+        pass
+
+    @abstractmethod
+    @pytest.fixture
+    def constant_branch_nncf_graph(self) -> NNCFGraphToTest:
+        pass
+
+    @abstractmethod
+    @pytest.fixture
     def depthwise_conv_nncf_graph(self) -> NNCFGraphToTestDepthwiseConv:
         pass
 
@@ -158,10 +173,10 @@ class TemplateTestQuantizerConfig:
         )
 
         weight_default_config = QuantizerConfig(
-            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True
+            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True, narrow_range=True
         )
         activation_default_config = QuantizerConfig(
-            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=False
+            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=False, narrow_range=False
         )
 
         assert len(q_setup.quantization_points) == 2
@@ -244,10 +259,10 @@ class TemplateTestQuantizerConfig:
         )
 
         weight_default_config = QuantizerConfig(
-            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True
+            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True, narrow_range=True
         )
         activation_default_config = QuantizerConfig(
-            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=True
+            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=True, narrow_range=False
         )
 
         assert len(q_setup.quantization_points) == 2
@@ -263,37 +278,73 @@ class TemplateTestQuantizerConfig:
             4: {
                 "qip": {"target_node_name": "/K_0", "input_port_id": None},
                 "qip_class": "ActivationQuantizationInsertionPoint",
-                "qconfig": {"num_bits": 8, "mode": "symmetric", "signedness_to_force": None, "per_channel": False},
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
                 "directly_quantized_operator_node_names": ["/K_Q_0"],
             },
             5: {
                 "qip": {"target_node_name": "/Q_0", "input_port_id": None},
                 "qip_class": "ActivationQuantizationInsertionPoint",
-                "qconfig": {"num_bits": 8, "mode": "symmetric", "signedness_to_force": None, "per_channel": False},
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
                 "directly_quantized_operator_node_names": ["/K_Q_0"],
             },
             6: {
                 "qip": {"target_node_name": "/Input_1_0", "input_port_id": None},
                 "qip_class": "ActivationQuantizationInsertionPoint",
-                "qconfig": {"num_bits": 8, "mode": "asymmetric", "signedness_to_force": None, "per_channel": False},
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "asymmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
                 "directly_quantized_operator_node_names": ["/K_0", "/Q_0", "/V_0"],
             },
             8: {
                 "qip": {"target_node_name": "/K_0"},
                 "qip_class": "WeightQuantizationInsertionPoint",
-                "qconfig": {"num_bits": 8, "mode": "symmetric", "signedness_to_force": True, "per_channel": True},
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": True,
+                    "per_channel": True,
+                    "narrow_range": True,
+                },
                 "directly_quantized_operator_node_names": ["/K_0"],
             },
             9: {
                 "qip": {"target_node_name": "/Q_0"},
                 "qip_class": "WeightQuantizationInsertionPoint",
-                "qconfig": {"num_bits": 8, "mode": "symmetric", "signedness_to_force": True, "per_channel": True},
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": True,
+                    "per_channel": True,
+                    "narrow_range": True,
+                },
                 "directly_quantized_operator_node_names": ["/Q_0"],
             },
             10: {
                 "qip": {"target_node_name": "/V_0"},
                 "qip_class": "WeightQuantizationInsertionPoint",
-                "qconfig": {"num_bits": 8, "mode": "symmetric", "signedness_to_force": True, "per_channel": True},
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": True,
+                    "per_channel": True,
+                    "narrow_range": True,
+                },
                 "directly_quantized_operator_node_names": ["/V_0"],
             },
         },
@@ -322,6 +373,94 @@ class TemplateTestQuantizerConfig:
             state["quantization_points"][6]["directly_quantized_operator_node_names"]
         )
         assert state == self.REF_TRANSFORMER_SETUP_STATE
+
+    REF_EMBEDDING_MODEL_SETUP_STATE = {
+        "quantization_points": {
+            3: {
+                "qip": {"target_node_name": "/Embedding_0"},
+                "qip_class": "WeightQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": True,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
+                "directly_quantized_operator_node_names": ["/Conv_0", "/Embedding_0"],
+            },
+            4: {
+                "qip": {"target_node_name": "/Conv_0"},
+                "qip_class": "WeightQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": True,
+                    "per_channel": True,
+                    "narrow_range": True,
+                },
+                "directly_quantized_operator_node_names": ["/Conv_0"],
+            },
+        },
+        "unified_scale_groups": {},
+        "shared_input_operation_set_groups": {0: [3, 4]},
+    }
+
+    def test_embedding_model_qconfig_shape_of(self, embedding_nncf_graph_shape_of):
+        state = self._get_q_setup(embedding_nncf_graph_shape_of.nncf_graph)
+        state["quantization_points"][3]["directly_quantized_operator_node_names"] = sorted(
+            state["quantization_points"][3]["directly_quantized_operator_node_names"]
+        )
+        assert state == self.REF_EMBEDDING_MODEL_SETUP_STATE
+
+    def test_embedding_model_qconfig_const_path(self, embedding_nncf_graph_constant_path):
+        state = self._get_q_setup(embedding_nncf_graph_constant_path.nncf_graph)
+        state["quantization_points"][3]["directly_quantized_operator_node_names"] = sorted(
+            state["quantization_points"][3]["directly_quantized_operator_node_names"]
+        )
+        assert state == self.REF_EMBEDDING_MODEL_SETUP_STATE
+
+    REF_CONSTANT_BRANCH_SETUP_STATE = {
+        "quantization_points": {
+            1: {
+                "qip": {"target_node_name": "/Input_1_0", "input_port_id": None},
+                "qip_class": "ActivationQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": None,
+                    "per_channel": False,
+                    "narrow_range": False,
+                },
+                "directly_quantized_operator_node_names": ["/Conv_1_0"],
+            },
+            3: {
+                "qip": {"target_node_name": "/Conv_1_0"},
+                "qip_class": "WeightQuantizationInsertionPoint",
+                "qconfig": {
+                    "num_bits": 8,
+                    "mode": "symmetric",
+                    "signedness_to_force": True,
+                    "per_channel": True,
+                    "narrow_range": True,
+                },
+                "directly_quantized_operator_node_names": ["/Conv_1_0"],
+            },
+        },
+        "unified_scale_groups": {},
+        "shared_input_operation_set_groups": {0: [1, 3]},
+    }
+
+    def test_constant_branch_model_qconfig(self, constant_branch_nncf_graph):
+        state = self._get_q_setup(constant_branch_nncf_graph.nncf_graph)
+        assert state == self.REF_CONSTANT_BRANCH_SETUP_STATE
+
+    def _get_q_setup(self, nncf_graph):
+        min_max_algo = MinMaxQuantization()
+        min_max_algo._backend_entity = self.get_algo_backend()
+        inference_nncf_graph = self._transform_to_inference_graph(nncf_graph, min_max_algo)
+        return min_max_algo._get_quantizer_setup(
+            nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
+        ).get_state()
 
     @pytest.mark.parametrize(
         "range_estimator_params", [RangeEstimatorParametersSet.MINMAX, RangeEstimatorParametersSet.MEAN_MINMAX]

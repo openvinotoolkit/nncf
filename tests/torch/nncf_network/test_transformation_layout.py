@@ -41,9 +41,9 @@ def trace_parameters_fixture(request) -> bool:
     return request.param
 
 
-def _get_trace_params_target_types_command_builders_and_models_cls() -> (
-    Tuple[bool, Type[torch.nn.Module], TargetType, callable]
-):
+def _get_trace_params_target_types_command_builders_and_models_cls() -> Tuple[
+    bool, Type[torch.nn.Module], TargetType, callable
+]:
     """
     Returns list of all avaliable command builders
     """
@@ -162,7 +162,8 @@ def test_all_possible_combinations_of_commands_for_get_applied_commands(
             for applied_command in applied_commands.transformations
         )
         if sum(map(int, eq_commands)) != 1:
-            raise RuntimeError(f"Command {command} has no pair in recovered commands")
+            msg = f"Command {command} has no pair in recovered commands"
+            raise RuntimeError(msg)
 
 
 @pytest.mark.parametrize("target_type", (TargetType.OPERATION_WITH_WEIGHTS, TargetType.OPERATOR_PRE_HOOK))

@@ -87,7 +87,6 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
         If left unspecified, every node in `nncf_graph` will be allowed to have a single post-hook for its output
          (post-hooking separate tensors in an operation's output is not currently supported)
         """
-
         super().__init__()
         self._base_nx_graph = deepcopy(nncf_graph.get_nx_graph_copy())
 
@@ -315,12 +314,11 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
         single node; the resulting InsertionPointGraph no longer has accessible the pre- and post-hooks that were
         located in  the middle of the fused pattern.
         If the InsertionPointGraph should be filtered from constant nodes before the node fusing,
-        then 'known_non_constant_node_keys' should be pass. This is the list of the node known that are non constansts.
+        then 'known_non_constant_node_keys' should be pass. This is the list of the node known that are non constants.
 
-        :param full_fusing_pattern: The GraphPatttern object representing a composition of fusing pattern variants.
+        :param full_fusing_pattern: The GraphPattern object representing a composition of fusing pattern variants.
         :return: The InsertionPointGraph with nodes fused according to pattern matching.
         """
-
         merged_ip_graph = deepcopy(self)
         matches = find_subgraphs_matching_pattern(merged_ip_graph.get_base_nx_graph(), full_fusing_pattern)
         for match in matches:

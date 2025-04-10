@@ -17,9 +17,8 @@ import nncf
 from tests.cross_fw.install.common import load_nncf_modules
 
 if len(sys.argv) != 3:
-    raise nncf.ValidationError(
-        "Must be run with an execution type as argument (either 'cpu' or 'gpu') and package type"
-    )
+    msg = "Must be run with an execution type as argument (either 'cpu' or 'gpu') and package type"
+    raise nncf.ValidationError(msg)
 execution_type = sys.argv[1]
 package_type = sys.argv[2]
 
@@ -54,7 +53,8 @@ elif execution_type == "gpu":
         input_tensor, input_low_tensor, input_high_tensor, levels
     )
 else:
-    raise nncf.ValidationError(f"Invalid execution type {execution_type} (expected 'cpu' or 'gpu')!")
+    msg = f"Invalid execution type {execution_type} (expected 'cpu' or 'gpu')!"
+    raise nncf.ValidationError(msg)
 
 EXCLUDED_MODULES_PATTERNS = (
     "nncf\\.openvino.*",

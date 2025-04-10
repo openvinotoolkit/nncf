@@ -66,7 +66,7 @@ def parse_args() -> Tuple[argparse.Namespace, TrainingArguments]:
     parser.add_argument(
         "--quick_check",
         action="store_true",
-        help="If set True, will train the model without pretrained weights on only " f"{quick_check_num} samples.",
+        help=f"If set True, will train the model without pretrained weights on only {quick_check_num} samples.",
     )
 
     args, other_args = parser.parse_known_args()
@@ -130,7 +130,7 @@ class CompressionTrainer(Trainer):
         ):
             compression_ctrl.distributed()
 
-    def compute_loss(self, model, inputs, return_outputs=False):
+    def compute_loss(self, model, inputs, num_items_in_batch=None, return_outputs=False):
         loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
         if self.compression_ctrl is not None:
             loss_compress = self.compression_ctrl.loss()

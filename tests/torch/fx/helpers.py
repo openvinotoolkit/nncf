@@ -56,7 +56,7 @@ class TinyImagenetDatasetManager:
             return
 
         val_annotations_file = val_data_dir / "val_annotations.txt"
-        with open(val_annotations_file, "r") as f:
+        with open(val_annotations_file) as f:
             val_annotation_data = map(lambda line: line.split("\t")[:2], f.readlines())
         for image_filename, image_label in val_annotation_data:
             from_image_filepath = val_images_dir / image_filename
@@ -124,7 +124,7 @@ def visualize_fx_model(model: torch.fx.GraphModule, output_svg_path: str):
 
 
 def get_torch_fx_model(
-    model: torch.nn.Module, ex_input: Union[torch.Tensor, Tuple[torch.Tensor, ...]]
+    model: torch.nn.Module, ex_input: Union[torch.Tensor, Tuple[torch.Tensor, ...]], dynamic_shapes=None
 ) -> torch.fx.GraphModule:
     """
     Converts given module to GraphModule.
@@ -151,7 +151,7 @@ def get_torch_fx_model(
     model.eval()
     with torch.no_grad():
         with disable_patching():
-            return torch.export.export_for_training(model, args=device_ex_input).module()
+            return torch.export.export_for_training(model, args=device_ex_input, dynamic_shapes=dynamic_shapes).module()
 
 
 def get_torch_fx_model_q_transformed(model: torch.nn.Module, ex_input: torch.Tensor) -> torch.fx.GraphModule:

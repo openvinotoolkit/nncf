@@ -35,6 +35,7 @@ from nncf.config.schemata.defaults import PRUNE_BATCH_NORMS
 from nncf.config.schemata.defaults import PRUNE_DOWNSAMPLE_CONVS
 from nncf.config.schemata.defaults import PRUNE_FIRST_CONV
 from nncf.config.schemata.defaults import PRUNING_INIT
+from nncf.parameters import StripFormat
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.converter import TFModelConverterFactory
 from nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
@@ -192,8 +193,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                     and weight_def.weight_attr_name == "gamma"
                 ):
                     nncf_logger.debug(
-                        "Fused gamma parameter encountered in BatchNormalization layer. "
-                        "Won't add a pruning mask to it."
+                        "Fused gamma parameter encountered in BatchNormalization layer. Won't add a pruning mask to it."
                     )
                     continue
 
@@ -236,7 +236,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
     def _get_related_batchnorms(self, layer_name: str, group: Cluster, graph: NNCFGraph) -> List[NNCFNode]:
         """
         Returns List of batchnorm elements related to the layer.
-        Note: Single node per layer for shared bactchnorm layers
+        Note: Single node per layer for shared batchnorm layers
         """
         layer_nodes = [node_ for node_ in group.elements if node_.layer_name == layer_name]
         bn_nodes = []
@@ -312,7 +312,8 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController, ABC):
         pruning_target = params.get("pruning_target", None)
         pruning_flops_target = params.get("pruning_flops_target", None)
         if pruning_target and pruning_flops_target:
-            raise ValueError("Only one parameter from 'pruning_target' and 'pruning_flops_target' can be set.")
+            msg = "Only one parameter from 'pruning_target' and 'pruning_flops_target' can be set."
+            raise ValueError(msg)
         if pruning_flops_target:
             self.prune_flops = True
 
@@ -359,6 +360,8 @@ class BasePruningAlgoController(BaseCompressionAlgorithmController, ABC):
 
         return pruned_layers_summary
 
-    def strip_model(self, model: tf.keras.Model, do_copy: bool = False) -> tf.keras.Model:
+    def strip_model(
+        self, model: tf.keras.Model, do_copy: bool = False, strip_format: StripFormat = StripFormat.NATIVE
+    ) -> tf.keras.Model:
         # Transform model for pruning creates copy of the model.
         return strip_model_from_masks(model, self._op_names)

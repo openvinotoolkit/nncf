@@ -46,7 +46,8 @@ class Patterns:
         :param match: whether should the pattern used as fussing pattern
         """
         if name in self._patterns_dict:
-            raise KeyError("{} is already registered".format(name))
+            msg = f"{name} is already registered"
+            raise KeyError(msg)
         self._patterns_dict[name] = pattern
         if match:
             self._full_pattern_graph.add_pattern_alternative(pattern)
@@ -100,7 +101,6 @@ class GraphPattern:
         :param other: GraphPattern that will be added.
         :return: resulted GraphPattern.
         """
-
         final_pattern = GraphPattern()
         for self_subgraph in self.get_weakly_connected_subgraphs():
             for other_subgraph in other.get_weakly_connected_subgraphs():
@@ -260,7 +260,8 @@ def merge_two_types_of_operations(first_op: Dict[str, Any], second_op: Dict[str,
         res[GraphPattern.METATYPE_ATTR].extend(second_op[GraphPattern.METATYPE_ATTR])
         res[GraphPattern.LABEL_ATTR] = label
         return res
-    raise nncf.InternalError("Incorrect dicts of operations")
+    msg = "Incorrect dicts of operations"
+    raise nncf.InternalError(msg)
 
 
 @dataclass

@@ -25,8 +25,8 @@ from openvino.runtime import opset13 as opset
 from nncf.common.utils.backend import is_openvino_at_least
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
-from nncf.common.utils.cpu_info import is_lnl_cpu
 from nncf.common.utils.helpers import set_env_variable
+from nncf.openvino.cpu_info import is_lnl_cpu
 from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import non_convertable_divide_op
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -144,7 +144,8 @@ def _infer_ov_model(
         actual_dtype = inputs[i].dtype
         expected_dtype = ov_model_params.input_dtypes[input_name]
         if actual_dtype != expected_dtype:
-            raise ValueError(f"Expected input '{input_name}' to be {expected_dtype}. But found: {actual_dtype}.")
+            msg = f"Expected input '{input_name}' to be {expected_dtype}. But found: {actual_dtype}."
+            raise ValueError(msg)
 
     # Infer the model
     if compiled_model._infer_request is None:
@@ -178,9 +179,11 @@ def _prepare_compression_model_inputs(
     Do some input checks and convert static shapes to dynamic shapes if needed.
     """
     if scale_shape is None and zero_point_shape is not None:
-        raise Exception("Zero point shape can only be provided if scale shape is provided.")
+        msg = "Zero point shape can only be provided if scale shape is provided."
+        raise Exception(msg)
     if scale_shape is None and reduction_axes is None:
-        raise ValueError("Reduction axes must be provided if scale shape is not provided.")
+        msg = "Reduction axes must be provided if scale shape is not provided."
+        raise ValueError(msg)
 
     # Set dynamic shapes if needed
     if ov_model_params.dynamic_shapes:
@@ -200,7 +203,6 @@ def get_compress_weight_model(
     scale_shape: Optional[Tuple] = None,
     zero_point_shape: Optional[Tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
-    return_nodes: Optional[bool] = False,
 ) -> Union[ModelCallable, ModelAsNodes]:
     """
     Get a model that compresses weights using the given configuration.
@@ -214,12 +216,9 @@ def get_compress_weight_model(
         as an input.
     :param reduction_axes: Optional axes to reduce the weight tensor. Not needed if scale (and z.p.) are provided as
         inputs.
-    :param return_nodes: Whether to return the OV model inputs parameters and results nodes instead of the model
-        callable.
     :return: A model callable that compresses weights using the given configuration. Or a model as nodes, if
         `return_nodes` is True.
     """
-
     weight_shape, scale_shape, zero_point_shape = _prepare_compression_model_inputs(
         ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes
     )
@@ -231,7 +230,6 @@ def get_compress_weight_model(
         scale_shape,
         zero_point_shape,
         reduction_axes,
-        return_nodes=return_nodes,
     )
 
 
@@ -261,7 +259,6 @@ def get_compress_decompress_weight_model(
     :return: A model callable that returns a decompressed weight, and optionally compressed weight, scale,
         (and zero point) if `return_compressed_weight` is True.
     """
-
     weight_shape, scale_shape, zero_point_shape = _prepare_compression_model_inputs(
         ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes
     )
@@ -274,6 +271,35 @@ def get_compress_decompress_weight_model(
         zero_point_shape,
         reduction_axes,
         return_compressed_weight,
+    )
+
+
+def get_quantization_error_model(
+    ov_model_params: OVModelParameters,
+    config: WeightCompressionConfig,
+    original_weight_shape: Tuple,
+    weight_shape: Tuple,
+    original_reduction_axes: ReductionAxes,
+    reduction_axes: ReductionAxes,
+) -> ModelCallable:
+    """
+    Get a model that calculates the quantization error for a given weight.
+
+    This function builds a model that compresses and then decompresses the given weight, and calculates the
+    quantization error by comparing the original weight with the decompressed weight.
+
+    :param ov_model_params: OV model parameters.
+    :param config: Compression configuration.
+    :param original_weight_shape: Shape of the original weight tensor.
+    :param weight_shape: Shape of the weight tensor to be compressed.
+    :param original_reduction_axes: Reduction axes of the original weight tensor before reshaping.
+    :param reduction_axes: Axes to reduce the weight tensor.
+    :return: A model callable that returns the quantization error.
+    """
+    weight_shape, _, _ = _prepare_compression_model_inputs(ov_model_params, weight_shape, None, None, reduction_axes)
+
+    return _build_quantization_error_model(
+        config, ov_model_params, original_weight_shape, weight_shape, original_reduction_axes, reduction_axes
     )
 
 
@@ -305,7 +331,8 @@ def _build_compress_model(
     ov_model_params.output_dtypes = {**default_output_dtypes, **ov_model_params.output_dtypes}
 
     if "weight" not in ov_model_params.input_dtypes:
-        raise ValueError("Input weight dtype is required!")
+        msg = "Input weight dtype is required!"
+        raise ValueError(msg)
 
     weight_dtype = ov_model_params.input_dtypes["weight"]
     input_scale_dtype = ov_model_params.input_dtypes["scale"]
@@ -317,13 +344,14 @@ def _build_compress_model(
     # Validate input dtypes
     valid_weight_dtypes = [TensorDataType.float32, TensorDataType.float16, TensorDataType.bfloat16]
     if weight_dtype not in valid_weight_dtypes:
-        raise ValueError(
-            f"Weight must be one of the following data types: {valid_weight_dtypes}. But found: {weight_dtype}."
-        )
+        msg = f"Weight must be one of the following data types: {valid_weight_dtypes}. But found: {weight_dtype}."
+        raise ValueError(msg)
     if scale_shape is not None and input_scale_dtype != TensorDataType.float32:
-        raise ValueError(f"Input scale must be of float32 data type. But found: {input_scale_dtype}.")
+        msg = f"Input scale must be of float32 data type. But found: {input_scale_dtype}."
+        raise ValueError(msg)
     if zero_point_shape is not None and input_zero_point_dtype not in [TensorDataType.int32, TensorDataType.float32]:
-        raise ValueError(f"Input zero point must be of int32/float32 data type. But found: {input_zero_point_dtype}.")
+        msg = f"Input zero point must be of int32/float32 data type. But found: {input_zero_point_dtype}."
+        raise ValueError(msg)
 
     # Validate output dtypes
     valid_compressed_weight_dtypes = [
@@ -335,17 +363,20 @@ def _build_compress_model(
         TensorDataType.uint4,
     ]
     if compressed_weight_dtype not in valid_compressed_weight_dtypes:
-        raise ValueError(
+        msg = (
             f"Compressed weight must be one of the following data types: {valid_compressed_weight_dtypes}. "
             f"But found: {compressed_weight_dtype}."
         )
+        raise ValueError(msg)
     if scale_shape is None and output_scale_dtype != TensorDataType.float32:
-        raise ValueError(f"Output scale must be of float32 data type. But found: {output_scale_dtype}.")
+        msg = f"Output scale must be of float32 data type. But found: {output_scale_dtype}."
+        raise ValueError(msg)
     if is_asym_mode and zero_point_shape is None and output_zero_point_dtype not in valid_compressed_weight_dtypes:
-        raise ValueError(
+        msg = (
             f"Output zero point must be of one of the following data types: {valid_compressed_weight_dtypes}. "
             f"But found: {output_zero_point_dtype}."
         )
+        raise ValueError(msg)
 
     # Build OV model
     weight = opset.parameter(weight_shape, name="weight", dtype=DTYPE_MAP_OV[weight_dtype])
@@ -431,7 +462,8 @@ def _build_compress_decompress_model(
     zero_point_shape: Optional[Tuple] = None,
     reduction_axes: Optional[ReductionAxes] = None,
     return_compressed_weight: Optional[bool] = False,
-) -> ModelCallable:
+    return_nodes: Optional[bool] = False,
+) -> Union[ModelCallable, ModelAsNodes]:
     default_output_dtypes = {"decompressed_weight": TensorDataType.float32}
     if not return_compressed_weight:
         # If compressed weight is not returned to a user, we can keep it in float32 to avoid additional conversion
@@ -441,11 +473,12 @@ def _build_compress_decompress_model(
 
     decompressed_weight_dtype = ov_model_params.output_dtypes["decompressed_weight"]
     if decompressed_weight_dtype != TensorDataType.float32:
-        raise ValueError(f"Decompressed weight must be of float32 data type. But found: {decompressed_weight_dtype}.")
+        msg = f"Decompressed weight must be of float32 data type. But found: {decompressed_weight_dtype}."
+        raise ValueError(msg)
 
     # Get compression model as input/result nodes and potentially modified ov model parameters
-    ov_parameters, ov_results, ov_model_params = get_compress_weight_model(
-        ov_model_params, config, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_nodes=True
+    ov_parameters, ov_results, ov_model_params = _build_compress_model(
+        config, ov_model_params, weight_shape, scale_shape, zero_point_shape, reduction_axes, return_nodes=True
     )
 
     if config.is_asym_mode:
@@ -470,7 +503,46 @@ def _build_compress_decompress_model(
     decompressed_weight = opset.multiply(scale, convert_op(compressed_weight, ov.Type.f32))
 
     ov_results = [decompressed_weight] + ov_results if return_compressed_weight else [decompressed_weight]
+
+    if return_nodes:
+        return ov_parameters, ov_results, ov_model_params
+
     model = ov.Model(ov_results, ov_parameters)
+    compiled_model = _compile_ov_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})
+
+    return partial(_infer_ov_model, ov_model_params, compiled_model)
+
+
+@cache_results(OV_MODEL_CACHE)
+def _build_quantization_error_model(
+    config: WeightCompressionConfig,
+    ov_model_params: OVModelParameters,
+    original_weight_shape: Tuple,
+    weight_shape: Tuple,
+    original_reduction_axes: ReductionAxes,
+    reduction_axes: ReductionAxes,
+) -> ModelCallable:
+    ov_parameters, ov_results, ov_model_params = _build_compress_decompress_model(
+        config,
+        ov_model_params,
+        weight_shape,
+        reduction_axes=reduction_axes,
+        return_compressed_weight=False,
+        return_nodes=True,
+    )
+
+    weight = ov_parameters[0]
+    decompressed_weight = ov_results[0]
+
+    weight = convert_op(opset.reshape(weight, original_weight_shape, special_zero=False), ov.Type.f32)
+    decompressed_weight = convert_op(
+        opset.reshape(decompressed_weight, original_weight_shape, special_zero=False), ov.Type.f32
+    )
+    diff = opset.squared_difference(decompressed_weight, weight)
+    layer_err = opset.reduce_mean(diff, reduction_axes=original_reduction_axes)
+    quantization_error = opset.reduce_max(layer_err, reduction_axes=tuple(range(len(layer_err.shape))))
+
+    model = ov.Model([quantization_error], ov_parameters)
     compiled_model = _compile_ov_model(model, device_name="CPU", config={inference_precision(): ov.Type.f32})
 
     return partial(_infer_ov_model, ov_model_params, compiled_model)
@@ -497,14 +569,18 @@ def get_astype_model(ov_model_params: OVModelParameters, input_shape: Tuple) -> 
 def _build_astype_model(ov_model_params: OVModelParameters, arg_shape: Tuple) -> ModelCallable:
     input_dtypes = ov_model_params.input_dtypes
     if input_dtypes is None:
-        raise ValueError("Input dtypes must be provided.")
+        msg = "Input dtypes must be provided."
+        raise ValueError(msg)
     output_dtypes = ov_model_params.output_dtypes
     if output_dtypes is None:
-        raise ValueError("Output dtypes must be provided.")
+        msg = "Output dtypes must be provided."
+        raise ValueError(msg)
     if "input" not in input_dtypes:
-        raise ValueError("Input dtype is required.")
+        msg = "Input dtype is required."
+        raise ValueError(msg)
     if "output" not in output_dtypes:
-        raise ValueError("Output dtype is required.")
+        msg = "Output dtype is required."
+        raise ValueError(msg)
 
     arg = opset.parameter(arg_shape, dtype=DTYPE_MAP_OV[input_dtypes["input"]], name="input")
     res = opset.convert(arg, DTYPE_MAP_OV[output_dtypes["output"]])

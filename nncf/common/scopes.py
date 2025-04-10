@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import re
-from typing import Iterable, List, Optional, Sequence, Union
+from typing import Iterable, List, Optional, Union
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -34,7 +34,6 @@ def matches_any(tested_str: str, strs_to_match_to: Union[Iterable[str], str, Non
     :return: A boolean value specifying whether a tested_str should matches at least one element
         in strs_to_match_to.
     """
-
     if strs_to_match_to is None:
         return False
 
@@ -52,8 +51,8 @@ def matches_any(tested_str: str, strs_to_match_to: Union[Iterable[str], str, Non
 
 def should_consider_scope(
     serializable_id: Union[QuantizerId, NNCFNodeName],
-    ignored_scopes: Optional[Sequence[str]],
-    target_scopes: Optional[Sequence[str]] = None,
+    ignored_scopes: Optional[Iterable[str]],
+    target_scopes: Optional[Iterable[str]] = None,
 ) -> bool:
     """
     Used when an entity arising during compression has to be compared to an allowlist or a denylist of strings.
@@ -125,8 +124,7 @@ def check_scopes_in_graph(
 
     if not_matched_ignored_scopes or not_matched_target_scopes:
         err_message = (
-            "No match has been found among the model operations "
-            "for the following ignored/target scope definitions:\n"
+            "No match has been found among the model operations for the following ignored/target scope definitions:\n"
         )
         if not_matched_ignored_scopes:
             err_message += f" - ignored_scope: {not_matched_ignored_scopes}\n"

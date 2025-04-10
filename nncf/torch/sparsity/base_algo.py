@@ -11,6 +11,7 @@
 """
 Base classes for NNCF PyTorch sparsity algorithm builder and controller objects.
 """
+
 from typing import List
 
 import torch
@@ -27,6 +28,7 @@ from nncf.common.sparsity.controller import SparsityController
 from nncf.common.sparsity.schedulers import SparsityScheduler
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import copy_model
+from nncf.parameters import StripFormat
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
@@ -127,7 +129,9 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
     def compression_stage(self) -> CompressionStage:
         return CompressionStage.FULLY_COMPRESSED
 
-    def strip_model(self, model: NNCFNetwork, do_copy: bool = False) -> NNCFNetwork:
+    def strip_model(
+        self, model: NNCFNetwork, do_copy: bool = False, strip_format: StripFormat = StripFormat.NATIVE
+    ) -> NNCFNetwork:
         if do_copy:
             model = copy_model(model)
 

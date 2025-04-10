@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import torch
 
@@ -43,12 +43,13 @@ class PTTargetPoint(TargetPoint):
 
     _state_names = PTTargetPointStateNames
 
-    def __init__(self, target_type: TargetType, target_node_name: NNCFNodeName, *, input_port_id: int = None):
+    def __init__(self, target_type: TargetType, target_node_name: NNCFNodeName, *, input_port_id: Optional[int] = None):
         super().__init__(target_type)
         self.target_node_name = target_node_name
         self.target_type = target_type
         if self.target_type not in self._OPERATION_TYPES + self._HOOK_TYPES + self._LAYER_TYPE:
-            raise NotImplementedError("Unsupported target type: {}".format(target_type))
+            msg = f"Unsupported target type: {target_type}"
+            raise NotImplementedError(msg)
 
         self.input_port_id = input_port_id
 
@@ -64,10 +65,10 @@ class PTTargetPoint(TargetPoint):
         prefix = str(self.target_type)
         retval = prefix
         if self.target_type in self._OPERATION_TYPES + self._LAYER_TYPE:
-            retval += " {}".format(self.target_node_name)
+            retval += f" {self.target_node_name}"
         elif self.target_type in self._HOOK_TYPES:
             if self.input_port_id is not None:
-                retval += " {}".format(self.input_port_id)
+                retval += f" {self.input_port_id}"
             retval += " " + str(self.target_node_name)
         return retval
 

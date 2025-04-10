@@ -45,6 +45,7 @@ from nncf.common.utils.backend import copy_model
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.os import safe_open
 from nncf.config.extractors import extract_bn_adaptation_init_params
+from nncf.parameters import StripFormat
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.graph.operator_metatypes import PTModuleConv1dMetatype
@@ -185,17 +186,19 @@ class FilterPruningController(BasePruningAlgoController):
                     with safe_open(Path(coeffs_path), "r", encoding="utf8") as coeffs_file:
                         loaded_coeffs = json.load(coeffs_file)
                 except (ValueError, FileNotFoundError) as err:
-                    raise Exception(
+                    msg = (
                         "Can't load json with ranking coefficients. Please, check format of json file "
                         "and path to the file."
-                    ) from err
+                    )
+                    raise Exception(msg) from err
                 ranking_coeffs = {key: tuple(loaded_coeffs[key]) for key in loaded_coeffs}
                 nncf_logger.debug(f"Loaded ranking coefficients = {ranking_coeffs}")
                 self.ranking_coeffs = ranking_coeffs
             else:
                 # Ranking can't be trained without registered init struct LeGRInitArgs
                 if not config.has_extra_struct(LeGRInitArgs):
-                    raise Exception("Please, register LeGRInitArgs via register_default_init_args function.")
+                    msg = "Please, register LeGRInitArgs via register_default_init_args function."
+                    raise Exception(msg)
                 # Wrapping model for parallelization
                 distributed_wrapping_init_args = config.get_extra_struct(DistributedCallbacksArgs)
                 target_model = distributed_wrapping_init_args.wrap_model(target_model)
@@ -213,7 +216,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         # Saving ranking coefficients to the specified file
         if params.get("save_ranking_coeffs_path"):
-            nncf_logger.info(f'Saving ranking coefficients to the file {params.get("save_ranking_coeffs_path")}')
+            nncf_logger.info(f"Saving ranking coefficients to the file {params.get('save_ranking_coeffs_path')}")
             with safe_open(Path(params.get("save_ranking_coeffs_path")), "w", encoding="utf8") as f:
                 json.dump(self.ranking_coeffs, f)
 
@@ -353,17 +356,15 @@ class FilterPruningController(BasePruningAlgoController):
             self.current_flops = flops
             self.current_params_num = params_num
             return right
-        raise nncf.InternalError(
-            "Can't prune the model to get the required "
-            "pruning level in flops = {}".format(target_flops_pruning_level)
-        )
+        msg = f"Can't prune the model to get the required pruning level in flops = {target_flops_pruning_level}"
+        raise nncf.InternalError(msg)
 
     def set_pruning_level(
         self, pruning_level: Union[float, Dict[int, float]], run_batchnorm_adaptation: bool = False
     ) -> None:
         """
         Set the global or groupwise pruning level in the model.
-        If pruning_level is a float, the correspoding global pruning level is set in the model,
+        If pruning_level is a float, the corresponding global pruning level is set in the model,
         either in terms of the percentage of filters pruned or as the percentage of flops
         removed, the latter being true in case the "prune_flops" flag of the controller is
         set to True.
@@ -378,7 +379,8 @@ class FilterPruningController(BasePruningAlgoController):
             with torch.no_grad():
                 if self.all_weights:
                     if groupwise_pruning_levels_set:
-                        raise nncf.InternalError("Cannot set group-wise pruning levels with all_weights=True")
+                        msg = "Cannot set group-wise pruning levels with all_weights=True"
+                        raise nncf.InternalError(msg)
                     # Non-uniform (global) importance-score-based pruning according
                     # to the global pruning level
                     if self.prune_flops:
@@ -389,9 +391,8 @@ class FilterPruningController(BasePruningAlgoController):
                     if groupwise_pruning_levels_set:
                         group_ids = [group.id for group in self.pruned_module_groups_info.get_all_clusters()]
                         if set(pruning_level.keys()) != set(group_ids):
-                            raise nncf.InternalError(
-                                "Groupwise pruning level dict keys do not correspond to layer group ids"
-                            )
+                            msg = "Groupwise pruning level dict keys do not correspond to layer group ids"
+                            raise nncf.InternalError(msg)
                     else:
                         # Pruning uniformly with the same pruning level across layers
                         if self.prune_flops:
@@ -597,7 +598,8 @@ class FilterPruningController(BasePruningAlgoController):
                 self.current_params_num = params_num
                 return
             cur_num += 1
-        raise nncf.InternalError("Can't prune model to asked flops pruning level")
+        msg = "Can't prune model to asked flops pruning level"
+        raise nncf.InternalError(msg)
 
     def _propagate_masks(self):
         nncf_logger.debug("Propagating pruning masks")
@@ -692,7 +694,9 @@ class FilterPruningController(BasePruningAlgoController):
             )
         self._bn_adaptation.run(self.model)
 
-    def strip_model(self, model: NNCFNetwork, do_copy: bool = False) -> NNCFNetwork:
+    def strip_model(
+        self, model: NNCFNetwork, do_copy: bool = False, strip_format: StripFormat = StripFormat.NATIVE
+    ) -> NNCFNetwork:
         if do_copy:
             model = copy_model(model)
 

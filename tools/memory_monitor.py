@@ -13,6 +13,7 @@ import atexit
 import logging
 import queue
 import subprocess
+import sys
 import threading
 import time
 from enum import Enum
@@ -96,7 +97,8 @@ class MemoryMonitor:
             if include_child_processes is None:
                 include_child_processes = True
         else:
-            raise ValueError("Unknown memory type to log")
+            msg = "Unknown memory type to log"
+            raise ValueError(msg)
         self.memory_unit = memory_unit
         self.include_child_processes = include_child_processes
 
@@ -118,7 +120,8 @@ class MemoryMonitor:
             ```
         """
         if self._monitoring_in_progress:
-            raise Exception("Monitoring already in progress")
+            msg = "Monitoring already in progress"
+            raise Exception(msg)
 
         self._memory_values_queue = queue.Queue()
         self._monitoring_thread_should_stop = False
@@ -216,7 +219,7 @@ class MemoryMonitor:
         :param plot_title: A title to give to a plot.
         :param filename_suffix: A string suffix to give to the saved figure.
         """
-        with open(log_filepath, "r") as f:
+        with open(log_filepath) as f:
             lines = f.readlines()
             time_values, memory_values = [], []
             for line in lines[:-2]:
@@ -251,7 +254,8 @@ class MemoryMonitor:
             elif self.memory_type == MemoryType.SYSTEM:
                 bytes_used = psutil.virtual_memory().total - psutil.virtual_memory().available
             else:
-                raise Exception("Unknown memory type to log")
+                msg = "Unknown memory type to log"
+                raise Exception(msg)
             if self._monitoring_thread_should_stop:
                 break
             self._memory_values_queue.put((time.perf_counter(), bytes_used))
@@ -362,6 +366,7 @@ if __name__ == "__main__":
 
     with subprocess.Popen(" ".join(args.executable), shell=True) as p:
         p.wait()
+        exit_code = p.returncode
 
         # Stop addition of new values as soon as possible
         for mm in memory_monitors:
@@ -380,3 +385,5 @@ if __name__ == "__main__":
             summary_data.append([mm.memory_type.value, fz, f"{int(max(memory_values))} {mm.memory_unit.value}"])
     print("\nMemory summary:")
     print(tabulate(summary_data, headers=["Memory type", "From zero", "Peak value"]))
+
+    sys.exit(exit_code)

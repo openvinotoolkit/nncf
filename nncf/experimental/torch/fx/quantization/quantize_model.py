@@ -31,6 +31,7 @@ from nncf.experimental.torch.fx.transformations import apply_quantization_transf
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
 from nncf.experimental.torch.fx.transformations import fq_weights_transformation
 from nncf.parameters import BackupMode
+from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
@@ -66,9 +67,11 @@ def quantize_impl(
         " in case of errors or a poor model performance."
     )
     if target_device == TargetDevice.CPU_SPR:
-        raise nncf.InternalError("target_device == CPU_SPR is not supported")
+        msg = "target_device == CPU_SPR is not supported"
+        raise nncf.InternalError(msg)
     if mode is not None:
-        raise ValueError(f"mode={mode} is not supported")
+        msg = f"mode={mode} is not supported"
+        raise ValueError(msg)
 
     original_graph_meta = model.meta
 
@@ -95,8 +98,7 @@ def quantize_impl(
     else:
         fq_weights_transformation(quantized_model)
 
-    # Magic. Without this call compiled model
-    # is not preformant
+    # Magic. Without this call compiled model is not performant
     quantized_model = GraphModule(quantized_model, quantized_model.graph)
 
     quantized_model = _fold_conv_bn_qat(quantized_model)
@@ -130,12 +132,12 @@ def compress_weights_impl(
     gptq: bool,
     lora_correction: bool,
     backup_mode: BackupMode,
+    compression_format: CompressionFormat,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> torch.fx.GraphModule:
     """
     Implementation of the `compress_weights()` method for the Torch Fx backend.
     """
-
     compression_algorithm = WeightCompression(
         mode,
         ratio,
@@ -149,6 +151,7 @@ def compress_weights_impl(
         gptq,
         lora_correction,
         backup_mode,
+        compression_format,
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)

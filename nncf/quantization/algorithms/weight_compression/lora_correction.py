@@ -180,9 +180,10 @@ class LoraCorrectionAlgorithm:
             indexes = do_nf4_quantization(compressed_weight.tensor, compressed_weight.scale, is_normalized_weight=True)
             fq_weights = do_nf4_dequantization(indexes, compressed_weight.scale, reduction_axis)
         else:
-            raise nncf.InternalError(
+            msg = (
                 f"{mode.value} mode is invalid for Lora Correction algorithm. Supported modes: INT4_SYM, INT4_ASYM, NF4"
             )
+            raise nncf.InternalError(msg)
         # fq_w + residual = w   =>  residual = w - fq_w
         svd_residual = fns.astype(weight - fq_weights, TensorDataType.float32)
 

@@ -211,7 +211,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         nncf_logger.info(f"[AutoQ] best_reward: {best_reward}")
         nncf_logger.info(f"[AutoQ] best_policy: {best_policy}")
         nncf_logger.info("[AutoQ] Search completed.")
-        nncf_logger.info("[AutoQ] Elapsed time of AutoQ Precision Initialization (): {}".format(end_ts - start_ts))
+        nncf_logger.info(f"[AutoQ] Elapsed time of AutoQ Precision Initialization (): {end_ts - start_ts}")
         return final_quantizer_setup
 
     def _search(self, agent: DDPG, env: "QuantizationEnv") -> Tuple[pd.Series, float]:  # noqa: F821
@@ -247,17 +247,19 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                 nncf_logger.info(
                     f"## Episode[{episode}], "
                     f"reward: {episode_reward:.3f}, "
-                    f'acc: {info["accuracy"]:.3f}, '
-                    f'model_ratio: {info["model_ratio"]:.3f}, '
-                    f'model_size(MB): {info["model_size"] / 8e6:.2f}, '
-                    f'BOP_ratio: {info["bop_ratio"]:.3f}\n'
+                    f"acc: {info['accuracy']:.3f}, "
+                    f"model_ratio: {info['model_ratio']:.3f}, "
+                    f"model_size(MB): {info['model_size'] / 8e6:.2f}, "
+                    f"BOP_ratio: {info['bop_ratio']:.3f}\n"
                 )
 
                 # Replay Buffer Management
                 if agent.memory.nb_entries % (len(env.master_df) + 1) > 0:
-                    raise ValueError("logical bug in buffer management, uneven episode length")
+                    msg = "logical bug in buffer management, uneven episode length"
+                    raise ValueError(msg)
                 if agent.memory.limit % (len(env.master_df) + 1) > 0:
-                    raise ValueError("replay buffer size must be divisible by episode step length")
+                    msg = "replay buffer size must be divisible by episode step length"
+                    raise ValueError(msg)
 
                 if agent.memory.nb_entries + len(transition_buffer) >= agent.memory.limit:
                     step_reward_per_episode = agent.memory.rewards.data[:: (len(transition_buffer) + 1)]
@@ -282,7 +284,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                     if i == 0:
                         prev_action = 0.0
                     else:
-                        prev_action = env.master_df["action"][i - 1] / 8  # ducktape scaling
+                        prev_action = env.master_df["action"][i - 1] / 8  # duct tape scaling
                     if prev_action != s_t["prev_action"]:
                         s_t["prev_action"] = prev_action
                     # EO ------------------------
@@ -329,9 +331,9 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                         f"## Episode[{episode}] "
                         f"New best policy: {best_policy.values.tolist()}, "
                         f"reward: {best_reward:.3f}, "
-                        f'acc: {info["accuracy"]:.3f}, '
-                        f'model_ratio: {info["model_ratio"]:.3f},'
-                        f' BOP_ratio: {info["bop_ratio"]:.3f}'
+                        f"acc: {info['accuracy']:.3f}, "
+                        f"model_ratio: {info['model_ratio']:.3f},"
+                        f" BOP_ratio: {info['bop_ratio']:.3f}"
                     )
                     nncf_logger.info(f"\033[92m {log_str}\033[00m")
 
@@ -350,7 +352,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
                 episode_elapsed = time.time() - episode_start_ts
 
-                nncf_logger.info(f'## Episode[{episode}] Policy: \n{env.master_df["action"].to_string()}\n')
+                nncf_logger.info(f"## Episode[{episode}] Policy: \n{env.master_df['action'].to_string()}\n")
                 nncf_logger.info(f"## Episode[{episode}] Elapsed: {episode_elapsed:.3f}\n")
 
                 episode += 1
@@ -382,7 +384,11 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             self.tb_writer.add_text("AutoQ/best_policy", best_policy_string, episode)
 
     def _dump_episode(
-        self, episodic_info_tuple: Tuple, bit_stats_df: pd.DataFrame, env: "QuantizationEnv", agent: DDPG  # noqa: F821
+        self,
+        episodic_info_tuple: Tuple,
+        bit_stats_df: pd.DataFrame,
+        env: "QuantizationEnv",  # noqa: F821
+        agent: DDPG,
     ):
         if self._dump_autoq_data:
             episode, final_reward, _, accuracy, model_ratio, bop_ratio, _, _, _ = episodic_info_tuple
@@ -395,9 +401,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             }
 
             # Save nncf compression cfg
-            episode_cfgfile = "{0}/{1:03d}_nncfcfg.json".format(
-                str(self._init_args.config["episodic_nncfcfg"]), episode
-            )
+            episode_cfgfile = "{}/{:03d}_nncfcfg.json".format(str(self._init_args.config["episodic_nncfcfg"]), episode)
 
             with safe_open(Path(episode_cfgfile), "w") as outfile:
                 json.dump(current_episode_nncfcfg, outfile, indent=4, sort_keys=False)
@@ -449,13 +453,13 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
     def _generate_tensorboard_logging_string(
         self, bit_stats_df: pd.DataFrame, master_df: pd.DataFrame, info_tuple: Tuple, skip_constraint=False
     ) -> str:
-        qdf = master_df  # For readibility
+        qdf = master_df  # For readability
         episode, reward, accuracy, model_ratio, bop_ratio = info_tuple
 
         text_string = bit_stats_df.to_markdown() + "\n\n\n"
-        text_string += "Episode: {:>4}, Reward: {:.3f}, ".format(episode, reward)
-        text_string += "Accuracy: {:.3f}, Model_Size_Ratio: {:.3f}, BOP_Ratio: {:.3f}\n\n\n".format(
-            accuracy, model_ratio, bop_ratio
+        text_string += f"Episode: {episode:>4}, Reward: {reward:.3f}, "
+        text_string += (
+            f"Accuracy: {accuracy:.3f}, Model_Size_Ratio: {model_ratio:.3f}, BOP_Ratio: {bop_ratio:.3f}\n\n\n"
         )
 
         for _, row_id in enumerate(qdf.index.tolist()):

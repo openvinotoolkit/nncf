@@ -36,7 +36,6 @@ from nncf.torch.tensor_statistics.collectors import get_raw_stat_collector
 
 
 class FXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
-
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
         return get_target_point(target_type, target_node_name, port_id)
@@ -105,7 +104,8 @@ class FXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
             elif node.op == "output":
                 return node.all_input_nodes.index(graph_node)
 
-        raise nncf.InternalError(f"Node with name {node_name} expected to have an output," " no outputs were found.")
+        msg = f"Node with name {node_name} expected to have an output, no outputs were found."
+        raise nncf.InternalError(msg)
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:

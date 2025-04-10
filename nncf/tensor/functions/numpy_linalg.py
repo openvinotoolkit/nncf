@@ -9,35 +9,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple, Union
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
+from numpy.typing import NDArray
 from scipy.linalg import lstsq
 
+from nncf.tensor.definitions import T_AXIS
 from nncf.tensor.functions import linalg
-from nncf.tensor.functions.dispatcher import register_numpy_types
+
+T_NUMPY_ARRAY = NDArray[Any]
 
 
-@register_numpy_types(linalg.norm)
+@linalg.norm.register
 def _(
-    a: Union[np.ndarray, np.generic],
-    ord: Optional[Union[str, float, int]] = None,
-    axis: Optional[Union[int, Tuple[int, ...]]] = None,
+    a: T_NUMPY_ARRAY,
+    ord: Union[Literal["fro", "nuc"], float, None] = None,
+    axis: T_AXIS = None,
     keepdims: bool = False,
-) -> np.ndarray:
+) -> T_NUMPY_ARRAY:
     return np.array(np.linalg.norm(a, ord=ord, axis=axis, keepdims=keepdims))
 
 
-@register_numpy_types(linalg.cholesky)
-def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
+@linalg.cholesky.register
+def _(a: T_NUMPY_ARRAY, upper: bool = False) -> T_NUMPY_ARRAY:
     lt = np.linalg.cholesky(a)
     if upper:
         return np.conjugate(np.swapaxes(lt, -2, -1))
     return lt
 
 
-@register_numpy_types(linalg.cholesky_inverse)
-def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
+@linalg.cholesky_inverse.register
+def _(a: T_NUMPY_ARRAY, upper: bool = False) -> T_NUMPY_ARRAY:
     c = np.linalg.inv(a)
     ct = np.conjugate(np.swapaxes(c, -2, -1))
     if upper:
@@ -45,21 +48,21 @@ def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
     return np.matmul(ct, c)
 
 
-@register_numpy_types(linalg.inv)
-def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+@linalg.inv.register
+def _(a: T_NUMPY_ARRAY) -> T_NUMPY_ARRAY:
     return np.linalg.inv(a)
 
 
-@register_numpy_types(linalg.pinv)
-def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+@linalg.pinv.register
+def _(a: T_NUMPY_ARRAY) -> T_NUMPY_ARRAY:
     return np.linalg.pinv(a)
 
 
-@register_numpy_types(linalg.lstsq)
-def _(a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic], driver: Optional[str] = None) -> np.ndarray:
+@linalg.lstsq.register
+def _(a: T_NUMPY_ARRAY, b: T_NUMPY_ARRAY, driver: Optional[str] = None) -> T_NUMPY_ARRAY:
     return lstsq(a, b, lapack_driver=driver)[0]
 
 
-@register_numpy_types(linalg.svd)
-def _(a: Union[np.ndarray, np.generic], full_matrices: Optional[bool] = True) -> np.ndarray:
-    return np.linalg.svd(a, compute_uv=True, full_matrices=full_matrices)
+@linalg.svd.register
+def _(a: T_NUMPY_ARRAY, full_matrices: Optional[bool] = True) -> T_NUMPY_ARRAY:
+    return np.linalg.svd(a, compute_uv=True, full_matrices=full_matrices)  # type: ignore[call-overload]

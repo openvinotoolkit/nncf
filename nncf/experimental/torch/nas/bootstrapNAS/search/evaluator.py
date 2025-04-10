@@ -100,7 +100,7 @@ class BaseEvaluator:
 
     def get_state(self) -> Dict[str, Any]:
         """
-        Returns state of the evaluatar
+        Returns state of the evaluator
 
         :return: Dict with the state of the evaluator
         """
@@ -180,7 +180,7 @@ class AccuracyEvaluator(BaseEvaluator):
         Initializes Accuracy operator
 
         :param eval_func: function used to validate a sub-network
-        :param val_loader: Datq loader used by the validation function
+        :param val_loader: Data loader used by the validation function
         :param is_top1: Whether is top 1 accuracy or top 5.
         :param ref_acc: Accuracy from a model that is used as input to BootstrapNAS
         """
@@ -216,7 +216,6 @@ class AccuracyEvaluator(BaseEvaluator):
         :param state: dict with state that should be used for updating this evaluator
         :return:
         """
-
         super().update_from_state(state)
         new_dict = state.copy()
         self._is_top1 = new_dict["is_top1"]

@@ -69,10 +69,10 @@ class WeightsFlopsCalculator:
         :return number of FLOPs for the model
                 number of weights (params) in the model
         """
-        flops_pers_node, weights_per_node = self.count_flops_and_weights_per_node(
+        flops_per_node, weights_per_node = self.count_flops_and_weights_per_node(
             graph, output_shapes, input_channels, output_channels, kernel_sizes, op_addresses_to_skip
         )
-        return sum(flops_pers_node.values()), sum(weights_per_node.values())
+        return sum(flops_per_node.values()), sum(weights_per_node.values())
 
     def count_flops_and_weights_per_node(
         self,
@@ -113,7 +113,8 @@ class WeightsFlopsCalculator:
                 continue
             layer_attr = node.layer_attributes
             if not isinstance(layer_attr, ConvolutionLayerAttributes):
-                raise nncf.InternalError(f"Unexpected layer attributes type for convolution layer: {type(layer_attr)}")
+                msg = f"Unexpected layer attributes type for convolution layer: {type(layer_attr)}"
+                raise nncf.InternalError(msg)
             num_in_channels = input_channels.get(name, layer_attr.in_channels)
             num_out_channels = output_channels.get(name, layer_attr.out_channels)
             kernel_size = kernel_sizes.get(name, layer_attr.kernel_size)
@@ -145,7 +146,8 @@ class WeightsFlopsCalculator:
 
             layer_attr = node.layer_attributes
             if not isinstance(layer_attr, LinearLayerAttributes):
-                raise nncf.InternalError(f"Unexpected layer attributes type for linear layer: {type(layer_attr)}")
+                msg = f"Unexpected layer attributes type for linear layer: {type(layer_attr)}"
+                raise nncf.InternalError(msg)
             num_in_features = input_channels.get(name, layer_attr.in_features)
             num_out_features = output_channels.get(name, layer_attr.out_features)
 

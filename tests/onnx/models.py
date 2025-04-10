@@ -975,7 +975,7 @@ class Float64InputMulModel(ONNXReferenceModel):
             to=onnx.TensorProto.FLOAT,
         )
 
-        tensor = np.array((1)).astype(np.float32)
+        tensor = np.array(1).astype(np.float32)
         tensor_name = "Tensor"
         initializer_tensor = create_initializer_tensor(
             name=tensor_name, tensor_array=tensor, data_type=onnx.TensorProto.FLOAT

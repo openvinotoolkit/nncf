@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import onnx
@@ -42,6 +42,7 @@ XFAIL_SUFFIX = "_xfail_reason"
 class ErrorReason(Enum):
     METRICS = "metrics"
     NUM_COMPRESSED = "num_compressed"
+    EXCEPTION = "exception"
 
 
 @dataclass
@@ -55,6 +56,7 @@ class BackendType(Enum):
     TORCH = "TORCH"
     CUDA_TORCH = "CUDA_TORCH"
     FX_TORCH = "FX_TORCH"
+    CUDA_FX_TORCH = "CUDA_FX_TORCH"
     ONNX = "ONNX"
     OV = "OV"
     OPTIMUM = "OPTIMUM"
@@ -63,6 +65,7 @@ class BackendType(Enum):
 NNCF_PTQ_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX, BackendType.OV]
 ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS
 PT_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH]
+FX_BACKENDS = [BackendType.FX_TORCH, BackendType.CUDA_FX_TORCH]
 OV_BACKENDS = [BackendType.OV, BackendType.OPTIMUM]
 
 LIMIT_LENGTH_OF_STATUS = 120
@@ -90,9 +93,20 @@ class StatsFromOutput:
 
 @dataclass
 class NumCompressNodes:
-    num_fq_nodes: Optional[int] = None
     num_int8: Optional[int] = None
-    num_int4: Optional[int] = None
+
+    def get_data(self):
+        return {"Num int8": self.num_int8}
+
+
+@dataclass
+class PTQNumCompressNodes(NumCompressNodes):
+    num_fq_nodes: Optional[int] = None
+
+    def get_data(self):
+        data = super().get_data()
+        data["Num FQ"] = self.num_fq_nodes
+        return data
 
 
 @dataclass
@@ -176,13 +190,13 @@ class RunInfo:
             return None
         return int(memory)
 
-    def get_result_dict(self):
+    def get_result_dict(self) -> Dict[str, str]:
+        """Returns a dictionary with the results of the run."""
         ram_data = {}
-        if self.compression_memory_usage_rss is None and self.compression_memory_usage_system is None:
+        if self.compression_memory_usage_system is None:
             ram_data["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage)
-        if self.compression_memory_usage_rss is not None:
+        else:
             ram_data["RAM MiB"] = self.format_memory_usage(self.compression_memory_usage_rss)
-        if self.compression_memory_usage_system is not None:
             ram_data["RAM MiB System"] = self.format_memory_usage(self.compression_memory_usage_system)
 
         result = {
@@ -191,9 +205,7 @@ class RunInfo:
             "Metric name": self.metric_name,
             "Metric value": self.metric_value,
             "Metric diff": self.metric_diff,
-            "Num FQ": self.num_compress_nodes.num_fq_nodes,
-            "Num int4": self.num_compress_nodes.num_int4,
-            "Num int8": self.num_compress_nodes.num_int8,
+            **self.num_compress_nodes.get_data(),
             "Compr. time": self.format_time(self.time_compression),
             **self.stats_from_output.get_stats(),
             "Total time": self.format_time(self.time_total),
@@ -202,7 +214,6 @@ class RunInfo:
             "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
             "Build url": os.environ.get("BUILD_URL", ""),
         }
-
         return result
 
 
@@ -222,6 +233,7 @@ class BaseTestPipeline(ABC):
         reference_data: dict,
         no_eval: bool,
         run_benchmark_app: bool,
+        torch_compile_validation: bool = False,
         params: dict = None,
         batch_size: int = 1,
         memory_monitor: bool = False,
@@ -238,6 +250,7 @@ class BaseTestPipeline(ABC):
         self.memory_monitor = memory_monitor
         self.no_eval = no_eval
         self.run_benchmark_app = run_benchmark_app
+        self.torch_compile_validation = torch_compile_validation
         self.output_model_dir: Path = self.output_dir / self.reported_name / self.backend.value
         self.output_model_dir.mkdir(parents=True, exist_ok=True)
         self.model_name = f"{self.reported_name}_{self.backend.value}"
@@ -289,31 +302,12 @@ class BaseTestPipeline(ABC):
     def run_bench(self) -> None:
         """Run a benchmark to collect performance statistics."""
 
-    def _validate(self) -> List[ErrorReport]:
+    def _validate(self) -> None:
         """
         Validates some test criteria.
         returns:
             A list of error reports generated during validation.
         """
-        return []
-
-    def _process_errors(self, errors) -> str:
-        """
-        Processes a list of error reports and updates the run status.
-
-        :param errors: A list of error reports.
-        :return: A string representing the concatenated statuses of the processed errors.
-        """
-        xfails, msg_list = [], []
-        for report in errors:
-            xfail_reason = report.reason.value + XFAIL_SUFFIX
-            if xfail_reason in self.reference_data:
-                xfails.append(f"XFAIL: {self.reference_data[xfail_reason]} - {report.msg}")
-            else:
-                msg_list.append(report.msg)
-        if msg_list:
-            raise ValueError("\n".join(msg_list))
-        self.run_info.status = "\n".join(xfails)
 
     def prepare(self):
         """
@@ -322,7 +316,8 @@ class BaseTestPipeline(ABC):
         print("Preparing...")
         self.prepare_model()
         if self.model is None:
-            raise nncf.ValidationError("self.model is None")
+            msg = "self.model is None"
+            raise nncf.ValidationError(msg)
         self.prepare_preprocessor()
         self.prepare_calibration_dataset()
 
@@ -334,29 +329,7 @@ class BaseTestPipeline(ABC):
             print("Validation skipped")
             return
         print("Validation...")
-
-        errors = self._validate()
-
-        metric_value = self.run_info.metric_value
-        metric_reference = self.reference_data.get("metric_value")
-        metric_value_fp32 = self.reference_data.get("metric_value_fp32")
-
-        if metric_value is not None and metric_value_fp32 is not None:
-            self.run_info.metric_diff = round(self.run_info.metric_value - self.reference_data["metric_value_fp32"], 5)
-
-        if (
-            metric_value is not None
-            and metric_reference is not None
-            and not np.isclose(metric_value, metric_reference, atol=self.reference_data.get("atol", 0.001))
-        ):
-            status_msg = None
-            if metric_value < metric_reference:
-                status_msg = f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
-            if metric_value > metric_reference:
-                status_msg = f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
-            if status_msg:
-                errors.append(ErrorReport(ErrorReason.METRICS, status_msg))
-        self._process_errors(errors)
+        self._validate()
 
     def run(self) -> None:
         """
@@ -369,11 +342,99 @@ class BaseTestPipeline(ABC):
         self.validate()
         self.run_bench()
 
+    def collect_errors(self) -> List[ErrorReport]:
+        """
+        Collects errors based on the pipeline's run information.
+
+        :param pipeline: The pipeline object containing run information.
+        :return: List of error reports.
+        """
+        errors = []
+
+        run_info = self.run_info
+        reference_data = self.reference_data
+
+        metric_value = run_info.metric_value
+        metric_reference = reference_data.get("metric_value")
+        metric_value_fp32 = reference_data.get("metric_value_fp32")
+
+        if metric_value is not None and metric_value_fp32 is not None:
+            run_info.metric_diff = round(metric_value - metric_value_fp32, 5)
+
+        if metric_value is not None and metric_reference is not None:
+            atol = reference_data.get("atol", 0.001)
+            if not np.isclose(metric_value, metric_reference, atol=atol):
+                status_msg = (
+                    f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
+                    if metric_value < metric_reference
+                    else f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
+                )
+                errors.append(ErrorReport(ErrorReason.METRICS, status_msg))
+
+        return errors
+
+    def update_status(self, error_reports: List[ErrorReport]) -> List[str]:
+        """
+        Updates status of the pipeline based on the errors encountered during the run.
+
+        :param pipeline: The pipeline object containing run information.
+        :param error_reports: List of errors encountered during the run.
+        :return: List of unexpected errors.
+        """
+        self.run_info.status = ""  # Successful status
+        xfails, unexpected_errors = [], []
+
+        for report in error_reports:
+            xfail_reason = report.reason.value + XFAIL_SUFFIX
+            if _is_error_xfailed(report, xfail_reason, self.reference_data):
+                xfails.append(_get_xfail_message(report, xfail_reason, self.reference_data))
+            else:
+                unexpected_errors.append(report.msg)
+
+        if xfails:
+            self.run_info.status = "\n".join(xfails)
+        if unexpected_errors:
+            self.run_info.status = "\n".join(unexpected_errors)
+        return unexpected_errors
+
 
 class PTQTestPipeline(BaseTestPipeline):
     """
     Base class to test post training quantization.
     """
+
+    def __init__(
+        self,
+        reported_name,
+        model_id,
+        backend,
+        compression_params,
+        output_dir,
+        data_dir,
+        reference_data,
+        no_eval,
+        run_benchmark_app,
+        torch_compile_validation=False,
+        params=None,
+        batch_size=1,
+        memory_monitor=False,
+    ):
+        super().__init__(
+            reported_name,
+            model_id,
+            backend,
+            compression_params,
+            output_dir,
+            data_dir,
+            reference_data,
+            no_eval,
+            run_benchmark_app,
+            torch_compile_validation,
+            params,
+            batch_size,
+            memory_monitor,
+        )
+        self.run_info = RunInfo(model=reported_name, backend=self.backend, num_compress_nodes=PTQNumCompressNodes())
 
     def _compress(self):
         """
@@ -408,6 +469,8 @@ class PTQTestPipeline(BaseTestPipeline):
 
         start_time = time.perf_counter()
         if self.memory_monitor:
+            self.run_info.compression_memory_usage_rss = -1
+            self.run_info.compression_memory_usage_system = -1
             gc.collect()
             with memory_monitor_context(
                 interval=0.1,
@@ -427,58 +490,34 @@ class PTQTestPipeline(BaseTestPipeline):
         Save compressed model to IR.
         """
         print("Saving quantized model...")
+        self.path_compressed_ir = self.output_model_dir / "model.xml"
         if self.backend == BackendType.OPTIMUM:
             self.path_compressed_ir = self.output_model_dir / "openvino_model.xml"
         elif self.backend in PT_BACKENDS:
             ov_model = ov.convert_model(
                 self.compressed_model.cpu(), example_input=self.dummy_tensor.cpu(), input=self.input_size
             )
-            self.path_compressed_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_compressed_ir)
-        elif self.backend == BackendType.FX_TORCH:
-            exported_model = torch.export.export(self.compressed_model, (self.dummy_tensor,))
+        elif self.backend in FX_BACKENDS:
+            exported_model = torch.export.export(self.compressed_model.cpu(), (self.dummy_tensor.cpu(),))
             ov_model = ov.convert_model(exported_model, example_input=self.dummy_tensor.cpu(), input=self.input_size)
             ov_model.reshape(self.input_size)
-            self.path_compressed_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_compressed_ir)
+
+            if self.backend == BackendType.CUDA_FX_TORCH:
+                self.model = self.model.cuda()
+                self.dummy_tensor = self.dummy_tensor.cuda()
+
         elif self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model.onnx"
             onnx.save(self.compressed_model, str(onnx_path))
             ov_model = ov.convert_model(onnx_path)
-            self.path_compressed_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in OV_BACKENDS:
-            self.path_compressed_ir = self.output_model_dir / "model.xml"
             from openvino._offline_transformations import apply_moc_transformations
 
             apply_moc_transformations(self.compressed_model, cf=True)
             ov.serialize(self.compressed_model, str(self.path_compressed_ir))
-
-    def get_num_compressed(self) -> None:
-        """
-        Get number of the FakeQuantize nodes in the compressed IR.
-        """
-
-        ie = ov.Core()
-        model = ie.read_model(model=self.path_compressed_ir)
-
-        num_fq = 0
-        num_int4 = 0
-        num_int8 = 0
-        for node in model.get_ops():
-            node_type = node.type_info.name
-            if node_type == "FakeQuantize":
-                num_fq += 1
-
-            for i in range(node.get_output_size()):
-                if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
-                    num_int8 += 1
-                if node.get_output_element_type(i).get_type_name() in ["i4", "u4", "nf4"]:
-                    num_int4 += 1
-
-        self.run_info.num_compress_nodes.num_int8 = num_int8
-        self.run_info.num_compress_nodes.num_int4 = num_int4
-        self.run_info.num_compress_nodes.num_fq_nodes = num_fq
 
     def run_bench(self) -> None:
         """
@@ -513,3 +552,50 @@ class PTQTestPipeline(BaseTestPipeline):
         stats = PTQTimeStats()
         stats.fill(stdout)
         self.run_info.stats_from_output = stats
+
+    def get_num_compressed(self) -> None:
+        ie = ov.Core()
+        model = ie.read_model(model=self.path_compressed_ir)
+        num_fq, _, num_int8 = get_num_fq_int4_int8(model)
+        self.run_info.num_compress_nodes.num_int8 = num_int8
+        self.run_info.num_compress_nodes.num_fq_nodes = num_fq
+
+
+def get_num_fq_int4_int8(model: ov.Model) -> Tuple[int, int, int]:
+    num_fq = 0
+    num_int8 = 0
+    num_int4 = 0
+    for node in model.get_ops():
+        node_type = node.type_info.name
+        if node_type == "FakeQuantize":
+            num_fq += 1
+
+        for i in range(node.get_output_size()):
+            if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
+                num_int8 += 1
+            if node.get_output_element_type(i).get_type_name() in ["i4", "u4", "nf4"]:
+                num_int4 += 1
+
+    return num_fq, num_int4, num_int8
+
+
+def _are_exceptions_matched(report: ErrorReport, reference_exception: Dict[str, str]) -> bool:
+    return (
+        reference_exception["error_message"] == report.msg.split(" | ")[1]
+        and reference_exception["type"] == report.msg.split(" | ")[0]
+    )
+
+
+def _is_error_xfailed(report: ErrorReport, xfail_reason: str, reference_data: Dict[str, Dict[str, str]]) -> bool:
+    if xfail_reason not in reference_data:
+        return False
+
+    if report.reason == ErrorReason.EXCEPTION:
+        return _are_exceptions_matched(report, reference_data[xfail_reason])
+    return True
+
+
+def _get_xfail_message(report: ErrorReport, xfail_reason: str, reference_data: Dict[str, Dict[str, str]]) -> str:
+    if report.reason == ErrorReason.EXCEPTION:
+        return f"XFAIL: {reference_data[xfail_reason]['message']} - {report.msg}"
+    return f"XFAIL: {xfail_reason} - {report.msg}"

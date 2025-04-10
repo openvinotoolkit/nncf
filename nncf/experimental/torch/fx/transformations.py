@@ -75,7 +75,7 @@ def _set_new_node_meta(
     model: torch.fx.GraphModule,
 ):
     """
-    Sets correct meta \"val\" value to the new node.
+    Sets correct meta 'val' value to the new node.
 
     :param new_node: The new node.
     :param prev_node: Input node of the new node.
@@ -200,9 +200,8 @@ def constant_update_fn(
     old_const = _get_node_by_input_port_id(node, input_port_id)
 
     if old_const.op != "get_attr":
-        raise nncf.InternalError(
-            f"Constant on input port {input_port_id} for {node} is expected," f" but node {old_const} is present."
-        )
+        msg = f"Constant on input port {input_port_id} for {node} is expected, but node {old_const} is present."
+        raise nncf.InternalError(msg)
 
     node_name = updated_node_name if updated_node_name else old_const.name + "_updated_constant"
     # Update metadata of the new constant node.
@@ -234,10 +233,11 @@ def qdq_insertion_transformation_builder(
 
     def qdq_insertion_transformation(model: torch.fx.GraphModule):
         if any(tp.target_type != TargetType.OPERATION_WITH_WEIGHTS for tp in target_points) and len(target_points) > 1:
-            raise nncf.InternalError(
+            msg = (
                 "Insertion of shared qdq pair for the weights is not supported."
                 " Please use non shared qdq pairs for the weights quantization."
             )
+            raise nncf.InternalError(msg)
         for target_point in target_points:
             insert_one_qdq(model, target_point, quantizer)
 
@@ -292,7 +292,7 @@ def output_insertion_transformation_builder(target_point: PTTargetPoint) -> Tran
         cloned_input.meta["val"] = copy(input_node.meta.get("val"))
 
         # Update args of the output node as one output could be present in the model
-        # TODO(dlaykhov) Support case when there are no outputs in the input model.
+        # TODO(dlyakhov) Support case when there are no outputs in the input model.
         output_nodes = [node for node in model.graph.nodes if node.op == "output"]
         assert len(output_nodes) == 1
         output_node = output_nodes[0]
@@ -316,7 +316,6 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
         target node.
     :param quantizer: Quantizer module to inherit quantization parameters from.
     """
-
     # Copied from torch.ao.quantization.quantize_pt2e.convert_pt2e
     # 1. extract information for inserting q/dq node from activation_post_process
     node_type = "call_function"
@@ -365,7 +364,7 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
                 # tracing where it may consider tensor overload as opposed to default.
                 # With extra check of scale and zero_point being scalar, it makes
                 # sure that the default overload can be used.
-                # TODO(dlaykhov): maybe need more complex attr name here
+                # TODO(dlyakhov): maybe need more complex attr name here
                 qparam_node = create_getattr_from_value(model, graph, target_node.name + key, value_or_node)
                 quantize_op_inputs.append(qparam_node)
             else:
@@ -403,7 +402,8 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
 
         target_node.replace_input_with(input_node, dq_node)
     else:
-        raise nncf.InternalError(f"Unexpected target type: {target_point.target_type}")
+        msg = f"Unexpected target type: {target_point.target_type}"
+        raise nncf.InternalError(msg)
 
 
 def _insert_call_module(
@@ -439,7 +439,8 @@ def get_input_node(target_point: PTTargetPoint, target_node: torch.fx.Node) -> t
         TargetType.OPERATOR_POST_HOOK,
         TargetType.OPERATION_WITH_WEIGHTS,
     ]:
-        raise nncf.InternalError(f"Unexpected target type: {target_type}")
+        msg = f"Unexpected target type: {target_type}"
+        raise nncf.InternalError(msg)
     if target_type == TargetType.OPERATOR_POST_HOOK:
         return target_node
 
@@ -474,7 +475,8 @@ def get_ctx_manager(graph: torch.fx.Graph, target_point: PTTargetPoint) -> Calla
         TargetType.OPERATOR_POST_HOOK,
         TargetType.OPERATION_WITH_WEIGHTS,
     ]:
-        raise nncf.InternalError(f"Unexpected target type: {target_point.target_type}")
+        msg = f"Unexpected target type: {target_point.target_type}"
+        raise nncf.InternalError(msg)
 
     if target_point.target_type == TargetType.OPERATOR_POST_HOOK:
         return graph.inserting_after
@@ -512,9 +514,9 @@ def _is_supported_batch_norm_for_training(node: torch.fx.Node):
     return node.target in supported_ops
 
 
-def _get_pattern_replacement_per_channel() -> (
-    Tuple[Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, int, torch.dtype], torch.Tensor]]
-):
+def _get_pattern_replacement_per_channel() -> Tuple[
+    Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, int, torch.dtype], torch.Tensor]
+]:
     """
     Returns the patter and replacement function for the subgraph rewriter to
     match and replace for per_tensor quantization
@@ -535,9 +537,9 @@ def _get_pattern_replacement_per_channel() -> (
     return pattern_per_channel, replacement_graph_per_channel
 
 
-def _get_pattern_replacement_per_tensor() -> (
-    Tuple[Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, torch.dtype], torch.Tensor]]
-):
+def _get_pattern_replacement_per_tensor() -> Tuple[
+    Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, torch.dtype], torch.Tensor]
+]:
     """
     Returns the patter and replacement function for the subgraph rewriter to
     match and replace for per_tensor quantization
@@ -610,7 +612,6 @@ def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) 
 
     :param: model: Model to apply transformations to.
     """
-
     for match in matches:
         mul_node = match.replacements[0]
         sub_node = match.replacements[1]
@@ -685,7 +686,7 @@ def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
 
 
 def compress_post_quantize_transformation(model: torch.fx.GraphModule) -> None:
-    """
+    r"""
     Applies transformation to compress the weights to Int8 after the quantization step.
     Starts by removing the Quantize/De-Quantize nodes for weight nodes by matching the pattern
     to be like follows:
@@ -732,7 +733,6 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     # to make it easier for algorithms to work
     # with the target graph BatchNorm operations
     # are being fused
-    fold_constant_except_qdq(model)
     _fuse_conv_bn_(model)
 
 

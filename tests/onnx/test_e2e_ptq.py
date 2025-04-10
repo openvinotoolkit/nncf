@@ -197,7 +197,7 @@ def _read_accuracy_checker_result(root_dir: Path, key: str) -> pd.DataFrame:
 
 def _read_reference_json(fpath: Path) -> pd.DataFrame:
     fpath = str(fpath)
-    with open(fpath, "r", encoding="utf-8") as fp:
+    with open(fpath, encoding="utf-8") as fp:
         d0 = json.load(fp)
 
     rows = []

@@ -24,6 +24,7 @@ from torch.nn.parallel import DistributedDataParallel
 import nncf
 from nncf import nncf_logger
 from nncf.common.utils.api_marker import api
+from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.structs import PatchedOperatorInfo
@@ -43,7 +44,8 @@ def get_namespaces_to_patch(namespace_target: NamespaceTarget) -> object:
         return TracedParameter
     if namespace_target == NamespaceTarget.TORCH:
         return torch
-    raise nncf.ValidationError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
+    msg = f"{namespace_target} namespace wasn't found in {NamespaceTarget}"
+    raise nncf.ValidationError(msg)
 
 
 def get_namespace_to_extract_functions_from(namespace_target: NamespaceTarget) -> object:
@@ -55,7 +57,8 @@ def get_namespace_to_extract_functions_from(namespace_target: NamespaceTarget) -
         return torch.nn.Parameter
     if namespace_target == NamespaceTarget.TORCH:
         return torch._C._VariableFunctions
-    raise nncf.ValidationError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
+    msg = f"{namespace_target} namespace wasn't found in {NamespaceTarget}"
+    raise nncf.ValidationError(msg)
 
 
 class FunctionsToPatchWithoutTracing:
@@ -178,11 +181,18 @@ class MagicFunctionsToPatch:
 
 @api(canonical_alias="nncf.torch.register_operator")
 def register_operator(name=None):
-    def wrap(operator):
-        op_name = name
-        if op_name is None:
-            op_name = operator.__name__
-        return wrap_operator(operator, PatchedOperatorInfo(op_name, NamespaceTarget.EXTERNAL))
+    if is_experimental_torch_tracing_enabled():
+
+        def wrap(operator):
+            # Skip wrapping operator for tracing by TorchFunctionMode
+            return operator
+    else:
+
+        def wrap(operator):
+            op_name = name
+            if op_name is None:
+                op_name = operator.__name__
+            return wrap_operator(operator, PatchedOperatorInfo(op_name, NamespaceTarget.EXTERNAL))
 
     return wrap
 
@@ -255,7 +265,8 @@ def get_torch_compile_wrapper():
         from nncf.torch.nncf_network import NNCFNetwork
 
         if isinstance(model, NNCFNetwork):
-            raise TypeError("At the moment torch.compile() is not supported for models optimized by NNCF.")
+            msg = "At the moment torch.compile() is not supported for models optimized by NNCF."
+            raise TypeError(msg)
         with disable_patching():
             return _ORIG_TORCH_COMPILE(model, **kwargs)
 
@@ -349,6 +360,9 @@ def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool
 
 
 def patch_torch_operators():
+    if is_experimental_torch_tracing_enabled():
+        return
+
     # Only patch torch.jit.script during first patch_torch_operators call
     if not PATCHING_STATE.jit_is_wrapped:
         patch_torch_jit()

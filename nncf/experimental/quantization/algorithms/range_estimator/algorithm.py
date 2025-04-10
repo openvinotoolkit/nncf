@@ -38,7 +38,7 @@ class MinMaxRangeEstimator(Algorithm):
             for the given model.
         :param subset_size: Size of a subset to calculate activations statistics used
             for quantization, defaults to 300.
-        :param inplace_statistics: Defines wheather to calculate quantizers statistics
+        :param inplace_statistics: Defines whether to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
         :param batchwise_statistics: Determines whether quantizer statistics should be calculated
@@ -69,10 +69,11 @@ class MinMaxRangeEstimator(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         if self._min_max_algo._quantization_target_points_to_qconfig is None:
-            raise RuntimeError(
+            msg = (
                 "Statistic points are not available."
                 " Please call `get_statistic_points` before calling the `apply` method."
             )
+            raise RuntimeError(msg)
         return self._min_max_algo.apply(model=model, graph=graph, statistic_points=statistic_points)
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:

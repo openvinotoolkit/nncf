@@ -17,6 +17,7 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
@@ -44,7 +45,7 @@ from nncf.torch.sparsity.magnitude.functions import calc_magnitude_binary_mask
 @PT_COMPRESSION_ALGORITHMS.register("magnitude_sparsity")
 class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
     def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
-        return BinaryMask(target_module_node.layer_attributes.get_weight_shape())
+        return BinaryMask(get_weight_shape_legacy(target_module_node.layer_attributes))
 
     def _build_controller(self, model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return MagnitudeSparsityController(model, self._sparsified_module_info, self.config)
@@ -133,9 +134,8 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         run_batchnorm_adaptation: bool = False,
     ):
         if sparsity_level >= 1 or sparsity_level < 0:
-            raise AttributeError(
-                "Sparsity level should be within interval [0,1), actual value to set is: {}".format(sparsity_level)
-            )
+            msg = f"Sparsity level should be within interval [0,1), actual value to set is: {sparsity_level}"
+            raise AttributeError(msg)
         if target_sparsified_module_info is None:
             target_sparsified_module_info_list = self.sparsified_module_info  # List[SparseModuleInfo]
         else:

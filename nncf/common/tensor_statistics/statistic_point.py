@@ -21,7 +21,7 @@ class StatisticPoint:
     StatisticPoint stores information is necessary for statistics collection process:
     target_point from which statistics is collected: node_name and target_type determines the node edge.
     tensor_collector determines how to aggregate statistics in target_point
-    algorithm implies on what algorithm nedeed this statistics.
+    algorithm implies on what algorithm needed this statistics.
     """
 
     def __init__(self, target_point: TargetPoint, tensor_collector: TensorCollector, algorithm: str):
@@ -117,5 +117,4 @@ class StatisticPointsContainer(UserDict):  # type: ignore
         :return: Iterable through all statistic collectors in node with target_node_name.
         """
         for _statistic_point in self.iter_through_statistic_points_in_target_node(target_node_name, filter_fn):
-            for _tensor_collector in _statistic_point.algorithm_to_tensor_collectors[algorithm]:
-                yield _tensor_collector
+            yield from _statistic_point.algorithm_to_tensor_collectors[algorithm]

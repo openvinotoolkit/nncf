@@ -183,12 +183,7 @@ NLP_DESCS = [
             model_builder=partial(AutoModelForQuestionAnswering.from_config, BertConfig(num_hidden_layers=1)),
         ),
         ref_groups=[
-            PruningGroup(
-                block=PruningBlock(size=64, offset=0),
-                producers={ProducerInfo(11), ProducerInfo(14), ProducerInfo(10)},
-                consumers={ConsumerInfo(29)},
-            ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(33)}, consumers={ConsumerInfo(35)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(26)}, consumers={ConsumerInfo(28)}),
         ],
     ),
     GroupTestDesc(
@@ -212,28 +207,21 @@ NLP_DESCS = [
             ),
         ),
         ref_groups=[
-            PruningGroup(
-                block=PruningBlock(size=2, offset=0),
-                producers={ProducerInfo(10), ProducerInfo(11), ProducerInfo(14)},
-                consumers={ConsumerInfo(29)},
-            ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(33)}, consumers={ConsumerInfo(35)}),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(40)}, consumers={ConsumerInfo(43)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(26)}, consumers={ConsumerInfo(28)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(33)}, consumers={ConsumerInfo(36)}),
         ],
     ),
     GroupTestDesc(
         model_desc=GeneralModelDesc(
             model_name="RoBERTa",
             input_info=[dict(sample_size=[1, 10], type="long")],
-            model_builder=partial(AutoModelForQuestionAnswering.from_config, RobertaConfig(num_hidden_layers=1)),
+            model_builder=partial(
+                AutoModelForQuestionAnswering.from_config,
+                RobertaConfig(num_hidden_layers=1),
+            ),
         ),
         ref_groups=[
-            PruningGroup(
-                block=PruningBlock(size=64, offset=0),
-                producers={ProducerInfo(19), ProducerInfo(22), ProducerInfo(18)},
-                consumers={ConsumerInfo(37)},
-            ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(41)}, consumers={ConsumerInfo(43)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(34)}, consumers={ConsumerInfo(36)}),
         ],
     ),
     GroupTestDesc(
@@ -253,12 +241,7 @@ NLP_DESCS = [
             ),
         ),
         ref_groups=[
-            PruningGroup(
-                block=PruningBlock(size=2, offset=0),
-                producers={ProducerInfo(7), ProducerInfo(10), ProducerInfo(13)},
-                consumers={ConsumerInfo(29)},
-            ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(32)}, consumers={ConsumerInfo(34)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(24)}, consumers={ConsumerInfo(26)}),
         ],
     ),
     GroupTestDesc(
@@ -355,12 +338,7 @@ CV_DESCS = [
             ),
         ),
         ref_groups=[
-            PruningGroup(
-                block=PruningBlock(),
-                producers={ProducerInfo(12), ProducerInfo(9), ProducerInfo(8)},
-                consumers={ConsumerInfo(26)},
-            ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(30)}, consumers={ConsumerInfo(32)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(25)}, consumers={ConsumerInfo(27)}),
         ],
     ),
     GroupTestDesc(
@@ -381,12 +359,7 @@ CV_DESCS = [
             ),
         ),
         ref_groups=[
-            PruningGroup(
-                block=PruningBlock(size=2, offset=0),
-                producers={ProducerInfo(12), ProducerInfo(9), ProducerInfo(8)},
-                consumers={ConsumerInfo(26)},
-            ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(30)}, consumers={ConsumerInfo(32)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(25)}, consumers={ConsumerInfo(27)}),
         ],
     ),
     GroupTestDesc(
@@ -407,12 +380,7 @@ CV_DESCS = [
             ),
         ),
         ref_groups=[
-            PruningGroup(
-                block=PruningBlock(size=2, offset=0),
-                producers={ProducerInfo(10), ProducerInfo(16), ProducerInfo(12)},
-                consumers={ConsumerInfo(34)},
-            ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(37)}, consumers={ConsumerInfo(41)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(25)}, consumers={ConsumerInfo(29)}),
         ],
     ),
     GroupTestDesc(
@@ -451,12 +419,7 @@ AUDIO_DESCS = [
             ),
         ),
         ref_groups=[
-            PruningGroup(
-                block=PruningBlock(size=24, offset=0),
-                producers={ProducerInfo(31), ProducerInfo(29), ProducerInfo(35)},
-                consumers={ConsumerInfo(53)},
-            ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(57)}, consumers={ConsumerInfo(60)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(48)}, consumers={ConsumerInfo(51)}),
         ],
     ),
 ]
@@ -476,7 +439,6 @@ def test_groups(desc: GroupTestDesc, mocker, tmp_path):
     not_filtered_groups = get_pruning_groups(
         nncf_network.nncf.get_graph(), PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES, pruning_producing_types, tmp_path
     )
-
     nx_graph = get_graph_spy.spy_return
     path_to_dot = get_full_path_to_the_graph(f"{str(desc)}.dot", "pruning_groups")
     compare_nx_graph_with_reference(nx_graph, path_to_dot, sort_dot_graph=False)

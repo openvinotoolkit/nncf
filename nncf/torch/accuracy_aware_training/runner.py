@@ -122,13 +122,13 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         if self._load_checkpoint_fn is not None:
             self._load_checkpoint_fn(model, checkpoint_path)
         else:
-            resuming_checkpoint = torch.load(checkpoint_path, map_location="cpu")
+            resuming_checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
             resuming_model_state_dict = resuming_checkpoint.get("state_dict", resuming_checkpoint)
             load_state(model, resuming_model_state_dict, is_resume=True)
 
     def _make_checkpoint_path(self, is_best, compression_rate=None):
         extension = ".pth"
-        return osp.join(self._checkpoint_save_dir, f'acc_aware_checkpoint_{"best" if is_best else "last"}{extension}')
+        return osp.join(self._checkpoint_save_dir, f"acc_aware_checkpoint_{'best' if is_best else 'last'}{extension}")
 
     def add_tensorboard_scalar(self, key, data, step):
         if is_main_process() and self.verbose and self._tensorboard_writer is not None:
@@ -167,6 +167,7 @@ class PTAdaptiveCompressionLevelTrainingRunner(
         base_path = osp.join(self._checkpoint_save_dir, "acc_aware_checkpoint")
         if is_best:
             if compression_rate is None:
-                raise ValueError("Compression rate cannot be None")
+                msg = "Compression rate cannot be None"
+                raise ValueError(msg)
             return f"{base_path}_best_{compression_rate:.3f}{extension}"
         return f"{base_path}_last{extension}"

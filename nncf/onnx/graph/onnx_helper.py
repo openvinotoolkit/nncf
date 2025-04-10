@@ -30,7 +30,7 @@ def get_name_to_node_map(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
 
 def get_edge_info_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoProto]:
     """
-    Retuns mapping from edge name to the edge info.
+    Returns mapping from edge name to the edge info.
 
     :param model: Model from mapping is built.
     :return: Mapping.
@@ -97,7 +97,8 @@ def get_input_port_id_for_node_after_input(input_name: str, to_node: onnx.NodePr
     for input_port_id, port in enumerate(to_node.input):
         if port == input_name:
             return input_port_id
-    raise nncf.ValidationError(f"The node {to_node} does not have input edge with the name {input_name}")
+    msg = f"The node {to_node} does not have input edge with the name {input_name}"
+    raise nncf.ValidationError(msg)
 
 
 def get_output_port_id_for_node_before_output(output_name: str, from_node: onnx.NodeProto) -> int:
@@ -111,7 +112,8 @@ def get_output_port_id_for_node_before_output(output_name: str, from_node: onnx.
     for output_port_id, port in enumerate(from_node.output):
         if port == output_name:
             return output_port_id
-    raise nncf.ValidationError(f"The node {from_node} does not have output edge with the name {output_name}")
+    msg = f"The node {from_node} does not have output edge with the name {output_name}"
+    raise nncf.ValidationError(msg)
 
 
 def get_node_index(model: onnx.ModelProto, node_name: str) -> Optional[int]:
@@ -135,8 +137,7 @@ def _get_all_tensors(model: onnx.ModelProto) -> Iterator[onnx.TensorProto]:
     :param model: ONNX model.
     :yield: tensors of ONNX model.
     """
-    for initializer in model.graph.initializer:
-        yield initializer
+    yield from model.graph.initializer
     for node in model.graph.node:
         for attribute in node.attribute:
             if attribute.HasField("t"):
@@ -169,7 +170,8 @@ def get_tensor(model: onnx.ModelProto, tensor_name: str) -> onnx.TensorProto:
     for tensor in _get_all_tensors(model):
         if tensor.name == tensor_name:
             return tensor
-    raise nncf.ValidationError("There is no tensor with the name {}".format(tensor_name))
+    msg = f"There is no tensor with the name {tensor_name}"
+    raise nncf.ValidationError(msg)
 
 
 def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray:
@@ -231,7 +233,7 @@ def get_parent(
     Returns parents of the node. If there is no parent node, returns None.
 
     :param node: The child node.
-    :param port_id: Input port id on which the parent is seeked.
+    :param port_id: Input port id on which the parent is sought.
     :param edge_node_mapping: Mapping describing start and consumed nodes of the edges.
     :return: Parent node.
     """

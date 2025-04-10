@@ -195,7 +195,7 @@ def prepare_tiny_imagenet_200(dataset_dir: Path):
         return
 
     val_annotations_file = val_data_dir / "val_annotations.txt"
-    with open(val_annotations_file, "r") as f:
+    with open(val_annotations_file) as f:
         val_annotation_data = map(lambda line: line.split("\t")[:2], f.readlines())
     for image_filename, image_label in val_annotation_data:
         from_image_filepath = val_images_dir / image_filename
@@ -278,11 +278,11 @@ def main():
         print(f"Train epoch: {epoch}")
         train_epoch(train_loader, quantized_model, criterion, optimizer, device=device)
         acc1_int8 = validate(val_loader, quantized_model, device)
-        print(f"Accyracy@1 of INT8 model after {epoch} epoch finetuning: {acc1_int8:.3f}")
+        print(f"Accuracy@1 of INT8 model after {epoch} epoch finetuning: {acc1_int8:.3f}")
         # Save the compression checkpoint for model with the best accuracy metric.
         if acc1_int8 > acc1_int8_best:
             state_dict = quantized_model.state_dict()
-            compression_config = quantized_model.nncf.get_config()
+            compression_config = nncf.torch.get_config(quantized_model)
             torch.save(
                 {
                     "model_state_dict": state_dict,
@@ -293,7 +293,7 @@ def main():
             acc1_int8_best = acc1_int8
 
     # Load quantization modules and parameters from best checkpoint to the source model.
-    ckpt = torch.load(ROOT / BEST_CKPT_NAME)
+    ckpt = torch.load(ROOT / BEST_CKPT_NAME, weights_only=False)
     quantized_model = nncf.torch.load_from_config(
         deepcopy(model), ckpt["compression_config"], torch.ones((1, 3, IMAGE_SIZE, IMAGE_SIZE)).to(device)
     )

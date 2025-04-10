@@ -67,7 +67,7 @@ from nncf.tensor.functions.numeric import zeros as zeros
 from nncf.tensor.functions.numeric import zeros_like as zeros_like
 
 
-def _initialize_backends():
+def _initialize_backends() -> None:
     import contextlib
 
     import nncf.tensor.functions.numpy_io
@@ -80,7 +80,7 @@ def _initialize_backends():
         import nncf.tensor.functions.torch_numeric  # noqa F401
 
     with contextlib.suppress(ImportError):
-        import nncf.tensor.functions.ov  # noqa: F401
+        import nncf.tensor.functions.openvino_numeric  # noqa: F401
 
 
 _initialize_backends()

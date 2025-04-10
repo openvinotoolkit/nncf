@@ -10,21 +10,20 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, Tuple, TypeVar
+from typing import Dict, List, Optional, Tuple, TypeVar
 
 import nncf
-from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
 from nncf.common.logging.track_progress import track
-from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
+from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.handle_errors import handle_invalid_group_size_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight_and_fp4_scale
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_dequantization
@@ -45,22 +44,12 @@ class ScaleEstimation:
 
     def __init__(
         self,
-        model: TModel,
-        name_to_node_mapping: Dict[str, Any],
-        all_weight_params: List[WeightCompressionParameters],
-        nodes_to_compress: List[NNCFNode],
-        statistics: Dict[str, WCTensorStatistic],
         subset_size: int = 32,
         initial_steps: int = 5,
         scale_steps: int = 10,
         weight_penalty: float = -1.0,
     ):
         """
-        :param model: Model for applying algorithm.
-        :param name_to_node_mapping: Name to node mapping for updating node weights.
-        :param all_weight_params: List of all weight parameters.
-        :param nodes_to_compress: List of nodes for processing.
-        :param statistics: Input activation statistics for each node.
         :param subset_size: The number of samples for scale estimation.
         :param initial_steps: The number of the steps for absmax scale rectification.
         :param scale_steps: The number of the steps for grid search scale rectification
@@ -68,47 +57,44 @@ class ScaleEstimation:
         :param weight_penalty: coefficient for penalty between fp and compressed weights. If -1 then doesn't apply.
         """
         super().__init__()
-        self.name_to_node_mapping = name_to_node_mapping
-        self._all_weight_params = all_weight_params
-        self._nodes_to_compress = nodes_to_compress
-        self._statistics = statistics
         self._subset_size = subset_size
         self._initial_steps = initial_steps
         self._scale_steps = scale_steps
         self._weight_penalty = weight_penalty
 
-        self._set_backend_entity(model)
-
     @property
     def available_backends(self) -> List[BackendType]:
-        return [BackendType.OPENVINO]
+        return [BackendType.OPENVINO, BackendType.TORCH]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
         Creates a helper class with a backed-specific logic of the algorithm.
 
         :param model: Backend-specific input model.
-        :param all_weight_params: List of all weight parameters.
-        :param nodes_to_compress: List of nodes for processing.
-        :param activations: The input activations of the layers considered for compression.
         """
-
         model_backend = get_backend(model)
         if model_backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
 
-            self._backend_entity = OVWeightCompressionAlgoBackend(model, self.name_to_node_mapping)
+            self._backend_entity = OVWeightCompressionAlgoBackend(model)
+        elif model_backend == BackendType.TORCH:
+            from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
+
+            self._backend_entity = PTWeightCompressionAlgoBackend()
         else:
-            raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific AWQ entity because {} is not supported!".format(model_backend.value)
+            msg = (
+                "Cannot return backend-specific Scale Estimation entity because"
+                f" {model_backend.value} is not supported!"
             )
+            raise nncf.UnsupportedBackendError(msg)
 
     def apply(
         self,
         model: TModel,
         graph: NNCFGraph,
-        statistic_points: Optional[StatisticPointsContainer] = None,
-        dataset: Optional[Dataset] = None,
+        all_weight_params: List[WeightCompressionParameters],
+        statistics: Dict[str, WCTensorStatistic],
+        backend_entity: Optional[WeightCompressionAlgoBackend] = None,
     ) -> Tuple[Dict[str, Tensor], Dict[str, Tensor]]:
         """
         Estimates better scale for the int4 nodes in the model.
@@ -119,23 +105,30 @@ class ScaleEstimation:
 
         :param model: Model for applying algorithm.
         :param graph: Model graph.
+        :param all_weight_params: List of all weight parameters.
+        :param statistics: Input activation statistics for each node.
         :param statistic_points: Statistic points with collected statistics values.
         :param dataset: A representative dataset for the calibration process.
+        :param backend_entity: Weight compression algorithm backend.
         :return: Two dictionaries for estimated scales and zero points for each weight name.
         """
-
+        self._backend_entity = backend_entity
+        if self._backend_entity is None:
+            self._set_backend_entity(model)
         scales, zero_points = dict(), dict()
 
-        for wp in track(self._all_weight_params, description="Applying Scale Estimation"):
+        invalid_node_names = []
+        first_caught_error = None
+        for wp in track(all_weight_params, description="Applying Scale Estimation"):
             weight_name = wp.weight_name
             node_name = wp.node_with_weight.node_name
             config = wp.compression_config
 
-            if config.num_bits != 4 or node_name not in self._statistics:
+            if config.num_bits != 4 or node_name not in statistics:
                 scales[weight_name] = None
                 continue
 
-            stats = self._statistics[node_name]
+            stats = statistics[node_name]
 
             weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
             if len(weight_data) != 1:  # not supported by the algorithm
@@ -144,16 +137,23 @@ class ScaleEstimation:
 
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
 
-            scales[weight_name], zero_points[weight_name] = self.calculate_quantization_params(
-                stats,
-                weight,
-                wp.reduction_axes,
-                config,
-                self._subset_size,
-                self._initial_steps,
-                self._scale_steps,
-                self._weight_penalty,
-            )
+            try:
+                scales[weight_name], zero_points[weight_name] = self.calculate_quantization_params(
+                    stats,
+                    weight,
+                    wp.reduction_axes,
+                    config,
+                    self._subset_size,
+                    self._initial_steps,
+                    self._scale_steps,
+                    self._weight_penalty,
+                )
+            except nncf.InvalidGroupSizeError as error:
+                first_caught_error = error
+                invalid_node_names.append(wp.node_with_weight.node_name)
+
+        if first_caught_error:
+            handle_invalid_group_size_error(first_caught_error, invalid_node_names)
 
         return scales, zero_points
 
@@ -195,6 +195,7 @@ class ScaleEstimation:
 
         s, X = process_stats(statistics, subset_size)
 
+        X = X.astype(TensorDataType.float32)
         weight = weight.astype(TensorDataType.float32)
         eps = fns.finfo(weight).eps
 
@@ -241,7 +242,6 @@ class ScaleEstimation:
         X, _ = reshape_weight_for_grouped_quantization(X, 0, group_size)
         best_diffs = None
         result_scale = None
-
         fp_outs = fns.matmul(fns.transpose(original_weight, (1, 0, 2)), X)
         q_outs = fns.matmul(fns.transpose(q_weights, (1, 0, 2)), X)
 
@@ -254,10 +254,6 @@ class ScaleEstimation:
         scale_sign = scale / fns.abs(scale)
         zero_scale = 0.001
         zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
-
-        # This is required for alignment with a previous OpenVINO models implementation
-        # TODO(Nikita Savelyev): remove this
-        opt_fns_kwargs = dict(dynamic_shapes=False, convertable_division=True)
 
         # iterative rectification of initial scale
         for i in range(initial_steps):
@@ -273,7 +269,6 @@ class ScaleEstimation:
                     config,
                     precomputed_scale=near_to_ideal_scale,
                     precomputed_zero_point=zp,
-                    **opt_fns_kwargs,
                 )
 
             q_weights_ = fns.zeros_like(original_weight) + out
@@ -308,7 +303,6 @@ class ScaleEstimation:
                         config,
                         precomputed_scale=near_to_ideal_scale,
                         precomputed_zero_point=zp,
-                        **opt_fns_kwargs,
                     )
                 compressed_weights = fns.zeros_like(original_weight) + out
                 target, zero_mask = get_target_zero_mask(compressed_weights, zp)
@@ -327,7 +321,6 @@ class ScaleEstimation:
                     config,
                     precomputed_scale=scaled_scale,
                     precomputed_zero_point=zp,
-                    **opt_fns_kwargs,
                 )
             compressed_weights = fns.zeros_like(original_weight) + out
 
@@ -345,7 +338,6 @@ class ScaleEstimation:
                     config,
                     precomputed_scale=near_to_ideal_scale,
                     precomputed_zero_point=zp,
-                    **opt_fns_kwargs,
                 )
             q_weights_ = fns.zeros_like(original_weight) + out
 

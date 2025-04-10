@@ -53,11 +53,14 @@ def quantize_impl(
     Implementation of the `quantize()` method for the ONNX backend.
     """
     if target_device == TargetDevice.CPU_SPR:
-        raise nncf.ValidationError("target_device == CPU_SPR is not supported.")
+        msg = "target_device == CPU_SPR is not supported."
+        raise nncf.ValidationError(msg)
     if mode is not None:
-        raise ValueError(f"mode={mode} is not supported")
+        msg = f"mode={mode} is not supported"
+        raise ValueError(msg)
     if model.opset_import[0].version < 10:
-        raise nncf.ValidationError("ONNX models with opset version < 10 do not support quantization.")
+        msg = "ONNX models with opset version < 10 do not support quantization."
+        raise nncf.ValidationError(msg)
     if model.opset_import[0].version < 13:
         nncf_logger.warning(
             "ONNX models with 10 < opset version < 13 do not support per-channel quantization."

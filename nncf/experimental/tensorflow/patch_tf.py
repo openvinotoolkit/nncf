@@ -49,11 +49,12 @@ class Hook:
 
         arg_provider_cls = TF_ARG_PROVIDERS.registry_dict.get(self._target_point.op_type_name)
         if arg_provider_cls is None:
-            raise ValueError(
+            msg = (
                 f"Unexpected type of the TensorFlow operation: {self._target_point.op_type_name}. "
                 "Register an `ArgProvider` instance for this type in the "
                 "`TF_ARG_PROVIDERS` registry, please."
             )
+            raise ValueError(msg)
 
         self._arg_provider = arg_provider_cls()
 
@@ -81,7 +82,7 @@ class Hook:
         Returns weights of the operation with `op_name`.
 
         :param op_name: Name of the operation.
-        :return: Weihts of the operation.
+        :return: Weights of the operation.
         """
         return self._ops_weights[op_name]
 

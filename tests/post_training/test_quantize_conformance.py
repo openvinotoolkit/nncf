@@ -29,6 +29,8 @@ from tests.post_training.model_scope import PTQ_TEST_CASES
 from tests.post_training.model_scope import WC_TEST_CASES
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import ErrorReason
+from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import RunInfo
 
 DATA_ROOT = Path(__file__).parent / "data"
@@ -45,58 +47,6 @@ def fixture_use_avx2():
         del os.environ["ONEDNN_MAX_CPU_ISA"]
     else:
         os.environ["ONEDNN_MAX_CPU_ISA"] = old_value
-
-
-@pytest.fixture(scope="session", name="data_dir")
-def fixture_data(pytestconfig):
-    if pytestconfig.getoption("data") is None:
-        raise ValueError("This test requires the --data argument to be specified.")
-    return Path(pytestconfig.getoption("data"))
-
-
-@pytest.fixture(scope="session", name="output_dir")
-def fixture_output(pytestconfig):
-    return Path(pytestconfig.getoption("output"))
-
-
-@pytest.fixture(scope="session", name="no_eval")
-def fixture_no_eval(pytestconfig):
-    return pytestconfig.getoption("no_eval")
-
-
-@pytest.fixture(scope="session", name="batch_size")
-def fixture_batch_size(pytestconfig):
-    return pytestconfig.getoption("batch_size")
-
-
-@pytest.fixture(scope="session", name="subset_size")
-def fixture_subset_size(pytestconfig):
-    return pytestconfig.getoption("subset_size")
-
-
-@pytest.fixture(scope="session", name="run_fp32_backend")
-def fixture_run_fp32_backend(pytestconfig):
-    return pytestconfig.getoption("fp32")
-
-
-@pytest.fixture(scope="session", name="run_torch_cuda_backend")
-def fixture_run_torch_cuda_backend(pytestconfig):
-    return pytestconfig.getoption("cuda")
-
-
-@pytest.fixture(scope="session", name="run_benchmark_app")
-def fixture_run_benchmark_app(pytestconfig):
-    return pytestconfig.getoption("benchmark")
-
-
-@pytest.fixture(scope="session", name="extra_columns")
-def fixture_extra_columns(pytestconfig):
-    return pytestconfig.getoption("extra_columns")
-
-
-@pytest.fixture(scope="session", name="memory_monitor")
-def fixture_memory_monitor(pytestconfig):
-    return pytestconfig.getoption("memory_monitor")
 
 
 def _parse_version(s: Path):
@@ -156,47 +106,18 @@ def fixture_wc_reference_data():
     return data
 
 
-@pytest.fixture(scope="session", name="ptq_result_data")
-def fixture_ptq_report_data(output_dir, run_benchmark_app, pytestconfig):
+@pytest.fixture(scope="session", name="result_data")
+def fixture_report_data(output_dir, run_benchmark_app, forked):
     data: Dict[str, RunInfo] = {}
-
     yield data
-
     if data:
-        test_results = OrderedDict(sorted(data.items()))
-        df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
-        if not run_benchmark_app:
-            df = df.drop(columns=["FPS"])
-
+        columns_to_drop = ["FPS"] if not run_benchmark_app else []
         output_dir.mkdir(parents=True, exist_ok=True)
         output_file = output_dir / "results.csv"
-
-        if pytestconfig.getoption("forked") and output_file.exists():
-            # When run test with --forked to run test in separate process
-            # Used in post_training_performance jobs
-            df.to_csv(output_file, index=False, mode="a", header=False)
-        else:
-            df.to_csv(output_file, index=False)
-
-
-@pytest.fixture(scope="session", name="wc_result_data")
-def fixture_wc_report_data(output_dir, run_benchmark_app, pytestconfig):
-    data: Dict[str, RunInfo] = {}
-
-    yield data
-
-    if data:
         test_results = OrderedDict(sorted(data.items()))
-        df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
-        if not run_benchmark_app:
-            df = df.drop(columns=["FPS"])
-
-        df = df.drop(columns=["Num FQ"])
-
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / "results.csv"
-
-        if pytestconfig.getoption("forked") and output_file.exists():
+        test_results = [v.get_result_dict() for v in test_results.values()]
+        df = pd.DataFrame(test_results).drop(columns=columns_to_drop)
+        if forked and output_file.exists():
             # When run test with --forked to run test in separate process
             # Used in post_training_performance jobs
             df.to_csv(output_file, index=False, mode="a", header=False)
@@ -207,8 +128,11 @@ def fixture_wc_report_data(output_dir, run_benchmark_app, pytestconfig):
 def maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size):
     if test_model_param["backend"] == BackendType.FP32 and not run_fp32_backend:
         pytest.skip("To run test for not quantized model use --fp32 argument")
-    if test_model_param["backend"] == BackendType.CUDA_TORCH and not run_torch_cuda_backend:
-        pytest.skip("To run test for CUDA_TORCH backend use --cuda argument")
+    if (
+        test_model_param["backend"] in [BackendType.CUDA_TORCH, BackendType.CUDA_FX_TORCH]
+        and not run_torch_cuda_backend
+    ):
+        pytest.skip(f"To run test for {test_model_param['backend'].value} backend use --cuda argument")
     if batch_size and batch_size > 1 and test_model_param.get("batch_size", 1) == 1:
         pytest.skip("The model does not support batch_size > 1. Please use --batch-size 1.")
     return test_model_param
@@ -253,7 +177,7 @@ def create_pipeline_kwargs(test_model_param, subset_size, test_case_name, refere
     print(f"PTQ params: {test_model_param['compression_params']}")
 
     # Get target fp32 metric value
-    model_name = test_case_name.split("_backend_")[0]
+    model_name = test_model_param.get("model_name", test_case_name.split("_backend_")[0])
     test_reference = reference_data[test_case_name]
     test_reference["metric_value_fp32"] = reference_data[f"{model_name}_backend_FP32"]["metric_value"]
 
@@ -267,77 +191,114 @@ def create_pipeline_kwargs(test_model_param, subset_size, test_case_name, refere
     }
 
 
-@pytest.mark.parametrize("test_case_name", PTQ_TEST_CASES.keys())
-def test_ptq_quantization(
-    ptq_reference_data: dict,
+def run_pipeline(
     test_case_name: str,
-    data_dir: Path,
+    reference_data: dict,
+    test_cases: dict,
+    result_data: Dict[str, RunInfo],
     output_dir: Path,
-    ptq_result_data: Dict[str, RunInfo],
+    data_dir: Optional[Path],
     no_eval: bool,
     batch_size: Optional[int],
     run_fp32_backend: bool,
     run_torch_cuda_backend: bool,
     subset_size: Optional[int],
     run_benchmark_app: bool,
+    torch_compile_validation: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
     memory_monitor: bool,
 ):
-    pipeline = None
-    err_msg = None
-    test_model_param = None
+    pipeline, exception_report, test_model_param = None, None, None
     start_time = time.perf_counter()
+    if test_case_name not in reference_data:
+        msg = f"{test_case_name} does not exist in 'reference_data.yaml'"
+        raise nncf.ValidationError(msg)
+    test_model_param = test_cases[test_case_name]
+    maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
+    pipeline_cls = test_model_param["pipeline_cls"]
+    pipeline_kwargs = create_pipeline_kwargs(test_model_param, subset_size, test_case_name, reference_data)
+    pipeline_kwargs.update(
+        {
+            "output_dir": output_dir,
+            "data_dir": data_dir,
+            "no_eval": no_eval,
+            "run_benchmark_app": run_benchmark_app,
+            "torch_compile_validation": torch_compile_validation,
+            "batch_size": batch_size or test_model_param.get("batch_size", 1),
+            "memory_monitor": memory_monitor,
+        }
+    )
+    pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
     try:
-        if test_case_name not in ptq_reference_data:
-            raise nncf.ValidationError(f"{test_case_name} does not exist in 'reference_data.yaml'")
-        test_model_param = PTQ_TEST_CASES[test_case_name]
-        maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
-        pipeline_cls = test_model_param["pipeline_cls"]
-        # Recalculates subset_size when subset_size is None
-        if batch_size is None:
-            batch_size = test_model_param.get("batch_size", 1)
-        if batch_size > 1 and subset_size is None:
-            subset_size = 300 // batch_size
-            print(f"Update subset_size value based on provided batch_size to {subset_size}.")
-        pipeline_kwargs = create_pipeline_kwargs(test_model_param, subset_size, test_case_name, ptq_reference_data)
-        pipeline_kwargs.update(
-            {
-                "output_dir": output_dir,
-                "data_dir": data_dir,
-                "no_eval": no_eval,
-                "run_benchmark_app": run_benchmark_app,
-                "batch_size": batch_size,
-                "memory_monitor": memory_monitor,
-            }
-        )
-        pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
         pipeline.run()
     except Exception as e:
-        err_msg = str(e)
-        if not err_msg:
-            err_msg = "Unknown exception"
+        message = f"{type(e).__name__} | {str(e)}"
+        exception_report = ErrorReport(ErrorReason.EXCEPTION, message)
         traceback.print_exc()
+    finally:
+        if pipeline is not None:
+            pipeline.cleanup_cache()
+            run_info = pipeline.run_info
 
-    if pipeline is not None:
-        pipeline.cleanup_cache()
-        run_info = pipeline.run_info
-        if err_msg:
-            run_info.status = f"{run_info.status} | {err_msg}" if run_info.status else err_msg
+            captured = capsys.readouterr()
+            write_logs(captured, pipeline)
 
-        captured = capsys.readouterr()
-        write_logs(captured, pipeline)
+            if extra_columns:
+                pipeline.collect_data_from_stdout(captured.out)
+        else:
+            run_info = create_short_run_info(test_model_param, message, test_case_name)
+        run_info.time_total = time.perf_counter() - start_time
 
-        if extra_columns:
-            pipeline.collect_data_from_stdout(captured.out)
-    else:
-        run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
+        if exception_report:
+            unexpected_errors = pipeline.update_status([exception_report])
+        else:
+            errors = pipeline.collect_errors()
+            unexpected_errors = pipeline.update_status(errors)
 
-    run_info.time_total = time.perf_counter() - start_time
-    ptq_result_data[test_case_name] = run_info
+        result_data[test_case_name] = run_info
+        if unexpected_errors:
+            pytest.fail(run_info.status)
+        if run_info.status.startswith("XFAIL:"):
+            pytest.xfail(run_info.status)
 
-    if err_msg:
-        pytest.fail(err_msg)
+
+@pytest.mark.parametrize("test_case_name", PTQ_TEST_CASES.keys())
+def test_ptq_quantization(
+    ptq_reference_data: dict,
+    test_case_name: str,
+    data_dir: Path,
+    output_dir: Path,
+    result_data: Dict[str, RunInfo],
+    no_eval: bool,
+    batch_size: Optional[int],
+    run_fp32_backend: bool,
+    run_torch_cuda_backend: bool,
+    subset_size: Optional[int],
+    run_benchmark_app: bool,
+    torch_compile_validation: bool,
+    capsys: pytest.CaptureFixture,
+    extra_columns: bool,
+    memory_monitor: bool,
+):
+    run_pipeline(
+        test_case_name,
+        ptq_reference_data,
+        PTQ_TEST_CASES,
+        result_data,
+        output_dir,
+        data_dir,
+        no_eval,
+        batch_size,
+        run_fp32_backend,
+        run_torch_cuda_backend,
+        subset_size,
+        run_benchmark_app,
+        torch_compile_validation,
+        capsys,
+        extra_columns,
+        memory_monitor,
+    )
 
 
 @pytest.mark.parametrize("test_case_name", WC_TEST_CASES.keys())
@@ -345,7 +306,7 @@ def test_weight_compression(
     wc_reference_data: dict,
     test_case_name: str,
     output_dir: Path,
-    wc_result_data: Dict[str, RunInfo],
+    result_data: Dict[str, RunInfo],
     no_eval: bool,
     batch_size: int,
     run_fp32_backend: bool,
@@ -357,53 +318,21 @@ def test_weight_compression(
     memory_monitor: bool,
     use_avx2: None,
 ):
-    pipeline = None
-    err_msg = None
-    test_model_param = None
-    start_time = time.perf_counter()
-    try:
-        if test_case_name not in wc_reference_data:
-            pytest.skip(f"{test_case_name} is not defined in `wc_reference_data` fixture")
-        test_model_param = WC_TEST_CASES[test_case_name]
-        maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
-        pipeline_cls = test_model_param["pipeline_cls"]
-        pipeline_kwargs = create_pipeline_kwargs(test_model_param, subset_size, test_case_name, wc_reference_data)
-        pipeline_kwargs.update(
-            {
-                "output_dir": output_dir,
-                "data_dir": None,
-                "no_eval": no_eval,
-                "run_benchmark_app": run_benchmark_app,
-                "batch_size": batch_size,
-                "memory_monitor": memory_monitor,
-            }
-        )
-        pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
-        pipeline.run()
-    except Exception as e:
-        err_msg = str(e)
-        if not err_msg:
-            err_msg = "Unknown exception"
-        traceback.print_exc()
-
-    if pipeline is not None:
-        pipeline.cleanup_cache()
-        run_info = pipeline.run_info
-        if err_msg:
-            run_info.status = f"{run_info.status} | {err_msg}" if run_info.status else err_msg
-
-        captured = capsys.readouterr()
-        write_logs(captured, pipeline)
-
-        if extra_columns:
-            pipeline.collect_data_from_stdout(captured.out)
-    else:
-        run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
-
-    run_info.time_total = time.perf_counter() - start_time
-    wc_result_data[test_case_name] = run_info
-
-    if err_msg:
-        pytest.fail(err_msg)
-    if run_info.status is not None and run_info.status.startswith("XFAIL:"):
-        pytest.xfail(run_info.status)
+    run_pipeline(
+        test_case_name,
+        wc_reference_data,
+        WC_TEST_CASES,
+        result_data,
+        output_dir,
+        None,  # data_dir is not used in WC
+        no_eval,
+        batch_size,
+        run_fp32_backend,
+        run_torch_cuda_backend,
+        subset_size,
+        run_benchmark_app,
+        False,  # torch_compile_validation is not used in WC
+        capsys,
+        extra_columns,
+        memory_monitor,
+    )

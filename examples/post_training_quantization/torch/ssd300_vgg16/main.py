@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+# isort: off
 import re
 import subprocess
 from pathlib import Path
@@ -86,7 +86,7 @@ class COCO128Dataset(torch.utils.data.Dataset):
         target = dict(image_id=[image_id], boxes=[], labels=[])
         label_filepath = self.labels_path / f"{image_id:012d}.txt"
         if label_filepath.exists():
-            with open(label_filepath, "r", encoding="utf-8") as f:
+            with open(label_filepath, encoding="utf-8") as f:
                 for box_descr in f.readlines():
                     category_id, rel_x, rel_y, rel_w, rel_h = tuple(map(float, box_descr.split(" ")))
                     box_x1, box_y1 = img_w * (rel_x - rel_w / 2), img_h * (rel_y - rel_h / 2)

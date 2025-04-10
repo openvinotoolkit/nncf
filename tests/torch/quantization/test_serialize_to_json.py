@@ -38,13 +38,25 @@ GROUND_TRUTH_STATE = {
     "quantization_points": {
         0: {
             "directly_quantized_operator_node_names": ["MyConv/1[2]/3[4]/5"],
-            "qconfig": {"mode": "symmetric", "num_bits": 8, "per_channel": False, "signedness_to_force": None},
+            "qconfig": {
+                "mode": "symmetric",
+                "num_bits": 8,
+                "per_channel": False,
+                "signedness_to_force": None,
+                "narrow_range": False,
+            },
             "qip": {"target_node_name": "dummy"},
             "qip_class": "WeightQuantizationInsertionPoint",
         },
         1: {
             "directly_quantized_operator_node_names": ["MyConv/1[2]/3[4]/5"],
-            "qconfig": {"mode": "symmetric", "num_bits": 8, "per_channel": False, "signedness_to_force": None},
+            "qconfig": {
+                "mode": "symmetric",
+                "num_bits": 8,
+                "per_channel": False,
+                "signedness_to_force": None,
+                "narrow_range": False,
+            },
             "qip": {"input_port_id": 0, "target_node_name": "dummy"},
             "qip_class": "ActivationQuantizationInsertionPoint",
         },

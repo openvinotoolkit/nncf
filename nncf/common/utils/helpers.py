@@ -56,8 +56,8 @@ def configure_accuracy_aware_paths(log_dir: Union[str, Path]) -> Union[str, Path
     :return: Path to the accuracy-aware training subdirectory.
     """
     d = datetime.datetime.now()
-    run_id = "{:%Y-%m-%d__%H-%M-%S}".format(d)
-    acc_aware_log_dir = osp.join(log_dir, "accuracy_aware_training/{run_id}".format(run_id=run_id))
+    run_id = f"{d:%Y-%m-%d__%H-%M-%S}"
+    acc_aware_log_dir = osp.join(log_dir, f"accuracy_aware_training/{run_id}")
     os.makedirs(acc_aware_log_dir, exist_ok=True)
     return acc_aware_log_dir
 

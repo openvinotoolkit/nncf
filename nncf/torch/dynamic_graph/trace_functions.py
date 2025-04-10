@@ -39,8 +39,7 @@ def flatten(items):
     it = items.items() if hasattr(items, "items") else iter(items)
     for item in it:
         if is_iterable(item):
-            for i in flatten(item):
-                yield i
+            yield from flatten(item)
         else:
             yield item
 
@@ -63,7 +62,6 @@ def forward_trace_only(operator: Callable, *args, **kwargs):
     compression, but still have to be accounted for so that the NNCF internal graph representation
     does not become disjoint.
     """
-
     result = operator(*args, **kwargs)
 
     fargs = flatten_args(args, kwargs)
@@ -82,10 +80,11 @@ def forward_trace_only(operator: Callable, *args, **kwargs):
                     forwarded_meta.shape = tuple(result[out_idx].shape)
                 result[out_idx] = TracedTensor.from_torch_tensor(result[out_idx], forwarded_meta)
         elif len(input_traced_tensor_indices) != len(output_tensors_to_be_traced_indices):
-            raise nncf.ValidationError(
-                "Unable to forward trace through operator {} - "
-                "input and output tensor count mismatch!".format(operator.__name__)
+            msg = (
+                f"Unable to forward trace through operator {operator.__name__} - "
+                "input and output tensor count mismatch!"
             )
+            raise nncf.ValidationError(msg)
         else:
             # Assume that output tensor order corresponds to input tensor order
             for in_idx, out_idx in zip(input_traced_tensor_indices, output_tensors_to_be_traced_indices):
@@ -96,10 +95,8 @@ def forward_trace_only(operator: Callable, *args, **kwargs):
         if was_tuple:
             result = tuple(result)
     elif len(input_traced_tensor_indices) > 1:
-        raise nncf.ValidationError(
-            "Unable to forward trace through operator {} - "
-            "input and output tensor count mismatch!".format(operator.__name__)
-        )
+        msg = f"Unable to forward trace through operator {operator.__name__} - input and output tensor count mismatch!"
+        raise nncf.ValidationError(msg)
     elif input_traced_tensor_indices:
         forwarded_meta = deepcopy(fargs[input_traced_tensor_indices[0]].tensor_meta)
         if forwarded_meta is not None:
@@ -116,7 +113,7 @@ def trace_tensor(x: torch.Tensor, port_id: int, node: DynamicGraphNode, ctx: Tra
     :param x: The input Tensor.
     :param node: A node in DynamicGraph associated with the function that produced the input tensor
     :param ctx: The resulting tensors will be registered within this TracingContext instance
-        to be stipped on context exit, which is required to correctly process situations when a traced model
+        to be stripped on context exit, which is required to correctly process situations when a traced model
         retains intermediate tensor values.
     :return: The resulting tensor with the TracedTensorMixin interface.
     """
@@ -148,12 +145,11 @@ def trace_tensors(
     :param operator_output: The output of an NNCF-wrapped function executed in a model object.
     :param node: A node in DynamicGraph associated with the function that produced `operator_output`
     :param ctx: The resulting tensors will be registered within this TracingContext instance
-        to be stipped on context exit, which is required to correctly process situations when a traced model
+        to be stripped on context exit, which is required to correctly process situations when a traced model
         retains intermediate tensor values.
     :return: Same structure as `operator_output`, but with torch.Tensor entries turned into tensor
         with tracing capabilities instance using TracedTensorMixin.
     """
-
     if isinstance(operator_output, (list, tuple)):
         output_ = []
         for i, x in enumerate(operator_output):

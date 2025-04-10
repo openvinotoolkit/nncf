@@ -558,9 +558,7 @@ class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
         ln.bias.data = torch.index_select(ln.bias.data, 0, reorder_indexes)
 
         nncf_logger.debug(
-            "Reordered channels (first 10 reorder indexes {}) of LayerNorm: {} ".format(
-                reorder_indexes[:10], node.node_key
-            )
+            f"Reordered channels (first 10 reorder indexes {reorder_indexes[:10]}) of LayerNorm: {node.node_key} "
         )
 
     @classmethod
@@ -575,7 +573,8 @@ class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
         node_module = model.nncf.get_containing_module(node.node_name)
 
         if prun_type == PrunType.CUT_WEIGHTS:
-            raise nncf.InternalError("LayerNorm does not support pruning by cutting channels")
+            msg = "LayerNorm does not support pruning by cutting channels"
+            raise nncf.InternalError(msg)
 
         node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.weight))
         node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.bias))
@@ -597,9 +596,9 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
         node_module = model.nncf.get_containing_module(node.node_name)
 
         if isinstance(node_module, tuple(NNCF_WRAPPED_USER_MODULES_DICT)):
-            assert (
-                node_module.target_weight_dim_for_compression == 0
-            ), "Implemented only for target_weight_dim_for_compression == 0"
+            assert node_module.target_weight_dim_for_compression == 0, (
+                "Implemented only for target_weight_dim_for_compression == 0"
+            )
             if prun_type == PrunType.CUT_WEIGHTS:
                 bool_mask = torch.tensor(input_mask, dtype=torch.bool)
                 old_num_channels = int(node_module.weight.size(0))
