@@ -19,6 +19,8 @@ from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDeviceType
 from nncf.tensor.definitions import TypeInfo
 from nncf.tensor.functions import numeric
+from nncf.tensor.functions.numpy_numeric import DTYPE_MAP_REV as NUMPY_DTYPE_MAP_REV
+from nncf.tensor.functions.numpy_numeric import T_NUMPY
 
 DTYPE_MAP: Dict[TensorDataType, ov.Type] = {
     TensorDataType.nf4: ov.Type.nf4,
@@ -100,6 +102,11 @@ def _(a: ov.Tensor) -> NDArray[Any]:
             dtype = TensorDataType.int8
         a = _astype_ov(a, dtype)
     return a.data
+
+
+@numeric.as_openvino_tensor.register
+def _(a: T_NUMPY) -> ov.Tensor:
+    return ov.Tensor(a, a.shape, DTYPE_MAP[NUMPY_DTYPE_MAP_REV[a.dtype]])
 
 
 @numeric.finfo.register

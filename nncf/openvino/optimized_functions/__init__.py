@@ -10,8 +10,14 @@
 # limitations under the License.
 
 from nncf.openvino.optimized_functions.functions import astype as astype
-from nncf.openvino.optimized_functions.functions import do_int_quantization as do_int_quantization
+from nncf.openvino.optimized_functions.functions import do_float_quantization as do_float_quantization
+from nncf.openvino.optimized_functions.functions import do_integer_quantization as do_integer_quantization
+from nncf.openvino.optimized_functions.functions import (
+    float_quantize_dequantize_weight as float_quantize_dequantize_weight,
+)
 from nncf.openvino.optimized_functions.functions import get_integer_quantization_error as get_integer_quantization_error
-from nncf.openvino.optimized_functions.functions import quantize_dequantize_weight as quantize_dequantize_weight
+from nncf.openvino.optimized_functions.functions import (
+    integer_quantize_dequantize_weight as integer_quantize_dequantize_weight,
+)
 from nncf.openvino.optimized_functions.models import OVModelParameters as OVModelParameters
 from nncf.openvino.optimized_functions.models import clear_ov_model_cache as clear_ov_model_cache
