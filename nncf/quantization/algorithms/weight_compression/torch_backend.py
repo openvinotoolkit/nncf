@@ -358,15 +358,18 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         target_node_name = wc_params.weight_name
         target_point = PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=target_node_name)
-        storage_key = "FQ_LORA_{}".format(target_node_name.replace(".", "_"))
 
-        return PTSharedFnInsertionCommand(
-            target_points=[target_point],
-            fn=quantizer,
-            op_unique_name=storage_key,
-            compression_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,
-            priority=TransformationPriority.QUANTIZATION_PRIORITY,
-        )
+        if is_experimental_torch_tracing_enabled():
+            return PT2InsertionCommand([target_point], quantizer)
+        else:
+            storage_key = "FQ_LORA_{}".format(target_node_name.replace(".", "_"))
+            return PTSharedFnInsertionCommand(
+                target_points=[target_point],
+                fn=quantizer,
+                op_unique_name=storage_key,
+                compression_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,
+                priority=TransformationPriority.QUANTIZATION_PRIORITY,
+            )
 
     @staticmethod
     def get_dq_insertion_command(
