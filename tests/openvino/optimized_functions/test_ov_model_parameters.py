@@ -13,7 +13,6 @@ import pytest
 
 from nncf import CompressWeightsMode
 from nncf.common.utils.caching import disable_results_caching
-from nncf.common.utils.os import is_macos
 from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.optimized_functions.models import OVModelParameters
 from nncf.openvino.optimized_functions.models import _infer_ov_model
@@ -322,11 +321,7 @@ def test_share_inputs_outputs(mocker, share_inputs, share_outputs, return_ov_ten
 @pytest.mark.parametrize(
     "weight,convertable_division,ref_compressed_weight",
     [
-        (
-            [[0.70361328125, 0.92919921875, 0.37109375, -0.98974609375]],
-            True,
-            [[226, 255, 181, 0]] if is_macos() else [[225, 255, 181, 0]],
-        ),
+        ([[0.70361328125, 0.92919921875, 0.37109375, -0.98974609375]], True, [[226, 255, 181, 0]]),
         ([[0.70361328125, 0.92919921875, 0.37109375, -0.98974609375]], False, [[226, 255, 181, 0]]),
     ],
 )
