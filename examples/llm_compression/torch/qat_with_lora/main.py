@@ -242,7 +242,7 @@ def export_to_openvino(
     model_to_eval = AutoModelForCausalLM.from_pretrained(pretrained, torch_dtype=torch.float32, device_map="cpu")
     model_input = get_model_input(example_input.to("cpu"))
     model_to_eval = load_checkpoint(model_to_eval, model_input, ckpt_file)
-    model_to_eval = nncf.strip(model_to_eval, strip_format=StripFormat.DQ, example_input=model_input)
+    model_to_eval = nncf.strip(model_to_eval, do_copy=False, strip_format=StripFormat.DQ, example_input=model_input)
     export_from_model(model_to_eval, ir_dir, device="cpu")
     return OVModelForCausalLM.from_pretrained(
         model_id=ir_dir,
