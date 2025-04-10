@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 import pytest
 import torch
 from networkx.drawing.nx_pydot import to_pydot
@@ -168,12 +170,10 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
         assert torch.allclose(tuned_vs_stripped_ov, vm.validation_ref, atol=atol)
 
 
-@pytest.mark.cuda
-def test_checkpoint_loading(tmp_path):
-    device = "cuda"
-    device_map = "auto"
+def test_checkpoint_loading(tmp_path: Path, use_cuda: bool):
+    device = "cuda" if use_cuda else "cpu"
     model_id = "hf-internal-testing/tiny-random-GPTNeoXForCausalLM"
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device_map)
+    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device)
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     example_input = tokenizer("dummy", return_tensors="pt").to(device)
     except_lm_head_and_5th_vproj = r"^(?!(gpt_neox/attention/query_key_value/linear/2|embed_out/linear/0)$).*"
@@ -205,7 +205,7 @@ def test_checkpoint_loading(tmp_path):
 
     # load checkpoint
     nncf_ckpt = torch.load(ckpt_path, weights_only=False)
-    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device_map)
+    model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device)
     model = load_from_config(model, nncf_ckpt["nncf_config"], example_input=dict(example_input))
     get_hook_storage(model).load_state_dict(nncf_ckpt["nncf_state_dict"])
 
