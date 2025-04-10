@@ -975,8 +975,6 @@ def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
     compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, gptq=True, scale_estimation=True)
 
 
-# TODO(andreyanufr) Waiting for the e2m1 in OV release
-@pytest.mark.xfail
 @pytest.mark.parametrize(
     ("mode", "all_layers", "ratio", "ref_ids"),
     (
