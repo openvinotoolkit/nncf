@@ -28,9 +28,9 @@ from nncf import SensitivityMetric
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.utils.debug import nncf_debug
 from nncf.common.utils.helpers import set_env_variable
-from nncf.common.utils.os import is_macos
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
+from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.parameters import BackupMode
@@ -1486,7 +1486,10 @@ def test_compression_with_transposed_activations(kwargs):
         )
 
 
-@pytest.mark.skipif(is_macos(), reason="Not relevant for MacOS")
+@pytest.mark.xfail(
+    is_arm_cpu(),
+    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
+)
 @pytest.mark.parametrize("disabled", [False, True])
 def test_disabled_optimized_compression(disabled):
     model = LMLinearModel().ov_model
