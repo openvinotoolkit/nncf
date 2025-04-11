@@ -11,7 +11,7 @@
 import random
 from collections import OrderedDict
 from contextlib import contextmanager
-from typing import Any, Dict, Generator, List
+from typing import Any, Callable, Dict, Generator, List
 
 import numpy as np
 import torch
@@ -25,6 +25,7 @@ from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
 from nncf.common.scopes import matches_any
+from nncf.common.utils.os import is_windows
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
@@ -467,3 +468,46 @@ def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
         # The model had no parameters at all, assume FP32
         dtype = torch.float32
     return dtype
+
+
+class CompilationWrapper:
+    """
+    Tries to wrap the provided function with torch.compile at first usage.
+    If it is not possible, it uses the original function without wrapping.
+    """
+
+    def __init__(self, func: Callable) -> None:
+        """
+        :param func: The original function to wrap.
+        """
+        self._func = func
+        self._compiled_func = self._func if is_windows() else None
+        self._is_compilation_successful = False
+
+    @property
+    def is_compilation_successful(self) -> bool:
+        """
+        Property that allows to verify compilation successfulness.
+        """
+        return self._is_compilation_successful
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        """
+        :param args: Function args.
+        :param args: Function kwargs.
+
+        :return: Result of the function call.
+        """
+        if self._compiled_func is None:
+            try:
+                self._compiled_func = torch.compile(self._func)
+                result = self._compiled_func(*args, **kwargs)
+                self._is_compilation_successful = True
+                return result
+            except Exception as e:
+                nncf_logger.warning(
+                    f"Could not use torch.compile. Falling back on not compiled version. Reason: {str(e)}"
+                )
+                self._compiled_func = self._func
+                self._is_compilation_successful = False
+        return self._compiled_func(*args, **kwargs)

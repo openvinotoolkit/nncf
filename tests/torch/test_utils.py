@@ -14,6 +14,7 @@ import torch
 from torch import nn
 
 from nncf.torch.initialization import DataLoaderBNAdaptationRunner
+from nncf.torch.utils import CompilationWrapper
 from nncf.torch.utils import _ModuleState
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_model_dtype
@@ -120,3 +121,24 @@ def test_model_dtype():
 def test_empty_model_dtype():
     model = EmptyModel()
     assert get_model_dtype(model) == torch.float32
+
+
+def test_compilation_wrapper():
+    def func(x: torch.tensor) -> torch.tensor:
+        return torch.sin(x) + torch.cos(x)
+
+    def failed_func(x: torch.tensor) -> torch.tensor:
+        if torch.compiler.is_compiling():
+            msg = "Simulated exception"
+            raise Exception(msg)
+        return torch.tan(x) + torch.atan(x)
+
+    wrapped_func = CompilationWrapper(func)
+    wrapped_func(torch.rand(10, 10))
+    assert wrapped_func.is_compilation_successful
+    torch.compiler.reset()
+
+    wrapped_failed_func = CompilationWrapper(failed_func)
+    wrapped_failed_func(torch.rand(10, 10))
+    assert not wrapped_failed_func.is_compilation_successful
+    torch.compiler.reset()
