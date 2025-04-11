@@ -85,9 +85,7 @@ class TFExporter(Exporter):
         :param save_path: The path where the model will be saved.
         """
         # Convert Keras model to the frozen graph.
-        input_signature = []
-        for item in self._model.inputs:
-            input_signature.append(tf.TensorSpec(item.shape, item.dtype, item.name))
+        input_signature = [tf.TensorSpec(item.shape, item.dtype, item.name) for item in self._model.inputs]
         concrete_function = tf.function(self._model).get_concrete_function(input_signature)
         frozen_func = convert_variables_to_constants_v2(concrete_function, lower_control_flow=False)
         frozen_graph = frozen_func.graph.as_graph_def(add_shapes=True)

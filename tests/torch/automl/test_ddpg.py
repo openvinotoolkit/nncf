@@ -164,7 +164,7 @@ def test_soft_update():
     source_ddpg, target_ddpg = create_two_ddpg_agents()
     target_ddpg.soft_update(target_ddpg.actor, source_ddpg.actor)
 
-    for _, state_tensor in target_ddpg.actor.state_dict().items():
+    for state_tensor in target_ddpg.actor.state_dict().values():
         assert torch.all(state_tensor == 0.95).item()
 
 
@@ -172,7 +172,7 @@ def test_hard_update():
     source_ddpg, target_ddpg = create_two_ddpg_agents()
     target_ddpg.hard_update(target_ddpg.actor, source_ddpg.actor)
 
-    for _, state_tensor in target_ddpg.actor.state_dict().items():
+    for state_tensor in target_ddpg.actor.state_dict().values():
         assert torch.all(state_tensor == 0.5).item()
 
 

@@ -162,10 +162,9 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
                 )
 
     def _collect_all_weights(self, target_sparsified_module_info_list: List[SparseModuleInfo]):
-        all_weights = []
-        for minfo in target_sparsified_module_info_list:
-            all_weights.append(self._weight_importance_fn(minfo.module.weight).view(-1))
-        return all_weights
+        return [
+            self._weight_importance_fn(minfo.module.weight).view(-1) for minfo in target_sparsified_module_info_list
+        ]
 
     def compression_stage(self) -> CompressionStage:
         if self._mode == "local":

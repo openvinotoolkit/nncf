@@ -156,9 +156,9 @@ class TraceOrderBitwidthMatcher:
         # so that the associated covering configurations would not require model regeneration
         optimized_observed_qconfs: List[List[QuantizerConfig]] = []
         for qconf_observed_set in observed_qconfs:
-            variants: List[List[QuantizerConfig]] = []
-            for qconf in qconf_observed_set:
-                variants.append(list(filter(qconf.is_a_bitwidth_variant, qconf_observed_set.keys())))
+            variants = [
+                list(filter(qconf.is_a_bitwidth_variant, qconf_observed_set.keys())) for qconf in qconf_observed_set
+            ]
             max_bw_varying_variant = max(variants, key=len)
             other_qconfs = list(filter(lambda x: x not in max_bw_varying_variant, qconf_observed_set.keys()))
             optimized_observed_qconfs.append(max_bw_varying_variant + other_qconfs)
@@ -391,10 +391,9 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                 raise nncf.InternalError(msg)
             for quantizer_id in quantizer_ids:
                 qconfig_sequence = retval.get(quantizer_id)
-                filtered_qconfig_sequence = []
-                for qconf in qconfig_sequence:
-                    if qconf.num_bits in minimal_set_bitwidths:
-                        filtered_qconfig_sequence.append(qconf)
+                filtered_qconfig_sequence = [
+                    qconf for qconf in qconfig_sequence if qconf.num_bits in minimal_set_bitwidths
+                ]
                 retval.replace(quantizer_id, filtered_qconfig_sequence)
         return retval
 

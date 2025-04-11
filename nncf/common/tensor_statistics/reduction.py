@@ -31,10 +31,7 @@ def split_into_channels(input_: NDArray[Any], scale_shape: List[int]) -> List[ND
     if channel_count == 1:
         return [channel_first_tensor]
 
-    ret_list = []
-    for i in range(channel_count):
-        ret_list.append(channel_first_tensor[i, ...])
-    return ret_list
+    return [channel_first_tensor[i, ...] for i in range(channel_count)]
 
 
 def get_per_channel_history(

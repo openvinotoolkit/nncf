@@ -149,9 +149,11 @@ class LayerwiseScheduler:
             # otherwise reuse existing inputs.
             reuse_input_nodes = set()
             if self.add_additional_outputs:
-                for node in indegree_map:
-                    if not visited_map[node]:
-                        paths.append(SimplePath(input_nodes_map[node], innode_map[node]))
+                paths.extend(
+                    SimplePath(input_nodes_map[node], innode_map[node])
+                    for node in indegree_map
+                    if not visited_map[node]
+                )
             else:
                 for node in indegree_map:
                     if not visited_map[node]:

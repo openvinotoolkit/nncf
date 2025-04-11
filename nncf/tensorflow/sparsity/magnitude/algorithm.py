@@ -218,14 +218,13 @@ class MagnitudeSparsityController(BaseSparsityController):
                         )
 
     def _collect_all_weights(self):
-        all_weights = []
-        for wrapped_layer in collect_wrapped_layers(self._model):
-            for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
-                for op_name in ops:
-                    if op_name in self._op_names:
-                        all_weights.append(
-                            tf.reshape(self._weight_importance_fn(wrapped_layer.layer_weights[weight_attr]), [-1])
-                        )
+        all_weights = [
+            tf.reshape(self._weight_importance_fn(wrapped_layer.layer_weights[weight_attr]), [-1])
+            for wrapped_layer in collect_wrapped_layers(self._model)
+            for weight_attr, ops in wrapped_layer.weights_attr_ops.items()
+            for op_name in ops
+            if op_name in self._op_names
+        ]
         return all_weights
 
     @property
@@ -247,10 +246,8 @@ class MagnitudeSparsityController(BaseSparsityController):
         collector = TFSparseModelStatisticsCollector(self.model, self._op_names)
         model_stats = collector.collect()
 
-        threshold_stats = []
         threshold = self._select_threshold(model_stats.sparsity_level)
-        for s in model_stats.sparsified_layers_summary:
-            threshold_stats.append(LayerThreshold(s.name, threshold))
+        threshold_stats = [LayerThreshold(s.name, threshold) for s in model_stats.sparsified_layers_summary]
 
         target_sparsity_level = self.scheduler.current_sparsity_level
 

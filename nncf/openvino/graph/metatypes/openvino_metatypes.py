@@ -43,10 +43,7 @@ class OVOpMetatype(OperatorMetatype):
 
     @classmethod
     def determine_subtype(cls, node: ov.Node) -> Optional[Type[OperatorMetatype]]:
-        matches = []
-        for subtype in cls.get_subtypes():
-            if subtype.matches(node):
-                matches.append(subtype)
+        matches = [subtype for subtype in cls.get_subtypes() if subtype.matches(node)]
         if len(matches) > 1:
             msg = "Multiple subtypes match operator call - can not determine single subtype."
             raise nncf.InternalError(msg)

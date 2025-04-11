@@ -299,7 +299,7 @@ class MultiElasticityHandler(ElasticityHandler):
         active_handlers = {dim: self._handlers[dim] for dim in self._handlers if self._is_handler_enabled_map[dim]}
         index_pos = 0
         sample = SubnetConfig()
-        for handler_id, _ in active_handlers.items():
+        for handler_id in active_handlers:
             if handler_id is ElasticityDim.KERNEL:
                 sample[handler_id] = [
                     self.kernel_search_space[j - index_pos][x[j]]

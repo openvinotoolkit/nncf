@@ -374,7 +374,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
     @staticmethod
     def visualize_marked_graph(merged_original_graph):
         out_graph = nx.DiGraph()
-        for node_key, _ in merged_original_graph.nodes.items():
+        for node_key in merged_original_graph.nodes:
             out_graph.add_node(node_key)
         for u, v in merged_original_graph.edges:
             edge = merged_original_graph.edges[u, v]

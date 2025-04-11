@@ -374,5 +374,5 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
             self._all_pct_values[pc] = deque(maxlen=window_size)
 
     def _reset(self) -> None:
-        for _, val in self._all_pct_values.items():
+        for val in self._all_pct_values.values():
             val.clear()

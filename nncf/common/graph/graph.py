@@ -251,13 +251,7 @@ class NNCFGraph:
         :param type_list: List of types to look for.
         :return: List of nodes with provided types.
         """
-        all_nodes_of_type: List[NNCFNode] = []
-        if not type_list:
-            return all_nodes_of_type
-        for nncf_node in self.nodes.values():
-            if nncf_node.node_type in type_list:
-                all_nodes_of_type.append(nncf_node)
-        return all_nodes_of_type
+        return [nncf_node for nncf_node in self.nodes.values() if nncf_node.node_type in type_list]
 
     def get_nodes_by_metatypes(self, metatype_list: Collection[Type[OperatorMetatype]]) -> List[NNCFNode]:
         """
@@ -266,11 +260,7 @@ class NNCFGraph:
         :param metatype_list: List of types to look for.
         :return: List of nodes with provided metatypes.
         """
-        all_nodes_of_type = []
-        for nncf_node in self.get_all_nodes():
-            if nncf_node.metatype in metatype_list:
-                all_nodes_of_type.append(nncf_node)
-        return all_nodes_of_type
+        return [nncf_node for nncf_node in self.get_all_nodes() if nncf_node.metatype in metatype_list]
 
     def get_all_node_ids(self) -> KeysView[int]:
         """
@@ -409,18 +399,18 @@ class NNCFGraph:
         parallel_input_port_ids = edge.parallel_input_port_ids
         edge.parallel_input_port_ids = []
         edges.append(edge)
-        for input_port_id in parallel_input_port_ids:
-            edges.append(
-                NNCFGraphEdge(
-                    from_node=edge.from_node,
-                    to_node=edge.to_node,
-                    input_port_id=input_port_id,
-                    output_port_id=edge.output_port_id,
-                    tensor_shape=list(edge.tensor_shape),
-                    dtype=edge.dtype,
-                    parallel_input_port_ids=[],
-                )
+        edges.extend(
+            NNCFGraphEdge(
+                from_node=edge.from_node,
+                to_node=edge.to_node,
+                input_port_id=input_port_id,
+                output_port_id=edge.output_port_id,
+                tensor_shape=list(edge.tensor_shape),
+                dtype=edge.dtype,
+                parallel_input_port_ids=[],
             )
+            for input_port_id in parallel_input_port_ids
+        )
         return edges
 
     def traverse_graph(
@@ -807,10 +797,7 @@ class NNCFGraph:
         The returned nodes order relies on DiGraphMatcher isomorphic subgraphs matching logic from networkX package.
         DiGraphMatcher does not guarantee a specific order for returning isomorphic subgraphs.
         """
-        output = []
-        for matched_subgraph in find_subgraphs_matching_pattern(self._nx_graph, patterns, strict):
-            subgraph_list = []
-            for node_key in matched_subgraph:
-                subgraph_list.append(self.get_node_by_key(node_key))
-            output.append(subgraph_list)
-        return output
+        return [
+            [self.get_node_by_key(node_key) for node_key in matched_subgraph]
+            for matched_subgraph in find_subgraphs_matching_pattern(self._nx_graph, patterns, strict)
+        ]

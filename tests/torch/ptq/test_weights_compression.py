@@ -531,7 +531,7 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_num_int4_nodes(model: torch.nn.Module) -> int:
         num = 0
-        for _, op in model.nncf.external_op.items():
+        for op in model.nncf.external_op.values():
             num += isinstance(op, INT4SymmetricWeightsDecompressor)
         return num
 

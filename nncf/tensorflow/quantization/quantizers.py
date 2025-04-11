@@ -230,11 +230,9 @@ class Quantizer(NNCFOperation):
 
     @staticmethod
     def _make_pre_processing_fn(fns_registry=None):
-        fns_list = []
         if fns_registry is None:
             fns_registry = []
-        for fn in fns_registry:
-            fns_list.append(partial(fn[0], **fn[1]))
+        fns_list = [partial(fn[0], **fn[1]) for fn in fns_registry]
 
         def pre_processing_fn(inputs):
             result = inputs
@@ -246,11 +244,9 @@ class Quantizer(NNCFOperation):
 
     @staticmethod
     def _make_post_processing_fn(fns_registry=None):
-        fns_list = []
         if fns_registry is None:
             fns_registry = []
-        for fn in reversed(fns_registry):
-            fns_list.append(partial(fn[0], **fn[2]))
+        fns_list = [partial(fn[0], **fn[2]) for fn in reversed(fns_registry)]
 
         def post_processing_fn(inputs):
             result = inputs

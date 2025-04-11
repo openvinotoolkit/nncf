@@ -89,13 +89,14 @@ class LayerwiseEngine:
                 and point.target_point.port_id == port_id
             )
 
-        res = []
-        for tensor_collector in statistic_points.get_algo_statistics_for_node(
+        tensor_collectors = statistic_points.get_algo_statistics_for_node(
             node_name, input_filter_func, self._algorithm_key
-        ):
-            for value in tensor_collector.get_statistics().values:
-                res.append(Tensor(value))
-        return res
+        )
+        return [
+            Tensor(value)
+            for tensor_collector in tensor_collectors
+            for value in tensor_collector.get_statistics().values
+        ]
 
     def _create_cache(
         self, outputs: List[NodeOutputPort], statistic_points: StatisticPointsContainer

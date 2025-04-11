@@ -718,9 +718,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
                 nncf_logger.debug(f"setting input width by user's request for scope={node_name}")
                 nodes_to_check = [node]
                 while any(elem is None for elem in input_masks):
-                    previous_nodes = []
-                    for node in nodes_to_check:
-                        previous_nodes.append(self._propagation_graph.get_previous_nodes(node))
+                    previous_nodes = [self._propagation_graph.get_previous_nodes(node) for node in nodes_to_check]
                     nodes_to_check.clear()
                     previous_nodes = [item for nodes in previous_nodes for item in nodes]
                     if not previous_nodes:

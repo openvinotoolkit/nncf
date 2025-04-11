@@ -91,11 +91,9 @@ class BitwidthGraph:
                 msg = f"Failed to get affected nodes for quantized module node: {wq_id.target_node_name}"
                 raise AttributeError(msg)
             preds = [nncf_graph.get_previous_nodes(node) for node in nodes]
-            wq_nodes = []
-            for pred_list in preds:
-                for pred_node in pred_list:
-                    if "UpdateWeight" in pred_node.node_name:
-                        wq_nodes.append(pred_node)
+            wq_nodes = [
+                pred_node for pred_list in preds for pred_node in pred_list if "UpdateWeight" in pred_node.node_name
+            ]
             assert len(wq_nodes) == 1
 
             node = wq_nodes[0]

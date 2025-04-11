@@ -154,7 +154,7 @@ class PruningNodeSelector:
             pruned_nodes_clusterization.merge_list_of_clusters(clusters_to_merge)
 
             # Merge previous convolutions into one cluster
-            all_previous_convs = []
+            all_previous_convs: List[NNCFNode] = []
             for node in list_of_nodes:
                 nncf_node = graph.get_node_by_id(node.node_id)
                 previous_convs = get_previous_convs(
@@ -162,9 +162,9 @@ class PruningNodeSelector:
                 )
                 # Check if previous node isn't multiforward,
                 # in case of multiforward nodes cycle
-                for previous_conv in previous_convs:
-                    if previous_conv not in list_of_nodes:
-                        all_previous_convs.append(previous_conv)
+                all_previous_convs.extend(
+                    previous_conv for previous_conv in previous_convs if previous_conv not in list_of_nodes
+                )
 
             previous_clusters = [
                 pruned_nodes_clusterization.get_cluster_containing_element(node.node_id).id

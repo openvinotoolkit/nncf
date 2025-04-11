@@ -76,7 +76,7 @@ class PTOperatorMetatype(OperatorMetatype):
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         output = set()
-        for _, function_names in cls.module_to_function_names.items():
+        for function_names in cls.module_to_function_names.values():
             output = output.union(function_names)
         if cls.external_op_names is not None:
             output = output.union(cls.external_op_names)
@@ -86,10 +86,11 @@ class PTOperatorMetatype(OperatorMetatype):
     def determine_subtype(
         cls, layer_attributes: Optional[BaseLayerAttributes] = None, function_args=None, functions_kwargs=None
     ) -> Optional["type[PTOperatorSubtype]"]:
-        matches = []
-        for subtype in cls.get_subtypes():
-            if subtype.matches(layer_attributes, function_args, functions_kwargs):
-                matches.append(subtype)
+        matches = [
+            subtype
+            for subtype in cls.get_subtypes()
+            if subtype.matches(layer_attributes, function_args, functions_kwargs)
+        ]
         assert len(matches) <= 1, "Multiple subtypes match operator call - cannot determine single subtype."
         if not matches:
             return None

@@ -26,7 +26,6 @@ def is_experimental_quantization(nncf_config: NNCFConfig) -> bool:
         algorithms_names.append(compression_section["algorithm"])
 
     if isinstance(compression_section, list):
-        for sec in compression_section:
-            algorithms_names.append(sec["algorithm"])
+        algorithms_names.extend(sec["algorithm"] for sec in compression_section)
 
     return "experimental_quantization" in algorithms_names

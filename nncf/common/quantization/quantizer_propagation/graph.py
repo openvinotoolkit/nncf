@@ -1210,10 +1210,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                     return False, (None, curr_node_key)
             return False, (affecting_pq, curr_node_key)
 
-        graph_roots = []
-        for node_key in self.nodes:
-            if not list(self.predecessors(node_key)):
-                graph_roots.append(node_key)
+        graph_roots = [node_key for node_key in self.nodes if not list(self.predecessors(node_key))]
 
         for graph_root_key in graph_roots:
             self.traverse_graph(graph_root_key, merge_traverse_fn, (None, graph_root_key))
@@ -1233,10 +1230,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                     return False, all_pqs
             return False, all_pqs
 
-        graph_roots = []
-        for node_key in self.nodes:
-            if not list(self.predecessors(node_key)):
-                graph_roots.append(node_key)
+        graph_roots = [node_key for node_key in self.nodes if not list(self.predecessors(node_key))]
 
         for graph_root_key in graph_roots:
             self.traverse_graph(graph_root_key, traverse_fn, retval)
@@ -1539,10 +1533,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                     assert out_edge_key in pq.affected_edges
             return False, None
 
-        graph_roots = []
-        for node_key in self.nodes:
-            if not list(self.predecessors(node_key)):
-                graph_roots.append(node_key)
+        graph_roots = [node_key for node_key in self.nodes if not list(self.predecessors(node_key))]
 
         for graph_root_key in graph_roots:
             self.traverse_graph(graph_root_key, traverse_fn, None)

@@ -145,7 +145,7 @@ def get_nodes(xml_dict: Dict, edges: Dict):
                     continue
                 else:
                     edge = edges[node_id][from_port]
-                for (to_node_id, to_port), edge_properties_dict in edge.items():
+                for edge_properties_dict in edge.values():
                     for name, value in zip(("precision", "shape", "is_input"), (precision, shape, is_input)):
                         assert name not in edge_properties_dict
                         edge_properties_dict[name] = value

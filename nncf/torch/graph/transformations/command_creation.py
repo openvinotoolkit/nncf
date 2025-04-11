@@ -68,9 +68,10 @@ def create_quantizer_insertion_command(
 def create_shared_quantizer_insertion_command(
     target_points: List[PTTargetPoint], quantizer: BaseQuantizer
 ) -> PTSharedFnInsertionCommand:
-    quantizers_ids = []
-    for target_point in target_points:
-        quantizers_ids.append(NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id))
+    quantizers_ids = [
+        NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id)
+        for target_point in target_points
+    ]
 
     storage_key = ";".join(str(quantizer_id) for quantizer_id in sorted(quantizers_ids, key=str))
     return PTSharedFnInsertionCommand(

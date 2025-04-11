@@ -86,10 +86,7 @@ def zeroed_observation(observation):
     if hasattr(observation, "shape"):
         return np.zeros(observation.shape)
     if hasattr(observation, "__iter__"):
-        out = []
-        for x in observation:
-            out.append(zeroed_observation(x))
-        return out
+        return [zeroed_observation(x) for x in observation]
     return 0.0
 
 
