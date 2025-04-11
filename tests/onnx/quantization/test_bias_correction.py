@@ -30,13 +30,6 @@ from tests.cross_fw.test_templates.test_bias_correction import TemplateTestBCAlg
 from tests.onnx.quantization.common import compare_nncf_graph
 
 
-def get_data_from_node(model: onnx.ModelProto, node_name: str):
-    data = [t for t in model.graph.initializer if t.name == node_name]
-    if data:
-        return onnx.numpy_helper.to_array(data[0])
-    return None
-
-
 class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
     @staticmethod
     def list_to_backend_type(data: List) -> np.ndarray:

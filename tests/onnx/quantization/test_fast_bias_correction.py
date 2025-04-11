@@ -22,13 +22,6 @@ from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import ONNXF
 from tests.cross_fw.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
 
 
-def get_data_from_node(model: onnx.ModelProto, node_name: str):
-    data = [t for t in model.graph.initializer if t.name == node_name]
-    if data:
-        return onnx.numpy_helper.to_array(data[0])
-    return None
-
-
 class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
     @staticmethod
     def list_to_backend_type(data: List) -> np.ndarray:
