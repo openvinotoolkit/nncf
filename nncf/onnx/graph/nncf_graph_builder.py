@@ -346,6 +346,7 @@ class GraphConverter:
         :param onnx_model: ONNX model.
         :return: NNCFGraph.
         """
+        # TODO(andrey-churkin): Move all preprocessing
         onnx_model = GraphConverter._replace_empty_node_name(onnx_model)
         onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
         edge_info_mapping = get_edge_info_mapping(onnx_model)

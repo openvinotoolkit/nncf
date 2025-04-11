@@ -18,6 +18,7 @@ from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
+from nncf.onnx.graph.model_utils import OnnxModel
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -80,10 +81,11 @@ def quantize_impl(
         model_type=model_type,
         advanced_parameters=advanced_parameters,
     )
-
-    graph = GraphConverter.create_nncf_graph(model)
+    onnx_model = OnnxModel.from_model(model)
+    graph = GraphConverter.create_nncf_graph(onnx_model.model_proto)
     warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
-    quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
+    quantized_onnx_model = quantization_algorithm.apply(onnx_model, graph, dataset=calibration_dataset)
+    quantized_model = quantized_onnx_model.export()
 
     return quantized_model
 

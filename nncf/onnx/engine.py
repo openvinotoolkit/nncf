@@ -13,9 +13,9 @@ from typing import Any, Dict
 
 import numpy as np
 import onnxruntime as rt
-from onnx import ModelProto
 
 from nncf.common.engine import Engine
+from nncf.onnx.graph.model_utils import OnnxModel
 
 
 class ONNXEngine(Engine):
@@ -23,11 +23,20 @@ class ONNXEngine(Engine):
     Engine for ONNX backend using ONNXRuntime to infer the model.
     """
 
-    def __init__(self, model: ModelProto, **rt_session_options: Any):
+    def __init__(self, model: OnnxModel, **rt_session_options: Any):
+        names = []
+        tensors = []
+        for name, tensor in model.tensors.items():
+            names.append(name)
+            tensors.append(rt.OrtValue.ortvalue_from_numpy(tensor))
+
+        sees_options = rt.SessionOptions()
+        sees_options.add_external_initializers(names, tensors)
+
         self.input_names = set()
         rt_session_options["providers"] = ["CPUExecutionProvider"]
-        serialized_model = model.SerializeToString()
-        self.sess = rt.InferenceSession(serialized_model, **rt_session_options)
+        serialized_model = model.model_proto.SerializeToString()
+        self.sess = rt.InferenceSession(serialized_model, sees_options, **rt_session_options)
 
         for inp in self.sess.get_inputs():
             self.input_names.add(inp.name)

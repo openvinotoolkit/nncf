@@ -40,7 +40,7 @@ class NNCFGraphFactory:
 
             from nncf.onnx.graph.nncf_graph_builder import GraphConverter as ONNXGraphConverter
 
-            return ONNXGraphConverter.create_nncf_graph(cast(ModelProto, model))
+            return ONNXGraphConverter.create_nncf_graph(cast(ModelProto, model.model_proto))
         if model_backend == BackendType.OPENVINO:
             from openvino import Model  # type: ignore
 
@@ -79,11 +79,10 @@ class ModelTransformerFactory:
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
-            from onnx import ModelProto
-
             from nncf.onnx.graph.model_transformer import ONNXModelTransformer
+            from nncf.onnx.graph.model_utils import OnnxModel
 
-            return ONNXModelTransformer(cast(ModelProto, model))
+            return ONNXModelTransformer(cast(OnnxModel, model))
         if model_backend == BackendType.OPENVINO:
             from openvino import Model
 
@@ -123,11 +122,10 @@ class EngineFactory:
         """
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
-            from onnx import ModelProto
-
             from nncf.onnx.engine import ONNXEngine
+            from nncf.onnx.graph.model_utils import OnnxModel
 
-            return ONNXEngine(cast(ModelProto, model))
+            return ONNXEngine(cast(OnnxModel, model))
         if model_backend == BackendType.OPENVINO:
             from openvino import Model
 
