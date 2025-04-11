@@ -10,51 +10,16 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Any, Callable, List, Tuple, TypeVar
+from typing import List, Tuple, TypeVar
 
 import numpy as np
 import torch
 
 import nncf
-from nncf import nncf_logger
+from nncf.torch.utils import CompilationWrapper
 from nncf.torch.utils import sum_like
 
 GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)
-
-
-class TorchCompileWrapper:
-    """
-    Tries to wrap the provided function with torch.compile at first usage.
-    If it is not possible, it uses the original function without wrapping.
-    """
-
-    def __init__(self, func: Callable) -> None:
-        """
-        :param func: The original function to wrap.
-        """
-        self._func = func
-        self._compiled_func = None
-
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        """
-        :param args: Function args.
-        :param args: Function kwargs.
-
-        :return: Result of the function call.
-        """
-        if self._compiled_func is None:
-            try:
-                nncf_logger.info(f"Using function {self._func.__name__} with torch.compile.")
-                self._compiled_func = torch.compile(self._func)
-                return self._compiled_func(*args, **kwargs)
-            except Exception as e:
-                nncf_logger.warning(
-                    f"Could not use torch.compile with {self._func.__name__} function. "
-                    f"Falling back on not compiled version. "
-                    f"Reason: {str(e)}"
-                )
-                self._compiled_func = self._func
-        return self._compiled_func(*args, **kwargs)
 
 
 class ReferenceBackendType(Enum):
@@ -156,8 +121,8 @@ class ReferenceQuantize:
 
 
 torch_executor = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)
-torch_forward = TorchCompileWrapper(torch_executor.forward)
-torch_backward = TorchCompileWrapper(torch_executor.backward)
+torch_forward = CompilationWrapper(torch_executor.forward)
+torch_backward = CompilationWrapper(torch_executor.backward)
 
 
 class ReferenceQuantizedFunctions:
