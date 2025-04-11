@@ -16,6 +16,22 @@ import onnx
 from onnx import numpy_helper
 
 import nncf
+from nncf.tensor.definitions import TensorDataType
+
+NNCF_DTYPE_TO_ONNX_DTYPE = {
+    TensorDataType.float16: onnx.TensorProto.FLOAT16,
+    TensorDataType.bfloat16: onnx.TensorProto.BFLOAT16,
+    TensorDataType.float32: onnx.TensorProto.FLOAT,
+    TensorDataType.float64: onnx.TensorProto.DOUBLE,
+    TensorDataType.int32: onnx.TensorProto.INT32,
+    TensorDataType.int64: onnx.TensorProto.INT64,
+    TensorDataType.int8: onnx.TensorProto.INT8,
+    TensorDataType.uint8: onnx.TensorProto.UINT8,
+    TensorDataType.int4: onnx.TensorProto.INT4,
+    TensorDataType.uint4: onnx.TensorProto.UINT4,
+}
+
+ONNX_DTYPE_TO_NNCF_DTYPE = {v: k for k, v in NNCF_DTYPE_TO_ONNX_DTYPE.items()}
 
 
 def get_name_to_node_map(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
@@ -272,3 +288,26 @@ def is_node_has_shared_weight(
     weight_tensor_edge = node.input[weight_port_id]
     nodes = children_node_mapping[weight_tensor_edge]
     return len(nodes) > 1
+
+
+def pack_4_bits(tensor: np.ndarray) -> np.ndarray:
+    """
+    Apply packing based on the rule - https://onnx.ai/onnx/technical/int4.html#packing-and-unpacking
+    :param tensor: Tensor to pack.
+    :return: Packed tensor.
+    """
+    if tensor.dtype == np.uint8:
+        if np.max(tensor) > 15 or np.min(tensor) < 0:
+            msg = "Tensor values are not in [0, 15]."
+            raise nncf.InternalError(msg)
+    elif tensor.dtype == np.int8:
+        if np.max(tensor) > 7 or np.min(tensor) < -8:
+            msg = "Tensor values are not in [-8, 7]."
+            raise nncf.InternalError(msg)
+    else:
+        msg = f"Invalid weight dtype {tensor.dtype}."
+        raise nncf.InternalError(msg)
+    packed_tensor = np.ascontiguousarray(tensor)
+    packed_tensor = packed_tensor.reshape(-1, 2)
+    packed_tensor = packed_tensor[..., 1::2] << 4 | packed_tensor[..., ::2] & 15
+    return packed_tensor
