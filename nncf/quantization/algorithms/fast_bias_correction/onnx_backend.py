@@ -61,7 +61,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_sub_input_output_names(subgraph: onnx.ModelProto) -> Tuple[str, str]:
-        return subgraph.graph.input[0].name, subgraph.graph.output[0].name
+        return subgraph.model_proto.graph.input[0].name, subgraph.model_proto.graph.output[0].name
 
     @staticmethod
     def create_input_data(

@@ -100,7 +100,9 @@ def is_onnx_model(model: Any) -> bool:
     """
     import onnx  # type: ignore
 
-    return isinstance(model, onnx.ModelProto)
+    from nncf.onnx.model import ONNXModel  # type: ignore
+
+    return isinstance(model, onnx.ModelProto) or isinstance(model, ONNXModel)
 
 
 @result_verifier
