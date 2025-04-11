@@ -27,7 +27,6 @@ from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.parameters import TargetDevice
-from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 from nncf.scopes import IgnoredScope
 from tests.common.quantization.metatypes import CatTestMetatype
@@ -47,13 +46,6 @@ def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
 
 def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
     return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.ONNX, device=device)
-
-
-@pytest.mark.parametrize("target_device", TargetDevice)
-def test_target_device(target_device):
-    min_max_algo = MinMaxQuantization(target_device=target_device)
-    min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
-    assert min_max_algo._target_device == target_device
 
 
 class TestPTQParams(TemplateTestPTQParams):

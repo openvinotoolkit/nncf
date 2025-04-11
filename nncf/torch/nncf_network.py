@@ -39,6 +39,7 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
 from nncf.common.utils.debug import is_debug
+from nncf.parameters import StripFormat
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
@@ -829,12 +830,12 @@ class NNCFNetworkInterface(torch.nn.Module):
             :param hook: External op call hook to check correctness.
             :param info: Info to log in case op call hook references are broken.
             """
-            assert hasattr(
-                self, hook._storage_name
-            ), f"Storage name {hook._storage_name} is not registered. Info: {info}"
-            assert hook._storage_key in getattr(
-                self, hook._storage_name
-            ), f"Key {hook._storage_key} is not registered in {hook._storage_name}. Info: {info}"
+            assert hasattr(self, hook._storage_name), (
+                f"Storage name {hook._storage_name} is not registered. Info: {info}"
+            )
+            assert hook._storage_key in getattr(self, hook._storage_name), (
+                f"Key {hook._storage_key} is not registered in {hook._storage_name}. Info: {info}"
+            )
 
         context_hooks = defaultdict(lambda: defaultdict(list))
         transformation_layout = PTTransformationLayout()
@@ -966,12 +967,14 @@ class NNCFNetworkInterface(torch.nn.Module):
     def set_compression_controller(self, ctrl: CompressionAlgorithmController):
         self.compression_controller = ctrl
 
-    def strip(self, do_copy: bool = True) -> "NNCFNetwork":
+    def strip(self, do_copy: bool = True, strip_format: StripFormat = StripFormat.NATIVE) -> "NNCFNetwork":
         """
-        Returns the model object with as much custom NNCF additions as possible removed
-        while still preserving the functioning of the model object as a compressed model.
+        Removes auxiliary layers and operations added during the compression process, resulting in a clean
+        model ready for deployment. The functionality of the model object is still preserved as a compressed model.
+
         :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
           will return the currently associated model object "stripped" in-place.
+        :param strip format: Describes the format in which model is saved after strip.
         :return: The stripped model.
         """
         if self.compression_controller is None:
@@ -979,8 +982,8 @@ class NNCFNetworkInterface(torch.nn.Module):
             from nncf.torch.quantization.strip import strip_quantized_model
 
             model = deepcopy(self._model_ref) if do_copy else self._model_ref
-            return strip_quantized_model(model)
-        return self.compression_controller.strip(do_copy)
+            return strip_quantized_model(model, strip_format=strip_format)
+        return self.compression_controller.strip(do_copy, strip_format=strip_format)
 
     def get_reused_parameters(self):
         """

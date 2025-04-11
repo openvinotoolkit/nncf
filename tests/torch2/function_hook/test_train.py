@@ -18,6 +18,9 @@ import torch.utils
 from torch import nn
 from torch.nn.parallel import DistributedDataParallel as DDP
 
+import nncf
+from nncf.experimental.torch2.function_hook.wrapper import wrap_model
+from tests.torch2.function_hook.helpers import ConvModel
 from tests.torch2.function_hook.helpers import get_wrapped_simple_model_with_hook
 
 
@@ -47,9 +50,45 @@ def test_train_data_parallel():
     wrapped_model = get_wrapped_simple_model_with_hook().cuda()
     optimizer = torch.optim.Adam(wrapped_model.parameters(), lr=0.1)
     parallel_model = torch.nn.DataParallel(wrapped_model)
-    parallel_model.to("cuda")
     run_one_epoch(parallel_model, optimizer, use_cuda=True)
     assert all(p.grad is not None for p in wrapped_model.parameters())
+
+
+@pytest.mark.skipif(torch.cuda.device_count() < 2, reason="requires 2xGPUs")
+@pytest.mark.cuda
+def test_train_data_parallel_with_overridden_forward():
+    model = ConvModel().cuda()
+    orig_forward = model.forward
+
+    def patched_forward(*args, **kwargs):
+        return orig_forward(*args, **kwargs)
+
+    model.forward = patched_forward
+    wrapped_model = wrap_model(model)
+    # Without wrap_model model will raise
+    # RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:1 and cuda:0!
+    # In overridden bound method __self__ links to original model for all replicas
+    optimizer = torch.optim.Adam(wrapped_model.parameters(), lr=0.1)
+    parallel_model = torch.nn.DataParallel(wrapped_model)
+    with pytest.raises(nncf.InternalError, match="Not supported overridden forward"):
+        run_one_epoch(parallel_model, optimizer, use_cuda=True)
+
+
+@pytest.mark.skipif(torch.cuda.device_count() < 2, reason="requires 2xGPUs")
+@pytest.mark.cuda
+def test_train_data_parallel_with_overridden_forward_after_wrap_model():
+    model = ConvModel().cuda()
+    wrapped_model = wrap_model(model)
+    orig_forward = model.forward
+
+    def patched_forward(*args, **kwargs):
+        return orig_forward(*args, **kwargs)
+
+    wrapped_model.forward = patched_forward
+    optimizer = torch.optim.Adam(wrapped_model.parameters(), lr=0.1)
+    parallel_model = torch.nn.DataParallel(wrapped_model)
+    with pytest.raises(nncf.InternalError, match="Not supported overridden forward"):
+        run_one_epoch(parallel_model, optimizer, use_cuda=True)
 
 
 def _train_ddp(rank, world_size):

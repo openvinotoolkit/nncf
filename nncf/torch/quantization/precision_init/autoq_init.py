@@ -247,10 +247,10 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                 nncf_logger.info(
                     f"## Episode[{episode}], "
                     f"reward: {episode_reward:.3f}, "
-                    f'acc: {info["accuracy"]:.3f}, '
-                    f'model_ratio: {info["model_ratio"]:.3f}, '
-                    f'model_size(MB): {info["model_size"] / 8e6:.2f}, '
-                    f'BOP_ratio: {info["bop_ratio"]:.3f}\n'
+                    f"acc: {info['accuracy']:.3f}, "
+                    f"model_ratio: {info['model_ratio']:.3f}, "
+                    f"model_size(MB): {info['model_size'] / 8e6:.2f}, "
+                    f"BOP_ratio: {info['bop_ratio']:.3f}\n"
                 )
 
                 # Replay Buffer Management
@@ -284,7 +284,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                     if i == 0:
                         prev_action = 0.0
                     else:
-                        prev_action = env.master_df["action"][i - 1] / 8  # ducktape scaling
+                        prev_action = env.master_df["action"][i - 1] / 8  # duct tape scaling
                     if prev_action != s_t["prev_action"]:
                         s_t["prev_action"] = prev_action
                     # EO ------------------------
@@ -331,9 +331,9 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                         f"## Episode[{episode}] "
                         f"New best policy: {best_policy.values.tolist()}, "
                         f"reward: {best_reward:.3f}, "
-                        f'acc: {info["accuracy"]:.3f}, '
-                        f'model_ratio: {info["model_ratio"]:.3f},'
-                        f' BOP_ratio: {info["bop_ratio"]:.3f}'
+                        f"acc: {info['accuracy']:.3f}, "
+                        f"model_ratio: {info['model_ratio']:.3f},"
+                        f" BOP_ratio: {info['bop_ratio']:.3f}"
                     )
                     nncf_logger.info(f"\033[92m {log_str}\033[00m")
 
@@ -352,7 +352,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
                 episode_elapsed = time.time() - episode_start_ts
 
-                nncf_logger.info(f'## Episode[{episode}] Policy: \n{env.master_df["action"].to_string()}\n')
+                nncf_logger.info(f"## Episode[{episode}] Policy: \n{env.master_df['action'].to_string()}\n")
                 nncf_logger.info(f"## Episode[{episode}] Elapsed: {episode_elapsed:.3f}\n")
 
                 episode += 1
@@ -384,7 +384,11 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             self.tb_writer.add_text("AutoQ/best_policy", best_policy_string, episode)
 
     def _dump_episode(
-        self, episodic_info_tuple: Tuple, bit_stats_df: pd.DataFrame, env: "QuantizationEnv", agent: DDPG  # noqa: F821
+        self,
+        episodic_info_tuple: Tuple,
+        bit_stats_df: pd.DataFrame,
+        env: "QuantizationEnv",  # noqa: F821
+        agent: DDPG,
     ):
         if self._dump_autoq_data:
             episode, final_reward, _, accuracy, model_ratio, bop_ratio, _, _, _ = episodic_info_tuple

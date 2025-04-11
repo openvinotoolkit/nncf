@@ -191,9 +191,9 @@ class ElasticWidthParams(BaseElasticityParams):
         self.max_num_widths = max_num_widths
         self.width_step = width_step
         self.width_multipliers = width_multipliers
-        assert (
-            filter_importance != "external" or external_importance_path is not None
-        ), "Missing external weight importance path."
+        assert filter_importance != "external" or external_importance_path is not None, (
+            "Missing external weight importance path."
+        )
         self.filter_importance = filter_importance
         self.external_importance_path = external_importance_path
 
@@ -809,9 +809,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
         :param node_name: node name
         :return: importance tensor
         """
-        assert should_consider_scope(
-            node_name, ignored_scopes=None, target_scopes=self._external_importance.keys()
-        ), f"Cannot match {node_name} in external weight importance data structure"
+        assert should_consider_scope(node_name, ignored_scopes=None, target_scopes=self._external_importance.keys()), (
+            f"Cannot match {node_name} in external weight importance data structure"
+        )
         return self._external_importance[node_name]
 
     def reorganize_weights(self) -> None:
@@ -939,9 +939,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
             width = int(sum(actual_mask))
             device = actual_mask.device
             ref_mask = ElasticWidthHandler._width_to_mask(width, mask_len, device).tensor
-            assert torch.equal(
-                ref_mask, actual_mask
-            ), f"Invalid mask {actual_mask}: the first {width} values must be ones, the rest - zeros."
+            assert torch.equal(ref_mask, actual_mask), (
+                f"Invalid mask {actual_mask}: the first {width} values must be ones, the rest - zeros."
+            )
             result = width
         return result
 
@@ -1065,9 +1065,9 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                     )
                 )
                 pruned_module = target_model.nncf.get_containing_module(node_name)
-                assert isinstance(
-                    pruned_module, (nn.Conv2d, nn.Linear)
-                ), "currently prune only 2D Convolutions and Linear layers"
+                assert isinstance(pruned_module, (nn.Conv2d, nn.Linear)), (
+                    "currently prune only 2D Convolutions and Linear layers"
+                )
 
                 group_minfos.append(
                     ElasticWidthInfo(

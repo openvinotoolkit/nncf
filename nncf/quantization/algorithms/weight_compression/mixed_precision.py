@@ -139,9 +139,11 @@ class DataFreeCriterion(MixedPrecisionCriterion):
     def _set_backend_entity(self, model: TModel) -> None:
         model_backend = get_backend(model)
         if model_backend == BackendType.OPENVINO:
-            from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
+            from nncf.quantization.algorithms.weight_compression.openvino_backend import (
+                OVTensorWeightCompressionAlgoBackend,
+            )
 
-            self._backend_entity = OVWeightCompressionAlgoBackend(model)
+            self._backend_entity = OVTensorWeightCompressionAlgoBackend(model)
         elif model_backend == BackendType.TORCH:
             from nncf.quantization.algorithms.weight_compression.torch_backend import PTWeightCompressionAlgoBackend
 
@@ -161,7 +163,10 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         graph: NNCFGraph,
     ) -> float:
         weight = self._backend_entity.get_weight(
-            weight_param.node_with_weight, weight_param.weight_port_id, model, graph
+            weight_param.node_with_weight,
+            weight_param.weight_port_id,
+            model,
+            graph,
         )
         backup_config = WeightCompressionConfig()
         reduction_axes = weight_param.reduction_axes

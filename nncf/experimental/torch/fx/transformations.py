@@ -292,7 +292,7 @@ def output_insertion_transformation_builder(target_point: PTTargetPoint) -> Tran
         cloned_input.meta["val"] = copy(input_node.meta.get("val"))
 
         # Update args of the output node as one output could be present in the model
-        # TODO(dlaykhov) Support case when there are no outputs in the input model.
+        # TODO(dlyakhov) Support case when there are no outputs in the input model.
         output_nodes = [node for node in model.graph.nodes if node.op == "output"]
         assert len(output_nodes) == 1
         output_node = output_nodes[0]
@@ -364,7 +364,7 @@ def insert_one_qdq(model: torch.fx.GraphModule, target_point: PTTargetPoint, qua
                 # tracing where it may consider tensor overload as opposed to default.
                 # With extra check of scale and zero_point being scalar, it makes
                 # sure that the default overload can be used.
-                # TODO(dlaykhov): maybe need more complex attr name here
+                # TODO(dlyakhov): maybe need more complex attr name here
                 qparam_node = create_getattr_from_value(model, graph, target_node.name + key, value_or_node)
                 quantize_op_inputs.append(qparam_node)
             else:
@@ -514,9 +514,9 @@ def _is_supported_batch_norm_for_training(node: torch.fx.Node):
     return node.target in supported_ops
 
 
-def _get_pattern_replacement_per_channel() -> (
-    Tuple[Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, int, torch.dtype], torch.Tensor]]
-):
+def _get_pattern_replacement_per_channel() -> Tuple[
+    Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, int, torch.dtype], torch.Tensor]
+]:
     """
     Returns the patter and replacement function for the subgraph rewriter to
     match and replace for per_tensor quantization
@@ -537,9 +537,9 @@ def _get_pattern_replacement_per_channel() -> (
     return pattern_per_channel, replacement_graph_per_channel
 
 
-def _get_pattern_replacement_per_tensor() -> (
-    Tuple[Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, torch.dtype], torch.Tensor]]
-):
+def _get_pattern_replacement_per_tensor() -> Tuple[
+    Callable[[torch.Tensor, torch.Tensor, torch.Tensor, int, int, torch.dtype], torch.Tensor]
+]:
     """
     Returns the patter and replacement function for the subgraph rewriter to
     match and replace for per_tensor quantization
@@ -733,7 +733,6 @@ def apply_quantization_transformations(model: torch.fx.GraphModule) -> None:
     # to make it easier for algorithms to work
     # with the target graph BatchNorm operations
     # are being fused
-    fold_constant_except_qdq(model)
     _fuse_conv_bn_(model)
 
 

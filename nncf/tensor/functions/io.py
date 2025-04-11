@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import functools
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -17,8 +16,8 @@ from nncf.common.utils.os import fail_if_symlink
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDeviceType
-from nncf.tensor.functions.dispatcher import dispatch_dict
 from nncf.tensor.functions.dispatcher import get_io_backend_fn
+from nncf.tensor.functions.dispatcher import tensor_dispatcher
 
 
 def load_file(
@@ -41,7 +40,7 @@ def load_file(
     return {key: Tensor(val) for key, val in loaded_dict.items()}
 
 
-@functools.singledispatch
+@tensor_dispatcher
 def save_file(
     data: Dict[str, Tensor],
     file_path: Path,
@@ -52,8 +51,3 @@ def save_file(
     :param data: A dictionary where the keys are tensor names and the values are Tensor objects.
     :param file_path: The path to the file where the tensor data will be saved.
     """
-    fail_if_symlink(file_path)
-    if isinstance(data, dict):
-        return dispatch_dict(save_file, data, file_path)
-    msg = f"Function `save_file` is not implemented for {type(data)}"
-    raise NotImplementedError(msg)

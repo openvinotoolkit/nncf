@@ -8,6 +8,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pytest
+
 from nncf.common.utils.caching import ResultsCache
 from nncf.common.utils.caching import cache_results
 from nncf.common.utils.caching import disable_results_caching
@@ -137,3 +139,14 @@ def test_caching_results():
                 check_fn()
         else:
             check_fn()
+
+
+def test_disable_caching_with_exception():
+    assert TEST_CACHE_CONTAINER.enabled()
+
+    with pytest.raises(RuntimeError):
+        with disable_results_caching(TEST_CACHE_CONTAINER):
+            assert not TEST_CACHE_CONTAINER.enabled()
+            raise RuntimeError
+
+    assert TEST_CACHE_CONTAINER.enabled()

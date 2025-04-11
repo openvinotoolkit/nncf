@@ -285,7 +285,11 @@ class LMWeightCompression(BaseTestPipeline):
             self.model_hf.save_pretrained(self.fp32_model_dir)
             self.model_hf._save_config(self.fp32_model_dir)
         elif self.backend == BackendType.TORCH:
+            _need_clean_dict = "forward" not in self.model_hf.__dict__
             export_from_model(self.model_hf, self.fp32_model_dir, stateful=False, compression_option="fp32")
+            if _need_clean_dict and "forward" in self.model_hf.__dict__:
+                # WA for experimental tracing, clean up overwritten forward (same as in class method)
+                del self.model_hf.__dict__["forward"]
 
     def _compress(self):
         """

@@ -62,7 +62,7 @@ class FXStatisticsAggregator(StatisticsAggregator):
         # All statistics are collected as a dead code,
         # so eliminate dead core removed statistics collector
         # from the target model. No additional code required
-        # for that, horay!
+        # for that, hooray!
         model.graph.eliminate_dead_code()
         model.recompile()
 

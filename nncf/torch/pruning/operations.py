@@ -596,9 +596,9 @@ class PTElementwisePruningOp(ElementwisePruningOp, PTPruner):
         node_module = model.nncf.get_containing_module(node.node_name)
 
         if isinstance(node_module, tuple(NNCF_WRAPPED_USER_MODULES_DICT)):
-            assert (
-                node_module.target_weight_dim_for_compression == 0
-            ), "Implemented only for target_weight_dim_for_compression == 0"
+            assert node_module.target_weight_dim_for_compression == 0, (
+                "Implemented only for target_weight_dim_for_compression == 0"
+            )
             if prun_type == PrunType.CUT_WEIGHTS:
                 bool_mask = torch.tensor(input_mask, dtype=torch.bool)
                 old_num_channels = int(node_module.weight.size(0))

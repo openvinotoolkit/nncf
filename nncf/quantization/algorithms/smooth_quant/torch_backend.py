@@ -35,7 +35,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import CompressionParameter
-from nncf.torch.layer_utils import StatefullModuleInterface
+from nncf.torch.layer_utils import StatefulModuleInterface
 from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.nncf_network import NNCFNetwork
@@ -43,7 +43,7 @@ from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_
 
 
 @COMPRESSION_MODULES.register()
-class SQMultiply(torch.nn.Module, StatefullModuleInterface):
+class SQMultiply(torch.nn.Module, StatefulModuleInterface):
     SCALE_SHAPE_KEY = "scale_shape"
 
     def __init__(self, scale_shape: Tuple[int, ...]):
@@ -99,14 +99,14 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode) -> bool:
-        # Metatypes of linears and convolutions guarantee
+        # Metatypes of linear and convolution operators guarantee
         # all nodes with the metatypes have weights, we can skip
         # this check by returning True.
         return True
 
     @staticmethod
     def get_activations_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        # Metatypes of linears and convolutions guarantee
+        # Metatypes of linear and convolution operators guarantee
         # all nodes with the metatypes have 0 activation port id.
         return 0
 
