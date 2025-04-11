@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
 
 import numpy as np
 import onnx
@@ -18,10 +18,20 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.logging.logger import nncf_logger
+from nncf.onnx.graph.layout import OVLayoutElem
+from nncf.onnx.graph.layout import get_conv_weights_layout
+from nncf.onnx.graph.layout import get_conv_weights_layout_from_node
+from nncf.onnx.graph.layout import get_linear_activations_layout_from_node
+from nncf.onnx.graph.layout import get_linear_input_layout
+from nncf.onnx.graph.layout import get_linear_weights_layout_from_node
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.graph.metatypes.groups import CONV_OPERATIONS
+from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_BIAS
+from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 
 
 def is_node_with_bias(node: NNCFNode) -> bool:
@@ -139,6 +149,36 @@ def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
         weight_channel_axis = -1 - port_id if transpose else -2 + port_id
     return weight_channel_axis
 
+def get_weight_channel_axes(node: NNCFNode) -> List[int]:
+    """
+    Returns axes numbers of the weight tensor which correspond to its channels.
+
+    :param node: NNCFNode with weights.
+    :param weights_port_id: Weight port id of the target node.
+    :return: Axes numbers of the weight tensor which correspond to its channels.
+    """
+    if node.metatype not in OPERATIONS_WITH_WEIGHTS:
+        msg = "Channel axis cannot be defined for operation without weights."
+        raise ValueError(msg)
+
+    if node.metatype in CONV_OPERATIONS:
+        weights_layout = get_conv_weights_layout_from_node(node)
+        return [idx for idx, elem in enumerate(weights_layout) if elem in [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT]]
+    elif node.metatype == ONNXMatMulMetatype:
+        return get_matmul_channel_axes(node)
+    return node.metatype.const_channel_axis
+
+
+def get_matmul_channel_axes(node: ov.Node) -> List[int]:
+    """
+    Calculate channel axes for the MatMul operation.
+
+    :param node: The target node.
+    :return: List of channel axes for the MatMul operation.
+    """
+    weights_layout = get_linear_weights_layout_from_node(node)
+    return [idx for idx, elem in enumerate(weights_layout) if elem in [OVLayoutElem.SPATIAL, OVLayoutElem.C_OUT]]
+
 
 def get_act_quantization_axis(node: NNCFNode, port_id: int) -> int:
     """
@@ -214,3 +254,7 @@ def get_quantized_tensor_shape(
     if target_point.is_weight_target_point():
         return node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
     return _get_activation_tensor_shape(nncf_graph, node, target_point)
+
+
+def get_const_value_as_onnx_tensor(initializer_name: str, model: onnx.ModelProto) -> np.ndarray:
+    # TODO 

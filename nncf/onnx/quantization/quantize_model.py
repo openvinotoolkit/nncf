@@ -9,29 +9,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import onnx
 
 import nncf
+from nncf.common.factory import NNCFGraphFactory
+from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
+from nncf.parameters import BackupMode
+from nncf.parameters import CompressionFormat
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
+from nncf.parameters import SensitivityMetric
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_accuracy_drop
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
+from nncf.quantization.statistics_caching import cache_weight_compression_statistics
+from nncf.quantization.statistics_caching import register_statistics_for_algorithm
 from nncf.scopes import IgnoredScope
 
 TTensor = TypeVar("TTensor")
@@ -201,3 +212,63 @@ def quantize_with_accuracy_control_impl(
         )
 
     return quantized_model
+
+def compress_weights_impl(
+    model: onnx.ModelProto,
+    dataset: Dataset,
+    mode: CompressWeightsMode,
+    ratio: float,
+    group_size: int,
+    ignored_scope: IgnoredScope,
+    all_layers: bool,
+    sensitivity_metric: SensitivityMetric,
+    awq: bool,
+    subset_size: int,
+    scale_estimation: bool,
+    gptq: bool,
+    lora_correction: bool,
+    backup_mode: BackupMode,
+    compression_format: CompressionFormat,
+    advanced_parameters: Optional[AdvancedCompressionParameters] = None,
+) -> onnx.ModelProto:
+    """
+    Implementation of the `compress_weights()` method for the OpenVINO backend.
+    """
+    graph = NNCFGraphFactory.create(model)
+    compression_algorithm = WeightCompression(
+        mode,
+        ratio,
+        group_size,
+        ignored_scope,
+        all_layers,
+        sensitivity_metric,
+        awq,
+        subset_size,
+        scale_estimation,
+        gptq,
+        lora_correction,
+        backup_mode,
+        compression_format,
+        advanced_parameters,
+    )
+
+    statistics_points = None
+    if advanced_parameters and advanced_parameters.statistics_path:
+        # If there is no such directory, then caches statistics
+        statistics_path = Path(advanced_parameters.statistics_path)
+        if not statistics_path.exists():
+            cache_weight_compression_statistics(model, graph, dataset, subset_size, statistics_path)
+        statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
+        compression_algorithm.set_backend_entity(model)
+        _, matmul_input_to_output_nodes_map = compression_algorithm.get_compression_nodes_info(graph)
+        register_statistics_for_algorithm(
+            statistics_aggregator,
+            model,
+            graph,
+            compression_algorithm,
+            matmul_input_to_output_nodes_map,
+        )
+        statistics_aggregator.load_statistics_from_dir(statistics_path)
+        statistics_points = statistics_aggregator.statistic_points
+
+    return compression_algorithm.apply(model, graph, statistics_points, dataset)

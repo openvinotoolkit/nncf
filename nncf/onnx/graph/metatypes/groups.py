@@ -164,3 +164,9 @@ OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     onnx_metatypes.ONNXROIAlignMetatype,
     onnx_metatypes.ONNXEmbeddingMetatype,
 ]
+
+CONV_OPERATIONS = [
+    onnx_metatypes.ONNXConvolutionMetatype,
+    onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
+    onnx_metatypes.ONNXGroupConvolutionMetatype,
+]
