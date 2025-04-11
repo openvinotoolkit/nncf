@@ -44,7 +44,9 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
@@ -1505,6 +1507,22 @@ def test_disabled_optimized_compression(disabled):
         else:
             run_compression()
             mock.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "weight,scale", [(np.array([-0.07263] * 2, np.float16), np.array([0.08564102] * 2, np.float32))]
+)
+def test_nf4_quantization_mid_quant(weight, scale):
+    weight = Tensor(weight)
+    scale = Tensor(scale)
+    # norm_weight equals -0.8480964 (one bit away from the first NF4 quantile center)
+    norm_weight = calculate_normalized_weight(weight, scale)
+    nf4_quant = do_nf4_quantization(norm_weight, scale, is_normalized_weight=True)
+
+    norm_weight_ov_backend = Tensor(ov.Tensor(norm_weight.data, norm_weight.shape, ov.Type.f32))
+    ref_nf4_quant = norm_weight_ov_backend.astype(TensorDataType.nf4).as_numpy_tensor()
+
+    np.testing.assert_allclose(nf4_quant.data, ref_nf4_quant.data, atol=0, rtol=0)
 
 
 class TestOVTemplateWeightCompression(TemplateWeightCompression):
