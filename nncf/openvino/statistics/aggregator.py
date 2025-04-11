@@ -13,7 +13,7 @@ from collections import defaultdict
 from typing import Dict
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType

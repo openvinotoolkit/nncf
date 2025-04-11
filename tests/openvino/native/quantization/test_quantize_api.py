@@ -9,11 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import pytest
-from openvino.runtime import Model
-from openvino.runtime import Shape
-from openvino.runtime import Type
-from openvino.runtime import op
-from openvino.runtime import opset13 as opset
+from openvino import Model
+from openvino import Shape
+from openvino import Type
+from openvino import op
+from openvino import opset13 as opset
 
 import nncf
 from nncf import Dataset

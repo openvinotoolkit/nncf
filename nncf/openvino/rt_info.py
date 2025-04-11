@@ -12,7 +12,7 @@
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 
-import openvino.runtime as ov
+import openvino as ov
 
 from nncf.common.logging import nncf_logger
 from nncf.scopes import IgnoredScope

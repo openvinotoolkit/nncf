@@ -15,8 +15,8 @@ from functools import partial
 from typing import Callable, Optional, Tuple
 
 import numpy as np
-import openvino.runtime as ov
-from openvino.runtime import opset13 as opset
+import openvino as ov
+from openvino import opset13 as opset
 
 from nncf.common.utils.registry import Registry
 from tests.torch.test_models.inceptionv3 import inception_v3

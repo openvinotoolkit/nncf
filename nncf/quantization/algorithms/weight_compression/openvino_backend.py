@@ -11,7 +11,7 @@
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import openvino as ov
-from openvino.runtime import opset13 as opset
+from openvino import opset13 as opset
 
 import nncf
 from nncf.common.graph import NNCFGraph

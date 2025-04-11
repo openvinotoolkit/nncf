@@ -12,7 +12,7 @@
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode

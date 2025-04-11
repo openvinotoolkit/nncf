@@ -12,7 +12,7 @@
 from itertools import islice
 from typing import Dict, List, Optional, Tuple
 
-import openvino.runtime as ov
+import openvino as ov
 
 from nncf import Dataset
 from nncf.common import factory

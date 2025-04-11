@@ -86,7 +86,7 @@ The NNCF PTQ is the simplest way to apply 8-bit quantization. To run the algorit
 
 ```python
 import nncf
-import openvino.runtime as ov
+import openvino as ov
 import torch
 from torchvision import datasets, transforms
 

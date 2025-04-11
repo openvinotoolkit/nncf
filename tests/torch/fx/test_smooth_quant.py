@@ -12,7 +12,7 @@
 from typing import Any, Callable, Dict, Type
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pytest
 import torch
 

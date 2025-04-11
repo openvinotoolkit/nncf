@@ -27,11 +27,11 @@ from itertools import islice
 from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pkg_resources
 from config import Config
-from openvino.runtime import Dimension
-from openvino.runtime import PartialShape
+from openvino import Dimension
+from openvino import PartialShape
 
 try:
     from accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
