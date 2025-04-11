@@ -30,6 +30,7 @@ from nncf.common.utils.debug import nncf_debug
 from nncf.common.utils.helpers import set_env_variable
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
+from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.parameters import BackupMode
@@ -638,11 +639,6 @@ def test_raise_error_for_many_axes():
         reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0, 1), group_size=1)
 
 
-def test_raise_error_channel_size_is_not_divisible_by_group_size():
-    with pytest.raises(nncf.UnsupportedModelError):
-        reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0,), group_size=3)
-
-
 @pytest.mark.parametrize("mode", INT8_MODES)
 @pytest.mark.parametrize(
     "params",
@@ -980,8 +976,6 @@ def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
     compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, gptq=True, scale_estimation=True)
 
 
-# TODO(andreyanufr) Waiting for the e2m1 in OV release
-@pytest.mark.xfail
 @pytest.mark.parametrize(
     ("mode", "all_layers", "ratio", "ref_ids"),
     (
@@ -1005,7 +999,7 @@ def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
 )
 def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
     model = SequentialMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 4, 4]), np.arange(16).reshape(4, 4)])
+    dataset = Dataset([np.ones([1, 4, 4]), np.arange(16).reshape(1, 4, 4)])
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.E2M1,
@@ -1490,6 +1484,10 @@ def test_compression_with_transposed_activations(kwargs):
         )
 
 
+@pytest.mark.xfail(
+    is_arm_cpu(),
+    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
+)
 @pytest.mark.parametrize("disabled", [False, True])
 def test_disabled_optimized_compression(disabled):
     model = LMLinearModel().ov_model
@@ -1547,6 +1545,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         names = {op.get_friendly_name() for op in model.get_ordered_ops() if op.get_element_type() == ov.Type.i4}
         low_precision_nodes = {f"weights_{i}" for i in ref_ids}
         assert low_precision_nodes == names
+
+    @staticmethod
+    def get_not_supported_algorithms() -> List[str]:
+        return []
 
     @staticmethod
     def get_scale_estimation_ref():

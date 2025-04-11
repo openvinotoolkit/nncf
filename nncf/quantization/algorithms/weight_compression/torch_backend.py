@@ -51,6 +51,7 @@ from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBacke
 from nncf.quantization.algorithms.weight_compression.backend import MixedPrecisionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.handle_errors import handle_invalid_group_size_error
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
 from nncf.quantization.algorithms.weight_compression.weight_lowering import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
@@ -355,19 +356,20 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             scale = scale.type(quantizer.scale.dtype)
             quantizer.scale = torch.nn.Parameter(scale * levels / 2)
 
-        target_node_name = wc_params.node_with_weight.node_name
-        target_point = PTTargetPoint(
-            TargetType.OPERATION_WITH_WEIGHTS, target_node_name=target_node_name, input_port_id=wc_params.weight_port_id
-        )
-        storage_key = "FQ_LORA_{}".format(wc_params.weight_name.replace(".", "_"))
+        target_node_name = wc_params.weight_name
+        target_point = PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=target_node_name)
 
-        return PTSharedFnInsertionCommand(
-            target_points=[target_point],
-            fn=quantizer,
-            op_unique_name=storage_key,
-            compression_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,
-            priority=TransformationPriority.QUANTIZATION_PRIORITY,
-        )
+        if is_experimental_torch_tracing_enabled():
+            return PT2InsertionCommand([target_point], quantizer)
+        else:
+            storage_key = "FQ_LORA_{}".format(target_node_name.replace(".", "_"))
+            return PTSharedFnInsertionCommand(
+                target_points=[target_point],
+                fn=quantizer,
+                op_unique_name=storage_key,
+                compression_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,
+                priority=TransformationPriority.QUANTIZATION_PRIORITY,
+            )
 
     @staticmethod
     def get_dq_insertion_command(
@@ -476,6 +478,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         transformation_layout = TransformationLayout()
         is_all_8bit = all(wc_params.compression_config.num_bits == 8 for wc_params in weight_compression_parameters)
+        invalid_node_names = []
+        first_caught_error = None
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
             if compression_config.mode in [
@@ -492,14 +496,19 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 msg = f"Could not find a torch.nn.Parameter in the model by name {weight_name}."
                 raise nncf.InternalError(msg)
 
-            # calculates compressed weights and decompression parameters
-            compressed_weight = compress_weight(
-                Tensor(weight),
-                wc_params.reduction_axes,
-                compression_config,
-                None if precomputed_scales is None else precomputed_scales.get(wc_params.weight_name),
-                None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name),
-            )
+            try:
+                # calculates compressed weights and decompression parameters
+                compressed_weight = compress_weight(
+                    Tensor(weight),
+                    wc_params.reduction_axes,
+                    compression_config,
+                    None if precomputed_scales is None else precomputed_scales.get(wc_params.weight_name),
+                    None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name),
+                )
+            except nncf.InvalidGroupSizeError as error:
+                first_caught_error = error
+                invalid_node_names.append(wc_params.node_with_weight.node_name)
+                continue
 
             if compression_format == CompressionFormat.DQ:
                 command = self.get_dq_insertion_command(compressed_weight, wc_params, model, graph, weight_node)
@@ -510,6 +519,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 )
             transformation_layout.register(command)
 
+        if first_caught_error:
+            handle_invalid_group_size_error(first_caught_error, invalid_node_names)
         # To have FQ's with requires_grad=True only
         model.requires_grad_(False)
 
