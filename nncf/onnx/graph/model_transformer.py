@@ -19,7 +19,7 @@ import nncf
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.onnx.graph.model_utils import OnnxModel
+from nncf.onnx.graph.model_utils import ONNXModel
 from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.onnx_helper import get_children
 from nncf.onnx.graph.onnx_helper import get_children_node_mapping
@@ -46,7 +46,7 @@ class ONNXModelTransformer(ModelTransformer):
     SCALE_TENSOR_NAME_PREFIX = "scale_"
     ZERO_POINT_NAME_PREFIX = "zero_point_"
 
-    def __init__(self, model: OnnxModel):
+    def __init__(self, model: ONNXModel):
         super().__init__(model)
         self.onnx_model_extractor = onnx.utils.Extractor(model.model_proto)
 
@@ -107,7 +107,7 @@ class ONNXModelTransformer(ModelTransformer):
                 initializer_update_transformations.append(transformation)
         # Inplace transformations, using deepcopy of model
         if quantizer_insert_transformations or initializer_update_transformations or qdq_node_removing_transformations:
-            model = OnnxModel(deepcopy(self._model.model_proto), self._model.tensors)
+            model = ONNXModel(deepcopy(self._model.model_proto), self._model.tensors)
 
             if quantizer_insert_transformations:
                 model = self._apply_quantizer_insertion_transformations(model, quantizer_insert_transformations)
@@ -122,7 +122,7 @@ class ONNXModelTransformer(ModelTransformer):
             model = self._apply_model_extraction_transformation(model_extraction_transformation)
         return model
 
-    def _apply_output_insertion_transformations(self, transformations: List[ONNXOutputInsertionCommand]) -> OnnxModel:
+    def _apply_output_insertion_transformations(self, transformations: List[ONNXOutputInsertionCommand]) -> ONNXModel:
         """
         Returns a new model with extra outputs provided by transformations.
 
@@ -142,7 +142,7 @@ class ONNXModelTransformer(ModelTransformer):
             model_outputs.add(target_edge_name)
 
         model_with_outputs = ONNXModelTransformer._insert_outputs(self._model.model_proto, outputs=model_outputs)
-        return OnnxModel(model_with_outputs, self._model.tensors)
+        return ONNXModel(model_with_outputs, self._model.tensors)
 
     @staticmethod
     def _insert_outputs(model: onnx.ModelProto, outputs: Union[List[str], Set[str]]) -> onnx.ModelProto:
@@ -189,7 +189,7 @@ class ONNXModelTransformer(ModelTransformer):
         return new_model
 
     def _apply_quantizer_insertion_transformations(
-        self, model: OnnxModel, transformations: List[ONNXQuantizerInsertionCommand]
+        self, model: ONNXModel, transformations: List[ONNXQuantizerInsertionCommand]
     ) -> onnx.ModelProto:
         """
         Creates a new model as a deepcopy of provided model and inserts QuantizeLinear-DequantizeLinear nodes pair.
@@ -303,11 +303,11 @@ class ONNXModelTransformer(ModelTransformer):
 
     def _insert_quantizer_dequantizer(
         self,
-        model: OnnxModel,
+        model: ONNXModel,
         transformation: ONNXQuantizerInsertionCommand,
         node_mapping: Dict[str, onnx.NodeProto],
         children_node_mapping: Dict[str, List[onnx.ValueInfoProto]],
-    ) -> OnnxModel:
+    ) -> ONNXModel:
         """
         Inserts QuantizeLinear-DequantizeLinear nodes pair.
 
@@ -357,7 +357,7 @@ class ONNXModelTransformer(ModelTransformer):
         return model
 
     def _apply_initializer_update_transformations(
-        self, model: OnnxModel, transformations: List[ONNXInitializerUpdateCommand]
+        self, model: ONNXModel, transformations: List[ONNXInitializerUpdateCommand]
     ) -> onnx.ModelProto:
         """
         Creates a copy of original model and applies bias correction transformations on the model.
@@ -402,10 +402,10 @@ class ONNXModelTransformer(ModelTransformer):
             if tensor is not None:
                 submodel_tensors[tensor_proto.name] = tensor
 
-        return OnnxModel(submodel_proto, submodel_tensors)
+        return ONNXModel(submodel_proto, submodel_tensors)
 
     def _apply_qdq_node_removing_transformations(
-        self, model: OnnxModel, transformations: List[ONNXQDQNodeRemovingCommand]
+        self, model: ONNXModel, transformations: List[ONNXQDQNodeRemovingCommand]
     ) -> onnx.ModelProto:
         # TODO(andrey-churkin): Update
         """

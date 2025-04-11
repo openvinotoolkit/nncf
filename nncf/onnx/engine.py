@@ -15,7 +15,7 @@ import numpy as np
 import onnxruntime as rt
 
 from nncf.common.engine import Engine
-from nncf.onnx.graph.model_utils import OnnxModel
+from nncf.onnx.graph.model_utils import ONNXModel
 
 
 class ONNXEngine(Engine):
@@ -23,7 +23,7 @@ class ONNXEngine(Engine):
     Engine for ONNX backend using ONNXRuntime to infer the model.
     """
 
-    def __init__(self, model: OnnxModel, **rt_session_options: Any):
+    def __init__(self, model: ONNXModel, **rt_session_options: Any):
         names = []
         tensors = []
         for name, tensor in model.tensors.items():

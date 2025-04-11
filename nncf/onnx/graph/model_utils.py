@@ -107,7 +107,7 @@ def insert_raw_data_into_model(model: onnx.ModelProto, data: Dict[str, np.ndarra
             tensor.CopyFrom(tensor_proto)
 
 
-class OnnxModel:
+class ONNXModel:
     def __init__(self, model: onnx.ModelProto, data: Dict[str, np.ndarray]):
         """
         :param model: The ONNX model without raw data loaded into its initializer tensors.
@@ -126,12 +126,12 @@ class OnnxModel:
         return self._data
 
     @classmethod
-    def from_model(cls, model: onnx.ModelProto) -> "OnnxModel":
+    def from_model(cls, model: onnx.ModelProto) -> "ONNXModel":
         """
-        Creates an instance of OnnxModel from a given ONNX model.
+        Creates an instance of ONNXModel from a given ONNX model.
 
         :param model: The ONNX model.
-        :return: An OnnxModel instance containing the model and the extracted raw data from the
+        :return: An ONNXModel instance containing the model and the extracted raw data from the
             initializer tensors.
         """
         # The `extract_raw_data_from_model()` method modifies the model passed to it,
@@ -146,7 +146,7 @@ class OnnxModel:
 
     def export(self) -> onnx.ModelProto:
         """
-        Exports the OnnxModel instance to an ONNX model, inserting the raw data into
+        Exports the ONNXModel instance to an ONNX model, inserting the raw data into
         its initializer tensors.
 
         :return: The ONNX model with the raw data inserted into its initializer tensors.

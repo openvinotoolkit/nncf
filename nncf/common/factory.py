@@ -80,9 +80,9 @@ class ModelTransformerFactory:
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
             from nncf.onnx.graph.model_transformer import ONNXModelTransformer
-            from nncf.onnx.graph.model_utils import OnnxModel
+            from nncf.onnx.graph.model_utils import ONNXModel
 
-            return ONNXModelTransformer(cast(OnnxModel, model))
+            return ONNXModelTransformer(cast(ONNXModel, model))
         if model_backend == BackendType.OPENVINO:
             from openvino import Model
 
@@ -123,9 +123,9 @@ class EngineFactory:
         model_backend = get_backend(model)
         if model_backend == BackendType.ONNX:
             from nncf.onnx.engine import ONNXEngine
-            from nncf.onnx.graph.model_utils import OnnxModel
+            from nncf.onnx.graph.model_utils import ONNXModel
 
-            return ONNXEngine(cast(OnnxModel, model))
+            return ONNXEngine(cast(ONNXModel, model))
         if model_backend == BackendType.OPENVINO:
             from openvino import Model
 

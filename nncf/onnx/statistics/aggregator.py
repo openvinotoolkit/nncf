@@ -21,7 +21,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
-from nncf.onnx.graph.model_utils import OnnxModel
+from nncf.onnx.graph.model_utils import ONNXModel
 from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
@@ -33,7 +33,7 @@ from nncf.tensor import Tensor
 class ONNXStatisticsAggregator(StatisticsAggregator):
     BACKEND: BackendType = BackendType.ONNX
 
-    def collect_statistics(self, model: OnnxModel, graph: NNCFGraph) -> None:
+    def collect_statistics(self, model: ONNXModel, graph: NNCFGraph) -> None:
         self.input_edges_mapping = get_input_edges_mapping(graph)
         self.node_mapping = get_name_to_node_map(model.model_proto)
         self._registered_weights = set()
@@ -83,7 +83,7 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
 
     @staticmethod
     def _get_merged_statistic_points(
-        statistic_points: StatisticPointsContainer, model: OnnxModel, graph: NNCFGraph
+        statistic_points: StatisticPointsContainer, model: ONNXModel, graph: NNCFGraph
     ) -> StatisticPointsContainer:
         # TODO: migrate to experimental statistic collector and use common merging algorithm
         return statistic_points
