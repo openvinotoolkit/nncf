@@ -163,7 +163,7 @@ def symmetric_range(
     level_high = fix_zero_filters_symmetric(max_values)
 
     signed = quantizer_config.signedness_to_force is True
-    signed = signed or fns.any(min_values < 0)
+    signed = signed or bool(fns.any(min_values < 0))
 
     if signed:
         level_low_scale = 1 if quantizer_config.narrow_range else levels / (levels - 2)
@@ -252,7 +252,7 @@ def calculate_quantizer_parameters(
 
 def calculate_convert_parameters(
     statistics: MinMaxTensorStatistic,
-    is_per_channel: False,
+    is_per_channel: bool,
     destination_type: FP8Type = FP8Type.E4M3,
     activation_scale: float = 0.5,
 ) -> FakeConvertParameters:
