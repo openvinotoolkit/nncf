@@ -12,27 +12,27 @@ from nncf.quantization.algorithms.weight_compression.mixed_precision import HAWQ
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MaxVarianceCriterion
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MeanMaxCriterion
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MeanVarianceCriterion
-from nncf.quantization.algorithms.weight_compression.torch_backend import PTMixedPrecisionAlgoBackend
+from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXMixedPrecisionAlgoBackend
 from tests.cross_fw.test_templates.test_weights_compression_backends import TemplateTestMixedPrecisionAlgoBackend
 
 
-class TestPTMixedPrecisionAlgoBackend(TemplateTestMixedPrecisionAlgoBackend):
+class TestFXMixedPrecisionAlgoBackend(TemplateTestMixedPrecisionAlgoBackend):
     def get_hawq_with_backend(self, subset_size):
         hawq = HAWQCriterion(None, None, subset_size=subset_size)
-        hawq._backend_entity = PTMixedPrecisionAlgoBackend()
+        hawq._backend_entity = FXMixedPrecisionAlgoBackend()
         return hawq
 
     def get_mean_variance_with_backend(self, subset_size: int):
         mean_variance = MeanVarianceCriterion(None, None, subset_size=subset_size)
-        mean_variance._backend_entity = PTMixedPrecisionAlgoBackend()
+        mean_variance._backend_entity = FXMixedPrecisionAlgoBackend()
         return mean_variance
 
     def get_max_variance_with_backend(self, subset_size: int):
         max_variance = MaxVarianceCriterion(None, None, subset_size=subset_size)
-        max_variance._backend_entity = PTMixedPrecisionAlgoBackend()
+        max_variance._backend_entity = FXMixedPrecisionAlgoBackend()
         return max_variance
 
     def get_mean_max_with_backend(self, subset_size: int):
         mean_max_variance = MeanMaxCriterion(None, None, subset_size=subset_size)
-        mean_max_variance._backend_entity = PTMixedPrecisionAlgoBackend()
+        mean_max_variance._backend_entity = FXMixedPrecisionAlgoBackend()
         return mean_max_variance

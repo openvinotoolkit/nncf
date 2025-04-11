@@ -146,6 +146,7 @@ frobenius
 fsolve
 funcs
 fval
+fxawq
 fxsq
 gacts
 gelsy
