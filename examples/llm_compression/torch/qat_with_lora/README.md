@@ -56,7 +56,7 @@ increase by 50% on average, achieving a **2x enhancement in minimizing accuracy 
 The **proportion of the PTWC-induced perplexity increase that is recovered** by using QAT+LoRA can be calculated
 using the following formula:
 
-Improvement = (PPL_PTWC - PPL_QAT+LoRA) / (PPL_PTWC - PPL_BF16)
+$Improvement = \frac{PPL_{PTWC} - PPL_{QAT+LoRA}}{PPL_{PTWC} - PPL_{BF16}}$
 
 Where:
 
