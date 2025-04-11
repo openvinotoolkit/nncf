@@ -15,14 +15,14 @@ import torch
 from nncf.torch.functions import logit
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import CompressionParameter
-from nncf.torch.layer_utils import StatefullModuleInterface
+from nncf.torch.layer_utils import StatefulModuleInterface
 from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.sparsity.rb.functions import binary_mask
 from nncf.torch.sparsity.rb.functions import calc_rb_binary_mask
 
 
 @COMPRESSION_MODULES.register()
-class RBSparsifyingWeight(BinaryMask, StatefullModuleInterface):
+class RBSparsifyingWeight(BinaryMask, StatefulModuleInterface):
     WEIGHTS_SHAPE_KEY = "weight_shape"
     FROZEN_KEY = "frozen"
     COMPRESSION_LR_MULTIPLIER_KEY = "compression_lr_multiplier"

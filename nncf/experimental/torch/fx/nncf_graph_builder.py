@@ -32,6 +32,8 @@ class GraphConverter:
     Builds the NNCFGraph from an torch.fx.GraphModule instance.
     """
 
+    TORCH_SYMBOLIC_TYPES = (torch.SymInt, torch.SymFloat, torch.SymBool)
+
     def _get_layer_attributes(
         node: torch.fx.Node, metatype: om.OperatorMetatype, model: torch.fx.GraphModule
     ) -> BaseLayerAttributes:
@@ -196,7 +198,9 @@ class GraphConverter:
             else:
                 tensor = source_node.meta["val"]
             if isinstance(tensor, torch.Tensor):
-                tensor_shape = tuple(tensor.shape)
+                tensor_shape = tuple(-1 if isinstance(i, torch.SymInt) else i for i in tensor.shape)
+            elif isinstance(tensor, GraphConverter.TORCH_SYMBOLIC_TYPES):
+                tensor_shape = (-1,)
 
         if tensor_shape is None:
             # TODO(dlyakhov): Refactor algorithms to always have knowns edges shapes.

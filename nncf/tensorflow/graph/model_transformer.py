@@ -61,7 +61,8 @@ class TFModelTransformer(ModelTransformer):
         self._name_mapping = {}
 
     def transform(self, transformation_layout: TFTransformationLayout):
-        """Applies transformations to the Keras model.
+        """
+        Applies transformations to the Keras model.
 
         :param transformation_layout: List of transformations
         :return: The transformed Keras model

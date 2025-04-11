@@ -18,7 +18,6 @@ from tests.common.experimental.test_tensor_collector_batch_size import TemplateT
 
 
 class TestTensorCollectorBatchSize(TemplateTestTensorCollectorBatchSize):
-
     @pytest.fixture(params=REDUCERS_MAP.values())
     def reducers(self, request) -> bool:
         return request.param

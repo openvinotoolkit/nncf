@@ -57,7 +57,6 @@ def _make_dataset_for_if_bodies(
     :param subset_size: The size of calibration_dataset.
     :return Dataset: Dataset for child model.
     """
-
     then_dataset, else_dataset = [], []
     calibration_dataset_size = (
         min(subset_size, calibration_dataset.get_length())

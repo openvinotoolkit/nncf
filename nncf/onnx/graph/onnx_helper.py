@@ -30,7 +30,7 @@ def get_name_to_node_map(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
 
 def get_edge_info_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoProto]:
     """
-    Retuns mapping from edge name to the edge info.
+    Returns mapping from edge name to the edge info.
 
     :param model: Model from mapping is built.
     :return: Mapping.
@@ -233,7 +233,7 @@ def get_parent(
     Returns parents of the node. If there is no parent node, returns None.
 
     :param node: The child node.
-    :param port_id: Input port id on which the parent is seeked.
+    :param port_id: Input port id on which the parent is sought.
     :param edge_node_mapping: Mapping describing start and consumed nodes of the edges.
     :return: Parent node.
     """

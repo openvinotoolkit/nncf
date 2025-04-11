@@ -21,6 +21,7 @@ import nncf
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import ConstantLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.experimental.torch2.function_hook.graph.build_graph_mode import build_graph
 from nncf.experimental.torch2.function_hook.graph.graph_utils import ConstMeta
@@ -157,7 +158,8 @@ def get_layer_attributes(
     if isinstance(meta, FunctionMeta):
         constant_port_ids = get_constant_port_ids(nx_graph, node)
         return PT2OpLayerAttributes(meta.func, meta.args, meta.kwargs, constant_port_ids)
-
+    if isinstance(meta, ConstMeta):
+        return ConstantLayerAttributes(meta.name_in_model, list(meta.shape))
     return None
 
 
@@ -211,16 +213,20 @@ def convert_to_nncf_graph(nx_graph: nx.MultiDiGraph) -> PTNNCFGraph:
     return nncf_graph
 
 
-def build_nncf_graph(model: nn.Module, *args: Any, **kwargs: Any) -> PTNNCFGraph:
+def build_nncf_graph(model: nn.Module, example_input: Any) -> PTNNCFGraph:
     """
     Builds an NNCF graph from the given PyTorch model.
 
     :param model: The PyTorch model to build the graph from.
-    :param *args: Positional arguments to model inference.
-    :param **kwargs: Keyword arguments to model inference.
+    :param example_input: An example input that will be used for model tracing.
     :return: The NNCF graph representation of the model.
     """
-    graph = build_graph(model, *args, **kwargs)
+    if isinstance(example_input, dict):
+        graph = build_graph(model, **example_input)
+    elif isinstance(example_input, tuple):
+        graph = build_graph(model, *example_input)
+    else:
+        graph = build_graph(model, example_input)
     return convert_to_nncf_graph(graph)
 
 
@@ -228,17 +234,16 @@ class GraphModelWrapper:
     """
     A class that wraps a PyTorch model with examples inputs and provides an interface
     to build a computational graph of the model.
-
-    :param model: The PyTorch model to be wrapped.
-    :param example_input: A tuple of example input for the model.
     """
 
     def __init__(self, model: nn.Module, example_input: Any) -> None:
         """
-        Initialize the GraphModelWrapper.
+        :param model: The PyTorch model to be wrapped.
+        :param example_input: A tuple of example input for the model.
         """
         self.model = model
         self.example_input = example_input
+        self.graph: Optional[PTNNCFGraph] = None
 
     def build_graph(self) -> PTNNCFGraph:
         """
@@ -249,8 +254,20 @@ class GraphModelWrapper:
 
         :return: A PTNNCFGraph where nodes represent operations of model.
         """
-        if isinstance(self.example_input, dict):
-            return build_nncf_graph(self.model, **self.example_input)
-        if isinstance(self.example_input, tuple):
-            return build_nncf_graph(self.model, *self.example_input)
         return build_nncf_graph(self.model, self.example_input)
+
+    def get_graph(self) -> PTNNCFGraph:
+        """
+        Returns the computational graph of the model.
+
+        :return: The PTNNCFGraph representing the model.
+        """
+        if self.graph is None:
+            self.graph = self.build_graph()
+        return self.graph
+
+    def reset_graph(self) -> None:
+        """
+        Resets the computational graph of the model.
+        """
+        self.graph = None

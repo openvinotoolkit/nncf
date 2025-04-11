@@ -18,6 +18,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.utils import get_first_nodes_of_type
+from nncf.common.graph.utils import get_weight_shape_legacy
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
@@ -34,6 +35,7 @@ from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 from nncf.experimental.tensorflow.quantization.init_range import RangeInitializerV2
 from nncf.experimental.tensorflow.quantization.init_range import TFRangeInitParamsV2
 from nncf.experimental.tensorflow.quantization.quantizers import create_quantizer
+from nncf.parameters import StripFormat
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.graph.metatypes.tf_ops import TFOpWithWeightsMetatype
 from nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
@@ -133,7 +135,7 @@ def _get_tensor_specs(
         assert len(metatype.weight_definitions) == 1
 
         channel_axes = metatype.weight_definitions[0].channel_axes
-        weight_shape = node.layer_attributes.get_weight_shape()
+        weight_shape = get_weight_shape_legacy(node.layer_attributes)
         tensor_specs.append((weight_shape, channel_axes))
     else:
         data_format = node.layer_attributes.get_data_format()
@@ -352,7 +354,9 @@ class QuantizationBuilderV2(QuantizationBuilder):
 
 
 class QuantizationControllerV2(QuantizationController):
-    def strip_model(self, model: NNCFNetwork, do_copy: bool = False) -> NNCFNetwork:
+    def strip_model(
+        self, model: NNCFNetwork, do_copy: bool = False, strip_format: StripFormat = StripFormat.NATIVE
+    ) -> NNCFNetwork:
         if do_copy:
             model = copy_model(model)
         return model

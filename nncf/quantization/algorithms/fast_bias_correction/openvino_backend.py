@@ -34,7 +34,6 @@ from nncf.tensor import Tensor
 
 
 class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
-
     def __init__(self, model):
         # Node mapping caching to reduce time for calculations
         self._node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
@@ -121,7 +120,6 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return get_activation_channel_axis(node, port_id, input_shape)
 
     def extract_submodel(self, model_transformer, input_id, output_id):
-
         return self._model_builder.build(
             input_ids=[input_id],
             output_ids=[output_id],

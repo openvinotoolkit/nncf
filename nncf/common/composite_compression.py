@@ -23,6 +23,7 @@ from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
+from nncf.parameters import StripFormat
 
 
 class CompositeCompressionLoss(CompressionLoss):
@@ -75,7 +76,6 @@ class CompositeCompressionLoss(CompressionLoss):
 
         :return: The compression loss value.
         """
-
         if len(self._child_losses) == 0:
             msg = "Cannot calculate the loss value because the number of child loss is 0."
             raise nncf.InternalError(msg)
@@ -277,12 +277,12 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
             stripped_model = ctrl.strip_model(stripped_model)
         self._model = stripped_model
 
-    def strip(self, do_copy: bool = True) -> TModel:  # type: ignore
+    def strip(self, do_copy: bool = True, strip_format: StripFormat = StripFormat.NATIVE) -> TModel:  # type: ignore
         model = self.model
         if do_copy:
             model = copy_model(model)
         for ctrl in self.child_ctrls:
-            model = ctrl.strip_model(model, do_copy=False)
+            model = ctrl.strip_model(model, do_copy=False, strip_format=strip_format)
         return model  # type: ignore
 
     @property

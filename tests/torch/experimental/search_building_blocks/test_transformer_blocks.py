@@ -101,7 +101,10 @@ LIST_CASES = [
     TransformerSearchBBlockParamsCase(
         name="wave2vec 2.0",
         input_info=dict(sample_size=[1, 400]),
-        model_creator=partial(AutoModelForAudioClassification.from_config, Wav2Vec2Config()),
+        model_creator=partial(
+            AutoModelForAudioClassification.from_config,
+            Wav2Vec2Config(),
+        ),
     ),
     TransformerSearchBBlockParamsCase(
         name="SWIN MS",

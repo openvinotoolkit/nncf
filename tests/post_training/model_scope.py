@@ -86,7 +86,9 @@ QUANTIZATION_MODELS = [
         "reported_name": "torchvision/resnet18",
         "model_id": "resnet18",
         "pipeline_cls": ImageClassificationTorchvision,
-        "compression_params": {},
+        "compression_params": {
+            "subset_size": 2,
+        },
         "backends": [
             BackendType.FX_TORCH,
             BackendType.CUDA_FX_TORCH,
@@ -102,6 +104,7 @@ QUANTIZATION_MODELS = [
         "model_id": "mobilenet_v3_small",
         "pipeline_cls": ImageClassificationTorchvision,
         "compression_params": {
+            "subset_size": 2,
             "fast_bias_correction": False,
             "preset": QuantizationPreset.MIXED,
         },
@@ -136,6 +139,7 @@ QUANTIZATION_MODELS = [
         "model_id": "crossvit_9_240",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=-1.0),
@@ -148,6 +152,7 @@ QUANTIZATION_MODELS = [
         "model_id": "darknet53",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -158,6 +163,7 @@ QUANTIZATION_MODELS = [
         "model_id": "deit3_small_patch16_224",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
@@ -172,6 +178,7 @@ QUANTIZATION_MODELS = [
         "model_id": "dla34",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -182,6 +189,7 @@ QUANTIZATION_MODELS = [
         "model_id": "dpn68",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -192,6 +200,7 @@ QUANTIZATION_MODELS = [
         "model_id": "efficientnet_b0",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -202,6 +211,7 @@ QUANTIZATION_MODELS = [
         "model_id": "efficientnet_b0",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "fast_bias_correction": False,
         },
@@ -213,6 +223,7 @@ QUANTIZATION_MODELS = [
         "model_id": "efficientnet_lite0",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -223,6 +234,7 @@ QUANTIZATION_MODELS = [
         "model_id": "hrnet_w18",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -232,7 +244,9 @@ QUANTIZATION_MODELS = [
         "reported_name": "timm/inception_resnet_v2",
         "model_id": "inception_resnet_v2",
         "pipeline_cls": ImageClassificationTimm,
-        "compression_params": {},
+        "compression_params": {
+            "subset_size": 4,
+        },
         "backends": NNCF_PTQ_BACKENDS,
         "batch_size": 64,
     },
@@ -241,6 +255,7 @@ QUANTIZATION_MODELS = [
         "model_id": "mobilenetv2_050",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -251,6 +266,7 @@ QUANTIZATION_MODELS = [
         "model_id": "mobilenetv2_050",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "fast_bias_correction": False,
         },
@@ -262,6 +278,7 @@ QUANTIZATION_MODELS = [
         "model_id": "mobilenetv3_small_050",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -272,6 +289,7 @@ QUANTIZATION_MODELS = [
         "model_id": "mobilenetv3_small_050",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "fast_bias_correction": False,
         },
@@ -283,6 +301,7 @@ QUANTIZATION_MODELS = [
         "model_id": "regnetx_002",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -293,6 +312,7 @@ QUANTIZATION_MODELS = [
         "model_id": "resnest14d",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -303,6 +323,7 @@ QUANTIZATION_MODELS = [
         "model_id": "swin_base_patch4_window7_224",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 9,
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
         },
@@ -314,6 +335,7 @@ QUANTIZATION_MODELS = [
         "model_id": "swin_base_patch4_window7_224",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
@@ -328,6 +350,7 @@ QUANTIZATION_MODELS = [
         "model_id": "tf_inception_v3",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -337,7 +360,9 @@ QUANTIZATION_MODELS = [
         "reported_name": "timm/vgg11",
         "model_id": "vgg11",
         "pipeline_cls": ImageClassificationTimm,
-        "compression_params": {},
+        "compression_params": {
+            "subset_size": 2,
+        },
         "backends": NNCF_PTQ_BACKENDS,
         "batch_size": 128,
     },
@@ -346,6 +371,7 @@ QUANTIZATION_MODELS = [
         "model_id": "visformer_small",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
         },
@@ -357,6 +383,7 @@ QUANTIZATION_MODELS = [
         "model_id": "wide_resnet50_2",
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
+            "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -407,7 +434,7 @@ WEIGHT_COMPRESSION_MODELS = [
                 scale_estimation_params=AdvancedScaleEstimationParameters(32, 5, 10, 1.0)
             ),
         },
-        "backends": [BackendType.OV],
+        "backends": [BackendType.OV, BackendType.TORCH],
     },
     {
         "reported_name": "tinyllama_data_aware_awq_scale_estimation_stateful",
@@ -524,21 +551,6 @@ WEIGHT_COMPRESSION_MODELS = [
             "ignored_scope": nncf.IgnoredScope(types=["Gather"]),
         },
         "backends": [BackendType.OV],
-    },
-    {
-        "reported_name": "tinyllama_scale_estimation_group_size_64",
-        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
-        "pipeline_cls": LMWeightCompression,
-        "compression_params": {
-            "group_size": 64,
-            "ratio": 0.8,
-            "mode": CompressWeightsMode.INT4_SYM,
-            "scale_estimation": True,
-            "advanced_parameters": AdvancedCompressionParameters(
-                scale_estimation_params=AdvancedScaleEstimationParameters(32, 5, 10, 1.0)
-            ),
-        },
-        "backends": [BackendType.OV, BackendType.TORCH],
     },
 ]
 

@@ -13,14 +13,14 @@ tinyllama_data_aware_backend_TORCH:
   num_int4: 94
   num_int8: 124
   num_compressed_xfail_reason: "Issue-160006"
-tinyllama_scale_estimation_group_size_64_backend_TORCH:
-  metric_value: 0.8566
-  num_int4: 94
-  num_int8: 124
-  num_compressed_xfail_reason: "Issue-160006"
 tinyllama_scale_estimation_per_channel_backend_TORCH:
-  metric_value: 0.81389
+  metric_value: 0.80873
   num_int4: 188
   num_int8: 124
   atol: 0.006 # difference across devices: 0.80873 vs 0.81389
+  num_compressed_xfail_reason: "Issue-160006"
+tinyllama_data_aware_awq_scale_estimation_backend_TORCH:
+  metric_value: 0.85502
+  num_int4: 94
+  num_int8: 124
   num_compressed_xfail_reason: "Issue-160006"

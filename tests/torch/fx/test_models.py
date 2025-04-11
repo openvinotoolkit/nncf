@@ -14,7 +14,7 @@ import os
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Callable, Dict, Tuple, Type, Union
+from typing import Callable, Dict, List, Tuple, Type, Union
 
 import openvino.torch  # noqa
 import pytest
@@ -25,6 +25,7 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
+from torch.export.dynamic_shapes import Dim
 
 import nncf
 from nncf.common.graph.graph import NNCFNodeName
@@ -46,8 +47,12 @@ from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_models.synthetic import YOLO11N_SDPABlock
 
 FX_DIR_NAME = Path("fx")
-FX_QUANTIZED_DIR_NAME = Path("fx") / "quantized"
-FX_QUANTIZED_COMPRESSED_DIR_NAME = Path("fx") / "post_quantization_compressed"
+FX_QUANTIZED_DIR_NAME = FX_DIR_NAME / "quantized"
+FX_QUANTIZED_COMPRESSED_DIR_NAME = FX_DIR_NAME / "post_quantization_compressed"
+
+FX_DYNAMIC_DIR = FX_DIR_NAME / "dynamic_shapes"
+FX_DYNAMIC_QUANTIZED_DIR_NAME = FX_DYNAMIC_DIR / "quantized"
+FX_DYNAMIC_QUANTIZED_COMPRESSED_DIR_NAME = FX_DYNAMIC_DIR / "post_quantization_compressed"
 
 
 @dataclass
@@ -66,7 +71,7 @@ TEST_MODELS = (
     torchvision_model_case("resnet18", (1, 3, 224, 224)),
     torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)),
     torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
-    torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
+    torchvision_model_case("swin_v2_t", (1, 3, 224, 224)),
     ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
     ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
     ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
@@ -91,7 +96,6 @@ def get_full_path_to_json(model_json_name: str, attributes: bool = False) -> str
 def get_ref_from_json(
     model_name: str, model_metatypes: Dict[NNCFNodeName, Union[Type[OperatorMetatype], bool]], attributes=False
 ) -> Dict[NNCFNodeName, Union[Type[OperatorMetatype], bool]]:
-
     model_json_name = get_json_filename(model_name)
     complete_path = get_full_path_to_json(model_json_name, attributes)
 
@@ -134,55 +138,73 @@ TEST_MODELS_QUANIZED = (
         ModelCase(test_models.UNet, "unet", [1, 3, 224, 224]),
         {},
         [(46, 50), (23, 27)],
+        [Dim.AUTO, Dim.STATIC, Dim.STATIC, Dim.STATIC],  # This Unet Model is not eligible for dynamic shape capability
     ),
     (
         torchvision_model_case("resnet18", (1, 3, 224, 224)),
         {},
         [(51, 58), (30, 37)],
+        [Dim.AUTO, Dim.STATIC, Dim.AUTO, Dim.AUTO],
     ),
     (
         torchvision_model_case("mobilenet_v3_small", (1, 3, 224, 224)),
         {},
         [(97, 112), (61, 76)],
+        [Dim.AUTO, Dim.STATIC, Dim.AUTO, Dim.AUTO],
     ),
     (
         torchvision_model_case("vit_b_16", (1, 3, 224, 224)),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [(124, 124), (74, 74)],
+        [Dim.AUTO, Dim.STATIC, Dim.STATIC, Dim.STATIC],  # This ViT Model is not eligible for dynamic shape capability
     ),
     (
-        torchvision_model_case("swin_v2_s", (1, 3, 224, 224)),
+        torchvision_model_case("swin_v2_t", (1, 3, 224, 224)),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [
-            (250, 250),
-            (149, 149),
+            (130, 130),
+            (77, 77),
         ],
+        [Dim.AUTO, Dim.STATIC, Dim.AUTO, Dim.AUTO],
     ),
     (
         ModelCase(partial(ShortTransformer, 5, 10), "synthetic_transformer", [5]),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [(4, 4), (2, 2)],
+        [Dim.AUTO],
     ),
     (
         ModelCase(YOLO11N_SDPABlock, "yolo11n_sdpa_block", YOLO11N_SDPABlock.INPUT_SIZE),
         {"model_type": nncf.ModelType.TRANSFORMER},
         [(4, 4), (3, 3)],
+        [Dim.AUTO, Dim.AUTO, Dim.AUTO],
     ),
 )
 
 
+@pytest.mark.parametrize("enable_dynamic_shapes", [True, False])
 @pytest.mark.parametrize("compress_weights", [True, False])
 @pytest.mark.parametrize(
-    ("model_case", "quantization_parameters", "compress_n_qdq"),
+    ("model_case", "quantization_parameters", "compress_n_qdq", "dynamic_shape_config"),
     TEST_MODELS_QUANIZED,
     ids=[m[0].model_id for m in TEST_MODELS_QUANIZED],
 )
-def test_quantized_model(model_case: ModelCase, quantization_parameters, compress_weights: bool, compress_n_qdq: int):
+def test_quantized_model(
+    model_case: ModelCase,
+    quantization_parameters,
+    compress_weights: bool,
+    compress_n_qdq: int,
+    enable_dynamic_shapes: bool,
+    dynamic_shape_config: List[bool],
+):
     model = model_case.model_builder()
     dtype = torch.int32 if model_case.model_id == "synthetic_transformer" else torch.float32
     example_input = torch.ones(model_case.input_shape, dtype=dtype)
+    dynamic_shapes = None
+    if enable_dynamic_shapes:
+        dynamic_shapes = [tuple(dynamic_shape_config)]
 
-    fx_model = get_torch_fx_model(model, example_input)
+    fx_model = get_torch_fx_model(model, example_input, dynamic_shapes=dynamic_shapes)
 
     def transform_fn(data_item):
         return data_item.to("cpu")
@@ -198,7 +220,11 @@ def test_quantized_model(model_case: ModelCase, quantization_parameters, compres
     # Uncomment to visualize torch fx graph
     # from tests.torch.fx.helpers import visualize_fx_model
     # visualize_fx_model(quantized_model, f"{model_case.model_id}_int8.svg")
-    save_dir = FX_QUANTIZED_COMPRESSED_DIR_NAME if compress_weights else FX_QUANTIZED_DIR_NAME
+    if dynamic_shapes:
+        save_dir = FX_DYNAMIC_QUANTIZED_COMPRESSED_DIR_NAME if compress_weights else FX_DYNAMIC_QUANTIZED_DIR_NAME
+    else:
+        save_dir = FX_QUANTIZED_COMPRESSED_DIR_NAME if compress_weights else FX_QUANTIZED_DIR_NAME
+
     nncf_graph = GraphConverter.create_nncf_graph(quantized_model)
     check_graph(nncf_graph, get_dot_filename(model_case.model_id), save_dir, extended=True)
     q_nodes, dq_nodes = count_q_dq(quantized_model)

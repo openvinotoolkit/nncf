@@ -50,6 +50,7 @@ from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.model_creation import is_wrapped_model
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.model_creation import load_from_config
+from nncf.torch.model_creation import get_config
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.layers import register_module
@@ -77,7 +78,4 @@ from nncf.torch.extensions import force_build_cpu_extensions, force_build_cuda_e
 if torch.__version__ >= "2.5.0":
     from torch._dynamo.polyfills import loader
 
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
-
-if not is_experimental_torch_tracing_enabled():
-    patch_torch_operators()
+patch_torch_operators()

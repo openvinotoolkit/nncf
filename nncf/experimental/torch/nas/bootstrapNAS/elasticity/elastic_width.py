@@ -27,6 +27,7 @@ from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.utils import get_num_filters_legacy
 from nncf.common.logging import nncf_logger
 from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
@@ -190,9 +191,9 @@ class ElasticWidthParams(BaseElasticityParams):
         self.max_num_widths = max_num_widths
         self.width_step = width_step
         self.width_multipliers = width_multipliers
-        assert (
-            filter_importance != "external" or external_importance_path is not None
-        ), "Missing external weight importance path."
+        assert filter_importance != "external" or external_importance_path is not None, (
+            "Missing external weight importance path."
+        )
         self.filter_importance = filter_importance
         self.external_importance_path = external_importance_path
 
@@ -294,7 +295,7 @@ class ElasticOutputWidthOp(ElasticWidthOp):
     @property
     def width_list(self) -> List[int]:
         """
-        list of all available widths to select from. Each value corresponds to a single element in the search space of
+        List of all available widths to select from. Each value corresponds to a single element in the search space of
         operation. The search space of the model is cartesian product of search spaces of operation.
         If all widths starting from 1 to maximum number of channels with step size 1 are available, the search space
         would be prohibitively large to efficiently train and search.
@@ -556,7 +557,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         self._filter_importance_fn = filter_importance_fn
         self._external_importance = None
         if external_importance_path is not None:
-            self._external_importance = torch.load(external_importance_path)
+            self._external_importance = torch.load(external_importance_path, weights_only=False)
             nncf_logger.debug("Loaded custom external weight importance.")
         self._weights_normalizer_fn = weights_normalizer_fn
         self._add_dynamic_inputs = add_dynamic_inputs
@@ -808,9 +809,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
         :param node_name: node name
         :return: importance tensor
         """
-        assert should_consider_scope(
-            node_name, ignored_scopes=None, target_scopes=self._external_importance.keys()
-        ), f"Cannot match {node_name} in external weight importance data structure"
+        assert should_consider_scope(node_name, ignored_scopes=None, target_scopes=self._external_importance.keys()), (
+            f"Cannot match {node_name} in external weight importance data structure"
+        )
         return self._external_importance[node_name]
 
     def reorganize_weights(self) -> None:
@@ -938,9 +939,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
             width = int(sum(actual_mask))
             device = actual_mask.device
             ref_mask = ElasticWidthHandler._width_to_mask(width, mask_len, device).tensor
-            assert torch.equal(
-                ref_mask, actual_mask
-            ), f"Invalid mask {actual_mask}: the first {width} values must be ones, the rest - zeros."
+            assert torch.equal(ref_mask, actual_mask), (
+                f"Invalid mask {actual_mask}: the first {width} values must be ones, the rest - zeros."
+            )
             result = width
         return result
 
@@ -1064,9 +1065,9 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                     )
                 )
                 pruned_module = target_model.nncf.get_containing_module(node_name)
-                assert isinstance(
-                    pruned_module, (nn.Conv2d, nn.Linear)
-                ), "currently prune only 2D Convolutions and Linear layers"
+                assert isinstance(pruned_module, (nn.Conv2d, nn.Linear)), (
+                    "currently prune only 2D Convolutions and Linear layers"
+                )
 
                 group_minfos.append(
                     ElasticWidthInfo(
@@ -1204,7 +1205,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
     def _create_dynamic_bn_input_op(generic_layer_attrs: BaseLayerAttributes, node_name: str) -> UpdateBatchNormParams:
         assert isinstance(generic_layer_attrs, GenericWeightedLayerAttributes)
         dynamic_bn_input_op = ElasticInputWidthBatchNormOp(
-            max_width=generic_layer_attrs.get_num_filters(), node_name=node_name
+            max_width=get_num_filters_legacy(generic_layer_attrs), node_name=node_name
         )
         return UpdateBatchNormParams(dynamic_bn_input_op)
 
@@ -1212,7 +1213,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
     def _create_dynamic_ln_input_op(generic_layer_attrs: BaseLayerAttributes, node_name: str) -> UpdateLayerNormParams:
         assert isinstance(generic_layer_attrs, GenericWeightedLayerAttributes)
         dynamic_ln_input_op = ElasticInputWidthLayerNormOp(
-            max_width=generic_layer_attrs.get_num_filters(), node_name=node_name
+            max_width=get_num_filters_legacy(generic_layer_attrs), node_name=node_name
         )
         return UpdateLayerNormParams(dynamic_ln_input_op)
 

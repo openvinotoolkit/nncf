@@ -155,12 +155,12 @@ class TraceOrderBitwidthMatcher:
         # For each index, put the largest qconf subset that only varies in bitwidth on top
         # so that the associated covering configurations would not require model regeneration
         optimized_observed_qconfs: List[List[QuantizerConfig]] = []
-        for qconf_oset in observed_qconfs:
+        for qconf_observed_set in observed_qconfs:
             variants: List[List[QuantizerConfig]] = []
-            for qconf in qconf_oset:
-                variants.append(list(filter(qconf.is_a_bitwidth_variant, qconf_oset.keys())))
+            for qconf in qconf_observed_set:
+                variants.append(list(filter(qconf.is_a_bitwidth_variant, qconf_observed_set.keys())))
             max_bw_varying_variant = max(variants, key=len)
-            other_qconfs = list(filter(lambda x: x not in max_bw_varying_variant, qconf_oset.keys()))
+            other_qconfs = list(filter(lambda x: x not in max_bw_varying_variant, qconf_observed_set.keys()))
             optimized_observed_qconfs.append(max_bw_varying_variant + other_qconfs)
 
         max_depth = max([len(qconfs_for_trace_idx) for qconfs_for_trace_idx in optimized_observed_qconfs])
@@ -478,7 +478,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         tolerance: float,
     ) -> TracesPerLayer:
         if self._traces_per_layer_path:
-            return TracesPerLayer(torch.load(self._traces_per_layer_path).to(self._init_device))
+            return TracesPerLayer(torch.load(self._traces_per_layer_path, weights_only=False).to(self._init_device))
 
         quantizers_switcher = QuantizersSwitcher(list(self._all_quantizers_per_scope.values()))
         params_to_restore = self.disable_all_gradients_except_weights_of_quantized_modules(
@@ -523,7 +523,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         :param quantizers_switcher: object that is responsible for enabling and disabling quantizers
         :param model: model to access all parameters
         :param weight_quantizers: modules with quantized weights per scope
-        :param params_to_restore: storage names of the parameters that should restore reguires_grad property
+        :param params_to_restore: storage names of the parameters that should restore requires_grad property
         """
         for wq_info in weight_quantizers.values():
             quantized_module = wq_info.quantized_module

@@ -191,7 +191,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
 
     @staticmethod
     def _insertion_point_to_quant_insertion_point(
-        ip: Union[PreHookInsertionPoint, PostHookInsertionPoint]
+        ip: Union[PreHookInsertionPoint, PostHookInsertionPoint],
     ) -> QuantizationInsertionPointBase:
         if isinstance(ip, PreHookInsertionPoint):
             return ActivationQuantizationInsertionPoint(ip.target_node_name, input_port_id=ip.input_port_id)
@@ -797,7 +797,6 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
         :return: True if all paths from the given node to the first
         input quantizable nodes have an activation quantizer, False otherwise.
         """
-
         nodes_keys_stack = deque(self.successors(node_key))
         while nodes_keys_stack:
             node_key = nodes_keys_stack.popleft()
@@ -1170,6 +1169,10 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
                 (ds_config.per_channel == us_config.per_channel)
                 or (ds_config.per_channel is True and us_config.per_channel is False)
             )
+
+            # Strictly prohibit merging of config with different narrow_range params
+            is_redundant = is_redundant and (ds_config.narrow_range == us_config.narrow_range)
+
             return is_redundant
 
         def merge_traverse_fn(
@@ -1386,7 +1389,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
         )
         for pq_set in pq_sets_grouped_by_unified_scale:
             setup.register_unified_scale_group_with_types(
-                [pqid_vs_qpid[pq.id] for pq in pq_set], [pq.unified_scale_type for pq in pq_set]  # type: ignore
+                [pqid_vs_qpid[pq.id] for pq in pq_set],
+                [pq.unified_scale_type for pq in pq_set],  # type: ignore
             )
 
         setup = self._handle_output_quantizers_for_weights_as_outputs_ops(setup, pqid_vs_qpid, wao_op_node_key_vs_wq_id)
@@ -1420,7 +1424,6 @@ class QuantizerPropagationStateGraph(nx.DiGraph):  # type: ignore[misc]
         :return: A MultiConfigQuantizerSetup with weights-as-outputs-dependent quantizers removed where possible
             and shared inputs/unified scales group adjusted to reflect the change.
         """
-
         # For the weights-are-outputs quantized operations, need to find out the dependent activation quantizers in
         # the multiconfig setup and see if it is possible to avoid requantization by selecting a common configuration
         # subset. If yes and the activation quantizer becomes unnecessary, need to unify the scales of the weight

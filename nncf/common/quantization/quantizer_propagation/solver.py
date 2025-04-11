@@ -51,6 +51,7 @@ from nncf.common.scopes import should_consider_scope
 from nncf.common.utils.debug import DEBUG_LOG_DIR
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.dot_file_rw import write_dot_graph
+from nncf.config.schemata.defaults import QUANTIZATION_NARROW_RANGE
 
 
 class TransitionStatus(Enum):
@@ -160,6 +161,7 @@ class QuantizationProposal:
                             final_qconfig.per_channel == initial_qconfig.per_channel
                             and final_qconfig.mode == initial_qconfig.mode
                             and final_qconfig.num_bits == initial_qconfig.num_bits
+                            and final_qconfig.narrow_range == initial_qconfig.narrow_range
                             and (
                                 final_qconfig.signedness_to_force == initial_qconfig.signedness_to_force
                                 or initial_qconfig.signedness_to_force is None
@@ -301,7 +303,13 @@ class QuantizerPropagationSolver:
     """
 
     DEFAULT_QUANTIZATION_TYPES = [
-        QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None, per_channel=False)
+        QuantizerConfig(
+            num_bits=8,
+            mode=QuantizationMode.SYMMETRIC,
+            signedness_to_force=None,
+            per_channel=False,
+            narrow_range=QUANTIZATION_NARROW_RANGE,
+        )
     ]
 
     DEFAULT_PROPAGATION_STRATEGY = QuantizerPropagationRule.MERGE_ALL_IN_ONE
@@ -668,7 +676,6 @@ class QuantizerPropagationSolver:
         :param quant_prop_graph: The propagation state graph for `curr_prop_quantizer` to be propagated in.
         :return: The new state of `quant_prop_graph` with `curr_prop_quantizer` propagated one step further.
         """
-
         curr_node_key = curr_prop_quantizer.current_location_node_key
         curr_node = quant_prop_graph.nodes[curr_node_key]
         curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
@@ -882,9 +889,8 @@ class QuantizerPropagationSolver:
     def _get_operator_qconfigs_map(self) -> Dict[Type[OperatorMetatype], Optional[List[QuantizerConfig]]]:
         # TODO (vshampor): ensure that there are no name collisions between ops in different torch subpackages
         #  with the same name
-        retval: Dict[Type[OperatorMetatype], Optional[List[QuantizerConfig]]] = (
-            {}
-        )  # Metas not in retval will correspond to wildcard quantization
+        # Metas not in retval will correspond to wildcard quantization
+        retval: Dict[Type[OperatorMetatype], Optional[List[QuantizerConfig]]] = {}
         if self._hw_config is None:
             for trait, meta_list in self._default_trait_to_metatype_map.items():
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
@@ -994,7 +1000,6 @@ class QuantizerPropagationSolver:
           corresponding TargetPoints.
         :return: A list of TargetPoint groups; each group is a list of TargetPoint's.
         """
-
         if linked_scopes_groups_list is None:
             return [[ip] for ip in target_insertion_points]
         retval: List[List[TargetPoint]] = []
@@ -1133,9 +1138,9 @@ class QuantizerPropagationSolver:
         for pred_ip_key in preds:
             pred_node = quant_prop_graph.nodes[pred_ip_key]
             pred_node_type = pred_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
-            assert QuantizerPropagationStateGraph.is_insertion_point(
-                pred_node_type
-            ), "Invalid insertion point graph supplied for quantizer propagation!"
+            assert QuantizerPropagationStateGraph.is_insertion_point(pred_node_type), (
+                "Invalid insertion point graph supplied for quantizer propagation!"
+            )
 
             ip = pred_node[QuantizerPropagationStateGraph.QUANT_INSERTION_POINT_DATA_NODE_ATTR]
             input_port_id = ip.input_port_id
@@ -1305,7 +1310,6 @@ class QuantizerPropagationSolver:
           cloned before transition, which impacts the logic of the function.
         :return: The status of the transition determining how it should proceed.
         """
-
         for from_node_key, to_node_key in path:
             from_node = quant_prop_graph.nodes[from_node_key]
 
@@ -1373,7 +1377,7 @@ class QuantizerPropagationSolver:
         Returns a tuple, of which the first node is the qconfig list for the quantizer to be placed
         above the branching node (i.e. that will affect all of the downward branches), and a list
         of nodes which are either None (which means that the corresponding branch quantizer has been successfully
-        merged, or qconfigs list to be set for the corresponding branch quantizer if it cannot be merged (e.g. if
+        merged), or qconfigs list to be set for the corresponding branch quantizer if it cannot be merged (e.g. if
         requantization to a lower bitwidth has to be done for this branch)
 
         :param potential_qconfigs_for_each_branch: For each branch defines the list of available configurations
@@ -1382,7 +1386,6 @@ class QuantizerPropagationSolver:
           of the merged quantizer, if any, and the second element corresponds to configurations of the quantizers
           that would have to remain on the branches (if any).
         """
-
         if self._propagation_strategy == QuantizerPropagationRule.DO_NOT_MERGE_BRANCHES:
             # Do not merge at all
             return None, potential_qconfigs_for_each_branch
@@ -1453,7 +1456,8 @@ class QuantizerPropagationSolver:
 
         merged_qconfig_list_counter = Counter(merged_qconfig_list)
         resulting_branch_qconfig_lists: List[List[QuantizerConfig]] = [
-            None for _ in potential_qconfigs_for_each_branch  # type: ignore[misc]
+            None  # type: ignore[misc]
+            for _ in potential_qconfigs_for_each_branch
         ]
 
         if self._propagation_strategy == QuantizerPropagationRule.MERGE_WITH_POTENTIAL_REQUANTIZATION:
@@ -1495,7 +1499,8 @@ class QuantizerPropagationSolver:
         """
         The input list should be sorted in descending order of priority. In case some qconfigs in the list have the
         same priority, this function will resolve the ambiguity in ordering these qconfigs in the final returned
-        list.
+        list. Quantization configs could not contain different narrow range parameters, so it does
+        not participate in __lt__ method of the QConfigComparator.
         """
 
         class QConfigComparator:

@@ -63,7 +63,7 @@ class TFIdentityOpMetatype(TFOpMetatype):
 
 @TF_OPERATION_METATYPES.register()
 class TFPackOpMetatype(TFOpMetatype):
-    # Unsqueezes->Concat pattern
+    # Unsqueeze->Concat pattern
     name = "PackOp"
     op_names = ["Pack", "stack"]
 

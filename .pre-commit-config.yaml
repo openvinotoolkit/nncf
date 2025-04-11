@@ -2,27 +2,29 @@ default_language_version:
   python: python3
 
 repos:
-  - repo: https://github.com/psf/black
-    rev: 24.10.0
-    hooks:
-      - id: black
-        files: '^.*\.py'
-
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.0
-    hooks:
-      - id: isort
-        name: isort (python)
-
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version.
-    rev: v0.9.2
+    rev: v0.9.6
     hooks:
       - id: ruff
+        args: [--fix, --show-fixes]
+      - id: ruff-format
+        types_or: [ python, pyi ]
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.43.0
     hooks:
       - id: markdownlint
-        args: [--config=.markdownlint.yaml]
+        args: [--config=.ci/markdownlint.yaml]
 
+  - repo: https://github.com/streetsidesoftware/cspell-cli
+    rev: v8.17.3
+    hooks:
+      - id: cspell
+        args:
+          - --config=.ci/cspell.json
+          - --no-must-find-files
+          - --no-progress
+          - --no-summary
+          - --gitignore
+          - --files
+        files: (^nncf/.*\.py$|.*\.md$)

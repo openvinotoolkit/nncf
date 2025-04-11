@@ -29,12 +29,14 @@ from nncf.config.structures import NNCFExtraConfigStruct
 
 @api(canonical_alias="nncf.NNCFConfig")
 class NNCFConfig(dict[str, Any]):
-    """Contains the configuration parameters required for NNCF to apply the selected algorithms.
+    """
+    Contains the configuration parameters required for NNCF to apply the selected algorithms.
 
     This is a regular dictionary object extended with some utility functions, such as the ability to attach well-defined
     structures to pass non-serializable objects as parameters. It is primarily built from a .json file, or from a
     Python JSON-like dictionary - both data types will be checked against a JSONSchema. See the definition of the
-    schema at https://openvinotoolkit.github.io/nncf/schema/, or by calling NNCFConfig.schema()."""
+    schema at https://openvinotoolkit.github.io/nncf/schema/, or by calling NNCFConfig.schema().
+    """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -47,7 +49,6 @@ class NNCFConfig(dict[str, Any]):
 
         :param nncf_dict: A Python dict with the JSON-style configuration for NNCF.
         """
-
         cls.validate(nncf_dict)
         return cls(deepcopy(nncf_dict))
 

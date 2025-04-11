@@ -9,22 +9,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import functools
-from typing import Optional, Tuple, Union
+from typing import Literal, Optional, Tuple, Union
 
 from nncf.tensor import Tensor
-from nncf.tensor.functions.dispatcher import tensor_guard
+from nncf.tensor.functions.dispatcher import tensor_dispatcher
 
 
-@functools.singledispatch
-@tensor_guard
+@tensor_dispatcher
 def norm(
     a: Tensor,
-    ord: Optional[Union[str, float, int]] = None,
+    ord: Union[Literal["fro", "nuc"], float, None] = None,
     axis: Optional[Union[int, Tuple[int, ...]]] = None,
     keepdims: bool = False,
 ) -> Tensor:
-    """
+    r"""
     Computes a vector or matrix norm.
 
     The following norms can be calculated:
@@ -61,11 +59,9 @@ def norm(
         as dimensions with size one. Default: False.
     :return: Norm of the matrix or vector.
     """
-    return Tensor(norm(a.data, ord, axis, keepdims))
 
 
-@functools.singledispatch
-@tensor_guard
+@tensor_dispatcher
 def cholesky(a: Tensor, upper: bool = False) -> Tensor:
     """
     Computes the Cholesky decomposition of a complex Hermitian or real symmetric
@@ -81,11 +77,9 @@ def cholesky(a: Tensor, upper: bool = False) -> Tensor:
         Default is lower-triangular.
     :return: Upper- or lower-triangular Cholesky factor of `a`.
     """
-    return Tensor(cholesky(a.data, upper))
 
 
-@functools.singledispatch
-@tensor_guard
+@tensor_dispatcher
 def cholesky_inverse(a: Tensor, upper: bool = False) -> Tensor:
     """
     Computes the inverse of a complex Hermitian or real symmetric positive-definite matrix given
@@ -97,11 +91,9 @@ def cholesky_inverse(a: Tensor, upper: bool = False) -> Tensor:
         upper triangular. Default: False.
     :return: The inverse of matrix given its Cholesky decomposition.
     """
-    return Tensor(cholesky_inverse(a.data, upper))
 
 
-@functools.singledispatch
-@tensor_guard
+@tensor_dispatcher
 def inv(a: Tensor) -> Tensor:
     """
     Computes the inverse of a matrix.
@@ -110,11 +102,9 @@ def inv(a: Tensor) -> Tensor:
         consisting of invertible matrices.
     :return: The inverse of the input tensor.
     """
-    return Tensor(inv(a.data))
 
 
-@functools.singledispatch
-@tensor_guard
+@tensor_dispatcher
 def pinv(a: Tensor) -> Tensor:
     """
     Compute the (Moore-Penrose) pseudo-inverse of a matrix.
@@ -122,11 +112,9 @@ def pinv(a: Tensor) -> Tensor:
     :param a: The input tensor of shape (*, M, N) where * is zero or more batch dimensions.
     :return: The pseudo-inverse of input tensor.
     """
-    return Tensor(pinv(a.data))
 
 
-@functools.singledispatch
-@tensor_guard
+@tensor_dispatcher
 def lstsq(a: Tensor, b: Tensor, driver: Optional[str] = None) -> Tensor:
     """
     Compute least-squares solution to equation Ax = b.
@@ -136,12 +124,10 @@ def lstsq(a: Tensor, b: Tensor, driver: Optional[str] = None) -> Tensor:
     :param driver: name of the LAPACK/MAGMA method to be used for solving the least-squares problem.
     :return: a tensor of size (N,) or (N, K), such that the 2-norm |b - A x| is minimized.
     """
-    return Tensor(lstsq(a.data, b.data, driver))
 
 
-@functools.singledispatch
-@tensor_guard
-def svd(a: Tensor, full_matrices: Optional[bool] = True) -> Tensor:
+@tensor_dispatcher
+def svd(a: Tensor, full_matrices: Optional[bool] = True) -> Tuple[Tensor, Tensor, Tensor]:
     """
     Factorizes the matrix a into two unitary matrices U and Vh, and a 1-D array s of singular values
     (real, non-negative) such that a == U @ S @ Vh, where S is a suitably shaped matrix of zeros with main diagonal s.
@@ -156,5 +142,3 @@ def svd(a: Tensor, full_matrices: Optional[bool] = True) -> Tensor:
         S - The singular values, sorted in non-increasing order. Of shape (K,), with K = min(M, N).
         Vh - Unitary matrix having right singular vectors as rows. Of shape (N, N) or (K, N) depending on full_matrices.
     """
-    U, S, Vh = svd(a.data, full_matrices=full_matrices)
-    return (Tensor(U), Tensor(S), Tensor(Vh))

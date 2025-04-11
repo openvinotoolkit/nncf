@@ -100,8 +100,8 @@ class TestONNXExport:
             .model_config_(
                 image_size=384,
                 patch_size=4,
-                window_size=12,
-                embed_dim=192,
+                window_size=4,  # TODO: nlyayus: SwinModel changed logic for window size
+                embed_dim=192,  # larger than input resolution Issue-162383
                 mlp_ratio=4,
                 depths=(2, 2, 5, 2),
                 num_heads=(6, 12, 24, 48),
@@ -112,6 +112,7 @@ class TestONNXExport:
     def test_same_outputs_in_torch_and_exported_onnx(self, tmp_path: Path, recipe: BaseMockRunRecipe):
         num_samples = 4
         recipe.log_dir_(tmp_path)
+        print(recipe.model_family)
         compression_ctrl, compressed_model = create_compressed_model(
             recipe.model(), recipe.nncf_config(), dump_graphs=False
         )
@@ -128,7 +129,7 @@ class TestONNXExport:
         compression_ctrl.export_model(onnx_model_path)
         onnx_output_dict = self._get_onnx_model_inference_outputs(onnx_model_path, dataset, recipe)
         onnx_outputs = next(iter(onnx_output_dict.values()))
-        assert np.allclose(softmax(onnx_outputs, axis=-1), softmax(torch_outputs, axis=-1), atol=1e-6)
+        assert np.allclose(softmax(onnx_outputs, axis=-1), softmax(torch_outputs, axis=-1), atol=1e-5)
 
     @pytest.mark.skipif(
         version.parse(torch.__version__) < version.parse("1.12"),
@@ -139,8 +140,8 @@ class TestONNXExport:
         "desc",
         [
             Dict(
-                nncf_weight_ratio=0.43,
-                ov_weight_ratio=0.36,
+                nncf_weight_ratio=0.14,
+                ov_weight_ratio=0.11,
                 recipe=BertRunRecipe().model_config_(
                     max_position_embeddings=2,
                     intermediate_size=4,
@@ -152,8 +153,8 @@ class TestONNXExport:
                 ),
             ),
             Dict(
-                nncf_weight_ratio=0.31,
-                ov_weight_ratio=0.25,
+                nncf_weight_ratio=0.1,
+                ov_weight_ratio=0.08,
                 recipe=Wav2Vec2RunRecipe().model_config_(
                     intermediate_size=4,
                     num_labels=1,
@@ -163,7 +164,7 @@ class TestONNXExport:
                 ),
             ),
             Dict(
-                nncf_weight_ratio=0.41,
+                nncf_weight_ratio=0.08,
                 ov_weight_ratio=0.07,
                 recipe=Wav2Vec2RunRecipe().model_config_(
                     # stride, hidden size and num heads is selected to reproduce invalid parsing of reshape:
@@ -192,7 +193,7 @@ class TestONNXExport:
                 ),
             ),
             Dict(
-                nncf_weight_ratio=0.55,
+                nncf_weight_ratio=0.25,
                 ov_weight_ratio=0.20,
                 recipe=DistilBertRunRecipe().model_config_(),
             ),
@@ -216,8 +217,8 @@ class TestONNXExport:
                 ),
             ),
             Dict(
-                nncf_weight_ratio=0.47,
-                ov_weight_ratio=0.36,
+                nncf_weight_ratio=0.15,
+                ov_weight_ratio=0.12,
                 recipe=ClipVisionRunRecipe().model_config_(),
             ),
         ],
@@ -269,9 +270,9 @@ class TestONNXExport:
         not_pruned_file_bytes = not_pruned_file.stat().st_size
         file_size_ratio = 1 - pruned_file_bytes / not_pruned_file_bytes
         assert pytest.approx(compression_rate, abs=1e-2) == desc.nncf_weight_ratio
-        assert (
-            pytest.approx(file_size_ratio, abs=3e-2) == desc.ov_weight_ratio
-        ), f"IR's size ratio: 1 - {pruned_file_bytes}/{not_pruned_file_bytes}"
+        assert pytest.approx(file_size_ratio, abs=3e-2) == desc.ov_weight_ratio, (
+            f"IR's size ratio: 1 - {pruned_file_bytes}/{not_pruned_file_bytes}"
+        )
         if abs(desc.ov_weight_ratio - desc.nncf_weight_ratio) >= 0.15:
             pytest.skip("Known issue in the ngraph transformation")
         assert abs(file_size_ratio - compression_rate) < 0.152

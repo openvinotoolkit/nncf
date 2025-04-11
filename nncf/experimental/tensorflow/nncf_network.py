@@ -41,7 +41,7 @@ class NNCFNetwork(tf.keras.Model):
         Initializes the NNCF network.
 
         :param model: Keras model.
-        :param input_signature: Input signature of the moodel.
+        :param input_signature: Input signature of the model.
         """
         super().__init__(**kwargs)
         self._model = model
@@ -98,7 +98,7 @@ class NNCFNetwork(tf.keras.Model):
         Inserts the list of the NNCF operations according to the target point.
 
         :param point: The location where operations should be inserted.
-        :param ops: List of the NNCF operarions.
+        :param ops: List of the NNCF operations.
         """
         ops_weights = {op.name: op.create_variables(self) for op in ops}
         hook = Hook(ops, point, ops_weights)

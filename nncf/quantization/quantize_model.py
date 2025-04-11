@@ -23,6 +23,7 @@ from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
 from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
 from nncf.parameters import BackupMode
+from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -440,6 +441,7 @@ def compress_weights(
     gptq: Optional[bool] = None,
     lora_correction: Optional[bool] = None,
     backup_mode: Optional[BackupMode] = None,
+    compression_format: Optional[CompressionFormat] = CompressionFormat.DQ,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> TModel:
     """
@@ -496,6 +498,9 @@ def compress_weights(
         INT8_SYM stands for 8-bit integer symmetric quantization without zero point.
         INT8_ASYM stands for 8-bit integer asymmetric quantization with a typical non-fixed zero point.
     :type backup_mode: nncf.BackupMode
+    :param compression_format: Describes the format in which the model is saved after weight compression.
+        Defaults to nncf.CompressionFormat.DQ.
+    :type compression_format: nncf.CompressionFormat
     :param advanced_parameters: Advanced parameters for compression algorithms.
     :type advanced_parameters: nncf.AdvancedCompressionParameters
     :return: The non-trainable model with compressed weights.
@@ -511,29 +516,29 @@ def compress_weights(
 
     if backend == BackendType.TORCH:
         from nncf.torch.model_creation import is_wrapped_model
-        from nncf.torch.model_creation import wrap_model
+        from nncf.torch.nncf_network import NNCFNetwork
         from nncf.torch.quantization.quantize_model import compress_weights_impl as pt_compression_weights_impl
 
         if mode in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]:
             msg = "Torch backend does not support NF4 and E2M1 modes for weight compression."
             raise nncf.ParameterNotSupportedError(msg)
 
-        options = {
-            "awq": awq,
-            "gptq": gptq,
-            "lora_correction": lora_correction,
-        }
+        options = {"gptq": gptq, "lora_correction": lora_correction}
         unsupported_options = [name for name, value in options.items() if value is not None]
         if unsupported_options:
             msg = f"Torch backend does not support {', '.join(unsupported_options)} option(s). Set them to None."
             raise nncf.ParameterNotSupportedError(msg)
 
         if advanced_parameters and advanced_parameters.statistics_path:
-            msg = "Torch does not support statistics caching."
+            msg = "Torch backend does not support statistics caching."
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if compression_format == CompressionFormat.FQ and group_size != -1:
+            msg = "Torch backend does not support FQ compression format for group-wise quantization."
             raise nncf.ParameterNotSupportedError(msg)
 
         if is_wrapped_model(model):
-            if not model.nncf.trace_parameters:
+            if isinstance(model, NNCFNetwork) and not model.nncf.trace_parameters:
                 msg = (
                     "Tracing capabilities with tracing parameters are required in the PyTorch model "
                     "for nncf.compress_weights(). Please wrap the model using "
@@ -545,6 +550,8 @@ def compress_weights(
             msg = "Please provide a dataset of at least one element for PyTorch model tracing."
             raise nncf.ValidationError(msg)
         else:
+            from nncf.torch.model_creation import wrap_model
+
             example_input = next(iter(dataset.get_inference_data()))
             model = wrap_model(model, example_input=example_input, trace_parameters=True)
         if mode in (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM):
@@ -584,6 +591,11 @@ def compress_weights(
         if advanced_parameters and advanced_parameters.statistics_path:
             msg = "TorchFX does not supports statistics caching."
             raise nncf.ParameterNotSupportedError(msg)
+
+        if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA]:
+            msg = "Torch FX backend does not support FQ and FQ_LORA compression formats."
+            raise nncf.ParameterNotSupportedError(msg)
+
         compression_weights_impl = fx_compression_weights_impl
 
     if backend == BackendType.OPENVINO:
@@ -600,7 +612,11 @@ def compress_weights(
 
         if gptq and lora_correction:
             msg = "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
-            raise nncf.ValidationError(msg)
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if compression_format in [CompressionFormat.FQ, CompressionFormat.FQ_LORA]:
+            msg = "OpenVINO backend does not support FQ and FQ_LORA compression formats."
+            raise nncf.ParameterNotSupportedError(msg)
 
         compression_weights_impl = ov_compress_weights_impl
     check_user_compression_configuration(
@@ -617,6 +633,7 @@ def compress_weights(
         ignored_scope,
         sensitivity_metric,
         backup_mode,
+        compression_format,
         advanced_parameters,
     )
     weight_compression_configuration = get_weight_compression_configuration(
@@ -643,6 +660,7 @@ def compress_weights(
         model=model,
         dataset=dataset,
         subset_size=subset_size,
+        compression_format=compression_format,
         **weight_compression_configuration,
     )
 

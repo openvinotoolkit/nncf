@@ -469,6 +469,5 @@ def test_number_of_combinations_considered(params, number_considered_combination
     combinations = create_combinations(params)
     find_best_combination(combinations, score_f, params)
     assert number_considered_combinations == score_function_call_count, (
-        f"Expected {number_considered_combinations} combinations to be considered, "
-        f"but got {score_function_call_count}."
+        f"Expected {number_considered_combinations} combinations to be considered, but got {score_function_call_count}."
     )

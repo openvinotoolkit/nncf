@@ -14,8 +14,9 @@ import atheris
 from tests.cross_fw.shared.paths import TEST_ROOT
 
 with atheris.instrument_imports():
-    import nncf
     import sys
+
+    import nncf
 
 from random import randint
 from random import seed

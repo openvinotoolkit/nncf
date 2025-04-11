@@ -22,7 +22,7 @@ import nncf
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.openvino.graph.model_transformer import OVModelTransformer
-from nncf.openvino.graph.node_utils import get_const_value
+from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_max_op
 from nncf.openvino.graph.node_utils import get_inplace_max_var_op
@@ -778,7 +778,7 @@ def test_bias_correction(model_with_parameters):
         if potential_bias.get_type_name() == "Convert":
             potential_bias = potential_bias.input_value(0).node
         assert potential_bias.get_type_name() == "Constant"
-        potential_bias_value = get_const_value(potential_bias)
+        potential_bias_value = get_const_value_as_numpy_tensor(potential_bias)
         assert np.all(potential_bias_value == bias_reference)
 
 
@@ -956,6 +956,6 @@ def test_multiply_insertion(model_with_parameters):
         assert scale_node.input(0).get_element_type() == scale_const.output(0).get_element_type()
 
         assert scale_const.get_type_name() == "Constant"
-        scale_const_data = get_const_value(scale_const)
+        scale_const_data = get_const_value_as_numpy_tensor(scale_const)
 
         assert np.all(scale_const_data == scale)

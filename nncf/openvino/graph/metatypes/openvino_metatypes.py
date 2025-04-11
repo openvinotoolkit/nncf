@@ -678,7 +678,7 @@ class OVSwishMetatype(OVOpMetatype):
 
 @OV_OPERATOR_METATYPES.register()
 class OVHSwishMetatype(OVOpMetatype):
-    name = "HSwishhOp"
+    name = "HSwishOp"
     op_names = ["HSwish"]
 
 

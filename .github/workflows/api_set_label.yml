@@ -10,14 +10,15 @@ on:
 jobs:
   update_labels:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 5
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.repository_owner == 'openvinotoolkit' }}
     permissions:
       pull-requests: write
 
     steps:
       - name: Download artifact
         id: download-artifact
-        uses: dawidd6/action-download-artifact@bf251b5aa9c2f7eeb574a96ee720e24f801b7c11 # v6
+        uses: dawidd6/action-download-artifact@07ab29fd4a977ae4d2b275087cf67563dfdf0295 # v9
         with:
             run_id: ${{ github.event.workflow_run.id }}
             name: api_status

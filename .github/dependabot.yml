@@ -1,0 +1,37 @@
+# See help here: https://docs.github.com/en/free-pro-team@latest/github/administering-a-repository/enabling-and-disabling-version-updates
+
+version: 2
+updates:
+
+  # Github actions
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "09:00"
+      timezone: "Asia/Dubai"
+    assignees:
+      - "AlexanderDokuchaev"
+    open-pull-requests-limit: 10
+
+  # Python
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "09:00"
+      timezone: "Asia/Dubai"
+    open-pull-requests-limit: 10
+    assignees:
+      - "AlexanderDokuchaev"
+    versioning-strategy: increase-if-necessary
+    ignore:
+      # Frameworks
+      - dependency-name: "onnx"
+      - dependency-name: "onnxruntime"
+      - dependency-name: "openvino"
+      - dependency-name: "tensorflow"
+      - dependency-name: "torch"
+      - dependency-name: "torchvision"
+      # Tests
+      - dependency-name: "pytest*"

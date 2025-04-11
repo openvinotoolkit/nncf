@@ -136,7 +136,6 @@ def get_backend(model: Any) -> BackendType:
     :param model: The framework-specific model.
     :return: A BackendType representing the correct NNCF backend to be used when working with the framework.
     """
-
     verify_map = {
         is_torch_fx_model: BackendType.TORCH_FX,
         is_torch_model: BackendType.TORCH,

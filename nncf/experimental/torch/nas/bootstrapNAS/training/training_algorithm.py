@@ -126,7 +126,6 @@ class EpochBasedTrainingAlgorithm:
         :param tensorboard_writer: The tensorboard object to be used for logging.
         :return: the fine-tuned model and elasticity controller
         """
-
         if train_iters is None:
             train_iters = len(train_loader)
         self._training_ctrl.set_training_lr_scheduler_args(optimizer, train_iters)  # len(train_loader))
@@ -256,7 +255,7 @@ class EpochBasedTrainingAlgorithm:
             msg = f"no checkpoint found at '{resuming_checkpoint_path}'"
             raise FileNotFoundError(msg)
         nncf_logger.info(f"=> loading checkpoint '{resuming_checkpoint_path}'")
-        checkpoint = torch.load(resuming_checkpoint_path, map_location="cpu")
+        checkpoint = torch.load(resuming_checkpoint_path, map_location="cpu", weights_only=False)
 
         training_state = checkpoint[cls._state_names.TRAINING_ALGO_STATE]
         nncf_config = NNCFConfig()

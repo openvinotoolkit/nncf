@@ -43,10 +43,6 @@ This diagram is the sparsity level of BERT-base model over the optimization life
 
 Optimized models are compatible with OpenVINO toolchain. Use `compression_controller.export_model("movement_sparsified_model.onnx")` to export model in onnx format. Sparsified parameters in the onnx are in value of zero. Structured sparse structures can be discarded during ONNX translation to OpenVINO IR using [Model Conversion](https://docs.openvino.ai/2025/openvino-workflow/model-preparation/convert-model-to-ir.html) with utilizing [pruning transformation](https://docs.openvino.ai/2025/openvino-workflow/model-optimization-guide/compressing-models-during-training/filter-pruning.html). Corresponding IR is compressed and deployable with [OpenVINO Runtime](https://docs.openvino.ai/2025/openvino-workflow/running-inference.html). To quantify inference performance improvement, both ONNX and IR can be profiled using [Benchmark Tool](https://docs.openvino.ai/2025/get-started/learn-openvino/openvino-samples/benchmark-tool.html).
 
-## Getting Started
-
-Please refer [optimum-intel](https://github.com/huggingface/optimum-intel/tree/main/examples/openvino) for example pipelines on image classification, question answering, etc. The repository also provides examples of joint pruning, quantization and distillation, end-to-end from NNCF optimization to compressed OpenVINO IR.
-
 ## Known Limitation
 
 1. Movement sparsification only supports `torch.nn.Linear` layers.

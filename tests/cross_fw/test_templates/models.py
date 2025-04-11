@@ -461,3 +461,132 @@ class NNCFGraphTransformer:
         ]
         original_mock_graph = create_mock_graph(nodes, node_edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
+
+
+class NNCFGraphModelWithEmbeddingsShapeOf:
+    def __init__(
+        self,
+        const_metatype,
+        embedding_metatype,
+        conv_metatype,
+        add_metatype,
+        shape_of_metatype=None,
+        embedding_layer_attrs=None,
+        conv_layer_attrs=None,
+        default_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
+    ):
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Shape_of", shape_of_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Add_int", add_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("W_EMB", const_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Embedding", embedding_metatype, layer_attributes=embedding_layer_attrs),
+            NodeWithType("Conv", conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("W_Conv", const_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=default_layer_attrs),
+        ]
+        node_edges = [
+            ("Input_1", "Shape_of"),
+            ("Shape_of", "Add_int"),
+            ("Add_int", "Embedding"),
+            ("W_EMB", "Embedding"),
+            ("Embedding", "Conv"),
+            ("W_Conv", "Conv"),
+            ("Conv", "Output_1"),
+        ]
+        edges_attrs = [
+            {},
+            {NNCFGraph.DTYPE_EDGE_ATTR: Dtype.INTEGER},
+            {NNCFGraph.DTYPE_EDGE_ATTR: Dtype.INTEGER},
+            {},
+            {},
+            {},
+            {},
+        ]
+
+        original_mock_graph = create_mock_graph(nodes, node_edges, edges_attrs)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
+
+
+class NNCFGraphModelWithEmbeddingsConstantPath:
+    def __init__(
+        self,
+        const_metatype,
+        embedding_metatype,
+        conv_metatype,
+        add_metatype,
+        embedding_layer_attrs=None,
+        conv_layer_attrs=None,
+        default_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
+    ):
+        nodes = [
+            NodeWithType("Const", const_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Add_int", add_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("W_EMB", const_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Embedding", embedding_metatype, layer_attributes=embedding_layer_attrs),
+            NodeWithType("Conv", conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("W_Conv", const_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=default_layer_attrs),
+        ]
+        node_edges = [
+            ("Const", "Add_int"),
+            ("Add_int", "Embedding"),
+            ("W_EMB", "Embedding"),
+            ("Embedding", "Conv"),
+            ("W_Conv", "Conv"),
+            ("Conv", "Output_1"),
+        ]
+        edges_attrs = [
+            {NNCFGraph.DTYPE_EDGE_ATTR: Dtype.INTEGER},
+            {NNCFGraph.DTYPE_EDGE_ATTR: Dtype.INTEGER},
+            {},
+            {},
+            {},
+            {},
+        ]
+
+        original_mock_graph = create_mock_graph(nodes, node_edges, edges_attrs)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
+
+
+class NNCFGraphConstantBranchWithWeightedNode:
+    # Const_1 Const_2  Const_3 Input_1
+    #     \     /         \    /
+    #    Const_conv      Conv_1
+    #             \     /
+    #             Add_1
+    #               |
+    #            Output_1
+
+    def __init__(
+        self,
+        const_metatype,
+        conv_metatype,
+        add_metatype,
+        conv_layer_attrs=None,
+        default_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
+    ):
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Const_1", const_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Const_2", const_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Const_3", const_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Conv_1", conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("Add_1", add_metatype, layer_attributes=default_layer_attrs),
+            NodeWithType("Const_conv", conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=default_layer_attrs),
+        ]
+        node_edges = [
+            ("Const_1", "Const_conv"),
+            ("Const_2", "Const_conv"),
+            ("Input_1", "Conv_1"),
+            ("Const_3", "Conv_1"),
+            ("Const_conv", "Add_1"),
+            ("Conv_1", "Add_1"),
+            ("Add_1", "Output_1"),
+        ]
+        original_mock_graph = create_mock_graph(nodes, node_edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls=nncf_graph_cls)

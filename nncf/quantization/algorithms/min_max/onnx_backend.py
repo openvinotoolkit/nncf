@@ -20,6 +20,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
+from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
@@ -119,7 +120,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_start_nodes_for_activation_path_tracing(
         nncf_graph: NNCFGraph,
     ) -> List[NNCFNode]:
-        return nncf_graph.get_input_nodes()
+        return nncf_graph.get_input_nodes() + nncf_graph.get_nodes_by_metatypes(
+            DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS]
+        )
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:
@@ -201,7 +204,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.ONNXSqrtMetatype,
                 om.ONNXReciprocalMetatype,
                 om.ONNXBatchNormMetatype,
-                # Сomparison operations
+                # Comparison operations
                 om.ONNXGreaterMetatype,
                 om.ONNXLessMetatype,
                 om.ONNXEqualMetatype,
@@ -214,8 +217,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> Set[str]:
         return set()
 
-    def get_weight_nodes(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        return [node for node in nncf_graph.get_all_nodes() if node.layer_attributes.has_weight()]
+    def get_weight_nodes(self, nncf_graph: NNCFGraph, inference_nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        return [node for node in inference_nncf_graph.get_all_nodes() if node.layer_attributes.has_weight()]
 
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: ONNXTargetPoint) -> str:

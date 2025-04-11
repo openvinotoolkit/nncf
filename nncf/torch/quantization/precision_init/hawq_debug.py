@@ -134,7 +134,7 @@ class HAWQDebugger:
 
     @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
     def dump_metric_flops(
-        self, metric_per_qconfig_sequence: List[Tensor], flops_per_config: List[float], choosen_qconfig_index: int
+        self, metric_per_qconfig_sequence: List[Tensor], flops_per_config: List[float], chosen_qconfig_index: int
     ):
         import matplotlib.pyplot as plt
 
@@ -151,8 +151,8 @@ class HAWQDebugger:
         configuration_index = flops_per_config.index(cm_m)
         ms_m = metric_per_qconfig_sequence[configuration_index].item()
         ax.scatter(cm_m, ms_m, s=30, facecolors="none", edgecolors="b", label="median from all metrics")
-        cm_c = metric_per_qconfig_sequence[choosen_qconfig_index].item()
-        fpc_c = flops_per_config[choosen_qconfig_index].item()
+        cm_c = metric_per_qconfig_sequence[chosen_qconfig_index].item()
+        fpc_c = flops_per_config[chosen_qconfig_index].item()
         ax.scatter(fpc_c, cm_c, s=30, facecolors="none", edgecolors="r", label="chosen config")
 
         ax.legend()

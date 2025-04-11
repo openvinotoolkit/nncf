@@ -86,7 +86,6 @@ def create_compressed_model(
     :return: A tuple of the compression controller for the requested algorithm(s) and the model object with additional
      modifications necessary to enable algorithm-specific compression during fine-tuning.
     """
-
     warning_deprecated(
         "The 'nncf.tensorflow.create_compressed_model' function is deprecated and will be removed in a "
         "future release.\n"
@@ -169,7 +168,7 @@ def load_from_config(model: tf.keras.Model, config: Dict[str, Any]) -> tf.keras.
     Does not recover additional modules weights as they are located in a corresponded checkpoint file.
 
     :param model: TensorFlow model.
-    :parem config: Config.
+    :param config: Config.
     :return: tf.keras.Model builded from given model with additional layers recovered from given config.
     """
     quantizer_setup_state = config["quantization"]["quantizer_setup"]

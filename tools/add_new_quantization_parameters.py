@@ -63,7 +63,7 @@ def main(argv):
     files_to_copy = []
     for pair in pth_files:
         src_file, dst_file = pair
-        sd = pth = torch.load(src_file)
+        sd = pth = torch.load(src_file, weights_only=False)
         if "state_dict" in pth:
             sd = pth["state_dict"]
 

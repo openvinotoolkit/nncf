@@ -1100,7 +1100,6 @@ def update_nncf_algorithms_config(nncf_algorithms_config: Dict[str, Dict[str, An
 
 
 class EnvInfo:
-
     @staticmethod
     def print_info() -> None:
         """

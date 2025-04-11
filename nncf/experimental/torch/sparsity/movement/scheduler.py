@@ -60,7 +60,6 @@ class MovementSchedulerParams:
         :param power: The power value of polynomial decay for threshold update during warmup stage.
         :param steps_per_epoch: Number of training steps in one epoch.
         """
-
         if steps_per_epoch is None and warmup_start_epoch < 1:
             msg = (
                 "`warmup_start_epoch` must be >= 1 to enable the auto calculation of "

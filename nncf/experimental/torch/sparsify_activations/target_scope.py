@@ -21,7 +21,7 @@ from nncf.scopes import get_matched_ignored_scope_info
 
 @dataclass
 class TargetScope(IgnoredScope):
-    """
+    r"""
     Specifies the target portions in a model graph.
 
     Example:

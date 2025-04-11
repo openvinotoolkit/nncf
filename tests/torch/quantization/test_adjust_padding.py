@@ -98,7 +98,7 @@ class MultiBranchesModelDesc(GeneralModelDesc):
             "target_device": "NPU",
             "config": {
                 "quantization": {
-                    "q4": {"bits": 4, "mode": "symmetric", "granularity": "pertensor"},
+                    "q4": {"bits": 4, "mode": "symmetric", "granularity": "pertensor", "narrow_range": False},
                 }
             },
             "operations": [
