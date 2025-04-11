@@ -96,6 +96,46 @@ class CompressWeightsMode(StrEnum):
     E2M1 = "e2m1"
 
 
+@api(canonical_alias="nncf.CompressionFormat")
+class CompressionFormat(StrEnum):
+    """
+    Describes the format in which the model is saved after weight compression.
+
+    :param DQ: Represents the 'dequantize' format, where weights are stored in low-bit precision,
+        and a dequantization subgraph is added to the model. This is the default format for post-training weight
+        compression methods.
+    :param FQ: Represents the 'fake_quantize' format, where quantization is simulated by applying
+        quantization and dequantization operations. Weights remain in the same precision. This format is
+        suitable for quantization-aware training (QAT).
+    :param FQ_LORA: Represents the 'fake_quantize_with_lora' format, which combines fake quantization
+        with absorbable low-rank adapters (LoRA). Quantization is applied to the sum of weights and
+        the multiplication of adapters. This makes quantization-aware training (QAT) more efficient in terms of
+        accuracy, as adapters can also be tuned and remain computationally affordable during training due to their
+        small dimensions.
+    """
+
+    DQ = "dequantize"
+    FQ = "fake_quantize"
+    FQ_LORA = "fake_quantize_with_lora"
+
+
+@api(canonical_alias="nncf.StripFormat")
+class StripFormat(StrEnum):
+    """
+    Describes the format in which model is saved after strip: operation that removes auxiliary layers and
+    operations added during the compression process, resulting in a clean model ready for deployment.
+    The functionality of the model object is still preserved as a compressed model.
+
+    :param NATIVE: Returns the model with as much custom NNCF additions as possible.
+    :param DQ: Replaces FakeQuantize operations with dequantization subgraph and compressed weights in low-bit
+        precision using fake quantize parameters. This is the default format for deployment of models with compressed
+        weights.
+    """
+
+    NATIVE = "native"
+    DQ = "dequantize"
+
+
 @api(canonical_alias="nncf.BackupMode")
 class BackupMode(StrEnum):
     """

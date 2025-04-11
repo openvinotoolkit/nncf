@@ -92,7 +92,8 @@ class QuantizationDebugInterface(DebugInterface):
             # are incremented for thread local copies of `qm_module`, which are not
             # the same as the primary copies of `qm_module` iterated over at this point
             self.register_quantizer_module_call(str(qm_scope), qm_module.call_count)
-            self.dump_scale(qm_module.get_trainable_params(), str(qm_scope))
+            detached_params = {name: param.detach() for name, param in qm_module.get_trainable_params().items()}
+            self.dump_scale(detached_params, str(qm_scope))
             qm_module.reset_call_counter()
         self.print_call_stats()
 

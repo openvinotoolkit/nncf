@@ -9,19 +9,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Union
 
 import numpy as np
+from numpy.typing import DTypeLike
+from numpy.typing import NDArray
 
+from nncf.tensor.definitions import T_AXIS
+from nncf.tensor.definitions import T_NUMBER
+from nncf.tensor.definitions import T_SHAPE
+from nncf.tensor.definitions import T_SHAPE_ARRAY
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDataType
 from nncf.tensor.definitions import TensorDeviceType
 from nncf.tensor.definitions import TypeInfo
 from nncf.tensor.functions import numeric as numeric
-from nncf.tensor.functions.dispatcher import register_numpy_types
 from nncf.tensor.tensor import TTensor
 
-DTYPE_MAP = {
+T_NUMPY_ARRAY = NDArray[Any]
+T_NUMPY = Union[T_NUMPY_ARRAY, np.generic]  # type: ignore [type-arg]
+
+DTYPE_MAP: Dict[TensorDataType, DTypeLike] = {
     TensorDataType.float16: np.dtype(np.float16),
     TensorDataType.float32: np.dtype(np.float32),
     TensorDataType.float64: np.dtype(np.float64),
@@ -34,81 +42,75 @@ DTYPE_MAP = {
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
 
-def validate_device(device: TensorDeviceType) -> None:
+def validate_device(device: Optional[TensorDeviceType]) -> None:
     if device is not None and device != TensorDeviceType.CPU:
         msg = "numpy_numeric only supports CPU device."
         raise ValueError(msg)
 
 
-def convert_to_numpy_dtype(dtype: TensorDataType) -> np.dtype:
+def convert_to_numpy_dtype(dtype: Optional[TensorDataType]) -> Optional[DTypeLike]:
     return DTYPE_MAP[dtype] if dtype is not None else None
 
 
-@register_numpy_types(numeric.device)
-def _(a: Union[np.ndarray, np.generic]) -> TensorDeviceType:
+@numeric.device.register
+def _(a: T_NUMPY) -> TensorDeviceType:
     return TensorDeviceType.CPU
 
 
-@register_numpy_types(numeric.backend)
-def _(a: Union[np.ndarray, np.generic]) -> TensorBackend:
+@numeric.backend.register
+def _(a: T_NUMPY) -> TensorBackend:
     return TensorBackend.numpy
 
 
-@register_numpy_types(numeric.squeeze)
-def _(
-    a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None
-) -> Union[np.ndarray, np.generic]:
+@numeric.squeeze.register
+def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY:
     return np.squeeze(a, axis=axis)
 
 
-@register_numpy_types(numeric.flatten)
-def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+@numeric.flatten.register
+def _(a: T_NUMPY) -> T_NUMPY_ARRAY:
     return a.flatten()
 
 
-@register_numpy_types(numeric.max)
-def _(
-    a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False
-) -> np.ndarray:
+@numeric.max.register
+def _(a: T_NUMPY, axis: T_AXIS = None, keepdims: bool = False) -> T_NUMPY_ARRAY:
     return np.array(np.max(a, axis=axis, keepdims=keepdims))
 
 
-@register_numpy_types(numeric.min)
-def _(
-    a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False
-) -> Union[np.ndarray, np.generic]:
+@numeric.min.register
+def _(a: T_NUMPY, axis: T_AXIS = None, keepdims: bool = False) -> T_NUMPY:
     return np.array(np.min(a, axis=axis, keepdims=keepdims))
 
 
-@register_numpy_types(numeric.abs)
-def _(a: Union[np.ndarray, np.generic]) -> Union[np.ndarray, np.generic]:
+@numeric.abs.register
+def _(a: T_NUMPY) -> T_NUMPY:
     return np.absolute(a)
 
 
-@register_numpy_types(numeric.astype)
-def _(a: Union[np.ndarray, np.generic], dtype: TensorDataType) -> Union[np.ndarray, np.generic]:
+@numeric.astype.register
+def _(a: T_NUMPY, dtype: TensorDataType) -> T_NUMPY:
     return a.astype(DTYPE_MAP[dtype])
 
 
-@register_numpy_types(numeric.dtype)
-def _(a: Union[np.ndarray, np.generic]) -> TensorDataType:
+@numeric.dtype.register
+def _(a: T_NUMPY) -> TensorDataType:
     return DTYPE_MAP_REV[np.dtype(a.dtype)]
 
 
-@register_numpy_types(numeric.reshape)
-def _(a: Union[np.ndarray, np.generic], shape: Union[int, Tuple[int, ...]]) -> np.ndarray:
+@numeric.reshape.register
+def _(a: T_NUMPY, shape: T_SHAPE) -> T_NUMPY:
     return a.reshape(shape)
 
 
-@register_numpy_types(numeric.all)
-def _(a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None) -> np.ndarray:
+@numeric.all.register
+def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY_ARRAY:
     return np.array(np.all(a, axis=axis))
 
 
-@register_numpy_types(numeric.allclose)
+@numeric.allclose.register
 def _(
-    a: Union[np.ndarray, np.generic],
-    b: Union[np.ndarray, np.generic, float],
+    a: T_NUMPY,
+    b: Union[T_NUMPY, float],
     rtol: float = 1e-05,
     atol: float = 1e-08,
     equal_nan: bool = False,
@@ -116,224 +118,214 @@ def _(
     return np.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-@register_numpy_types(numeric.any)
-def _(a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None) -> np.ndarray:
+@numeric.any.register
+def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY_ARRAY:
     return np.array(np.any(a, axis=axis))
 
 
-@register_numpy_types(numeric.count_nonzero)
-def _(a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None) -> np.ndarray:
+@numeric.count_nonzero.register
+def _(a: T_NUMPY, axis: T_AXIS = None) -> T_NUMPY_ARRAY:
     return np.array(np.count_nonzero(a, axis=axis))
 
 
-@register_numpy_types(numeric.isempty)
-def _(a: Union[np.ndarray, np.generic]) -> bool:
+@numeric.isempty.register
+def _(a: T_NUMPY) -> bool:
     return a.size == 0
 
 
-@register_numpy_types(numeric.isclose)
+@numeric.isclose.register
 def _(
-    a: Union[np.ndarray, np.generic],
-    b: Union[np.ndarray, np.generic, float],
+    a: T_NUMPY,
+    b: Union[T_NUMPY, float],
     rtol: float = 1e-05,
     atol: float = 1e-08,
     equal_nan: bool = False,
-) -> np.ndarray:
+) -> T_NUMPY_ARRAY:
     return np.isclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-@register_numpy_types(numeric.maximum)
-def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic, float]) -> np.ndarray:
+@numeric.maximum.register
+def _(x1: T_NUMPY, x2: Union[T_NUMPY, float]) -> T_NUMPY_ARRAY:
     return np.maximum(x1, x2)
 
 
-@register_numpy_types(numeric.minimum)
-def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic, float]) -> np.ndarray:
+@numeric.minimum.register
+def _(x1: T_NUMPY, x2: Union[T_NUMPY, float]) -> T_NUMPY_ARRAY:
     return np.minimum(x1, x2)
 
 
-@register_numpy_types(numeric.ones_like)
-def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+@numeric.ones_like.register
+def _(a: T_NUMPY) -> T_NUMPY_ARRAY:
     return np.ones_like(a)
 
 
-@register_numpy_types(numeric.where)
+@numeric.where.register
 def _(
-    condition: Union[np.ndarray, np.generic],
-    x: Union[np.ndarray, np.generic, float],
-    y: Union[np.ndarray, np.generic, float],
-) -> np.ndarray:
+    condition: T_NUMPY,
+    x: Union[T_NUMPY, float],
+    y: Union[T_NUMPY, float],
+) -> T_NUMPY_ARRAY:
     return np.where(condition, x, y)
 
 
-@register_numpy_types(numeric.zeros_like)
-def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+@numeric.zeros_like.register
+def _(a: T_NUMPY) -> T_NUMPY_ARRAY:
     return np.zeros_like(a)
 
 
-@register_numpy_types(numeric.stack)
-def _(x: Union[np.ndarray, np.generic], axis: int = 0) -> List[np.ndarray]:
+@numeric.stack.register
+def _(x: Sequence[T_NUMPY], axis: int = 0) -> T_NUMPY_ARRAY:
     return np.stack(x, axis=axis)
 
 
-@register_numpy_types(numeric.concatenate)
-def _(x: Union[np.ndarray, np.generic], axis: int = 0) -> List[np.ndarray]:
+@numeric.concatenate.register
+def _(x: T_NUMPY, axis: int = 0) -> T_NUMPY_ARRAY:
     return np.concatenate(x, axis=axis)
 
 
-@register_numpy_types(numeric.unstack)
-def _(x: Union[np.ndarray, np.generic], axis: int = 0) -> List[np.ndarray]:
+@numeric.unstack.register
+def _(x: T_NUMPY, axis: int = 0) -> List[T_NUMPY_ARRAY]:
     return [np.squeeze(e, axis) for e in np.split(x, x.shape[axis], axis=axis)]
 
 
-@register_numpy_types(numeric.moveaxis)
-def _(a: np.ndarray, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> np.ndarray:
+@numeric.moveaxis.register
+def _(a: T_NUMPY_ARRAY, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> T_NUMPY_ARRAY:
     return np.moveaxis(a, source, destination)
 
 
-@register_numpy_types(numeric.mean)
+@numeric.mean.register
 def _(
-    a: Union[np.ndarray, np.generic],
-    axis: Union[int, Tuple[int, ...]] = None,
+    a: T_NUMPY,
+    axis: T_AXIS = None,
     keepdims: bool = False,
     dtype: Optional[TensorDataType] = None,
-) -> np.ndarray:
-    dtype = convert_to_numpy_dtype(dtype)
-    return np.array(np.mean(a, axis=axis, keepdims=keepdims, dtype=dtype))
+) -> T_NUMPY_ARRAY:
+    np_dtype = convert_to_numpy_dtype(dtype)
+    return np.array(np.mean(a, axis=axis, keepdims=keepdims, dtype=np_dtype))  # type: ignore [arg-type]
 
 
-@register_numpy_types(numeric.median)
+@numeric.median.register
 def _(
-    a: Union[np.ndarray, np.generic],
-    axis: Union[int, Tuple[int, ...]] = None,
+    a: T_NUMPY,
+    axis: Optional[T_SHAPE] = None,
     keepdims: bool = False,
-) -> np.ndarray:
-    return np.array(np.median(a, axis=axis, keepdims=keepdims))
+) -> T_NUMPY_ARRAY:
+    return np.array(np.median(a, axis=axis, keepdims=keepdims))  # type: ignore [arg-type]
 
 
-@register_numpy_types(numeric.round)
-def _(a: Union[np.ndarray, np.generic], decimals: int = 0) -> np.ndarray:
+@numeric.round.register
+def _(a: T_NUMPY, decimals: int = 0) -> T_NUMPY_ARRAY:
     return np.round(a, decimals=decimals)
 
 
-@register_numpy_types(numeric.power)
-def _(a: Union[np.ndarray, np.generic], exponent: Union[np.ndarray, float]) -> Union[np.ndarray, np.generic]:
+@numeric.power.register
+def _(a: T_NUMPY, exponent: Union[T_NUMPY, float]) -> T_NUMPY:
     return np.power(a, exponent)
 
 
-@register_numpy_types(numeric.quantile)
+@numeric.quantile.register
 def _(
-    a: Union[np.ndarray, np.generic],
+    a: T_NUMPY,
     q: Union[float, List[float]],
-    axis: Optional[Union[int, Tuple[int]]] = None,
+    axis: T_AXIS = None,
     keepdims: bool = False,
-) -> Union[np.ndarray, np.generic]:
+) -> T_NUMPY:
     return np.array(np.quantile(a.astype(np.float64, copy=False), q=q, axis=axis, keepdims=keepdims))
 
 
-@register_numpy_types(numeric.percentile)
+@numeric.percentile.register
 def _(
-    a: np.ndarray,
+    a: T_NUMPY,
     q: Union[float, List[float]],
-    axis: Union[int, Tuple[int, ...], List[int]],
+    axis: T_AXIS,
     keepdims: bool = False,
-) -> List[Union[np.ndarray, np.generic]]:
+) -> T_NUMPY:
     return np.quantile(
         a.astype(np.float64, copy=False), q=np.true_divide(np.array(q), 100), axis=axis, keepdims=keepdims
     )
 
 
-@register_numpy_types(numeric._binary_op_nowarn)
-def _(
-    a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic, float], operator_fn: Callable
-) -> Union[np.ndarray, np.generic]:
+@numeric._binary_op_nowarn.register
+def _(a: T_NUMPY, b: Union[T_NUMPY, float], operator_fn: Callable[..., Any]) -> T_NUMPY:
     # Run operator with disabled warning
     with np.errstate(invalid="ignore", divide="ignore"):
         return operator_fn(a, b)
 
 
-@register_numpy_types(numeric._binary_reverse_op_nowarn)
-def _(
-    a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic, float], operator_fn: Callable
-) -> Union[np.ndarray, np.generic]:
+@numeric._binary_reverse_op_nowarn.register
+def _(a: T_NUMPY, b: Union[T_NUMPY, float], operator_fn: Callable[..., Any]) -> T_NUMPY:
     # Run operator with disabled warning
     with np.errstate(invalid="ignore", divide="ignore"):
         return operator_fn(b, a)
 
 
-@register_numpy_types(numeric.finfo)
-def _(a: np.ndarray) -> TypeInfo:
-    ti = np.finfo(a.dtype)
-    return TypeInfo(ti.eps, ti.max, ti.min)
+@numeric.finfo.register
+def _(a: T_NUMPY) -> TypeInfo:
+    ti = np.finfo(a.dtype)  # type: ignore[arg-type]
+    return TypeInfo(float(ti.eps), float(ti.max), float(ti.min))
 
 
-@register_numpy_types(numeric.clip)
+@numeric.clip.register
 def _(
-    a: Union[np.ndarray, np.generic],
-    a_min: Union[np.ndarray, np.generic, float],
-    a_max: Union[np.ndarray, np.generic, float],
-) -> Union[np.ndarray, np.generic]:
+    a: T_NUMPY,
+    a_min: Union[T_NUMPY, float],
+    a_max: Union[T_NUMPY, float],
+) -> T_NUMPY:
     return np.clip(a, a_min, a_max)
 
 
-@register_numpy_types(numeric.as_tensor_like)
-def _(a: Union[np.ndarray, np.generic], data: Any) -> Union[np.ndarray, np.generic]:
+@numeric.as_tensor_like.register
+def _(a: T_NUMPY, data: Any) -> T_NUMPY:
     return np.array(data)
 
 
-@register_numpy_types(numeric.item)
-def _(a: Union[np.ndarray, np.generic]) -> Union[int, float, bool]:
+@numeric.item.register
+def _(a: T_NUMPY) -> T_NUMBER:
     return a.item()
 
 
-@register_numpy_types(numeric.sum)
-def _(
-    a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False
-) -> np.ndarray:
+@numeric.sum.register
+def _(a: T_NUMPY, axis: T_AXIS = None, keepdims: bool = False) -> T_NUMPY_ARRAY:
     return np.array(np.sum(a, axis=axis, keepdims=keepdims))
 
 
-@register_numpy_types(numeric.multiply)
-def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic, float]) -> np.ndarray:
+@numeric.multiply.register
+def _(x1: T_NUMPY, x2: Union[T_NUMPY, float]) -> T_NUMPY_ARRAY:
     return np.multiply(x1, x2)
 
 
-@register_numpy_types(numeric.var)
+@numeric.var.register
 def _(
-    a: Union[np.ndarray, np.generic],
-    axis: Optional[Union[int, Tuple[int, ...]]] = None,
+    a: T_NUMPY,
+    axis: T_AXIS = None,
     keepdims: bool = False,
     ddof: int = 0,
-) -> np.ndarray:
-    return np.array(np.var(a, axis=axis, keepdims=keepdims, ddof=ddof))
+) -> T_NUMPY_ARRAY:
+    return np.array(np.var(a, axis=axis, keepdims=keepdims, ddof=ddof))  # type: ignore[arg-type]
 
 
-@register_numpy_types(numeric.size)
-def _(a: Union[np.ndarray, np.generic]) -> int:
+@numeric.size.register
+def _(a: T_NUMPY) -> int:
     return a.size
 
 
-@register_numpy_types(numeric.matmul)
-def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic, float]) -> np.ndarray:
+@numeric.matmul.register
+def _(x1: T_NUMPY, x2: Union[T_NUMPY, float]) -> T_NUMPY_ARRAY:
     return np.matmul(x1, x2)
 
 
-@register_numpy_types(numeric.unsqueeze)
-def _(
-    a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None
-) -> Union[np.ndarray, np.generic]:
+@numeric.unsqueeze.register
+def _(a: T_NUMPY, axis: int) -> T_NUMPY:
     return np.expand_dims(a, axis=axis)
 
 
-@register_numpy_types(numeric.transpose)
-def _(a: Union[np.ndarray, np.generic], axes: Optional[Tuple[int, ...]] = None) -> Union[np.ndarray, np.generic]:
+@numeric.transpose.register
+def _(a: T_NUMPY, axes: Optional[T_SHAPE_ARRAY] = None) -> T_NUMPY:
     return np.transpose(a, axes=axes)
 
 
-@register_numpy_types(numeric.argsort)
-def _(
-    a: Union[np.ndarray, np.generic], axis: int = -1, descending=False, stable=False
-) -> Union[np.ndarray, np.generic]:
+@numeric.argsort.register
+def _(a: T_NUMPY, axis: int = -1, descending: bool = False, stable: bool = False) -> T_NUMPY:
     if descending and stable:
         return a.shape[axis] - 1 - np.flip(np.argsort(np.flip(a, axis), axis=axis, kind="stable"), axis)
     if descending and not stable:
@@ -341,59 +333,62 @@ def _(
     return np.argsort(a, axis=axis, kind="stable" if stable else None)
 
 
-@register_numpy_types(numeric.diag)
-def _(a: Union[np.ndarray, np.generic], k: int = 0) -> np.ndarray:
+@numeric.diag.register
+def _(a: T_NUMPY, k: int = 0) -> T_NUMPY_ARRAY:
     return np.diag(a, k=k)
 
 
-@register_numpy_types(numeric.logical_or)
-def _(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
+@numeric.logical_or.register
+def _(x1: T_NUMPY_ARRAY, x2: T_NUMPY_ARRAY) -> T_NUMPY_ARRAY:
     return np.logical_or(x1, x2)
 
 
-@register_numpy_types(numeric.masked_mean)
+@numeric.masked_mean.register
 def _(
-    x: np.ndarray, mask: Optional[np.ndarray], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
-) -> np.ndarray:
+    x: T_NUMPY_ARRAY,
+    mask: Optional[T_NUMPY_ARRAY],
+    axis: T_AXIS,
+    keepdims: bool = False,
+) -> T_NUMPY_ARRAY:
     if mask is None:
         return np.mean(x, axis=axis, keepdims=keepdims)
-    masked_x = np.ma.array(x, mask=mask)
+    masked_x = np.ma.array(x, mask=mask)  # type: ignore[no-untyped-call]
     result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
     if isinstance(result, np.ma.MaskedArray):
         return result.data
     return result
 
 
-@register_numpy_types(numeric.masked_median)
-def _(
-    x: np.ndarray, mask: Optional[np.ndarray], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
-) -> np.ndarray:
+@numeric.masked_median.register
+def _(x: T_NUMPY_ARRAY, mask: Optional[T_NUMPY_ARRAY], axis: T_AXIS, keepdims: bool = False) -> T_NUMPY_ARRAY:
     if mask is None:
         return np.median(x, axis=axis, keepdims=keepdims)
-    masked_x = np.ma.array(x, mask=mask)
-    result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
+    masked_x = np.ma.array(x, mask=mask)  # type: ignore[no-untyped-call]
+    result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)  # type: ignore[no-untyped-call]
     if isinstance(result, np.ma.MaskedArray):
         return result.data
     return result
 
 
-@register_numpy_types(numeric.expand_dims)
-def _(a: np.ndarray, axis: Union[int, Tuple[int, ...], List[int]]) -> np.ndarray:
+@numeric.expand_dims.register
+def _(a: T_NUMPY, axis: T_SHAPE) -> T_NUMPY_ARRAY:
     return np.expand_dims(a, axis=axis)
 
 
-@register_numpy_types(numeric.clone)
-def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+@numeric.clone.register
+def _(a: T_NUMPY) -> T_NUMPY:
     return a.copy()
 
 
-@register_numpy_types(numeric.searchsorted)
-def _(a: np.ndarray, v: np.ndarray, side: str = "left", sorter: Optional[np.ndarray] = None) -> np.ndarray:
+@numeric.searchsorted.register
+def _(
+    a: T_NUMPY_ARRAY, v: T_NUMPY_ARRAY, side: Literal["left", "right"] = "left", sorter: Optional[T_NUMPY_ARRAY] = None
+) -> T_NUMPY_ARRAY:
     return np.searchsorted(a, v, side, sorter)
 
 
-@register_numpy_types(numeric.as_numpy_tensor)
-def _(a: np.ndarray) -> np.ndarray:
+@numeric.as_numpy_tensor.register
+def _(a: T_NUMPY_ARRAY) -> T_NUMPY_ARRAY:
     return a
 
 
@@ -402,10 +397,10 @@ def zeros(
     *,
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
-) -> np.ndarray:
+) -> T_NUMPY_ARRAY:
     validate_device(device)
-    dtype = convert_to_numpy_dtype(dtype)
-    return np.zeros(shape, dtype=dtype)
+    np_dtype = convert_to_numpy_dtype(dtype)
+    return np.zeros(shape, dtype=np_dtype)
 
 
 def eye(
@@ -414,10 +409,10 @@ def eye(
     *,
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
-) -> np.ndarray:
+) -> T_NUMPY_ARRAY:
     validate_device(device)
-    dtype = convert_to_numpy_dtype(dtype)
-    return np.eye(n, m, dtype=dtype)
+    np_dtype = convert_to_numpy_dtype(dtype)
+    return np.eye(n, m, dtype=np_dtype)
 
 
 def arange(
@@ -427,28 +422,28 @@ def arange(
     *,
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
-) -> np.ndarray:
+) -> T_NUMPY_ARRAY:
     validate_device(device)
-    dtype = convert_to_numpy_dtype(dtype)
-    return np.arange(start, end, step, dtype=dtype)
+    np_dtype = convert_to_numpy_dtype(dtype)
+    return np.arange(start, end, step, dtype=np_dtype)
 
 
-@register_numpy_types(numeric.log2)
-def _(a: Union[np.ndarray, np.generic]) -> Union[np.ndarray, np.generic]:
+@numeric.log2.register
+def _(a: T_NUMPY) -> T_NUMPY:
     return np.log2(a)
 
 
-@register_numpy_types(numeric.ceil)
-def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+@numeric.ceil.register
+def _(a: T_NUMPY) -> T_NUMPY_ARRAY:
     return np.ceil(a)
 
 
 def tensor(
-    data: Union[TTensor, Sequence[float]],
+    data: Union[TTensor, List[float]],
     *,
     dtype: Optional[TensorDataType] = None,
     device: Optional[TensorDeviceType] = None,
-) -> np.ndarray:
+) -> T_NUMPY_ARRAY:
     validate_device(device)
-    dtype = convert_to_numpy_dtype(dtype)
-    return np.array(data, dtype=dtype)
+    np_dtype = convert_to_numpy_dtype(dtype)
+    return np.array(data, dtype=np_dtype)

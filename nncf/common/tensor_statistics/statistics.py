@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import Counter
-from typing import Any, Dict, TypeVar, cast
+from typing import Any, Dict, TypeVar
 
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -27,7 +27,7 @@ class TensorStatistic(ABC):
 
     @staticmethod
     def tensor_eq(tensor1: Tensor, tensor2: Tensor, rtol: float = 1e-6) -> bool:
-        return cast(bool, fns.allclose(tensor1, tensor2))
+        return fns.allclose(tensor1, tensor2, rtol=rtol)
 
     @abstractmethod
     def __eq__(self, other: Any) -> bool:

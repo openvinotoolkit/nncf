@@ -543,7 +543,9 @@ class OVModelTransformer(ModelTransformer):
         for transformation in transformations:
             node_with_weight = name_to_node_mapping[transformation.target_point.target_node_name]
             OVModelTransformer._set_const_value(
-                node_with_weight, transformation.target_point.port_id, transformation.weight_value  # Weight port id
+                node_with_weight,
+                transformation.target_point.port_id,  # Weight port id
+                transformation.weight_value,
             )
         return model
 

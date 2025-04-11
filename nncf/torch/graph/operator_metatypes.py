@@ -1200,7 +1200,9 @@ OP_NAMES_WITH_WEIGHTS = [x for meta in OPERATORS_WITH_WEIGHTS_METATYPES for x in
 
 QUANTIZE_NODE_TYPES = [
     "symmetric_quantize",
+    "symmetric_quantize_lora",
     "asymmetric_quantize",
+    "asymmetric_quantize_lora",
     "quantize_per_tensor",
     "dequantize_per_tensor",
     "quantize_per_channel",
@@ -1217,3 +1219,5 @@ OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     PTModuleEmbeddingBagMetatype,
     PTModuleEmbeddingMetatype,
 ]
+
+MATMUL_METATYPES = [PTLinearMetatype, PTMatMulMetatype, PTAddmmMetatype]
