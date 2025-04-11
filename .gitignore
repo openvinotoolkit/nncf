@@ -126,6 +126,7 @@ examples/**/*.onnx
 examples/**/statistics
 examples/**/runs
 examples/**/results
+examples/**/output
 examples/**/metrics.json
 datasets/**
 
