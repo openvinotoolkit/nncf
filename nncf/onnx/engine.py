@@ -15,7 +15,7 @@ import numpy as np
 import onnxruntime as rt
 
 from nncf.common.engine import Engine
-from nncf.onnx.graph.model_utils import ONNXModel
+from nncf.onnx.model import ONNXModel
 
 
 class ONNXEngine(Engine):

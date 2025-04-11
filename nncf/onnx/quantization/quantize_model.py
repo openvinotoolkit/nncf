@@ -18,7 +18,7 @@ from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
-from nncf.onnx.graph.model_utils import ONNXModel
+from nncf.onnx.model import ONNXModel
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.parameters import DropType
 from nncf.parameters import ModelType

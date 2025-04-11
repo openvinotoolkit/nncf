@@ -19,7 +19,7 @@ import nncf
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.onnx.graph.model_utils import ONNXModel
+from nncf.onnx.model import ONNXModel
 from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.onnx_helper import get_children
 from nncf.onnx.graph.onnx_helper import get_children_node_mapping
