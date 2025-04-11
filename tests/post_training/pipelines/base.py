@@ -414,7 +414,7 @@ class PTQTestPipeline(BaseTestPipeline):
         reference_data,
         no_eval,
         run_benchmark_app,
-        torch_compile_validation=False,
+        torch_compile_validation=True,
         params=None,
         batch_size=1,
         memory_monitor=False,
@@ -496,9 +496,9 @@ class PTQTestPipeline(BaseTestPipeline):
                 xml_file = file
         if bin_file is None or xml_file is None:
             return
-        bin_new_path = folder_path / f'{new_name}.bin'
-        xml_new_path = folder_path / f'{new_name}.xml'
-        
+        bin_new_path = folder_path / f"{new_name}.bin"
+        xml_new_path = folder_path / f"{new_name}.xml"
+
         os.rename(os.path.join(model_folder, bin_file), bin_new_path)
         os.rename(os.path.join(model_folder, xml_file), xml_new_path)
 
@@ -525,9 +525,13 @@ class PTQTestPipeline(BaseTestPipeline):
             # ov.serialize(ov_model, self.path_compressed_ir)
             # TODO Remove after Issue - 162009
             torch.export.save(exported_model, self.output_model_dir / "model.pt2")
-            mod = torch.compile(exported_model.module(), backend="openvino", options = {"model_caching" : True, "cache_dir": str(self.output_model_dir)})
+            mod = torch.compile(
+                exported_model.module(),
+                backend="openvino",
+                options={"model_caching": True, "cache_dir": str(self.output_model_dir)},
+            )
             mod(self.dummy_tensor)
-            self._rename_files(self.output_model_dir, 'model')
+            self._rename_files(self.output_model_dir, "model")
 
             if self.backend == BackendType.CUDA_FX_TORCH:
                 self.model = self.model.cuda()

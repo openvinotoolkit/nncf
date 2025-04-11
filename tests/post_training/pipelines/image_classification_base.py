@@ -94,7 +94,7 @@ class ImageClassificationBase(PTQTestPipeline):
         predictions = np.zeros(dataset_size)
         references = -1 * np.ones(dataset_size)
 
-        if self.backend in FX_BACKENDS:
+        if self.backend in FX_BACKENDS and self.torch_compile_validation:
             predictions, references = self._validate_torch_compile(val_loader, predictions, references)
         else:
             predictions, references = self._validate_ov(val_loader, predictions, references, dataset_size)
