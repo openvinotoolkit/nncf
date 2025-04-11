@@ -26,7 +26,7 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
+from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
 from nncf.experimental.common.tensor_statistics.collectors import MaxVarianceReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
@@ -233,7 +233,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph, weight: Tensor
     ):
-        if is_experimental_torch_tracing_enabled():
+        if is_torch_tracing_by_torch_function_mode():
             weight_node = get_const_node(node_with_weight, weight_port_id, graph)
             module_name, weight_attr_name = split_const_name(weight_node.layer_attributes.name)
             module = get_module_by_name(module_name, model.model)
@@ -359,7 +359,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         target_node_name = wc_params.weight_name
         target_point = PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=target_node_name)
 
-        if is_experimental_torch_tracing_enabled():
+        if is_torch_tracing_by_torch_function_mode():
             return PT2InsertionCommand([target_point], quantizer)
         else:
             storage_key = "FQ_LORA_{}".format(target_node_name.replace(".", "_"))
@@ -439,7 +439,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight.requires_grad = False
         weight.data = packed_tensor
 
-        if is_experimental_torch_tracing_enabled():
+        if is_torch_tracing_by_torch_function_mode():
             return PT2InsertionCommand(
                 [
                     PTTargetPoint(
@@ -559,7 +559,7 @@ class PTAWQAlgoAlgoBackend(AWQAlgoBackend, PTWeightCompressionAlgoBackend):
         sq_multiply = SQMultiply(scale.shape)
         sq_multiply.scale = scale
 
-        if is_experimental_torch_tracing_enabled():
+        if is_torch_tracing_by_torch_function_mode():
             return PT2InsertionCommand(target_points, sq_multiply)
         scale_node_name = f"{source_node.node_name}/awq_mul"
         return PTSharedFnInsertionCommand(target_points, sq_multiply, scale_node_name)
