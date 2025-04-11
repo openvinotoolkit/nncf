@@ -9,6 +9,7 @@ on:
       - synchronize
     paths-ignore:
       - '**/*.md'
+      - '.ci/*'
       - 'docs/**/*'
       - 'tests/post_training/*'  # post_training tests runs on Jenkins
       - 'tests/torch/sota_checkpoints_eval.json'  # reference for PT e2e
