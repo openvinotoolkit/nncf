@@ -330,7 +330,7 @@ class FXAWQAlgoAlgoBackend(AWQAlgoBackend, FXWeightCompressionAlgoBackend):
         for node in next_nodes:
             target_points.append(
                 PTTargetPoint(
-                    PTWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[TargetType.PRE_LAYER_OPERATION],
+                    TargetType.OPERATOR_PRE_HOOK,
                     node.node_name,
                     input_port_id=input_port_id,
                 )
