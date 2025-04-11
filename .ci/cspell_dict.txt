@@ -340,6 +340,7 @@ ptnncf
 ptprelu
 ptrelu
 ptsilu
+ptwc
 pymodules
 pymoo
 pyopenvino
@@ -370,6 +371,7 @@ qtype
 quantizability
 quantizable
 qval
+qwen
 rademacher
 randn
 rankdir
