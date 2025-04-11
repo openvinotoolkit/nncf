@@ -12,6 +12,9 @@
 import pytest
 import torch
 
+import nncf
+from nncf.torch import create_compressed_model
+
 
 def test_patching():
     # Check that patching torch functions is disabled
@@ -19,3 +22,8 @@ def test_patching():
 
     with pytest.raises(AttributeError):
         getattr(torch.relu, "_original_op")
+
+
+def test_create_compressed_model_error():
+    with pytest.raises(nncf.InternalError, match="NNCF_TORCH_LEGACY_TRACING=1"):
+        create_compressed_model(None, {})

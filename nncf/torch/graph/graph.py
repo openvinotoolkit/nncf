@@ -17,7 +17,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
+from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
 from nncf.experimental.torch2.function_hook.graph.graph_utils import TensorMeta
 from nncf.experimental.torch2.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
 from nncf.torch.dynamic_graph.scope import Scope
@@ -106,7 +106,7 @@ class PTNNCFGraph(NNCFGraph):
         :return: List of NNCFNodes that are identified as disconnected.
         """
         input_nodes = set()
-        if is_experimental_torch_tracing_enabled():
+        if is_torch_tracing_by_torch_function_mode():
             # Check expected number of input edges by counting TensorMeta in op_args and op_kwargs.
             for node in self.get_all_nodes():
                 input_edges = len(self.get_input_edges(node))

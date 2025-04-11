@@ -27,7 +27,7 @@ from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.extractors import has_input_info_field
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
+from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
 from nncf.experimental.torch2.function_hook.serialization import get_config as pt2_get_config
 from nncf.experimental.torch2.function_hook.serialization import load_from_config as pt2_load_from_config
 from nncf.telemetry import tracked_function
@@ -44,6 +44,7 @@ from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.io_handling import LoaderInputInfo
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
+from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
 from nncf.torch.graph.transformations.serialization import deserialize_transformations
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
@@ -115,6 +116,13 @@ def create_compressed_model(
         " - https://github.com/openvinotoolkit/nncf/tree/develop/examples/post_training_quantization/torch\n"
         " - https://github.com/openvinotoolkit/nncf/tree/develop/examples/quantization_aware_training/torch"
     )
+
+    if not PATCHING_STATE.operators_are_wrapped:
+        msg = (
+            "The PyTorch operators are not wrapped. "
+            "To run create_compressed_model set NNCF_TORCH_LEGACY_TRACING=1 environment variable."
+        )
+        raise nncf.InternalError(msg)
 
     if isinstance(model, NNCFNetwork):
         msg = (
@@ -353,7 +361,7 @@ def wrap_model(
     :param trace_parameters: Whether to trace model parameters. Default is False.
     :return: A model wrapped by NNCFNetwork or GraphModelWrapper if experimental PyTorch model tracing is enabled.
     """
-    if is_experimental_torch_tracing_enabled():
+    if is_torch_tracing_by_torch_function_mode():
         if not trace_parameters:
             msg = "The 'trace_parameters=False' option is not supported in the experimental tracing mode."
             raise nncf.InternalError(msg)
@@ -411,7 +419,7 @@ def load_from_config(model: Module, config: Dict[str, Any], example_input: Optio
         of keywords arguments. Required with enabled legacy tracing mode.
     :return: Wrapped model with additional modules recovered from given config.
     """
-    if is_experimental_torch_tracing_enabled():
+    if is_torch_tracing_by_torch_function_mode():
         return pt2_load_from_config(model, config)
 
     if example_input is None:
@@ -436,6 +444,6 @@ def get_config(model: Module) -> Dict[str, Any]:
     :param model: The compressed model.
     :return: The configuration object of the compressed model.
     """
-    if is_experimental_torch_tracing_enabled():
+    if is_torch_tracing_by_torch_function_mode():
         return pt2_get_config(model)
     return model.nncf.get_config()

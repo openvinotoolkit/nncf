@@ -24,7 +24,7 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
+from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
 from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.torch2.commands import PT2InsertionCommand
@@ -154,7 +154,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
             input_port_id = None
         if (
-            not is_experimental_torch_tracing_enabled()
+            not is_torch_tracing_by_torch_function_mode()
             and target_type in PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP
         ):
             target_type = PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]
@@ -281,7 +281,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = PTMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_point.target_type
         )
-        if is_experimental_torch_tracing_enabled():
+        if is_torch_tracing_by_torch_function_mode():
             return PT2InsertionCommand(target_points=[target_point], hook_module=quantizer)
 
         return create_quantizer_insertion_command(target_point, quantizer)
@@ -300,7 +300,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = PTMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_points[0].target_type
         )
-        if is_experimental_torch_tracing_enabled():
+        if is_torch_tracing_by_torch_function_mode():
             return [PT2InsertionCommand(target_points=target_points, hook_module=quantizer)]
         return [create_shared_quantizer_insertion_command(target_points, quantizer)]
 

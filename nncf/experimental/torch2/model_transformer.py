@@ -28,6 +28,8 @@ from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import set_const_data
 from nncf.torch.model_graph_manager import update_fused_bias
+from nncf.torch.utils import get_model_device
+from nncf.torch.utils import is_multidevice
 
 TRANSFORMATION_PAIRS = Tuple[Tuple[Type[Any], Callable[[GraphModelWrapper, List[Any]], GraphModelWrapper]], ...]
 
@@ -84,10 +86,17 @@ class PT2ModelTransformer(ModelTransformer[GraphModelWrapper]):
         :param wrapped_model: Model to apply transformations.
         :param command: Insertion transformation command.
         """
+        device = None
+        if not is_multidevice(self._model.model):
+            device = get_model_device(self._model.model)
+
         for command in transformations:
             target_points = command.target_points
             hook_module = command.hook_module
             handle_storage = command.handle_storage
+
+            if device is not None:
+                hook_module.to(device)
 
             for target_point in target_points:
                 handle = insert_hook(wrapped_model.model, hook_module, target_point)

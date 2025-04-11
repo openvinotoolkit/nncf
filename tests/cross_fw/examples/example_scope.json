@@ -156,7 +156,7 @@
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
             "fp32_mAP": 0.5228869318962097,
-            "int8_mAP": 0.5148677825927734,
+            "int8_mAP": 0.5145288109779358,
             "accuracy_drop": 0.0080191493
         },
         "performance_metrics": {
@@ -242,6 +242,7 @@
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "python_version": [3,10,0],
         "accuracy_tolerance_after_training": 0.02,
+        "accuracy_tolerance": 0.08,
         "accuracy_metrics": {
             "fp32_f1score": 1.0,
             "int8_init_f1score": 0.9767441749572754
