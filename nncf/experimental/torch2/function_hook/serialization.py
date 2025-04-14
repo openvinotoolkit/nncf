@@ -15,10 +15,13 @@ from weakref import WeakKeyDictionary
 from torch import nn
 
 import nncf
+from nncf.common.logging import nncf_logger
 from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import StatefulModuleInterface
+from nncf.torch.utils import get_model_device
+from nncf.torch.utils import is_multidevice
 
 COMPRESSION_STATE_ATTR = "compression_state"
 TModel = TypeVar("TModel", bound=nn.Module)
@@ -98,9 +101,17 @@ def load_from_config(model: TModel, config: Dict[str, Any]) -> TModel:
     wrapped_model = wrap_model(model)
     hook_storage = get_hook_storage(wrapped_model)
     transformation_commands = cast(List[S_COMMAND], config[COMPRESSION_STATE_ATTR])
+
+    device = None
+    if not is_multidevice(wrapped_model):
+        device = get_model_device(wrapped_model)
+    else:
+        nncf_logger.warning("Model is on multiple devices. Cannot determine device for loaded modules.")
+
     for command in transformation_commands:
         module_cls = COMPRESSION_MODULES.get(command["module_cls_name"])
         module = module_cls.from_config(command["module_config"])
+        module.to(device)
         for target_name in command["hook_names_in_model"]:
             hook_type, hook_key, hook_id = target_name.split(".")
             storage_dict = getattr(hook_storage, hook_type)

@@ -54,9 +54,6 @@ def pytest_configure(config: Config) -> None:
     if nncf_debug:
         set_log_level(logging.DEBUG)
 
-    # Disable patching of torch functions
-    os.environ["NNCF_EXPERIMENTAL_TORCH_TRACING"] = "1"
-
 
 @pytest.fixture
 def regen_ref_data(request: FixtureRequest):

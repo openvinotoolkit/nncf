@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 import torch
+from networkx.drawing.nx_pydot import to_pydot
 from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
 from sentence_transformers import SentenceTransformer
@@ -23,22 +24,25 @@ from transformers import AutoTokenizer
 import nncf
 from nncf.data.dataset import Dataset
 from nncf.errors import ValidationError
+from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
 from nncf.torch import load_from_config
+from nncf.torch.model_creation import get_config
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.quantization.layers import AsymmetricQuantizer as AQ
 from nncf.torch.quantization.layers import LoraMixin
 from nncf.torch.quantization.layers import SymmetricQuantizer as SQ
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.ptq.test_weights_compression import ShortTransformer
-from tests.torch.test_compressed_graph import check_graph
 from tests.torch.test_models.synthetic import LinearModel
+from tests.torch2.utils import compare_with_reference_file
+from tests.torch2.utils import to_comparable_nx_graph
 
-REFERENCE_GRAPH_DIR = TEST_ROOT / "torch" / "data" / "reference_graphs" / "compress_weights" / "fq_lora"
+REF_DIR = TEST_ROOT / "torch2" / "data" / "reference_graphs" / "compress_weights" / "fq_lora"
 
 
 class ValidationMock:
@@ -98,17 +102,16 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
     device = "cuda"
     model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map=device)
     tokenizer = AutoTokenizer.from_pretrained(model_id)
-    inputs = tokenizer("overfit " * 10, return_tensors="pt").to(device)
+    example_inputs = dict(tokenizer("overfit " * 10, return_tensors="pt").to(device))
 
-    except_lm_head_and_5th_vproj = (
-        r"^(?!.*(OPTDecoderLayer\[5\]/OPTSdpaAttention\[self_attn\]/Linear\[v_proj\]/l|lm_head).*$).*$"
-    )
+    except_lm_head_and_5th_vproj = r"^(?!(self_attn/v_proj/linear/5|lm_head/linear/0)$).*"
+
     model = nncf.compress_weights(
         model,
         group_size=64,
         mode=mode,
         backup_mode=backup_mode,
-        dataset=nncf.Dataset([dict(inputs)]),
+        dataset=nncf.Dataset([example_inputs]),
         compression_format=nncf.CompressionFormat.FQ_LORA,
         ignored_scope=nncf.IgnoredScope(patterns=[except_lm_head_and_5th_vproj]),
         **compression_kwargs,
@@ -126,9 +129,9 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
     model_kwargs = dict(
-        input_ids=inputs["input_ids"][:, :-1],
-        attention_mask=inputs["attention_mask"][:, :-1],
-        labels=inputs["input_ids"][:, 1:],
+        input_ids=example_inputs["input_ids"][:, :-1],
+        attention_mask=example_inputs["attention_mask"][:, :-1],
+        labels=example_inputs["input_ids"][:, 1:],
     )
     for i in range(5):
         optimizer.zero_grad()
@@ -150,7 +153,7 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
         # Workaround till export from the optimum would be fixed - CVS-164159
         model = model.to(torch.float32)
 
-        model = nncf.strip(model, do_copy=False, strip_format=StripFormat.DQ)
+        model = nncf.strip(model, do_copy=False, strip_format=StripFormat.DQ, example_input=example_inputs)
         stripped_output = generate_control_output(model, tokenizer)
 
         model = get_ov_model(model, tmp_path)
@@ -167,26 +170,26 @@ def test_fq_lora_tuning(tmp_path, mode, backup_mode, compression_kwargs, ref_num
 
 def test_checkpoint_loading(tmp_path: Path, use_cuda: bool):
     device = "cuda" if use_cuda else "cpu"
-    model = ShortTransformer(8, 16, share_weights=False).to(device)
-    example_input = torch.randint(0, 10, (8,)).to(device)
+    model = ShortTransformer(8, 16, share_weights=True).to(device)
+    input_ids = torch.randint(0, 10, (8,)).to(device)
 
     model = compress_weights(
         model,
         group_size=4,
         mode=CompressWeightsMode.INT4_ASYM,
         backup_mode=CompressWeightsMode.INT8_ASYM,
-        dataset=Dataset([example_input]),
+        dataset=Dataset([input_ids]),
         compression_format=CompressionFormat.FQ_LORA,
         advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=2),
     )
     with torch.no_grad():
-        ref_output = model(example_input)
+        ref_output = model(input_ids)
 
     # save checkpoint
     ckpt_path = tmp_path / "nncf_ckpt.pth"
     torch.save(
         {
-            "nncf_config": model.nncf.get_config(),
+            "nncf_config": get_config(model),
             "model_state_dict": model.state_dict(),
         },
         ckpt_path,
@@ -195,12 +198,12 @@ def test_checkpoint_loading(tmp_path: Path, use_cuda: bool):
 
     # load checkpoint
     nncf_ckpt = torch.load(ckpt_path, weights_only=False)
-    model = ShortTransformer(8, 16, share_weights=False).to(device)
-    model = load_from_config(model, nncf_ckpt["nncf_config"], example_input=example_input)
+    model = ShortTransformer(8, 16, share_weights=True).to(device)
+    model = load_from_config(model, nncf_ckpt["nncf_config"], example_input=input_ids)
     model.load_state_dict(nncf_ckpt["model_state_dict"])
 
     with torch.no_grad():
-        actual_output = model(example_input)
+        actual_output = model(input_ids)
     assert torch.all(actual_output == ref_output)
 
 
@@ -220,7 +223,7 @@ def test_invalid_lora_rank():
 
 
 @pytest.mark.parametrize("all_layers", [True, False])
-def test_compress_shared_weights(mocker, all_layers):
+def test_compress_shared_weights(all_layers, regen_ref_data):
     model = ShortTransformer(8, 16, share_weights=True)
 
     input_ids = torch.randint(0, 10, (8,))
@@ -234,15 +237,8 @@ def test_compress_shared_weights(mocker, all_layers):
         compression_format=CompressionFormat.FQ_LORA,
         advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=4),
     )
-    nncf_graph = compressed_model.nncf.get_graph()
-    filename = f"shared_weights_all_layers_{all_layers}.dot"
-    check_graph(nncf_graph, filename, REFERENCE_GRAPH_DIR, extended=True)
-
-    assert len(compressed_model.nncf.external_quantizers) == 2
-    # check that the weight decompressors are called only once
-    # for val in compressed_model.nncf.external_quantizers.values():
-    for val in compressed_model.nncf.external_quantizers.values():
-        mocker.spy(val, "forward")
-    compressed_model(input_ids)
-    for val in compressed_model.nncf.external_quantizers.values():
-        assert val.forward.call_count == 1
+    nncf_graph = build_nncf_graph(compressed_model, example_input=input_ids)
+    nx_graph = to_comparable_nx_graph(nncf_graph)
+    dot_nncf_graph = to_pydot(nx_graph)
+    ref_file = REF_DIR / f"shared_weights_all_layers_{all_layers}.dot"
+    compare_with_reference_file(str(dot_nncf_graph), ref_file, regen_ref_data)
