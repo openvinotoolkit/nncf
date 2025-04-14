@@ -221,8 +221,9 @@ def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, Any]
     mode = accuracy_aware_training_config.get("mode")
     params = {"mode": mode}
 
-    aat_params = accuracy_aware_training_config.get("params", {})
-    params.update({param_key: param_val for param_key, param_val in aat_params.items()})
+    if accuracy_aware_training_config.get("params") is not None:
+        for param_key, param_val in accuracy_aware_training_config.get("params").items():
+            params[param_key] = param_val
 
     validate_accuracy_aware_schema(config, params)
 

@@ -220,7 +220,8 @@ class NormalizedKeys:
             if len(list_orig_keys) == 1:
                 unique_clipped_key_vs_orig_key_map[clipped_key] = list_orig_keys[0]
             else:
-                unique_clipped_key_vs_orig_key_map.update({orig_key: orig_key for orig_key in list_orig_keys})
+                for orig_key in list_orig_keys:
+                    unique_clipped_key_vs_orig_key_map[orig_key] = orig_key
         return unique_clipped_key_vs_orig_key_map, ignored_keys
 
     @staticmethod
