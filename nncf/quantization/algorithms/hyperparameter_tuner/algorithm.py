@@ -14,7 +14,7 @@ import dataclasses
 import functools
 import itertools
 import operator
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, TypeVar, Union
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -220,7 +220,7 @@ class HyperparameterTuner:
     def __init__(
         self,
         pipeline_fn: Callable[..., Pipeline],
-        init_params: Dict[str, Any],
+        init_params: Mapping[str, Any],
         param_grids: List[Dict[str, List[Any]]],
         calibration_dataset: Dataset,
         validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
