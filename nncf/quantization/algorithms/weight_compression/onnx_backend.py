@@ -64,6 +64,11 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         self.name_to_node_map = get_name_to_node_map(model)
 
     def _get_weight_dtype(self, mode: CompressWeightsMode) -> onnx.TensorProto.DataType:
+        """
+        Returns the ONNX data type corresponding to the specified compression mode.
+        :param mode: The compression mode.
+        :return: The ONNX data type.
+        """
         dtype = self.MODE_TO_WEIGHT_DTYPE.get(mode)
         if dtype is None:
             msg = f"{mode.value} is not supported."
@@ -77,6 +82,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         Helper function to preprocess the tensor shapes for the compressed weight tensors to ONNX shapes expectations.
         The function reshapes the weight tensor and squeezes the scale and zero point tensors based on the
         dequantize_block_size parameter.
+
         :param compressed_weight: The compressed weight tensor.
         :param weight_shape: The original shape of the weight tensor.
         :param dequantize_block_size: The block size for dequantization.
