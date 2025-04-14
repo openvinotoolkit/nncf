@@ -647,7 +647,6 @@ def compress_weights(
         if dataset:
             msg = "ONNX only supports data-free weights compression. Set the 'dataset' option to None"
             raise nncf.ParameterNotSupportedError(msg)
-        dataset = None
         if advanced_parameters and advanced_parameters.statistics_path:
             msg = "ONNX does not supports statistics caching."
             raise nncf.ParameterNotSupportedError(msg)
