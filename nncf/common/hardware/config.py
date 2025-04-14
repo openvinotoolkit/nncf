@@ -8,14 +8,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 from abc import ABC
 from abc import abstractmethod
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Type
-
-import jstyleson as json  # type: ignore[import-untyped]
 
 import nncf
 from nncf.common.graph.operator_metatypes import OperatorMetatype

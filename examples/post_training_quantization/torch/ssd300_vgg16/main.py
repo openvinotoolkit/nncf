@@ -25,7 +25,6 @@ from fastdownload import FastDownload
 from PIL import Image
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchvision.models.detection.ssd import SSD
-from torchvision.models.detection.ssd import GeneralizedRCNNTransform
 from torchvision.models.detection.anchor_utils import DefaultBoxGenerator
 from rich.progress import track
 from functools import partial
@@ -141,7 +140,6 @@ def main():
     model.eval()
 
     # Disable NNCF tracing for some methods in order for the model to be properly traced by NNCF
-    disable_tracing(GeneralizedRCNNTransform.normalize)
     disable_tracing(SSD.postprocess_detections)
     disable_tracing(DefaultBoxGenerator.forward)
 

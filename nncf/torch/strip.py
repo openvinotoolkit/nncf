@@ -14,7 +14,7 @@ from copy import deepcopy
 from typing import Any, Optional
 
 import nncf
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
+from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
 from nncf.parameters import StripFormat
 from nncf.torch.nncf_network import NNCFNetwork
 
@@ -35,7 +35,7 @@ def strip(
     :param example_input: An example input tensor to be used for tracing the model.
     :return: The stripped model.
     """
-    if is_experimental_torch_tracing_enabled():
+    if is_torch_tracing_by_torch_function_mode():
         from nncf.experimental.torch2.function_hook.strip import strip_quantized_model
 
         if example_input is None:
