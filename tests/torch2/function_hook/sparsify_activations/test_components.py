@@ -29,8 +29,8 @@ from tests.common.test_ignored_scope import IGNORED_SCOPES_TEST_DATA
 from tests.common.test_ignored_scope import LINEAR_TYPE
 from tests.common.test_ignored_scope import WRONG_IGNORED_SCOPES_TEST_DATA
 from tests.common.test_ignored_scope import NNCFGraphToTestIgnoredScope
-from tests.torch.experimental.sparsify_activations.helpers import ThreeLinearModel
-from tests.torch.experimental.sparsify_activations.helpers import convert_ignored_scope_to_target_scope
+from tests.torch2.function_hook.sparsify_activations.helpers import ThreeLinearModel
+from tests.torch2.function_hook.sparsify_activations.helpers import convert_ignored_scope_to_target_scope
 
 
 @dataclass
