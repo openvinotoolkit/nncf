@@ -197,7 +197,6 @@ inputless
 interp
 ioff
 iterval
-jstyleson
 junitxml
 keepdim
 keepdims
@@ -222,9 +221,9 @@ logicalor
 logicalxor
 logit
 loglikelihoods
+lspec
 lstmsequence
 lstsq
-lspec
 lyalyushkin
 mapillary
 maskrcnn
@@ -322,6 +321,7 @@ ovlstm
 ovmvn
 ovroi
 pbar
+perchannel
 pertensor
 pinv
 popleft
@@ -342,6 +342,7 @@ ptnncf
 ptprelu
 ptrelu
 ptsilu
+ptwc
 pymodules
 pymoo
 pyopenvino
@@ -372,6 +373,7 @@ qtype
 quantizability
 quantizable
 qval
+qwen
 rademacher
 randn
 rankdir

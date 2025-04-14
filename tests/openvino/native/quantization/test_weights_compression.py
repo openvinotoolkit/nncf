@@ -30,6 +30,7 @@ from nncf.common.utils.debug import nncf_debug
 from nncf.common.utils.helpers import set_env_variable
 from nncf.data.dataset import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
+from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.parameters import BackupMode
@@ -43,7 +44,9 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_normalized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_int_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_nf4_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
@@ -975,8 +978,6 @@ def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
     compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, gptq=True, scale_estimation=True)
 
 
-# TODO(andreyanufr) Waiting for the e2m1 in OV release
-@pytest.mark.xfail
 @pytest.mark.parametrize(
     ("mode", "all_layers", "ratio", "ref_ids"),
     (
@@ -1000,7 +1001,7 @@ def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
 )
 def test_mixed_precision_e2m1(mode, all_layers, ratio, ref_ids):
     model = SequentialMatmulModel().ov_model
-    dataset = Dataset([np.ones([1, 4, 4]), np.arange(16).reshape(4, 4)])
+    dataset = Dataset([np.ones([1, 4, 4]), np.arange(16).reshape(1, 4, 4)])
     compressed_model = compress_weights(
         model,
         mode=CompressWeightsMode.E2M1,
@@ -1485,6 +1486,10 @@ def test_compression_with_transposed_activations(kwargs):
         )
 
 
+@pytest.mark.xfail(
+    is_arm_cpu(),
+    reason="Due to a bug in CPU plugin compression models can fail at compilation on ARM CPUs. Ticket: 164135.",
+)
 @pytest.mark.parametrize("disabled", [False, True])
 def test_disabled_optimized_compression(disabled):
     model = LMLinearModel().ov_model
@@ -1502,6 +1507,22 @@ def test_disabled_optimized_compression(disabled):
         else:
             run_compression()
             mock.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "weight,scale", [(np.array([-0.07263] * 2, np.float16), np.array([0.08564102] * 2, np.float32))]
+)
+def test_nf4_quantization_mid_quant(weight, scale):
+    weight = Tensor(weight)
+    scale = Tensor(scale)
+    # norm_weight equals -0.8480964 (one bit away from the first NF4 quantile center)
+    norm_weight = calculate_normalized_weight(weight, scale)
+    nf4_quant = do_nf4_quantization(norm_weight, scale, is_normalized_weight=True)
+
+    norm_weight_ov_backend = Tensor(ov.Tensor(norm_weight.data, norm_weight.shape, ov.Type.f32))
+    ref_nf4_quant = norm_weight_ov_backend.astype(TensorDataType.nf4).as_numpy_tensor()
+
+    np.testing.assert_allclose(nf4_quant.data, ref_nf4_quant.data, atol=0, rtol=0)
 
 
 class TestOVTemplateWeightCompression(TemplateWeightCompression):

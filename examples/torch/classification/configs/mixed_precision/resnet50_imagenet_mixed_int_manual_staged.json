@@ -28,11 +28,6 @@
         "initializer": {
             "precision": {
                 "type": "manual",
-                // [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
-                // Acc@1 76.58%
-                // | num_bits | % weights | % activations | % total |
-                //| 8        | 21.600    | 28.000        | 49.600  |
-                //| 4        | 21.600    | 28.800        | 50.400  |
                 "bitwidth_per_scope": [
                     [8, "ResNet/NNCFConv2d[conv1]/conv2d_0|WEIGHT"],
                     [4, "ResNet/NNCFLinear[fc]/linear_0|WEIGHT"],

@@ -88,7 +88,7 @@ def quantize_impl(
 
 def compress_weights_impl(
     model: Union[GraphModelWrapper, torch.nn.Module],
-    dataset: Dataset,
+    dataset: Optional[Dataset],
     mode: CompressWeightsMode,
     ratio: float,
     group_size: int,

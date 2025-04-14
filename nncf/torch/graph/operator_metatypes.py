@@ -22,7 +22,7 @@ from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
-from nncf.experimental.common.check_feature import is_experimental_torch_tracing_enabled
+from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 
@@ -76,7 +76,7 @@ class PTOperatorMetatype(OperatorMetatype):
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         output = set()
-        for _, function_names in cls.module_to_function_names.items():
+        for function_names in cls.module_to_function_names.values():
             output = output.union(function_names)
         if cls.external_op_names is not None:
             output = output.union(cls.external_op_names)
@@ -729,7 +729,7 @@ class PTBatchNormMetatype(PTOperatorMetatype):
     }
     subtypes = [PTModuleBatchNormMetatype]
 
-    if is_experimental_torch_tracing_enabled():
+    if is_torch_tracing_by_torch_function_mode():
         # torch.batch_norm
         weight_port_ids = [1]
         bias_port_id = 2

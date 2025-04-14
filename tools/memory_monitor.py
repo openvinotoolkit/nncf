@@ -350,7 +350,7 @@ if __name__ == "__main__":
         description="Memory Monitor Tool. Monitors memory for an executable and saves logs at specified location.",
         epilog="Examples:\n"
         "   python memory_monitor.py --log-dir ./allocation_logs python allocate.py\n"
-        "   python memory_monitor.py optimum-cli export openvino ...",
+        '   python memory_monitor.py "optimum-cli export openvino ..."',
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument(
