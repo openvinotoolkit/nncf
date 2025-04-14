@@ -362,12 +362,11 @@ class QuantizerSetupBase:
                 translated_id_set = set(
                     this_qp_id_to_other_qp_id_dict[this_qp_id] for this_qp_id in this_same_input_group_set
                 )
+                matches = []
 
-                matches = [
-                    other_shared_inputs_group
-                    for other_shared_inputs_group in second.shared_input_operation_set_groups.values()
-                    if translated_id_set == other_shared_inputs_group
-                ]
+                for other_shared_inputs_group in second.shared_input_operation_set_groups.values():
+                    if translated_id_set == other_shared_inputs_group:
+                        matches.append(other_shared_inputs_group)
                 if not matches:
                     return False
                 assert len(matches) == 1  # shared inputs group entries should be present in only one group
@@ -378,11 +377,10 @@ class QuantizerSetupBase:
                 translated_id_set = set(
                     this_qp_id_to_other_qp_id_dict[this_qp_id] for this_qp_id in this_unified_scales_group
                 )
-                matches = [
-                    other_unified_scales_group
-                    for other_unified_scales_group in second.unified_scale_groups.values()
-                    if translated_id_set == other_unified_scales_group
-                ]
+                matches = []
+                for other_unified_scales_group in second.unified_scale_groups.values():
+                    if translated_id_set == other_unified_scales_group:
+                        matches.append(other_unified_scales_group)
                 if not matches:
                     return False
                 assert len(matches) == 1  # unified scale group entries should be present in only one group

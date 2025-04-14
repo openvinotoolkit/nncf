@@ -429,7 +429,9 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                     else:
                         non_tensor_inputs.append(input_obj)
 
-                traced_tensor_inputs.extend(i for i in traced_parameter_inputs if i.tensor_meta is not None)
+                for i in traced_parameter_inputs:
+                    if i.tensor_meta is not None:
+                        traced_tensor_inputs.append(i)
 
                 for i in traced_tensor_inputs:
                     creator_id = i.tensor_meta.creator_id
@@ -550,7 +552,9 @@ class NodeManager:
         result = []
         for pairs in input_comparators_per_scope:
             comparator, scopes = pairs
-            result.extend(comparator for scope in scopes if scope in str(op_address))
+            for scope in scopes:
+                if scope in str(op_address):
+                    result.append(comparator)
         return result
 
     def find_node(

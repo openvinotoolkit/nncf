@@ -97,7 +97,9 @@ class PrunedModelStatistics(Statistics):
         )
 
         header = ["Layer's name", "Weight's shape", "Mask's shape", "Filter pruning level"]
-        rows = [[s.name, s.weight_shape, s.mask_shape, s.filter_pruning_level] for s in self.pruned_layers_summary]
+        rows = []
+        for s in self.pruned_layers_summary:
+            rows.append([s.name, s.weight_shape, s.mask_shape, s.filter_pruning_level])
 
         layers_string = create_table(header, rows)
 

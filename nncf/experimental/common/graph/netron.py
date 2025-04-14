@@ -214,14 +214,15 @@ def get_graph_desc(
                 )
             )
 
-        outputs = [
-            PortDesc(
-                port_id=str(edge.output_port_id),
-                precision=convert_nncf_dtype_to_ov_dtype(edge.dtype),
-                shape=edge.tensor_shape,
+        outputs = []
+        for edge in graph.get_output_edges(node):
+            outputs.append(
+                PortDesc(
+                    port_id=str(edge.output_port_id),
+                    precision=convert_nncf_dtype_to_ov_dtype(edge.dtype),
+                    shape=edge.tensor_shape,
+                )
             )
-            for edge in graph.get_output_edges(node)
-        ]
 
         nodes.append(
             NodeDesc(

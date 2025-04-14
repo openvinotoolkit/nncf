@@ -685,10 +685,9 @@ class OVModelTransformer(ModelTransformer):
         :returns: Transformed model.
         """
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
-        outputs = [
-            OVModelTransformer._insert_inplace_operation(transformation, name_to_node_mapping)
-            for transformation in transformations
-        ]
+        outputs = []
+        for transformation in transformations:
+            outputs.append(OVModelTransformer._insert_inplace_operation(transformation, name_to_node_mapping))
         return OVModelTransformer._insert_outputs(model, outputs)
 
     @staticmethod

@@ -150,7 +150,10 @@ class GPTQ:
             self._set_backend_entity(model)
 
         matmul_metatypes = self._backend_entity.matmul_metatypes
-        filtered_nodes = [node for node in target_nodes if node.metatype in matmul_metatypes]
+        filtered_nodes = []
+        for node in target_nodes:
+            if node.metatype in matmul_metatypes:
+                filtered_nodes.append(node)
 
         return self._layerwise_engine.get_statistic_points(model, graph, filtered_nodes)
 

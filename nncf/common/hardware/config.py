@@ -199,9 +199,9 @@ class HWConfig(list[Dict[str, Any]], ABC):
             else:
                 allowed_qconfs = []
 
-            qconf_list_with_possible_duplicates = [
-                self.get_qconf_from_hw_config_subdict(hw_config_qconf_dict) for hw_config_qconf_dict in allowed_qconfs
-            ]
+            qconf_list_with_possible_duplicates = []
+            for hw_config_qconf_dict in allowed_qconfs:
+                qconf_list_with_possible_duplicates.append(self.get_qconf_from_hw_config_subdict(hw_config_qconf_dict))
 
             qconf_list = list(OrderedDict.fromkeys(qconf_list_with_possible_duplicates))
 

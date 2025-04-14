@@ -991,12 +991,12 @@ class NNCFNetworkInterface(torch.nn.Module):
 
         :return: A list of parameter names.
         """
+        ret = []
         graph = self._original_graphs_pair.nncf_graph
-        return [
-            node.layer_attributes.name
-            for node in graph.get_nodes_by_metatypes(CONST_NOOP_METATYPES)
-            if node.is_shared()
-        ]
+        for node in graph.get_nodes_by_metatypes(CONST_NOOP_METATYPES):
+            if node.is_shared():
+                ret.append(node.layer_attributes.name)
+        return ret
 
 
 class NNCFNetworkMeta(type):

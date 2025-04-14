@@ -143,6 +143,8 @@ ignore = [
     "D415", # missing-terminal-punctuation
     "D417", # undocumented-param
     "PERF203", # try-except-in-loop
+    "PERF401", # manual-list-comprehension
+    "PERF403", # manual-dict-comprehension
 ]
 select = [
     "CPY001", # copyright check
@@ -167,7 +169,7 @@ extend-select = [
 "tests/**/*.py" = ["F403"]
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]
-"!nncf/**.py" = ["INP", "D", "PERF"]
+"!nncf/**.py" = ["INP", "D"]
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = """\

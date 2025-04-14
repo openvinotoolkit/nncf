@@ -191,10 +191,10 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         weight_params: List[WeightCompressionParameters],
         statistic_points: Optional[StatisticPointsContainer] = None,
     ) -> List[float]:
-        return [
-            self._calc_score_per_node(weight_param, model, graph, statistic_points)
-            for weight_param in track(weight_params, description="Mixed-Precision assignment")
-        ]
+        scores = []
+        for weight_param in track(weight_params, description="Mixed-Precision assignment"):
+            scores.append(self._calc_score_per_node(weight_param, model, graph, statistic_points))
+        return scores
 
     def get_statistic_points(
         self,

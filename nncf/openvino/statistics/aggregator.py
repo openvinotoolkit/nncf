@@ -43,15 +43,16 @@ class OVStatisticsAggregator(StatisticsAggregator):
     def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
         for _, statistic_point, tensor_collector in statistic_points.get_tensor_collectors():
             stat_node_name, port_id, _ = self._translate_to_post_layer_operation(statistic_point)
-            input_info = [
-                [
-                    hash(reducer),
-                    get_reducer_output_node_names(
-                        reducer.name, stat_node_name, port_id, reducer.output_port_id, reducer.inplace
-                    ),
-                ]
-                for reducer in tensor_collector.reducers
-            ]
+            input_info = []
+            for reducer in tensor_collector.reducers:
+                input_info.append(
+                    [
+                        hash(reducer),
+                        get_reducer_output_node_names(
+                            reducer.name, stat_node_name, port_id, reducer.output_port_id, reducer.inplace
+                        ),
+                    ]
+                )
             target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, input_info)
             tensor_collector.register_inputs(target_inputs)
 

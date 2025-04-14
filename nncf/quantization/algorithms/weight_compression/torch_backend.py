@@ -547,14 +547,15 @@ class PTAWQAlgoAlgoBackend(AWQAlgoBackend, PTWeightCompressionAlgoBackend):
         scale: torch.Tensor,
     ) -> PTSharedFnInsertionCommand:
         input_port_id = 0
-        target_points = [
-            PTTargetPoint(
-                PTWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[TargetType.PRE_LAYER_OPERATION],
-                node.node_name,
-                input_port_id=input_port_id,
+        target_points = []
+        for node in next_nodes:
+            target_points.append(
+                PTTargetPoint(
+                    PTWeightCompressionAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[TargetType.PRE_LAYER_OPERATION],
+                    node.node_name,
+                    input_port_id=input_port_id,
+                )
             )
-            for node in next_nodes
-        ]
 
         sq_multiply = SQMultiply(scale.shape)
         sq_multiply.scale = scale

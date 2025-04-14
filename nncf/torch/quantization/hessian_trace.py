@@ -36,7 +36,9 @@ class ParameterHandler:
         return self._parameters
 
     def get_gradients(self) -> List[Union[Tensor, float]]:
-        gradients = [0.0 if parameter.grad is None else parameter.grad + 0.0 for parameter in self.parameters]
+        gradients = []
+        for parameter in self.parameters:
+            gradients.append(0.0 if parameter.grad is None else parameter.grad + 0.0)
         return gradients
 
     def sample_rademacher_like_params(self) -> List[Tensor]:

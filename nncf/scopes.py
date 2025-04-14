@@ -145,7 +145,8 @@ def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List
     if ignored_scope is None:
         return results
     results.extend(ignored_scope.names)
-    results.extend("{re}" + p for p in ignored_scope.patterns)
+    for p in ignored_scope.patterns:
+        results.append("{re}" + p)
     if ignored_scope.types:
         msg = "Legacy ignored scope format does not support operation types"
         raise nncf.InternalError(msg)

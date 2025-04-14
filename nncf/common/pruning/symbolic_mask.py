@@ -124,10 +124,11 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
 
     @classmethod
     def repeat(cls, tensor: SymbolicMask, repeats: int) -> SymbolicMask:  # type: ignore
-        updated_mask_producers = [
-            SymbolicMaskProducer(mask_producer.id, mask_producer.sparse_multiplier * repeats)
-            for mask_producer in tensor.mask_producers
-        ]
+        updated_mask_producers = []
+        for mask_producer in tensor.mask_producers:
+            updated_mask_producers.append(
+                SymbolicMaskProducer(mask_producer.id, mask_producer.sparse_multiplier * repeats)
+            )
         return SymbolicMask(tensor.shape[0] * repeats, updated_mask_producers)
 
     @classmethod

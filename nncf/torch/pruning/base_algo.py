@@ -267,14 +267,15 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         Creates a table with layer pruning level statistics
         """
         header = ["Name", "Weight's shape", "Bias shape", "Layer PR"]
-        rows_data = [
-            [
-                str(minfo.module_scope),
-                list(minfo.module.weight.size()),
-                list(minfo.module.bias.size()) if minfo.module.bias is not None else [],
-                self.pruning_level_for_mask(minfo),
-            ]
-            for minfo in self.pruned_module_groups_info.get_all_nodes()
-        ]
+        rows_data = []
+        for minfo in self.pruned_module_groups_info.get_all_nodes():
+            rows_data.append(
+                [
+                    str(minfo.module_scope),
+                    list(minfo.module.weight.size()),
+                    list(minfo.module.bias.size()) if minfo.module.bias is not None else [],
+                    self.pruning_level_for_mask(minfo),
+                ]
+            )
 
         return create_table(header, rows_data, max_col_widths=[33, 20, 6, 8])

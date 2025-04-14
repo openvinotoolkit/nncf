@@ -71,10 +71,12 @@ def _make_dataset_for_if_bodies(
         data_item = []
         results = engine.infer(input_data)
         if results[if_cond_input_name]:
-            data_item.extend(results[name] for name in then_model_input_names)
+            for name in then_model_input_names:
+                data_item.append(results[name])
             then_dataset.append(data_item)
         else:
-            data_item.extend(results[name] for name in else_model_input_names)
+            for name in else_model_input_names:
+                data_item.append(results[name])
             else_dataset.append(data_item)
     nncf_logger.info(f"The length of dataset for then body is {len(then_dataset)}, else body is {len(else_dataset)}.")
     return Dataset(then_dataset), Dataset(else_dataset)
@@ -233,13 +235,16 @@ class OVBackend:
         :param if_body_condition: True for then body, else for else body.
         :return: Input names of If body.
         """
+        input_names = []
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         ov_node = name_to_node_mapping[if_node.node_name]
         input_indices = [
             desc.input_index
             for desc in ov_node.get_input_descriptions(OVBackend._get_if_body_port_id(if_body_condition))
         ]
-        return [ov_node.inputs()[index].get_tensor().get_any_name() for index in input_indices]
+        for index in input_indices:
+            input_names.append(ov_node.inputs()[index].get_tensor().get_any_name())
+        return input_names
 
     @staticmethod
     def get_if_cond_input_name(model: ov.Model, if_node: NNCFNode) -> str:

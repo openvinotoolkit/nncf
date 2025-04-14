@@ -375,8 +375,11 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[SymbolicM
     :param graph: Graph to work with.
     :return: Input masks.
     """
+    retval = []
     input_masks = [input_edge.from_node.attributes["output_mask"] for input_edge in graph.get_input_edges(node)]
-    return [input_mask[node.node_name] if isinstance(input_mask, dict) else input_mask for input_mask in input_masks]
+    for input_mask in input_masks:
+        retval.append(input_mask[node.node_name] if isinstance(input_mask, dict) else input_mask)
+    return retval
 
 
 def get_input_channels(node: NNCFNode) -> int:

@@ -194,15 +194,16 @@ class FillerInputInfo(ModelInputInfo):
                 ]
             )
         if isinstance(input_infos, list):
-            elements: List[FillerInputElement] = [
-                FillerInputElement(
-                    info_dict.get("sample_size"),
-                    info_dict.get("type"),
-                    info_dict.get("keyword"),
-                    info_dict.get("filler"),
+            elements: List[FillerInputElement] = []
+            for info_dict in input_infos:
+                elements.append(
+                    FillerInputElement(
+                        info_dict.get("sample_size"),
+                        info_dict.get("type"),
+                        info_dict.get("keyword"),
+                        info_dict.get("filler"),
+                    )
                 )
-                for info_dict in input_infos
-            ]
             return FillerInputInfo(elements)
         msg = "Invalid input_infos specified in config - should be either dict or list of dicts"
         raise nncf.ValidationError(msg)

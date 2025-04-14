@@ -32,7 +32,10 @@ def serialize_transformations(transformations_layout: TransformationLayout) -> D
     :param transformation_layout: Given transformation layout.
     :return: Serialized representation of given transformation layout as a dict.
     """
-    transformation_commands = [serialize_command(command) for command in transformations_layout.transformations]
+    transformation_commands = []
+    for command in transformations_layout.transformations:
+        transformation_commands.append(serialize_command(command))
+
     return {COMPRESSION_STATE_ATTR: transformation_commands}
 
 

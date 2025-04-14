@@ -245,7 +245,10 @@ class InsertionPointGraph(nx.DiGraph):  # type: ignore
     @staticmethod
     def _get_default_post_hook_ip_list(nncf_graph: NNCFGraph) -> List[PostHookInsertionPoint]:
         # Post-hook all nodes, post hook applies to the entire op output
-        return [PostHookInsertionPoint(nncf_node.node_name) for nncf_node in nncf_graph.get_all_nodes()]
+        allowed_post_hook_insertion_points = []
+        for nncf_node in nncf_graph.get_all_nodes():
+            allowed_post_hook_insertion_points.append(PostHookInsertionPoint(nncf_node.node_name))
+        return allowed_post_hook_insertion_points
 
     def remove_nodes_from(self, nodes: List[str]) -> None:
         """

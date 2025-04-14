@@ -22,10 +22,13 @@ from nncf.config.structures import QuantizationRangeInitArgs
 
 
 def extract_algorithm_names(config: NNCFConfig) -> List[str]:
+    retval = []
     compression_config_json_section = config.get("compression", [])
     if isinstance(compression_config_json_section, dict):
         compression_config_json_section = [compression_config_json_section]
-    return [algo_config["algorithm"] for algo_config in compression_config_json_section]
+    for algo_config in compression_config_json_section:
+        retval.append(algo_config["algorithm"])
+    return retval
 
 
 def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) -> Dict[str, Any]:

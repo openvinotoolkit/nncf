@@ -12,7 +12,7 @@
 import functools
 import inspect
 from contextlib import contextmanager
-from typing import Any, Callable, List, Optional, Union
+from typing import Callable, List, Optional, Union
 
 import torch
 import torch.utils.cpp_extension
@@ -325,43 +325,34 @@ def patch_namespace_opname(namespace, op_info: PatchedOperatorInfo):
         nncf_logger.debug(f"Not patching {op_name} since it is missing in this version of PyTorch")
 
 
-def is_function_object_to_path(obj: Any) -> bool:
-    """
-    Checks if the given object is a function object that can be patched.
-
-    :param obj: The object to check.
-    :return: True if the object is a function object that can be patched, False otherwise.
-    """
-    return inspect.isfunction(obj) or inspect.isbuiltin(obj) or inspect.ismethod(obj) or inspect.ismethoddescriptor(obj)
-
-
-def remove_private_functions(names: List[str]) -> List[str]:
-    """
-    Removes private functions from the given list of names.
-
-    :param names: The list of function names.
-    :return: The filtered list of function names without private functions.
-    """
-    filtered_names = []
-    for name in names:
-        if name.startswith("_"):
-            continue
-        filtered_names.append(name)
-    return filtered_names
-
-
 def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool = True) -> List[str]:
     """
     Seeks all attributes from the namespace, then takes only attributes,
     which types are function, builtin, method or method descriptor.
     If 'do_filer' is True, then also removes all private or magic attributes.
-
     :param namespace: Python module.
     :param do_filter: If True return only public functions, else - otherwise.
     """
+
+    def remove_private_functions(names: List[str]) -> List[str]:
+        filtered_names = []
+        for name in names:
+            if name.startswith("_"):
+                continue
+            filtered_names.append(name)
+        return filtered_names
+
     patched_namespace = get_namespace_to_extract_functions_from(namespace)
+    all_torch_function_names = []
     members = inspect.getmembers(patched_namespace)
-    all_torch_function_names = [name for name, member in members if is_function_object_to_path(member)]
+    for member in members:
+        if (
+            inspect.isfunction(member[1])
+            or inspect.isbuiltin(member[1])
+            or inspect.ismethod(member[1])
+            or inspect.ismethoddescriptor(member[1])
+        ):
+            all_torch_function_names.append(member[0])
     if do_filter:
         filtered_function_names = remove_private_functions(all_torch_function_names)
         return filtered_function_names
