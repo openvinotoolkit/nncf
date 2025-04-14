@@ -142,6 +142,9 @@ ignore = [
     "D413", # missing-blank-line-after-last-section
     "D415", # missing-terminal-punctuation
     "D417", # undocumented-param
+    "PERF203", # try-except-in-loop
+    "PERF401", # manual-list-comprehension
+    "PERF403", # manual-dict-comprehension
 ]
 select = [
     "CPY001", # copyright check
@@ -154,6 +157,7 @@ select = [
     "ISC", # flake8-implicit-str-concat
     "NPY", # numpy rules
     "UP", # pyupgrade
+    "PERF", # perflint
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify

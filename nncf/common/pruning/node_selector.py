@@ -154,7 +154,7 @@ class PruningNodeSelector:
             pruned_nodes_clusterization.merge_list_of_clusters(clusters_to_merge)
 
             # Merge previous convolutions into one cluster
-            all_previous_convs = []
+            all_previous_convs: List[NNCFNode] = []
             for node in list_of_nodes:
                 nncf_node = graph.get_node_by_id(node.node_id)
                 previous_convs = get_previous_convs(

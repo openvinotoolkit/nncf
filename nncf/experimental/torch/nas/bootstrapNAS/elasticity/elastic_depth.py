@@ -265,8 +265,7 @@ class ElasticDepthHandler(SingleElasticityHandler):
                             f"The block #{block_index} or #{valid_block_indexes} "
                             f"did not satisfy requirement of next static block"
                         )
-                        for valid_block_index in valid_block_indexes:
-                            block_indexes_to_remove.append(valid_block_index)
+                        block_indexes_to_remove.extend(valid_block_indexes)
                         break
             if found:
                 break
