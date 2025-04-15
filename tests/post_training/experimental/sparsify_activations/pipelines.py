@@ -29,6 +29,7 @@ import nncf
 from nncf.experimental.torch.sparsify_activations import sparsify_activations
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgoBackend
 from nncf.experimental.torch.sparsify_activations.torch_backend import PTSparsifyActivationsAlgoBackend
+from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.torch.quantization.layers import INT8AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 from tests.post_training.pipelines.base import PT_BACKENDS
@@ -44,8 +45,8 @@ from tests.post_training.pipelines.lm_weight_compression import LMWeightCompress
 from tests.post_training.pipelines.lm_weight_compression import WCNumCompressNodes
 from tests.post_training.pipelines.lm_weight_compression import WCTimeStats
 from tests.post_training.pipelines.lm_weight_compression import collect_int4_int8_num_errors
-from tests.torch.experimental.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 from tests.torch.helpers import set_torch_seed
+from tests.torch2.function_hook.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
 
 
 @dataclass
@@ -251,12 +252,14 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
         self.path_compressed_ir = self.output_model_dir / self.OV_MODEL_NAME
         if self.backend == BackendType.CUDA_TORCH:
             self.model_hf.float()
-            for module in self.model_hf.nncf.modules():
+            for _, module in get_hook_storage(self.model_hf).named_hooks():
                 if isinstance(module, (INT8AsymmetricWeightsDecompressor, INT8SymmetricWeightsDecompressor)):
                     module.result_dtype = torch.float32
             export_from_model(
                 self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32", device="cuda"
             )
+        if self.backend == BackendType.FP32:
+            self.path_compressed_ir = self.fp32_model_dir / self.OV_MODEL_NAME
         else:
             super().save_compressed_model()
 
