@@ -135,9 +135,7 @@ class PTSparsifyActivationsAlgoBackend(SparsifyActivationsAlgoBackend):
         :param model: The model with activation sparsifiers.
         :return: List of activation sparsifiers.
         """
-        return [
-            m for _, m in get_hook_storage(model).named_hooks() if isinstance(m, ActivationsSparsifier) and m.training
-        ]
+        return [m for _, m in get_hook_storage(model).named_hooks() if isinstance(m, ActivationsSparsifier)]
 
     @property
     def supported_metatypes(self) -> List[Type[OperatorMetatype]]:
