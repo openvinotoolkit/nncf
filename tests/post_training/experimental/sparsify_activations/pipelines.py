@@ -258,10 +258,12 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
             export_from_model(
                 self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32", device="cuda"
             )
-        if self.backend == BackendType.FP32:
-            self.path_compressed_ir = self.fp32_model_dir / self.OV_MODEL_NAME
         else:
-            super().save_compressed_model()
+            if self.backend == BackendType.FP32:
+                ov.serialize(self.model, self.fp32_model_dir / self.OV_MODEL_NAME)
+                self.model_hf._save_config(self.fp32_model_dir)
+            else:
+                super().save_compressed_model()
 
     def _dump_model_fp32(self):
         if self.backend == BackendType.CUDA_TORCH:
