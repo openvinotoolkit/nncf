@@ -17,23 +17,26 @@ import openvino as ov
 import pytest
 import torch
 import torch.nn as nn
+from networkx.drawing.nx_pydot import to_pydot
 
 import nncf
 import nncf.experimental
 import nncf.experimental.torch.sparsify_activations
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import SparsifyActivationsAlgorithm
 from nncf.experimental.torch.sparsify_activations.sparsify_activations_impl import TargetScope
-from nncf.experimental.torch.sparsify_activations.torch_backend import ACTIVATIONS_SPARSIFIER_PREFIX
 from nncf.experimental.torch.sparsify_activations.torch_backend import ActivationsSparsifier
+from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
+from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.scopes import IgnoredScope
 from nncf.torch.model_creation import wrap_model
-from nncf.torch.nncf_network import NNCFNetwork
-from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
-from tests.torch.experimental.sparsify_activations.helpers import ThreeLinearModel
-from tests.torch.experimental.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
-from tests.torch.experimental.sparsify_activations.helpers import dummy_llama_model
 from tests.torch.helpers import set_torch_seed
+from tests.torch2.function_hook.sparsify_activations.helpers import ThreeLinearModel
+from tests.torch2.function_hook.sparsify_activations.helpers import count_sparsifier_patterns_in_ov
+from tests.torch2.function_hook.sparsify_activations.helpers import dummy_llama_model
+from tests.torch2.utils import compare_with_reference_file
+from tests.torch2.utils import to_comparable_nx_graph
 
 
 @dataclass
@@ -47,18 +50,21 @@ class SparsifyActivationsAlgorithmTestDesc:
     ref_num_batches_tracked: int
     ref_num_patterns_in_ov: int
 
+    def __str__(self) -> str:
+        return self.name
 
-sparsify_activations_algorithm_test_descs = [
+
+SPARSIFY_ACTIVATIONS_ALGORITHM_TEST_DESCS = [
     SparsifyActivationsAlgorithmTestDesc(
         name="linear",
         model_getter=lambda: nn.Linear(4, 2),
         dataset_getter=lambda device: nncf.Dataset(torch.randn([3, 2, 4]).to(device)),
         target_sparsity_by_scope={
-            TargetScope(names=["Linear/linear_0"]): 0.3,
+            TargetScope(names=["/linear/0"]): 0.3,
         },
         ignored_scope=None,
         ref_sparsifier_target_sparsity={
-            f"{ACTIVATIONS_SPARSIFIER_PREFIX}_Linear/linear_0": 0.3,
+            "pre_hooks./linear/0__0.0": 0.3,
         },
         ref_num_batches_tracked=3,
         ref_num_patterns_in_ov=1,
@@ -72,9 +78,9 @@ sparsify_activations_algorithm_test_descs = [
         },
         ignored_scope=None,
         ref_sparsifier_target_sparsity={
-            f"{ACTIVATIONS_SPARSIFIER_PREFIX}_ThreeLinearModel/Linear[linear1]/linear_0": 0.4,
-            f"{ACTIVATIONS_SPARSIFIER_PREFIX}_ThreeLinearModel/Linear[linear2]/linear_0": 0.4,
-            f"{ACTIVATIONS_SPARSIFIER_PREFIX}_ThreeLinearModel/Linear[linear3]/linear_0": 0.4,
+            "pre_hooks.linear1/linear/0__0.0": 0.4,
+            "pre_hooks.linear2/linear/0__0.0": 0.4,
+            "pre_hooks.linear3/linear/0__0.0": 0.4,
         },
         ref_num_batches_tracked=3,
         ref_num_patterns_in_ov=2,  # Sparsifiers are combined in linear1 and linear2
@@ -84,13 +90,13 @@ sparsify_activations_algorithm_test_descs = [
         model_getter=ThreeLinearModel,
         dataset_getter=lambda device: nncf.Dataset(torch.randint(0, 30, (3, 2, 8)).to(device)),
         target_sparsity_by_scope={
-            TargetScope(names=["ThreeLinearModel/Linear[linear2]/linear_0"]): 0.4,
+            TargetScope(names=["linear2/linear/0"]): 0.4,
             TargetScope(patterns=[".*linear3.*"]): 0.4,
         },
         ignored_scope=IgnoredScope(patterns=[".*linear1.*"]),
         ref_sparsifier_target_sparsity={
-            f"{ACTIVATIONS_SPARSIFIER_PREFIX}_ThreeLinearModel/Linear[linear2]/linear_0": 0.4,
-            f"{ACTIVATIONS_SPARSIFIER_PREFIX}_ThreeLinearModel/Linear[linear3]/linear_0": 0.4,
+            "pre_hooks.linear2/linear/0__0.0": 0.4,
+            "pre_hooks.linear3/linear/0__0.0": 0.4,
         },
         ref_num_batches_tracked=3,
         ref_num_patterns_in_ov=2,
@@ -106,10 +112,7 @@ sparsify_activations_algorithm_test_descs = [
         },
         ignored_scope=None,
         ref_sparsifier_target_sparsity={
-            (
-                f"{ACTIVATIONS_SPARSIFIER_PREFIX}_LlamaForCausalLM/LlamaModel[model]/ModuleList[layers]/"
-                f"LlamaDecoderLayer[{layer_id}]/LlamaMLP[mlp]/Linear[{name}]/linear_0"
-            ): sparsity
+            (f"pre_hooks.model/mlp/{name}/linear/{layer_id}__0.0"): sparsity
             for name, sparsity in [("gate_proj", 0.2), ("up_proj", 0.3), ("down_proj", 0.4)]
             for layer_id in [0, 1]
         },
@@ -120,13 +123,18 @@ sparsify_activations_algorithm_test_descs = [
 
 
 @pytest.mark.parametrize(
-    "desc",
-    sparsify_activations_algorithm_test_descs,
-    ids=[p.name for p in sparsify_activations_algorithm_test_descs],
+    "use_cuda",
+    [pytest.param(True, marks=pytest.mark.cuda), False],
+    ids=["cuda", "cpu"],
     scope="class",
 )
 @pytest.mark.parametrize("compress_weights", [False, True], scope="class")
-@pytest.mark.parametrize("use_cuda", [False, True], ids=["cpu", "cuda"], scope="class")
+@pytest.mark.parametrize(
+    "desc",
+    SPARSIFY_ACTIVATIONS_ALGORITHM_TEST_DESCS,
+    ids=str,
+    scope="class",
+)
 class TestSparsifyActivationsAlgorithm:
     @pytest.fixture(autouse=True, scope="class")
     def setup(self, request, desc: SparsifyActivationsAlgorithmTestDesc, compress_weights: bool, use_cuda: bool):
@@ -159,29 +167,33 @@ class TestSparsifyActivationsAlgorithm:
     def test_inserted_sparsifier(self):
         desc: SparsifyActivationsAlgorithmTestDesc = self.desc
         model = self.model
-        assert isinstance(model, NNCFNetwork)
         num_sparsifiers = 0
-        for name, op in model.nncf.external_op.items():
-            if isinstance(op, ActivationsSparsifier):
-                assert op.target_sparsity == desc.ref_sparsifier_target_sparsity[name]
-                assert op.num_batches_tracked == desc.ref_num_batches_tracked
+
+        for name, hook in get_hook_storage(model).named_hooks():
+            if isinstance(hook, ActivationsSparsifier):
+                assert hook.target_sparsity == desc.ref_sparsifier_target_sparsity[name]
+                assert hook.num_batches_tracked == desc.ref_num_batches_tracked
                 num_sparsifiers += 1
+
         assert num_sparsifiers == len(desc.ref_sparsifier_target_sparsity)
 
-    def test_nncf_graph(self):
+    def test_nncf_graph(self, regen_ref_data):
         desc: SparsifyActivationsAlgorithmTestDesc = self.desc
-        model: NNCFNetwork = self.model
+        model = self.model
         file_name = "_".join(
             filter(None, [desc.name, "int8_sym_weights" if self.compress_weights else None, "sparse_activations"])
         )
-        ref_dot_path = Path(TEST_ROOT, "torch", "data", "experimental", "sparsify_activations", f"{file_name}.dot")
-        graph = model.nncf.get_graph().get_graph_for_structure_analysis()
-        compare_nx_graph_with_reference(graph, ref_dot_path)
+        example_input = next(iter(self.dataset.get_inference_data()))
+        nncf_graph = build_nncf_graph(model, example_input)
+        nx_graph = to_comparable_nx_graph(nncf_graph)
+        dot_nncf_graph = to_pydot(nx_graph)
+        ref_file = Path(TEST_ROOT, "torch2", "data", "sparsify_activations", f"{file_name}.dot")
+        compare_with_reference_file(str(dot_nncf_graph), ref_file, regen_ref_data)
 
     def test_export_openvino(self):
         if self.desc.name == "dummy_llama" and self.compress_weights:
             pytest.xfail("Disabled until ticket 165186 is resolved.")
-        model: NNCFNetwork = self.model
+        model = self.model
         example_input = next(iter(self.dataset.get_inference_data()))
         with torch.no_grad():
             torch_outputs = model(example_input)
@@ -215,51 +227,49 @@ class TargetSparsityByNodeTestDesc:
             target_sparsity_by_scope={TargetScope(patterns=[".*linear.*"]): 0.3},
             ignored_scope=IgnoredScope(),
             ref_target_sparsity_by_node_name={
-                "ThreeLinearModel/Linear[linear1]/linear_0": 0.3,
-                "ThreeLinearModel/Linear[linear2]/linear_0": 0.3,
-                "ThreeLinearModel/Linear[linear3]/linear_0": 0.3,
+                "linear1/linear/0": 0.3,
+                "linear2/linear/0": 0.3,
+                "linear3/linear/0": 0.3,
             },
         ),
         TargetSparsityByNodeTestDesc(
             target_sparsity_by_scope={TargetScope(patterns=[".*linear[23].*"], types=["linear"]): 0.3},
             ignored_scope=IgnoredScope(),
             ref_target_sparsity_by_node_name={
-                "ThreeLinearModel/Linear[linear1]/linear_0": 0.3,
-                "ThreeLinearModel/Linear[linear2]/linear_0": 0.3,
-                "ThreeLinearModel/Linear[linear3]/linear_0": 0.3,
+                "linear1/linear/0": 0.3,
+                "linear2/linear/0": 0.3,
+                "linear3/linear/0": 0.3,
             },
         ),
         TargetSparsityByNodeTestDesc(
             target_sparsity_by_scope={
-                TargetScope(
-                    subgraphs=[nncf.Subgraph(inputs=["/nncf_model_input_0"], outputs=["/nncf_model_output_0"])]
-                ): 0.1,
+                TargetScope(subgraphs=[nncf.Subgraph(inputs=["input_ids"], outputs=["output_0"])]): 0.1,
             },
             ignored_scope=IgnoredScope(),
             ref_target_sparsity_by_node_name={
-                "ThreeLinearModel/Linear[linear1]/linear_0": 0.1,
-                "ThreeLinearModel/Linear[linear3]/linear_0": 0.1,
+                "linear1/linear/0": 0.1,
+                "linear3/linear/0": 0.1,
             },
         ),
         TargetSparsityByNodeTestDesc(
             target_sparsity_by_scope={
-                TargetScope(names=["ThreeLinearModel/Linear[linear1]/linear_0"]): 0.1,
+                TargetScope(names=["linear1/linear/0"]): 0.1,
                 TargetScope(patterns=[".*linear[23].*"]): 0.3,
             },
             ignored_scope=IgnoredScope(patterns=[".*linear2.*"]),
             ref_target_sparsity_by_node_name={
-                "ThreeLinearModel/Linear[linear1]/linear_0": 0.1,
-                "ThreeLinearModel/Linear[linear3]/linear_0": 0.3,
+                "linear1/linear/0": 0.1,
+                "linear3/linear/0": 0.3,
             },
         ),
         TargetSparsityByNodeTestDesc(
             target_sparsity_by_scope={
                 TargetScope(patterns=[".*nonexist.*"], validate=False): 0.3,
-                TargetScope(names=["ThreeLinearModel/Linear[linear1]/linear_0"]): 0.3,
+                TargetScope(names=["linear1/linear/0"]): 0.3,
             },
             ignored_scope=IgnoredScope(),
             ref_target_sparsity_by_node_name={
-                "ThreeLinearModel/Linear[linear1]/linear_0": 0.3,
+                "linear1/linear/0": 0.3,
             },
         ),
         TargetSparsityByNodeTestDesc(
@@ -277,7 +287,7 @@ class TargetSparsityByNodeTestDesc:
         ),
         TargetSparsityByNodeTestDesc(
             target_sparsity_by_scope={
-                TargetScope(names=["ThreeLinearModel/Linear[linear1]/linear_0"]): 0.3,
+                TargetScope(names=["linear1/linear/0"]): 0.3,
                 TargetScope(patterns=[".*linear1.*"]): 0.4,
             },
             ignored_scope=IgnoredScope(),
@@ -286,12 +296,13 @@ class TargetSparsityByNodeTestDesc:
     ],
 )
 def test_get_target_sparsity_by_node(desc: TargetSparsityByNodeTestDesc):
-    model = wrap_model(
+    model: GraphModelWrapper = wrap_model(
         ThreeLinearModel(),
         example_input=torch.ones((2, 4)).long(),
         trace_parameters=True,
     )
-    graph = model.nncf.get_graph()
+
+    graph = model.get_graph()
     algo = SparsifyActivationsAlgorithm(desc.target_sparsity_by_scope, desc.ignored_scope)
     algo._set_backend_entity(model)
     if desc.raised_error_message is not None:

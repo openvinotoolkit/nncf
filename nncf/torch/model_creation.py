@@ -365,10 +365,13 @@ def wrap_model(
         if not trace_parameters:
             msg = "The 'trace_parameters=False' option is not supported in the experimental tracing mode."
             raise nncf.InternalError(msg)
+        from nncf.experimental.torch2.function_hook import is_wrapped as pt2_is_wrapped
         from nncf.experimental.torch2.function_hook import wrap_model as pt2_wrap_model
         from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
-        wrapped_model = GraphModelWrapper(pt2_wrap_model(model), example_input=example_input)
+        if not pt2_is_wrapped(model):
+            model = pt2_wrap_model(model)
+        wrapped_model = GraphModelWrapper(model, example_input=example_input)
         return wrapped_model
 
     if not isinstance(model, torch.nn.Module):

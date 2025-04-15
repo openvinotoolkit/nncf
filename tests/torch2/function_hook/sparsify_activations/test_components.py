@@ -29,8 +29,8 @@ from tests.common.test_ignored_scope import IGNORED_SCOPES_TEST_DATA
 from tests.common.test_ignored_scope import LINEAR_TYPE
 from tests.common.test_ignored_scope import WRONG_IGNORED_SCOPES_TEST_DATA
 from tests.common.test_ignored_scope import NNCFGraphToTestIgnoredScope
-from tests.torch.experimental.sparsify_activations.helpers import ThreeLinearModel
-from tests.torch.experimental.sparsify_activations.helpers import convert_ignored_scope_to_target_scope
+from tests.torch2.function_hook.sparsify_activations.helpers import ThreeLinearModel
+from tests.torch2.function_hook.sparsify_activations.helpers import convert_ignored_scope_to_target_scope
 
 
 @dataclass
@@ -180,12 +180,11 @@ class TestPTSparsifyActivationsAlgoBackend:
     def test_insert_sparsifiers(self, compress_weights: bool):
         model, dataset = self.create_model_and_dataset(compress_weights=compress_weights)
         example_input = next(iter(dataset.get_inference_data()))
-        ref_output = model(example_input)
-
-        graph = model.nncf.get_graph()
+        ref_output = model.model(example_input)
+        graph = model.get_graph()
         nodes = graph.get_nodes_by_metatypes(PTSparsifyActivationsAlgoBackend.SUPPORTED_METATYPES)
         backend = PTSparsifyActivationsAlgoBackend()
-        model_with_sparsifiers = backend.insert_sparsifiers(model, graph, {node: 0.9 for node in nodes})
+        model_with_sparsifiers = backend.insert_sparsifiers(model, graph, {node: 0.9 for node in nodes}).model
         assert len(backend.get_sparsifiers(model_with_sparsifiers)) == len(nodes)
 
         output = model_with_sparsifiers(example_input)
@@ -195,7 +194,8 @@ class TestPTSparsifyActivationsAlgoBackend:
 
     def test_calibrate_sparsifiers(self, mocker):
         model, dataset = self.create_model_and_dataset()
-        graph = model.nncf.get_graph()
+        graph = model.get_graph()
+
         backend = PTSparsifyActivationsAlgoBackend()
         mock_sparsifier = ActivationsSparsifier(0.5, 0.1)
         mock_sparsifier.freeze = True
@@ -206,24 +206,25 @@ class TestPTSparsifyActivationsAlgoBackend:
             num_model_forward_calls += 1
             assert model.training is False
 
-        model.register_forward_pre_hook(model_forward_pre_hook)
+        model.model.register_forward_pre_hook(model_forward_pre_hook)
 
-        with mocker.patch.object(backend, "get_sparsifiers", return_value=[mock_sparsifier]):
-            backend.calibrate_sparsifiers(model, graph, dataset)
-            assert mock_sparsifier.freeze is True
-            assert num_model_forward_calls == dataset.get_length()
+        mocker.patch.object(backend, "get_sparsifiers", return_value=[mock_sparsifier])
+        backend.calibrate_sparsifiers(model, graph, dataset)
+        assert mock_sparsifier.freeze is True
+        assert num_model_forward_calls == dataset.get_length()
 
     def create_model_and_dataset(self, compress_weights: bool = False):
         model = ThreeLinearModel()
         dataset = nncf.Dataset(torch.randint(0, 30, (3, 2, 8)))
         if compress_weights:
             model = nncf.compress_weights(model, mode=nncf.CompressWeightsMode.INT8_SYM, dataset=dataset)
-        else:
-            model = wrap_model(
-                model,
-                example_input=next(iter(dataset.get_inference_data())),
-                trace_parameters=True,
-            )
+
+        model = wrap_model(
+            model,
+            example_input=next(iter(dataset.get_inference_data())),
+            trace_parameters=True,
+        )
+
         return model, dataset
 
 
