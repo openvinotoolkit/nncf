@@ -170,7 +170,6 @@ class TestSparsifyActivationsAlgorithm:
         num_sparsifiers = 0
 
         for name, hook in get_hook_storage(model).named_hooks():
-            print(name)
             if isinstance(hook, ActivationsSparsifier):
                 assert hook.target_sparsity == desc.ref_sparsifier_target_sparsity[name]
                 assert hook.num_batches_tracked == desc.ref_num_batches_tracked
@@ -304,8 +303,6 @@ def test_get_target_sparsity_by_node(desc: TargetSparsityByNodeTestDesc):
     )
 
     graph = model.get_graph()
-    for x in graph.get_all_nodes():
-        print(x)
     algo = SparsifyActivationsAlgorithm(desc.target_sparsity_by_scope, desc.ignored_scope)
     algo._set_backend_entity(model)
     if desc.raised_error_message is not None:
