@@ -15,7 +15,7 @@ import onnx
 import pytest
 
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.onnx.graph.onnx_helper import get_tensor_value
+from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from tests.cross_fw.shared.comparator import compare_stats
@@ -38,8 +38,8 @@ def get_q_nodes_params(model: onnx.ModelProto) -> Dict[str, np.ndarray]:
     output = {}
     for node in model.graph.node:
         if node.op_type == "QuantizeLinear":
-            scale = get_tensor_value(model, node.input[1])
-            zero_point = get_tensor_value(model, node.input[2])
+            scale = onnx.numpy_helper.to_array(get_tensor(model, node.input[1]))
+            zero_point = onnx.numpy_helper.to_array(get_tensor(model, node.input[2]))
             output[node.name] = {"scale": scale, "zero_point": zero_point}
     return output
 

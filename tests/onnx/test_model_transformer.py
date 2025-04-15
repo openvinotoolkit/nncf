@@ -21,12 +21,12 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_helper import get_tensor
-from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.transformations.commands import ONNXInitializerUpdateCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.model import ONNXModel
 from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParameters
 from tests.onnx.models import LinearModel
 from tests.onnx.quantization.common import compare_nncf_graph
@@ -41,9 +41,9 @@ QUANTIZER_NUMBER = [None, 1, 3]
     "target_layers, should_raise, quantizer_number", zip(TARGET_LAYERS, SHOULD_RAISE_EXCEPTION, QUANTIZER_NUMBER)
 )
 def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
-    model = LinearModel().onnx_model
+    model = ONNXModel.from_model(LinearModel().onnx_model)
     transformation_layout = TransformationLayout()
-    nncf_graph = GraphConverter.create_nncf_graph(model)
+    nncf_graph = GraphConverter.create_nncf_graph(model.model_proto)
     nncf_input_node_next_onnx_nodes = {}
     for input_node in nncf_graph.get_input_nodes():
         next_nodes = nncf_graph.get_next_nodes(input_node)
@@ -63,7 +63,8 @@ def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
             _ = model_transformer.transform(transformation_layout)
         except KeyError:
             return
-    transformed_model = model_transformer.transform(transformation_layout)
+    transformed_model = model_transformer.transform(transformation_layout).export()
+
     onnx.checker.check_model(transformed_model)
 
     num_q = 0
@@ -104,14 +105,14 @@ class QuantizerParameters:
     ],
 )
 def test_inserted_quantizer_parameters(test_parameters):
-    model = LinearModel().onnx_model
+    model = ONNXModel.from_model(LinearModel().onnx_model)
     transformation_layout = TransformationLayout()
     quantizer_parameters = ONNXQuantizerLayerParameters(
         test_parameters.scale, test_parameters.zero_point, tensor_type=test_parameters.onnx_dtype
     )
     target_point = ONNXTargetPoint(TargetType.POST_LAYER_OPERATION, test_parameters.target_layer, 0)
 
-    nncf_graph = GraphConverter.create_nncf_graph(model)
+    nncf_graph = GraphConverter.create_nncf_graph(model.model_proto)
     nncf_input_node_next_onnx_nodes = {}
     for input_node in nncf_graph.get_input_nodes():
         next_nodes = nncf_graph.get_next_nodes(input_node)
@@ -122,8 +123,11 @@ def test_inserted_quantizer_parameters(test_parameters):
 
     model_transformer = ONNXModelTransformer(model)
 
-    transformed_model = model_transformer.transform(transformation_layout)
+    transformed_model = model_transformer.transform(transformation_layout).export()
+
     onnx.checker.check_model(transformed_model)
+
+    get_tensor_value = lambda model_proto, name: onnx.numpy_helper.to_array(get_tensor(model_proto, name))
 
     for node in transformed_model.graph.node:
         op_type = node.op_type
@@ -141,8 +145,8 @@ TARGET_LAYERS_OUTPUT = [["Y", "ReLU1_Y"], ["Y", "Conv1_Y", "BN1_Y"], ["Y", "Conv
 
 @pytest.mark.parametrize("target_layers, target_layer_outputs", zip(TARGET_LAYERS, TARGET_LAYERS_OUTPUT))
 def test_output_insertion(target_layers, target_layer_outputs):
-    model = LinearModel().onnx_model
-    nncf_graph = GraphConverter.create_nncf_graph(model)
+    model = ONNXModel.from_model(LinearModel().onnx_model)
+    nncf_graph = GraphConverter.create_nncf_graph(model.model_proto)
     nncf_input_node_next_onnx_nodes = {}
     for input_node in nncf_graph.get_input_nodes():
         next_nodes = nncf_graph.get_next_nodes(input_node)
@@ -156,7 +160,7 @@ def test_output_insertion(target_layers, target_layer_outputs):
 
     model_transformer = ONNXModelTransformer(model)
 
-    transformed_model = model_transformer.transform(transformation_layout)
+    transformed_model = model_transformer.transform(transformation_layout).export()
 
     assert Counter([out.name for out in transformed_model.graph.output]) == Counter(target_layer_outputs)
 
@@ -168,7 +172,7 @@ BIAS_REFERENCES = [[2.0, 3.0]]
 
 @pytest.mark.parametrize("layers, values, refs", zip(CONV_LAYERS, BIAS_VALUES, BIAS_REFERENCES))
 def test_bias_correction(layers, values, refs):
-    model = LinearModel().onnx_model
+    model = ONNXModel.from_model(LinearModel().onnx_model)
     transformation_layout = TransformationLayout()
     for conv_layer, bias_value in zip(layers, values):
         bias_port_id = 2
@@ -178,7 +182,7 @@ def test_bias_correction(layers, values, refs):
 
     model_transformer = ONNXModelTransformer(model)
 
-    transformed_model = model_transformer.transform(transformation_layout)
+    transformed_model = model_transformer.transform(transformation_layout).export()
     node_dict = {node.name: node for node in transformed_model.graph.node}
 
     for conv_layer, bias_reference in zip(layers, refs):
@@ -206,9 +210,9 @@ def test_node_removing(target_layers):
         command = ONNXQDQNodeRemovingCommand(target_point)
         transformation_layout.register(command)
 
-    model_transformer = ONNXModelTransformer(quantized_model)
+    model_transformer = ONNXModelTransformer(ONNXModel.from_model(quantized_model))
 
-    transformed_model = model_transformer.transform(transformation_layout)
+    transformed_model = model_transformer.transform(transformation_layout).export()
     onnx.checker.check_model(transformed_model)
     compare_nncf_graph(transformed_model, "synthetic/" + "removed_nodes_in_" + model_to_test.path_ref_graph)
 
@@ -223,8 +227,8 @@ def test_no_transformations():
 
     onnx_model = LinearModel().onnx_model
     input_shape = [1, 3, 32, 32]
-    model_transformer = ONNXModelTransformer(onnx_model)
-    transformed_model = model_transformer.transform(TransformationLayout())
+    model_transformer = ONNXModelTransformer(ONNXModel.from_model(onnx_model))
+    transformed_model = model_transformer.transform(TransformationLayout()).export()
 
     ret_val_1 = infer_model_with_ones(onnx_model, input_shape)
     ret_val_2 = infer_model_with_ones(transformed_model, input_shape)

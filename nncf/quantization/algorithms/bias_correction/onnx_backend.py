@@ -11,8 +11,6 @@
 
 from typing import Dict, Optional, Set, Tuple
 
-import onnx
-
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
@@ -27,6 +25,7 @@ from nncf.onnx.graph.transformations.commands import ONNXInitializerUpdateComman
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.model import ONNXModel
 from nncf.onnx.statistics.collectors import get_mean_statistic_collector
 from nncf.onnx.statistics.collectors import get_raw_stat_collector
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
@@ -80,17 +79,17 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return 0
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, model: onnx.ModelProto, nncf_graph: NNCFGraph) -> Tensor:
+    def get_bias_value(node: NNCFNode, model: ONNXModel, nncf_graph: NNCFGraph) -> Tensor:
         return Tensor(get_bias_value(node, model))
 
     @staticmethod
-    def get_input_name(model: onnx.ModelProto, node_name: str, input_port_id: int) -> str:
-        node_mapping = get_name_to_node_map(model)
+    def get_input_name(model: ONNXModel, node_name: str, input_port_id: int) -> str:
+        node_mapping = get_name_to_node_map(model.model_proto)
         return node_mapping[node_name].input[input_port_id]
 
     @staticmethod
-    def get_output_name(model: onnx.ModelProto, node_name: str, output_port_id: int) -> str:
-        node_mapping = get_name_to_node_map(model)
+    def get_output_name(model: ONNXModel, node_name: str, output_port_id: int) -> str:
+        node_mapping = get_name_to_node_map(model.model_proto)
         return node_mapping[node_name].output[output_port_id]
 
     @staticmethod
@@ -102,7 +101,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return is_node_with_bias(node)
 
     @staticmethod
-    def remove_fq_from_inputs(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> onnx.ModelProto:
+    def remove_fq_from_inputs(model: ONNXModel, nncf_graph: NNCFGraph) -> ONNXModel:
         return remove_fq_from_inputs(model, nncf_graph)
 
     @staticmethod

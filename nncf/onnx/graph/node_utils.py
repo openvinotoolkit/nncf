@@ -22,6 +22,7 @@ from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.model import ONNXModel
 
 
 def is_node_with_bias(node: NNCFNode) -> bool:
@@ -36,7 +37,7 @@ def is_node_with_bias(node: NNCFNode) -> bool:
     return node.layer_attributes.has_bias()
 
 
-def get_bias_value(node_with_bias: NNCFNode, model: onnx.ModelProto) -> np.ndarray:
+def get_bias_value(node_with_bias: NNCFNode, model: ONNXModel) -> np.ndarray:
     """
     Returns the bias tensor for the biased node.
 

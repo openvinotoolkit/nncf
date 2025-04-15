@@ -18,6 +18,7 @@ import torch
 from nncf.common.factory import NNCFGraphFactory
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_node_with_bias
+from nncf.onnx.model import ONNXModel
 from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import ONNXFastBiasCorrectionAlgoBackend
 from tests.cross_fw.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
 
@@ -36,7 +37,7 @@ class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
         onnx_model = onnx.load(onnx_path)
-        return onnx_model
+        return ONNXModel.from_model(onnx_model)
 
     @staticmethod
     def fn_to_type(tensor):
@@ -51,7 +52,7 @@ class TestONNXFBCAlgorithm(TemplateTestFBCAlgorithm):
         return transform_fn
 
     @staticmethod
-    def check_bias(model: onnx.ModelProto, ref_bias: list):
+    def check_bias(model: ONNXModel, ref_bias: list):
         ref_bias = np.array(ref_bias)
         nncf_graph = NNCFGraphFactory.create(model)
         for node in nncf_graph.get_all_nodes():

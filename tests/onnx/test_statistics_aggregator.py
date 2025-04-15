@@ -18,6 +18,7 @@ from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.model import ONNXModel
 from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
 from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.fast_bias_correction.onnx_backend import ONNXFastBiasCorrectionAlgoBackend
@@ -45,9 +46,11 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def get_backend_model(self, dataset_samples):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
         conv_w = self.dataset_samples_to_conv_w(sample)
-        return IdentityConvolutionalModel(
-            input_shape=INPUT_SHAPE, inp_ch=3, out_ch=3, kernel_size=3, conv_w=conv_w
-        ).onnx_model
+        return ONNXModel.from_model(
+            IdentityConvolutionalModel(
+                input_shape=INPUT_SHAPE, inp_ch=3, out_ch=3, kernel_size=3, conv_w=conv_w
+            ).onnx_model
+        )
 
     def get_statistics_aggregator(self, dataset):
         return ONNXStatisticsAggregator(dataset)

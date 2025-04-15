@@ -21,6 +21,7 @@ from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
 from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
 from nncf.onnx.graph.onnx_helper import get_edge_shape
+from nncf.onnx.model import ONNXModel
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
@@ -108,8 +109,10 @@ def min_max_quantize_model(
 ) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
-    graph = GraphConverter.create_nncf_graph(original_model)
-    dataset = get_random_dataset_for_test(original_model, dataset_has_batch_size)
+
+    original_model = ONNXModel.from_model(original_model)
+    graph = GraphConverter.create_nncf_graph(original_model.model_proto)
+    dataset = get_random_dataset_for_test(original_model.model_proto, dataset_has_batch_size)
     quantization_params = {} if quantization_params is None else quantization_params
 
     advanced_parameters = quantization_params.get("advanced_parameters", AdvancedQuantizationParameters())
@@ -124,7 +127,7 @@ def min_max_quantize_model(
     post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
 
     quantized_model = post_training_quantization.apply(original_model, graph, dataset=dataset)
-    return quantized_model
+    return quantized_model.export()
 
 
 def ptq_quantize_model(

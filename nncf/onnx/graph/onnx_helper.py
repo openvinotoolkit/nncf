@@ -15,6 +15,7 @@ import numpy as np
 import onnx
 
 import nncf
+from nncf.onnx.model import ONNXModel
 
 
 def get_name_to_node_map(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
@@ -173,7 +174,7 @@ def get_tensor(model: onnx.ModelProto, tensor_name: str) -> onnx.TensorProto:
     raise nncf.ValidationError(msg)
 
 
-def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray:
+def get_tensor_value(model: ONNXModel, tensor_name: str) -> np.ndarray:
     """
     Returns tensor value of a tensor with the name 'tensor_name'.
 

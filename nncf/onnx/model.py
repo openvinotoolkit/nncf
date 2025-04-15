@@ -32,14 +32,17 @@ def extract_raw_data_from_model(model: onnx.ModelProto) -> Dict[str, np.ndarray]
     tensors = _get_initializer_tensors(model)
     data = {}
     for tensor in tensors:
-        if not tensor.HasField("raw_data"):
-            continue
         # TODO(andrey-churkin): Handle the case when the model is loaded without data
         # `onnx.load("model.onnx", load_external_data=False)`.
+        arr = onnx.numpy_helper.to_array(tensor)
+
+        if not tensor.HasField("raw_data"):
+            tensor_proto = onnx.numpy_helper.from_array(arr, tensor.name)
+            tensor.CopyFrom(tensor_proto)
 
         # TODO(andrey-churkin): Probably, we should convert the NumPy array into an `ort.OrtValue`
         # here as follows: `OrtValue.ortvalue_from_numpy(numpy_tensor)`.
-        data[tensor.name] = onnx.numpy_helper.to_array(tensor)
+        data[tensor.name] = arr
 
         # We should call the `set_external_data()`` method here; otherwise, we will get an error during
         # session creation because we can't replace a non-external initializer with external data.
@@ -114,3 +117,13 @@ class ONNXModel:
         copy_model = copy.deepcopy(self._model)
         insert_raw_data_into_model(copy_model, self._data)
         return copy_model
+
+    def clone(self) -> "ONNXModel":
+        """
+        :return:
+        """
+        copy_proto = copy.deepcopy(self._model)
+        # TODO(andrey-churkin): We should also make a shallow copy of the dictionary here.
+        # We should forbid the use of copy and deepcopy on an ONNXModel instance. The right
+        # way is to use the ONNXModel.clone() method.
+        return ONNXModel(copy_proto, self._data.copy())

@@ -19,7 +19,6 @@ import nncf
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.onnx.model import ONNXModel
 from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.onnx_helper import get_children
 from nncf.onnx.graph.onnx_helper import get_children_node_mapping
@@ -32,6 +31,7 @@ from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.onnx.model import ONNXModel
 
 
 class ONNXModelTransformer(ModelTransformer):
@@ -107,7 +107,7 @@ class ONNXModelTransformer(ModelTransformer):
                 initializer_update_transformations.append(transformation)
         # Inplace transformations, using deepcopy of model
         if quantizer_insert_transformations or initializer_update_transformations or qdq_node_removing_transformations:
-            model = ONNXModel(deepcopy(self._model.model_proto), self._model.tensors)
+            model = self._model.clone()
 
             if quantizer_insert_transformations:
                 model = self._apply_quantizer_insertion_transformations(model, quantizer_insert_transformations)
@@ -203,7 +203,8 @@ class ONNXModelTransformer(ModelTransformer):
         children_node_mapping = get_children_node_mapping(model.model_proto)
         for transformation in transformations:
             model = self._insert_quantizer_dequantizer(model, transformation, node_mapping, children_node_mapping)
-        return model
+
+        return ONNXModel(onnx.shape_inference.infer_shapes(model.model_proto), model.tensors)
 
     def _get_quantize_dequantize_nodes(
         self, transformation: ONNXQuantizerInsertionCommand, target_edge_name: str
@@ -358,7 +359,7 @@ class ONNXModelTransformer(ModelTransformer):
 
     def _apply_initializer_update_transformations(
         self, model: ONNXModel, transformations: List[ONNXInitializerUpdateCommand]
-    ) -> onnx.ModelProto:
+    ) -> ONNXModel:
         """
         Creates a copy of original model and applies bias correction transformations on the model.
 
@@ -393,7 +394,7 @@ class ONNXModelTransformer(ModelTransformer):
             output_tensor_names.append(output_onnx_node.output[output_port_id])
 
         if not output_tensor_names:
-            output_tensor_names = [n.name for n in self._model.graph.output]
+            output_tensor_names = [n.name for n in self._model.model_proto.graph.output]
 
         submodel_proto = self.onnx_model_extractor.extract_model(input_tensor_names, output_tensor_names)
         submodel_tensors = {}
@@ -415,8 +416,8 @@ class ONNXModelTransformer(ModelTransformer):
         :param transformations: Nodes removing transformations.
         :return: Model with removed nodes.
         """
-        name_to_node_map = get_name_to_node_map(model)
-        children_node_mapping = get_children_node_mapping(model)
+        name_to_node_map = get_name_to_node_map(model.model_proto)
+        children_node_mapping = get_children_node_mapping(model.model_proto)
         # We combine quantize and dequantize nodes into pairs here because it
         # does not make sense to remove only the quantize node or the dequantize
         # node. They should be removed together.
@@ -440,8 +441,8 @@ class ONNXModelTransformer(ModelTransformer):
             msg = "Invalid transformation commands."
             raise RuntimeError(msg)
 
-        initializers = {i.name: i for i in model.graph.initializer}
-        value_infos = {i.name: i for i in model.graph.value_info}
+        initializers = {i.name: i for i in model.model_proto.graph.initializer}
+        value_infos = {i.name: i for i in model.model_proto.graph.value_info}
 
         for quantize_node_proto, dequantize_node_proto in quantize_dequantize_pairs:
             # Unlink Q-DQ subgraph from graph
@@ -452,13 +453,13 @@ class ONNXModelTransformer(ModelTransformer):
                         child.input[port_id] = quantize_node_proto.input[0]
             # QuantizeLinear and DequantizeLinear nodes have common initializers in ports 1 and 2.
             for i in [1, 2]:
-                model.graph.initializer.remove(initializers[quantize_node_proto.input[i]])
-                model.graph.value_info.remove(value_infos[quantize_node_proto.input[i]])
+                model.model_proto.graph.initializer.remove(initializers[quantize_node_proto.input[i]])
+                model.model_proto.graph.value_info.remove(value_infos[quantize_node_proto.input[i]])
 
             for node_proto in [quantize_node_proto, dequantize_node_proto]:
-                model.graph.value_info.remove(value_infos[node_proto.output[0]])
+                model.model_proto.graph.value_info.remove(value_infos[node_proto.output[0]])
 
-            model.graph.node.remove(quantize_node_proto)
-            model.graph.node.remove(dequantize_node_proto)
+            model.model_proto.graph.node.remove(quantize_node_proto)
+            model.model_proto.graph.node.remove(dequantize_node_proto)
 
         return model

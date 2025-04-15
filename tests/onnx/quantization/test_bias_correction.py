@@ -20,6 +20,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.onnx.graph.model_utils import remove_fq_from_inputs
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.node_utils import get_bias_value
+from nncf.onnx.model import ONNXModel
 from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
@@ -27,7 +28,6 @@ from tests.cross_fw.test_templates.helpers import MultipleConvTestModel
 from tests.cross_fw.test_templates.helpers import SplittedModel
 from tests.cross_fw.test_templates.helpers import TransposeConvTestModel
 from tests.cross_fw.test_templates.test_bias_correction import TemplateTestBCAlgorithm
-from tests.onnx.quantization.common import compare_nncf_graph
 
 
 class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
@@ -44,7 +44,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
         onnx_model = onnx.load(onnx_path)
-        return onnx_model
+        return ONNXModel.from_model(onnx_model)
 
     @staticmethod
     def fn_to_type(tensor) -> np.ndarray:
@@ -59,16 +59,12 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
         return transform_fn
 
     @staticmethod
-    def remove_fq_from_inputs(model: onnx.ModelProto) -> onnx.ModelProto:
-        graph = GraphConverter.create_nncf_graph(model)
+    def remove_fq_from_inputs(model: ONNXModel) -> ONNXModel:
+        graph = GraphConverter.create_nncf_graph(model.model_proto)
         return remove_fq_from_inputs(model, graph)
 
     @staticmethod
-    def compare_nncf_graphs(model: onnx.ModelProto, ref_path: str) -> None:
-        return compare_nncf_graph(model, ref_path)
-
-    @staticmethod
-    def check_bias(model: onnx.ModelProto, ref_biases: Dict) -> None:
+    def check_bias(model: ONNXModel, ref_biases: Dict) -> None:
         nncf_graph = NNCFGraphFactory.create(model)
         for ref_name, ref_value in ref_biases.items():
             node = nncf_graph.get_node_by_name(ref_name)
