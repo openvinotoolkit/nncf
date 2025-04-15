@@ -260,7 +260,8 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
             )
         else:
             if self.backend == BackendType.FP32:
-                ov.serialize(self.model, self.fp32_model_dir / self.OV_MODEL_NAME)
+                self.path_compressed_ir = self.fp32_model_dir / self.OV_MODEL_NAME
+                ov.serialize(self.model, self.path_compressed_ir)
                 self.model_hf._save_config(self.fp32_model_dir)
             else:
                 super().save_compressed_model()
