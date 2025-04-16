@@ -18,6 +18,7 @@ from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.onnx.graph.node_utils import get_act_quantization_axis
 from nncf.onnx.graph.node_utils import get_bias_value
+from nncf.onnx.model import ONNXModel
 from tests.onnx.models import OneConvolutionalIdentityBiasModel
 from tests.onnx.models import OneConvolutionalModel
 
@@ -28,8 +29,8 @@ def create_nncf_node(**layer_atrributes) -> NNCFNode:
 
 @pytest.mark.parametrize("model", [OneConvolutionalModel(), OneConvolutionalIdentityBiasModel()])
 def test_get_bias_value(model):
-    onnx_model = model.onnx_model
-    nncf_graph = GraphConverter.create_nncf_graph(onnx_model)
+    onnx_model = ONNXModel.from_model(model.onnx_model)
+    nncf_graph = GraphConverter.create_nncf_graph(onnx_model.model_proto)
     # Only one Convolution in test models
     conv_node = nncf_graph.get_nodes_by_metatypes([ONNXConvolutionMetatype])[0]
     bias_value = get_bias_value(conv_node, onnx_model)

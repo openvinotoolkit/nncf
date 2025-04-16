@@ -100,7 +100,9 @@ def is_onnx_model(model: Any) -> bool:
     """
     import onnx  # type: ignore
 
-    return isinstance(model, onnx.ModelProto)
+    from nncf.onnx.model import ONNXModel  # type: ignore
+
+    return isinstance(model, (onnx.ModelProto, ONNXModel))
 
 
 @result_verifier
@@ -176,6 +178,12 @@ def copy_model(model: TModel) -> TModel:
 
         model = TFModelTransformer(model).transform(TFTransformationLayout())
         return model
+    if model_backend == BackendType.ONNX:
+        from nncf.onnx.model import ONNXModel
+
+        onnx_model = cast(ONNXModel, model)
+        return cast(TModel, onnx_model.clone())
+
     return deepcopy(model)
 
 

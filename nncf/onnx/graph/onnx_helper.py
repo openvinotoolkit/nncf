@@ -13,9 +13,9 @@ from typing import Dict, Iterator, List, Optional, Union
 
 import numpy as np
 import onnx
-from onnx import numpy_helper
 
 import nncf
+from nncf.onnx.model import ONNXModel
 
 
 def get_name_to_node_map(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
@@ -174,7 +174,7 @@ def get_tensor(model: onnx.ModelProto, tensor_name: str) -> onnx.TensorProto:
     raise nncf.ValidationError(msg)
 
 
-def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray:
+def get_tensor_value(model: ONNXModel, tensor_name: str) -> np.ndarray:
     """
     Returns tensor value of a tensor with the name 'tensor_name'.
 
@@ -182,7 +182,8 @@ def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray:
     :param tensor_name: Name of the tensor.
     :return: The value of the tensor.
     """
-    return numpy_helper.to_array(get_tensor(model, tensor_name))
+    # TODO(andrey-churkin): Consider adding a separate method: `OnnxModel.get_tensor_by_name(name: str) -> np.ndarray`
+    return model.tensors[tensor_name]
 
 
 def get_edge_shape(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> List[int]:

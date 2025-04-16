@@ -791,15 +791,15 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
     for attribute in node.attribute:
         if attribute.name == "group":
             conv_group = onnx.helper.get_attribute_value(attribute)
-    weight_tensor_value = None
+    shape = None
     initializer_name = get_tensor_edge_name(model, node, 1, get_parents_node_mapping(model))
     for init in model.graph.initializer:
         if init.name == initializer_name:
-            weight_tensor_value = onnx.numpy_helper.to_array(init)
-    if weight_tensor_value is None:
+            shape = [dim for dim in init.dims]
+    if shape is None:
         return False
-    conv_out_channels = weight_tensor_value.shape[0]
-    conv_in_channels = weight_tensor_value.shape[1] * conv_group
+    conv_out_channels = shape[0]
+    conv_in_channels = shape[1] * conv_group
     if (
         conv_out_channels % conv_in_channels == 0
         and conv_out_channels // conv_in_channels > 0

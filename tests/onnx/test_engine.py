@@ -22,6 +22,7 @@ from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.onnx.model import ONNXModel
 from tests.onnx.models import NonShapeModel
 
 
@@ -39,7 +40,9 @@ TARGET_LAYERS_OUTPUT = [["Y", "conv"], ["Y", "conv", "relu_1"], ["Y", "conv", "r
 @pytest.mark.parametrize("target_layers, target_layers_output", zip(TARGET_LAYERS, TARGET_LAYERS_OUTPUT))
 def test_output_insertion(target_layers, target_layers_output):
     model = NonShapeModel().onnx_model
-    nncf_graph = GraphConverter.create_nncf_graph(model)
+    model = ONNXModel.from_model(model)
+
+    nncf_graph = GraphConverter.create_nncf_graph(model.model_proto)
     nncf_input_node_next_onnx_nodes = {}
     for input_node in nncf_graph.get_input_nodes():
         next_nodes = nncf_graph.get_next_nodes(input_node)
