@@ -14,8 +14,8 @@ from typing import Any, Dict, List, Optional
 
 import openvino.runtime as ov
 
+import nncf
 from nncf.common.logging import nncf_logger
-from nncf.definitions import NNCF_VERSION
 from nncf.scopes import IgnoredScope
 
 
@@ -33,7 +33,7 @@ def exclude_empty_fields(value: Dict[str, Any]) -> Dict[str, Any]:
     return value
 
 
-def dump_parameters(
+def write_rt_info(
     model: ov.Model, parameters: Dict, algo_name: Optional[str] = "quantization", path: Optional[List] = None
 ) -> None:
     """
@@ -51,7 +51,7 @@ def dump_parameters(
             if isinstance(value, IgnoredScope):
                 value = exclude_empty_fields(asdict(value))
                 if bool(value):
-                    dump_parameters(model, value, algo_name, [key])
+                    write_rt_info(model, value, algo_name, [key])
                     continue
                 else:
                     # The default value in case empty ignored_scope parameter passed
@@ -59,9 +59,6 @@ def dump_parameters(
 
             rt_path = ["nncf", algo_name] + path + [key]
             model.set_rt_info(str(value), rt_path)
+        model.set_rt_info(nncf.__version__, ["nncf", "version"])
     except RuntimeError as e:
         nncf_logger.debug(f"Unable to dump optimization parameters due to error: {e}")
-
-
-def dump_nncf_version(model: ov.Model) -> None:
-    model.set_rt_info(NNCF_VERSION, ["nncf", "version"])

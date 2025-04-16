@@ -30,8 +30,7 @@ from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
-from nncf.openvino.rt_info import dump_nncf_version
-from nncf.openvino.rt_info import dump_parameters
+from nncf.openvino.rt_info import write_rt_info
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -127,7 +126,7 @@ def native_quantize_if_op_impl(
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)
 
-    dump_parameters(
+    write_rt_info(
         quantized_model,
         {
             "preset": preset,
@@ -139,7 +138,6 @@ def native_quantize_if_op_impl(
             "advanced_parameters": convert_to_dict_recursively(advanced_parameters),
         },
     )
-    dump_nncf_version(quantized_model)
     return quantized_model
 
 
@@ -175,7 +173,7 @@ def native_quantize_impl(
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)
 
-    dump_parameters(
+    write_rt_info(
         quantized_model,
         {
             "preset": preset,
@@ -187,7 +185,6 @@ def native_quantize_impl(
             "advanced_parameters": convert_to_dict_recursively(advanced_parameters),
         },
     )
-    dump_nncf_version(quantized_model)
     return quantized_model
 
 
@@ -312,7 +309,7 @@ def quantize_with_accuracy_control_impl(
     if compress_weights:
         compress_quantize_weights_transformation(quantized_model)
 
-    dump_parameters(
+    write_rt_info(
         quantized_model,
         {
             "preset": preset,
@@ -327,7 +324,6 @@ def quantize_with_accuracy_control_impl(
             "advanced_accuracy_restorer_parameters": convert_to_dict_recursively(advanced_accuracy_restorer_parameters),
         },
     )
-    dump_nncf_version(quantized_model)
     return quantized_model
 
 

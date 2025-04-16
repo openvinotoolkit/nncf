@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import os
-import re
 from pathlib import Path
 
 NNCF_PACKAGE_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -24,12 +23,3 @@ CACHE_MODELS_PATH = NNCF_CACHE_PATH / Path("models")
 # debug dumps, are performed or not performed
 NNCF_CI_ENV_VAR_NAME = "NNCF_CI"  # Must be set in CI environments
 NNCF_DEV_ENV_VAR_NAME = "NNCF_DEV"  # Must be set in environments of the NNCF dev team machines
-
-try:
-    NNCF_VERSION = re.search(
-        r"^__version__ = ['\"](\d+\.\d+\.\d+[^'\"]*)['\"]",
-        (Path(NNCF_PACKAGE_ROOT_DIR) / "version.py").read_text(),
-        re.M,
-    ).group(1)
-except Exception:
-    NNCF_VERSION = "unknown"
