@@ -302,6 +302,7 @@ class WeightCompression(Algorithm):
                 awq_params.alpha_min,
                 awq_params.alpha_max,
                 awq_params.steps,
+                awq_params.is_data_aware,
             )
         if self._gptq:
             gptq_params = self._advanced_parameters.gptq_params

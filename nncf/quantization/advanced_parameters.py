@@ -276,6 +276,8 @@ class AdvancedAWQParameters:
     :type alpha_max: float
     :param steps: The number of the steps in grid search.
     :type steps: int
+    :param is_data_aware: Determines whether to use activations to calculate scales.
+    :type is_data_aware: bool
     """
 
     subset_size: int = 32
@@ -283,6 +285,7 @@ class AdvancedAWQParameters:
     alpha_min: float = 0.0
     alpha_max: float = 1.0
     steps: int = 100
+    is_data_aware: bool = True
 
 
 @api()
