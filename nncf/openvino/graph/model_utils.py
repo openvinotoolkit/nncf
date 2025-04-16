@@ -11,7 +11,7 @@
 from collections import deque
 from typing import List
 
-import openvino.runtime as ov
+import openvino as ov
 
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph

@@ -12,9 +12,9 @@
 from typing import List, Type
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pytest
-from openvino.runtime import opset13 as opset
+from openvino import opset13 as opset
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetPoint

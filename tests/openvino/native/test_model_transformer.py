@@ -14,9 +14,9 @@ from pathlib import Path
 from typing import Callable, List, Tuple
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pytest
-from openvino.runtime import opset13 as opset
+from openvino import opset13 as opset
 
 import nncf
 from nncf.common.graph.transformations.commands import TargetType
