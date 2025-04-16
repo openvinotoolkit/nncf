@@ -233,7 +233,7 @@ def quantize(
 
     if backend == BackendType.TORCH:
         if is_torch_tracing_by_torch_function_mode():
-            from nncf.experimental.torch2.quantization.quantize_model import quantize_impl
+            from nncf.torch.function_hook.quantization.quantize_model import quantize_impl
         else:
             from nncf.torch.quantization.quantize_model import quantize_impl
 

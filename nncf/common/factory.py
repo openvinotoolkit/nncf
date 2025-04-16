@@ -54,7 +54,7 @@ class NNCFGraphFactory:
 
             return FXGraphConverter.create_nncf_graph(cast(GraphModule, model))
         if model_backend == BackendType.TORCH:
-            from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+            from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
             from nncf.torch.nncf_network import NNCFNetwork
 
             if isinstance(model, GraphModelWrapper):
@@ -91,8 +91,8 @@ class ModelTransformerFactory:
 
             return OVModelTransformer(cast(Model, model), inplace=inplace)
         if model_backend == BackendType.TORCH and is_torch_tracing_by_torch_function_mode():
-            from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
-            from nncf.experimental.torch2.model_transformer import PT2ModelTransformer
+            from nncf.torch.function_hook.model_transformer import PT2ModelTransformer
+            from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
             return PT2ModelTransformer(cast(GraphModelWrapper, model))
 
@@ -137,8 +137,8 @@ class EngineFactory:
         if model_backend in (BackendType.TORCH, BackendType.TORCH_FX):
             from torch.nn import Module
 
-            from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
             from nncf.torch.engine import PTEngine
+            from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
             if isinstance(model, GraphModelWrapper):
                 pt_model = model.model
@@ -196,7 +196,7 @@ class StatisticsAggregatorFactory:
 
             return PTStatisticsAggregator(dataset)
         if model_backend == BackendType.TORCH and is_torch_tracing_by_torch_function_mode():
-            from nncf.experimental.torch2.statistics.aggregator import PT2StatisticsAggregator
+            from nncf.torch.function_hook.statistics.aggregator import PT2StatisticsAggregator
 
             return PT2StatisticsAggregator(dataset)
         if model_backend == BackendType.TORCH_FX:

@@ -30,9 +30,9 @@ from torch import nn
 from torch.overrides import TorchFunctionMode
 
 from nncf.common.logging import nncf_logger as logger
-from nncf.experimental.torch2.function_hook.handle_inner_functions import get_handle_inner_function
-from nncf.experimental.torch2.function_hook.hook_storage import HookStorage
-from nncf.experimental.torch2.function_hook.weak_map import WeakUnhashableKeyMap
+from nncf.torch.function_hook.handle_inner_functions import get_handle_inner_function
+from nncf.torch.function_hook.hook_storage import HookStorage
+from nncf.torch.function_hook.weak_map import WeakUnhashableKeyMap
 
 IGNORED_FN_NAMES = [
     "__repr__",

@@ -17,10 +17,10 @@ from torch import nn
 import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import ConstantLayerAttributes
-from nncf.experimental.torch2.function_hook.hook_storage import decode_hook_name
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
-from nncf.experimental.torch2.function_hook.wrapper import get_hook_storage
 from nncf.parameters import StripFormat
+from nncf.torch.function_hook.hook_storage import decode_hook_name
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
+from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_module_by_name

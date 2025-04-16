@@ -16,9 +16,9 @@ import openvino.runtime as ov
 import pytest
 import torch
 
-from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
-from nncf.experimental.torch2.function_hook.wrapper import wrap_model
 from nncf.quantization.algorithms.smooth_quant.torch_backend import PTSmoothQuantAlgoBackend
+from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+from nncf.torch.function_hook.wrapper import wrap_model
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from tests.cross_fw.test_templates.helpers import ConvTestModel

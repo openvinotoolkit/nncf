@@ -26,7 +26,6 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.patcher import PATCHER
 from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
-from nncf.experimental.torch2.function_hook.hook_executor_mode import disable_function_hook_mode
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import DynamicGraphNode
 from nncf.torch.dynamic_graph.graph import DynamicGraphNodeParameters
@@ -37,6 +36,7 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
+from nncf.torch.function_hook.hook_executor_mode import disable_function_hook_mode
 
 
 class ThreadLocalGlobalContext(threading.local):

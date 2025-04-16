@@ -8,3 +8,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from nncf.torch.function_hook.graph.build_graph_mode import build_graph as build_graph
+from nncf.torch.function_hook.wrapper import get_hook_storage as get_hook_storage
+from nncf.torch.function_hook.wrapper import is_wrapped as is_wrapped
+from nncf.torch.function_hook.wrapper import register_post_function_hook as register_post_function_hook
+from nncf.torch.function_hook.wrapper import register_pre_function_hook as register_pre_function_hook
+from nncf.torch.function_hook.wrapper import wrap_model as wrap_model

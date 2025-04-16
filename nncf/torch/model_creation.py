@@ -28,8 +28,6 @@ from nncf.config.extractors import extract_algorithm_names
 from nncf.config.extractors import has_input_info_field
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
-from nncf.experimental.torch2.function_hook.serialization import get_config as pt2_get_config
-from nncf.experimental.torch2.function_hook.serialization import load_from_config as pt2_load_from_config
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.telemetry.extractors import FunctionCallTelemetryExtractor
@@ -45,6 +43,8 @@ from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.io_handling import LoaderInputInfo
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
 from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
+from nncf.torch.function_hook.serialization import get_config as pt2_get_config
+from nncf.torch.function_hook.serialization import load_from_config as pt2_load_from_config
 from nncf.torch.graph.transformations.serialization import deserialize_transformations
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
@@ -365,9 +365,9 @@ def wrap_model(
         if not trace_parameters:
             msg = "The 'trace_parameters=False' option is not supported in the experimental tracing mode."
             raise nncf.InternalError(msg)
-        from nncf.experimental.torch2.function_hook import is_wrapped as pt2_is_wrapped
-        from nncf.experimental.torch2.function_hook import wrap_model as pt2_wrap_model
-        from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+        from nncf.torch.function_hook import is_wrapped as pt2_is_wrapped
+        from nncf.torch.function_hook import wrap_model as pt2_wrap_model
+        from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
         if not pt2_is_wrapped(model):
             model = pt2_wrap_model(model)
@@ -399,7 +399,7 @@ def is_wrapped_model(model: Any) -> bool:
     :param model: A model.
     :return: True if the model is wrapped, False otherwise.
     """
-    from nncf.experimental.torch2.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
+    from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
     return isinstance(model, (NNCFNetwork, GraphModelWrapper))
 

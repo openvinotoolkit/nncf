@@ -36,7 +36,7 @@ def strip(
     :return: The stripped model.
     """
     if is_torch_tracing_by_torch_function_mode():
-        from nncf.experimental.torch2.function_hook.strip import strip_quantized_model
+        from nncf.torch.function_hook.strip import strip_quantized_model
 
         if example_input is None:
             msg = "Required example_input for strip model."
