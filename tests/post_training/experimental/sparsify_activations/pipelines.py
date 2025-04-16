@@ -258,10 +258,13 @@ class LMSparsifyActivations(SAPipelineMixin, LMWeightCompression):
             export_from_model(
                 self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32", device="cuda"
             )
-        if self.backend == BackendType.FP32:
-            self.path_compressed_ir = self.fp32_model_dir / self.OV_MODEL_NAME
         else:
-            super().save_compressed_model()
+            if self.backend == BackendType.FP32:
+                self.path_compressed_ir = self.fp32_model_dir / self.OV_MODEL_NAME
+                ov.serialize(self.model, self.path_compressed_ir)
+                self.model_hf._save_config(self.fp32_model_dir)
+            else:
+                super().save_compressed_model()
 
     def _dump_model_fp32(self):
         if self.backend == BackendType.CUDA_TORCH:
@@ -292,3 +295,10 @@ class ImageClassificationTimmSparsifyActivations(SAPipelineMixin, ImageClassific
         subset = torch.utils.data.Subset(val_dataset, indices=indices)
         loader = torch.utils.data.DataLoader(subset, batch_size=self.batch_size, num_workers=2, shuffle=False)
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
+
+    def save_compressed_model(self):
+        if self.backend == BackendType.FP32:
+            self.path_compressed_ir = self.fp32_model_dir / "model_fp32.xml"
+            ov.serialize(self.model, self.path_compressed_ir)
+        else:
+            super().save_compressed_model()
