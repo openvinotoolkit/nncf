@@ -15,6 +15,7 @@ import torch
 
 import nncf
 import nncf.torch.graph.operator_metatypes as om
+from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -24,7 +25,6 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
 from nncf.experimental.common.tensor_statistics.collectors import REDUCERS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.parameters import ModelType
@@ -153,10 +153,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         input_port_id: Optional[int] = port_id
         if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
             input_port_id = None
-        if (
-            not is_torch_tracing_by_torch_function_mode()
-            and target_type in PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP
-        ):
+        if is_torch_tracing_by_patching() and target_type in PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
             target_type = PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]
         return PTTargetPoint(target_type, target_node_name, input_port_id=input_port_id)
 
@@ -281,10 +278,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = PTMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_point.target_type
         )
-        if is_torch_tracing_by_torch_function_mode():
-            return PT2InsertionCommand(target_points=[target_point], hook_module=quantizer)
-
-        return create_quantizer_insertion_command(target_point, quantizer)
+        if is_torch_tracing_by_patching():
+            return create_quantizer_insertion_command(target_point, quantizer)
+        return PT2InsertionCommand(target_points=[target_point], hook_module=quantizer)
 
     @staticmethod
     def create_unified_scales_quantizers_insertion_commands(
@@ -300,9 +296,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = PTMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_points[0].target_type
         )
-        if is_torch_tracing_by_torch_function_mode():
-            return [PT2InsertionCommand(target_points=target_points, hook_module=quantizer)]
-        return [create_shared_quantizer_insertion_command(target_points, quantizer)]
+        if is_torch_tracing_by_patching():
+            return [create_shared_quantizer_insertion_command(target_points, quantizer)]
+        return [PT2InsertionCommand(target_points=target_points, hook_module=quantizer)]
 
     @staticmethod
     def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:

@@ -15,7 +15,7 @@ from typing import Any, Callable, TypeVar, cast
 from packaging import version
 
 import nncf
-from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
+from nncf.common.check_features import is_torch_tracing_by_patching
 
 try:
     import openvino  # type: ignore # noqa: F401
@@ -58,10 +58,9 @@ def is_torch_model(model: Any) -> bool:
 
     from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
-    if is_torch_tracing_by_torch_function_mode():
-        return isinstance(model, (GraphModelWrapper, torch.nn.Module)) and not isinstance(model, torch.fx.GraphModule)
-
-    return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
+    if is_torch_tracing_by_patching():
+        return not isinstance(model, torch.fx.GraphModule) and isinstance(model, torch.nn.Module)
+    return isinstance(model, (GraphModelWrapper, torch.nn.Module)) and not isinstance(model, torch.fx.GraphModule)
 
 
 @result_verifier

@@ -12,13 +12,13 @@
 import os
 
 
-def is_torch_tracing_by_torch_function_mode() -> bool:
+def is_torch_tracing_by_patching() -> bool:
     """
     Checks if legacy torch tracing is enabled by environment variable NNCF_TORCH_LEGACY_TRACING.
 
-    True - will wrap model by NNCFNetwork and patch function in torch namespace.
-    False - will use FunctionHookMode without patching torch namespace.
+    True - will use FunctionHookMode without patching torch namespace.
+    False - will wrap model by NNCFNetwork and patch function in torch namespace.
 
     :return: True if legacy torch tracing is enabled, False otherwise.
     """
-    return os.getenv("NNCF_TORCH_LEGACY_TRACING", "").lower() not in ["1", "on", "true"]
+    return os.getenv("NNCF_TORCH_LEGACY_TRACING", "").lower() in ["1", "on", "true"]

@@ -12,6 +12,7 @@
 from typing import Any, TypeVar, cast
 
 import nncf
+from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.engine import Engine
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer
@@ -20,7 +21,6 @@ from nncf.common.tensor_statistics import aggregator
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data.dataset import Dataset
-from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
 
 TModel = TypeVar("TModel")
 
@@ -90,13 +90,13 @@ class ModelTransformerFactory:
             from nncf.openvino.graph.model_transformer import OVModelTransformer
 
             return OVModelTransformer(cast(Model, model), inplace=inplace)
-        if model_backend == BackendType.TORCH and is_torch_tracing_by_torch_function_mode():
+        if model_backend == BackendType.TORCH and not is_torch_tracing_by_patching():
             from nncf.torch.function_hook.model_transformer import PT2ModelTransformer
             from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
             return PT2ModelTransformer(cast(GraphModelWrapper, model))
 
-        if model_backend == BackendType.TORCH and not is_torch_tracing_by_torch_function_mode():
+        if model_backend == BackendType.TORCH and is_torch_tracing_by_patching():
             from nncf.torch.model_transformer import PTModelTransformer
             from nncf.torch.nncf_network import NNCFNetwork
 
@@ -191,11 +191,11 @@ class StatisticsAggregatorFactory:
             from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 
             return OVStatisticsAggregator(dataset)
-        if model_backend == BackendType.TORCH and not is_torch_tracing_by_torch_function_mode():
+        if model_backend == BackendType.TORCH and is_torch_tracing_by_patching():
             from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 
             return PTStatisticsAggregator(dataset)
-        if model_backend == BackendType.TORCH and is_torch_tracing_by_torch_function_mode():
+        if model_backend == BackendType.TORCH and not is_torch_tracing_by_patching():
             from nncf.torch.function_hook.statistics.aggregator import PT2StatisticsAggregator
 
             return PT2StatisticsAggregator(dataset)

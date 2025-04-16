@@ -19,13 +19,13 @@ from typing import Callable, DefaultDict, Dict, List, Optional, Union
 
 import torch
 
+from nncf.common.check_features import is_torch_tracing_by_patching
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.hook_handle import HookHandle
 from nncf.common.hook_handle import add_op_to_registry
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.patcher import PATCHER
-from nncf.experimental.common.check_feature import is_torch_tracing_by_torch_function_mode
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import DynamicGraphNode
 from nncf.torch.dynamic_graph.graph import DynamicGraphNodeParameters
@@ -506,15 +506,15 @@ def disable_tracing(method):
     Patch a method so that it will be executed within no_nncf_trace context
     :param method: A method to patch.
     """
-    if is_torch_tracing_by_torch_function_mode():
+    if is_torch_tracing_by_patching():
 
         def no_nncf_trace_wrapper(self, fn, *args, **kwargs):
-            with disable_function_hook_mode():
+            with no_nncf_trace():
                 return fn(*args, **kwargs)
     else:
 
         def no_nncf_trace_wrapper(self, fn, *args, **kwargs):
-            with no_nncf_trace():
+            with disable_function_hook_mode():
                 return fn(*args, **kwargs)
 
     PATCHER.patch(method, no_nncf_trace_wrapper)

@@ -25,7 +25,6 @@ from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
@@ -36,9 +35,7 @@ from nncf.torch.quantization.strip import sym_fq_to_decompressor
 TModel = TypeVar("TModel", bound=nn.Module)
 
 
-def strip_quantized_model(
-    model: NNCFNetwork, example_input: Any, strip_format: StripFormat = StripFormat.NATIVE
-) -> NNCFNetwork:
+def strip_quantized_model(model: TModel, example_input: Any, strip_format: StripFormat = StripFormat.NATIVE) -> TModel:
     """
     Removes auxiliary layers and operations added during the quantization process,
     resulting in a clean quantized model ready for deployment. The functionality of the model object is still preserved
