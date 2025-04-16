@@ -85,7 +85,7 @@ files = [
     "nncf/data",
     "nncf/common",
     "nncf/config",
-    "nncf/experimental/torch2",
+    "nncf/torch/function_hook",
     "nncf/quantization/*py",
     "nncf/telemetry/",
     "nncf/tensor/",
