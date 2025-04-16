@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pytest
 
 import nncf
@@ -130,6 +130,7 @@ def test_meta_information(model_creator_func, ignored_options):
     assert quantized_model.has_rt_info(base_path)
 
     check_parameters(quantized_model, quantize_parameters, base_path)
+    assert quantized_model.get_rt_info(["nncf", "version"]) == nncf.__version__
 
 
 @pytest.mark.parametrize(

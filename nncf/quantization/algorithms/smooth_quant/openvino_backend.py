@@ -12,7 +12,7 @@
 from typing import Callable, List, Tuple
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 
 import nncf
 from nncf.common.graph import NNCFGraph

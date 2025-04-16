@@ -260,4 +260,7 @@ def sparsify_activations(
 
     graph = NNCFGraphFactory.create(model)
     sparse_model = algorithm.apply(model, graph, dataset)
+
+    if backend == BackendType.TORCH:
+        sparse_model = sparse_model.model
     return sparse_model

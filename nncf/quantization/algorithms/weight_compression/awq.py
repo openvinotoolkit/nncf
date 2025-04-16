@@ -289,7 +289,7 @@ class AWQ(Algorithm):
         matches = []
         inference_nncf_graph = transform_to_inference_graph(deepcopy(graph), [], [], [], [])
         nx_graph = inference_nncf_graph.get_nx_graph_copy()
-        for _, pattern_graph in self._patterns.items():
+        for pattern_graph in self._patterns.values():
             matches.extend(find_subgraphs_matching_pattern(nx_graph, pattern_graph(), strict=False))
 
         if len(matches) == 0:

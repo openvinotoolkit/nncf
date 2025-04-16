@@ -13,7 +13,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
-import openvino.runtime as ov
+import openvino as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
 from nncf.common.factory import NNCFGraphFactory
@@ -364,7 +364,7 @@ def quantize_impl(
 
 def compress_weights_impl(
     model: ov.Model,
-    dataset: Dataset,
+    dataset: Optional[Dataset],
     mode: CompressWeightsMode,
     ratio: float,
     group_size: int,

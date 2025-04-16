@@ -12,7 +12,7 @@
 from typing import List, Optional, Tuple
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetPoint

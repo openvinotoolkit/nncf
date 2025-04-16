@@ -9,12 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
 import jsonschema
-import jstyleson as json  # type: ignore
 
 import nncf
 from nncf.common.logging import nncf_logger

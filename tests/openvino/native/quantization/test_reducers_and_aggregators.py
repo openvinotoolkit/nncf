@@ -13,7 +13,7 @@ from typing import Any, List, Optional, Tuple
 
 import numpy as np
 import openvino as ov
-import openvino.runtime.opset13 as opset
+import openvino.opset13 as opset
 import pytest
 
 from nncf.common.graph.layer_attributes import Dtype
