@@ -40,6 +40,7 @@ from nncf.openvino.graph.transformations.command_creation import OVCommandCreato
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.optimized_functions import clear_ov_model_cache
 from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
+from nncf.openvino.rt_info import dump_nncf_version
 from nncf.openvino.rt_info import dump_parameters
 from nncf.openvino.statistics.collectors import OVMaxVarianceReducer
 from nncf.openvino.statistics.collectors import OVMeanAbsMaxReducer
@@ -355,6 +356,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: ov.Model, parameters: Dict, algo_name: Optional[str] = "quantization", path: Optional[List] = None
     ) -> None:
         dump_parameters(model, parameters, algo_name, path)
+        dump_nncf_version(model)
 
     @staticmethod
     def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:

@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 import openvino.runtime as ov
 
 from nncf.common.logging import nncf_logger
+from nncf.definitions import NNCF_VERSION
 from nncf.scopes import IgnoredScope
 
 
@@ -60,3 +61,7 @@ def dump_parameters(
             model.set_rt_info(str(value), rt_path)
     except RuntimeError as e:
         nncf_logger.debug(f"Unable to dump optimization parameters due to error: {e}")
+
+
+def dump_nncf_version(model: ov.Model) -> None:
+    model.set_rt_info(NNCF_VERSION, ["nncf", "version"])
