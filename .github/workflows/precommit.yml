@@ -16,6 +16,10 @@ on:
       - 'tests/tensorflow/sota_checkpoints_eval.json'  # reference for TF e2e
       - 'tests/cross_fw/examples/*'  # examples tests runs in separate workflow
 
+concurrency:
+  group: precommit-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   pytest:
     uses: ./.github/workflows/call_precommit.yml
