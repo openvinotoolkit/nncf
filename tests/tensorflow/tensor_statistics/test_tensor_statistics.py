@@ -16,10 +16,12 @@ import pytest
 import tensorflow as tf
 
 from nncf.common.tensor_statistics.collectors import OfflineTensorStatisticCollector
-from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import StatisticsNotCollectedError
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.tensor_statistics.statistics import TensorStatistic
+# Using experimental tensor statistics implementation as part of the migration 
+# # from old tensor statistics to experimental tensor statistics
+from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.tensorflow.tensor_statistics.collectors import TFMeanMinMaxStatisticCollector
 from nncf.tensorflow.tensor_statistics.collectors import TFMeanPercentileStatisticCollector
 from nncf.tensorflow.tensor_statistics.collectors import TFMedianMADStatisticCollector
@@ -98,8 +100,8 @@ class TestCollectedStatistics:
     )
     def test_collected_statistics_with_shape_convert(
         self,
-        collector: Type[TensorStatisticCollectorBase],
-        reduction_shapes_vs_ref_statistic: Dict[Tuple[ReductionAxes, ReductionAxes], TensorStatistic],
+        collector: Type[TensorCollector],
+        reduction_shapes_vs_ref_statistic: Dict[Tuple[AggregationAxes, AggregationAxes], TensorStatistic],
     ):
         for reduction_shape in reduction_shapes_vs_ref_statistic:
             collector_obj = collector(use_abs_max=True, reduction_shape=reduction_shape)
@@ -176,8 +178,8 @@ class TestCollectedStatistics:
     )
     def test_collected_statistics(
         self,
-        collector: Type[TensorStatisticCollectorBase],
-        reduction_shapes_vs_ref_statistic: Dict[ReductionAxes, TensorStatistic],
+        collector: Type[TensorCollector],
+        reduction_shapes_vs_ref_statistic: Dict[AggregationAxes, TensorStatistic],
     ):
         for reduction_shape in reduction_shapes_vs_ref_statistic:
             collector_obj = collector(reduction_shape=reduction_shape)
@@ -206,12 +208,12 @@ class TestCollectedStatistics:
         collector_type = request.param
         return collector_type(reduction_shape=(1,))
 
-    def test_collected_samples(self, collector_for_interface_test: TensorStatisticCollectorBase):
+    def test_collected_samples(self, collector_for_interface_test: TensorCollector):
         for input_ in TestCollectedStatistics.REF_INPUTS:
             collector_for_interface_test.register_input(input_)
         assert collector_for_interface_test.collected_samples() == len(TestCollectedStatistics.REF_INPUTS)
 
-    def test_reset(self, collector_for_interface_test: TensorStatisticCollectorBase):
+    def test_reset(self, collector_for_interface_test: TensorCollector):
         for input_ in TestCollectedStatistics.REF_INPUTS:
             collector_for_interface_test.register_input(input_)
         collector_for_interface_test.reset()
@@ -219,7 +221,7 @@ class TestCollectedStatistics:
         with pytest.raises(StatisticsNotCollectedError):
             collector_for_interface_test.get_statistics()
 
-    def test_enable_disable(self, collector_for_interface_test: TensorStatisticCollectorBase):
+    def test_enable_disable(self, collector_for_interface_test: TensorCollector):
         for input_ in TestCollectedStatistics.REF_INPUTS:
             collector_for_interface_test.register_input(input_)
 
