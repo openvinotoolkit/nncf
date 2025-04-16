@@ -30,7 +30,7 @@ from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
-from nncf.openvino.rt_info import write_rt_info
+from nncf.openvino.rt_info import dump_parameters
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
@@ -126,7 +126,7 @@ def native_quantize_if_op_impl(
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)
 
-    write_rt_info(
+    dump_parameters(
         quantized_model,
         {
             "preset": preset,
@@ -173,7 +173,7 @@ def native_quantize_impl(
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)
 
-    write_rt_info(
+    dump_parameters(
         quantized_model,
         {
             "preset": preset,
@@ -309,7 +309,7 @@ def quantize_with_accuracy_control_impl(
     if compress_weights:
         compress_quantize_weights_transformation(quantized_model)
 
-    write_rt_info(
+    dump_parameters(
         quantized_model,
         {
             "preset": preset,

@@ -33,7 +33,7 @@ def exclude_empty_fields(value: Dict[str, Any]) -> Dict[str, Any]:
     return value
 
 
-def write_rt_info(
+def dump_parameters(
     model: ov.Model, parameters: Dict, algo_name: Optional[str] = "quantization", path: Optional[List] = None
 ) -> None:
     """
@@ -51,7 +51,7 @@ def write_rt_info(
             if isinstance(value, IgnoredScope):
                 value = exclude_empty_fields(asdict(value))
                 if bool(value):
-                    write_rt_info(model, value, algo_name, [key])
+                    dump_parameters(model, value, algo_name, [key])
                     continue
                 else:
                     # The default value in case empty ignored_scope parameter passed
