@@ -3,10 +3,6 @@ permissions: read-all
 
 on:
   pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
     paths-ignore:
       - '**/*.md'
       - '.ci/*'
