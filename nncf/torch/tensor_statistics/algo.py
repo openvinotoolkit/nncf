@@ -15,9 +15,11 @@ import torch
 from nncf.api.compression import CompressionStage
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
-from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.config import NNCFConfig
+
+# Using experimental tensor statistics implementation as part of the migration
+# from old tensor statistics to experimental tensor statistics
+from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.tensor import Tensor
 from nncf.torch.algo_selector import ZeroCompressionLoss
@@ -33,7 +35,7 @@ from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 
 
 class TensorStatisticObservationPoint:
-    def __init__(self, target_point: PTTargetPoint, reduction_shapes: Set[ReductionAxes] = None):
+    def __init__(self, target_point: PTTargetPoint, reduction_shapes: Set[AggregationAxes] = None):
         self.target_point = target_point
         self.reduction_shapes = reduction_shapes
 
@@ -71,7 +73,7 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
     def __init__(
         self,
         config: NNCFConfig,
-        observation_points_vs_collectors: Dict[TensorStatisticObservationPoint, TensorStatisticCollectorBase],
+        observation_points_vs_collectors: Dict[TensorStatisticObservationPoint, TensorCollector],
     ):
         super().__init__(config)
         self._observation_points_vs_collectors = observation_points_vs_collectors
@@ -107,9 +109,7 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
 
 
 class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
-    def __init__(
-        self, target_model: NNCFNetwork, ip_vs_collector_dict: Dict[PTTargetPoint, TensorStatisticCollectorBase]
-    ):
+    def __init__(self, target_model: NNCFNetwork, ip_vs_collector_dict: Dict[PTTargetPoint, TensorCollector]):
         super().__init__(target_model)
         self.ip_vs_collector_dict = ip_vs_collector_dict
         self._scheduler = StubCompressionScheduler()

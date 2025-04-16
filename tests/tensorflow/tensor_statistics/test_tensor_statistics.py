@@ -17,7 +17,8 @@ import tensorflow as tf
 
 from nncf.common.tensor_statistics.collectors import OfflineTensorStatisticCollector
 from nncf.common.tensor_statistics.collectors import StatisticsNotCollectedError
-# Using experimental tensor statistics implementation as part of the migration 
+
+# Using experimental tensor statistics implementation as part of the migration
 # # from old tensor statistics to experimental tensor statistics
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector

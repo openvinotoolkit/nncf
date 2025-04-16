@@ -19,10 +19,10 @@ import torch
 # from old tensor statistics to experimental tensor statistics
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import PercentileTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 from nncf.torch.tensor_statistics.collectors import get_mean_percentile_statistic_collector

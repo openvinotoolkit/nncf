@@ -31,10 +31,12 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.scopes import should_consider_scope
-from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.config.schemata.algo.quantization import RANGE_INIT_TYPES_VS_DESCRIPTIONS
+
+# Using experimental tensor statistics implementation as part of the migration
+# from old tensor statistics to experimental tensor statistics
 from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.initialization import DataLoaderBaseRunner
 from nncf.torch.nncf_network import NNCFNetwork
@@ -107,7 +109,7 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         self._input_shape = input_shape
         self._channel_idx = channel_idx
 
-    def get_reduction_aggregation_axes(self, is_per_sample: bool) -> Tuple[ReductionAxes, AggregationAxes]:
+    def get_reduction_aggregation_axes(self, is_per_sample: bool) -> Tuple[AggregationAxes, AggregationAxes]:
         if self.is_per_channel:
             return super().get_reduction_aggregation_axes(self._input_shape, (self._channel_idx,), is_per_sample)
         return super().get_reduction_aggregation_axes(self._input_shape, (), is_per_sample)
@@ -117,7 +119,7 @@ class StatCollectorGenerator:
     @staticmethod
     def generate_collectors_for_range_init_statistics_collection(
         target_model_graph: PTNNCFGraph, quantizer_setup: QuantizerSetupBase, range_init_params: PTRangeInitParams
-    ) -> Dict[TensorStatisticObservationPoint, Dict[ReductionAxes, TensorStatisticCollectorBase]]:
+    ) -> Dict[TensorStatisticObservationPoint, Dict[AggregationAxes, TensorCollector]]:
         retval = {}
         for qp in quantizer_setup.quantization_points.values():
             init_config = range_init_params.get_init_config_for_quantization_point(qp)
@@ -147,10 +149,10 @@ class StatCollectorGenerator:
     @staticmethod
     def generate_stat_collector_for_range_init_config(
         init_config: RangeInitConfig,
-        scale_shape: ReductionAxes = None,
+        scale_shape: AggregationAxes = None,
         collector_params: PTRangeInitCollectorParams = None,
         num_samples_to_collect_override: int = None,
-    ) -> TensorStatisticCollectorBase:
+    ) -> TensorCollector:
         num_samples = init_config.num_init_samples
         if num_samples_to_collect_override is not None:
             num_samples = num_samples_to_collect_override
@@ -222,7 +224,7 @@ class StatCollectorGenerator:
     @classmethod
     def get_all_scale_shapes_with_params(
         cls, qp: QuantizationPointBase, target_nncf_graph: PTNNCFGraph
-    ) -> Dict[ReductionAxes, PTRangeInitCollectorParams]:
+    ) -> Dict[AggregationAxes, PTRangeInitCollectorParams]:
         qconfigs = qp.get_all_configs_list()
         if qp.is_weight_quantization_point():
             module_node = target_nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
@@ -262,14 +264,12 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
         self.modules_to_init = modules_to_init_vs_init_configs
         self.progressbar_description = "Range parameters initialization"
 
-        self.collectors_and_modules_to_init: Dict[str, Tuple[TensorStatisticCollectorBase, BaseQuantizer]] = (
-            OrderedDict()
-        )
+        self.collectors_and_modules_to_init: Dict[str, Tuple[TensorCollector, BaseQuantizer]] = OrderedDict()
         self.hook_handles = []
         self.batch_size = batch_size
 
     def _get_fwd_hook(
-        self, collector: TensorStatisticCollectorBase
+        self, collector: TensorCollector
     ) -> Callable[["torch.Module", torch.Tensor, torch.Tensor], torch.Tensor]:
         hook = create_register_input_hook(collector=collector)
 
