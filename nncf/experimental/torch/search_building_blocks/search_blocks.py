@@ -286,14 +286,14 @@ def get_potential_candidate_for_block(search_graph: SearchGraph) -> Tuple[ShapeV
     for node in search_graph.get_all_nodes():
         next_edges = search_graph.get_next_edges(node.node_key)
         prev_edges = search_graph.get_prev_edges(node.node_key)
-        for _, edge_attr in next_edges.items():
+        for edge_attr in next_edges.values():
             search_graph.set_node_attr(
                 node.node_key, SearchGraph.ACTIVATION_OUTPUT_SHAPE_ATTR, edge_attr[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
             )
             if not node.is_dummy:
                 add_node_to_aux_struct(node, edge_attr[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR], act_output_shape)
             break
-        for _, edge_attr in prev_edges.items():
+        for edge_attr in prev_edges.values():
             search_graph.set_node_attr(
                 node.node_key, SearchGraph.ACTIVATION_OUTPUT_SHAPE_ATTR, edge_attr[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
             )

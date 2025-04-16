@@ -409,7 +409,7 @@ class TracingContext:
             self._threading.thread_local.node_call_tracker[node.node_id] = 1
 
     def reset_node_call_counters(self):
-        for k, _ in self._threading.thread_local.node_call_tracker.items():
+        for k in self._threading.thread_local.node_call_tracker:
             self._threading.thread_local.node_call_tracker[k] = 0
 
     def get_node_call_counter_dict(self):
@@ -442,8 +442,7 @@ class TracingContext:
         stack_copy = self.relative_scopes_stack.copy()
         scope_el_list = []
         for relative_scope in stack_copy:
-            for scope_element in relative_scope.scope_elements:
-                scope_el_list.append(scope_element)
+            scope_el_list.extend(relative_scope.scope_elements)
         return Scope(scope_el_list)
 
     def reset_graph(self):
