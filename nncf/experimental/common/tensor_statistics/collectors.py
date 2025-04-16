@@ -19,7 +19,6 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 import nncf
 import nncf.tensor.functions as fns
 from nncf.common.tensor import TensorType
-from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
@@ -28,6 +27,8 @@ from nncf.quantization.range_estimator import StatisticsType
 from nncf.tensor import Tensor
 
 InplaceInsertionFNType = TypeVar("InplaceInsertionFNType")
+# AggregationAxes serves the same purpose as ReductionAxes in the old implementation
+# but is defined here to break circular dependencies
 AggregationAxes = Tuple[int, ...]
 
 
@@ -37,7 +38,7 @@ class TensorReducerBase(ABC):
     the specified rule. Could handle tensors inplace or out of place.
     """
 
-    def __init__(self, reduction_axes: Optional[ReductionAxes] = None, inplace: bool = False):
+    def __init__(self, reduction_axes: Optional[AggregationAxes] = None, inplace: bool = False):
         """
         :param reduction_axes: Reduction axes for reduction calculation. Equal to list(range(len(input.shape)))
             if empty.
@@ -98,7 +99,7 @@ class TensorReducerBase(ABC):
     def __hash__(self) -> int:
         return hash((self.__class__.__name__, self.inplace, self._reduction_axes))
 
-    def _get_reduction_axes(self, tensor: Tensor) -> ReductionAxes:
+    def _get_reduction_axes(self, tensor: Tensor) -> AggregationAxes:
         if self._reduction_axes is not None:
             return self._reduction_axes
         return tuple(range(len(tensor.shape)))
@@ -489,7 +490,7 @@ class MeanAbsMaxReducer(TensorReducerBase):
 class QuantileReducerBase(TensorReducerBase):
     def __init__(
         self,
-        reduction_axes: Optional[ReductionAxes] = None,
+        reduction_axes: Optional[AggregationAxes] = None,
         quantile: Optional[Union[float, Tuple[float]]] = None,
         inplace: bool = False,
     ):
@@ -513,7 +514,7 @@ class QuantileReducer(QuantileReducerBase):
 class AbsQuantileReducer(QuantileReducerBase):
     def __init__(
         self,
-        reduction_axes: Optional[ReductionAxes] = None,
+        reduction_axes: Optional[AggregationAxes] = None,
         quantile: Optional[Union[float, List[float]]] = None,
         inplace: bool = False,
     ):
