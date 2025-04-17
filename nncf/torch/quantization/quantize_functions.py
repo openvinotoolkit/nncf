@@ -63,24 +63,24 @@ class QuantizeSymmetric(torch.autograd.Function):
                 grad_output = grad_output.contiguous()
 
             grad_input, _, grad_scale = QuantizedFunctionsCUDA.get("Quantize_backward")(
-                grad_output=grad_output,
-                input_=input_,
-                input_low=input_low,
-                input_range=input_range,
-                levels=levels,
-                level_low=level_low,
-                level_high=level_high,
+                grad_output,
+                input_,
+                input_low,
+                input_range,
+                levels,
+                level_low,
+                level_high,
             )
         else:
             grad_input, _, grad_scale = QuantizedFunctionsCPU.get("Quantize_backward")(
-                grad_output=grad_output,
-                input_=input_,
-                input_low=input_low,
-                input_range=input_range,
-                levels=levels,
-                level_low=level_low,
-                level_high=level_high,
-                is_asymmetric=False,
+                grad_output,
+                input_,
+                input_low,
+                input_range,
+                levels,
+                level_low,
+                level_high,
+                False,
             )
 
         return grad_input, grad_scale, None, None, None
@@ -123,24 +123,24 @@ class QuantizeAsymmetric(torch.autograd.Function):
                 grad_output = grad_output.contiguous()
 
             grad_input, grad_input_low, grad_input_range = QuantizedFunctionsCUDA.get("Quantize_backward")(
-                grad_output=grad_output,
-                input_=input_,
-                input_low=input_low,
-                input_range=input_range,
-                levels=levels,
-                level_low=level_low,
-                level_high=level_high,
+                grad_output,
+                input_,
+                input_low,
+                input_range,
+                levels,
+                level_low,
+                level_high,
             )
         else:
             grad_input, grad_input_low, grad_input_range = QuantizedFunctionsCPU.get("Quantize_backward")(
-                grad_output=grad_output,
-                input_=input_,
-                input_low=input_low,
-                input_range=input_range,
-                levels=levels,
-                level_low=level_low,
-                level_high=level_high,
-                is_asymmetric=True,
+                grad_output,
+                input_,
+                input_low,
+                input_range,
+                levels,
+                level_low,
+                level_high,
+                True,
             )
         return grad_input, grad_input_low, grad_input_range, None, None, None
 
