@@ -675,7 +675,7 @@ def test_get_scale_zp_from_input_low_input_high(
 
 
 class CompatibilityTestDesc:
-    def __init__(self, levels, level_low, level_high, is_asymmetric):
+    def __init__(self, levels, level_low, level_high):
         self.input_ = torch.tensor([[-0.5, 0.5]])
         self.input_low = torch.tensor([-0.5])
         self.input_high = torch.tensor([0.5])
@@ -683,7 +683,6 @@ class CompatibilityTestDesc:
         self.levels = levels
         self.level_low = level_low
         self.level_high = level_high
-        self.is_asymmetric = is_asymmetric
 
 
 @pytest.mark.parametrize(
