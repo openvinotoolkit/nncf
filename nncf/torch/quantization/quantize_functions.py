@@ -114,7 +114,7 @@ class QuantizeAsymmetric(torch.autograd.Function):
             )
         else:
             grad_input, grad_input_low, grad_input_range = QuantizedFunctionsCPU.get("Quantize_backward")(
-                grad_output, input_, input_low, input_range, levels, level_low, level_high, False
+                grad_output, input_, input_low, input_range, levels, level_low, level_high, True
             )
         return grad_input, grad_input_low, grad_input_range, None, None, None
 
