@@ -381,13 +381,7 @@ class BaseParametrized:
 
             mock_prev_output_grads = np.ones(input_size, dtype=np.float16 if is_fp16 else np.float32)
             ref_grads = RQ.backward(
-                mock_prev_output_grads,
-                ref_input,
-                ref_input_low,
-                ref_input_range,
-                levels,
-                level_low,
-                level_high,
+                mock_prev_output_grads, ref_input, ref_input_low, ref_input_range, levels, level_low, level_high
             )
             del ref_grads[1]
             test_value = symmetric_quantize(test_input, levels, level_low, level_high, test_scale, EPS)
@@ -591,13 +585,7 @@ class BaseParametrized:
 
             mock_prev_output_grads = np.ones(input_size, dtype=np.float16 if is_fp16 else np.float32)
             ref_grads = RQ.backward(
-                mock_prev_output_grads,
-                ref_input,
-                ref_input_low,
-                ref_input_range,
-                levels,
-                level_low,
-                level_high,
+                mock_prev_output_grads, ref_input, ref_input_low, ref_input_range, levels, level_low, level_high
             )
 
             test_value = asymmetric_quantize(
