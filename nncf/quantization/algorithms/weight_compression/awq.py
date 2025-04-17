@@ -121,7 +121,7 @@ class AWQ(Algorithm):
         graph: NNCFGraph,
         all_weight_params: List[WeightCompressionParameters],
         nodes_to_compress: List[NNCFNode],
-        statistics: Dict[str, WCTensorStatistic],
+        statistics: Optional[Dict[str, WCTensorStatistic]] = None,
         wc_backend_entity: Optional[WeightCompressionAlgoBackend] = None,
     ) -> TModel:
         """
