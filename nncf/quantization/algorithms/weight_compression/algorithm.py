@@ -324,7 +324,12 @@ class WeightCompression(Algorithm):
         self._data_aware_mixed_precision = (
             self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR and self._ratio != 1.0
         )
-        self._data_aware_compression = self._awq or self._scale_estimation or self._lora_correction or self._gptq
+        self._data_aware_compression = (
+            (self._awq and self._advanced_parameters.awq_params.is_data_aware)
+            or self._scale_estimation
+            or self._lora_correction
+            or self._gptq
+        )
 
     @property
     def available_backends(self) -> List[BackendType]:
