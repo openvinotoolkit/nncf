@@ -70,7 +70,7 @@ class ReferenceQuantize:
         input_: GeneralizedTensor,
         input_low: GeneralizedTensor,
         input_range: GeneralizedTensor,
-        output: GeneralizedTensor,
+        levels: int,
         level_low: int,
         level_high: int,
         is_asymmetric: bool = False,
@@ -83,6 +83,7 @@ class ReferenceQuantize:
 
         mask_in = 1 - mask_hi - mask_lo
         range_sign = self._sign(input_range)
+        output = self.forward(input_=input_, input_low=input_low, input_range=input_range, levels=levels)
         err = (output - input_) * self._reciprocal(input_range * range_sign)
         grad_range = grad_output * (err * mask_in + range_sign * (level_low / level_high) * mask_lo + mask_hi)
         grad_range = sum_like(grad_range, input_range)

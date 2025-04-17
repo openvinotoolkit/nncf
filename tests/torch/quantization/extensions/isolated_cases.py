@@ -58,8 +58,8 @@ def test_reference_quantization_on_cpu_isolated(mocker):
     test_input_range = torch.from_numpy(ref_input_range).float()
 
     RQ = ReferenceQuantize(backend_type=ReferenceBackendType.NUMPY)
-    ref_input_low, ref_input_range = RQ.tune_range(ref_input_low, ref_input_range, levels)
-    ref_value = RQ.forward(ref_input, ref_input_low, ref_input_range, levels)
+    ref_input_low, ref_input_range = RQ.tune_range(input_low=ref_input_low, input_range=ref_input_range, levels=levels)
+    ref_value = RQ.forward(input_=ref_input, input_low=ref_input_low, input_range=ref_input_range, levels=levels)
     test_value = asymmetric_quantize(test_input, levels, level_low, level_high, test_input_low, test_input_range, eps=0)
     check_outputs_for_quantization_functions(test_value, ref_value, rtol=1e-3)
 
