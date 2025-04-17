@@ -29,8 +29,7 @@ std::vector<at::Tensor> q_cpu_backward(
         at::Tensor input_range,
         scalar_t levels,
         scalar_t levels_low,
-        scalar_t levels_high,
-        bool is_asymmetric) {
+        scalar_t levels_high) {
     auto output = q_cpu_forward<scalar_t>(input, input_low, input_range, levels);
     auto reverted_range = 1 / input_range;
     scalar_t alpha = levels_low / levels_high;
@@ -91,8 +90,7 @@ std::vector<at::Tensor> q_backward(
         at::Tensor input_range,
         int levels,
         int level_low,
-        int level_high,
-        bool is_asymmetric) {
+        int level_high) {
     CHECK_INPUT(grad_output);
     CHECK_INPUT(input);
     CHECK_INPUT(input_low);
@@ -100,7 +98,7 @@ std::vector<at::Tensor> q_backward(
 
     std::vector<at::Tensor> results;
     DISPATCH_TENSOR_DATA_TYPES(input.scalar_type(), "q_cpu_backward", ([&] {
-        results = q_cpu_backward<scalar_t>(grad_output, input, input_low, input_range, levels, level_low, level_high, is_asymmetric);
+        results = q_cpu_backward<scalar_t>(grad_output, input, input_low, input_range, levels, level_low, level_high);
     }));
 
     return results;
