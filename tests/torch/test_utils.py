@@ -14,6 +14,7 @@ import torch
 from torch import nn
 
 import nncf
+from nncf.common.utils.os import is_windows
 from nncf.torch.initialization import DataLoaderBNAdaptationRunner
 from nncf.torch.utils import CompilationWrapper
 from nncf.torch.utils import _ModuleState
@@ -147,8 +148,9 @@ def not_compilable_fn(x, y):
     ],
 )
 def test_compilation_wrapper(fn, is_compilation_successful):
+    successful_ref = False if is_windows() else is_compilation_successful
     torch.compiler.reset()
     wrapped_fn = CompilationWrapper(fn)
     wrapped_fn(torch.randn(10, 10), torch.randn(10, 10))
-    assert wrapped_fn.is_compilation_successful == is_compilation_successful
+    assert wrapped_fn.is_compilation_successful == successful_ref
     torch.compiler.reset()
