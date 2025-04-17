@@ -36,7 +36,6 @@ from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
-from nncf.quantization.advanced_parameters import AdvancedAWQParameters as AWQParams
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters as CompressionParams
 from nncf.quantization.advanced_parameters import AdvancedGPTQParameters as GPTQParams
@@ -1509,30 +1508,6 @@ def test_disabled_optimized_compression(disabled):
             mock.assert_called_once()
 
 
-@pytest.mark.parametrize("dataset", [None, Dataset([np.ones([1, 8, 8])])])
-@pytest.mark.parametrize("is_data_aware", [True, False])
-def test_data_free_awq(dataset, is_data_aware):
-    n_layers = 8
-    model = TestOVTemplateWeightCompression.get_awq_act_model(True, n_layers)
-
-    compressed_model = compress_weights(
-        model,
-        mode=CompressWeightsMode.INT4_ASYM,
-        ratio=1.0,
-        group_size=-1,
-        dataset=dataset,
-        awq=True,
-        advanced_parameters=CompressionParams(
-            awq_params=AWQParams(
-                is_data_aware=is_data_aware,
-            )
-        ),
-    )
-
-    n_awq = TestOVTemplateWeightCompression.get_num_multiply_from_awq(compressed_model)
-    assert n_awq == n_layers - 1
-
-
 @pytest.mark.parametrize(
     "weight,scale", [(np.array([-0.07263] * 2, np.float16), np.array([0.08564102] * 2, np.float32))]
 )
@@ -1591,6 +1566,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_not_supported_algorithms() -> List[str]:
         return []
+
+    @staticmethod
+    def supports_data_free() -> bool:
+        return True
 
     @staticmethod
     def get_scale_estimation_ref():
